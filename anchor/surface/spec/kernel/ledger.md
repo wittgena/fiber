@@ -1,4 +1,5 @@
-# anchor.tester.spec.kernel.ledger
+# anchor.surface.spec.kernel.ledger
+@lineage: anchor.tester.spec.kernel.ledger
 @lineage: abc.loop.ledger.kernel
 
 @desc: Specification of topological sealing from open logic streams to executable kernels

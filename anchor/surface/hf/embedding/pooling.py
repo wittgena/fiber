@@ -1,4 +1,4 @@
-# anchor.inter.embeddings.huggingface.pooling
+# anchor.surface.hf.embedding.pooling
 from enum import Enum
 from typing import TYPE_CHECKING, Union, overload
 

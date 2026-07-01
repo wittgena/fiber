@@ -1,4 +1,5 @@
-# anchor.tester.spec.inter
+# anchor.surface.spec.inter
+@lineage: anchor.tester.spec.inter
 @lineage: anchor.spec.inter
 
 @desc: Reversible Substitution Stream-Based Speciation Architecture Specification

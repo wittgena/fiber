@@ -1,47 +1,21 @@
 uvloop
 fastapi
-uvicorn
-aioredis>=2.0.1
-konlpy
-mecab-python3
-pdfminer.six
-gensim
-networkx
-pymongo
-pyyaml
-quandl
-pandas
-pandas_datareader
-matplotlib
-watchdog
-tyro
+redis
 
+networkx
+pyyaml
+watchdog
 rocksdict
-astroid
-pyright
+
+## 
+transformers
 libcst
 
-prometheus_client
-kubernetes
-kubernetes_asyncio
-kopf
-bcc
+datamodel_code_generator
 
-weaviate
-databricks
-vulture
-setproctitle
-optuna
-
-#
+## protocol
 acp
 mcp==2.0.0a3
 
-## TUI
-click_default_group
-sqlmodel
-xdg_base_dirs
-humanize
-
 ##
-datamodel_code_generator
+tyro
