@@ -4,7 +4,7 @@
 @phase: Type System Projection
 @desc: Acts as the primary switch to dynamically decouple Brane from external LiteLLM dependencies.
 @flow: System Ignition -> brane Resolution (LITELLM_CONVERT_SWITCH) -> Unified Adapter Binding
-@manifold: Ensures structural schema alignment across heterogeneous topologies (MCP, DSPy, LlamaIndex).
+@manifold: Ensures structural schema alignment across heterogeneous topologies
 @tag: strangler-fig, graceful-decoupling, boundary-switch, zero-dependency
 """
 import os
