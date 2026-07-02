@@ -1,28 +1,15 @@
 # xphi.xor.store.message
-## @lineage: bound.bridge.cache.store.message
-## @lineage: bound.bridge.store
-## @lineage: bound.bridge.message.store
-## @lineage: bound.broker.message.store
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-__all__ = [
-    "InMemoryMessageStateStore",
-    "IncomingMessage",
-    "MessageStateStore",
-    "OutgoingMessage",
-]
-
-
 @dataclass(slots=True)
 class OutgoingMessage:
     request_id: int
     method: str
     future: asyncio.Future[Any]
-
 
 @dataclass(slots=True)
 class IncomingMessage:

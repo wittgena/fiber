@@ -1,7 +1,4 @@
 # xphi.xor.store.event
-## @lineage: bound.bridge.cache.store.event
-## @lineage: xphi.server.cache.store.event
-## @lineage: bound.server.xphi.cache.store.event
 from collections import deque
 from dataclasses import dataclass
 from uuid import uuid4

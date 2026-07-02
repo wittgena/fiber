@@ -1,11 +1,8 @@
 # xphi.auth.confirm
-## @lineage: bound.auth.confirm
-## @lineage: xphi.agent.manager.auth.confirm
-## @lineage: anchor.agent.manager.auth.confirm
-## @lineage: gov.sandbox.security.auth.confirm
 from abc import ABC, abstractmethod
 from pydantic import field_validator
-from xphi.xor.security.risk import SecurityRisk
+
+from xphi.auth.eval.security import SecurityRisk
 from arch.topos.state.disc import DiscMixin
 
 class ConfirmationPolicyBase(DiscMixin, ABC):
