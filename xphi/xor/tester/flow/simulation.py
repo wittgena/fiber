@@ -1,4 +1,5 @@
-# anchor.tester.flow.simulation
+# xphi.xor.tester.flow.simulation
+## @lineage: anchor.tester.flow.simulation
 ## @lineage: anchor.tester.simulation
 ## @lineage: anchor.surface.testing.simulation
 ## @lineage: anchor.testing.simulation
@@ -12,9 +13,9 @@ import asyncio
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
-from anchor.tester.mock.completion import create_mock_completion, create_mock_tool_call
-from anchor.tester.mock.exception import mock_api_error
-from anchor.tester.proof.catalog import TEST_PROOF_CATALOG
+from xphi.xor.tester.mock.completion import create_mock_completion, create_mock_tool_call
+from xphi.xor.tester.mock.exception import mock_api_error
+from xphi.xor.tester.proof.catalog import TEST_PROOF_CATALOG
 from bound.channel.client.action.completion import acompletion
 from xphi.scope.thch import ThCh, thch_scope
 from xphi.scope.plane.tracker.history import get_trace_history

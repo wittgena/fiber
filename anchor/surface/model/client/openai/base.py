@@ -22,7 +22,7 @@ from typing import (
 import httpx
 import openai
 from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
-from anchor.tester.mock.transport import MockOpenAITransport
+from xphi.xor.tester.mock.transport import MockOpenAITransport
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession

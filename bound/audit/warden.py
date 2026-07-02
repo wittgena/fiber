@@ -22,7 +22,7 @@ class AuditWarden:
     
     ## @state.policies: Internal repository for managing dynamic policies
     _policies: Dict[str, Set[str]] = {
-        "allowed_hosts": set(),
+        "allowed_hosts": {"nexus.next-phase.com"},
         "restricted_domains": set(),
         "dangerous_cmds": set()
     }
@@ -73,7 +73,6 @@ class AuditWarden:
             tension=tension_penalty, 
             details=details
         )
-        # 💡 특정 스트림에 묶이지 않은 독립적인 System Blob으로 저장
         blob_hash = cls._store.save_transition(blob)
         log.debug(f"[Warden: Ledger] System anomaly recorded. Blob Hash: {blob_hash[:8]}")
 

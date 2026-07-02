@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "brane"
+version = "0.1.0"
+description = "The Universal Integration Boundary for heterogeneous AI ecosystems"
+readme = "README.md"
+requires-python = ">=3.10"
+
+## @desc: Essential core packages for system bootstrap, transport, and foundational data structures.
+## @invariant: Must maintain zero-dependency on external LLM providers to preserve core isolation.
+dependencies = [
+    "uvloop", 
+    "fastapi", 
+    "redis", 
+    "trio", 
+    "networkx", 
+    "pyyaml", 
+    "watchdog", 
+    "rocksdict", 
+    "transformers", 
+    "libcst", 
+    "datamodel-code-generator", 
+    "acp", 
+    "mcp==2.0.0a3", 
+    "tyro",
+    "pydantic",
+    "httpx"
+]
+
+## @desc: Extensions for document extraction, media parsing, and GitHub repository interactions.
+readers = [
+    "PyJWT",      ## @desc: JWT generation for GitHub App Auth (anchor.surface.readers.github)
+    "pypdf",      ## @desc: PDF parsing integration (anchor.surface.readers.file.docs)
+    "python-docx" ## @desc: DOCX parsing integration (anchor.surface.readers.file.docs)
+]
+
+## @desc: Dependencies for the absolute closed-system sandbox and trace assertions.
+dev = [
+    "pytest",
+    "pytest-asyncio"
+]
+
+## @desc: Unified installation of all optional boundaries (e.g., pip install brane[all]).
+all = ["brane[llm,readers,dev]"]

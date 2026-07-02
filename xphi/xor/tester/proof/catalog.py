@@ -1,4 +1,5 @@
-# anchor.tester.proof.catalog
+# xphi.xor.tester.proof.catalog
+## @lineage: anchor.tester.proof.catalog
 ## @lineage: anchor.tester.catalog
 
 TEST_PROOF_CATALOG = {

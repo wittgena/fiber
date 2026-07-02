@@ -1,6 +1,4 @@
 # anchor.cli.mcp.server
-## @lineage: anchor.cli.mcps.server
-## @lineage: bound.adapter.mcps.server
 import sys
 import warnings
 import anyio
