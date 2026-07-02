@@ -1,6 +1,5 @@
 # xphi.loop.flow.reader.file.base
 from __future__ import annotations
-
 import asyncio
 import logging
 import mimetypes
@@ -26,13 +25,13 @@ import fsspec
 from fsspec.implementations.local import LocalFileSystem
 
 from bound.adapter.llama.async_utils import get_asyncio_module, run_jobs
-from xphi.loop.flow.reader.base import BaseReader, ResourcesReaderMixin
 from bound.adapter.llama.schema import Document
 from bound.adapter.llama.utils import get_tqdm_iterable
 
+from xphi.loop.flow.reader.base import BaseReader, ResourcesReaderMixin
+from watcher.plane.emitter import get_emitter
 
-logger = logging.getLogger(__name__)
-
+log = get_emitter(__name__)
 
 class FileSystemReaderMixin(ABC):
     @abstractmethod
@@ -63,52 +62,47 @@ class FileSystemReaderMixin(ABC):
         """
         return self.read_file_content(input_file, **kwargs)
 
-
-def _try_loading_included_file_formats() -> dict[
-    str, Type[BaseReader]
-]:  # pragma: no cover
-    try:
-        from xphi.loop.flow.reader.file import (
-            DocxReader,
-            EpubReader,
-            HWPReader,
-            ImageReader,
-            IPYNBReader,
-            MboxReader,
-            PandasCSVReader,
-            PandasExcelReader,
-            PDFReader,
-            VideoAudioReader,
-        )  # pants: no-infer-dep
-    except ImportError:
-        logger.warning(
-            "some file readers will not be available if not provided by the `file_extractor` parameter"
-        )
-        return {}
-
-    default_file_reader_cls: dict[str, Type[BaseReader]] = {
-        ".hwp": HWPReader,
-        ".pdf": PDFReader,
-        ".docx": DocxReader,
-        ".pptx": PptxReader,
-        ".ppt": PptxReader,
-        ".pptm": PptxReader,
-        ".gif": ImageReader,
-        ".jpg": ImageReader,
-        ".png": ImageReader,
-        ".jpeg": ImageReader,
-        ".webp": ImageReader,
-        ".mp3": VideoAudioReader,
-        ".mp4": VideoAudioReader,
-        ".csv": PandasCSVReader,
-        ".epub": EpubReader,
-        ".mbox": MboxReader,
-        ".ipynb": IPYNBReader,
-        ".xls": PandasExcelReader,
-        ".xlsx": PandasExcelReader,
+def _try_loading_included_file_formats() -> dict[str, Type["BaseReader"]]:
+    import importlib
+    import xphi.loop.flow.reader as reader_pkg
+    logger = logging.getLogger(__name__)
+    base_pkg_name = reader_pkg.__name__
+    reader_mapping = {
+        ".hwp":   (".file", "HWPReader"),
+        ".pdf":   (".file", "PDFReader"),
+        ".docx":  (".file", "DocxReader"),
+        ".pptx":  (".file", "PptxReader"),
+        ".ppt":   (".file", "PptxReader"),
+        ".pptm":  (".file", "PptxReader"),
+        ".gif":   (".image", "ImageReader"),  
+        ".jpg":   (".image", "ImageReader"),
+        ".png":   (".image", "ImageReader"),
+        ".jpeg":  (".image", "ImageReader"),
+        ".webp":  (".image", "ImageReader"),
+        ".mp3":   (".audio", "VideoAudioReader"),
+        ".mp4":   (".video", "VideoAudioReader"),
+        ".csv":   (".tabular", "PandasCSVReader"),
+        ".xls":   (".tabular", "PandasExcelReader"),
+        ".xlsx":  (".tabular", "PandasExcelReader"),
+        ".epub":  (".file", "EpubReader"),
+        ".mbox":  (".file", "MboxReader"),
+        ".ipynb": (".file", "IPYNBReader"),
     }
-    return default_file_reader_cls
 
+    default_file_reader_cls = {}
+    for ext, (module_path, class_name) in reader_mapping.items():
+        try:
+            if module_path.startswith("."):
+                module = importlib.import_module(module_path, package=base_pkg_name)
+            else:
+                module = importlib.import_module(module_path)
+                
+            reader_cls = getattr(module, class_name)
+            default_file_reader_cls[ext] = reader_cls
+        except (ImportError, AttributeError):
+            continue
+
+    return default_file_reader_cls
 
 def _format_file_timestamp(
     timestamp: float | None, include_time: bool = False
@@ -351,7 +345,7 @@ class SimpleDirectoryReader(BaseReader, ResourcesReaderMixin, FileSystemReaderMi
                 for rejected_dir in rejected_dirs:
                     if str(ref_parent_dir).startswith(str(rejected_dir)):
                         skip_because_excluded = True
-                        logger.debug(
+                        log.debug(
                             "Skipping %s because it in parent dir %s which is in %s",
                             ref,
                             ref_parent_dir,
@@ -376,7 +370,7 @@ class SimpleDirectoryReader(BaseReader, ResourcesReaderMixin, FileSystemReaderMi
             raise ValueError(f"No files found in {input_dir}.")
 
         # print total number of files added
-        logger.debug(
+        log.debug(
             f"> [SimpleDirectoryReader] Total files added: {len(new_input_files)}"
         )
 
