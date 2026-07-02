@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import Any, ClassVar
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from anchor.model.cost.calculator import completion_cost
-from anchor.surface.model.client.types import CostPerToken, Usage
+from anchor.provider.cost.calculator import completion_cost
+from anchor.provider.legacy.types import CostPerToken, Usage
 from bound.channel.compat.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
 
 from xphi.scope.plane.metrics import Metrics

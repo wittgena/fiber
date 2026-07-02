@@ -5,9 +5,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, Union
 from openai.lib import _parsing, _pydantic
 from pydantic import BaseModel
-from anchor.surface.model.client.openai.types import AllMessageValues, ChatCompletionToolCallChunk
-from anchor.surface.model.client.base import PydanticObjectBase
-from anchor.surface.provider.types import ProviderSpecificModelInfo
+from anchor.provider.legacy.openai.types import AllMessageValues, ChatCompletionToolCallChunk
+from anchor.provider.legacy.base import PydanticObjectBase
+from anchor.provider.types import ProviderSpecificModelInfo
 from bound.channel.compat.switch.params import Message
 
 from watcher.plane.emitter import get_emitter

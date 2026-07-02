@@ -26,13 +26,13 @@ from pydantic import BaseModel
 from bound.channel.config.response import BaseResponsesAPIConfig
 from bound.channel.config.resolver import config
 from bound.channel.client.action.param.optional import PreProcessNonDefaultParams
-from anchor.surface.model.client.openai.types import (
+from anchor.provider.legacy.openai.types import (
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
     ResponseText,
 )
 from bound.channel.client.response.identity import ResponseIdentityManager
-from anchor.surface.model.param.response import DecodedResponseId
+from anchor.provider.model.param.response import DecodedResponseId
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("responses.utils")

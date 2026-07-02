@@ -1,7 +1,7 @@
 # xphi.xor.secret.credential
 from typing import List
 from bound.channel.config.resolver import config
-from anchor.surface.model.client.types import CredentialItem
+from anchor.provider.legacy.types import CredentialItem
 
 class CredentialAccessor:
     @staticmethod

@@ -11,7 +11,7 @@ from xphi.xor.opt.utils import (
     parse_value,
     translate_field_type,
 )
-from anchor.model.dsp.llm.base import BaseLM
+from xphi.xor.dsp.llm.base import BaseLM
 from anchor.surface.exception import ContextWindowExceededError
 from arch.xor.manifold.sign.signature import Signature
 from xphi.reflect.dsp.handler.stream.callback import BaseCallback

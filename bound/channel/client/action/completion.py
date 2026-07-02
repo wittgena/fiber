@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
 from anchor.surface.exception import Timeout
 from bound.channel.compat.switch.params import ModelResponse
-from anchor.surface.provider.mapping.exception import exception_type
+from anchor.provider.mapper.exception import exception_type
 from bound.channel.client.action.core import async_core_completion
 
 from bound.transport.stream.wrapper import CustomStreamWrapper

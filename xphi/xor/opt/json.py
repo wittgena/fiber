@@ -14,7 +14,7 @@ from xphi.xor.opt.utils import (
     serialize_for_json,
     translate_field_type,
 )
-from anchor.model.dsp.llm.base import BaseLM
+from xphi.xor.dsp.llm.base import BaseLM
 from arch.xor.manifold.sign.signature import Signature, SignatureMeta
 from xphi.reflect.dsp.handler.stream.callback import BaseCallback
 from xphi.reflect.dsp.exceptions import AdapterParseError

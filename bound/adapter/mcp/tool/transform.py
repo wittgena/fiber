@@ -11,7 +11,7 @@ from mcp_types import CallToolResult as MCPCallToolResult
 from mcp_types import Tool as MCPTool
 from mcp.client.session import ClientSession
 
-from anchor.surface.model.client.types import ChatCompletionMessageToolCall
+from anchor.provider.legacy.types import ChatCompletionMessageToolCall
 
 def transform_mcp_tool_to_openai_tool(mcp_tool: MCPTool) -> ChatCompletionToolParam:
     """Convert an MCP tool to an OpenAI tool."""

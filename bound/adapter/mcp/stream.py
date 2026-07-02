@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 from starlette.datastructures import Headers
 
 from bound.channel.compat.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
-from anchor.surface.model.client.openai.types import OutputItemDoneEvent
-from anchor.surface.model.client.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
+from anchor.provider.legacy.openai.types import OutputItemDoneEvent
+from anchor.provider.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
 
 from bound.adapter.mcp.handler import MCPHandler
 from bound.adapter.mcp.parser.header import MCPHeaderParser

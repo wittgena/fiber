@@ -51,10 +51,6 @@ from openai.lib import _parsing
 import inspect
 from weakref import WeakKeyDictionary
 
-from bound.channel.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
-from bound.channel.config.resolver import config
-from bound.channel.client.action.param.format import type_to_response_format_param
-from bound.channel.client.action.task.executor import executor
 from anchor.surface.exception import (
     APIConnectionError,
     APIError,
@@ -73,9 +69,8 @@ from anchor.surface.exception import (
     UnsupportedParamsError,
 )
 
-
-from anchor.model.token.counter import get_modified_max_tokens
-from anchor.surface.model.client.openai.types import (
+from anchor.provider.model.token.counter import get_modified_max_tokens
+from anchor.provider.legacy.openai.types import (
     AllMessageValues,
     AllPromptValues,
     ChatCompletionAssistantToolCall,
@@ -85,15 +80,20 @@ from anchor.surface.model.client.openai.types import (
     OpenAITextCompletionUserMessage,
     OpenAIWebSearchOptions,
 )
-from anchor.surface.provider.routing.locator import get_llm_provider
-from anchor.surface.model.client.types import CallTypes, Embedding, ProviderTypes
+from bound.router.provider.locator import get_llm_provider
+from anchor.provider.legacy.types import CallTypes, Embedding, ProviderTypes
+
+from bound.channel.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
+from bound.channel.config.resolver import config
+from bound.channel.client.action.param.format import type_to_response_format_param
+from bound.channel.client.action.task.executor import executor
+from bound.channel.client.action.task.logging import GLOBAL_LOGGING_WORKER
+from bound.channel.client.bridge.rule import Rules
+from bound.channel.client.response.metadata import update_response_metadata
 
 from bound.transport.stream.chunk.builder import stream_chunk_builder
-from bound.channel.client.action.task.logging import GLOBAL_LOGGING_WORKER
-from bound.channel.mcp.bridge.rule import Rules
-from bound.channel.client.response.metadata import update_response_metadata
-from xphi.xor.secret.credential import CredentialAccessor
 
+from xphi.xor.secret.credential import CredentialAccessor
 from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObject
 
 from phase.gov.proto.gate import uuid

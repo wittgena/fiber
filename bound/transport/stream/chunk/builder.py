@@ -33,11 +33,11 @@ import tiktoken
 if TYPE_CHECKING:
     from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObj
 
-from anchor.surface.model.client.types import TextChoices, TextCompletionResponse
+from anchor.provider.legacy.types import TextChoices, TextCompletionResponse
 from anchor.surface.exception import APIError
 
 from bound.channel.config.resolver import config
-from anchor.model.token.counter import token_counter
+from anchor.provider.model.token.counter import token_counter
 from bound.transport.stream.chunk.processor import ChunkProcessor
 from bound.channel.compat.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter

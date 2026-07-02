@@ -5,7 +5,7 @@ from typing import Any, Callable
 from bound.channel.compat.switch.dsp.settings import settings
 from xphi.reflect.dsp.adapter import Adapter
 from xphi.xor.opt.chat import ChatAdapter
-from anchor.model.dsp.llm.instance import DSPInstance
+from xphi.xor.dsp.llm.instance import DSPInstance
 from xphi.reflect.dsp.handler.train import infer_data_format
 from xphi.reflect.dsp.opt.predict import Predict
 from xphi.reflect.dsp.model.prompter import Prompter
