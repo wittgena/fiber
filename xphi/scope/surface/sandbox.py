@@ -1,6 +1,4 @@
 # xphi.scope.surface.sandbox
-## @lineage: bound.xor.scope.surface.sandbox
-## @lineage: bound.scope.surface.sandbox
 from abc import abstractmethod
 import os
 import subprocess

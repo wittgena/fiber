@@ -1,31 +1,32 @@
 # xphi.proxy.dphi.invoker
-## @lineage: xphi.reflect.dphi.invoker
 """
-@phase:
-Ψ (event ingress via Redis)
- → EventBus (queue)
- → Φ (dphi projection via StreamClient)
- → ∂Φ (boundary execution & Redis result listen)
- → Ψ′ (re-entry or state mutation)
+@desc: Phase Invoker (Action & Perception Orchestrator)
+@flow:
+  [Sense]   Ψ (Event ingress via Tunnel) ↦ EventBus
+  [Eval]    EventBus ↦ Φ (Connector/Projector)
+  [Action]  Φ ↦ SurfaceClient.stream_job (HTTP Dispatch)
+  [Listen]  SurfaceClient.stream_job ↦ MQ Result (without threads)
+  [Reentry] Ψ′ ↦ State mutation or Re-entry
 """
 import asyncio
 import os
 import sys
 import json
-import threading
+import time
+import subprocess
 import urllib.parse
+import atexit
 from typing import Callable, List, Dict, Any
-import redis.asyncio as redis_async
+from pathlib import Path
 
-from arch.contract.interface import IEventBus, IPhaseField, IPhaseAtor
-from arch.proto.event.psi import PsiEvent
-
+from arch.bound.sandbox.adapter import resolve_default_config
+from arch.bound.sandbox.tunnel import TunnelFactory
+from arch.contract.interface import IEventBus, IPhaseAtor, IPhaseField 
+from arch.proto.event.psi import PsiEvent, PsiCarrier
+from arch.bound.sandbox.surface import SurfaceMQ, SurfaceClient
 from phase.bind.resolver import find_current_self, resolve_path
 from phase.bind.client.stream import StreamClient
-from phase.bind.client.surface import RedisClient, SurfaceClient
-
 from watcher.plane.emitter import get_logger
-from xphi.proxy.dphi.runtime import DPhiRuntime
 
 log = get_logger("dphi.invoker")
 
@@ -36,13 +37,63 @@ except Exception as e:
     log.error(f"[Φ₀] anchor resolve fail: {e}")
     sys.exit(1)
 
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+_mq_config = resolve_default_config()
+MQ_HOST = _mq_config.host
+MQ_PORT = _mq_config.port
 DPHI_API_BASE = os.getenv("DPHI_API_BASE", "http://localhost:8080/judgment")
 
-class QueueEventBus(IEventBus):
-    """@role: ψ-router (queue 기반 adapter)"""
+class DPhiRuntime:
+    """activate resolver when boundary has no handler"""
+    def __init__(self, jar_root: Path = LIB_ROOT):
+        self.jar_root = jar_root
+        self.process_name = "dphi-node" 
+        self.proc: subprocess.Popen = None
 
+    def ensure(self):
+        """@flow: 런타임 강제 기동 및 레지스트리(State Store) 등록"""
+        jars = sorted(self.jar_root.glob("dphi-*.jar"))
+        if not jars:
+            raise RuntimeError("dphi jar not found")
+
+        jar = jars[-1]
+        log.info(f"[bootstrap] start dphi: {jar}")
+
+        cmd = [
+            "bash", "-c",
+            f"exec -a {self.process_name} java -Dreaper.tag={self.process_name} -jar {jar}"
+        ]
+
+        self.proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        
+        # [FIX] 프로세스 수확기 등록: 부모(Python)가 죽을 때 자식(Java)도 함께 종료시킵니다.
+        atexit.register(lambda: self.proc.terminate() if self.proc else None)
+
+        pid = self.proc.pid
+        try:
+            async def register_pid():
+                state_store = await TunnelFactory.get_isolated()
+                await state_store.sadd("system:xphi:pids", str(pid))
+                if hasattr(state_store, "aclose"):
+                    await state_store.aclose()
+                
+            asyncio.run(register_pid())
+            log.info(f"[bootstrap] Registered PID {pid} to State Store (system:xphi:pids)")
+        except Exception as e:
+            log.warning(f"[bootstrap] Failed to register PID to State Store (Continuing anyway): {e}")
+
+        log.info("[bootstrap] Waiting for resonance (3s)...")
+        time.sleep(3)
+
+
+# ==========================================
+# 2. 통신 인프라 (EventBus & Receptor)
+# ==========================================
+class QueueEventBus(IEventBus):
+    """@role: ψ-router (Queue-based asynchronous bus)"""
     def __init__(self, queue: asyncio.Queue):
         self.queue = queue
         self.subscribers: List[tuple] = []
@@ -50,61 +101,89 @@ class QueueEventBus(IEventBus):
     async def publish(self, event: PsiEvent) -> None:
         await self.queue.put(event)
 
-    def subscribe(self, ator, predicate: Callable) -> None:
+    def subscribe(self, ator: IPhaseAtor, predicate: Callable) -> None:
         self.subscribers.append((ator, predicate))
 
-class EventReceptor(IPhaseAtor):
-    """@role: ψ ingress (external Redis → EventBus)"""
 
+class EventReceptor:
+    """@role: Ψ ingress (External Matrix ↦ EventBus)"""
     def __init__(self, queue: asyncio.Queue):
         self.queue = queue
-        self.redis = redis_async.from_url(
-            f"redis://{REDIS_HOST}:{REDIS_PORT}",
-            decode_responses=True
-        )
+        self.mq_client = None
 
     async def start(self):
-        pubsub = self.redis.pubsub()
-        await pubsub.subscribe("psi:judgment:exec")  # 토픽명은 환경에 맞게 조정
+        """@flow: Background listening loop using TunnelFactory"""
+        self.mq_client = await TunnelFactory.get_default()
+        pubsub = self.mq_client.pubsub()
+        await pubsub.subscribe("psi:judgment:exec") 
 
-        log.info("[Ψ] listening for events on 'psi:judgment:exec'")
+        log.info("[Ψ] Listening for events on 'psi:judgment:exec'")
 
-        async for msg in pubsub.listen():
-            if msg["type"] == "message":
-                event = PsiEvent(payload=msg["data"])
+        try:
+            async for msg in pubsub.listen():
+                if msg["type"] not in ("message", "pmessage"):
+                    continue
+                
+                raw_data = msg["data"]
+                try:
+                    event = PsiEvent.from_json(raw_data)
+                except Exception:
+                    event = PsiEvent(
+                        event_id="ingress-legacy",
+                        parent_id=None,
+                        source_id="receptor",
+                        scope="GLOBAL",
+                        tick=0,
+                        carrier=PsiCarrier(kind="EXEC", tag="LEGACY", payload=raw_data)
+                    )
                 await self.queue.put(event)
+        finally:
+            await pubsub.close()
 
 
-class PhiConnector(SurfaceClient, IPhaseAtor):
+# ==========================================
+# 3. 위상 액터 (PhiConnector & Field)
+# ==========================================
+class PhiConnector(IPhaseAtor):
     """
-    @role: Φ(t) Projector -> phi 연동 액터
+    @role: Φ(t) Projector & Actuator
+    @desc: 뇌(판단)와 팔(실행)의 분리. SurfaceClient를 상속받지 않고 조립(Composition)하여 사용.
     """
-    def __init__(self, ator_id="phi.projector"):
-        super().__init__(
+    def __init__(self, ator_id="phi.connector"):
+        self._id = ator_id
+        self._state: Dict[str, Any] = {"last_job": None, "status": "idle"}
+        
+        self.surface = SurfaceClient(
             stream_client=StreamClient(),
             bootstrap_runtime=DPhiRuntime(LIB_ROOT),
-            redis_surface=RedisClient(REDIS_HOST, REDIS_PORT),
+            mq_surface=SurfaceMQ(),
             source_name="loop.judgment",
             fallback_url=DPHI_API_BASE,
             path_prefix=""
         )
-        self._id = ator_id
-        self._state = {"last_job": None}
 
     @property
     def ator_id(self) -> str:
         return self._id
 
-    async def react(self, event: PsiEvent, bus: IEventBus):
-        """이벤트 발생 시 비동기 루프를 블로킹하지 않도록 스레드로 오프로드"""
-        await asyncio.to_thread(self._invoke_phi, event)
+    @property
+    def state(self) -> Dict[str, Any]:
+        return self._state
 
-    def _invoke_phi(self, event: PsiEvent):
-        # 1. 위상 해석 (Carrier/Payload 파싱)
+    def set_state(self, new_state: str) -> None:
+        self._state["status"] = new_state
+
+    async def react(self, event: PsiEvent, field: IPhaseField, bus: IEventBus) -> None:
+        """@flow: Offload blocking unified pipeline to background thread pool"""
+        self.set_state("projecting")
+        await asyncio.to_thread(self._invoke_phi, event, bus)
+        self.set_state("idle")
+
+    def _invoke_phi(self, event: PsiEvent, bus: IEventBus):
+        """@flow: Execution without explicit threading"""
         payload = event.payload
         try:
             data = json.loads(payload) if isinstance(payload, str) else payload
-            # 예시: data 내부에서 액션과 타겟 경로를 추출
             action = data.get("action", "process") 
             target_path = data.get("path", "/")
         except Exception:
@@ -116,63 +195,107 @@ class PhiConnector(SurfaceClient, IPhaseAtor):
         log.info(f"[Φ(t) Modulation] Routing event to Xphi: {query}")
 
         try:
-            # 2. Xphi 런타임으로 요청 전송 (overlay.xor 방식)
-            for msg in self.request(query_path=query, method="POST", is_json=False):
-                if msg.startswith("jobId:"):
-                    job_id = msg.split("jobId:")[1].strip()
-                    log.info(f"[job] Assigned Job ID: {job_id}")
-                    self._state["last_job"] = job_id
+            pipeline = self.surface.stream_job(query, channel_prefix="judgment:result:", method="POST", is_json=False)
+            
+            for source, data in pipeline:
+                if source == "http":
+                    if isinstance(data, str) and data.startswith("jobId:"):
+                        job_id = data.split("jobId:")[1].strip()
+                        log.info(f"[job] Assigned Job ID: {job_id}")
+                        self._state["last_job"] = job_id
+                    else:
+                        log.info(f"[Xphi REST] {data}")
+                        
+                elif source == "mq":
+                    blocks = len(data.get("blocks", []))
+                    log.info(f"[MQ Result] Job finished. blocks={blocks}")
                     
-                    # 3. 경계 실행 (∂Φ) - 결과 수신을 위한 백그라운드 리스너 기동
-                    threading.Thread(target=self._listen_job_result, args=(job_id,), daemon=True).start()
-                else:
-                    log.info(f"[Xphi REST] {msg}")
         except Exception as e:
             log.error(f"[Actuation Error] Xphi projection failed: {e}")
 
-    def _listen_job_result(self, job_id: str):
-        """
-        @role: ∂Φ (boundary execution handling)
-        """
-        channel = f"judgment:result:{job_id}"
-        log.info(f"[∂Φ] Boundary listening on {channel}")
-        
-        for data in self.surface.listen_job(channel):
-            blocks = len(data.get("blocks", []))
-            log.info(f"[Redis Result] Job {job_id} finished. blocks={blocks}")
-            # 필요하다면 여기서 Ψ′ (재진입) 이벤트를 EventBus로 다시 쏠 수 있습니다.
+
+class DummyPhaseField(IPhaseField):
+    """
+    @role: 구조적 완결성을 위한 임시 Field 구현체.
+    현재 루프 구조에서 실제 Field 로직이 붙기 전까지 IPhaseAtor.react의 인자를 채워줍니다.
+    """
+    def get_state(self) -> Dict[str, float]: return {}
+    def evolve(self, dt: float) -> None: pass
+    def compute_gradient(self) -> Dict[str, float]: return {}
 
 
+# ==========================================
+# 4. 오케스트레이션 루프 (Loop)
+# ==========================================
 class Loop:
-    """@role: phase loop (implicit EventBus + runtime)"""
+    """@role: Phase loop (Implicit EventBus + Runtime)"""
     def __init__(self):
         self.queue = asyncio.Queue()
         self.bus = QueueEventBus(self.queue)
+        self.field = DummyPhaseField()
         
-        # 위상 액터 초기화
         self.listener = EventReceptor(self.queue)
         self.projector = PhiConnector()
 
     async def bootstrap(self):
-        # 초기화 이벤트 주입
-        await self.bus.publish(PsiEvent(payload=json.dumps({"action": "ping", "path": "init"})))
+        log.info("[Loop] Bootstrapping DPhi Runtime in background...")
+        await asyncio.to_thread(self.projector.surface.bootstrap_runtime.ensure)
+        
+        dummy_event = PsiEvent(
+            event_id="boot", parent_id=None, source_id="system", scope="LOCAL", tick=0,
+            carrier=PsiCarrier(kind="PING", tag="INIT", payload=json.dumps({"action": "ping", "path": "init"}))
+        )
+        await self.bus.publish(dummy_event)
 
     async def run(self):
-        # 1. 외부 이벤트 리스너(Redis PubSub) 가동
-        asyncio.create_task(self.listener.start())
+        listener_task = asyncio.create_task(self.listener.start())
         await self.bootstrap()
 
-        # 2. 메인 이벤트 루프
-        while True:
-            event: PsiEvent = await self.queue.get()
-            log.info(f"[Ψ Event] Received: {event.payload}")
-            
-            # 3. Projector(Φ)에게 이벤트 위임
-            await self.projector.react(event, self.bus)
+        try:
+            while True:
+                event: PsiEvent = await self.queue.get()
+                log.info(f"[Ψ Event] Received: {event.payload}")
+                
+                await self.projector.react(event, self.field, self.bus)
+        except asyncio.CancelledError:
+            log.info("[Loop] Phase loop collapsing. Shutting down...")
+            listener_task.cancel()
+
+
+# ==========================================
+# 5. [Test & Simulation Matrix] 
+# ==========================================
+async def mock_stimulus_injector():
+    """
+    @test: 런타임이 안정화된 후 가상의 판단 이벤트를 주기적으로 주입하여 전체 파이프라인 동시 테스트
+    """
+    await asyncio.sleep(8.0)
+    log.info("\n🧪 [Test Matrix] Injecting mock stimuli into 'psi:judgment:exec'...\n")
+    
+    mq = await TunnelFactory.get_default()
+    
+    test_payloads = [
+        {"action": "analyze", "path": "/test/manifold_alpha"},
+        {"action": "validate", "path": "/test/manifold_beta"}
+    ]
+    
+    for payload in test_payloads:
+        await mq.publish("psi:judgment:exec", json.dumps(payload))
+        log.info(f"🧪 [Test Matrix] Injected: {payload}")
+        await asyncio.sleep(3.0)
+
 
 async def main():
-    loop = Loop()
-    await loop.run()
+    invoker_loop = Loop()
+    log.info("Starting Invoker Matrix with Concurrent Testing Harness...")
+    tasks = [
+        asyncio.create_task(invoker_loop.run()),
+        asyncio.create_task(mock_stimulus_injector())
+    ]
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n## System gracefully terminated.")
