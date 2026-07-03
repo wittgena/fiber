@@ -17,7 +17,7 @@ from bound.channel.compat.switch.dsp.settings import settings
 from bound.channel.compat.switch.dsp.context import get_dspy_context_propagator
 from xphi.xor.opt.exam.prediction import Prediction
 from xphi.xor.opt.exam.example import Example
-from xphi.reflect.dsp.handler.stream.callback import with_callbacks
+from xphi.xor.dsp.handler.stream.callback import with_callbacks
 
 from arch.proto.wrapper.opt import OptExecutor
 from watcher.plane.emitter import get_emitter

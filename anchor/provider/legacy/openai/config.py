@@ -47,7 +47,7 @@ from anchor.provider.types import ProviderTypes
 from anchor.provider.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from anchor.provider.legacy.openai.types import *
 
-from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObj
+from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
 from bound.channel.client.response.converter import convert_to_model_response_object
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from anchor.provider.legacy.base import BaseLLM

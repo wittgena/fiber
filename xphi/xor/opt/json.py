@@ -16,8 +16,8 @@ from xphi.xor.opt.utils import (
 )
 from xphi.xor.dsp.llm.base import BaseLM
 from arch.xor.manifold.sign.signature import Signature, SignatureMeta
-from xphi.reflect.dsp.handler.stream.callback import BaseCallback
-from xphi.reflect.dsp.exceptions import AdapterParseError
+from xphi.xor.dsp.handler.stream.callback import BaseCallback
+from xphi.xor.dsp.exceptions import AdapterParseError
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("opt.json")

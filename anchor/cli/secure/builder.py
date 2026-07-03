@@ -260,7 +260,7 @@ def _ensure_proxy_active(registry_url: str) -> PypiMCPClient:
     log.info(f"🚀 [Proxy] Auto-booting internal MCP Proxy on port {port}...")
     
     try:
-        import xphi.reflect.proxy.pypi as proxy_server
+        import xphi.proxy.pypi as proxy_server
         client = PypiMCPClient(sys.executable, proxy_server)
     except Exception as e:
         log.error(f"Failed to instantiate proxy client: {e}")

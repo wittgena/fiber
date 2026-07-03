@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import orjson
 import requests
 from xphi.xor.dsp.training.base import Provider, TrainingJob
-from xphi.reflect.dsp.handler.train import TrainDataFormat, get_finetune_directory
+from xphi.xor.dsp.handler.train import TrainDataFormat, get_finetune_directory
 
 if TYPE_CHECKING:
     from databricks.sdk import WorkspaceClient

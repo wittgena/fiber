@@ -9,7 +9,7 @@ from anchor.surface.registry.provider import get_provider_for_model
 from bound.channel.config.resolver import config
 from bound.channel.config.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 from anchor.provider.model.param.legacy import LiteLLM_Params
-from xphi.xor.secret.manager import get_secret_str, get_secret 
+from xphi.xor.auth.secret.manager import get_secret_str, get_secret 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("routing.locator")

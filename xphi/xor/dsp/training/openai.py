@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Any
 import openai
 from xphi.xor.dsp.training.base import Provider, TrainingJob
-from xphi.reflect.dsp.handler.train import TrainDataFormat, TrainingStatus, save_data
+from xphi.xor.dsp.handler.train import TrainDataFormat, TrainingStatus, save_data
 
 class TrainingJobOpenAI(TrainingJob):
     def __init__(self, *args, **kwargs):

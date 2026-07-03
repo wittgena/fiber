@@ -16,7 +16,7 @@ from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAu
 from mcp.client._transport import Transport
 from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamable_http_client
-from xphi.auth.oauth.provider import OAuthClientProvider, TokenStorage
+from xphi.xor.auth.oauth.provider import OAuthClientProvider, TokenStorage
 
 from watcher.plane.emitter import get_emitter
 

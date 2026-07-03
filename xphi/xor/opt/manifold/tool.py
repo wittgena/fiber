@@ -8,7 +8,7 @@ from pydantic import BaseModel, TypeAdapter, create_model
 
 from bound.channel.compat.switch.dsp.settings import settings
 from xphi.xor.opt.basetype import Type
-from xphi.reflect.dsp.handler.stream.callback import with_callbacks
+from xphi.xor.dsp.handler.stream.callback import with_callbacks
 
 _TYPE_MAPPING = {"string": str, "integer": int, "number": float, "boolean": bool, "array": list, "object": dict}
 

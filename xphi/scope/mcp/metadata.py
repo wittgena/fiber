@@ -1,4 +1,5 @@
-# server.mcp.utilities.func_metadata
+# xphi.scope.mcp.metadata
+## @lineage: server.mcp.utilities.func_metadata
 import functools
 import inspect
 import json

@@ -14,9 +14,9 @@ from xphi.xor.dsp.delegator import DSPDelegator
 
 from bound.channel.compat.switch.dsp.settings import settings
 
-from xphi.reflect.dsp.handler.cache import request_cache
-from xphi.reflect.dsp.handler.stream.callback import BaseCallback
-from xphi.reflect.dsp.handler.train import TrainDataFormat
+from xphi.xor.dsp.handler.cache import request_cache
+from xphi.xor.dsp.handler.stream.callback import BaseCallback
+from xphi.xor.dsp.handler.train import TrainDataFormat
 
 from phase.gov.proto.gate import uuid4
 from watcher.plane.emitter import get_emitter

@@ -11,9 +11,9 @@ from xphi.xor.opt.exam.example import Example
 from xphi.xor.opt.exam.prediction import Prediction
 
 from xphi.xor.opt.module.base import BaseModule
-from xphi.scope.plane.tracker.history import pretty_print_history
+from bound.watcher.plane.tracker.history import pretty_print_history
 
-from xphi.reflect.dsp.handler.stream.callback import with_callbacks
+from xphi.xor.dsp.handler.stream.callback import with_callbacks
 
 from xphi.xor.opt.module.runner import ParallelRunner
 
@@ -105,7 +105,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
             return await self.aforward(*args, **kwargs)
 
     def named_predictors(self):
-        from xphi.reflect.dsp.opt.predict import Predict
+        from xphi.xor.opt.prompter.predict import Predict
         return [(name, param) for name, param in self.named_parameters() if isinstance(param, Predict)]
 
     def predictors(self):

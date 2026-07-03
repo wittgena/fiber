@@ -3,7 +3,7 @@ import re
 import textwrap
 from typing import Any, NamedTuple
 from pydantic.fields import FieldInfo
-from xphi.reflect.dsp.adapter import Adapter
+from xphi.xor.dsp.adapter import Adapter
 from xphi.xor.opt.utils import (
     format_field_value,
     get_annotation_name,
@@ -14,8 +14,8 @@ from xphi.xor.opt.utils import (
 from xphi.xor.dsp.llm.base import BaseLM
 from anchor.surface.exception import ContextWindowExceededError
 from arch.xor.manifold.sign.signature import Signature
-from xphi.reflect.dsp.handler.stream.callback import BaseCallback
-from xphi.reflect.dsp.exceptions import AdapterParseError
+from xphi.xor.dsp.handler.stream.callback import BaseCallback
+from xphi.xor.dsp.exceptions import AdapterParseError
 
 field_header_pattern = re.compile(r"\[\[ ## (\w+) ## \]\]")
 

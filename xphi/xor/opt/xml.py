@@ -11,7 +11,7 @@ from pydantic.fields import FieldInfo
 from xphi.xor.opt.chat import ChatAdapter, FieldInfoWithName
 from xphi.xor.opt.utils import format_field_value, translate_field_type
 from arch.xor.manifold.sign.signature import Signature
-from xphi.reflect.dsp.handler.stream.callback import BaseCallback
+from xphi.xor.dsp.handler.stream.callback import BaseCallback
 
 class XMLAdapter(ChatAdapter):
     def __init__(self, callbacks: list[BaseCallback] | None = None):
@@ -100,7 +100,7 @@ class XMLAdapter(ChatAdapter):
         for k, v in fields.items():
             fields[k] = self._parse_field_value(signature.output_fields[k], v, completion, signature)
         if fields.keys() != signature.output_fields.keys():
-            from xphi.reflect.dsp.exceptions import AdapterParseError
+            from xphi.xor.dsp.exceptions import AdapterParseError
 
             raise AdapterParseError(
                 adapter_name="XMLAdapter",
@@ -116,7 +116,7 @@ class XMLAdapter(ChatAdapter):
         try:
             return parse_value(raw, field_info.annotation)
         except Exception as e:
-            from xphi.reflect.dsp.exceptions import AdapterParseError
+            from xphi.xor.dsp.exceptions import AdapterParseError
 
             raise AdapterParseError(
                 adapter_name="XMLAdapter",

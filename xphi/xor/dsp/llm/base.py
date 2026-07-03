@@ -7,8 +7,8 @@ import uuid
 from typing import Any, TextIO
 
 from bound.channel.compat.switch.dsp.settings import settings
-from xphi.reflect.dsp.handler.stream.callback import with_callbacks
-from xphi.scope.plane.tracker.history import pretty_print_history
+from xphi.xor.dsp.handler.stream.callback import with_callbacks
+from bound.watcher.plane.tracker.history import pretty_print_history
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

@@ -31,7 +31,7 @@ import openai
 import tiktoken
 
 if TYPE_CHECKING:
-    from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObj
+    from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
 
 from anchor.provider.legacy.types import TextChoices, TextCompletionResponse
 from anchor.surface.exception import APIError

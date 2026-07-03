@@ -25,8 +25,8 @@ from bound.channel.client.wrapper import client
 from bound.channel.client.action.support.helpers import safe_deep_copy, filter_internal_params
 from bound.channel.client.action.support.asyncify import run_async_function
 
-from xphi.scope.plane.trace.dd import tracer
-from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObj
+from bound.watcher.plane.trace.dd import tracer
+from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
 
 from watcher.plane.emitter import get_emitter
 

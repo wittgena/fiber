@@ -38,7 +38,7 @@ from bound.channel.client.action.api.response import responses
 from bound.channel.client.action.api.response_crud import delete_responses, get_responses, list_input_items, cancel_responses, compact_responses
 
 from bound.transport.stream.iterator import ResponseStreamIterator
-from xphi.xor.secret.manager import get_secret_str
+from xphi.xor.auth.secret.manager import get_secret_str
 
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter

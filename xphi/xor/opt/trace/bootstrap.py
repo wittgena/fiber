@@ -11,7 +11,7 @@ from bound.channel.compat.switch.dsp.settings import settings
 
 from xphi.xor.opt.exam.example import Example
 from xphi.xor.opt.exam.prediction import Prediction
-from xphi.reflect.dsp.exceptions import AdapterParseError
+from xphi.xor.dsp.exceptions import AdapterParseError
 from xphi.xor.opt.module.eval import Evaluate
 from xphi.xor.opt.module.meta import Module
 

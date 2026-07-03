@@ -18,7 +18,7 @@ from xphi.xor.tester.mock.exception import mock_api_error
 from xphi.xor.tester.proof.catalog import TEST_PROOF_CATALOG
 from bound.channel.client.action.completion import acompletion
 from xphi.scope.thch import ThCh, thch_scope
-from xphi.scope.plane.tracker.history import get_trace_history
+from bound.watcher.plane.tracker.history import get_trace_history
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("flow.simulation")

@@ -9,7 +9,7 @@
 import random
 from xphi.xor.opt.manifold.parameter import Parameter
 from xphi.xor.opt.exam.prediction import Prediction
-from xphi.reflect.dsp.handler.stream.callback import with_callbacks
+from xphi.xor.dsp.handler.stream.callback import with_callbacks
 
 def single_query_passage(passages):
     passages_dict = {key: [] for key in list(passages[0].keys())}

@@ -1,4 +1,5 @@
-# server.mcp.utilities.context_injection
+# xphi.scope.mcp.injection
+## @lineage: server.mcp.utilities.context_injection
 """Context injection utilities for MCPServer."""
 from __future__ import annotations
 import inspect

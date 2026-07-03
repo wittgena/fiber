@@ -6,7 +6,7 @@ from abc import abstractmethod
 from concurrent.futures import Future
 from threading import Thread
 from typing import TYPE_CHECKING, Any
-from xphi.reflect.dsp.handler.train import TrainDataFormat
+from xphi.xor.dsp.handler.train import TrainDataFormat
 
 class TrainingJob(Future):
     def __init__(

@@ -35,7 +35,7 @@ from bound.channel.client.action.param.validator import (
     validate_chat_completion_tool_choice,
     validate_openai_optional_params
 )
-from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObj
+from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
 
 from watcher.plane.emitter import get_emitter
 
