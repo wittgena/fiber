@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import pydantic
 
 from anchor.provider.dsp.base import BaseLM
-from bound.adapter.opt.basetype import Type
+from xphi.xor.opt.manifold.model.basetype import Type
 
 if TYPE_CHECKING:
     from arch.xor.manifold.sign.signature import Signature

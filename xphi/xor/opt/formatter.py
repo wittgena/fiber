@@ -11,10 +11,9 @@ import pydantic
 from pydantic import TypeAdapter
 from pydantic.fields import FieldInfo
 
-from bound.adapter.opt.model.reasoning import Reasoning
-from bound.adapter.opt.basetype import Type as SpiType
-from xphi.xor.manifold.code import Code
-from bound.adapter.opt.model.reasoning import Reasoning
+from xphi.xor.opt.manifold.model.reasoning import Reasoning
+from xphi.xor.opt.manifold.model.basetype import Type as SpiType
+from xphi.xor.opt.manifold.code import Code
 
 from arch.xor.manifold.sign.utils import get_spi_field_type
 

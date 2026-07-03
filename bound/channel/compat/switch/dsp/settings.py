@@ -1,8 +1,4 @@
 # bound.channel.compat.switch.dsp.settings
-## @lineage: anchor.channel.compat.switch.dsp.settings
-## @lineage: anchor.channel.switch.dsp.settings
-## @lineage: anchor.switch.dspy.settings
-## @lineage: anchor.router.switch.dspy.settings
 import asyncio
 import contextvars
 import copy
@@ -125,15 +121,6 @@ class DSPSettings:
         modules_to_serialize: list[str] | None = None,
         exclude_keys: list[str] | None = None,
     ):
-        """
-        Save the settings to a file using cloudpickle.
-
-        Args:
-            path: The file path to save the settings to.
-            modules_to_serialize (list or None): A list of modules to serialize with cloudpickle's `register_pickle_by_value`.
-                If None, then no modules will be registered for serialization.
-            exclude_keys (list or None): A list of keys to exclude during saving.
-        """
         log.warning(
             "`settings` are serialized using cloudpickle. Because cloudpickle allows for the "
             "execution of arbitrary code during deserialization, you should only load files from "

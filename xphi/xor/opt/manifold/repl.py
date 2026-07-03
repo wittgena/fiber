@@ -5,7 +5,7 @@ import json
 from typing import TYPE_CHECKING, Any, Iterator
 import pydantic
 from pydantic import Field
-from xphi.xor.opt.utils import serialize_for_json
+from xphi.xor.opt.formatter import serialize_for_json
 if TYPE_CHECKING:
     from pydantic.fields import FieldInfo
 

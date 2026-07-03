@@ -1,6 +1,4 @@
 # xphi.xor.opt.callback.base
-## @lineage: xphi.xor.dsp.handler.stream.callback
-## @lineage: xphi.reflect.dsp.handler.stream.callback
 import functools
 import inspect
 from contextvars import ContextVar

@@ -9,12 +9,12 @@ from anchor.provider.dsp.base import BaseLM
 from anchor.provider.dsp.instance import DSPInstance
 
 from bound.channel.compat.switch.dsp.settings import settings
-from bound.adapter.opt.chat import ChatAdapter
+from bound.adapter.opt.signature import SignatureAdapter
 
-from xphi.xor.manifold.parameter import Parameter
+from xphi.xor.opt.manifold.parameter import Parameter
 from arch.xor.manifold.sample import Prediction
 from xphi.xor.opt.callback.base import BaseCallback
-from xphi.xor.opt.module.meta import Module
+from xphi.xor.opt.manifold.module.meta import Module
 
 from arch.xor.manifold.sign.signature import Signature, ensure_signature
 from phase.gov.proto.gate import uuid4
@@ -216,7 +216,7 @@ class Predict(Module, Parameter):
         
         lm, config, signature, demos, kwargs = self._forward_preprocess(**kwargs)
         log.debug(f"[Predict-{req_id}] ⚙️ Preprocess complete. LM: {type(lm).__name__}, Stream: {self._should_stream()}")
-        adapter = settings.adapter or ChatAdapter()
+        adapter = settings.adapter or SignatureAdapter()
 
         if self._should_stream():
             log.debug(f"[Predict-{req_id}] 🌊 Executing STREAMING adapter call...")
@@ -240,7 +240,7 @@ class Predict(Module, Parameter):
         lm, config, signature, demos, kwargs = self._forward_preprocess(**kwargs)
         log.debug(f"[Predict-{req_id}] ⚙️ Preprocess complete. LM: {type(lm).__name__}, Stream: {self._should_stream()}")
 
-        adapter = settings.adapter or ChatAdapter()
+        adapter = settings.adapter or SignatureAdapter()
         if self._should_stream():
             log.debug(f"[Predict-{req_id}] 🌊 Executing ASYNC STREAMING adapter call...")
             with settings.context(caller_predict=self):

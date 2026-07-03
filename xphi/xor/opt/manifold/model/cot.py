@@ -1,13 +1,11 @@
 # bound.adapter.opt.model.cot
-## @lineage: xphi.xor.dsp.model.cot
-## @lineage: xphi.reflect.dsp.model.cot
 from typing import Any
 from pydantic.fields import FieldInfo
 
 from arch.xor.manifold.sign.field import InputField, OutputField
 from arch.xor.manifold.sign.signature import Signature, ensure_signature
-from xphi.xor.opt.module.meta import Module
-from xphi.xor.opt.prompter.predict import Predict
+from xphi.xor.opt.manifold.module.meta import Module
+from xphi.xor.opt.prompter import Predict
 
 class ChainOfThought(Module):
     def __init__(

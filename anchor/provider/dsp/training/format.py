@@ -6,7 +6,7 @@ from pathlib import Path
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 import orjson
-from bound.adapter.opt.chat import ChatAdapter
+from bound.adapter.opt.signature import SignatureAdapter
 
 if TYPE_CHECKING:
     from bound.adapter.opt.base import Adapter
@@ -65,7 +65,7 @@ class GRPOStatus(TypedDict):
 
 
 def infer_data_format(adapter: "Adapter") -> str:
-    if isinstance(adapter, ChatAdapter):
+    if isinstance(adapter, SignatureAdapter):
         return TrainDataFormat.CHAT
     raise ValueError(f"Could not infer the data format for: {adapter}")
 

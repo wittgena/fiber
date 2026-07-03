@@ -8,7 +8,7 @@ from jsonschema import ValidationError, validate
 from pydantic import BaseModel, TypeAdapter, create_model
 
 from bound.channel.compat.switch.dsp.settings import settings
-from bound.adapter.opt.basetype import Type
+from xphi.xor.opt.manifold.model.basetype import Type
 from xphi.xor.opt.callback.base import with_callbacks
 
 _TYPE_MAPPING = {"string": str, "integer": int, "number": float, "boolean": bool, "array": list, "object": dict}

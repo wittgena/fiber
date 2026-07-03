@@ -5,13 +5,13 @@ import json_repair
 
 from anchor.provider.dsp.base import BaseLM
 
-from bound.adapter.opt.basetype import Type
-from bound.adapter.opt.basetype import split_message_content_for_custom_types
+from xphi.xor.opt.manifold.model.basetype import Type
+from xphi.xor.opt.manifold.model.basetype import split_message_content_for_custom_types
 from bound.adapter.opt.exception import AdapterParseError
 
-from xphi.xor.manifold.history import History
-from xphi.xor.manifold.tool import Tool, ToolCalls
-from bound.adapter.opt.model.reasoning import Reasoning
+from xphi.xor.opt.manifold.history import History
+from xphi.xor.opt.manifold.tool import Tool, ToolCalls
+from xphi.xor.opt.manifold.model.reasoning import Reasoning
 from xphi.xor.opt.callback.base import BaseCallback, with_callbacks
 
 from arch.xor.manifold.sign.signature import Signature
@@ -20,7 +20,6 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
-# Citations 제거
 _DEFAULT_NATIVE_RESPONSE_TYPES = [Reasoning]
 
 class Adapter:

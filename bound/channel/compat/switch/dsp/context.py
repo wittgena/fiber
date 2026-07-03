@@ -1,8 +1,4 @@
 # bound.channel.compat.switch.dsp.context
-## @lineage: anchor.channel.compat.switch.dsp.context
-## @lineage: anchor.channel.switch.dsp.context
-## @lineage: anchor.switch.dspy.context
-## @lineage: anchor.router.switch.dspy.context
 import copy
 from bound.channel.compat.switch.dsp.settings import settings
 

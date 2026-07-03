@@ -29,7 +29,7 @@ class BaseModule:
         Unlike PyTorch, handles (non-recursive) lists of parameters too.
         """
 
-        from xphi.xor.manifold.parameter import Parameter
+        from xphi.xor.opt.manifold.parameter import Parameter
 
         visited = set()
         named_parameters = []
@@ -162,7 +162,7 @@ class BaseModule:
         return {name: param.dump_state(json_mode=json_mode) for name, param in self.named_parameters()}
 
     def load_state(self, state, *, allow_unsafe_lm_state=False):
-        from xphi.xor.opt.prompter.predict import Predict
+        from xphi.xor.opt.prompter import Predict
 
         for name, param in self.named_parameters():
             if isinstance(param, Predict):

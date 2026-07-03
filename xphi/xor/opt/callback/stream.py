@@ -1,6 +1,4 @@
 # xphi.xor.opt.callback.stream
-## @lineage: xphi.xor.dsp.handler.stream.messages
-## @lineage: xphi.reflect.dsp.handler.stream.messages
 import asyncio
 import concurrent.futures
 from dataclasses import dataclass

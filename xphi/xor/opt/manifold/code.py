@@ -5,7 +5,7 @@ import re
 from typing import Any, ClassVar
 import pydantic
 from pydantic import create_model
-from bound.adapter.opt.basetype import Type
+from xphi.xor.opt.manifold.model.basetype import Type
 
 class Code(Type):
     code: str

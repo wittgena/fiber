@@ -1,30 +1,30 @@
-# bound.adapter.opt.chat
-## @lineage: xphi.xor.opt.chat
-import re
+# bound.adapter.opt.signature
+## @lineage: bound.adapter.opt.chat
 import textwrap
 from typing import Any, NamedTuple
 from pydantic.fields import FieldInfo
+
 from bound.adapter.opt.base import Adapter
-from xphi.xor.opt.utils import (
+from bound.adapter.opt.exception import AdapterParseError
+from bound.adapter.opt.parser import MarkdownRegexParser, JSONRepairParser
+
+from xphi.xor.opt.formatter import (
     format_field_value,
     get_annotation_name,
     get_field_description_string,
-    parse_value,
     translate_field_type,
 )
-from anchor.provider.dsp.base import BaseLM
-from anchor.surface.exception import ContextWindowExceededError
 from arch.xor.manifold.sign.signature import Signature
 from xphi.xor.opt.callback.base import BaseCallback
-from bound.adapter.opt.exception import AdapterParseError
+from watcher.plane.emitter import get_emitter
 
-field_header_pattern = re.compile(r"\[\[ ## (\w+) ## \]\]")
+log = get_emitter(__name__)
 
 class FieldInfoWithName(NamedTuple):
     name: str
     info: FieldInfo
 
-class ChatAdapter(Adapter):
+class SignatureAdapter(Adapter):
     def __init__(
         self,
         callbacks: list[BaseCallback] | None = None,
@@ -38,50 +38,8 @@ class ChatAdapter(Adapter):
             native_response_types=native_response_types,
         )
         self.use_json_adapter_fallback = use_json_adapter_fallback
-
-    def __call__(
-        self,
-        lm: BaseLM,
-        lm_kwargs: dict[str, Any],
-        signature: type[Signature],
-        demos: list[dict[str, Any]],
-        inputs: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        try:
-            return super().__call__(lm, lm_kwargs, signature, demos, inputs)
-        except Exception as e:
-            from xphi.xor.opt.json import JSONAdapter
-            if (
-                isinstance(e, ContextWindowExceededError)
-                or isinstance(self, JSONAdapter)
-                or not self.use_json_adapter_fallback
-            ):
-                raise e
-            return JSONAdapter()(lm, lm_kwargs, signature, demos, inputs)
-
-    async def acall(
-        self,
-        lm: BaseLM,
-        lm_kwargs: dict[str, Any],
-        signature: type[Signature],
-        demos: list[dict[str, Any]],
-        inputs: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        try:
-            return await super().acall(lm, lm_kwargs, signature, demos, inputs)
-        except Exception as e:
-            # fallback to JSONAdapter
-            from xphi.xor.opt.json import JSONAdapter
-
-            if (
-                isinstance(e, ContextWindowExceededError)
-                or isinstance(self, JSONAdapter)
-                or not self.use_json_adapter_fallback
-            ):
-                # On context window exceeded error, already using JSONAdapter, or use_json_adapter_fallback is False
-                # we don't want to retry with a different adapter. Raise the original error instead of the fallback error.
-                raise e
-            return await JSONAdapter().acall(lm, lm_kwargs, signature, demos, inputs)
+        self.primary_parser = MarkdownRegexParser()
+        self.fallback_parser = JSONRepairParser() if use_json_adapter_fallback else None
 
     def format_field_description(self, signature: type[Signature]) -> str:
         return (
@@ -161,43 +119,6 @@ class ChatAdapter(Adapter):
         assistant_message_content += "\n\n[[ ## completed ## ]]\n"
         return assistant_message_content
 
-    def parse(self, signature: type[Signature], completion: str) -> dict[str, Any]:
-        sections = [(None, [])]
-
-        for line in completion.splitlines():
-            match = field_header_pattern.match(line.strip())
-            if match:
-                # If the header pattern is found, split the rest of the line as content
-                header = match.group(1)
-                remaining_content = line[match.end() :].strip()
-                sections.append((header, [remaining_content] if remaining_content else []))
-            else:
-                sections[-1][1].append(line)
-
-        sections = [(k, "\n".join(v).strip()) for k, v in sections]
-
-        fields = {}
-        for k, v in sections:
-            if (k not in fields) and (k in signature.output_fields):
-                try:
-                    fields[k] = parse_value(v, signature.output_fields[k].annotation)
-                except Exception as e:
-                    raise AdapterParseError(
-                        adapter_name="ChatAdapter",
-                        signature=signature,
-                        lm_response=completion,
-                        message=f"Failed to parse field {k} with value {v} from the LM response. Error message: {e}",
-                    )
-        if fields.keys() != signature.output_fields.keys():
-            raise AdapterParseError(
-                adapter_name="ChatAdapter",
-                signature=signature,
-                lm_response=completion,
-                parsed_result=fields,
-            )
-
-        return fields
-
     def format_field_with_value(self, fields_with_values: dict[FieldInfoWithName, Any]) -> str:
         output = []
         for field, field_value in fields_with_values.items():
@@ -218,3 +139,20 @@ class ChatAdapter(Adapter):
         assistant_message = {"role": "assistant", "content": assistant_message_content}
         messages = system_user_messages + [assistant_message]
         return {"messages": messages}
+
+    # =====================================================================
+    # 2. Parsing Method: 주입받은 파서 전략을 활용하여 결과를 해석합니다.
+    # =====================================================================
+    def parse(self, signature: type[Signature], completion: str) -> dict[str, Any]:
+        try:
+            # 1차 시도: Markdown 정규식 파서
+            return self.primary_parser.parse(signature, completion)
+        except AdapterParseError as e:
+            # 2차 시도: 파싱이 실패하면 JSON 파서로 복구를 시도합니다 (Fallback)
+            # 이 과정은 오직 문자열을 재해석할 뿐, LLM을 다시 호출하지 않으므로 매우 빠릅니다.
+            if self.fallback_parser:
+                log.warning(f"Markdown parsing failed. Attempting JSON parsing fallback. Reason: {e.message}")
+                return self.fallback_parser.parse(signature, completion)
+            
+            # Fallback이 비활성화되어 있거나 Fallback마저 실패하면 에러를 던집니다.
+            raise e

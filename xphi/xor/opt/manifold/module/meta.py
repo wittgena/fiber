@@ -8,9 +8,9 @@ from bound.watcher.plane.tracker.history import pretty_print_history
 
 from arch.xor.manifold.sample import Sample
 from arch.xor.manifold.sample import Prediction
-from xphi.xor.opt.module.base import BaseModule
+from xphi.xor.opt.manifold.module.base import BaseModule
 from xphi.xor.opt.callback.base import with_callbacks
-from xphi.xor.opt.module.runner import ParallelRunner
+from xphi.xor.opt.manifold.module.runner import ParallelRunner
 
 from arch.contract.exp.nest import NestedAttr
 from watcher.plane.emitter import get_emitter
@@ -100,7 +100,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
             return await self.aforward(*args, **kwargs)
 
     def named_predictors(self):
-        from xphi.xor.opt.prompter.predict import Predict
+        from xphi.xor.opt.prompter import Predict
         return [(name, param) for name, param in self.named_parameters() if isinstance(param, Predict)]
 
     def predictors(self):
