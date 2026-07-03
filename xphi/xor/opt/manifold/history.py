@@ -1,5 +1,5 @@
-# xphi.xor.manifold.history
-## @lineage: xphi.xor.opt.manifold.history
+# xphi.xor.opt.manifold.history
+## @lineage: xphi.xor.manifold.history
 from typing import Any
 import pydantic
 

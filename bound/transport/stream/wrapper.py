@@ -32,7 +32,7 @@ from anchor.provider.legacy.types import Delta, CallTypes, GenericStreamingChunk
 
 from bound.channel.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from bound.channel.config.resolver import config
-from bound.channel.compat.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from bound.channel.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 
 from bound.channel.client.bridge.rule import Rules
 from bound.channel.client.action.task.executor import executor

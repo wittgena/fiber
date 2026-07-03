@@ -1,9 +1,10 @@
-# xphi.xor.opt.module.meta
+# xphi.xor.opt.manifold.module.meta
+## @lineage: xphi.xor.opt.module.meta
 import inspect
 from typing import Any, TextIO, TYPE_CHECKING
 
-from bound.channel.compat.switch.dsp.settings import settings
-from bound.channel.compat.switch.dsp.usage import track_usage
+from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.usage import track_usage
 from bound.watcher.plane.tracker.history import pretty_print_history
 
 from arch.xor.manifold.sample import Sample
@@ -63,7 +64,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
 
     @with_callbacks
     def __call__(self, *args, **kwargs) -> Prediction:
-        from bound.channel.compat.switch.dsp.settings import thread_local_overrides
+        from xphi.scope.dsp.context import thread_local_overrides
 
         caller_modules = settings.caller_modules or []
         caller_modules = list(caller_modules)
@@ -82,7 +83,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
 
     @with_callbacks
     async def acall(self, *args, **kwargs) -> Prediction:
-        from bound.channel.compat.switch.dsp.settings import thread_local_overrides
+        from xphi.scope.dsp.context import thread_local_overrides
 
         caller_modules = settings.caller_modules or []
         caller_modules = list(caller_modules)

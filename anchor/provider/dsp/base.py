@@ -7,7 +7,7 @@ import datetime
 import uuid
 from typing import Any, TextIO
 
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import settings
 from xphi.xor.opt.callback.base import with_callbacks
 from bound.watcher.plane.tracker.history import pretty_print_history
 from watcher.plane.emitter import get_emitter

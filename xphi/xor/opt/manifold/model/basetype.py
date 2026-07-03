@@ -1,4 +1,5 @@
-# bound.adapter.opt.basetype
+# xphi.xor.opt.manifold.model.basetype
+## @lineage: bound.adapter.opt.basetype
 ## @lineage: xphi.xor.opt.basetype
 import json
 import re
@@ -8,7 +9,7 @@ import pydantic
 from anchor.provider.dsp.base import BaseLM
 
 if TYPE_CHECKING:
-    from bound.channel.compat.switch.params import ModelResponseStream
+    from bound.channel.switch.params import ModelResponseStream
     from arch.xor.manifold.sign.signature import Signature
 
 CUSTOM_TYPE_START_IDENTIFIER = "<<CUSTOM-TYPE-START-IDENTIFIER>>"

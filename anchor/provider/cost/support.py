@@ -17,7 +17,7 @@ from anchor.provider.types import ProviderTypesSet
 from anchor.provider.cost.unit import generic_cost_per_token
 from bound.router.provider.locator import get_llm_provider
 from anchor.provider.model.token.counter import token_counter
-from bound.channel.compat.switch.params import ModelResponse, ModelResponseStream
+from bound.channel.switch.params import ModelResponse, ModelResponseStream
 
 from anchor.provider.legacy.openai.types import (
     HttpxBinaryResponseContent,

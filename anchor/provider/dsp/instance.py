@@ -1,6 +1,4 @@
 # anchor.provider.dsp.instance
-## @lineage: xphi.xor.dsp.llm.instance
-## @lineage: anchor.model.dsp.llm.instance
 import re
 import threading
 import warnings
@@ -13,7 +11,7 @@ from anchor.provider.dsp.training.base import Provider, ReinforceJob, TrainingJo
 from anchor.provider.dsp.delegator import DSPDelegator
 from anchor.surface.exception import ContextWindowExceededError
 
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import settings
 
 from anchor.provider.dsp.cache import request_cache
 from xphi.xor.opt.callback.base import BaseCallback

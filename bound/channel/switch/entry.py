@@ -1,4 +1,5 @@
-# bound.channel.compat.switch.entry
+# bound.channel.switch.entry
+## @lineage: bound.channel.compat.switch.entry
 ## @lineage: anchor.channel.compat.switch.entry
 ## @lineage: anchor.channel.switch.entry
 ## @lineage: anchor.switch.entry
@@ -9,7 +10,7 @@
 @tag: facade, execution-boundary, dynamic-routing
 """
 import os
-from bound.channel.compat.switch.params import LITELLM_CONVERT_SWITCH
+from bound.channel.switch.params import LITELLM_CONVERT_SWITCH
 
 if LITELLM_CONVERT_SWITCH:
     try:

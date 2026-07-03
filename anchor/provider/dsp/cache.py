@@ -16,7 +16,7 @@ from cachetools import LRUCache
 from diskcache import FanoutCache
 from bound.channel.config.resolver import config
 from watcher.plane.emitter import get_emitter
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import settings
 
 log = get_emitter(__name__)
 

@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
 from bound.channel.config.base import BaseConfig
-from bound.channel.compat.switch.params import ModelResponse
+from bound.channel.switch.params import ModelResponse
 from bound.channel.config.resolver import config
 
 from bound.channel.client.http import AsyncHTTPHandler, HTTPHandler, _get_httpx_client, get_async_httpx_client

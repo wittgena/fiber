@@ -23,7 +23,7 @@ from bound.channel.config.base import BaseConfig
 from anchor.surface.exception import BaseLLMException
 from bound.channel.config.resolver import config
 from bound.channel.config.constants import DEFAULT_MAX_RETRIES
-from bound.channel.compat.switch.params import ModelResponse, ModelResponseStream
+from bound.channel.switch.params import ModelResponse, ModelResponseStream
 
 from anchor.provider.types import ProviderTypes
 from anchor.provider.legacy.types import EmbeddingResponse

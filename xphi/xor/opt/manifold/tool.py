@@ -1,5 +1,5 @@
-# xphi.xor.manifold.tool
-## @lineage: xphi.xor.opt.manifold.tool
+# xphi.xor.opt.manifold.tool
+## @lineage: xphi.xor.manifold.tool
 import asyncio
 import inspect
 from typing import TYPE_CHECKING, Any, Callable, get_origin, get_type_hints
@@ -7,7 +7,7 @@ import pydantic
 from jsonschema import ValidationError, validate
 from pydantic import BaseModel, TypeAdapter, create_model
 
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import settings
 from xphi.xor.opt.manifold.model.basetype import Type
 from xphi.xor.opt.callback.base import with_callbacks
 

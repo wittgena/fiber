@@ -1,10 +1,11 @@
-# bound.channel.compat.switch.chat.adapter
+# bound.channel.switch.chat.adapter
+## @lineage: bound.channel.compat.switch.chat.adapter
 ## @lineage: anchor.channel.compat.switch.chat.adapter
 ## @lineage: anchor.channel.switch.chat.adapter
 ## @lineage: anchor.switch.chat.adapter
 from typing import AsyncGenerator, Protocol, Any
 from bound.channel.client.action.completion import acompletion
-from bound.channel.compat.switch.params import ModelResponse
+from bound.channel.switch.params import ModelResponse
 
 class SimpleMessage(dict):
     role: str

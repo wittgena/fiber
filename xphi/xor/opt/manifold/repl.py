@@ -1,5 +1,5 @@
-# xphi.xor.manifold.repl
-## @lineage: xphi.xor.opt.manifold.repl
+# xphi.xor.opt.manifold.repl
+## @lineage: xphi.xor.manifold.repl
 from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Iterator

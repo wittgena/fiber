@@ -1,9 +1,9 @@
-# xphi.xor.opt.module.runner
+# xphi.xor.opt.manifold.module.runner
+## @lineage: xphi.xor.opt.module.runner
 import threading
 from typing import Any
 
-from bound.channel.compat.switch.dsp.settings import settings
-from bound.channel.compat.switch.dsp.context import get_dspy_context_propagator
+from xphi.scope.dsp.context import settings, get_context_propagator
 
 from arch.xor.manifold.sample import Sample
 from arch.proto.wrapper.opt import OptExecutor
@@ -42,9 +42,6 @@ class ParallelRunner:
 
     def forward(self, exec_pairs: list[tuple[Any, Sample]], num_threads: int | None = None) -> list[Any]:
         num_threads = num_threads if num_threads is not None else self.num_threads
-
-        # Theoria의 순수한 OptExecutor에 공통 Context Propagator를 주입 (Dependency Injection)
-        # get_dspy_context_propagator()를 호출하여 생성된 lambda(팩토리)를 넘깁니다.
         executor = OptExecutor(
             num_threads=num_threads,
             max_errors=self.max_errors,
@@ -52,7 +49,7 @@ class ParallelRunner:
             disable_progress_bar=self.disable_progress_bar,
             timeout=self.timeout,
             straggler_limit=self.straggler_limit,
-            context_propagator=get_dspy_context_propagator()  # [핵심] 외부 모듈의 상태 전이 훅 주입
+            context_propagator=get_context_propagator()
         )
 
         def process_pair(pair):

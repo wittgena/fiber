@@ -1,12 +1,9 @@
-# bound.channel.compat.switch.dsp.usage
-## @lineage: anchor.channel.compat.switch.dsp.usage
-## @lineage: anchor.channel.switch.dsp.usage
-## @lineage: anchor.switch.dspy.usage
+# xphi.scope.dsp.usage
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Generator
 from pydantic import BaseModel
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import RunContext
 
 class UsageTracker:
     def __init__(self):
@@ -24,9 +21,9 @@ class UsageTracker:
     def _merge_usage_entries(
         self, usage_entry1: dict[str, Any] | None, usage_entry2: dict[str, Any] | None
     ) -> dict[str, Any]:
-        if usage_entry1 is None or len(usage_entry1) == 0:
-            return dict(usage_entry2)
-        if usage_entry2 is None or len(usage_entry2) == 0:
+        if not usage_entry1:
+            return dict(usage_entry2 or {})
+        if not usage_entry2:
             return dict(usage_entry1)
 
         result = dict(usage_entry2)
@@ -55,9 +52,15 @@ class UsageTracker:
 
 
 @contextmanager
-def track_usage() -> Generator[UsageTracker, None, None]:
-    """Context manager for tracking LM usage."""
+def track_usage(ctx: RunContext) -> Generator[UsageTracker, None, None]:
+    """
+    명시적으로 전달된 컨텍스트(ctx)에 UsageTracker를 주입하는 Context Manager입니다.
+    """
     tracker = UsageTracker()
-
-    with settings.context(usage_tracker=tracker):
+    original_tracker = ctx.usage_tracker
+    ctx.usage_tracker = tracker
+    
+    try:
         yield tracker
+    finally:
+        ctx.usage_tracker = original_tracker

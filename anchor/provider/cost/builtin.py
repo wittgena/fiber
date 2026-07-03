@@ -7,7 +7,7 @@ from bound.channel.config.resolver import config
 from bound.channel.config.constants import OPENAI_FILE_SEARCH_COST_PER_1K_CALLS
 from anchor.provider.legacy.openai.types import FileSearchTool, ResponsesAPIResponse, WebSearchOptions
 from anchor.provider.legacy.types import ModelInfo, SearchContextCostPerQuery, StandardBuiltInToolsParams, PromptTokensDetailsWrapper
-from bound.channel.compat.switch.params import Message, ModelResponse, Usage
+from bound.channel.switch.params import Message, ModelResponse, Usage
 
 class BuiltInToolCostTracker:
     """Helper class for tracking the cost of built-in tools"""

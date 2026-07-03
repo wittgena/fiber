@@ -18,7 +18,7 @@ from anchor.provider.legacy.openai.types import (
     ImageURLListItem,
     OpenAIModerationResponse,
 )
-from bound.channel.compat.switch.params import (
+from bound.channel.switch.params import (
     ChatCompletionDeltaToolCall,
     ChatCompletionRedactedThinkingBlock,
     CompletionTokensDetailsWrapper,
@@ -30,7 +30,7 @@ from bound.channel.compat.switch.params import (
     TranscriptionUsageDurationObject,
     TranscriptionUsageTokensObject,
 )
-from bound.channel.compat.switch.params import (
+from bound.channel.switch.params import (
     TextChoices,
     TextCompletionResponse,
     TranscriptionResponse,

@@ -1,4 +1,5 @@
-# bound.adapter.opt.model.reasoning
+# xphi.xor.opt.manifold.model.reasoning
+## @lineage: bound.adapter.opt.model.reasoning
 ## @lineage: xphi.xor.dsp.model.reasoning
 ## @lineage: xphi.reflect.dsp.model.reasoning
 from typing import TYPE_CHECKING, Any, Optional

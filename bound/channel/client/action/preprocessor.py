@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 from bound.channel.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from anchor.provider.legacy.types import EmbeddingResponse
-from bound.channel.compat.switch.params import ModelResponse
+from bound.channel.switch.params import ModelResponse
 from anchor.provider.legacy.types import all_litellm_params
 from bound.channel.config.resolver import config
 from anchor.provider.model.support import supports_httpx_timeout

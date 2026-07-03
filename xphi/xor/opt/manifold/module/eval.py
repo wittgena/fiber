@@ -1,4 +1,4 @@
-# xphi.xor.opt.module.eval
+# xphi.xor.opt.manifold.module.eval
 import csv
 import importlib
 import json
@@ -9,12 +9,11 @@ if TYPE_CHECKING:
 
 import tqdm
 
-from bound.channel.compat.switch.dsp.settings import settings
-from bound.channel.compat.switch.dsp.context import get_dspy_context_propagator
+from xphi.xor.opt.callback.base import with_callbacks
+from xphi.scope.dsp.context import settings, get_context_propagator
+
 from arch.xor.manifold.sample import Prediction
 from arch.xor.manifold.sample import Sample
-from xphi.xor.opt.callback.base import with_callbacks
-
 from arch.proto.wrapper.opt import OptExecutor
 from watcher.plane.emitter import get_emitter
 
@@ -120,14 +119,13 @@ class Evaluate:
 
         tqdm.tqdm._instances.clear()
 
-        # [핵심 변경] OptExecutor 직접 호출하되, 상태 전파기(Context Propagator)를 반드시 주입
         executor = OptExecutor(
             num_threads=num_threads,
             disable_progress_bar=not display_progress,
             max_errors=(self.max_errors if self.max_errors is not None else settings.max_errors),
             provide_traceback=self.provide_traceback,
             compare_results=True,
-            context_propagator=get_dspy_context_propagator()  # <-- DSPy 컨텍스트의 안전한 하위 스레드 주입
+            context_propagator=get_context_propagator()
         )
 
         def process_item(example):

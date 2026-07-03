@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from anchor.provider.cost.calculator import completion_cost
 from anchor.provider.legacy.types import CostPerToken, Usage
-from bound.channel.compat.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
+from bound.channel.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
 
 from bound.watcher.plane.metrics import Metrics
 

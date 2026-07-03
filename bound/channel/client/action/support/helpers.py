@@ -17,7 +17,7 @@ from bound.channel.config.resolver import config
 from anchor.provider.legacy.openai.types import AllMessageValues, OpenAIChatCompletionFinishReason
 if TYPE_CHECKING:
     from opentelemetry.trace import Span as _Span
-    from bound.channel.compat.switch.params import ModelResponseStream
+    from bound.channel.switch.params import ModelResponseStream
     Span = Union[_Span, Any]
 else:
     Span = Any

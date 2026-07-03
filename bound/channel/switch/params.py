@@ -1,4 +1,5 @@
-# bound.channel.compat.switch.params
+# bound.channel.switch.params
+## @lineage: bound.channel.compat.switch.params
 ## @lineage: anchor.channel.compat.switch.params
 """
 @phase: Type System Projection

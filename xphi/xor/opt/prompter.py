@@ -1,4 +1,5 @@
-# xphi.xor.opt.prompter.predict
+# xphi.xor.opt.prompter
+## @lineage: xphi.xor.opt.prompter.predict
 import random
 from typing import Any, Literal, get_args, get_origin
 from pydantic import BaseModel
@@ -8,7 +9,7 @@ from typeguard import TypeCheckError, check_type
 from anchor.provider.dsp.base import BaseLM
 from anchor.provider.dsp.instance import DSPInstance
 
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import settings
 from bound.adapter.opt.signature import SignatureAdapter
 
 from xphi.xor.opt.manifold.parameter import Parameter

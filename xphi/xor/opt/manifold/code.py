@@ -1,5 +1,5 @@
-# xphi.xor.manifold.code
-## @lineage: xphi.xor.opt.manifold.code
+# xphi.xor.opt.manifold.code
+## @lineage: xphi.xor.manifold.code
 ## @lineage: xphi.opt.manifold.code
 import re
 from typing import Any, ClassVar

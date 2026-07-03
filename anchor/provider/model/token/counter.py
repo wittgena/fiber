@@ -24,7 +24,7 @@ from anchor.provider.legacy.openai.types import (
     OpenAIMessageContent,
 )
 from anchor.provider.legacy.types import SelectTokenizerResponse
-from bound.channel.compat.switch.params import Message
+from bound.channel.switch.params import Message
 from bound.channel.config.resolver import config
 from bound.channel.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
 

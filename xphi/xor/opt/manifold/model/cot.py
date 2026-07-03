@@ -1,4 +1,5 @@
-# bound.adapter.opt.model.cot
+# xphi.xor.opt.manifold.model.cot
+## @lineage: bound.adapter.opt.model.cot
 from typing import Any
 from pydantic.fields import FieldInfo
 

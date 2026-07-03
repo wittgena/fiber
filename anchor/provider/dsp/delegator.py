@@ -1,6 +1,4 @@
 # anchor.provider.dsp.delegator
-## @lineage: xphi.xor.dsp.delegator
-## @lineage: anchor.model.dsp.delegator
 import os
 import pydantic
 from typing import Any, cast
@@ -10,7 +8,7 @@ from asyncer import syncify
 from bound.channel.client.action.completion import completion, acompletion
 from bound.channel.client.action.api.response import responses
 from bound.channel.client.action.api.aresponse import aresponses
-from bound.channel.compat.switch.dsp.settings import settings
+from xphi.scope.dsp.context import settings
 from bound.transport.stream.chunk.builder import stream_chunk_builder
 
 from watcher.plane.emitter import get_emitter

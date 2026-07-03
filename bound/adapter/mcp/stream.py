@@ -4,7 +4,7 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 from starlette.datastructures import Headers
 
-from bound.channel.compat.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
+from bound.channel.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
 from anchor.provider.legacy.openai.types import OutputItemDoneEvent
 from anchor.provider.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
 
