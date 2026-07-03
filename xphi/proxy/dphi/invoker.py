@@ -19,7 +19,7 @@ import atexit
 from typing import Callable, List, Dict, Any
 from pathlib import Path
 
-from arch.bound.sandbox.adapter import resolve_default_config
+from arch.bound.sandbox.adapter.config import resolve_default_config
 from arch.bound.sandbox.tunnel import TunnelFactory
 from arch.contract.interface import IEventBus, IPhaseAtor, IPhaseField 
 from arch.proto.event.psi import PsiEvent, PsiCarrier
@@ -74,13 +74,11 @@ class DPhiRuntime:
 
         pid = self.proc.pid
         try:
-            async def register_pid():
-                state_store = await TunnelFactory.get_isolated()
-                await state_store.sadd("system:xphi:pids", str(pid))
-                if hasattr(state_store, "aclose"):
-                    await state_store.aclose()
+            state_store = TunnelFactory.get_isolated_sync()
+            state_store.sadd("system:xphi:pids", str(pid))
+            if hasattr(state_store, "close"):
+                state_store.close()
                 
-            asyncio.run(register_pid())
             log.info(f"[bootstrap] Registered PID {pid} to State Store (system:xphi:pids)")
         except Exception as e:
             log.warning(f"[bootstrap] Failed to register PID to State Store (Continuing anyway): {e}")
@@ -88,10 +86,6 @@ class DPhiRuntime:
         log.info("[bootstrap] Waiting for resonance (3s)...")
         time.sleep(3)
 
-
-# ==========================================
-# 2. 통신 인프라 (EventBus & Receptor)
-# ==========================================
 class QueueEventBus(IEventBus):
     """@role: ψ-router (Queue-based asynchronous bus)"""
     def __init__(self, queue: asyncio.Queue):
@@ -212,7 +206,6 @@ class PhiConnector(IPhaseAtor):
                     
         except Exception as e:
             log.error(f"[Actuation Error] Xphi projection failed: {e}")
-
 
 class DummyPhaseField(IPhaseField):
     """

@@ -1,13 +1,11 @@
 # xphi.xor.opt.module.runner
-## @lineage: xphi.scope.module.runner
-## @lineage: bound.xor.scope.module.runner
-## @lineage: bound.scope.module.runner
 import threading
 from typing import Any
 
 from bound.channel.compat.switch.dsp.settings import settings
 from bound.channel.compat.switch.dsp.context import get_dspy_context_propagator
-from xphi.xor.opt.exam.example import Example
+
+from arch.xor.manifold.sample import Sample
 from arch.proto.wrapper.opt import OptExecutor
 
 class ParallelRunner:
@@ -42,7 +40,7 @@ class ParallelRunner:
         self.failed_examples = []
         self.exceptions = []
 
-    def forward(self, exec_pairs: list[tuple[Any, Example]], num_threads: int | None = None) -> list[Any]:
+    def forward(self, exec_pairs: list[tuple[Any, Sample]], num_threads: int | None = None) -> list[Any]:
         num_threads = num_threads if num_threads is not None else self.num_threads
 
         # Theoria의 순수한 OptExecutor에 공통 Context Propagator를 주입 (Dependency Injection)
@@ -61,7 +59,7 @@ class ParallelRunner:
             result = None
             module, example = pair
 
-            if isinstance(example, Example):
+            if isinstance(example, Sample):
                 if self.access_examples:
                     result = module(**example.inputs())
                 else:

@@ -1,9 +1,4 @@
 # xphi.agent.reflect.feature
-## @lineage: xphi.reflect.agent.feature
-## @lineage: bound.agent.reflector.feature
-## @lineage: xphi.agent.reflector.feature
-## @lineage: anchor.agent.reflector.feature
-## @lineage: agent.reflector.critic.taxonomy
 import math
 from typing import Any
 

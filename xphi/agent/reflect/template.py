@@ -34,17 +34,6 @@ def _get_cache_path(tokenizer_name: str) -> Path:
 def _fetch_tokenizer_config(
     tokenizer_name: str, use_cache: bool = True
 ) -> dict[str, Any]:
-    """
-    Fetch tokenizer_config.json from HuggingFace Hub.
-
-    Args:
-        tokenizer_name: The HuggingFace model/tokenizer name
-            (e.g., "Qwen/Qwen3-4B-Instruct-2507")
-        use_cache: Whether to use cached config if available
-
-    Returns:
-        The parsed tokenizer config dictionary
-    """
     cache_path = _get_cache_path(tokenizer_name)
 
     # Try to load from cache

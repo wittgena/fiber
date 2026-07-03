@@ -1,8 +1,8 @@
 # xphi.scope.surface.dphi
 from contextlib import ExitStack
 
-from xphi.xor.dsp.llm.local import LocalLM
-from xphi.xor.dsp.llm.instance import DSPInstance
+from anchor.provider.dsp.local import LocalLM
+from anchor.provider.dsp.instance import DSPInstance
 from bound.channel.compat.switch.dsp.settings import settings
 from xphi.scope.surface.config import BaseSurface, SurfaceConfig
 from xphi.scope.thch import thch_scope

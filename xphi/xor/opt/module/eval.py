@@ -1,8 +1,4 @@
 # xphi.xor.opt.module.eval
-## @lineage: xphi.scope.module.eval
-## @lineage: bound.xor.scope.module.eval
-## @lineage: bound.scope.module.eval
-## @lineage: meta.ops.evaluator.evaluate
 import csv
 import importlib
 import json
@@ -15,9 +11,9 @@ import tqdm
 
 from bound.channel.compat.switch.dsp.settings import settings
 from bound.channel.compat.switch.dsp.context import get_dspy_context_propagator
-from xphi.xor.opt.exam.prediction import Prediction
-from xphi.xor.opt.exam.example import Example
-from xphi.xor.dsp.handler.stream.callback import with_callbacks
+from arch.xor.manifold.sample import Prediction
+from arch.xor.manifold.sample import Sample
+from xphi.xor.opt.callback.base import with_callbacks
 
 from arch.proto.wrapper.opt import OptExecutor
 from watcher.plane.emitter import get_emitter

@@ -1,20 +1,15 @@
 # xphi.xor.opt.module.meta
-## @lineage: xphi.scope.module.meta
-## @lineage: bound.xor.scope.module.meta
-## @lineage: bound.scope.module.meta
 import inspect
 from typing import Any, TextIO, TYPE_CHECKING
 
 from bound.channel.compat.switch.dsp.settings import settings
 from bound.channel.compat.switch.dsp.usage import track_usage
-from xphi.xor.opt.exam.example import Example
-from xphi.xor.opt.exam.prediction import Prediction
-
-from xphi.xor.opt.module.base import BaseModule
 from bound.watcher.plane.tracker.history import pretty_print_history
 
-from xphi.xor.dsp.handler.stream.callback import with_callbacks
-
+from arch.xor.manifold.sample import Sample
+from arch.xor.manifold.sample import Prediction
+from xphi.xor.opt.module.base import BaseModule
+from xphi.xor.opt.callback.base import with_callbacks
 from xphi.xor.opt.module.runner import ParallelRunner
 
 from arch.contract.exp.nest import NestedAttr
@@ -140,7 +135,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
 
     def batch(
         self,
-        examples: list[Example],
+        examples: list[Sample],
         num_threads: int | None = None,
         max_errors: int | None = None,
         return_failed_examples: bool = False,
@@ -148,7 +143,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
         disable_progress_bar: bool = False,
         timeout: int = 120,
         straggler_limit: int = 3,
-    ) -> list[Example] | tuple[list[Example], list[Example], list[Exception]]:
+    ) -> list[Sample] | tuple[list[Sample], list[Sample], list[Exception]]:
         ## Create a list of execution pairs (self, example)
         exec_pairs = [(self, example.inputs()) for example in examples]
 

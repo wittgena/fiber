@@ -1,23 +1,23 @@
 # xphi.xor.opt.prompter.predict
-## @lineage: xphi.reflect.dsp.opt.predict
 import random
 from typing import Any, Literal, get_args, get_origin
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 from typeguard import TypeCheckError, check_type
 
-from xphi.xor.dsp.llm.base import BaseLM
-from xphi.xor.dsp.llm.instance import DSPInstance
-from bound.channel.compat.switch.dsp.settings import settings
+from anchor.provider.dsp.base import BaseLM
+from anchor.provider.dsp.instance import DSPInstance
 
-from xphi.xor.opt.chat import ChatAdapter
-from xphi.xor.opt.manifold.parameter import Parameter
-from xphi.xor.opt.exam.prediction import Prediction
-from xphi.xor.dsp.handler.stream.callback import BaseCallback
+from bound.channel.compat.switch.dsp.settings import settings
+from bound.adapter.opt.chat import ChatAdapter
+
+from xphi.xor.manifold.parameter import Parameter
+from arch.xor.manifold.sample import Prediction
+from xphi.xor.opt.callback.base import BaseCallback
 from xphi.xor.opt.module.meta import Module
 
-from phase.gov.proto.gate import uuid4
 from arch.xor.manifold.sign.signature import Signature, ensure_signature
+from phase.gov.proto.gate import uuid4
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

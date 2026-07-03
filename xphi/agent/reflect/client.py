@@ -1,9 +1,4 @@
 # xphi.agent.reflect.client
-## @lineage: xphi.reflect.agent.client
-## @lineage: bound.agent.reflector.client
-## @lineage: xphi.agent.reflector.client
-## @lineage: anchor.agent.reflector.client
-## @lineage: gov.bridge.tool.gate.client
 import copy
 from collections.abc import Sequence
 from typing import Any, cast
@@ -17,7 +12,6 @@ from pydantic import (
     field_validator,
 )
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
-
 from bound.channel.compat.switch.params import ChatCompletionToolParam
 from xphi.agent.reflect.template import ChatTemplateRenderer
 
@@ -56,31 +50,8 @@ class LabelProbMap(BaseModel):
     order: list[str] | None = None  # if you requested a specific order
     model_config = ConfigDict(extra="forbid")
 
-
-# ============================================================
-# CriticClient
-# ============================================================
-
-
 class CriticClient(BaseModel):
-    """
-    Core inference client for the Critic classification service.
-
-    Owns:
-      - Configuration (server URL, API key, model, tokenizer, etc.)
-      - Label space (for predictions only)
-      - Message normalization and chat template formatting
-      - Inference via vLLM /classify endpoint
-
-    Does NOT handle:
-      - Dataset loading
-      - Ground truth extraction
-      - Evaluation / metrics
-    """
-
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
-
-    # --- connection / model config ---
     server_url: str = Field(
         default="https://all-hands-ai--critic-qwen3-4b-serve.modal.run",
         description="Base URL of the vLLM classification service",

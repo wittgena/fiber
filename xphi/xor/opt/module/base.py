@@ -1,9 +1,4 @@
 # xphi.xor.opt.module.base
-## @lineage: xphi.scope.module.base
-## @lineage: bound.xor.scope.module.base
-## @lineage: bound.scope.module.base
-## @lineage: bound.module.base
-## @lineage: meta.watcher.scope.module.base
 import sys
 import copy
 import logging
@@ -12,6 +7,7 @@ from collections.abc import Generator
 from pathlib import Path
 import cloudpickle
 import orjson
+
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
@@ -33,7 +29,7 @@ class BaseModule:
         Unlike PyTorch, handles (non-recursive) lists of parameters too.
         """
 
-        from xphi.xor.opt.manifold.parameter import Parameter
+        from xphi.xor.manifold.parameter import Parameter
 
         visited = set()
         named_parameters = []

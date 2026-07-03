@@ -1,9 +1,4 @@
 # xphi.agent.reflect.metadata
-## @lineage: xphi.reflect.agent.metadata
-## @lineage: bound.agent.option.metadata
-## @lineage: xphi.agent.manager.option.metadata
-## @lineage: anchor.agent.manager.option.metadata
-## @lineage: agent.manager.option.metadata
 from __future__ import annotations
 from enum import Enum
 from pydantic import BaseModel
