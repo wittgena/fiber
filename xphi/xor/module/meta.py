@@ -1,9 +1,10 @@
-# xphi.xor.opt.manifold.module.meta
+# xphi.xor.module.meta
+## @lineage: xphi.xor.opt.manifold.module.meta
 ## @lineage: xphi.xor.opt.module.meta
 import inspect
 from typing import Any, TextIO, TYPE_CHECKING
 
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from xphi.scope.dsp.usage import track_usage
 from bound.watcher.plane.tracker.history import pretty_print_history
 
@@ -59,12 +60,12 @@ class Module(BaseModule, metaclass=ProgramMeta):
     def __call__(self, *args, **kwargs) -> Prediction:
         from xphi.scope.dsp.context import thread_local_overrides
 
-        caller_modules = settings.caller_modules or []
+        caller_modules = runtime.caller_modules or []
         caller_modules = list(caller_modules)
         caller_modules.append(self)
 
-        with settings.context(caller_modules=caller_modules):
-            if settings.track_usage and thread_local_overrides.get().get("usage_tracker") is None:
+        with runtime.bind(caller_modules=caller_modules):
+            if runtime.track_usage and thread_local_overrides.get().get("usage_tracker") is None:
                 with track_usage() as usage_tracker:
                     output = self.forward(*args, **kwargs)
                 tokens = usage_tracker.get_total_tokens()
@@ -78,12 +79,12 @@ class Module(BaseModule, metaclass=ProgramMeta):
     async def acall(self, *args, **kwargs) -> Prediction:
         from xphi.scope.dsp.context import _current_context
 
-        caller_modules = settings.caller_modules or []
+        caller_modules = runtime.caller_modules or []
         caller_modules = list(caller_modules)
         caller_modules.append(self)
 
-        with settings.context(caller_modules=caller_modules):
-            if settings.track_usage and _current_context.get().get("usage_tracker") is None:
+        with runtime.bind(caller_modules=caller_modules):
+            if runtime.track_usage and _current_context.get().get("usage_tracker") is None:
                 with track_usage() as usage_tracker:
                     output = await self.aforward(*args, **kwargs)
                     tokens = usage_tracker.get_total_tokens()

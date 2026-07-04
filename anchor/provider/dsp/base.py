@@ -7,7 +7,7 @@ import datetime
 import uuid
 from typing import Any, TextIO
 
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from xphi.xor.opt.callback.base import with_callbacks
 from bound.watcher.plane.tracker.history import pretty_print_history
 from watcher.plane.emitter import get_emitter
@@ -62,7 +62,7 @@ class BaseLM:
             log.error(f"🚨 ERROR in _process_lm_response: {e}", exc_info=True)
             raise e
 
-        if settings.disable_history:
+        if runtime.disable_history:
             return outputs
 
         ## Logging, with removed api key & where `cost` is None on cache hit.
@@ -175,7 +175,7 @@ class BaseLM:
         pretty_print_history(self.history, n, file=file)
 
     def update_history(self, entry):
-        if settings.disable_history:
+        if runtime.disable_history:
             return
 
         # Global LM history
@@ -184,18 +184,18 @@ class BaseLM:
 
         GLOBAL_HISTORY.append(entry)
 
-        if settings.max_history_size == 0:
+        if runtime.max_history_size == 0:
             return
 
-        if len(self.history) >= settings.max_history_size:
+        if len(self.history) >= runtime.max_history_size:
             self.history.pop(0)
 
         self.history.append(entry)
 
         # Per-module history
-        caller_modules = settings.caller_modules or []
+        caller_modules = runtime.caller_modules or []
         for module in caller_modules:
-            if len(module.history) >= settings.max_history_size:
+            if len(module.history) >= runtime.max_history_size:
                 module.history.pop(0)
             module.history.append(entry)
 

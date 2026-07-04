@@ -8,7 +8,7 @@ from asyncer import syncify
 from bound.channel.client.action.completion import completion, acompletion
 from bound.channel.client.action.api.response import responses
 from bound.channel.client.action.api.aresponse import aresponses
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from bound.transport.stream.chunk.builder import stream_chunk_builder
 
 from watcher.plane.emitter import get_emitter
@@ -32,8 +32,8 @@ class DSPDelegator:
         sync: bool = True,
         headers: dict[str, Any] | None = None,
     ):
-        stream = settings.send_stream
-        caller_predict = settings.caller_predict
+        stream = runtime.send_stream
+        caller_predict = runtime.caller_predict
 
         if stream is None:
             return None
@@ -42,7 +42,7 @@ class DSPDelegator:
         stream = cast(MemoryObjectSendStream, stream)
         caller_predict_id = id(caller_predict) if caller_predict else None
 
-        if settings.track_usage:
+        if runtime.track_usage:
             request["stream_options"] = {"include_usage": True}
 
         async def stream_completion(request: dict[str, Any], cache_kwargs: dict[str, Any]):

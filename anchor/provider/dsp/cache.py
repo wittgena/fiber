@@ -16,7 +16,7 @@ from cachetools import LRUCache
 from diskcache import FanoutCache
 from bound.channel.config.resolver import config
 from watcher.plane.emitter import get_emitter
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 
 log = get_emitter(__name__)
 
@@ -285,7 +285,7 @@ def configure_cache(
         memory_max_entries,
     )
     # Update the reference to point to the new cache
-    settings.cache = GATE_CACHE
+    runtime.cache = GATE_CACHE
 
 def _get_gate_cache():
     disk_cache_dir = os.environ.get("GATE_CACHEDIR") or os.path.join(Path.home(), ".gate_cache")

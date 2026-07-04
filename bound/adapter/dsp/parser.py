@@ -1,11 +1,12 @@
-# bound.adapter.opt.parser
+# bound.adapter.dsp.parser
+## @lineage: bound.adapter.opt.parser
 import re
 from typing import Any, Protocol
 import json_repair
 import regex
 
 from arch.xor.manifold.sign.signature import Signature
-from bound.adapter.opt.exception import AdapterParseError
+from bound.adapter.dsp.exception import AdapterParseError
 from xphi.xor.opt.formatter import parse_value
 from watcher.plane.emitter import get_emitter
 

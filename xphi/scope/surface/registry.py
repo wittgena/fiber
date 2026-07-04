@@ -1,3 +1,4 @@
+# xphi.scope.surface.registry
 import importlib
 from typing import Type
 from xphi.scope.surface.config import BaseSurface

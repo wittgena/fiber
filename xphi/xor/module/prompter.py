@@ -1,4 +1,5 @@
-# xphi.xor.opt.prompter
+# xphi.xor.module.prompter
+## @lineage: xphi.xor.opt.prompter
 import random
 from typing import Any, Literal, get_args, get_origin
 from pydantic import BaseModel
@@ -7,9 +8,9 @@ from typeguard import TypeCheckError, check_type
 
 from anchor.provider.dsp.base import BaseLM
 from anchor.provider.dsp.instance import DSPInstance
-from bound.adapter.opt.signature import SignatureAdapter
+from bound.adapter.dsp.signature import SignatureAdapter
 
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from xphi.xor.opt.manifold.parameter import Parameter
 from xphi.xor.opt.callback.base import BaseCallback
 from xphi.xor.module.meta import Module
@@ -115,7 +116,7 @@ class Predict(Module, Parameter):
         demos = kwargs.pop("demos", self.demos)
         config = {**self.config, **kwargs.pop("config", {})}
 
-        lm = kwargs.pop("lm", self.lm) or settings.lm
+        lm = kwargs.pop("lm", self.lm) or runtime.lm
         if lm is None:
             raise ValueError(
                 "No LM is loaded. Please configure the LM using `settings.configure(lm=settings.LM(...))`. e.g, "
@@ -164,7 +165,7 @@ class Predict(Module, Parameter):
             )
 
         # Validate input field types match signature
-        if settings.warn_on_type_mismatch:
+        if runtime.warn_on_type_mismatch:
             for field_name, field_info in signature.input_fields.items():
                 if field_name in kwargs:
                     value = kwargs[field_name]
@@ -194,16 +195,16 @@ class Predict(Module, Parameter):
 
     def _forward_postprocess(self, completions, signature, **kwargs):
         pred = Prediction.from_completions(completions, signature=signature)
-        if kwargs.pop("_trace", True) and settings.trace is not None and settings.max_trace_size > 0:
-            trace = settings.trace
-            if len(trace) >= settings.max_trace_size:
+        if kwargs.pop("_trace", True) and runtime.trace is not None and runtime.max_trace_size > 0:
+            trace = runtime.trace
+            if len(trace) >= runtime.max_trace_size:
                 trace.pop(0)
             trace.append((self, {**kwargs}, pred))
         return pred
 
     def _should_stream(self):
-        stream_listeners = settings.stream_listeners or []
-        should_stream = settings.send_stream is not None
+        stream_listeners = runtime.stream_listeners or []
+        should_stream = runtime.send_stream is not None
         if should_stream and len(stream_listeners) > 0:
             should_stream = any(stream_listener.predict == self for stream_listener in stream_listeners)
 
@@ -215,15 +216,15 @@ class Predict(Module, Parameter):
         
         lm, config, signature, demos, kwargs = self._forward_preprocess(**kwargs)
         log.debug(f"[Predict-{req_id}] ⚙️ Preprocess complete. LM: {type(lm).__name__}, Stream: {self._should_stream()}")
-        adapter = settings.adapter or SignatureAdapter()
+        adapter = runtime.adapter or SignatureAdapter()
 
         if self._should_stream():
             log.debug(f"[Predict-{req_id}] 🌊 Executing STREAMING adapter call...")
-            with settings.context(caller_predict=self):
+            with runtime.bind(caller_predict=self):
                 completions = adapter(lm, lm_kwargs=config, signature=signature, demos=demos, inputs=kwargs)
         else:
             log.debug(f"[Predict-{req_id}] ⚡ Executing STANDARD adapter call...")
-            with settings.context(send_stream=None):
+            with runtime.bind(send_stream=None):
                 completions = adapter(lm, lm_kwargs=config, signature=signature, demos=demos, inputs=kwargs)
 
         log.debug(f"[Predict-{req_id}] ✅ Adapter call completed. Initiating postprocess...")
@@ -239,14 +240,14 @@ class Predict(Module, Parameter):
         lm, config, signature, demos, kwargs = self._forward_preprocess(**kwargs)
         log.debug(f"[Predict-{req_id}] ⚙️ Preprocess complete. LM: {type(lm).__name__}, Stream: {self._should_stream()}")
 
-        adapter = settings.adapter or SignatureAdapter()
+        adapter = runtime.adapter or SignatureAdapter()
         if self._should_stream():
             log.debug(f"[Predict-{req_id}] 🌊 Executing ASYNC STREAMING adapter call...")
-            with settings.context(caller_predict=self):
+            with runtime.bind(caller_predict=self):
                 completions = await adapter.acall(lm, lm_kwargs=config, signature=signature, demos=demos, inputs=kwargs)
         else:
             log.debug(f"[Predict-{req_id}] ⚡ Executing ASYNC STANDARD adapter call...")
-            with settings.context(send_stream=None):
+            with runtime.bind(send_stream=None):
                 completions = await adapter.acall(lm, lm_kwargs=config, signature=signature, demos=demos, inputs=kwargs)
 
         log.debug(f"[Predict-{req_id}] ✅ Adapter acall completed. Initiating postprocess...")

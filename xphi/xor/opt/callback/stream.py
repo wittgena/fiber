@@ -4,7 +4,7 @@ import concurrent.futures
 from dataclasses import dataclass
 from typing import Any
 from asyncer import syncify
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from xphi.xor.opt.callback.base import BaseCallback
 
 @dataclass
@@ -71,7 +71,7 @@ class StatusStreamingCallback(BaseCallback):
         instance: Any,
         inputs: dict[str, Any],
     ):
-        stream = settings.send_stream
+        stream = runtime.send_stream
         if stream is None or instance.name == "finish":
             return
 
@@ -85,7 +85,7 @@ class StatusStreamingCallback(BaseCallback):
         outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
-        stream = settings.send_stream
+        stream = runtime.send_stream
         if stream is None or outputs == "Completed.":
             return
 
@@ -99,7 +99,7 @@ class StatusStreamingCallback(BaseCallback):
         instance: Any,
         inputs: dict[str, Any],
     ):
-        stream = settings.send_stream
+        stream = runtime.send_stream
         if stream is None:
             return
 
@@ -113,7 +113,7 @@ class StatusStreamingCallback(BaseCallback):
         outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
-        stream = settings.send_stream
+        stream = runtime.send_stream
         if stream is None:
             return
 
@@ -127,7 +127,7 @@ class StatusStreamingCallback(BaseCallback):
         instance: Any,
         inputs: dict[str, Any],
     ):
-        stream = settings.send_stream
+        stream = runtime.send_stream
         if stream is None:
             return
 
@@ -141,7 +141,7 @@ class StatusStreamingCallback(BaseCallback):
         outputs: dict[str, Any] | None,
         exception: Exception | None = None,
     ):
-        stream = settings.send_stream
+        stream = runtime.send_stream
         if stream is None:
             return
 

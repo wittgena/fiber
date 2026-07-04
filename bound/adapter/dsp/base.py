@@ -1,4 +1,5 @@
-# bound.adapter.opt.base
+# bound.adapter.dsp.base
+## @lineage: bound.adapter.opt.base
 ## @lineage: xphi.xor.dsp.adapter
 from typing import Any, get_origin
 import json_repair
@@ -7,7 +8,7 @@ from anchor.provider.dsp.base import BaseLM
 
 from xphi.xor.opt.manifold.model.basetype import Type
 from xphi.xor.opt.manifold.model.basetype import split_message_content_for_custom_types
-from bound.adapter.opt.exception import AdapterParseError
+from bound.adapter.dsp.exception import AdapterParseError
 
 from xphi.xor.opt.manifold.history import History
 from xphi.xor.opt.manifold.tool import Tool, ToolCalls

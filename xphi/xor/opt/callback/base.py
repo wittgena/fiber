@@ -148,8 +148,8 @@ def with_callbacks(fn):
 
     def _get_active_callbacks(instance):
         """Get combined global and instance-level callbacks."""
-        from xphi.scope.dsp.context import settings
-        return settings.get("callbacks", []) + getattr(instance, "callbacks", [])
+        from xphi.scope.dsp.context import runtime
+        return runtime.get("callbacks", []) + getattr(instance, "callbacks", [])
 
     if inspect.iscoroutinefunction(fn):
         @functools.wraps(fn)

@@ -1,3 +1,4 @@
+# xphi.scope.manager
 import asyncio
 from contextlib import asynccontextmanager, nullcontext
 from typing import Any, AsyncGenerator, Optional, Callable
@@ -6,9 +7,9 @@ from anchor.provider.dsp.local import LocalLM
 from anchor.provider.dsp.instance import DSPInstance
 
 from xphi.scope.surface.config import SurfaceConfig
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from xphi.scope.surface.registry import get_surface_class
-from xphi.scope.thch import thch_scope
+from bound.adapter.bridge.dsp.thch import folding_thch
 
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 from watcher.plane.emitter import get_emitter
@@ -82,8 +83,8 @@ async def managed_scope(**kwargs):
     facet_type = "logical" if config.surface_type == "local" else "infra"
     surface_name = manager.impl.__class__.__name__.replace("Surface", "").lower()
     
-    with settings.context(**dsp_kwargs):
-        with thch_scope() if use_thch else nullcontext():
+    with runtime.bind(**dsp_kwargs):
+        with folding_thch() if use_thch else nullcontext():
             async with scope_trace(name=surface_name, facet=facet_type):
                 log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
                 if use_thch:

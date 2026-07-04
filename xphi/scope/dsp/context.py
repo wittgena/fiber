@@ -9,7 +9,7 @@ from watcher.plane.emitter import get_emitter
 log = get_emitter("dsp.context")
 
 @dataclass
-class RunContext:
+class RuntimeContext:
     lm: Optional[Any] = None
     adapter: Optional[Any] = None
     rm: Optional[Any] = None
@@ -32,28 +32,25 @@ class RunContext:
     max_trace_size: int = 10000
     warn_on_type_mismatch: bool = True
 
-_default_context = RunContext()
-_current_context = contextvars.ContextVar("dsp_run_context", default=_default_context)
+_default_context = RuntimeContext()
+_current_context = contextvars.ContextVar("dsp_runtime_context", default=_default_context)
 
-class SettingsProxy:
+class RuntimeState:
     def __getattr__(self, name):
         ctx = _current_context.get()
         if hasattr(ctx, name):
             return getattr(ctx, name)
-        raise AttributeError(f"'SettingsProxy' object has no attribute '{name}'")
+        raise AttributeError(f"'RuntimeState' object has no attribute '{name}'")
 
     def __setattr__(self, name, value):
-        raise RuntimeError(
-            f"Direct assignment (settings.{name} = ...) is prohibited for thread safety. "
-            "Use `with settings.context(...)` instead."
-        )
+        raise RuntimeError("Use `with runtime.bind(...)` instead")
         
     def get(self, key, default=None):
         ctx = _current_context.get()
         return getattr(ctx, key, default)
 
     @contextmanager
-    def context(self, **kwargs):
+    def bind(self, **kwargs):
         current_ctx = _current_context.get()
         new_ctx = replace(current_ctx, **kwargs)
         token = _current_context.set(new_ctx)
@@ -91,11 +88,11 @@ class SettingsProxy:
             return cloudpickle.load(f)
 
 def get_context_propagator():
-    current_kwargs = settings._get_dict_safe()
+    current_kwargs = runtime._get_dict_safe()
     if current_kwargs.get("usage_tracker"):
         import copy
         current_kwargs["usage_tracker"] = copy.deepcopy(current_kwargs["usage_tracker"])
         
-    return lambda: settings.context(**current_kwargs)
+    return lambda: runtime.bind(**current_kwargs)
 
-settings = SettingsProxy()
+runtime = RuntimeState()

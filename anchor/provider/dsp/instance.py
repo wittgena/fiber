@@ -13,7 +13,7 @@ from anchor.provider.dsp.cache import request_cache
 from anchor.provider.dsp.training.format import TrainDataFormat
 from anchor.surface.exception import ContextWindowExceededError
 
-from xphi.scope.dsp.context import settings
+from xphi.scope.dsp.context import runtime
 from xphi.xor.opt.callback.base import BaseCallback
 
 from phase.gov.proto.gate import uuid4
@@ -163,8 +163,8 @@ class DSPInstance(BaseLM):
             raise e
 
         self._check_truncation(results)
-        if not getattr(results, "cache_hit", False) and settings.usage_tracker and hasattr(results, "usage"):
-            settings.usage_tracker.add_usage(self.model, dict(results.usage))
+        if not getattr(results, "cache_hit", False) and runtime.usage_tracker and hasattr(results, "usage"):
+            runtime.usage_tracker.add_usage(self.model, dict(results.usage))
         
         log.debug(f"[DSPInstance-{req_id}] 🏁 forward END")
         return results
@@ -214,8 +214,8 @@ class DSPInstance(BaseLM):
             raise e
 
         self._check_truncation(results)
-        if not getattr(results, "cache_hit", False) and settings.usage_tracker and hasattr(results, "usage"):
-            settings.usage_tracker.add_usage(self.model, dict(results.usage))
+        if not getattr(results, "cache_hit", False) and runtime.usage_tracker and hasattr(results, "usage"):
+            runtime.usage_tracker.add_usage(self.model, dict(results.usage))
         
         log.debug(f"[DSPInstance-{req_id}] 🏁 aforward END")
         return results

@@ -3,7 +3,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Generator
 from pydantic import BaseModel
-from xphi.scope.dsp.context import RunContext
+from xphi.scope.dsp.context import RuntimeContext, runtime
 
 class UsageTracker:
     def __init__(self):
@@ -50,17 +50,8 @@ class UsageTracker:
             total_usage_by_lm[lm] = total_usage
         return total_usage_by_lm
 
-
 @contextmanager
-def track_usage(ctx: RunContext) -> Generator[UsageTracker, None, None]:
-    """
-    명시적으로 전달된 컨텍스트(ctx)에 UsageTracker를 주입하는 Context Manager입니다.
-    """
+def track_usage() -> Generator[UsageTracker, None, None]:
     tracker = UsageTracker()
-    original_tracker = ctx.usage_tracker
-    ctx.usage_tracker = tracker
-    
-    try:
+    with runtime.bind(usage_tracker=tracker):
         yield tracker
-    finally:
-        ctx.usage_tracker = original_tracker

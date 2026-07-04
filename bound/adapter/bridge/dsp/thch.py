@@ -1,4 +1,5 @@
-# xphi.scope.thch
+# bound.adapter.bridge.dsp.thch
+## @lineage: bound.adapter.dsp.thch
 import sys
 import inspect
 from contextlib import contextmanager
@@ -58,8 +59,7 @@ class ThCh:
         return self._real_engine(**inputs)
 
 @contextmanager
-def thch_scope():
-    """@inversion.folding: 환경 격리 및 레거시 방어막"""
+def folding_thch():
     try:
         import xphi.xor.opt.manifold.model.cot as cot_module
     except ImportError:

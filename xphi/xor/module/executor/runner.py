@@ -1,9 +1,10 @@
-# xphi.xor.opt.manifold.module.runner
+# xphi.xor.module.executor.runner
+## @lineage: xphi.xor.opt.manifold.module.runner
 ## @lineage: xphi.xor.opt.module.runner
 import threading
 from typing import Any
 
-from xphi.scope.dsp.context import settings, get_context_propagator
+from xphi.scope.dsp.context import runtime, get_context_propagator
 
 from arch.xor.manifold.sample import Sample
 from arch.proto.wrapper.opt import OptExecutor
@@ -25,11 +26,11 @@ class ParallelRunner:
         straggler_limit: int = 3,
     ):
         super().__init__()
-        self.num_threads = num_threads or settings.num_threads
-        self.max_errors = settings.max_errors if max_errors is None else max_errors
+        self.num_threads = num_threads or runtime.num_threads
+        self.max_errors = runtime.max_errors if max_errors is None else max_errors
         self.access_examples = access_examples
         self.return_failed_examples = return_failed_examples
-        self.provide_traceback = provide_traceback if provide_traceback is not None else settings.provide_traceback
+        self.provide_traceback = provide_traceback if provide_traceback is not None else runtime.provide_traceback
         self.disable_progress_bar = disable_progress_bar
         self.timeout = timeout
         self.straggler_limit = straggler_limit
