@@ -1,5 +1,4 @@
 # xphi.agent.resolver.context
-## @lineage: agent.runtime.scope.context
 import asyncio
 import socket
 from typing import List, Optional, Tuple, Dict, Any, Type, Protocol
@@ -7,13 +6,13 @@ from typing import List, Optional, Tuple, Dict, Any, Type, Protocol
 from anchor.provider.model.tier.registry import model_tier_registry
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("runtime.context")
+log = get_emitter("resolver.context")
 
 class SchemeResolverProtocol(Protocol):
     def select(self, is_external: bool = False) -> Tuple[str, str]:
         ...
 
-class RuntimeContextResolver:
+class ContextResolver:
     """@desc: Diagnoses infrastructure state to determine optimal model architecture and Surface Scope parameters."""
     ULTIMATE_LOCAL_MODEL = "local-gemma-3"
 
@@ -58,7 +57,7 @@ class RuntimeContextResolver:
         scope_kwargs = {
             "use_proxy": use_proxy,
             "show_logs": True,
-            "dphi_model": resolved_model  
+            "model": resolved_model  
         }
         return scope_kwargs, resolved_model, use_proxy
 

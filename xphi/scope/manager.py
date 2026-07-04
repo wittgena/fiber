@@ -1,61 +1,19 @@
-# xphi.scope.manager
 import asyncio
-from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator
+from contextlib import asynccontextmanager, nullcontext
+from typing import Any, AsyncGenerator, Optional, Callable
+
+from anchor.provider.dsp.local import LocalLM
+from anchor.provider.dsp.instance import DSPInstance
 
 from xphi.scope.surface.config import SurfaceConfig
 from xphi.scope.dsp.context import settings
-from xphi.scope.surface.sandbox import SandboxSurface
 from xphi.scope.surface.registry import get_surface_class
+from xphi.scope.thch import thch_scope
 
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scope.manager")
-
-class ProxySurface(SandboxSurface):
-    def __init__(self, config: SurfaceConfig):
-        super().__init__(config)
-        self.host_url = config.server_url
-        self.workspace_ref = config.workspace_ref
-        self.session_api_key = config.session_api_key
-        self.process_name = "proxy.surface"
-        
-        self._engine: Optional[BaseEngine] = None
-        self.engine_factory: Callable[..., BaseEngine] = getattr(config, 'engine_factory', None)
-        if not self.engine_factory:
-            raise ValueError("[ProxySurface] BaseEngine 생성을 위한 engine_factory가 제공되지 않았습니다.")
-
-    def get_engine(self):
-        if not self._engine:
-            self._engine = self.engine_factory(
-                host_url=self.host_url, 
-                agent_usage="managed_context", 
-                workspace_ref=self.workspace_ref,
-                session_api_key=self.session_api_key
-            )
-        return lambda agent_usage: self._engine
-        
-    async def up(self):
-        log.info(f"[ProxySurface] Pre-flight checking to remote server at {self.host_url}")
-        engine_initializer = self.get_engine()
-        engine = engine_initializer(None)
-        
-        try:
-            health_response = await engine.health_check()
-            log.info(f"[ProxySurface] Remote Server Alive: {health_response.get('status', 'OK')}")
-        except Exception as e:
-            log.error(f"[ProxySurface] Remote Sandbox Pre-flight connection failed: {str(e)}")
-            raise ConnectionError(f"Cannot enter managed_scope. Target host unreachable: {e}")
-            
-        super().up()
-
-    async def down(self):
-        log.info(f"[ProxySurface] Cleaning up workspace communication resources...")
-        if self._engine:
-            await self._engine.close()
-        log.info(f"[ProxySurface] Disconnected safely from remote server.")
-        super().down()
 
 class SurfaceManager:
     def __init__(self, config: SurfaceConfig):
@@ -84,8 +42,24 @@ class SurfaceManager:
     def get_engine(self):
         return self.impl.get_engine()
 
+
+def _instantiate_lm(model_name: str) -> Optional[Any]:
+    """LM 엔진 인스턴스화 전담 팩토리"""
+    if not model_name:
+        return None
+    
+    is_local = model_name.startswith("local/") or model_name in ["local-gemma-3"]
+    if is_local:
+        log.debug(f"[managed_scope] ⚙️ Binding Local Engine: {model_name}")
+        return LocalLM(model=model_name)
+    else:
+        log.debug(f"[managed_scope] ⚙️ Binding Standard Engine: {model_name}")
+        return DSPInstance(model=model_name)
+
+
 @asynccontextmanager
 async def managed_scope(**kwargs):
+    use_thch = kwargs.pop("use_thch", False)
     surface_fields = {f for f in SurfaceConfig.__dataclass_fields__}
     surface_kwargs = {}
     dsp_kwargs = {}
@@ -96,21 +70,32 @@ async def managed_scope(**kwargs):
         else:
             dsp_kwargs[k] = v
 
+    target_model = dsp_kwargs.pop("model", None)
+    if target_model:
+        lm_instance = _instantiate_lm(target_model)
+        if lm_instance:
+            dsp_kwargs["lm"] = lm_instance
+
     config = SurfaceConfig(**surface_kwargs)
     manager = SurfaceManager(config)
     
-    facet_type = "logical" if config.surface_type == "dphi" else "infra"
+    facet_type = "logical" if config.surface_type == "local" else "infra"
     surface_name = manager.impl.__class__.__name__.replace("Surface", "").lower()
+    
     with settings.context(**dsp_kwargs):
-        async with scope_trace(name=surface_name, facet=facet_type):
-            log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
-            try:
-                await manager.up()
-                yield manager 
-            except Exception as e:
-                log.error(f"🚨 [managed_scope] 비즈니스 파이프라인 예외: {type(e).__name__} - {e}")
-                raise
-            finally:
-                log.info("[managed_scope] 인프라 자원 안전 회수 시퀀스 트리거")
-                await manager.down()
-                log.info("[+] Context Manager closed safely.")
+        with thch_scope() if use_thch else nullcontext():
+            async with scope_trace(name=surface_name, facet=facet_type):
+                log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
+                if use_thch:
+                    log.info("[managed_scope] 🌉 ThCh Meta-Compilation Bridge Activated.")
+                
+                try:
+                    await manager.up()
+                    yield manager 
+                except Exception as e:
+                    log.error(f"🚨 [managed_scope] pipeline exception: {type(e).__name__} - {e}")
+                    raise
+                finally:
+                    log.info("[managed_scope] 인프라 자원 안전 회수 시퀀스 트리거")
+                    await manager.down()
+                    log.info("[+] Context Manager closed safely.")

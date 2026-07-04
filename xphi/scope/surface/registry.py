@@ -5,7 +5,7 @@ from xphi.scope.surface.config import BaseSurface
 SURFACE_REGISTRY = {
     "local": "xphi.scope.surface.local.LocalSurface",
     "sandbox": "xphi.scope.surface.sandbox.SandboxSurface",
-    "dphi": "xphi.scope.surface.dphi.DphiSurface",
+    "proxy": "xphi.scope.surface.proxy.ProxySurface"
 }
 
 def get_surface_class(surface_type: str) -> Type[BaseSurface]:

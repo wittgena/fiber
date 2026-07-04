@@ -9,13 +9,12 @@ from anchor.provider.model.support import supports_function_calling, supports_re
 from anchor.provider.dsp.training.openai import OpenAIProvider
 from anchor.provider.dsp.training.base import Provider, ReinforceJob, TrainingJob
 from anchor.provider.dsp.delegator import DSPDelegator
+from anchor.provider.dsp.cache import request_cache
+from anchor.provider.dsp.training.format import TrainDataFormat
 from anchor.surface.exception import ContextWindowExceededError
 
 from xphi.scope.dsp.context import settings
-
-from anchor.provider.dsp.cache import request_cache
 from xphi.xor.opt.callback.base import BaseCallback
-from anchor.provider.dsp.training.format import TrainDataFormat
 
 from phase.gov.proto.gate import uuid4
 from watcher.plane.emitter import get_emitter
@@ -296,11 +295,18 @@ class DSPInstance(BaseLM):
         return {key: getattr(self, key) for key in state_keys} | filtered_kwargs
 
     def _check_truncation(self, results):
-        if self.model_type != "responses" and any(c.finish_reason == "length" for c in results.get("choices", [])):
-            log.warning(
-                f"LM response was truncated due to exceeding max_tokens={self.kwargs.get('max_tokens')}. "
-                "You can inspect the latest LM interactions with `inspect_history()`. "
-                "To avoid truncation, consider passing a larger max_tokens when setting up settings.LM. "
-                f"You may also consider increasing the temperature (currently {self.kwargs.get('temperature')}) "
-                " if the reason for truncation is repetition."
+        if self.model_type != "responses":
+            choices = results.get("choices", []) if isinstance(results, dict) else getattr(results, "choices", [])
+            has_length_truncation = any(
+                (c.get("finish_reason") if isinstance(c, dict) else getattr(c, "finish_reason", None)) == "length" 
+                for c in choices
             )
+
+            if has_length_truncation:
+                log.warning(
+                    f"LM response was truncated due to exceeding max_tokens={self.kwargs.get('max_tokens')}. "
+                    "You can inspect the latest LM interactions with `inspect_history()`. "
+                    "To avoid truncation, consider passing a larger max_tokens when setting up settings.LM. "
+                    f"You may also consider increasing the temperature (currently {self.kwargs.get('temperature')}) "
+                    " if the reason for truncation is repetition."
+                )

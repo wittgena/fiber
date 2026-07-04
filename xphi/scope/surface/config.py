@@ -21,8 +21,8 @@ def get_free_port(starting_port: int, max_port: int = 8999) -> int:
 
 @dataclass
 class SurfaceConfig:
-    surface_type: str = "local" # 'local', 'sandbox', 'dphi' 등을 직접 지정
-    dphi_model: str = "local-gemma-3"
+    surface_type: str = "local"
+    # model: str = "local-gemma-3"
     
     ## 네트워크 및 포트 설정
     host: str = "0.0.0.0"

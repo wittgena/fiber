@@ -1,5 +1,4 @@
 # bound.adapter.opt.signature
-## @lineage: bound.adapter.opt.chat
 import textwrap
 from typing import Any, NamedTuple
 from pydantic.fields import FieldInfo
@@ -140,19 +139,11 @@ class SignatureAdapter(Adapter):
         messages = system_user_messages + [assistant_message]
         return {"messages": messages}
 
-    # =====================================================================
-    # 2. Parsing Method: 주입받은 파서 전략을 활용하여 결과를 해석합니다.
-    # =====================================================================
     def parse(self, signature: type[Signature], completion: str) -> dict[str, Any]:
         try:
-            # 1차 시도: Markdown 정규식 파서
             return self.primary_parser.parse(signature, completion)
         except AdapterParseError as e:
-            # 2차 시도: 파싱이 실패하면 JSON 파서로 복구를 시도합니다 (Fallback)
-            # 이 과정은 오직 문자열을 재해석할 뿐, LLM을 다시 호출하지 않으므로 매우 빠릅니다.
             if self.fallback_parser:
-                log.warning(f"Markdown parsing failed. Attempting JSON parsing fallback. Reason: {e.message}")
+                log.warning(f"Markdown parsing failed. Attempting JSON parsing fallback. Reason: {str(e)}")
                 return self.fallback_parser.parse(signature, completion)
-            
-            # Fallback이 비활성화되어 있거나 Fallback마저 실패하면 에러를 던집니다.
             raise e

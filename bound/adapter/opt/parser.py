@@ -11,7 +11,6 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
-
 class OutputParser(Protocol):
     """Adapter의 텍스트 파싱을 전담하는 프로토콜(인터페이스)"""
     def parse(self, signature: type[Signature], completion: str) -> dict[str, Any]:
