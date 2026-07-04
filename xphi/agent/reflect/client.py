@@ -50,7 +50,7 @@ class LabelProbMap(BaseModel):
     order: list[str] | None = None  # if you requested a specific order
     model_config = ConfigDict(extra="forbid")
 
-class CriticClient(BaseModel):
+class ReflectorClient(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="ignore")
     server_url: str = Field(
         default="https://all-hands-ai--critic-qwen3-4b-serve.modal.run",
@@ -76,11 +76,8 @@ class CriticClient(BaseModel):
         default=True, description="Whether the model predicts success label at index 0"
     )
 
-    # --- runtime fields ---
     _client: httpx.Client = PrivateAttr(default_factory=httpx.Client)
     _template_renderer: ChatTemplateRenderer | None = PrivateAttr(default=None)
-
-    # --- label space ---
     sentiment_labels: tuple[str, ...] = (
         "sentiment_positive",
         "sentiment_neutral",
@@ -121,9 +118,6 @@ class CriticClient(BaseModel):
         "Negative": "sentiment_negative",
     }
 
-    # ---------------------
-    # Validation
-    # ---------------------
     @field_validator("api_key", mode="before")
     @classmethod
     def _validate_and_convert_api_key(cls, v: str | SecretStr) -> SecretStr:
@@ -138,9 +132,6 @@ class CriticClient(BaseModel):
 
         return SecretStr(secret_value) if isinstance(v, str) else v
 
-    # ---------------------
-    # Label helpers
-    # ---------------------
     @property
     def all_labels(self) -> tuple[str, ...]:
         base_labels = (
@@ -153,9 +144,6 @@ class CriticClient(BaseModel):
             return ("success",) + base_labels
         return base_labels
 
-    # ---------------------
-    # Tokenizer / formatting
-    # ---------------------
     def _get_template_renderer(self) -> ChatTemplateRenderer:
         """Lazily initialize the chat template renderer."""
         if self._template_renderer is None:
@@ -189,8 +177,6 @@ class CriticClient(BaseModel):
     ) -> str:
         renderer = self._get_template_renderer()
         msgs = self.normalize_messages(copy.deepcopy(messages))
-        # Cast tools to Sequence[dict[str, Any]] for type compatibility
-        # ChatCompletionToolParam is a TypedDict which is structurally compatible
         tools_dicts: Sequence[dict[str, Any]] | None = (
             cast(Sequence[dict[str, Any]], tools) if tools is not None else None
         )
@@ -200,9 +186,6 @@ class CriticClient(BaseModel):
             )
         return renderer.apply_chat_template(msgs, add_generation_prompt=False)
 
-    # ---------------------
-    # Inference
-    # ---------------------
     def classify_trace(
         self,
         messages: Sequence[dict],
@@ -219,11 +202,9 @@ class CriticClient(BaseModel):
 
         @retry(
             retry=retry_if_exception(should_retry),
-            stop=stop_after_attempt(3),  # up to 3 tries
-            wait=wait_exponential(
-                multiplier=1, min=1, max=8
-            ),  # exponential backoff: 1s, 2s, 4s, 8s
-            reraise=True,  # re-raise the last exception if all retries fail
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=1, max=8),
+            reraise=True,
         )
         def _post_with_retry():
             api_key_value = (
@@ -246,16 +227,7 @@ class CriticClient(BaseModel):
         resp = _post_with_retry()
         return ClassificationResponse.model_validate(resp.json())
 
-    # ---------------------
-    # Post-processing helpers
-    # ---------------------
     def extract_prob_map(self, response: ClassificationResponse) -> LabelProbMap:
-        """
-        Server format (flat-only, strict):
-          response.data == [ ClassificationItem(probs=[p0, p1, ..., pN-1],
-                            num_classes=N) ]
-        We align probs directly to self.all_labels (same length, same order).
-        """
         if not response.data:
             raise ValueError("empty response.data from server")
 

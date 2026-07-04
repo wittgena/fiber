@@ -1,12 +1,12 @@
 # xphi.proxy.dphi.invoker
 """
-@desc: Phase Invoker (Action & Perception Orchestrator)
+@desc: Phase Invoker - Action & Perception Orchestrator
 @flow:
-  [Sense]   Ψ (Event ingress via Tunnel) ↦ EventBus
-  [Eval]    EventBus ↦ Φ (Connector/Projector)
-  [Action]  Φ ↦ SurfaceClient.stream_job (HTTP Dispatch)
-  [Listen]  SurfaceClient.stream_job ↦ MQ Result (without threads)
-  [Reentry] Ψ′ ↦ State mutation or Re-entry
+-> sense: Ψ (Event ingress via Tunnel) ↦ EventBus
+-> eval: EventBus ↦ Φ (Connector/Projector)
+-> action: Φ ↦ SurfaceClient.stream_job (HTTP Dispatch)
+-> listen: SurfaceClient.stream_job ↦ MQ Result (without threads)
+-> reentry: Ψ′ ↦ State mutation or Re-entry
 """
 import asyncio
 import os
@@ -280,7 +280,7 @@ async def mock_stimulus_injector():
 
 async def main():
     invoker_loop = Loop()
-    log.info("Starting Invoker Matrix with Concurrent Testing Harness...")
+    log.info("Starting Invoker Matrix with Concurrent Test...")
     tasks = [
         asyncio.create_task(invoker_loop.run()),
         asyncio.create_task(mock_stimulus_injector())
