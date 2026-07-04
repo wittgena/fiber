@@ -9,9 +9,9 @@ from bound.watcher.plane.tracker.history import pretty_print_history
 
 from arch.xor.manifold.sample import Sample
 from arch.xor.manifold.sample import Prediction
-from xphi.xor.opt.manifold.module.base import BaseModule
+from xphi.xor.module.base import BaseModule
 from xphi.xor.opt.callback.base import with_callbacks
-from xphi.xor.opt.manifold.module.runner import ParallelRunner
+from xphi.xor.module.executor.runner import ParallelRunner
 
 from arch.contract.exp.nest import NestedAttr
 from watcher.plane.emitter import get_emitter
@@ -19,17 +19,11 @@ from watcher.plane.emitter import get_emitter
 log = get_emitter('module.meta')
 
 class ProgramMeta(type):
-    """Metaclass ensuring every ``Module`` instance is properly initialised."""
-
     def __call__(cls, *args, **kwargs):
-        ## Create the instance without invoking ``__init__`` so we can inject the base initialization beforehand.
         obj = cls.__new__(cls, *args, **kwargs)
         if isinstance(obj, cls):
-            ## ``_base_init`` sets attributes that should exist on all modules even when a subclass forgets to call ``super().__init__``.
             Module._base_init(obj)
             cls.__init__(obj, *args, **kwargs)
-
-            ## Guarantee existence of critical attributes if ``__init__`` didn't create them.
             if not hasattr(obj, "callbacks"):
                 obj.callbacks = []
             if not hasattr(obj, "history"):
@@ -46,7 +40,6 @@ class Module(BaseModule, metaclass=ProgramMeta):
     def __init__(self, callbacks=None):
         self.callbacks = callbacks or []
         self._compiled = False
-        # LM calling history of the module.
         self.history = []
 
     def __getstate__(self):
@@ -101,7 +94,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
             return await self.aforward(*args, **kwargs)
 
     def named_predictors(self):
-        from xphi.xor.opt.prompter import Predict
+        from xphi.xor.module.prompter import Predict
         return [(name, param) for name, param in self.named_parameters() if isinstance(param, Predict)]
 
     def predictors(self):
@@ -145,10 +138,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
         timeout: int = 120,
         straggler_limit: int = 3,
     ) -> list[Sample] | tuple[list[Sample], list[Sample], list[Exception]]:
-        ## Create a list of execution pairs (self, example)
         exec_pairs = [(self, example.inputs()) for example in examples]
-
-        ## Create an instance of Parallel
         parallel_executor = ParallelRunner(
             num_threads=num_threads,
             max_errors=max_errors,
@@ -159,7 +149,6 @@ class Module(BaseModule, metaclass=ProgramMeta):
             straggler_limit=straggler_limit,
         )
 
-        ## Execute the forward method of Parallel
         if return_failed_examples:
             results, failed_examples, exceptions = parallel_executor.forward(exec_pairs)
             return results, failed_examples, exceptions
@@ -168,10 +157,6 @@ class Module(BaseModule, metaclass=ProgramMeta):
             return results
 
     def _set_lm_usage(self, tokens: dict[str, Any], output: Any):
-        # Some optimizers (e.g., GEPA bootstrap tracing) temporarily patch
-        # module.forward to return a tuple: (prediction, trace).
-        # When usage tracking is enabled, ensure we attach usage to the
-        # prediction object if present.
         prediction_in_output = None
         if isinstance(output, Prediction):
             prediction_in_output = output
@@ -185,7 +170,6 @@ class Module(BaseModule, metaclass=ProgramMeta):
     def __getattribute__(self, name):
         attr = super().__getattribute__(name)
         if name == "forward" and callable(attr):
-            ## Check if forward is called through __call__ or directly
             stack = inspect.stack()
             forward_called_directly = len(stack) <= 1 or stack[1].function != "__call__"
             if forward_called_directly:

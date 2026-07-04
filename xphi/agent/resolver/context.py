@@ -58,7 +58,6 @@ class RuntimeContextResolver:
         scope_kwargs = {
             "use_proxy": use_proxy,
             "show_logs": True,
-            "use_dphi": True,
             "dphi_model": resolved_model  
         }
         return scope_kwargs, resolved_model, use_proxy

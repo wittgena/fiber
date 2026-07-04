@@ -1,17 +1,14 @@
 # xphi.scope.surface.local
-## @lineage: bound.xor.scope.surface.local
-## @lineage: bound.scope.surface.local
-## @lineage: gov.bridge.scope.surface.local
 import time
 from xphi.scope.surface.config import BaseSurface, SurfaceConfig
-
 from phase.bind.client.engine.local import LLMEngine
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("surface.local")
 
 class LocalSurface(BaseSurface):
-    def __init__(self):
+    def __init__(self, config: SurfaceConfig):
+        self.config = config
         self.engine = LLMEngine()
 
     def up(self):
@@ -22,7 +19,7 @@ class LocalSurface(BaseSurface):
         try:
             time.sleep(2) 
             ready = True
-        except Exception as e:  # Fixed: Catching the exception explicitly to use 'e'
+        except Exception as e:
             log.debug(f"[-] Wait interrupted during Local Surface init: {e}")
 
         if not ready:

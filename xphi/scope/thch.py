@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from typing import Any, Type
 from pydantic import BaseModel
 
-from xphi.xor.opt.manifold.module.meta import Module
+from xphi.xor.module.meta import Module
 from xphi.xor.opt.manifold.model.cot import ChainOfThought 
 
 from arch.xor.manifold.sign.field import InputField, OutputField

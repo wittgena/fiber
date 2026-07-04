@@ -1,5 +1,4 @@
 # xphi.xor.opt.prompter
-## @lineage: xphi.xor.opt.prompter.predict
 import random
 from typing import Any, Literal, get_args, get_origin
 from pydantic import BaseModel
@@ -8,15 +7,14 @@ from typeguard import TypeCheckError, check_type
 
 from anchor.provider.dsp.base import BaseLM
 from anchor.provider.dsp.instance import DSPInstance
-
-from xphi.scope.dsp.context import settings
 from bound.adapter.opt.signature import SignatureAdapter
 
+from xphi.scope.dsp.context import settings
 from xphi.xor.opt.manifold.parameter import Parameter
-from arch.xor.manifold.sample import Prediction
 from xphi.xor.opt.callback.base import BaseCallback
-from xphi.xor.opt.manifold.module.meta import Module
+from xphi.xor.module.meta import Module
 
+from arch.xor.manifold.sample import Prediction
 from arch.xor.manifold.sign.signature import Signature, ensure_signature
 from phase.gov.proto.gate import uuid4
 from watcher.plane.emitter import get_emitter

@@ -5,27 +5,26 @@ from typing import Any, AsyncGenerator
 
 from xphi.scope.surface.config import SurfaceConfig
 from xphi.scope.dsp.context import settings
-from xphi.scope.surface.local import LocalSurface
-from xphi.scope.surface.sandbox import CoreSandboxSurface
-from xphi.scope.surface.dphi import DphiSurface
+from xphi.scope.surface.sandbox import SandboxSurface
+from xphi.scope.surface.registry import get_surface_class
 
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scope.manager")
 
-class SandboxSurface(CoreSandboxSurface):
+class ProxySurface(SandboxSurface):
     def __init__(self, config: SurfaceConfig):
         super().__init__(config)
         self.host_url = config.server_url
         self.workspace_ref = config.workspace_ref
         self.session_api_key = config.session_api_key
-        self.process_name = "sandbox.surface.remote"
+        self.process_name = "proxy.surface"
         
         self._engine: Optional[BaseEngine] = None
         self.engine_factory: Callable[..., BaseEngine] = getattr(config, 'engine_factory', None)
         if not self.engine_factory:
-            raise ValueError("[SandboxSurface] BaseEngine 생성을 위한 engine_factory가 제공되지 않았습니다.")
+            raise ValueError("[ProxySurface] BaseEngine 생성을 위한 engine_factory가 제공되지 않았습니다.")
 
     def get_engine(self):
         if not self._engine:
@@ -38,37 +37,37 @@ class SandboxSurface(CoreSandboxSurface):
         return lambda agent_usage: self._engine
         
     async def up(self):
-        log.info(f"[SandboxSurface] Pre-flight checking to remote server at {self.host_url}")
+        log.info(f"[ProxySurface] Pre-flight checking to remote server at {self.host_url}")
         engine_initializer = self.get_engine()
         engine = engine_initializer(None)
         
         try:
             health_response = await engine.health_check()
-            log.info(f"[SandboxSurface] Remote Server Alive: {health_response.get('status', 'OK')}")
+            log.info(f"[ProxySurface] Remote Server Alive: {health_response.get('status', 'OK')}")
         except Exception as e:
-            log.error(f"[SandboxSurface] Remote Sandbox Pre-flight connection failed: {str(e)}")
+            log.error(f"[ProxySurface] Remote Sandbox Pre-flight connection failed: {str(e)}")
             raise ConnectionError(f"Cannot enter managed_scope. Target host unreachable: {e}")
             
         super().up()
 
     async def down(self):
-        log.info(f"[SandboxSurface] Cleaning up workspace communication resources...")
+        log.info(f"[ProxySurface] Cleaning up workspace communication resources...")
         if self._engine:
             await self._engine.close()
-        log.info(f"[SandboxSurface] Disconnected safely from remote server.")
+        log.info(f"[ProxySurface] Disconnected safely from remote server.")
         super().down()
 
 class SurfaceManager:
-    """인프라 자원의 수명주기를 관리하는 매니저 (DSP 논리 설정 배제)"""
     def __init__(self, config: SurfaceConfig):
         self.config = config
-        
-        if getattr(config, "use_proxy", False):
-            self.impl = SandboxSurface(config)
-        elif getattr(config, "use_dphi", False):
-            self.impl = DphiSurface(config)
-        else:
-            self.impl = LocalSurface()
+        surface_type = getattr(config, "surface_type", "local")
+        try:
+            surface_class = get_surface_class(surface_type)
+        except (ImportError, AttributeError, ValueError) as e:
+            log.warning(f"🚨 '{surface_type}' Surface 로드 실패: {e}. 기본 'local' 환경으로 Fallback 합니다.")
+            surface_class = get_surface_class("local")
+            
+        self.impl = surface_class(config)
 
     async def up(self):
         if asyncio.iscoroutinefunction(self.impl.up):
@@ -100,7 +99,7 @@ async def managed_scope(**kwargs):
     config = SurfaceConfig(**surface_kwargs)
     manager = SurfaceManager(config)
     
-    facet_type = "logical" if config.use_dphi else "infra"
+    facet_type = "logical" if config.surface_type == "dphi" else "infra"
     surface_name = manager.impl.__class__.__name__.replace("Surface", "").lower()
     with settings.context(**dsp_kwargs):
         async with scope_trace(name=surface_name, facet=facet_type):
