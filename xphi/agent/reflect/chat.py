@@ -37,8 +37,6 @@ def select_chat_options(
     # Reasoning-model quirks
     supports_reasoning_effort = get_features(llm.model).supports_reasoning_effort
     if supports_reasoning_effort:
-        # LiteLLM automatically handles reasoning_effort for all models, including
-        # Claude Opus 4.5 (maps to output_config and adds beta header automatically)
         if llm.reasoning_effort is not None:
             out["reasoning_effort"] = llm.reasoning_effort
 
@@ -80,7 +78,7 @@ def select_chat_options(
         out["prompt_cache_retention"] = llm.prompt_cache_retention
 
     # Pass through user-provided extra_body unchanged
-    if llm.litellm_extra_body:
-        out["extra_body"] = llm.litellm_extra_body
+    if llm.brane_extra_body:
+        out["extra_body"] = llm.brane_extra_body
 
     return out
