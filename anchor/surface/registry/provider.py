@@ -16,8 +16,8 @@ from anchor.provider.types import ProviderTypes
 
 log = get_emitter("registry.provider")
 
-IO_ROOT = Path(resolve_path("io"))
-REGISTRY_DIR = IO_ROOT / "llms" / "registry"
+CONTRACT_ROOT = resolve_path("contract")
+REGISTRY_DIR = CONTRACT_ROOT / "registry" / "llms"
 
 # ==========================================
 # 1. 원격/로컬 JSON 백업 및 파싱

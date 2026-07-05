@@ -1,7 +1,5 @@
 # bound.watcher.audit.warden
-## @lineage: bound.audit.warden
 """
-@lineage: bound.audit.warden
 @desc: 
 - CPython Runtime Audit Hook (PEP 578) based outbound control module.
 - Monitors runtime events based on externally injected security policies and permanently records them to the immutable Merkle-backed store

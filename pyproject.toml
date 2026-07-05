@@ -9,39 +9,30 @@ description = "The Universal Integration Boundary for heterogeneous AI ecosystem
 readme = "README.md"
 requires-python = ">=3.10"
 
-## @desc: Essential core packages for system bootstrap, transport, and foundational data structures.
-## @invariant: Must maintain zero-dependency on external LLM providers to preserve core isolation.
 dependencies = [
-    "uvloop", 
-    "fastapi", 
-    "redis", 
-    "trio", 
-    "networkx", 
-    "pyyaml", 
-    "watchdog", 
-    "rocksdict", 
-    "transformers", 
-    "libcst", 
-    "datamodel-code-generator", 
-    "acp", 
-    "mcp==2.0.0a3", 
-    "tyro",
-    "pydantic",
-    "httpx"
+    "uvloop", "fastapi", "redis", "trio", "networkx", "pyyaml", 
+    "watchdog", "rocksdict", "transformers", "libcst", 
+    "datamodel-code-generator", "acp", "mcp==2.0.0a3", "tyro", 
+    "pydantic", "httpx"
 ]
 
-## @desc: Extensions for document extraction, media parsing, and GitHub repository interactions.
-readers = [
-    "PyJWT",      ## @desc: JWT generation for GitHub App Auth (anchor.surface.readers.github)
-    "pypdf",      ## @desc: PDF parsing integration (anchor.surface.readers.file.docs)
-    "python-docx" ## @desc: DOCX parsing integration (anchor.surface.readers.file.docs)
-]
+[project.optional-dependencies]
+readers = ["PyJWT", "pypdf", "python-docx"]
+dev = ["pytest", "pytest-asyncio"]
+all = ["brane[readers,dev]"]
 
-## @desc: Dependencies for the absolute closed-system sandbox and trace assertions.
-dev = [
-    "pytest",
-    "pytest-asyncio"
-]
+[project.scripts]
+anchor-bind = "brane.anchor.bind.around:run_around"
 
-## @desc: Unified installation of all optional boundaries (e.g., pip install brane[all]).
-all = ["brane[llm,readers,dev]"]
+# 1. 빌드 훅 연결 (요청하신 anchor.bind 하위 경로, _ 미사용)
+[tool.hatch.build.hooks.custom]
+path = "anchor/bind/hatch.py"
+
+# 2. 로컬 Native 패키지들의 가상 경로 맵핑
+[tool.hatch.build.targets.wheel]
+packages = ["anchor", "bound", "xphi"]
+
+[tool.hatch.build.targets.wheel.sources]
+"anchor" = "brane/anchor"
+"bound"  = "brane/bound"
+"xphi"   = "brane/xphi"

@@ -24,7 +24,7 @@ from websockets.asyncio.client import ClientConnection
 # from gate.litellm.voider import Logging as LiteLLMLoggingObj
 LiteLLMLoggingObj = Any
 
-from xphi.xor.auth.secret.redact import redact_string
+from xphi.xor.secret.redact import redact_string
 from bound.channel.config.response import BaseResponsesAPIConfig
 from bound.channel.config.constants import REALTIME_WEBSOCKET_MAX_MESSAGE_SIZE_BYTES
 from bound.transport.stream.iterator import ResponseWSStreaming, ResponseWSHandler

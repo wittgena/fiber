@@ -10,7 +10,7 @@
 ## @lineage: gate.litellm.dd_tracing
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Optional, Union
-from xphi.xor.auth.secret.manager import get_secret_bool
+from xphi.xor.secret.manager import get_secret_bool
 
 if TYPE_CHECKING:
     from ddtrace.tracer import Tracer as DD_TRACER

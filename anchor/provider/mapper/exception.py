@@ -15,7 +15,7 @@ import httpx
 
 from bound.channel.config.resolver import config
 from bound.channel.client.action.support.base import get_api_base
-from xphi.xor.auth.secret.redact import redact_string
+from xphi.xor.secret.redact import redact_string
 from anchor.provider.types import ProviderTypes
 from anchor.surface.exception import (
     APIConnectionError,

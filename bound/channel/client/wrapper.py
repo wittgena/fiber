@@ -93,7 +93,7 @@ from bound.channel.client.response.metadata import update_response_metadata
 
 from bound.transport.stream.chunk.builder import stream_chunk_builder
 
-from xphi.xor.auth.secret.credential import CredentialAccessor
+from xphi.xor.secret.credential import CredentialAccessor
 from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObject
 
 from phase.gov.proto.gate import uuid
