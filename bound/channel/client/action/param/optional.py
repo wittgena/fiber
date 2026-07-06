@@ -27,11 +27,11 @@ from bound.channel.config.base import BaseConfig
 from bound.channel.config.resolver import config
 from bound.channel.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
 
-from anchor.surface.model.client.anthropic import AnthropicThinkingParam
-from anchor.surface.model.client.openai.types import AllMessageValues, OpenAIWebSearchOptions
-from anchor.surface.model.client.types import Embedding, Function, ProviderTypes
-from anchor.surface.provider.config.factory import ProviderConfigManager
-from anchor.surface.provider.support import get_supported_openai_params
+from anchor.provider.legacy.anthropic import AnthropicThinkingParam
+from anchor.provider.legacy.openai.types import AllMessageValues, OpenAIWebSearchOptions
+from anchor.provider.legacy.types import Embedding, Function, ProviderTypes
+from bound.router.provider.config import ProviderConfigManager
+from anchor.provider.model.support import get_supported_openai_params
 
 from watcher.plane.emitter import get_emitter
 

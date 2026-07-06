@@ -1,4 +1,5 @@
 # xphi.xor.secret.redact
+## @lineage: xphi.xor.auth.secret.redact
 ## @lineage: bound.xor.secret.redact
 ## @lineage: xor.secret.redact
 import copy

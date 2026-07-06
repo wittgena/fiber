@@ -28,7 +28,7 @@ from xphi.xor.secret.redact import redact_string
 from bound.channel.config.response import BaseResponsesAPIConfig
 from bound.channel.config.constants import REALTIME_WEBSOCKET_MAX_MESSAGE_SIZE_BYTES
 from bound.transport.stream.iterator import ResponseWSStreaming, ResponseWSHandler
-from anchor.surface.model.param.legacy import GenericLiteLLMParams
+from anchor.provider.model.param.legacy import GenericLiteLLMParams
 from bound.channel.client.http import get_shared_realtime_ssl_context
 
 from watcher.plane.emitter import get_emitter

@@ -1,6 +1,4 @@
 # xphi.scope.surface.sandbox
-## @lineage: bound.xor.scope.surface.sandbox
-## @lineage: bound.scope.surface.sandbox
 from abc import abstractmethod
 import os
 import subprocess
@@ -15,12 +13,7 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("surface.sandbox")
 
-class CoreSandboxSurface(BaseSurface):
-    """
-    ## @desc: Core infrastructure for Sandbox Surface. 
-    ## Abstract base class that manages physical lifecycle (processes, ports, registry) 
-    ## without depending on domain-specific logic (Surgent/Gov).
-    """
+class SandboxSurface(BaseSurface):
     def __init__(self, config: SurfaceConfig):
         self.config = config
         self.process = None
@@ -30,8 +23,7 @@ class CoreSandboxSurface(BaseSurface):
         redis_host = os.getenv("REDIS_HOST", "localhost")
         self.redis = redis.Redis(host=redis_host, decode_responses=True)
         
-        ## Injected by subclass (Dependency Inversion)
-        self.process_name = "brane.sandbox" 
+        self.process_name = "sandbox.surface"
         self._launcher_module = None 
         self.registry_key = "system:sandbox:pids"
 

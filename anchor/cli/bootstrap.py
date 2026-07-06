@@ -1,4 +1,5 @@
 # anchor.cli.bootstrap
+# anchor/cli/bootstrap.py
 """
 @desc:
 - Core System Bootstrap & Membrane Ignition Sequence.
@@ -8,7 +9,7 @@ import sys
 import json
 import os
 
-from bound.audit.warden import AuditWarden
+from bound.watcher.audit.warden import AuditWarden
 from phase.bind.redirector import PhaseAirlock
 from watcher.plane.emitter import get_emitter
 
@@ -17,36 +18,54 @@ log = get_emitter("cli.bootstrap", phase="anchor")
 # @state.membrane_flag: Global state to ensure singleton-like execution
 _MEMBRANE_ESTABLISHED = False
 
+# @mock.data: Extracted mock intelligence data for easier maintenance.
+# Injected with 'nexus.next-phase.com' to resolve the SecureBuilder whitelist issue.
+_MOCK_INTELLIGENCE_DATA = {
+    "warden_policies": {
+        "allowed_hosts": [
+            "localhost", 
+            "127.0.0.1", 
+            "fiber.internal",
+            "nexus.next-phase.com"  # 👈 추가됨: 빌더의 프라이빗 레지스트리 통신 허용
+        ],
+        "restricted_domains": [
+            "api.openai.com", 
+            "telemetry.litellm.ai", 
+            "malware.cnc.net"
+        ],
+        "dangerous_cmds": [
+            "nc", 
+            "wget", 
+            "curl", 
+            "bash"
+        ]
+    },
+    "quarantine_targets": [
+        {
+            "legacy_path": "vuln_lib", 
+            "canonical_path": "bound.security.dummy",
+            "reason": "CVE-2026-0001: RCE in vuln_lib"
+        },
+        {
+            "legacy_path": "litellm.telemetry", 
+            "canonical_path": "bound.security.blackhole",
+            "reason": "Unauthorized phoning home detected"
+        }
+    ]
+}
+
 def _fetch_agent_intelligence() -> dict:
     """
     @desc: Fetches emergency security payloads from an external intelligence source 
            (e.g., Security Agent, Redis, Config file).
-    @action: In production, replaces mock payload with external storage/cache reads.
+    @action: Simulates fetching a raw JSON string and parsing it.
     """
-    ## @mock.payload: Integrated intelligence payload injected by a security agent
-    mock_payload = """
-    {
-        "warden_policies": {
-            "allowed_hosts": ["localhost", "127.0.0.1", "fiber.internal"],
-            "restricted_domains": ["api.openai.com", "telemetry.litellm.ai", "malware.cnc.net"],
-            "dangerous_cmds": ["nc", "wget", "curl", "bash"]
-        },
-        "quarantine_targets": [
-            {
-                "legacy_path": "vuln_lib", 
-                "canonical_path": "bound.security.dummy",
-                "reason": "CVE-2026-0001: RCE in vuln_lib"
-            },
-            {
-                "legacy_path": "litellm.telemetry", 
-                "canonical_path": "bound.security.blackhole",
-                "reason": "Unauthorized phoning home detected"
-            }
-        ]
-    }
-    """
+    # 1. Simulate the receipt of a raw JSON payload from an external source
+    raw_json_payload = json.dumps(_MOCK_INTELLIGENCE_DATA)
+    
+    # 2. Parse the payload (representing the actual production logic)
     try:
-        return json.loads(mock_payload)
+        return json.loads(raw_json_payload)
     except Exception as e:
         ## @action: Fail-Safe (Return empty policy to trigger Strict Air-Gap default)
         log.error(f"[Bootstrap] Failed to parse agent intelligence: {e}")

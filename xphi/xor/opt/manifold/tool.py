@@ -6,9 +6,9 @@ import pydantic
 from jsonschema import ValidationError, validate
 from pydantic import BaseModel, TypeAdapter, create_model
 
-from bound.channel.compat.switch.dsp.settings import settings
-from xphi.xor.opt.basetype import Type
-from xphi.reflect.dsp.handler.stream.callback import with_callbacks
+from xphi.scope.dsp.context import runtime
+from xphi.xor.opt.manifold.model.basetype import Type
+from xphi.xor.opt.callback.base import with_callbacks
 
 _TYPE_MAPPING = {"string": str, "integer": int, "number": float, "boolean": bool, "array": list, "object": dict}
 
@@ -134,13 +134,13 @@ class Tool(Type):
         parsed_kwargs = self._validate_and_parse_args(**kwargs)
         result = self.func(**parsed_kwargs)
         if asyncio.iscoroutine(result):
-            if settings.allow_tool_async_sync_conversion:
+            if runtime.allow_tool_async_sync_conversion:
                 return self._run_async_in_sync(result)
             else:
                 raise ValueError(
                     "You are calling `__call__` on an async tool, please use `acall` instead or enable "
-                    "async-to-sync conversion with `settings.configure(allow_tool_async_sync_conversion=True)` "
-                    "or `with settings.context(allow_tool_async_sync_conversion=True):`."
+                    "async-to-sync conversion with `runtime.bind(allow_tool_async_sync_conversion=True)` "
+                    "or `with runtime.bind(allow_tool_async_sync_conversion=True):`."
                 )
         return result
 

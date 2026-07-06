@@ -1,4 +1,5 @@
 # xphi.xor.secret.handler.client
+## @lineage: xphi.xor.auth.secret.handler.client
 ## @lineage: bound.xor.secret.handler.client
 ## @lineage: xor.secret.handler.client
 ## @lineage: bound.channel.secret.handler.client

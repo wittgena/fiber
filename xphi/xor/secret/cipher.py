@@ -1,4 +1,5 @@
 # xphi.xor.secret.cipher
+## @lineage: xphi.xor.auth.secret.cipher
 ## @lineage: bound.xor.secret.cipher
 ## @lineage: xor.secret.cipher
 ## @lineage: bound.channel.secret.cipher

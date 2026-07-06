@@ -23,22 +23,24 @@ import anyio
 import httpx
 from pydantic import BaseModel
 
+from anchor.surface.exception import OpenAIError
+from anchor.provider.mapper.exception import exception_type
+from anchor.provider.legacy.openai.types import OpenAIChatCompletionChunk
+from anchor.provider.types import ProviderTypes
+from anchor.provider.model.param.legacy import GenericLiteLLMParams
+from anchor.provider.legacy.types import Delta, CallTypes, GenericStreamingChunk as GChunk
+
 from bound.channel.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from bound.channel.config.resolver import config
-from anchor.surface.exception import OpenAIError
-from bound.channel.compat.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
-from anchor.surface.provider.mapping.exception import exception_type
-from anchor.surface.model.client.openai.types import OpenAIChatCompletionChunk
-from anchor.surface.provider.types import ProviderTypes
-from anchor.surface.model.param.legacy import GenericLiteLLMParams
-from anchor.surface.model.client.types import Delta, CallTypes, GenericStreamingChunk as GChunk
+from bound.channel.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 
-from bound.transport.stream.chunk.builder import stream_chunk_builder
-from bound.transport.stream.check import is_model_response_stream_empty
+from bound.channel.client.bridge.rule import Rules
 from bound.channel.client.action.task.executor import executor
 from bound.channel.client.action.support.base import get_api_base
 from bound.channel.client.action.support.helpers import map_finish_reason, process_response_headers
-from bound.channel.mcp.bridge.rule import Rules
+
+from bound.transport.stream.chunk.builder import stream_chunk_builder
+from bound.transport.stream.check import is_model_response_stream_empty
 
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter
@@ -1125,7 +1127,7 @@ class CustomStreamWrapper:
         try:
             # return this for all models
             completion_obj: Dict[str, Any] = {"content": ""}
-            from anchor.surface.model.client.types import GenericStreamingChunk as GChunk
+            from anchor.provider.legacy.types import GenericStreamingChunk as GChunk
 
             if (
                 isinstance(chunk, ModelResponseStream)
@@ -2396,7 +2398,7 @@ def generic_chunk_has_all_required_fields(chunk: dict) -> bool:
 def convert_generic_chunk_to_model_response_stream(
     chunk: GChunk,
 ) -> ModelResponseStream:
-    from anchor.surface.model.client.types import Delta
+    from anchor.provider.legacy.types import Delta
 
     model_response_stream = ModelResponseStream(
         id=str(uuid.uuid4()),

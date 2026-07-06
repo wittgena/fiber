@@ -25,7 +25,7 @@ from bound.channel.config.response import BaseResponsesAPIConfig
 LiteLLMLoggingObj = Any
 
 from bound.channel.client.action.support.helpers import process_response_headers
-from anchor.surface.provider.types import ProviderTypes
+from anchor.provider.types import ProviderTypes
 from bound.channel.config.resolver import config
 from bound.channel.client.http import (
     AsyncHTTPHandler,
@@ -33,16 +33,16 @@ from bound.channel.client.http import (
     _get_httpx_client,
     get_async_httpx_client,
 )
-from anchor.surface.model.param.response import DeleteResponseResult
-from anchor.surface.model.param.legacy import GenericLiteLLMParams
-from anchor.surface.model.client.types import CallTypes
+from anchor.provider.model.param.response import DeleteResponseResult
+from anchor.provider.model.param.legacy import GenericLiteLLMParams
+from anchor.provider.legacy.types import CallTypes
 from bound.transport.stream.iterator import (
     ResponseStreamIterator,
     MockResponsesAPIStreamingIterator,
     ResponsesAPIStreamingIterator,
     SyncResponsesAPIStreamingIterator,
 )
-from anchor.surface.model.client.openai.types import ResponseInputParam, ResponsesAPIResponse
+from anchor.provider.legacy.openai.types import ResponseInputParam, ResponsesAPIResponse
 from watcher.plane.emitter import get_emitter 
 
 log = get_emitter("handler.api")

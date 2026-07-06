@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "brane"
+version = "1.0.1"
+description = "The Universal Integration Boundary for heterogeneous AI ecosystems"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "uvloop", "fastapi", "redis", "trio", "networkx", "pyyaml", 
+    "watchdog", "rocksdict", "transformers", "libcst", 
+    "datamodel-code-generator", "acp", "mcp==2.0.0a3", "tyro", 
+    "pydantic", "httpx"
+]
+
+[project.optional-dependencies]
+readers = ["PyJWT", "pypdf", "python-docx"]
+dev = ["pytest", "pytest-asyncio"]
+all = ["brane[readers,dev]"]
+
+[project.scripts]
+anchor-bind = "brane.anchor.bind.around:run_around"
+
+[tool.hatch.build.hooks.custom]
+path = "anchor/bind/hatch.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["brane"]

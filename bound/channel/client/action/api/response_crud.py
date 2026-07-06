@@ -15,15 +15,15 @@ from pydantic import BaseModel
 from bound.channel.config.resolver import config
 from bound.channel.config.constants import request_timeout
 from bound.channel.config.response import BaseResponsesAPIConfig
-from anchor.surface.provider.routing.locator import get_llm_provider
-from anchor.surface.model.client.openai.types import (
+from bound.router.provider.locator import get_llm_provider
+from anchor.provider.legacy.openai.types import (
     ResponseInputParam,
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
 )
-from anchor.surface.model.param.response import *
-from anchor.surface.model.param.legacy import GenericLiteLLMParams
-from anchor.surface.provider.config.factory import ProviderConfigManager
+from anchor.provider.model.param.response import *
+from anchor.provider.model.param.legacy import GenericLiteLLMParams
+from bound.router.provider.config import ProviderConfigManager
 from bound.channel.client.action.api.handler import ResponseApiHandler
 from bound.channel.client.action.param.litellm import infer_openai_data_residency
 from bound.channel.client.wrapper import client

@@ -2,15 +2,15 @@
 ## @lineage: xphi.adapter.mcp.event.tool
 ## @lineage: bound.adapter.mcp.legacy.stream
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
-from anchor.surface.model.client.openai.types import OutputItemDoneEvent
-from anchor.surface.model.client.openai.types import ResponsesAPIStreamEvents
-from anchor.surface.model.client.openai.types import (
+from anchor.provider.legacy.openai.types import OutputItemDoneEvent
+from anchor.provider.legacy.openai.types import ResponsesAPIStreamEvents
+from anchor.provider.legacy.openai.types import (
     BaseOpenAIResponse,
     MCPListToolsCompletedEvent,
     MCPListToolsFailedEvent,
     MCPListToolsInProgressEvent,
 )
-from bound.channel.compat.switch.params import ResponsesAPIStreamingResponse, ToolParam
+from bound.channel.switch.params import ResponsesAPIStreamingResponse, ToolParam
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tool.event")

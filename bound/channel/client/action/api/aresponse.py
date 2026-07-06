@@ -15,17 +15,17 @@ from bound.adapter.mcp.parser.payload import MCPPayloadParser
 from bound.adapter.mcp.stream import MCPStreamIterator
 from bound.adapter.mcp.event.tool import create_mcp_list_tools_events
 
-from anchor.surface.model.param.response import *
-from anchor.surface.model.param.legacy import GenericLiteLLMParams
-from anchor.surface.model.client.openai.types import ResponseText
-from anchor.surface.model.client.openai.types import (
+from anchor.provider.model.param.response import *
+from anchor.provider.model.param.legacy import GenericLiteLLMParams
+from anchor.provider.legacy.openai.types import ResponseText
+from anchor.provider.legacy.openai.types import (
     AllMessageValues, PromptObject, Reasoning, ResponseIncludable, ResponseInputParam,
     ResponsesAPIResponse, ToolChoice, ToolParam,
 )
 
-from anchor.surface.provider.config.factory import ProviderConfigManager
-from anchor.surface.provider.types import ProviderTypes
-from anchor.surface.provider.routing.locator import get_llm_provider
+from bound.router.provider.config import ProviderConfigManager
+from anchor.provider.types import ProviderTypes
+from bound.router.provider.locator import get_llm_provider
 
 from bound.channel.client.action.param.litellm import get_litellm_params, infer_openai_data_residency
 from bound.channel.config.response import BaseResponsesAPIConfig

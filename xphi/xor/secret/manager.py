@@ -1,4 +1,5 @@
 # xphi.xor.secret.manager
+## @lineage: xphi.xor.auth.secret.manager
 ## @lineage: bound.xor.secret.manager
 ## @lineage: xor.secret.manager
 ## @lineage: bound.channel.secret.manager

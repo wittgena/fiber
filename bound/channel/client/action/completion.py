@@ -16,17 +16,17 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
 from anchor.surface.exception import Timeout
-from bound.channel.compat.switch.params import ModelResponse
-from anchor.surface.provider.mapping.exception import exception_type
-from bound.channel.client.action.core import async_core_completion
+from anchor.provider.mapper.exception import exception_type
 
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.adapter.bridge.trace.dd import tracer
+
+from bound.channel.switch.params import ModelResponse
+from bound.channel.client.action.core import async_core_completion
 from bound.channel.client.wrapper import client
 from bound.channel.client.action.support.helpers import safe_deep_copy, filter_internal_params
 from bound.channel.client.action.support.asyncify import run_async_function
-
-from xphi.scope.plane.trace.dd import tracer
-from xphi.scope.plane.delegator import Logging as LiteLLMLoggingObj
+from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
 
 from watcher.plane.emitter import get_emitter
 

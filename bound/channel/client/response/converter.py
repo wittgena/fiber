@@ -13,12 +13,12 @@ from typing_extensions import Required, TypedDict
 
 from bound.channel.config.constants import RESPONSE_FORMAT_TOOL_NAME
 from bound.channel.client.action.support.header import get_response_headers
-from anchor.surface.model.client.openai.types import (
+from anchor.provider.legacy.openai.types import (
     ChatCompletionThinkingBlock,
     ImageURLListItem,
     OpenAIModerationResponse,
 )
-from bound.channel.compat.switch.params import (
+from bound.channel.switch.params import (
     ChatCompletionDeltaToolCall,
     ChatCompletionRedactedThinkingBlock,
     CompletionTokensDetailsWrapper,
@@ -30,7 +30,7 @@ from bound.channel.compat.switch.params import (
     TranscriptionUsageDurationObject,
     TranscriptionUsageTokensObject,
 )
-from bound.channel.compat.switch.params import (
+from bound.channel.switch.params import (
     TextChoices,
     TextCompletionResponse,
     TranscriptionResponse,
@@ -46,7 +46,7 @@ from bound.channel.compat.switch.params import (
 )
 from anchor.surface.exception import APIError
 
-from anchor.surface.model.client.types import Logprobs as TextCompletionLogprobs
+from anchor.provider.legacy.types import Logprobs as TextCompletionLogprobs
 
 from watcher.plane.emitter import get_emitter 
 

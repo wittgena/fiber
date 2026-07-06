@@ -1,4 +1,5 @@
 # xphi.xor.secret.validator.manager
+## @lineage: xphi.xor.auth.secret.validator.manager
 ## @lineage: bound.xor.secret.validator.manager
 ## @lineage: xor.secret.validator.manager
 ## @lineage: bound.channel.secret.validator.manager

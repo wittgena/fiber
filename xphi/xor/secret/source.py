@@ -1,4 +1,5 @@
 # xphi.xor.secret.source
+## @lineage: xphi.xor.auth.secret.source
 ## @lineage: bound.xor.secret.source
 ## @lineage: xor.secret.source
 ## @lineage: bound.channel.secret.source

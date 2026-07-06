@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING, Any, Iterable, List, Literal, Optional, Union
 import httpx
 
 from bound.channel.config.resolver import config
-from anchor.surface.model.client.openai.types import AllMessageValues, OpenAIChatCompletionFinishReason
+from anchor.provider.legacy.openai.types import AllMessageValues, OpenAIChatCompletionFinishReason
 if TYPE_CHECKING:
     from opentelemetry.trace import Span as _Span
-    from bound.channel.compat.switch.params import ModelResponseStream
+    from bound.channel.switch.params import ModelResponseStream
     Span = Union[_Span, Any]
 else:
     Span = Any
@@ -251,7 +251,7 @@ def _get_parent_otel_span_from_kwargs(
 
 
 def process_response_headers(response_headers: Union[httpx.Headers, dict]) -> dict:
-    from anchor.surface.model.client.types import OPENAI_RESPONSE_HEADERS
+    from anchor.provider.legacy.types import OPENAI_RESPONSE_HEADERS
 
     openai_headers = {}
     processed_headers = {}
