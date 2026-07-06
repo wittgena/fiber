@@ -32,7 +32,7 @@ from anchor.surface.exception import (
     MockException
 )
 from bound.channel.client.action.param.optional import PreProcessNonDefaultParams, add_provider_specific_params_to_optional_params
-from anchor.provider.model.support import get_supported_openai_params
+from anchor.surface.model.support import get_supported_openai_params
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("provider.param_embedding")

@@ -10,7 +10,7 @@ from anchor.provider.legacy.openai.types import (
     MCPListToolsFailedEvent,
     MCPListToolsInProgressEvent,
 )
-from bound.channel.switch.params import ResponsesAPIStreamingResponse, ToolParam
+from anchor.surface.switch.params import ResponsesAPIStreamingResponse, ToolParam
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tool.event")

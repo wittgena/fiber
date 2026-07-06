@@ -18,12 +18,12 @@ from dataclasses import dataclass, field
 
 from bound.channel.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from anchor.provider.legacy.types import EmbeddingResponse
-from bound.channel.switch.params import ModelResponse
+from anchor.surface.switch.params import ModelResponse
 from anchor.provider.legacy.types import all_litellm_params
 from bound.channel.config.resolver import config
-from anchor.provider.model.support import supports_httpx_timeout
-from bound.router.provider.config import ProviderConfigManager
-from bound.router.provider.locator import get_llm_provider
+from anchor.surface.model.support import supports_httpx_timeout
+from anchor.provider.router.config import ProviderConfigManager
+from anchor.provider.router.locator import get_llm_provider
 from anchor.provider.types import ProviderTypes
 from anchor.provider.legacy.openai.types import AllMessageValues
 from bound.channel.client.action.param.optional import get_optional_params
@@ -304,7 +304,7 @@ class EmbeddingPreprocessor:
         self.kwargs = kwargs
 
     def build(self) -> EmbeddingContext:
-        from bound.router.provider.locator import get_llm_provider
+        from anchor.provider.router.locator import get_llm_provider
         
         # 1. Provider 식별
         custom_llm_provider = self.kwargs.get("custom_llm_provider")

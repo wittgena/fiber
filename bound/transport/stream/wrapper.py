@@ -24,7 +24,7 @@ import httpx
 from pydantic import BaseModel
 
 from anchor.surface.exception import OpenAIError
-from anchor.provider.mapper.exception import exception_type
+from anchor.surface.mapper.exception import exception_type
 from anchor.provider.legacy.openai.types import OpenAIChatCompletionChunk
 from anchor.provider.types import ProviderTypes
 from anchor.provider.model.param.legacy import GenericLiteLLMParams
@@ -32,7 +32,7 @@ from anchor.provider.legacy.types import Delta, CallTypes, GenericStreamingChunk
 
 from bound.channel.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from bound.channel.config.resolver import config
-from bound.channel.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from anchor.surface.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 
 from bound.channel.client.bridge.rule import Rules
 from bound.channel.client.action.task.executor import executor

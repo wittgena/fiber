@@ -13,7 +13,7 @@ from enum import Enum
 from typing import Any
 from pydantic import BaseModel, ValidationError
 
-from anchor.surface.acp.exceptions import RequestError
+from acp.exceptions import RequestError
 
 from bound.transport.dispatcher.worker import DefaultMessageDispatcher, MessageDispatcher, RpcTaskKind, NotificationRunner, RequestRunner
 from bound.transport.dispatcher.sender import MessageSender, SenderFactory

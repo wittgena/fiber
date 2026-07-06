@@ -27,6 +27,7 @@ DEFAULT_BOUND_SKELETON = {
     },
     "substitution": {
         "io": "anchor/io",
+        "memory": "anchor/memory",
         "workspace": "anchor/ext/workspace",
         "xor": "anchor/io/xor",
         "contract": "anchor/io/contract"
@@ -35,8 +36,8 @@ DEFAULT_BOUND_SKELETON = {
         "brane": "brane",
         "io": ":io:",
         "ext": ":anchor:/ext",
-        "ledger": ":anchor:/ledger",
         "memory": ":anchor:/memory",
+        "ledger": ":memory:/ledger",
         "log": ":io:/log",
         "sandbox": ":workspace:/sandbox",
         "surface": ":io:/surface",

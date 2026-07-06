@@ -42,7 +42,7 @@ from bound.channel.config.constants import DEFAULT_MAX_RETRIES
 from bound.channel.client.response.iterator import BaseModelResponseIterator
 from bound.channel.config.base import BaseConfig
 from anchor.surface.exception import BaseLLMException
-from bound.channel.switch.params import ModelResponse, ModelResponseStream
+from anchor.surface.switch.params import ModelResponse, ModelResponseStream
 from anchor.provider.types import ProviderTypes
 from anchor.provider.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from anchor.provider.legacy.openai.types import *

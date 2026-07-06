@@ -8,8 +8,8 @@ import asyncio
 from collections.abc import Callable
 from typing import Any, cast, final
 
-from anchor.surface.acp.interfaces import Agent, Client
-from anchor.surface.acp.meta import AGENT_METHODS
+from acp.interfaces import Agent, Client
+from acp.meta import AGENT_METHODS
 
 from bound.transport.conn.base import Connection
 from anchor.surface.acp.schema import (

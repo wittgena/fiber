@@ -13,10 +13,10 @@
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
 from anchor.provider.legacy.types import EmbeddingResponse
-from anchor.provider.mapper.exception import exception_type
+from anchor.surface.mapper.exception import exception_type
 from bound.channel.client.wrapper import client
 from bound.channel.client.action.preprocessor import EmbeddingPreprocessor
-from anchor.surface.registry.adapter import AdapterRegistry
+from anchor.provider.adapter import AdapterRegistry
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.embedding")

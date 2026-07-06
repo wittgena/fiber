@@ -39,7 +39,7 @@ from anchor.surface.exception import APIError
 from bound.channel.config.resolver import config
 from anchor.provider.model.token.counter import token_counter
 from bound.transport.stream.chunk.processor import ChunkProcessor
-from bound.channel.switch.params import Choices, Message, ModelResponse, Usage
+from anchor.surface.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("blm.main")

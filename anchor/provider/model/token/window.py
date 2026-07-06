@@ -6,7 +6,7 @@ import tiktoken
 
 from anchor.provider.model.token.counter import token_counter
 from anchor.provider.model.token.convert import get_default_encoding
-from anchor.surface.registry.provider import model_cost
+from anchor.provider.registry import model_cost
 from anchor.provider.legacy.openai.types import AllMessageValues
 from bound.channel.config.constants import DEFAULT_TRIM_RATIO
 

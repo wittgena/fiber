@@ -13,7 +13,7 @@ import anyio
 import httpx
 
 from anchor.cli.bootstrap import ignite, _fetch_agent_intelligence
-from xphi.proxy.pypi.client import PypiMCPClient
+from bound.router.proxy.pypi.client import PypiMCPClient
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 
@@ -246,7 +246,7 @@ def _ensure_proxy_active(registry_url: str) -> PypiMCPClient:
 
     log.info(f"🚀 [Proxy] Auto-booting internal MCP Proxy on port {port}...")
     try:
-        import xphi.proxy.pypi.server as proxy_server
+        import bound.router.proxy.pypi.server as proxy_server
         client = PypiMCPClient(sys.executable, proxy_server.__name__)
     except Exception as e:
         log.error(f"Failed to instantiate proxy client: {e}")

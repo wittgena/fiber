@@ -80,7 +80,7 @@ from anchor.provider.legacy.openai.types import (
     OpenAITextCompletionUserMessage,
     OpenAIWebSearchOptions,
 )
-from bound.router.provider.locator import get_llm_provider
+from anchor.provider.router.locator import get_llm_provider
 from anchor.provider.legacy.types import CallTypes, Embedding, ProviderTypes
 
 from bound.channel.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY

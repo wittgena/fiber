@@ -7,9 +7,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from anchor.surface.acp.exceptions import RequestError
-from anchor.surface.acp.interfaces import Agent
-from anchor.surface.acp.meta import AGENT_METHODS
+from acp.exceptions import RequestError
+from acp.interfaces import Agent
+from acp.meta import AGENT_METHODS
 from bound.router.message import MessageRouter, Route, _resolve_handler, _warn_legacy_handler
 from anchor.surface.acp.schema import (
     AuthenticateRequest,

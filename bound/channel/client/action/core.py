@@ -1,10 +1,10 @@
 # bound.channel.client.action.core
 from typing import Any, Dict, List, Optional, Union
 
-from anchor.provider.mapper.exception import exception_type
-from bound.channel.switch.params import ModelResponse, ModelResponseStream
+from anchor.surface.mapper.exception import exception_type
+from anchor.surface.switch.params import ModelResponse, ModelResponseStream
 from bound.channel.client.action.preprocessor import CompletionPreprocessor
-from anchor.surface.registry.adapter import AdapterRegistry
+from anchor.provider.adapter import AdapterRegistry
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from bound.router.adapter.llm import TopologyMissingError
 

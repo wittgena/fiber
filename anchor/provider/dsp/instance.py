@@ -5,7 +5,7 @@ import warnings
 from typing import Any, Literal
 
 from anchor.provider.dsp.base import BaseLM
-from anchor.provider.model.support import supports_function_calling, supports_reasoning, supports_response_schema, get_supported_openai_params
+from anchor.surface.model.support import supports_function_calling, supports_reasoning, supports_response_schema, get_supported_openai_params
 from anchor.provider.dsp.training.openai import OpenAIProvider
 from anchor.provider.dsp.training.base import Provider, ReinforceJob, TrainingJob
 from anchor.provider.dsp.delegator import DSPDelegator

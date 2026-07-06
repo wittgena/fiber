@@ -16,11 +16,11 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
 from anchor.surface.exception import Timeout
-from anchor.provider.mapper.exception import exception_type
+from anchor.surface.mapper.exception import exception_type
 
 from bound.adapter.bridge.trace.dd import tracer
 
-from bound.channel.switch.params import ModelResponse
+from anchor.surface.switch.params import ModelResponse
 from bound.channel.client.action.core import async_core_completion
 from bound.channel.client.wrapper import client
 from bound.channel.client.action.support.helpers import safe_deep_copy, filter_internal_params

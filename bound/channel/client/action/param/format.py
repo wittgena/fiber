@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from anchor.provider.legacy.openai.types import AllMessageValues, ChatCompletionToolCallChunk
 from anchor.provider.legacy.base import PydanticObjectBase
 from anchor.provider.types import ProviderSpecificModelInfo
-from bound.channel.switch.params import Message
+from anchor.surface.switch.params import Message
 
 from watcher.plane.emitter import get_emitter
 

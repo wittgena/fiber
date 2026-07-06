@@ -30,8 +30,8 @@ from bound.channel.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
 from anchor.provider.legacy.anthropic import AnthropicThinkingParam
 from anchor.provider.legacy.openai.types import AllMessageValues, OpenAIWebSearchOptions
 from anchor.provider.legacy.types import Embedding, Function, ProviderTypes
-from bound.router.provider.config import ProviderConfigManager
-from anchor.provider.model.support import get_supported_openai_params
+from anchor.provider.router.config import ProviderConfigManager
+from anchor.surface.model.support import get_supported_openai_params
 
 from watcher.plane.emitter import get_emitter
 

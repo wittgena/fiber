@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Optional
 from anchor.provider.model.token.splitter import TokenSplitter
 from anchor.provider.model.token.window import ContextWindow
 from anchor.provider.model.token.counter import token_counter
-from anchor.surface.registry.provider import model_cost
+from anchor.provider.registry import model_cost
 
 from bound.adapter.llama.prompts.utils import is_chat_model
 from bound.adapter.llama.base.embeddings.base import BaseEmbedding

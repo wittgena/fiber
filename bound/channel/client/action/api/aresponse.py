@@ -23,9 +23,9 @@ from anchor.provider.legacy.openai.types import (
     ResponsesAPIResponse, ToolChoice, ToolParam,
 )
 
-from bound.router.provider.config import ProviderConfigManager
+from anchor.provider.router.config import ProviderConfigManager
 from anchor.provider.types import ProviderTypes
-from bound.router.provider.locator import get_llm_provider
+from anchor.provider.router.locator import get_llm_provider
 
 from bound.channel.client.action.param.litellm import get_litellm_params, infer_openai_data_residency
 from bound.channel.config.response import BaseResponsesAPIConfig

@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, TypeVar
 from pydantic import BaseModel
 from bound.transport.dispatcher.validator.model import to_camel_case
-from anchor.surface.acp.exceptions import RequestError
+from acp.exceptions import RequestError
 
 __all__ = ["MessageRouter", "Route"]
 

@@ -18,7 +18,7 @@ from typing import (
 from copy import deepcopy
 import json
 
-from bound.channel.switch.params import ResponsesAPIResponse, ModelResponse
+from anchor.surface.switch.params import ResponsesAPIResponse, ModelResponse
 from mcp_types import EmbeddedResource, ImageContent, TextContent
 from anchor.provider.legacy.types import Choices
 from anchor.provider.model.token.convert import convert_list_message_to_dict

@@ -13,10 +13,10 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from bound.router.provider.locator import get_llm_provider
+from anchor.provider.router.locator import get_llm_provider
 from bound.adapter.llama.base.llms.types import ChatMessage, MessageRole
 from bound.adapter.inter.base import BaseProviderAdapter
-from anchor.provider.mapper.state import StateMapper
+from anchor.surface.mapper.state import StateMapper
 
 from bound.channel.client.action.preprocessor import CompletionContext
 from bound.router.adapter.llm import LLMRouter, TopologyMissingError

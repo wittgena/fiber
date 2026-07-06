@@ -49,7 +49,7 @@ from bound.channel.config.constants import (
 )
 
 from anchor.provider.types import ProviderTypes
-from bound.transport.aiohttp import AiohttpTransport
+from bound.channel.client.aiohttp import AiohttpTransport
 
 log = get_emitter("handler.http")
 

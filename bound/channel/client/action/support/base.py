@@ -8,7 +8,7 @@
 ## @lineage: bound.client.api.get_api_base
 from typing import Optional, Union
 from bound.channel.config.resolver import config
-from bound.router.provider.locator import get_llm_provider
+from anchor.provider.router.locator import get_llm_provider
 from anchor.provider.model.param.legacy import LiteLLM_Params
 from watcher.plane.emitter import get_emitter
 

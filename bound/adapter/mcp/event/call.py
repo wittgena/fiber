@@ -12,7 +12,7 @@ from anchor.provider.legacy.openai.types import (
     MCPCallFailedEvent,
     MCPCallInProgressEvent,
 )
-from bound.channel.switch.params import ResponsesAPIStreamingResponse
+from anchor.surface.switch.params import ResponsesAPIStreamingResponse
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter
 

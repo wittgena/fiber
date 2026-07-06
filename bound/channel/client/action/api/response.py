@@ -39,8 +39,8 @@ from anchor.provider.model.param.response import *
 from anchor.provider.model.param.legacy import GenericLiteLLMParams
 from anchor.provider.legacy.openai.types import ResponseText
 
-from bound.router.provider.config import ProviderConfigManager
-from bound.router.provider.locator import get_llm_provider
+from anchor.provider.router.config import ProviderConfigManager
+from anchor.provider.router.locator import get_llm_provider
 
 from bound.adapter.mcp.handler import MCPHandler
 from bound.channel.client.action.api.handler import ResponseApiHandler

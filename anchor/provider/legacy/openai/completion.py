@@ -23,12 +23,12 @@ from bound.channel.config.base import BaseConfig
 from anchor.surface.exception import BaseLLMException
 from bound.channel.config.resolver import config
 from bound.channel.config.constants import DEFAULT_MAX_RETRIES
-from bound.channel.switch.params import ModelResponse, ModelResponseStream
+from anchor.surface.switch.params import ModelResponse, ModelResponseStream
 
 from anchor.provider.types import ProviderTypes
 from anchor.provider.legacy.types import EmbeddingResponse
 from bound.channel.client.response.converter import convert_to_model_response_object
-from bound.router.provider.config import ProviderConfigManager
+from anchor.provider.router.config import ProviderConfigManager
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from anchor.provider.legacy.base import BaseLLM
 from anchor.provider.legacy.openai.base import (

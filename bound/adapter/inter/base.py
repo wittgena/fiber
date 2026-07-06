@@ -1,7 +1,7 @@
 # bound.adapter.inter.base
 ## @lineage: bound.adapter.provider.base
 from typing import Any, Dict, List, Optional, Union
-from bound.channel.switch.params import ModelResponse
+from anchor.surface.switch.params import ModelResponse
 from bound.channel.client.action.preprocessor import CompletionContext
 from anchor.provider.legacy.completor import CompletionHandler
 from bound.transport.stream.wrapper import CustomStreamWrapper
