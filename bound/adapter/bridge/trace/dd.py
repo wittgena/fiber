@@ -1,22 +1,13 @@
 # bound.watcher.plane.trace.dd
-## @lineage: xphi.scope.plane.trace.dd
-## @lineage: bound.xor.scope.plane.trace.dd
-## @lineage: bound.scope.plane.trace.dd
-## @lineage: bound.plane.trace.dd
-## @lineage: channel.bridge.litellm.dd_tracing
-## @lineage: bridge.litellm.dd_tracing
-## @lineage: channel.litellm.dd_tracing
-## @lineage: channel.bound.litellm.dd_tracing
-## @lineage: gate.litellm.dd_tracing
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any, Optional, Union
-from xphi.xor.secret.manager import get_secret_bool
 
 if TYPE_CHECKING:
     from ddtrace.tracer import Tracer as DD_TRACER
 else:
     DD_TRACER = Any
 
+from xphi.xor.secret.manager import get_secret_bool
 
 class NullSpan:
     """A no-op span implementation."""

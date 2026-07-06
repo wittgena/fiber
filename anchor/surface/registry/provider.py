@@ -15,18 +15,13 @@ from anchor.provider.model.info import get_model_info
 from anchor.provider.types import ProviderTypes
 
 log = get_emitter("registry.provider")
+REGISTRY_ROOT = resolve_path("registry") / "llms"
 
-CONTRACT_ROOT = resolve_path("contract")
-REGISTRY_DIR = CONTRACT_ROOT / "registry" / "llms"
-
-# ==========================================
-# 1. 원격/로컬 JSON 백업 및 파싱
-# ==========================================
 def save_local_backup(data: dict, filename: str) -> None:
     """원격에서 성공적으로 가져온 JSON 데이터를 로컬에 백업합니다."""
     try:
-        REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
-        backup_path = REGISTRY_DIR / filename
+        REGISTRY_ROOT.mkdir(parents=True, exist_ok=True)
+        backup_path = REGISTRY_ROOT / filename
         with open(backup_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         log.debug(f"Saved local backup successfully: {backup_path}")
@@ -36,7 +31,7 @@ def save_local_backup(data: dict, filename: str) -> None:
 def load_local_backup(filename: str) -> dict:
     """원격 패치 실패 시, 저장된 로컬 백업본을 로드합니다."""
     try:
-        backup_path = REGISTRY_DIR / filename
+        backup_path = REGISTRY_ROOT / filename
         if backup_path.exists():
             with open(backup_path, "r", encoding="utf-8") as f:
                 return json.load(f)

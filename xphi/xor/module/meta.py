@@ -6,7 +6,7 @@ from typing import Any, TextIO, TYPE_CHECKING
 
 from xphi.scope.dsp.context import runtime
 from xphi.scope.dsp.usage import track_usage
-from bound.watcher.plane.tracker.history import pretty_print_history
+from bound.watcher.telemetry.history import pretty_print_history
 
 from arch.xor.manifold.sample import Sample
 from arch.xor.manifold.sample import Prediction

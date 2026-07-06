@@ -29,11 +29,6 @@ class UniversalPhaseSnapshot:
     error_weight: float = 0.0     # 다양한 에러(health_check, crash_loop 등)를 합산/정규화한 수치
     is_locked: bool = False       # 스케일링/제어 불가 상태 (AWS SCP 제한, K8s PDB 등)
 
-
-# ==========================================
-# 2. Adapter Interfaces (Ports)
-# ==========================================
-
 class IMetricsAdapter(Protocol):
     """
     @role: 수집 포트 (Ingress Interface)
@@ -49,11 +44,6 @@ class IInterventionAdapter(Protocol):
     """
     async def apply_correction(self, resource_id: str, adjustments: Dict[str, Any]) -> bool:
         ...
-
-
-# ==========================================
-# 3. Concrete Implementations (Examples)
-# ==========================================
 
 class AwsAsgAdapter(IMetricsAdapter):
     """AWS Auto Scaling Group 구현체"""

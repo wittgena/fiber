@@ -20,7 +20,7 @@ from bound.transport.dispatcher.sender import MessageSender, SenderFactory
 from bound.transport.dispatcher.queue import MessageQueue, RpcTask, InMemoryMessageQueue
 
 from xphi.xor.store.message import MessageStateStore, InMemoryMessageStateStore
-from bound.watcher.plane.telemetry.acp import span_context
+from bound.watcher.telemetry.acp import span_context
 
 from phase.runtime.task.supervisor import TaskSupervisor
 

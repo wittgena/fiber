@@ -11,7 +11,7 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tier.registry", phase="SYSTEM")
 
-MANIFEST_PATH = resolve_path("res") / "config" / "model_tier_registry.json"
+MANIFEST_PATH = resolve_path("registry") / "llms" / "model_tier_registry.json"
 
 DEFAULT_FALLBACK_CONFIG = {
     "strategy": "sliding_window_rotation",

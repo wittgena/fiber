@@ -2,7 +2,7 @@
 ## @lineage: xphi.scope.plane.delegator
 import inspect
 from typing import Any, Dict, List, Optional, Tuple, Coroutine
-from bound.watcher.plane.telemetry.llm import Telemetry
+from bound.watcher.telemetry.llm import Telemetry
 from bound.watcher.plane.metrics import Metrics
 from watcher.plane.emitter import get_emitter
 from opentelemetry import trace
