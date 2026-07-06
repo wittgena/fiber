@@ -1,5 +1,4 @@
 # anchor.bind.hatch
-# anchor/bind/build.py
 import os
 import shutil
 import subprocess
@@ -9,7 +8,6 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 class CustomBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         """Hatchling 빌드 파이프라인 개입 훅"""
-        # self/ 루트 탐색 로직 (현재 위치: self/brane/anchor/bind/build.py)
         workspace_root = Path(self.root).parent
         local_theoria = workspace_root / "theoria"
         target_modules = ["arch", "phase", "watcher"]
