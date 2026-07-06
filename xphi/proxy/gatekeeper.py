@@ -1,7 +1,4 @@
 # xphi.proxy.gatekeeper
-## @lineage: bound.watcher.server.gatekeeper
-## @lineage: xphi.proxy.pypi.gatekeeper
-# xphi/proxy/pypi/gatekeeper.py
 import sys
 import base64
 import json
@@ -10,9 +7,8 @@ import asyncio
 from bound.adapter.bridge.ledger import LedgerBridge
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("pypi.gatekeeper")
+log = get_emitter("proxy.gatekeeper")
 
-# 전역 상태 (Server에서 MCP를 통해 업데이트 가능)
 bridge = LedgerBridge()
 quarantine_db = {}  
 auth_policy = {"strict_mode": True, "expected_token": "temp_oidc_token_12345"}

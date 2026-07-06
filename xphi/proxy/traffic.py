@@ -1,14 +1,9 @@
 # xphi.proxy.traffic
-## @lineage: bound.watcher.server.traffic
-## @lineage: bound.watcher.sphere.traffic
-## @lineage: nexus.protocol.tracer.oracle
 import asyncio
 import math
 import random
 import time
 from typing import Optional, Any
-
-# [Architecture Align] 'import as' 제거 및 TunnelFactory 직접 주입
 from arch.bound.sandbox.tunnel import TunnelFactory
 from arch.proto.event.psi import PsiEvent, PsiCarrier, CarrierType, PhaseField
 from watcher.plane.emitter import get_emitter

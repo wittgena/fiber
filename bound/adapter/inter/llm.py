@@ -19,7 +19,7 @@ from bound.adapter.inter.base import BaseProviderAdapter
 from anchor.surface.mapper.state import StateMapper
 
 from bound.channel.client.action.preprocessor import CompletionContext
-from bound.router.adapter.llm import LLMRouter, TopologyMissingError
+from bound.transport.router.llm import LLMRouter, TopologyMissingError
 from bound.transport.stream.wrapper import CustomStreamWrapper
 
 from phase.gov.proto.gate import uuid4 

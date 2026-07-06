@@ -4,7 +4,7 @@ import datetime
 from typing import TypedDict, Any, Literal
 from pydantic import AnyHttpUrl, BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from bound.transport.session.server.http import EventStore
+from mcp.server.streamable_http import EventStore
 
 class ServerRunConfig(TypedDict, total=False):
     transport: Literal["stdio", "sse", "streamable-http"]
