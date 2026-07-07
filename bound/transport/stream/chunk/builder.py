@@ -1,12 +1,4 @@
 # bound.transport.stream.chunk.builder
-## @lineage: bound.bridge.transport.stream.chunk.builder
-## @lineage: bound.broker.transport.stream.chunk.builder
-## @lineage: bound.channel.transport.stream.chunk.builder
-## @lineage: bound.bridge.stream.chunk.builder
-## @lineage: bound.client.handler.stream.chunk.builder
-## @lineage: bound.handler.support.stream.chunk.builder
-## @lineage: bound.channel.handler.support.stream.chunk.builder
-## @lineage: bound.handler.stream.chunk.builder
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -31,7 +23,7 @@ import openai
 import tiktoken
 
 if TYPE_CHECKING:
-    from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
+    from bound.watcher.plane.delegator import LogDelegator
 
 from bound.surface.legacy.types import TextChoices, TextCompletionResponse
 from bound.surface.exception import APIError

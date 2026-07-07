@@ -1,8 +1,28 @@
-# bound.channel.action.support.header
-## @lineage: bound.channel.client.action.support.header
-## @lineage: anchor.channel.client.action.support.header
-## @lineage: anchor.channel.action.support.header
-from typing import Optional
+# bound.channel.bridge.convert.header
+## @lineage: bound.channel.action.support.header
+import httpx
+from typing import Optional, Union
+from bound.surface.legacy.types import OPENAI_RESPONSE_HEADERS
+
+def process_response_headers(response_headers: Union[httpx.Headers, dict]) -> dict:
+    openai_headers = {}
+    processed_headers = {}
+    additional_headers = {}
+
+    for k, v in response_headers.items():
+        if k in OPENAI_RESPONSE_HEADERS:
+            openai_headers[k] = v
+        if k.startswith("llm_provider-"):
+            processed_headers[k] = v
+        else:
+            additional_headers["{}-{}".format("llm_provider", k)] = v
+
+    additional_headers = {
+        **openai_headers,
+        **processed_headers,
+        **additional_headers,
+    }
+    return additional_headers
 
 def get_response_headers(_response_headers: Optional[dict] = None) -> dict:
     if _response_headers is None:

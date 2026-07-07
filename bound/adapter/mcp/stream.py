@@ -1,6 +1,4 @@
 # bound.adapter.mcp.stream
-## @lineage: xphi.adapter.mcp.stream
-## @lineage: bound.adapter.mcp.legacy.stream
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 from starlette.datastructures import Headers
 
@@ -73,7 +71,7 @@ class MCPStreamIterator(ResponseStreamIterator):
         self.custom_llm_provider = self.original_request_params.get(
             "custom_llm_provider", None
         )
-        self.litellm_call_id = self.original_request_params.get("litellm_call_id")
+        self.call_id = self.original_request_params.get("call_id")
         self.litellm_trace_id = self.original_request_params.get("litellm_trace_id")
 
         self._extract_mcp_headers_from_params()
@@ -412,7 +410,7 @@ class MCPStreamIterator(ResponseStreamIterator):
                 mcp_server_auth_headers=self.mcp_server_auth_headers,
                 oauth2_headers=self.oauth2_headers,
                 raw_headers=self.raw_headers,
-                litellm_call_id=self.litellm_call_id,
+                call_id=self.call_id,
                 litellm_trace_id=self.litellm_trace_id,
             )
 

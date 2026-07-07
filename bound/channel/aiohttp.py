@@ -1,8 +1,4 @@
 # bound.channel.aiohttp
-## @lineage: bound.channel.client.aiohttp
-## @lineage: bound.transport.aiohttp
-## @lineage: bound.bridge.transport.aiohttp
-## @lineage: bound.broker.transport.aiohttp
 import asyncio
 import contextlib
 import os

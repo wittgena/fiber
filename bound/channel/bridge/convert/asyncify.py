@@ -1,9 +1,5 @@
-# bound.channel.action.support.asyncify
-## @lineage: bound.channel.client.action.support.asyncify
-## @lineage: anchor.channel.client.action.support.asyncify
-## @lineage: anchor.channel.action.support.asyncify
-## @lineage: bound.channel.support.asyncify
-## @lineage: bound.channel.action.handler.asyncify
+# bound.channel.bridge.convert.asyncify
+## @lineage: bound.channel.action.support.asyncify
 import asyncio
 import functools
 from typing import Awaitable, Callable, Optional

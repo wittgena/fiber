@@ -1,4 +1,5 @@
-# bound.channel.action.support.search.file
+# bound.channel.bridge.search.file
+## @lineage: bound.channel.action.support.search.file
 ## @lineage: bound.channel.client.action.support.search.file
 ## @lineage: anchor.channel.client.action.support.search.file
 ## @lineage: anchor.channel.action.support.search.file

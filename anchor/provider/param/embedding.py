@@ -1,12 +1,4 @@
 # anchor.provider.param.embedding
-## @lineage: anchor.provider.model.param.embedding
-## @lineage: anchor.surface.model.param.embedding
-## @lineage: anchor.surface.model.types.vector_stores
-## @lineage: anchor.surface.model.legacy.types.vector_stores
-## @lineage: bound.adapter.legacy.llm.types.vector_stores
-## @lineage: anchor.surface.legacy.llm.types.vector_stores
-## @lineage: anchor.surface.legacy.types.vector_stores
-## @lineage: anchor.model.types.vector_stores
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -25,8 +17,8 @@ class EmbeddingRequest(BaseModel):
     caching: bool = False
     user: Optional[str] = None
     custom_llm_provider: Optional[Union[str, dict]] = None
-    litellm_call_id: Optional[str] = None
-    litellm_logging_obj: Optional[dict] = None
+    call_id: Optional[str] = None
+    log_delegator: Optional[dict] = None
     logger_fn: Optional[str] = None
     model_config = ConfigDict(extra="allow")
 

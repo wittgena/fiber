@@ -1,4 +1,5 @@
-# bound.surface.mapper.traverser
+# bound.channel.bridge.mapper.traverser
+## @lineage: bound.surface.mapper.traverser
 ## @lineage: anchor.surface.mapper.traverser
 ## @lineage: anchor.provider.mapper.traverser
 ## @lineage: bound.adapter.provider.state.traverser

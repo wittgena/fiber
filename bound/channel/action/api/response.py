@@ -1,8 +1,4 @@
 # bound.channel.action.api.response
-## @lineage: bound.channel.client.action.api.response
-## @lineage: anchor.channel.client.action.api.response
-## @lineage: anchor.channel.action.api.response
-## @lineage: bound.channel.bridge.action.response
 import asyncio
 import contextvars
 from dataclasses import dataclass, field
@@ -44,12 +40,12 @@ from anchor.registry.router.locator import get_llm_provider
 
 from bound.adapter.mcp.handler import MCPHandler
 from bound.channel.action.api.handler import ResponseApiHandler
-from bound.channel.action.support.asyncify import run_async_function
+from bound.channel.bridge.convert.asyncify import run_async_function
 from bound.channel.action.param.litellm import infer_openai_data_residency
-from bound.channel.wrapper import client
+from bound.channel.client import client
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.channel.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
-from bound.channel.action.support.request import ResponsesAPIRequestUtils
+from bound.channel.bridge.api import APIBridge
 from bound.channel.response.identity import ResponseIdentityManager
 
 from phase.gov.proto.gate import uuid
@@ -84,7 +80,7 @@ class ResponsesContext:
     responses_api_request_params: Dict[str, Any]
     
     # 메타 및 유틸리티 플래그
-    litellm_logging_obj: Optional[LiteLLMLoggingObj]
+    log_delegator: Optional[LiteLLMLoggingObj]
     use_chat_completions_api: bool
     is_async: bool
     timeout: Union[float, httpx.Timeout]
@@ -107,7 +103,7 @@ class ResponsesPreprocessor:
         self.tools = explicit_args.get("tools")
         self.text = explicit_args.get("text")
         
-        self.litellm_logging_obj = kwargs.get("litellm_logging_obj")
+        self.log_delegator = kwargs.get("log_delegator")
         self.is_async = kwargs.pop("aresponses", False) is True
         self.use_chat_completions_api = bool(kwargs.pop("use_chat_completions_api", None))
         
@@ -128,8 +124,8 @@ class ResponsesPreprocessor:
             )
 
         # Build final parameter sets
-        response_api_optional_params = ResponsesAPIRequestUtils.get_requested_response_api_optional_param(self.merged_vars)
-        responses_api_request_params = dict(ResponsesAPIRequestUtils.get_optional_params_responses_api(
+        response_api_optional_params = APIBridge.get_requested_response_api_optional_param(self.merged_vars)
+        responses_api_request_params = dict(APIBridge.get_optional_params_responses_api(
             model=self.model,
             responses_api_provider_config=provider_config,
             response_api_optional_params=response_api_optional_params,
@@ -150,7 +146,7 @@ class ResponsesPreprocessor:
             litellm_params=self.litellm_params,
             response_api_optional_params=response_api_optional_params,
             responses_api_request_params=responses_api_request_params,
-            litellm_logging_obj=self.litellm_logging_obj,
+            log_delegator=self.log_delegator,
             use_chat_completions_api=self.use_chat_completions_api,
             is_async=self.is_async,
             timeout=timeout,
@@ -160,7 +156,7 @@ class ResponsesPreprocessor:
         )
 
     def _format_text(self):
-        self.text = ResponsesAPIRequestUtils.convert_text_format_to_text_param(
+        self.text = APIBridge.convert_text_format_to_text_param(
             text_format=self.explicit_args.get("text_format"), text=self.text
         )
         if self.text is not None:
@@ -203,10 +199,10 @@ class ResponsesPreprocessor:
             item for item in self.input if isinstance(item, dict) and "role" in item # type: ignore[misc]
         ]
 
-        if hasattr(self.litellm_logging_obj, "should_run_prompt_management_hooks") and \
-           self.litellm_logging_obj.should_run_prompt_management_hooks(prompt_id=prompt_id, non_default_params=self.kwargs):
+        if hasattr(self.log_delegator, "should_run_prompt_management_hooks") and \
+           self.log_delegator.should_run_prompt_management_hooks(prompt_id=prompt_id, non_default_params=self.kwargs):
             
-            self.model, merged_input, merged_optional_params = self.litellm_logging_obj.get_chat_completion_prompt(
+            self.model, merged_input, merged_optional_params = self.log_delegator.get_chat_completion_prompt(
                 model=self.model, messages=client_input, non_default_params=self.kwargs,
                 prompt_id=prompt_id, prompt_variables=self.kwargs.get("prompt_variables"),
                 prompt_label=self.kwargs.get("prompt_label"), prompt_version=self.kwargs.get("prompt_version"),
@@ -289,7 +285,7 @@ class ResponsesDispatcher:
         return run_async_function(aresponses_api_with_mcp, **mcp_kwargs)
 
     def _dispatch_file_search(self) -> Optional[Any]:
-        from bound.channel.action.support.search.file import aresponses_with_emulated_file_search
+        from bound.channel.bridge.search.file import aresponses_with_emulated_file_search
         
         if not _has_file_search_tool(self.ctx.tools) or not (
             self.ctx.responses_api_provider_config is None
@@ -302,7 +298,7 @@ class ResponsesDispatcher:
             **self.ctx.explicit_args,
             "custom_llm_provider": self.ctx.custom_llm_provider,
             "timeout": self.ctx.timeout,
-            **{k: v for k, v in self.ctx.kwargs.items() if k not in {"litellm_call_id", "aresponses"}}
+            **{k: v for k, v in self.ctx.kwargs.items() if k not in {"call_id", "aresponses"}}
         }
         if self.ctx.use_chat_completions_api:
             emulated_kwargs["use_chat_completions_api"] = True
@@ -317,8 +313,8 @@ class ResponsesDispatcher:
         )
 
     def _dispatch_final_api(self) -> Any:
-        if self.ctx.litellm_logging_obj:
-            self.ctx.litellm_logging_obj.update_from_kwargs(
+        if self.ctx.log_delegator:
+            self.ctx.log_delegator.update_from_kwargs(
                 kwargs=self.ctx.kwargs,
                 model=self.ctx.model,
                 user=self.ctx.explicit_args.get("user"),
@@ -326,7 +322,7 @@ class ResponsesDispatcher:
                 litellm_params={
                     **self.ctx.responses_api_request_params,
                     "aresponses": self.ctx.is_async,
-                    "litellm_call_id": self.ctx.kwargs.get("litellm_call_id"),
+                    "call_id": self.ctx.kwargs.get("call_id"),
                     "model_info": self.ctx.kwargs.get("model_info"),
                     "data_residency": infer_openai_data_residency(
                         self.ctx.custom_llm_provider, self.ctx.litellm_params.api_base
@@ -336,7 +332,7 @@ class ResponsesDispatcher:
                 custom_llm_provider=self.ctx.custom_llm_provider,
             )
 
-        final_input = ResponsesAPIRequestUtils._restore_encrypted_content_item_ids_in_input(self.ctx.input)
+        final_input = APIBridge._restore_encrypted_content_item_ids_in_input(self.ctx.input)
         if self.ctx.custom_llm_provider is None:
             raise ValueError("custom_llm_provider is required but passed as None")
 
@@ -347,7 +343,7 @@ class ResponsesDispatcher:
             response_api_optional_request_params=self.ctx.responses_api_request_params,
             custom_llm_provider=self.ctx.custom_llm_provider,
             litellm_params=self.ctx.litellm_params,
-            logging_obj=self.ctx.litellm_logging_obj,
+            logging_obj=self.ctx.log_delegator,
             extra_headers=self.ctx.explicit_args.get("extra_headers"),
             extra_body=self.ctx.explicit_args.get("extra_body"),
             timeout=self.ctx.timeout,
@@ -361,7 +357,7 @@ class ResponsesDispatcher:
         )
 
         if isinstance(response, ResponsesAPIResponse):
-            response = ResponsesAPIRequestUtils._update_responses_api_response_id_with_model_id(
+            response = APIBridge._update_responses_api_response_id_with_model_id(
                 responses_api_response=response,
                 litellm_metadata=self.ctx.kwargs.get("litellm_metadata", {}),
                 custom_llm_provider=self.ctx.custom_llm_provider,

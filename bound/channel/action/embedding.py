@@ -13,8 +13,8 @@
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
 from bound.surface.legacy.types import EmbeddingResponse
-from bound.surface.mapper.exception import exception_type
-from bound.channel.wrapper import client
+from bound.channel.bridge.mapper.exception import exception_type
+from bound.channel.client import client
 from bound.channel.action.preprocessor import EmbeddingPreprocessor
 from anchor.registry.adapter import AdapterRegistry
 from watcher.plane.emitter import get_emitter

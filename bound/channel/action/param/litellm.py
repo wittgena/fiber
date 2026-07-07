@@ -1,9 +1,4 @@
 # bound.channel.action.param.litellm
-## @lineage: bound.channel.client.action.param.litellm
-## @lineage: anchor.channel.client.action.param.litellm
-## @lineage: anchor.channel.action.param.litellm
-## @lineage: bound.channel.support.param.litellm
-## @lineage: bound.channel.action.handler.param.litellm
 from typing import Dict, Optional
 from urllib.parse import urlparse
 
@@ -81,7 +76,7 @@ def get_litellm_params(
     together_ai=False,
     custom_llm_provider: Optional[str] = None,
     api_base: Optional[str] = None,
-    litellm_call_id=None,
+    call_id=None,
     model_alias_map=None,
     completion_call_id=None,
     metadata: Optional[dict] = None,
@@ -139,7 +134,7 @@ def get_litellm_params(
         "custom_llm_provider": custom_llm_provider,
         "api_base": api_base,
         "data_residency": data_residency,
-        "litellm_call_id": litellm_call_id,
+        "call_id": call_id,
         "model_alias_map": model_alias_map,
         "completion_call_id": completion_call_id,
         "aembedding": aembedding,
@@ -148,7 +143,7 @@ def get_litellm_params(
         "proxy_server_request": proxy_server_request,
         "preset_cache_key": preset_cache_key,
         "no-log": no_log or kwargs.get("no-log"),
-        "stream_response": {},  # litellm_call_id: ModelResponse Dict
+        "stream_response": {},  # call_id: ModelResponse Dict
         "input_cost_per_token": input_cost_per_token,
         "input_cost_per_second": input_cost_per_second,
         "output_cost_per_token": output_cost_per_token,

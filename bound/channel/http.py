@@ -1,8 +1,4 @@
 # bound.channel.http
-## @lineage: bound.channel.client.http
-## @lineage: anchor.channel.client.http
-## @lineage: bound.channel.handler.http
-## @lineage: bound.channel.action.handler.http
 import ssl
 from enum import Enum
 import asyncio

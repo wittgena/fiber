@@ -251,7 +251,7 @@ def completion_cost(  # noqa: PLR0915
     standard_built_in_tools_params: Optional[StandardBuiltInToolsParams] = None,
     litellm_model_name: Optional[str] = None,
     router_model_id: Optional[str] = None,
-    litellm_logging_obj: Optional[LitellmLoggingObject] = None,
+    log_delegator: Optional[LitellmLoggingObject] = None,
     service_tier: Optional[str] = None,
     data_residency: Optional[str] = None,
 ) -> float:
@@ -377,7 +377,7 @@ def completion_cost(  # noqa: PLR0915
                 elif (current_model in getattr(config, "replicate_models", []) or "replicate" in current_model) and current_model not in model_cost:
                     return get_replicate_completion_pricing(completion_response, total_time)
 
-                request_model_for_cost = litellm_logging_obj.model if litellm_logging_obj else None
+                request_model_for_cost = log_delegator.model if log_delegator else None
 
                 prompt_cost, comp_cost = cost_per_token(
                     model=current_model,
@@ -473,7 +473,7 @@ def response_cost_calculator(
     standard_built_in_tools_params: Optional[StandardBuiltInToolsParams] = None,
     litellm_model_name: Optional[str] = None,
     router_model_id: Optional[str] = None,
-    litellm_logging_obj: Optional[LitellmLoggingObject] = None,
+    log_delegator: Optional[LitellmLoggingObject] = None,
     service_tier: Optional[str] = None,
     data_residency: Optional[str] = None,
 ) -> float:
@@ -500,7 +500,7 @@ def response_cost_calculator(
             standard_built_in_tools_params=standard_built_in_tools_params,
             litellm_model_name=litellm_model_name,
             router_model_id=router_model_id,
-            litellm_logging_obj=litellm_logging_obj,
+            log_delegator=log_delegator,
             service_tier=service_tier,
             data_residency=data_residency,
         )

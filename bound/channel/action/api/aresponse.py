@@ -1,7 +1,4 @@
 # bound.channel.action.api.aresponse
-## @lineage: bound.channel.client.action.api.aresponse
-## @lineage: anchor.channel.client.action.api.aresponse
-## @lineage: anchor.channel.action.api.aresponse
 import asyncio
 import contextvars
 from functools import partial
@@ -30,7 +27,7 @@ from anchor.registry.router.locator import get_llm_provider
 from bound.channel.action.param.litellm import get_litellm_params, infer_openai_data_residency
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.channel.ws import ResponseWebsocketHandler
-from bound.channel.wrapper import client
+from bound.channel.client import client
 from bound.channel.response.identity import ResponseIdentityManager
 
 from bound.channel.action.api.handler import ResponseApiHandler
@@ -63,16 +60,16 @@ async def aresponses(
 ) -> Union[ResponsesAPIResponse, ResponseStreamIterator]:
     kwargs["aresponses"] = True
     
-    litellm_logging_obj = kwargs.get("litellm_logging_obj")
+    log_delegator = kwargs.get("log_delegator")
     prompt_id = kwargs.get("prompt_id")
     
-    if isinstance(litellm_logging_obj, LiteLLMLoggingObj) and litellm_logging_obj.should_run_prompt_management_hooks(
+    if isinstance(log_delegator, LiteLLMLoggingObj) and log_delegator.should_run_prompt_management_hooks(
         prompt_id=prompt_id, non_default_params=kwargs
     ):
         client_input: List[AllMessageValues] = [{"role": "user", "content": input}] if isinstance(input, str) else [
             item for item in input if isinstance(item, dict) and "role" in item # type: ignore[misc]
         ]
-        model, merged_input, merged_optional_params = await litellm_logging_obj.async_get_chat_completion_prompt(
+        model, merged_input, merged_optional_params = await log_delegator.async_get_chat_completion_prompt(
             model=model, messages=client_input, non_default_params=kwargs,
             prompt_id=prompt_id, prompt_variables=kwargs.get("prompt_variables"),
             prompt_label=kwargs.get("prompt_label"), prompt_version=kwargs.get("prompt_version"),
@@ -136,7 +133,7 @@ async def aresponses_api_with_mcp(
         tool_results = await MCPHandler._execute_tool_calls(
             tool_server_map=tool_server_map, tool_calls=tool_calls, user_api_key_auth=user_api_key_auth,
             mcp_auth_header=mcp_auth_header, mcp_server_auth_headers=mcp_server_auth_headers,
-            oauth2_headers=None, raw_headers=None, litellm_call_id=kwargs.get("litellm_call_id"), litellm_trace_id=kwargs.get("litellm_trace_id"),
+            oauth2_headers=None, raw_headers=None, call_id=kwargs.get("call_id"), litellm_trace_id=kwargs.get("litellm_trace_id"),
         )
         
         if tool_results:
@@ -171,7 +168,7 @@ async def _aresponses_websocket(
     timeout: Optional[float] = None,
     **kwargs,
 ):
-    litellm_logging_obj: LiteLLMLoggingObj = kwargs.get("litellm_logging_obj")  # type: ignore
+    log_delegator: LiteLLMLoggingObj = kwargs.get("log_delegator")  # type: ignore
     user = kwargs.get("user", None)
     litellm_params = GenericLiteLLMParams(**kwargs)
     litellm_params_dict = get_litellm_params(**kwargs)
@@ -192,7 +189,7 @@ async def _aresponses_websocket(
         dynamic_api_base or litellm_params.api_base or config.api_base,
     )
 
-    litellm_logging_obj.update_from_kwargs(
+    log_delegator.update_from_kwargs(
         kwargs=kwargs,
         model=model,
         user=user,
@@ -228,7 +225,7 @@ async def _aresponses_websocket(
         "custom_llm_provider",
         "model",
         "websocket",
-        "litellm_logging_obj",
+        "log_delegator",
         "api_base",
         "api_key",
         "timeout",
@@ -242,7 +239,7 @@ async def _aresponses_websocket(
     await ws_handler.async_responses_websocket(
         model=model,
         websocket=websocket,
-        logging_obj=litellm_logging_obj,
+        logging_obj=log_delegator,
         responses_api_provider_config=responses_api_provider_config,
         api_base=resolved_api_base,
         api_key=resolved_api_key,

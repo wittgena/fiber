@@ -1,9 +1,4 @@
 # bound.channel.bridge.rule
-## @lineage: bound.channel.client.bridge.rule
-## @lineage: bound.channel.mcp.bridge.rule
-## @lineage: anchor.channel.bridge.rule
-## @lineage: anchor.channel.client.rule
-## @lineage: bound.adapter.proxy.rule
 import json
 from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate

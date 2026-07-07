@@ -1,9 +1,4 @@
 # bound.surface.legacy.types
-## @lineage: anchor.provider.legacy.types
-## @lineage: anchor.surface.model.client.types
-## @lineage: anchor.surface.model.types
-## @lineage: anchor.surface.model.types.utils
-## @lineage: anchor.surface.model.legacy.types.utils
 import json
 import time
 from enum import Enum
@@ -40,7 +35,7 @@ EventHookType = Any
 
 from phase.gov.proto.gate import uuid
 from bound.surface.legacy.base import BaseOpenAIResponse, PydanticObjectBase
-from bound.channel.action.support.helpers import map_finish_reason
+from bound.channel.bridge.mapper.reason import map_finish_reason
 from bound.surface.legacy.base import HiddenParams
 from bound.surface.legacy.openai.types import (
     AllMessageValues,
@@ -2429,7 +2424,7 @@ class LoggedLiteLLMParams(TypedDict, total=False):
     force_timeout: Optional[float]
     custom_llm_provider: Optional[str]
     api_base: Optional[str]
-    litellm_call_id: Optional[str]
+    call_id: Optional[str]
     model_alias_map: Optional[dict]
     metadata: Optional[dict]
     model_info: Optional[dict]
@@ -2874,7 +2869,7 @@ class StandardAuditLogPayload(TypedDict):
 class StandardLoggingPayload(TypedDict):
     id: str
     trace_id: str  # Trace multiple LLM calls belonging to same overall request (e.g. fallbacks/retries)
-    litellm_call_id: Optional[str]  # UUID returned in x-litellm-call-id response header
+    call_id: Optional[str]  # UUID returned in x-litellm-call-id response header
     call_type: str
     stream: Optional[bool]
     response_cost: float
@@ -3017,8 +3012,8 @@ all_litellm_params = (
         "verbose",
         "custom_llm_provider",
         "model_file_id_mapping",
-        "litellm_logging_obj",
-        "litellm_call_id",
+        "log_delegator",
+        "call_id",
         "use_client",
         "id",
         "fallbacks",

@@ -16,22 +16,68 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
-from bound.surface.exception import Timeout
-from bound.surface.mapper.exception import exception_type
-
 from bound.adapter.bridge.trace.dd import tracer
-
+from bound.surface.exception import Timeout
+from bound.channel.bridge.mapper.exception import exception_type
 from bound.surface.switch.params import ModelResponse
 from bound.channel.action.core import async_core_completion
-from bound.channel.wrapper import client
-from bound.channel.action.support.helpers import safe_deep_copy, filter_internal_params
-from bound.channel.action.support.asyncify import run_async_function
+from bound.channel.client import client
+from bound.channel.bridge.convert.asyncify import run_async_function
 from bound.transport.stream.wrapper import CustomStreamWrapper
-from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
+from bound.watcher.plane.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.completion")
+
+def filter_internal_params(data: dict, additional_internal_params: Optional[set] = None) -> dict:
+    if not isinstance(data, dict):
+        return data
+
+    internal_params = {
+        "skip_mcp_handler",
+        "mcp_handler_context",
+        "_skip_mcp_handler",
+    }
+    if additional_internal_params:
+        internal_params.update(additional_internal_params)
+    return {k: v for k, v in data.items() if k not in internal_params}
+
+def safe_deep_copy(data):
+    import copy
+    if config.safe_memory_mode is True:
+        return data
+
+    litellm_parent_otel_span: Optional[Any] = None
+    litellm_parent_otel_span = None
+    if isinstance(data, dict):
+        if "metadata" in data and "litellm_parent_otel_span" in data["metadata"]:
+            litellm_parent_otel_span = data["metadata"].pop("litellm_parent_otel_span")
+            data["metadata"]["litellm_parent_otel_span"] = "placeholder"
+
+        if ("litellm_metadata" in data and "litellm_parent_otel_span" in data["litellm_metadata"]):
+            litellm_parent_otel_span = data["litellm_metadata"].pop("litellm_parent_otel_span")
+            data["litellm_metadata"]["litellm_parent_otel_span"] = "placeholder"
+
+    if isinstance(data, dict):
+        new_data = {}
+        for k, v in data.items():
+            try:
+                new_data[k] = copy.deepcopy(v)
+            except Exception:
+                new_data[k] = v
+    else:
+        try:
+            new_data = copy.deepcopy(data)
+        except Exception:
+            new_data = data
+
+    if isinstance(data, dict) and litellm_parent_otel_span is not None:
+        if "metadata" in data and "litellm_parent_otel_span" in data["metadata"]:
+            data["metadata"]["litellm_parent_otel_span"] = litellm_parent_otel_span
+        if ("litellm_metadata" in data and "litellm_parent_otel_span" in data["litellm_metadata"]):
+            data["litellm_metadata"]["litellm_parent_otel_span"] = litellm_parent_otel_span
+    return new_data
 
 class Completions:
     def __init__(self, params, router_obj: Optional[Any]):
@@ -102,12 +148,12 @@ async def acompletion(
     if mock_timeout is True:
         await _handle_mock_timeout_async(mock_timeout, timeout, model)
 
-    litellm_logging_obj = kwargs.get("litellm_logging_obj")
+    log_delegator = kwargs.get("log_delegator")
     tools = kwargs.get("tools")
-    if isinstance(litellm_logging_obj, LiteLLMLoggingObj) and litellm_logging_obj.should_run_prompt_management_hooks(
+    if isinstance(log_delegator, LogDelegator) and log_delegator.should_run_prompt_management_hooks(
         prompt_id=kwargs.get("prompt_id"), non_default_params=kwargs, tools=tools,
     ):
-        model, messages, _ = await litellm_logging_obj.async_get_chat_completion_prompt(
+        model, messages, _ = await log_delegator.async_get_chat_completion_prompt(
             model=model, messages=messages, non_default_params=kwargs,
             prompt_id=kwargs.get("prompt_id"), prompt_variables=kwargs.get("prompt_variables"),
             tools=tools, prompt_label=kwargs.get("prompt_label"), prompt_version=kwargs.get("prompt_version"),
@@ -150,9 +196,8 @@ async def async_completion_with_fallbacks(**kwargs):
     fallbacks = [original_model] + nested_kwargs.pop("fallbacks", [])
     kwargs.pop("acompletion", None) 
     
-    base_kwargs = {**kwargs, **nested_kwargs, "litellm_call_id": str(uuid.uuid4())}
-    litellm_logging_obj = base_kwargs.pop("litellm_logging_obj", None)
-
+    base_kwargs = {**kwargs, **nested_kwargs, "call_id": str(uuid.uuid4())}
+    log_delegator = base_kwargs.pop("log_delegator", None)
     most_recent_exception_str: Optional[str] = None
     
     for fallback in fallbacks:
@@ -170,7 +215,7 @@ async def async_completion_with_fallbacks(**kwargs):
             ## 재귀 호출
             response = await acompletion(
                 model=current_model, messages=messages, 
-                litellm_logging_obj=litellm_logging_obj, **current_kwargs
+                log_delegator=log_delegator, **current_kwargs
             )
             if response is not None:
                 return response

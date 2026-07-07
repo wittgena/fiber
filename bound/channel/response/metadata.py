@@ -1,24 +1,16 @@
 # bound.channel.response.metadata
-## @lineage: bound.channel.client.response.metadata
-## @lineage: anchor.channel.client.response.metadata
-## @lineage: anchor.channel.response.metadata
-## @lineage: bound.channel.support.metadata
 import datetime
 from typing import Any, Optional, Union
 from bound.surface.legacy.config.constants import LITELLM_DETAILED_TIMING
-from bound.channel.action.support.helpers import process_response_headers
-from bound.channel.action.support.base import get_api_base
-
-# from gate.litellm.voider import Logging as LiteLLMLoggingObject
-LiteLLMLoggingObject = Any
-
+from bound.channel.bridge.convert.header import process_response_headers
+from bound.channel.bridge.api import get_api_base
+from bound.watcher.plane.delegator import LogDelegator
 from bound.surface.legacy.types import (
     EmbeddingResponse,
     HiddenParams,
     ModelResponse,
     TranscriptionResponse,
 )
-
 
 class ResponseMetadata:
     def __init__(self, result: Any):
@@ -37,7 +29,7 @@ class ResponseMetadata:
         )
 
     def set_hidden_params(
-        self, logging_obj: LiteLLMLoggingObject, model: Optional[str], kwargs: dict
+        self, logging_obj: LogDelegator, model: Optional[str], kwargs: dict
     ) -> None:
         """Set hidden parameters on the response"""
 
@@ -45,7 +37,7 @@ class ResponseMetadata:
         model_info = kwargs.get("model_info", {}) or {}
         model_id = model_info.get("id", None)
         new_params = {
-            "litellm_call_id": getattr(logging_obj, "litellm_call_id", None),
+            "call_id": getattr(logging_obj, "call_id", None),
             "api_base": get_api_base(model=model or "", optional_params=kwargs),
             "model_id": model_id,
             "response_cost": logging_obj._response_cost_calculator(
@@ -81,7 +73,7 @@ class ResponseMetadata:
         self,
         start_time: datetime.datetime,
         end_time: datetime.datetime,
-        logging_obj: LiteLLMLoggingObject,
+        logging_obj: LogDelegator,
     ) -> None:
         """Set response timing metrics"""
         total_response_time_ms = (end_time - start_time).total_seconds() * 1000
@@ -160,7 +152,7 @@ class ResponseMetadata:
 
 def update_response_metadata(
     result: Any,
-    logging_obj: LiteLLMLoggingObject,
+    logging_obj: LogDelegator,
     model: Optional[str],
     kwargs: dict,
     start_time: datetime.datetime,

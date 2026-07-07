@@ -142,7 +142,7 @@ class MCPToolExecutor:
                 sanitized_name = unprefixed_name
 
             start_time = datetime.now()
-            tool_logging_call_id = kwargs.get("litellm_call_id") or str(uuid.uuid4())
+            tool_logging_call_id = kwargs.get("call_id") or str(uuid.uuid4())
             
             # Request schema for telemetry
             logging_request_data = {
@@ -154,15 +154,15 @@ class MCPToolExecutor:
                 },
                 "input": [{"role": "tool", "content": {"tool_name": sanitized_name, "arguments": parsed_args}}],
                 "call_type": CallTypes.call_mcp_tool.value,
-                "litellm_call_id": tool_logging_call_id,
+                "call_id": tool_logging_call_id,
             }
             if kwargs.get("litellm_trace_id"):
                 logging_request_data["litellm_trace_id"] = kwargs.get("litellm_trace_id")
 
             # 1. Telemetry Pre-call
-            litellm_logging_obj = None
+            log_delegator = None
             if global_brane_logger:
-                litellm_logging_obj, logging_request_data = await global_brane_logger.log_pre_call(
+                log_delegator, logging_request_data = await global_brane_logger.log_pre_call(
                     tool_name=name,
                     logging_request_data=logging_request_data,
                     logging_input=logging_request_data["input"],
@@ -185,9 +185,9 @@ class MCPToolExecutor:
             )
 
             # 3. Telemetry Post-call Success
-            if global_brane_logger and litellm_logging_obj:
+            if global_brane_logger and log_delegator:
                 await global_brane_logger.log_post_call_success(
-                    litellm_logging_obj=litellm_logging_obj,
+                    log_delegator=log_delegator,
                     result=result,
                     start_time=start_time,
                     tool_name=name

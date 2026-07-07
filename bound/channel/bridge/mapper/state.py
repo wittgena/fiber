@@ -1,4 +1,5 @@
-# bound.surface.mapper.state
+# bound.channel.bridge.mapper.state
+## @lineage: bound.surface.mapper.state
 ## @lineage: anchor.surface.mapper.state
 ## @lineage: anchor.provider.mapper.state
 ## @lineage: bound.adapter.provider.state.mapper
@@ -14,7 +15,7 @@ from phase.gov.proto.gate import uuid4
 from phase.bind.resolver import get_invoker
 from watcher.plane.emitter import get_emitter
 
-from bound.surface.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
+from bound.channel.bridge.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")

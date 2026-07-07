@@ -2,7 +2,7 @@
 ## @lineage: bound.channel.client.action.core
 from typing import Any, Dict, List, Optional, Union
 
-from bound.surface.mapper.exception import exception_type
+from bound.channel.bridge.mapper.exception import exception_type
 from bound.surface.switch.params import ModelResponse, ModelResponseStream
 from bound.channel.action.preprocessor import CompletionPreprocessor
 from anchor.registry.adapter import AdapterRegistry

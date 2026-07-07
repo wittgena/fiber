@@ -15,7 +15,6 @@ from arch.proto.event.next import LogEvent
 from phase.gov.proto.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context
 
-## CORE OBSERVABILITY INFRASTRUCTURE
 emitter = get_emitter("plane.delegator")
 
 """PEP 562: Module-level attribute access (LiteLLM legacy global scope compatibility)"""
@@ -51,10 +50,6 @@ class ParsedUsage:
     reasoning: int = 0
     is_meaningful: bool = False
 
-# ==============================================================================
-# 2. [DEPRECATED] LEGACY OPENTELEMETRY ISOLATION
-# ==============================================================================
-
 def _get_legacy_trace_id() -> str:
     """
     @desc: Quarantined OpenTelemetry trace extraction. 
@@ -72,11 +67,6 @@ def _get_legacy_trace_id() -> str:
     # Fallback to the native topological context flow
     ctx = _flow_context.get()
     return ctx.get("flow_id") or ctx.get("session_id") or uuid4().hex
-
-
-# ==============================================================================
-# 3. STATELESS OBSERVABILITY ENGINE
-# ==============================================================================
 
 class DriverObserver:
     """
@@ -256,7 +246,8 @@ class DriverObserver:
 class LoggingBase:
     def pre_call(self, input, api_key, model=None, additional_args={}): pass
     def post_call(self, original_response, input=None, api_key=None, additional_args={}): pass
-class Logging(LoggingBase):
+
+class LogDelegator(LoggingBase):
     """@compat.anchor: Entry point for LiteLLM & Openhands ecosystem integration"""
     stream: bool = False
     litellm_trace_id: str
@@ -297,15 +288,19 @@ class Logging(LoggingBase):
         return None
 
     ## @lifecycle.hooks: Delegated to DriverObserver
-    def success_handler(self, kwargs, result=None, start_time=None):
+    def success_handler(self, kwargs, result=None, start_time=None, end_time=None):
         req_start = start_time or kwargs.get("start_time", time.time())
+        req_end = end_time or time.time()
         telemetry_ctx = kwargs.get("telemetry_ctx", {})
         
         if result:
+            # 기존에는 track_success 내부에서 time.time()을 썼다면, 
+            # DriverObserver.track_success도 end_time을 받도록 수정하거나 아래처럼 start_time을 보정할 수 있습니다.
+            # (가장 좋은 것은 DriverObserver.track_success가 latency를 직접 받거나 end_time을 받는 것입니다)
             self.observer.track_success(resp=result, start_time=req_start, telemetry_ctx=telemetry_ctx)
         return self._safe_super_call('success_handler', kwargs, result, start_time)
 
-    async def async_success_handler(self, kwargs, result=None, start_time=None):
+    async def async_success_handler(self, kwargs, result=None, start_time=None, end_time=None):
         req_start = start_time or kwargs.get("start_time", time.time())
         telemetry_ctx = kwargs.get("telemetry_ctx", {})
         
@@ -317,7 +312,7 @@ class Logging(LoggingBase):
             return await super_result
         return super_result
 
-    def failure_handler(self, kwargs, exception, traceback_exception=None, start_time=None):
+    def failure_handler(self, kwargs, exception, traceback_exception=None, start_time=None, end_time=None):
         req_start = start_time or kwargs.get("start_time", time.time())
         telemetry_ctx = kwargs.get("telemetry_ctx", {})
         
@@ -325,7 +320,7 @@ class Logging(LoggingBase):
         self._safe_super_call('failure_handler', kwargs, exception, traceback_exception, start_time)
         return exception, traceback_exception
 
-    async def async_failure_handler(self, kwargs, exception, traceback_exception=None, start_time=None):
+    async def async_failure_handler(self, kwargs, exception, traceback_exception=None, start_time=None, end_time=None):
         req_start = start_time or kwargs.get("start_time", time.time())
         telemetry_ctx = kwargs.get("telemetry_ctx", {})
         

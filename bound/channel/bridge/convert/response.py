@@ -1,9 +1,5 @@
-# bound.channel.response.converter
-## @lineage: bound.channel.client.response.converter
-## @lineage: anchor.channel.client.response.converter
-## @lineage: anchor.channel.response.converter
-## @lineage: bound.channel.support.convert
-## @lineage: bound.adapter.litellm.support.convert
+# bound.channel.bridge.convert.response
+## @lineage: bound.channel.response.converter
 import asyncio
 import json
 import time
@@ -12,7 +8,7 @@ from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
 from typing_extensions import Required, TypedDict
 
 from bound.surface.legacy.config.constants import RESPONSE_FORMAT_TOOL_NAME
-from bound.channel.action.support.header import get_response_headers
+from bound.channel.bridge.convert.header import get_response_headers
 from bound.surface.legacy.openai.types import (
     ChatCompletionThinkingBlock,
     ImageURLListItem,

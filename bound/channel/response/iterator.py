@@ -1,10 +1,4 @@
 # bound.channel.response.iterator
-## @lineage: bound.channel.client.response.iterator
-## @lineage: anchor.channel.client.response.iterator
-## @lineage: anchor.channel.response.iterator
-## @lineage: bound.channel.support.response.iterator
-## @lineage: anchor.action.response.iterator
-## @lineage: anchor.base.response.iterator
 import json
 from abc import abstractmethod
 from typing import List, Optional, Union, cast

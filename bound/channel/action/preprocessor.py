@@ -36,8 +36,7 @@ from bound.channel.action.param.validator import (
     validate_chat_completion_tool_choice,
     validate_openai_optional_params
 )
-from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
-
+from bound.watcher.plane.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.preprocessor")
@@ -84,7 +83,7 @@ class CompletionContext:
     acompletion: bool
     shared_session: Optional[Any]
     client_instance: Optional[Any]
-    logging_obj: Optional[LiteLLMLoggingObj]
+    logging_obj: Optional[LogDelegator]
     deployment_id: Optional[str]
     original_kwargs: dict  # 예외 처리를 위해 원본 보존
 
@@ -228,8 +227,8 @@ class CompletionPreprocessor:
         )
         return optional_params, litellm_params
 
-    def _setup_logging(self, optional_params: dict, litellm_params: dict) -> Optional[LiteLLMLoggingObj]:
-        logging_obj = cast(LiteLLMLoggingObj, self.kwargs.get("litellm_logging_obj"))
+    def _setup_logging(self, optional_params: dict, litellm_params: dict) -> Optional[LogDelegator]:
+        logging_obj = cast(LogDelegator, self.kwargs.get("log_delegator"))
         if logging_obj:
             logging_obj.update_environment_variables(
                 model=self.model, user=self.kwargs.get("user"), optional_params=optional_params, 
@@ -336,7 +335,7 @@ class EmbeddingPreprocessor:
             timeout=self.kwargs.get("timeout", 60.0),
             aembedding=self.kwargs.get("aembedding", False),
             optional_params=optional_params,
-            logging_obj=self.kwargs.get("litellm_logging_obj"),
+            logging_obj=self.kwargs.get("log_delegator"),
             original_kwargs=self.kwargs
         )
 

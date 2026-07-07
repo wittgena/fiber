@@ -1,6 +1,4 @@
 # bound.transport.stream.iterator
-## @lineage: bound.bridge.transport.stream.iterator
-## @lineage: bound.broker.transport.stream.iterator
 from __future__ import annotations
 import asyncio
 import json
@@ -20,11 +18,11 @@ from bound.surface.legacy.types import CallTypes
 
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.channel.action.task.executor import executor
-from bound.channel.action.support.asyncify import run_async_function
-from bound.channel.action.support.helpers import process_response_headers
-from bound.channel.action.support.base import get_api_base
+from bound.channel.bridge.convert.asyncify import run_async_function
+from bound.channel.bridge.convert.header import process_response_headers
+from bound.channel.bridge.api import get_api_base
 from bound.channel.response.metadata import update_response_metadata
-from bound.channel.action.support.request import ResponsesAPIRequestUtils
+from bound.channel.bridge.api import APIBridge
 from bound.channel.response.identity import ResponseIdentityManager
 
 from watcher.plane.emitter import get_emitter
@@ -137,15 +135,10 @@ class ResponseStreamIterator:
                     )
                 )
 
-                # Only when the SSE JSON carries a response body (delta events do not).
-                # Using getattr(..., "response") alone is unsafe with Mocks: they synthesize a
-                # truthy child Mock for any attribute, which breaks tests and is wrong on stream.
                 if "response" in parsed_chunk:
-                    response_object = getattr(
-                        openai_responses_api_chunk, "response", None
-                    )
+                    response_object = getattr(openai_responses_api_chunk, "response", None)
                     if response_object is not None:
-                        response = ResponsesAPIRequestUtils._update_responses_api_response_id_with_model_id(
+                        response = APIBridge._update_responses_api_response_id_with_model_id(
                             responses_api_response=response_object,
                             litellm_metadata=self.litellm_metadata,
                             custom_llm_provider=self.custom_llm_provider,
@@ -165,7 +158,7 @@ class ResponseStreamIterator:
                 ):
                     _item = getattr(openai_responses_api_chunk, "item", None)
                     if _item is not None:
-                        ResponsesAPIRequestUtils._encode_container_id_on_output_item(
+                        APIBridge._encode_container_id_on_output_item(
                             item=_item,
                             custom_llm_provider=self.custom_llm_provider,
                             model_id=_stream_model_id,
@@ -177,7 +170,7 @@ class ResponseStreamIterator:
                         openai_responses_api_chunk, "annotation", None
                     )
                     if _annotation is not None:
-                        ResponsesAPIRequestUtils._encode_container_id_on_output_item(
+                        APIBridge._encode_container_id_on_output_item(
                             item=_annotation,
                             custom_llm_provider=self.custom_llm_provider,
                             model_id=_stream_model_id,
@@ -186,13 +179,13 @@ class ResponseStreamIterator:
                     _part = getattr(openai_responses_api_chunk, "part", None)
                     if _part is not None:
                         if isinstance(_part, dict):
-                            ResponsesAPIRequestUtils._encode_container_ids_in_annotations(
+                            APIBridge._encode_container_ids_in_annotations(
                                 _part.get("annotations"),
                                 self.custom_llm_provider,
                                 _stream_model_id,
                             )
                         else:
-                            ResponsesAPIRequestUtils._encode_container_ids_in_annotations(
+                            APIBridge._encode_container_ids_in_annotations(
                                 getattr(_part, "annotations", None),
                                 self.custom_llm_provider,
                                 _stream_model_id,
@@ -1347,8 +1340,8 @@ _RESPONSE_CREATE_PARAMS: frozenset = (
 
 _MANAGED_WS_SKIP_KWARGS: frozenset = frozenset(
     {
-        "litellm_logging_obj",
-        "litellm_call_id",
+        "log_delegator",
+        "call_id",
         "aresponses",
         "_aresponses_websocket",
         "user_api_key_dict",

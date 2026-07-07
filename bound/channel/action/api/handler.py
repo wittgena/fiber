@@ -1,7 +1,4 @@
 # bound.channel.action.api.handler
-## @lineage: bound.channel.client.action.api.handler
-## @lineage: anchor.channel.client.action.api.handler
-## @lineage: anchor.channel.action.api.handler
 import json
 import ssl
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -24,7 +21,7 @@ from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 
 LiteLLMLoggingObj = Any
 
-from bound.channel.action.support.helpers import process_response_headers
+from bound.channel.bridge.convert.header import process_response_headers
 from bound.surface.legacy.provider import ProviderTypes
 from bound.surface.legacy.config.resolver import config
 from bound.channel.http import (

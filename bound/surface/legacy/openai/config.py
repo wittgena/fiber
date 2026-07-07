@@ -1,13 +1,4 @@
 # bound.surface.legacy.openai.config
-## @lineage: anchor.provider.legacy.openai.config
-## @lineage: anchor.surface.model.client.openai.config
-## @lineage: anchor.surface.model.openai.config
-## @lineage: anchor.surface.model.types.openai.config
-## @lineage: anchor.surface.model.legacy.openai.config
-## @lineage: bound.adapter.legacy.llm.openai.config
-## @lineage: anchor.surface.legacy.llm.openai.config
-## @lineage: anchor.surface.legacy.openai.openai
-## @lineage: bound.inter.llms.openai.openai
 import time
 import types
 from typing import (
@@ -48,8 +39,8 @@ from bound.surface.legacy.provider import ProviderTypes
 from bound.surface.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from bound.surface.legacy.openai.types import *
 
-from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
-from bound.channel.response.converter import convert_to_model_response_object
+from bound.watcher.plane.delegator import LogDelegator
+from bound.channel.bridge.convert.response import convert_to_model_response_object
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
@@ -206,7 +197,7 @@ class OpenAIConfig(BaseConfig):
         model: str,
         raw_response: httpx.Response,
         model_response: ModelResponse,
-        logging_obj: LiteLLMLoggingObj,
+        logging_obj: LogDelegator,
         request_data: dict,
         messages: List[AllMessageValues],
         optional_params: dict,

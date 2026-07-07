@@ -1,8 +1,5 @@
-# bound.surface.mapper.exception
-## @lineage: anchor.surface.mapper.exception
-## @lineage: anchor.provider.mapper.exception
-## @lineage: anchor.surface.provider.mapping.exception
-## @lineage: anchor.surface.mapping.exception
+# bound.channel.bridge.mapper.exception
+## @lineage: bound.surface.mapper.exception
 """
 @desc: 
 - Standardized LLM Provider exception mapping module
@@ -12,12 +9,10 @@
 import json
 import re
 import traceback
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 import httpx
 
 from bound.surface.legacy.config.resolver import config
-from bound.channel.action.support.base import get_api_base
-from xphi.xor.secret.redact import redact_string
 from bound.surface.legacy.provider import ProviderTypes
 from bound.surface.exception import (
     APIConnectionError,
@@ -35,6 +30,8 @@ from bound.surface.exception import (
     Timeout,
     UnprocessableEntityError,
 )
+from xphi.xor.secret.redact import redact_string
+
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("mapping.exception")
@@ -67,13 +64,17 @@ SEMANTIC_ERROR_REGEX = [
     (re.compile(r"timeout|timed out", re.IGNORECASE), Timeout),
 ]
 
+
 def exception_type(
-    model,
-    original_exception,
-    custom_llm_provider,
-    completion_kwargs={},
-    extra_kwargs={},
+    model: Optional[str],
+    original_exception: Exception,
+    custom_llm_provider: Optional[str],
+    completion_kwargs: Optional[Dict[str, Any]] = None, # [FIX 2] 가변 기본 인자 방지
+    extra_kwargs: Optional[Dict[str, Any]] = None,      # [FIX 2] 가변 기본 인자 방지
 ):
+    completion_kwargs = completion_kwargs or {}
+    extra_kwargs = extra_kwargs or {}
+
     ## @phase: validation, @desc: Return immediately if already mapped
     if any(isinstance(original_exception, exc_type) for exc_type in config.LITELLM_EXCEPTION_TYPES):
         return original_exception
@@ -94,8 +95,11 @@ def exception_type(
         ## @phase: context_building, @desc: Assemble extra debug information
         extra_information = f"\nModel: {model}"
         try:
-            _api_base = get_api_base(model=model, optional_params=extra_kwargs)
-            if _api_base: extra_information += f"\nAPI Base: `{_api_base}`"
+            # [FIX 1] 지연 임포트(Lazy Import) 적용하여 순환 참조(Circular Dependency) 고리 완벽 차단
+            from bound.channel.bridge.api import get_api_base
+            _api_base = get_api_base(model=model or "", optional_params=extra_kwargs)
+            if _api_base: 
+                extra_information += f"\nAPI Base: `{_api_base}`"
         except Exception:
             pass
 
@@ -134,6 +138,7 @@ def exception_type(
             )
         setattr(raised_exc, "litellm_response_headers", litellm_response_headers)
         raise raised_exc
+
     except Exception as e:
         ## @phase: catch_all - Final safety net for pipeline failures
         if hasattr(e, "litellm_response_headers"):
