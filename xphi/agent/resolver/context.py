@@ -3,7 +3,7 @@ import asyncio
 import socket
 from typing import List, Optional, Tuple, Dict, Any, Type, Protocol
 
-from anchor.provider.model.tier.registry import model_tier_registry
+from anchor.provider.tier.registry import model_tier_registry
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")

@@ -16,8 +16,8 @@ import time
 from typing_extensions import TypedDict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
-from anchor.provider.legacy.openai.types import ChatCompletionAssistantContentValue, ChatCompletionAudioDelta
-from anchor.provider.legacy.types import (
+from bound.surface.legacy.openai.types import ChatCompletionAssistantContentValue, ChatCompletionAudioDelta
+from bound.surface.legacy.types import (
     ChatCompletionAudioResponse,
     ChatCompletionMessageToolCall,
     Choices,
@@ -33,8 +33,8 @@ from anchor.provider.legacy.types import (
     CompletionTokensDetails, 
 )
 
-from anchor.provider.legacy.openai.types import ChatCompletionRedactedThinkingBlock, ChatCompletionThinkingBlock
-from anchor.provider.model.token.counter import token_counter
+from bound.surface.legacy.openai.types import ChatCompletionRedactedThinkingBlock, ChatCompletionThinkingBlock
+from anchor.provider.token.counter import token_counter
 from watcher.plane.emitter import get_emitter 
 
 log = get_emitter("chunk.processor")

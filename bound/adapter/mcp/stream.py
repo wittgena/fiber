@@ -1,12 +1,10 @@
 # bound.adapter.mcp.stream
-## @lineage: xphi.adapter.mcp.stream
-## @lineage: bound.adapter.mcp.legacy.stream
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 from starlette.datastructures import Headers
 
-from bound.channel.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
-from anchor.provider.legacy.openai.types import OutputItemDoneEvent
-from anchor.provider.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
+from bound.surface.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
+from bound.surface.legacy.openai.types import OutputItemDoneEvent
+from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
 
 from bound.adapter.mcp.handler import MCPHandler
 from bound.adapter.mcp.parser.header import MCPHeaderParser
@@ -73,7 +71,7 @@ class MCPStreamIterator(ResponseStreamIterator):
         self.custom_llm_provider = self.original_request_params.get(
             "custom_llm_provider", None
         )
-        self.litellm_call_id = self.original_request_params.get("litellm_call_id")
+        self.call_id = self.original_request_params.get("call_id")
         self.litellm_trace_id = self.original_request_params.get("litellm_trace_id")
 
         self._extract_mcp_headers_from_params()
@@ -321,7 +319,7 @@ class MCPStreamIterator(ResponseStreamIterator):
         return chunk
 
     async def _create_initial_response_iterator(self) -> None:
-        from bound.channel.client.action.api.aresponse import aresponses
+        from bound.channel.action.api.aresponse import aresponses
         """Create the initial response iterator by making the first LLM call"""
         try:
             # Make the initial response API call - but avoid the MCP wrapper
@@ -412,7 +410,7 @@ class MCPStreamIterator(ResponseStreamIterator):
                 mcp_server_auth_headers=self.mcp_server_auth_headers,
                 oauth2_headers=self.oauth2_headers,
                 raw_headers=self.raw_headers,
-                litellm_call_id=self.litellm_call_id,
+                call_id=self.call_id,
                 litellm_trace_id=self.litellm_trace_id,
             )
 
@@ -474,7 +472,7 @@ class MCPStreamIterator(ResponseStreamIterator):
             self.tool_results = []
 
     async def _create_follow_up_iterator(self) -> None:
-        from bound.channel.client.action.api.aresponse import aresponses
+        from bound.channel.action.api.aresponse import aresponses
         """Create the follow-up response iterator with tool results"""
         if not self.collected_response or not hasattr(self, "tool_results"):
             return

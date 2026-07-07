@@ -9,7 +9,7 @@
 @desc: Simulates multi-dimensional spatial vectors for testing RAG or search workflows.
 """
 from typing import List, Union
-from anchor.provider.legacy.types import EmbeddingResponse
+from bound.surface.legacy.types import EmbeddingResponse
 
 def create_mock_embedding(
     input_data: Union[str, List[str]], 

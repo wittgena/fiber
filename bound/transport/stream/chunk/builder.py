@@ -1,12 +1,4 @@
 # bound.transport.stream.chunk.builder
-## @lineage: bound.bridge.transport.stream.chunk.builder
-## @lineage: bound.broker.transport.stream.chunk.builder
-## @lineage: bound.channel.transport.stream.chunk.builder
-## @lineage: bound.bridge.stream.chunk.builder
-## @lineage: bound.client.handler.stream.chunk.builder
-## @lineage: bound.handler.support.stream.chunk.builder
-## @lineage: bound.channel.handler.support.stream.chunk.builder
-## @lineage: bound.handler.stream.chunk.builder
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -31,15 +23,15 @@ import openai
 import tiktoken
 
 if TYPE_CHECKING:
-    from bound.watcher.plane.delegator import Logging as LiteLLMLoggingObj
+    from bound.watcher.plane.delegator import LogDelegator
 
-from anchor.provider.legacy.types import TextChoices, TextCompletionResponse
-from anchor.surface.exception import APIError
+from bound.surface.legacy.types import TextChoices, TextCompletionResponse
+from bound.surface.exception import APIError
 
-from bound.channel.config.resolver import config
-from anchor.provider.model.token.counter import token_counter
+from bound.surface.legacy.config.resolver import config
+from anchor.provider.token.counter import token_counter
 from bound.transport.stream.chunk.processor import ChunkProcessor
-from bound.channel.switch.params import Choices, Message, ModelResponse, Usage
+from bound.surface.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("blm.main")

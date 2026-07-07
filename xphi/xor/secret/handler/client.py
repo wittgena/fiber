@@ -10,7 +10,7 @@ import os
 from typing import Any, Optional
 from xphi.xor.secret.handler.base import BaseSecretManager
 from xphi.xor.secret.kms import KeyManagementSystem
-from bound.channel.config.resolver import config
+from bound.surface.legacy.config.resolver import config
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("secret.handler.client")

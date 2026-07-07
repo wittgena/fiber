@@ -14,7 +14,7 @@ import orjson
 import pydantic
 from cachetools import LRUCache
 from diskcache import FanoutCache
-from bound.channel.config.resolver import config
+from bound.surface.legacy.config.resolver import config
 from watcher.plane.emitter import get_emitter
 from xphi.scope.dsp.context import runtime
 

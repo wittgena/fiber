@@ -2,10 +2,10 @@
 from dataclasses import dataclass
 from typing import Any, Callable, List, Optional
 
-from anchor.provider.model.token.splitter import TokenSplitter
-from anchor.provider.model.token.window import ContextWindow
-from anchor.provider.model.token.counter import token_counter
-from anchor.surface.registry.provider import model_cost
+from anchor.provider.token.splitter import TokenSplitter
+from anchor.provider.token.window import ContextWindow
+from anchor.provider.token.counter import token_counter
+from anchor.registry.model.cost import model_cost
 
 from bound.adapter.llama.prompts.utils import is_chat_model
 from bound.adapter.llama.base.embeddings.base import BaseEmbedding
@@ -134,7 +134,7 @@ class _Settings:
         LlamaIndex의 PromptHelper를 대체하는 안전한 ContextWindow 인스턴스를 반환합니다.
         """
         if self._context_window is None:
-            from anchor.provider.model.token.encoder import encode, decode
+            from anchor.provider.token.encoder import encode, decode
             safe_model = getattr(self.llm, "model", "gpt-3.5-turbo") if self._llm else "gpt-3.5-turbo"
             
             self._context_window = ContextWindow(

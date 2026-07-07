@@ -6,18 +6,18 @@ from httpx import Response
 from pydantic import BaseModel
 from functools import lru_cache
 
-from bound.channel.config.resolver import config
-from bound.channel.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE, DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
-from anchor.surface.registry.provider import model_cost, _get_model_info_helper
+from anchor.registry.model.cost import model_cost, lookup_base_model_info
+from anchor.registry.router.locator import get_llm_provider
 from anchor.provider.cost.builtin import BuiltInToolCostTracker
 from anchor.provider.cost.transform import UsageTransform
-
-from anchor.provider.model.token.counter import token_counter
+from anchor.provider.token.counter import token_counter
 from anchor.provider.cost.unit import CostCalculatorUtils, generic_cost_per_token
-from bound.router.provider.locator import get_llm_provider
-from bound.channel.switch.params import ModelResponse, ModelResponseStream
+from anchor.provider.param.rerank import RerankBilledUnits, RerankResponse
 
-from anchor.provider.legacy.openai.types import (
+from bound.surface.legacy.config.resolver import config
+from bound.surface.legacy.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE, DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
+from bound.surface.switch.params import ModelResponse, ModelResponseStream
+from bound.surface.legacy.openai.types import (
     HttpxBinaryResponseContent,
     OpenAIModerationResponse,
     OpenAIRealtimeStreamList,
@@ -26,8 +26,7 @@ from anchor.provider.legacy.openai.types import (
     ResponseAPIUsage,
     ResponsesAPIResponse,
 )
-from anchor.provider.model.param.rerank import RerankBilledUnits, RerankResponse
-from anchor.provider.legacy.types import (
+from bound.surface.legacy.types import (
     CallTypesLiteral, LiteLLMRealtimeStreamLoggingObject,
     StandardBuiltInToolsParams, Usage, CallTypes, CostPerToken, 
     EmbeddingResponse, ImageResponse, TextCompletionResponse, TranscriptionResponse
@@ -206,7 +205,7 @@ def cost_per_token(  # noqa: PLR0915
     # 하드코딩된 벤더별 분기(openai, anthropic, gemini)를 모두 날렸습니다.
     # 이제 모든 과금 규칙은 model_cost 메타데이터와 generic 엔진이 통일해서 처리합니다.
     # =========================================================================
-    model_info = _get_model_info_helper(model=model, custom_llm_provider=custom_llm_provider)
+    model_info = lookup_base_model_info(model=model, custom_llm_provider=custom_llm_provider)
 
     # Token 기반 과금 체계인 경우 (가장 흔함)
     if (model_info.get("input_cost_per_token") or 0.0) > 0 or (model_info.get("output_cost_per_token") or 0.0) > 0:
@@ -252,7 +251,7 @@ def completion_cost(  # noqa: PLR0915
     standard_built_in_tools_params: Optional[StandardBuiltInToolsParams] = None,
     litellm_model_name: Optional[str] = None,
     router_model_id: Optional[str] = None,
-    litellm_logging_obj: Optional[LitellmLoggingObject] = None,
+    log_delegator: Optional[LitellmLoggingObject] = None,
     service_tier: Optional[str] = None,
     data_residency: Optional[str] = None,
 ) -> float:
@@ -378,7 +377,7 @@ def completion_cost(  # noqa: PLR0915
                 elif (current_model in getattr(config, "replicate_models", []) or "replicate" in current_model) and current_model not in model_cost:
                     return get_replicate_completion_pricing(completion_response, total_time)
 
-                request_model_for_cost = litellm_logging_obj.model if litellm_logging_obj else None
+                request_model_for_cost = log_delegator.model if log_delegator else None
 
                 prompt_cost, comp_cost = cost_per_token(
                     model=current_model,
@@ -474,7 +473,7 @@ def response_cost_calculator(
     standard_built_in_tools_params: Optional[StandardBuiltInToolsParams] = None,
     litellm_model_name: Optional[str] = None,
     router_model_id: Optional[str] = None,
-    litellm_logging_obj: Optional[LitellmLoggingObject] = None,
+    log_delegator: Optional[LitellmLoggingObject] = None,
     service_tier: Optional[str] = None,
     data_residency: Optional[str] = None,
 ) -> float:
@@ -501,7 +500,7 @@ def response_cost_calculator(
             standard_built_in_tools_params=standard_built_in_tools_params,
             litellm_model_name=litellm_model_name,
             router_model_id=router_model_id,
-            litellm_logging_obj=litellm_logging_obj,
+            log_delegator=log_delegator,
             service_tier=service_tier,
             data_residency=data_residency,
         )

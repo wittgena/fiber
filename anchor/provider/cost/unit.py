@@ -5,7 +5,7 @@
 ## @lineage: anchor.switch.model.cost.unit
 ## @lineage: anchor.model.info.cost.calculator.utils
 from typing import Literal, Optional, Tuple, TypedDict, cast
-from anchor.provider.legacy.types import (
+from bound.surface.legacy.types import (
     CacheCreationTokenDetails,
     CallTypes,
     CompletionTokensDetailsWrapper,
@@ -17,7 +17,7 @@ from anchor.provider.legacy.types import (
     Usage,
     DataResidency
 )
-from anchor.provider.model.info import get_model_info
+from bound.surface.model.info import get_model_info
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("calculator.utils")
