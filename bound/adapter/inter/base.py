@@ -1,8 +1,8 @@
 # bound.adapter.inter.base
 ## @lineage: bound.adapter.provider.base
 from typing import Any, Dict, List, Optional, Union
-from bound.surface.switch.params import ModelResponse
-from bound.channel.action.preprocessor import CompletionContext
+from anchor.bind.switch.params import ModelResponse
+from bound.transport.channel.action.preprocessor import CompletionContext
 from bound.surface.legacy.completor import CompletionHandler
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from xphi.xor.secret.manager import get_secret_bool

@@ -1,9 +1,4 @@
 # xphi.scope.mock.response
-## @lineage: xphi.xor.tester.mock.response
-## @lineage: anchor.tester.mock.response
-## @lineage: anchor.surface.testing.mock.response
-## @lineage: anchor.testing.mock.response
-## @lineage: anchor.switch.mock.response
 """
 @phase: Mock Generation Boundary (API Responses)
 @desc: Simulates MCP tool orchestrations, Websocket flows, and ResponsesAPI payloads.

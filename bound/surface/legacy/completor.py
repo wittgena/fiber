@@ -10,10 +10,10 @@ from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
 from bound.surface.legacy.config.base import BaseConfig
-from bound.surface.switch.params import ModelResponse
+from anchor.bind.switch.params import ModelResponse
 from bound.surface.legacy.config.resolver import config
 
-from bound.channel.http import AsyncHTTPHandler, HTTPHandler, _get_httpx_client, get_async_httpx_client
+from bound.transport.channel.http import AsyncHTTPHandler, HTTPHandler, _get_httpx_client, get_async_httpx_client
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from anchor.registry.router.config import ProviderConfigManager
 from bound.surface.legacy.provider import ProviderTypes

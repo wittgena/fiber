@@ -9,7 +9,7 @@ from anchor.provider.dsp.instance import DSPInstance
 from xphi.scope.surface.config import SurfaceConfig
 from xphi.scope.dsp.context import runtime
 from xphi.scope.surface.registry import get_surface_class
-from bound.adapter.bridge.dsp.thch import folding_thch
+from bound.bridge.adapter.dsp.thch import folding_thch
 
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 from watcher.plane.emitter import get_emitter

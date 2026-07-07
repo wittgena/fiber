@@ -8,7 +8,7 @@ import hashlib
 import re
 from aiohttp import web, ClientSession
 
-from bound.adapter.mcp.server.wrapper import SecureMCPServer
+from anchor.bind.secure.server import SecureMCPServer
 from xphi.proxy.gatekeeper import gatekeeper, quarantine_db, emit_ledger_event, GatekeeperRejection
 from xphi.proxy.rule.projector import projector, SecurityContext, MetaRuleDef
 from xphi.proxy.setting import pypi_settings, ServerRunConfig, tool_get_time

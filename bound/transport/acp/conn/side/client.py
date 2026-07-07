@@ -51,7 +51,7 @@ from anchor.registry.acp.schema import (
     TextContentBlock,
 )
 from bound.transport.acp.validator.model import compatible_class, notify_model, param_model, param_models, request_model, request_model_from_dict
-from bound.transport.client import build_client_router
+from bound.transport.acp.client import build_client_router
 
 __all__ = ["ClientSideConnection"]
 _CLIENT_CONNECTION_ERROR = "ClientSideConnection requires asyncio StreamWriter/StreamReader"

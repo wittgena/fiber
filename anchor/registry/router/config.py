@@ -9,7 +9,7 @@ from enum import Enum
 from bound.surface.legacy.provider import ProviderTypes, ProviderTypesSet, ProviderSpecificModelInfo
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
-from bound.channel.action.param.format import BaseLLMModelInfo
+from bound.bridge.channel.param.format import BaseLLMModelInfo
 
 class ProviderConfigManager:
     _PROVIDER_CONFIG_MAP: Optional[dict[ProviderTypes, tuple[Callable, bool]]] = None

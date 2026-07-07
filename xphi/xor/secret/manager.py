@@ -12,7 +12,7 @@ import traceback
 import httpx
 from typing import Optional, Union, Dict, Tuple
 
-from bound.channel.http import HTTPHandler
+from bound.transport.channel.http import HTTPHandler
 from bound.surface.legacy.config.resolver import config
 from xphi.xor.secret.handler.client import get_secret_from_vendor
 

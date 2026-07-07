@@ -24,7 +24,7 @@ During the transition from MCP 1.0 (Stateful) to MCP 2.0 (Stateless), legacy fra
 
 ### [BRN-SEC-MCP-001] Protocol Downgrade Attack & Auth Bypass
 
-* **Industry Vectors:** JSON-RPC `initialize` Handshake Spoofing, FastMCP/LiteLLM Fallback Exploits
+* **Industry Vectors:** JSON-RPC `initialize` Handshake Spoofing, Fallback Exploits
 * **Threat Profile:** Attackers manipulate the MCP client to force the `initialize` payload's `protocolVersion` to a lower version (MCP 1.0) while intentionally omitting the mandatory stateless `Authorization` headers required by MCP 2.0. Legacy frameworks, attempting to maintain backward compatibility, automatically route this traffic to the stateful legacy pipeline, bypassing strict security middlewares.
 
 **Brane Resolution**

@@ -16,10 +16,10 @@ from typing import AsyncGenerator, Generator, Any, List
 from anchor.registry.router.locator import get_llm_provider
 from bound.adapter.llama.base.llms.types import ChatMessage, MessageRole
 from bound.adapter.inter.base import BaseProviderAdapter
-from bound.channel.bridge.mapper.state import StateMapper
+from bound.bridge.channel.mapper.state import StateMapper
 
-from bound.channel.action.preprocessor import CompletionContext
-from bound.transport.router.llm import LLMRouter, TopologyMissingError
+from bound.transport.channel.action.preprocessor import CompletionContext
+from bound.bridge.router.llm import LLMRouter, TopologyMissingError
 from bound.transport.stream.wrapper import CustomStreamWrapper
 
 from phase.gov.proto.gate import uuid4 

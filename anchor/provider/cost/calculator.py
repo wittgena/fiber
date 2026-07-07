@@ -16,7 +16,7 @@ from anchor.provider.param.rerank import RerankBilledUnits, RerankResponse
 
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE, DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
-from bound.surface.switch.params import ModelResponse, ModelResponseStream
+from anchor.bind.switch.params import ModelResponse, ModelResponseStream
 from bound.surface.legacy.openai.types import (
     HttpxBinaryResponseContent,
     OpenAIModerationResponse,

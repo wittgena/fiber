@@ -24,11 +24,11 @@ from bound.surface.legacy.config.base import BaseConfig
 from bound.surface.exception import BaseLLMException
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import DEFAULT_MAX_RETRIES
-from bound.surface.switch.params import ModelResponse, ModelResponseStream
+from anchor.bind.switch.params import ModelResponse, ModelResponseStream
 
 from bound.surface.legacy.provider import ProviderTypes
 from bound.surface.legacy.types import EmbeddingResponse
-from bound.channel.bridge.convert.response import convert_to_model_response_object
+from bound.bridge.channel.convert.response import convert_to_model_response_object
 from anchor.registry.router.config import ProviderConfigManager
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.base import BaseLLM

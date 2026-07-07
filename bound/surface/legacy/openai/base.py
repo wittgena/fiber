@@ -1,9 +1,4 @@
 # bound.surface.legacy.openai.base
-## @lineage: anchor.provider.legacy.openai.base
-## @lineage: anchor.surface.model.client.openai.base
-## @lineage: anchor.surface.model.openai.base
-## @lineage: anchor.surface.model.types.openai.base
-## @lineage: anchor.surface.model.legacy.openai.common_utils
 import hashlib
 import inspect
 import json
@@ -24,18 +19,18 @@ from typing import (
 import httpx
 import openai
 from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
-from xphi.scope.mock.transport import MockOpenAITransport
 
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
 from bound.surface.legacy.config.resolver import config
 from bound.surface.exception import BaseLLMException
-from bound.channel.http import (
+from bound.transport.channel.http import (
     _DEFAULT_TTL_FOR_HTTPX_CLIENTS,
     AsyncHTTPHandler,
     get_ssl_configuration,
 )
+from xphi.scope.mock.transport.openai import MockOpenAITransport
 
 
 def _get_client_init_params(cls: type) -> Tuple[str, ...]:

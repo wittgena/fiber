@@ -1,7 +1,4 @@
 # bound.adapter.dsp.exception
-## @lineage: bound.adapter.opt.exception
-## @lineage: xphi.xor.dsp.exceptions
-## @lineage: xphi.reflect.dsp.exceptions
 from arch.xor.manifold.sign.signature import Signature
 
 class AdapterParseError(Exception):

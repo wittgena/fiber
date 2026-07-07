@@ -19,7 +19,7 @@ from bound.adapter.llama.base.llms.types import (
 from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
 from bound.adapter.llama.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
 from bound.adapter.llama.tools.types import BaseTool
-from bound.adapter.bridge.hf import HFInferenceBridge
+from bound.bridge.adapter.hf import HFInferenceBridge
 from xphi.loop.flow.llm.llm import ToolSelection
 from xphi.loop.flow.llm.function_calling import FunctionCallingLLM
 

@@ -1,17 +1,10 @@
 # bound.transport.acp.conn.side.agent
-## @lineage: bound.transport.conn.side.agent
-## @lineage: bound.router.conn.side.agent
-## @lineage: bound.conn.side.agent
-## @lineage: bound.conn.agent
 from __future__ import annotations
-
 import asyncio
 from collections.abc import Callable
 from typing import Any, cast, final
-
 from acp.interfaces import Agent, Client
 from acp.meta import CLIENT_METHODS
-
 from bound.transport.acp.conn.base import Connection
 from anchor.registry.acp.schema import (
     AgentMessageChunk,
@@ -49,7 +42,7 @@ from anchor.registry.acp.schema import (
     WriteTextFileResponse,
 )
 from bound.transport.acp.validator.model import compatible_class, notify_model, param_model, request_model, request_optional_model
-from bound.transport.agent import build_agent_router
+from bound.transport.acp.agent import build_agent_router
 
 __all__ = ["AgentSideConnection"]
 _AGENT_CONNECTION_ERROR = "AgentSideConnection requires asyncio StreamWriter/StreamReader"

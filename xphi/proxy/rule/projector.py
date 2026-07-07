@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from aiohttp import web, ClientSession
 from pydantic import BaseModel, Field
 
-from bound.adapter.bridge.ledger import LedgerBridge
+from bound.bridge.adapter.ledger import LedgerBridge
 from xphi.proxy.gatekeeper import GatekeeperRejection
 from watcher.plane.emitter import get_emitter
 
