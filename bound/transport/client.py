@@ -9,7 +9,7 @@ from acp.exceptions import RequestError
 from acp.interfaces import Client
 from acp.meta import CLIENT_METHODS
 from bound.transport.message import MessageRouter
-from anchor.surface.acp.schema import (
+from anchor.registry.acp.schema import (
     CreateTerminalRequest,
     KillTerminalRequest,
     ReadTextFileRequest,

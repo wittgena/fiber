@@ -12,20 +12,20 @@ from typing import Any, Dict, List, Literal, Optional
 import httpx
 from openai._streaming import SSEDecoder
 
-import anchor.provider.legacy.openai.types as openai_types
-from bound.channel.config.resolver import config
-from bound.channel.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS, STREAM_SSE_DONE_STRING
-from anchor.provider.legacy.openai.types import ResponsesAPIStreamEvents
-from anchor.provider.legacy.types import CallTypes
+import bound.surface.legacy.openai.types as openai_types
+from bound.surface.legacy.config.resolver import config
+from bound.surface.legacy.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS, STREAM_SSE_DONE_STRING
+from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
+from bound.surface.legacy.types import CallTypes
 
-from bound.channel.config.response import BaseResponsesAPIConfig
-from bound.channel.client.action.task.executor import executor
-from bound.channel.client.action.support.asyncify import run_async_function
-from bound.channel.client.action.support.helpers import process_response_headers
-from bound.channel.client.action.support.base import get_api_base
-from bound.channel.client.response.metadata import update_response_metadata
-from bound.channel.client.action.support.request import ResponsesAPIRequestUtils
-from bound.channel.client.response.identity import ResponseIdentityManager
+from bound.surface.legacy.config.response import BaseResponsesAPIConfig
+from bound.channel.action.task.executor import executor
+from bound.channel.action.support.asyncify import run_async_function
+from bound.channel.action.support.helpers import process_response_headers
+from bound.channel.action.support.base import get_api_base
+from bound.channel.response.metadata import update_response_metadata
+from bound.channel.action.support.request import ResponsesAPIRequestUtils
+from bound.channel.response.identity import ResponseIdentityManager
 
 from watcher.plane.emitter import get_emitter
 
@@ -1583,7 +1583,7 @@ class ResponseWSHandler:
         if not model:
             return None
         try:
-            from anchor.provider.router.locator import get_llm_provider
+            from anchor.registry.router.locator import get_llm_provider
             _, provider, _, _ = get_llm_provider(model=model)
             return provider
         except Exception:

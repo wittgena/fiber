@@ -9,7 +9,7 @@ import importlib
 import inspect
 from typing import Dict, Any, Optional, Set
 
-from anchor.provider.registry import get_provider_for_model
+from anchor.registry.model.cost import get_provider_for_model
 from anchor.cli.adapter.scan.llm import LLMScanner
 import anchor.inter.llms as llm_pkg 
 

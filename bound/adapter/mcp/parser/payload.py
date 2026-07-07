@@ -18,11 +18,11 @@ from typing import (
 from copy import deepcopy
 import json
 
-from anchor.surface.switch.params import ResponsesAPIResponse, ModelResponse
+from bound.surface.switch.params import ResponsesAPIResponse, ModelResponse
 from mcp_types import EmbeddedResource, ImageContent, TextContent
-from anchor.provider.legacy.types import Choices
-from anchor.provider.model.token.convert import convert_list_message_to_dict
-from anchor.provider.model.param.response import GenericResponseOutputItem, OutputText
+from bound.surface.legacy.types import Choices
+from anchor.provider.token.convert import convert_list_message_to_dict
+from anchor.provider.param.response import GenericResponseOutputItem, OutputText
 
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter

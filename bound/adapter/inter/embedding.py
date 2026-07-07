@@ -7,7 +7,7 @@
 @desc: Dynamically binds Brane contexts to LlamaIndex embedding topologies for spatial vector translation.
 """
 from typing import List, Union
-from bound.channel.client.action.preprocessor import EmbeddingContext
+from bound.channel.action.preprocessor import EmbeddingContext
 from bound.adapter.inter.base import BaseProviderAdapter
 from bound.transport.router.embedding import EmbeddingRouter
 

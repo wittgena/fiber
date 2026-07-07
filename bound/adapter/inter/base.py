@@ -1,12 +1,12 @@
 # bound.adapter.inter.base
 ## @lineage: bound.adapter.provider.base
 from typing import Any, Dict, List, Optional, Union
-from anchor.surface.switch.params import ModelResponse
-from bound.channel.client.action.preprocessor import CompletionContext
-from anchor.provider.legacy.completor import CompletionHandler
+from bound.surface.switch.params import ModelResponse
+from bound.channel.action.preprocessor import CompletionContext
+from bound.surface.legacy.completor import CompletionHandler
 from bound.transport.stream.wrapper import CustomStreamWrapper
 from xphi.xor.secret.manager import get_secret_bool
-from anchor.provider.legacy.openai.completion import OpenAIChatCompletion
+from bound.surface.legacy.openai.completion import OpenAIChatCompletion
 
 from watcher.plane.emitter import get_emitter
 

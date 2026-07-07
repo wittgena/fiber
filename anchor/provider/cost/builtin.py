@@ -3,11 +3,11 @@
 ## @lineage: anchor.surface.model.cost.builtin
 ## @lineage: anchor.model.info.cost.track.toolcall
 from typing import Any, Dict, List, Literal, Optional, Tuple
-from bound.channel.config.resolver import config
-from bound.channel.config.constants import OPENAI_FILE_SEARCH_COST_PER_1K_CALLS
-from anchor.provider.legacy.openai.types import FileSearchTool, ResponsesAPIResponse, WebSearchOptions
-from anchor.provider.legacy.types import ModelInfo, SearchContextCostPerQuery, StandardBuiltInToolsParams, PromptTokensDetailsWrapper
-from anchor.surface.switch.params import Message, ModelResponse, Usage
+from bound.surface.legacy.config.resolver import config
+from bound.surface.legacy.config.constants import OPENAI_FILE_SEARCH_COST_PER_1K_CALLS
+from bound.surface.legacy.openai.types import FileSearchTool, ResponsesAPIResponse, WebSearchOptions
+from bound.surface.legacy.types import ModelInfo, SearchContextCostPerQuery, StandardBuiltInToolsParams, PromptTokensDetailsWrapper
+from bound.surface.switch.params import Message, ModelResponse, Usage
 
 class BuiltInToolCostTracker:
     """Helper class for tracking the cost of built-in tools"""
@@ -486,7 +486,7 @@ class BuiltInToolCostTracker:
 
         # Azure has storage-based pricing for file search
         if provider == "azure":
-            from bound.channel.config.constants import AZURE_FILE_SEARCH_COST_PER_GB_PER_DAY
+            from bound.surface.legacy.config.constants import AZURE_FILE_SEARCH_COST_PER_GB_PER_DAY
 
             if storage_gb and days:
                 return storage_gb * days * AZURE_FILE_SEARCH_COST_PER_GB_PER_DAY
@@ -519,7 +519,7 @@ class BuiltInToolCostTracker:
 
         # Azure has different pricing structure for vector store
         if provider == "azure":
-            from bound.channel.config.constants import AZURE_VECTOR_STORE_COST_PER_GB_PER_DAY
+            from bound.surface.legacy.config.constants import AZURE_VECTOR_STORE_COST_PER_GB_PER_DAY
 
             return storage_gb * days * AZURE_VECTOR_STORE_COST_PER_GB_PER_DAY
 
@@ -556,7 +556,7 @@ class BuiltInToolCostTracker:
                     return total_cost
 
             # Azure default pricing
-            from bound.channel.config.constants import (
+            from bound.surface.legacy.config.constants import (
                 AZURE_COMPUTER_USE_INPUT_COST_PER_1K_TOKENS,
                 AZURE_COMPUTER_USE_OUTPUT_COST_PER_1K_TOKENS,
             )

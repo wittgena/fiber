@@ -13,7 +13,7 @@ from acp.interfaces import Agent, Client
 from acp.meta import AGENT_METHODS
 
 from bound.transport.acp.conn.base import Connection
-from anchor.surface.acp.schema import (
+from anchor.registry.acp.schema import (
     AcpMcpServer,
     AudioContentBlock,
     AuthenticateRequest,

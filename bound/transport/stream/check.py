@@ -1,6 +1,6 @@
 # bound.transport.stream.check
 from typing import Any
-from anchor.provider.legacy.types import Delta, ModelResponseBase, ModelResponseStream
+from bound.surface.legacy.types import Delta, ModelResponseBase, ModelResponseStream
 
 def is_model_response_stream_empty(model_response: ModelResponseStream) -> bool:
     BASE_FIELDS = ModelResponseBase.model_fields.keys()

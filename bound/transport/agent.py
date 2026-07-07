@@ -12,7 +12,7 @@ from acp.exceptions import RequestError
 from acp.interfaces import Agent
 from acp.meta import AGENT_METHODS
 from bound.transport.message import MessageRouter, Route, _resolve_handler, _warn_legacy_handler
-from anchor.surface.acp.schema import (
+from anchor.registry.acp.schema import (
     AuthenticateRequest,
     CancelNotification,
     CloseSessionRequest,

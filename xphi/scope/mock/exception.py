@@ -7,7 +7,7 @@
 @phase: Mock Generation Boundary (Exceptions)
 @desc: Safely generates standardized API exceptions for testing resilience and fallback topologies.
 """
-from anchor.surface.mapper.exception import exception_type
+from bound.surface.mapper.exception import exception_type
 
 class MockAPIConnectionError(Exception):
     """Fallback 및 Retry 로직을 트리거하기 위한 순수 Mock Exception"""

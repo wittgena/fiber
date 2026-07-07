@@ -23,21 +23,21 @@ import anyio
 import httpx
 from pydantic import BaseModel
 
-from anchor.surface.exception import OpenAIError
-from anchor.surface.mapper.exception import exception_type
-from anchor.provider.legacy.openai.types import OpenAIChatCompletionChunk
-from anchor.provider.types import ProviderTypes
-from anchor.provider.model.param.legacy import GenericLiteLLMParams
-from anchor.provider.legacy.types import Delta, CallTypes, GenericStreamingChunk as GChunk
+from bound.surface.exception import OpenAIError
+from bound.surface.mapper.exception import exception_type
+from bound.surface.legacy.openai.types import OpenAIChatCompletionChunk
+from bound.surface.legacy.provider import ProviderTypes
+from anchor.provider.param.legacy import GenericLiteLLMParams
+from bound.surface.legacy.types import Delta, CallTypes, GenericStreamingChunk as GChunk
 
-from bound.channel.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
-from bound.channel.config.resolver import config
-from anchor.surface.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from bound.surface.legacy.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
+from bound.surface.legacy.config.resolver import config
+from bound.surface.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 
-from bound.channel.client.bridge.rule import Rules
-from bound.channel.client.action.task.executor import executor
-from bound.channel.client.action.support.base import get_api_base
-from bound.channel.client.action.support.helpers import map_finish_reason, process_response_headers
+from bound.channel.bridge.rule import Rules
+from bound.channel.action.task.executor import executor
+from bound.channel.action.support.base import get_api_base
+from bound.channel.action.support.helpers import map_finish_reason, process_response_headers
 
 from bound.transport.stream.chunk.builder import stream_chunk_builder
 from bound.transport.stream.check import is_model_response_stream_empty
@@ -947,7 +947,7 @@ class CustomStreamWrapper:
         model_response: ModelResponseStream,
         response_obj: Dict[str, Any],
     ):
-        from bound.channel.client.action.support.helpers import (
+        from bound.channel.action.support.helpers import (
             preserve_upstream_non_openai_attributes,
         )
 
@@ -1127,7 +1127,7 @@ class CustomStreamWrapper:
         try:
             # return this for all models
             completion_obj: Dict[str, Any] = {"content": ""}
-            from anchor.provider.legacy.types import GenericStreamingChunk as GChunk
+            from bound.surface.legacy.types import GenericStreamingChunk as GChunk
 
             if (
                 isinstance(chunk, ModelResponseStream)
@@ -2264,7 +2264,7 @@ class CustomStreamWrapper:
         429 (rate-limit) is explicitly exempted from the 4xx filter because
         it is transient and the Router should switch to another model group.
         """
-        from anchor.surface.exception import MidStreamFallbackError
+        from bound.surface.exception import MidStreamFallbackError
 
         # Map to OpenAI exception format
         if isinstance(e, OpenAIError):
@@ -2398,7 +2398,7 @@ def generic_chunk_has_all_required_fields(chunk: dict) -> bool:
 def convert_generic_chunk_to_model_response_stream(
     chunk: GChunk,
 ) -> ModelResponseStream:
-    from anchor.provider.legacy.types import Delta
+    from bound.surface.legacy.types import Delta
 
     model_response_stream = ModelResponseStream(
         id=str(uuid.uuid4()),

@@ -1,8 +1,4 @@
 # bound.watcher.plane.observer
-## @lineage: bound.watcher.plane.topos
-## @lineage: bound.watcher.topos.global
-## @lineage: bound.channel.global
-## @lineage: watcher.ator.global
 from __future__ import annotations
 import asyncio
 import math

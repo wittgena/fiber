@@ -1,8 +1,8 @@
 # xphi.xor.secret.credential
 ## @lineage: xphi.xor.auth.secret.credential
 from typing import List
-from bound.channel.config.resolver import config
-from anchor.provider.legacy.types import CredentialItem
+from bound.surface.legacy.config.resolver import config
+from bound.surface.legacy.types import CredentialItem
 
 class CredentialAccessor:
     @staticmethod
