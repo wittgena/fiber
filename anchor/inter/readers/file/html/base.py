@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from xphi.loop.flow.reader.base import BaseReader
-from bound.adapter.llama.schema import Document
+from anchor.inter.bound.schema import Document
 
 if TYPE_CHECKING:
     from bs4 import Tag

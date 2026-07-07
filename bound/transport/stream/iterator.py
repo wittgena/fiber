@@ -15,15 +15,15 @@ from bound.surface.legacy.config.constants import LITELLM_MAX_STREAMING_DURATION
 from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
 from bound.surface.legacy.types import CallTypes
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.bridge.channel.task.executor import executor
-from bound.bridge.channel.convert.asyncify import run_async_function
-from bound.bridge.channel.convert.header import process_response_headers
-from bound.bridge.channel.api import get_api_base
-from bound.transport.channel.response.metadata import update_response_metadata
-from bound.bridge.channel.api import APIBridge
-from bound.transport.channel.response.identity import ResponseIdentityManager
+from bound.transport.client.executor import executor
+from bound.channel.convert.asyncify import run_async_function
+from bound.channel.convert.header import process_response_headers
+from bound.channel.api import get_api_base
+from bound.transport.response.metadata import update_response_metadata
+from bound.channel.api import APIBridge
+from bound.transport.response.identity import ResponseIdentityManager
 
-from xphi.watcher.plane.delegator import LogDelegator
+from bound.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("streaming.iterator")

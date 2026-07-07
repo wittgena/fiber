@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, Any, Set
 
 import anchor.inter.llms as base_path
-from bound.adapter.llama.base.llms.base import BaseLLM 
+from anchor.inter.bound.base.llms.base import BaseLLM 
 from arch.contract.registry.unified import contract
 from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
 from watcher.plane.emitter import get_emitter

@@ -8,10 +8,10 @@ import httpx
 from pydantic import BaseModel
 
 from bound.surface.legacy.config.resolver import config
-from bound.bridge.mcp.handler import MCPHandler
-from bound.bridge.mcp.parser.payload import MCPPayloadParser
-from bound.bridge.mcp.stream import MCPStreamIterator
-from bound.bridge.mcp.event.tool import create_mcp_list_tools_events
+from bound.transport.mcp.handler import MCPHandler
+from bound.transport.mcp.parser.payload import MCPPayloadParser
+from bound.transport.stream.mcp import MCPStreamIterator
+from bound.transport.mcp.event.tool import create_mcp_list_tools_events
 
 from anchor.provider.param.response import *
 from anchor.provider.param.legacy import GenericLiteLLMParams
@@ -25,15 +25,15 @@ from anchor.registry.router.config import ProviderConfigManager
 from bound.surface.legacy.provider import ProviderTypes
 from anchor.registry.router.locator import get_llm_provider
 
-from bound.bridge.channel.param.litellm import get_litellm_params, infer_openai_data_residency
+from bound.channel.param.litellm import get_litellm_params, infer_openai_data_residency
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.transport.channel.ws import ResponseWebsocketHandler
-from bound.transport.channel.client import client
-from bound.transport.channel.response.identity import ResponseIdentityManager
+from bound.transport.ws import ResponseWebsocketHandler
+from bound.transport.client.wrapper import client
+from bound.transport.response.identity import ResponseIdentityManager
 
-from bound.transport.channel.response.api.handler import ResponseApiHandler
+from bound.transport.response.api.handler import ResponseApiHandler
 from bound.surface.action.response import responses
-from bound.transport.channel.response.api.response_crud import delete_responses, get_responses, list_input_items, cancel_responses, compact_responses
+from bound.transport.response.api.response_crud import delete_responses, get_responses, list_input_items, cancel_responses, compact_responses
 
 from bound.transport.stream.iterator import ResponseStreamIterator
 from xphi.xor.secret.manager import get_secret_str

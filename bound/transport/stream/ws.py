@@ -12,9 +12,9 @@ from typing import Any, Dict, List, Literal, Optional
 import httpx
 import bound.surface.legacy.openai.types as openai_types
 from bound.surface.legacy.config.resolver import config
-from bound.bridge.channel.task.executor import executor
-from bound.transport.channel.response.identity import ResponseIdentityManager
-from xphi.watcher.plane.delegator import LogDelegator
+from bound.transport.client.executor import executor
+from bound.transport.response.identity import ResponseIdentityManager
+from bound.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter
 

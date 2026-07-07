@@ -17,8 +17,8 @@ from typing import (
 
 from xphi.loop.callback.pythonically_printing_base_handler import PythonicallyPrintingBaseHandler
 from xphi.loop.callback.schema import CBEventType, EventPayload
-from bound.adapter.llama.utilities.token_counting import TokenCounter
-from bound.adapter.llama.utils import get_tokenizer
+from anchor.inter.bound.utilities.token_counting import TokenCounter
+from anchor.inter.bound.utils import get_tokenizer
 import logging
 
 if TYPE_CHECKING:

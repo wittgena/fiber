@@ -24,9 +24,9 @@ from typing import (
 import fsspec
 from fsspec.implementations.local import LocalFileSystem
 
-from bound.adapter.llama.async_utils import get_asyncio_module, run_jobs
-from bound.adapter.llama.schema import Document
-from bound.adapter.llama.utils import get_tqdm_iterable
+from anchor.inter.bound.async_utils import get_asyncio_module, run_jobs
+from anchor.inter.bound.schema import Document
+from anchor.inter.bound.utils import get_tqdm_iterable
 
 from xphi.loop.flow.reader.base import BaseReader, ResourcesReaderMixin
 from watcher.plane.emitter import get_emitter

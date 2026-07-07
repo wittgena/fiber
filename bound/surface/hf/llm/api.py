@@ -3,7 +3,7 @@
 import json
 import logging
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
-from bound.adapter.llama.base.llms.generic_utils import (
+from anchor.inter.bound.base.llms.generic_utils import (
     completion_response_to_chat_response,
     stream_completion_response_to_chat_response,
     astream_completion_response_to_chat_response,
@@ -11,15 +11,15 @@ from bound.adapter.llama.base.llms.generic_utils import (
     stream_chat_response_to_completion_response,
     astream_chat_response_to_completion_response,
 )
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatMessage, ChatResponse, ChatResponseAsyncGen, ChatResponseGen,
     CompletionResponse, CompletionResponseAsyncGen, CompletionResponseGen,
     LLMMetadata, MessageRole,
 )
-from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
-from bound.adapter.llama.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
-from bound.adapter.llama.tools.types import BaseTool
-from bound.bridge.adapter.hf import HFInferenceBridge
+from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
+from anchor.inter.bound.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
+from anchor.inter.bound.tools.types import BaseTool
+from bound.surface.hf.bridge import HFInferenceBridge
 from xphi.loop.flow.llm.llm import ToolSelection
 from xphi.loop.flow.llm.function_calling import FunctionCallingLLM
 

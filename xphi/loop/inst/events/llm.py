@@ -3,14 +3,14 @@
 ## @lineage: bound.adapter.instrumentation.events.llm
 ## @lineage: anchor.adapter.instrumentation.events.llm
 from typing import Any, Dict, List, Optional
-from bound.adapter.llama.bridge.pydantic import BaseModel, SerializeAsAny, ConfigDict
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.bridge.pydantic import BaseModel, SerializeAsAny, ConfigDict
+from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
     CompletionResponse,
 )
 from xphi.loop.inst.events.base import BaseEvent
-from bound.adapter.llama.prompts import BasePromptTemplate
+from anchor.inter.bound.prompts import BasePromptTemplate
 
 
 class LLMPredictStartEvent(BaseEvent):

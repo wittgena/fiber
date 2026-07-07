@@ -35,7 +35,7 @@ EventHookType = Any
 
 from phase.gov.proto.gate import uuid
 from bound.surface.legacy.base import BaseOpenAIResponse, PydanticObjectBase
-from bound.bridge.channel.mapper.reason import map_finish_reason
+from bound.adapter.mapper.reason import map_finish_reason
 from bound.surface.legacy.base import HiddenParams
 from bound.surface.legacy.openai.types import (
     AllMessageValues,

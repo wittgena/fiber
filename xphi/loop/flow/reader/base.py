@@ -9,8 +9,8 @@ from typing import (
     List,
 )
 
-from bound.adapter.llama.bridge.pydantic import ConfigDict, Field
-from bound.adapter.llama.schema import BaseComponent, Document
+from anchor.inter.bound.bridge.pydantic import ConfigDict, Field
+from anchor.inter.bound.schema import BaseComponent, Document
 
 class BaseReader(ABC):  # pragma: no cover
     def lazy_load_data(self, *args: Any, **load_kwargs: Any) -> Iterable[Document]:

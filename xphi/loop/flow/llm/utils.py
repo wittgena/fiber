@@ -28,7 +28,7 @@ def resolve_llm(
     llm: Optional[LLMType] = None, callback_manager: Optional[CallbackManager] = None
 ) -> LLM:
     """Resolve LLM from string or LLM instance."""
-    from bound.adapter.llama.settings import Settings
+    from anchor.inter.bound.settings import Settings
 
     try:
         # For langchain v1.x.x

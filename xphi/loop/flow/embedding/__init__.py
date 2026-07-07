@@ -3,7 +3,7 @@
 ## @lineage: bound.adapter.llama.embeddings.__init__
 ## @lineage: bound.adapter.embeddings.__init__
 ## @lineage: anchor.adapter.embeddings.__init__
-from bound.adapter.llama.base.embeddings.base import BaseEmbedding
+from anchor.inter.bound.base.embeddings.base import BaseEmbedding
 from xphi.loop.flow.embedding.mock_embed_model import MockEmbedding
 from xphi.loop.flow.embedding.mock_embed_model import MockMultiModalEmbedding
 from xphi.loop.flow.embedding.multi_modal_base import MultiModalEmbedding

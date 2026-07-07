@@ -3,7 +3,7 @@
 import requests
 from packaging import version
 from typing import Union, List, Optional
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatResponse,
 )
 

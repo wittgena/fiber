@@ -7,8 +7,8 @@ Intercepts macroscopic network traffic, enforces strict spec invariants,
 and bridges validated logic streams into the core ledger matrix.
 """
 from xphi.proxy.ingress.transducer import SpecValidator
-from bound.bridge.adapter.ledger import LedgerBridge
-from xphi.watcher.plane.topos import unified_flow_span
+from bound.adapter.ledger import LedgerBridge
+from bound.watcher.topos import unified_flow_span
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("ingress.router")

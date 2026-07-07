@@ -39,15 +39,15 @@ from bound.surface.legacy.openai.types import ResponseText
 from anchor.registry.router.config import ProviderConfigManager
 from anchor.registry.router.locator import get_llm_provider
 
-from bound.bridge.mcp.handler import MCPHandler
-from bound.transport.channel.response.api.handler import ResponseApiHandler
-from bound.bridge.channel.convert.asyncify import run_async_function
-from bound.bridge.channel.param.litellm import infer_openai_data_residency
-from bound.transport.channel.client import client
+from bound.transport.mcp.handler import MCPHandler
+from bound.transport.response.api.handler import ResponseApiHandler
+from bound.channel.convert.asyncify import run_async_function
+from bound.channel.param.litellm import infer_openai_data_residency
+from bound.transport.client.wrapper import client
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.transport.channel.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
-from bound.bridge.channel.api import APIBridge
-from bound.transport.channel.response.identity import ResponseIdentityManager
+from bound.transport.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
+from bound.channel.api import APIBridge
+from bound.transport.response.identity import ResponseIdentityManager
 
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter
@@ -286,7 +286,7 @@ class ResponsesDispatcher:
         return run_async_function(aresponses_api_with_mcp, **mcp_kwargs)
 
     def _dispatch_file_search(self) -> Optional[Any]:
-        from bound.bridge.channel.search.file import aresponses_with_emulated_file_search
+        from bound.surface.action.search import aresponses_with_emulated_file_search
         
         if not _has_file_search_tool(self.ctx.tools) or not (
             self.ctx.responses_api_provider_config is None

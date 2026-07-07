@@ -14,9 +14,9 @@
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
 from bound.surface.legacy.types import EmbeddingResponse
-from bound.bridge.channel.mapper.exception import exception_type
-from bound.transport.channel.client import client
-from bound.transport.channel.action.preprocessor import EmbeddingPreprocessor
+from bound.adapter.mapper.exception import exception_type
+from bound.transport.client.wrapper import client
+from bound.adapter.action.preprocessor import EmbeddingPreprocessor
 from anchor.registry.adapter import AdapterRegistry
 from watcher.plane.emitter import get_emitter
 

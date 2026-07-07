@@ -9,7 +9,7 @@ from xphi.loop.callback.simple_llm_handler import SimpleLLMHandler
 
 def set_global_handler(eval_mode: str, **eval_params: Any) -> None:
     """Set global eval handlers."""
-    import bound.adapter.llama
+    import anchor.inter.bound
 
     handler = create_global_handler(eval_mode, **eval_params)
     if handler:

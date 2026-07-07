@@ -11,9 +11,9 @@ structured data directly in the message content (not in function calls).
 
 from typing import Optional, Type, Union
 from pydantic import ValidationError
-from bound.adapter.llama.base.llms.types import ChatResponse
+from anchor.inter.bound.base.llms.types import ChatResponse
 from xphi.loop.prog.utils import FlexibleModel, _repair_incomplete_json, create_flexible_model
-from bound.adapter.llama.types import Model
+from anchor.inter.bound.types import Model
 
 def process_streaming_content_incremental(
     chat_response: ChatResponse,

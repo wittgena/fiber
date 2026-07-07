@@ -5,7 +5,7 @@
 from typing import Dict, List
 
 from xphi.loop.inst.events.base import BaseEvent
-from bound.adapter.llama.bridge.pydantic import ConfigDict
+from anchor.inter.bound.bridge.pydantic import ConfigDict
 
 
 class EmbeddingStartEvent(BaseEvent):

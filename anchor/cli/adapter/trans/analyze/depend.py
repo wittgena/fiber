@@ -22,7 +22,7 @@ except ImportError:
         print("[CRITICAL] Python 3.11 미만이거나 'tomli' 패키지가 설치되지 않았습니다. pip install tomli 를 실행하세요.")
         sys.exit(1)
 
-import bound.adapter.llama as adapter_path
+import anchor.inter.bound as adapter_path
 from phase.bind.resolver import find_current_self
 from watcher.plane.emitter import get_emitter
 

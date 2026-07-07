@@ -9,7 +9,7 @@ import sys
 import json
 import os
 
-from xphi.watcher.audit.warden import AuditWarden
+from bound.watcher.audit.warden import AuditWarden
 from phase.bind.redirector import PhaseAirlock
 from watcher.plane.emitter import get_emitter
 

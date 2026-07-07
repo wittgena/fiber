@@ -5,8 +5,8 @@
 from typing import List, Optional
 
 from xphi.loop.inst.events.base import BaseEvent
-from bound.adapter.llama.schema import NodeWithScore, QueryType
-from bound.adapter.llama.bridge.pydantic import ConfigDict
+from anchor.inter.bound.schema import NodeWithScore, QueryType
+from anchor.inter.bound.bridge.pydantic import ConfigDict
 
 
 class ReRankStartEvent(BaseEvent):

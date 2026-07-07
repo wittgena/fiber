@@ -4,7 +4,7 @@ import base64
 import json
 import time
 import asyncio
-from bound.bridge.adapter.ledger import LedgerBridge
+from bound.adapter.ledger import LedgerBridge
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("proxy.gatekeeper")

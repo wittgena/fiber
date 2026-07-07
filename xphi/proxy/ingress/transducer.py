@@ -17,7 +17,7 @@ from xphi.proxy.ingress.schema import (
     ProtocolSource,
     ActionIntent
 )
-from xphi.watcher.plane.topos import span_context
+from bound.watcher.topos import span_context
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.transducer", phase="SYSTEM")

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 from bound.surface.legacy.config.resolver import config
 from bound.surface.exception import BaseLLMException
-from bound.transport.channel.http import (
+from bound.transport.http import (
     _DEFAULT_TTL_FOR_HTTPX_CLIENTS,
     AsyncHTTPHandler,
     get_ssl_configuration,
