@@ -1,52 +1,74 @@
 # anchor.provider.dsp.adapter.thch
-## @lineage: bound.bridge.adapter.dsp.thch
-## @lineage: bound.adapter.bridge.dsp.thch
-## @lineage: bound.adapter.dsp.thch
-import sys
 import inspect
-from contextlib import contextmanager
-from typing import Any, Type
-from pydantic import BaseModel
+from threading import Lock
+from typing import Any, Annotated, get_args, get_origin
+from pydantic import BaseModel, Field
 
 from xphi.xor.module.meta import Module
 from xphi.xor.opt.manifold.model.cot import ChainOfThought 
 
 from arch.xor.manifold.sign.field import InputField, OutputField
 from arch.xor.manifold.sign.signature import Signature
-
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scope.thch")
 
-def _compile_to_sign(proto_cls: type[BaseModel]):
-    """[런타임 형질 변환기] ProtoSignature -> Sign"""
-    if hasattr(proto_cls, "__meta_compiled__"):
-        return proto_cls.__meta_compiled__
+# Thread-safe 캐시 저장소
+_SIGNATURE_CACHE: dict[type[BaseModel], type[Signature]] = {}
+_CACHE_LOCK = Lock()
+
+def _compile_to_sign(proto_cls: type[BaseModel]) -> type[Signature]:
+    """[런타임 형질 변환기] Pydantic BaseModel -> DSPy Signature"""
+    # 1. 캐시 확인 (원본 클래스 변형 방지)
+    with _CACHE_LOCK:
+        if proto_cls in _SIGNATURE_CACHE:
+            return _SIGNATURE_CACHE[proto_cls]
 
     meta_fields = {}
+    
+    # 2. Pydantic V2 필드 및 Annotated 분석
     for field_name, field_info in proto_cls.model_fields.items():
-        meta = field_info.json_schema_extra or {}
-        field_type = meta.get("__meta_field_type")
-        desc = meta.get("desc", "")
-        if field_type == "input":
+        desc = field_info.description or ""
+        field_type_hint = proto_cls.__annotations__.get(field_name)
+        
+        # Annotated에서 내부 메타데이터(예: "input", "output") 추출
+        meta_tag = "input" # Default
+        if get_origin(field_type_hint) is Annotated:
+            args = get_args(field_type_hint)
+            if "output" in args:
+                meta_tag = "output"
+            elif "input" in args:
+                meta_tag = "input"
+
+        # 필드 생성
+        if meta_tag == "input":
             meta_fields[field_name] = InputField(desc=desc)
-        elif field_type == "output":
+        elif meta_tag == "output":
             meta_fields[field_name] = OutputField(desc=desc)
 
-    sig_cls = type(proto_cls.__name__, (Signature,), {"__doc__": proto_cls.__doc__, **meta_fields})
-    proto_cls.__meta_compiled__ = sig_cls
+    # 3. Signature 동적 클래스 생성
+    sig_cls = type(
+        proto_cls.__name__ + "Signature", 
+        (Signature,), 
+        {"__doc__": proto_cls.__doc__, **meta_fields}
+    )
+    
+    with _CACHE_LOCK:
+        _SIGNATURE_CACHE[proto_cls] = sig_cls
+        
     return sig_cls
 
 class ThCh:
-    def __init__(self, signature, state_path=None, state_key=None, **kwargs):
-        self.signature = signature
+    """지연 초기화(Lazy init)를 지원하는 체인 어댑터"""
+    def __init__(self, signature: type[BaseModel], state_path: str = None, state_key: str = None, **kwargs):
+        self.signature_model = signature
         self.state_path = state_path
         self.state_key = state_key
         self.kwargs = kwargs
         self._real_engine = None
 
     def _bootstrap(self):
-        sig = _compile_to_sign(self.signature)
+        sig = _compile_to_sign(self.signature_model)
         self._real_engine = ChainOfThought(sig, **self.kwargs)
 
         if self.state_path:
@@ -59,24 +81,3 @@ class ThCh:
         if not self._real_engine:
             self._bootstrap()
         return self._real_engine(**inputs)
-
-@contextmanager
-def folding_thch():
-    try:
-        import xphi.xor.opt.manifold.model.cot as cot_module
-    except ImportError:
-        log.warning("[ThCh] 내부 모듈(cot) 부재. 투명하게(Pass-through) 우회합니다.")
-        yield
-        return
-
-    original_cot = cot_module.ChainOfThought
-    class LegacyThChInterceptor(ThCh):
-        pass
-
-    try:
-        cot_module.ChainOfThought = LegacyThChInterceptor
-        log.info("[ThCh] 🌀 Topological Scope Opened (Legacy Mode).")
-        yield
-    finally:
-        cot_module.ChainOfThought = original_cot
-        log.info("[ThCh] Scope Closed. Restored to vacuum.")
