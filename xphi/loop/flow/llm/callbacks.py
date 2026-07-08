@@ -15,7 +15,7 @@ from typing import (
     cast,
 )
 
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,

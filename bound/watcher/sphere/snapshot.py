@@ -1,4 +1,5 @@
 # bound.watcher.sphere.snapshot
+## @lineage: xphi.watcher.sphere.snapshot
 """
 @desc: Phase Transition Model
 @flow: Adapter ↦ Ψ (UniversalPhaseSnapshot) ↦ ∂Φ (Tension) ↦ Diffusion ↦ Attractor

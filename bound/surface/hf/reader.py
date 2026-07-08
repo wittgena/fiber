@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from typing import Dict, List
 import pandas as pd
 from xphi.loop.flow.reader.base import BaseReader
-from bound.adapter.llama.schema import Document
+from anchor.inter.bound.schema import Document
 
 
 class HuggingFaceFSReader(BaseReader):

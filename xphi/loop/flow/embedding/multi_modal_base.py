@@ -9,13 +9,13 @@ import asyncio
 from abc import abstractmethod
 from typing import Coroutine, List, Tuple
 
-from bound.adapter.llama.base.embeddings.base import (
+from anchor.inter.bound.base.embeddings.base import (
     BaseEmbedding,
     Embedding,
 )
 from xphi.loop.callback.schema import CBEventType, EventPayload
-from bound.adapter.llama.schema import ImageType
-from bound.adapter.llama.utils import get_tqdm_iterable
+from anchor.inter.bound.schema import ImageType
+from anchor.inter.bound.utils import get_tqdm_iterable
 
 
 class MultiModalEmbedding(BaseEmbedding):

@@ -3,11 +3,11 @@
 ## @lineage: bound.adapter.llama.llms.custom
 from typing import Any, Sequence
 
-from bound.adapter.llama.base.llms.generic_utils import (
+from anchor.inter.bound.base.llms.generic_utils import (
     completion_response_to_chat_response,
     stream_completion_response_to_chat_response,
 )
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,

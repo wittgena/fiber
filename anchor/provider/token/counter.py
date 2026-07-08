@@ -25,7 +25,7 @@ from bound.surface.legacy.openai.types import (
     OpenAIMessageContent,
 )
 from bound.surface.legacy.types import SelectTokenizerResponse
-from bound.surface.switch.params import Message
+from anchor.bind.switch.params import Message
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
 

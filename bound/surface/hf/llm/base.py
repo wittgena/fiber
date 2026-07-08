@@ -4,7 +4,7 @@ import logging
 from typing import Any, Callable, List, Optional, Sequence, Union
 
 import torch
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
     ChatResponseGen,
@@ -12,9 +12,9 @@ from bound.adapter.llama.base.llms.types import (
     CompletionResponseGen,
     LLMMetadata,
 )
-from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
+from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
 from xphi.loop.callback import CallbackManager
-from bound.adapter.llama.constants import (
+from anchor.inter.bound.constants import (
     DEFAULT_CONTEXT_WINDOW,
     DEFAULT_NUM_OUTPUTS,
 )
@@ -23,13 +23,13 @@ from xphi.loop.flow.llm.callbacks import (
     llm_completion_callback,
 )
 from xphi.loop.flow.llm.custom import CustomLLM
-from bound.adapter.llama.base.llms.generic_utils import (
+from anchor.inter.bound.base.llms.generic_utils import (
     completion_response_to_chat_response,
     stream_completion_response_to_chat_response,
     messages_to_prompt as generic_messages_to_prompt,
 )
-from bound.adapter.llama.prompts.base import PromptTemplate
-from bound.adapter.llama.types import BaseOutputParser, PydanticProgramMode, Thread
+from anchor.inter.bound.prompts.base import PromptTemplate
+from anchor.inter.bound.types import BaseOutputParser, PydanticProgramMode, Thread
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,

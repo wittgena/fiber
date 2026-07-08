@@ -3,8 +3,8 @@
 ## @lineage: bound.adapter.instrumentation.events.query
 ## @lineage: anchor.adapter.instrumentation.events.query
 from xphi.loop.inst.events.base import BaseEvent
-from bound.adapter.llama.base.response.schema import RESPONSE_TYPE
-from bound.adapter.llama.schema import QueryType
+from anchor.inter.bound.base.response.schema import RESPONSE_TYPE
+from anchor.inter.bound.schema import QueryType
 
 
 class QueryStartEvent(BaseEvent):

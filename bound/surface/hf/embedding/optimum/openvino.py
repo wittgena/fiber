@@ -6,9 +6,9 @@ from transformers import AutoTokenizer
 from PIL import Image
 
 from bound.surface.hf.utils import format_query, format_text
-from bound.adapter.llama.base.embeddings.base import DEFAULT_EMBED_BATCH_SIZE, BaseEmbedding, Embedding
-from bound.adapter.llama.schema import ImageType
-from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
+from anchor.inter.bound.base.embeddings.base import DEFAULT_EMBED_BATCH_SIZE, BaseEmbedding, Embedding
+from anchor.inter.bound.schema import ImageType
+from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
 
 from xphi.loop.flow.embedding.multi_modal_base import MultiModalEmbedding
 from xphi.loop.callback.base import CallbackManager

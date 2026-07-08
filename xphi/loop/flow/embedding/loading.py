@@ -5,7 +5,7 @@
 ## @lineage: anchor.adapter.embeddings.loading
 from typing import Dict, Type
 
-from bound.adapter.llama.base.embeddings.base import BaseEmbedding
+from anchor.inter.bound.base.embeddings.base import BaseEmbedding
 from xphi.loop.flow.embedding.mock_embed_model import MockEmbedding
 
 RECOGNIZED_EMBEDDINGS: Dict[str, Type[BaseEmbedding]] = {

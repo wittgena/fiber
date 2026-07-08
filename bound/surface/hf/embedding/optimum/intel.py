@@ -4,12 +4,12 @@ from typing import Any, List, Optional
 from transformers import AutoTokenizer
 
 from bound.surface.hf.utils import format_query, format_text
-from bound.adapter.llama.base.embeddings.base import (
+from anchor.inter.bound.base.embeddings.base import (
     DEFAULT_EMBED_BATCH_SIZE,
     BaseEmbedding,
 )
-from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
-from bound.adapter.llama.utils import infer_torch_device
+from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
+from anchor.inter.bound.utils import infer_torch_device
 from xphi.loop.callback.base import CallbackManager
 
 

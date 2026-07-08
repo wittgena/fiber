@@ -17,7 +17,7 @@ from acp.exceptions import RequestError
 from bound.transport.acp.conn.worker import DefaultMessageDispatcher, MessageDispatcher, RpcTaskKind, NotificationRunner, RequestRunner
 from bound.transport.acp.conn.sender import MessageSender, SenderFactory
 from bound.transport.acp.conn.queue import MessageQueue, RpcTask, InMemoryMessageQueue
-from bound.watcher.plane.topos import span_context
+from bound.watcher.topos import span_context
 
 from xphi.xor.store.message import MessageStateStore, InMemoryMessageStateStore
 

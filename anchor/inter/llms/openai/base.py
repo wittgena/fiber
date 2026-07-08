@@ -26,7 +26,7 @@ import httpx
 import tiktoken
 
 import xphi.loop.inst as instrument
-from bound.adapter.llama.base.llms.generic_utils import (
+from anchor.inter.bound.base.llms.generic_utils import (
     achat_to_completion_decorator,
     acompletion_to_chat_decorator,
     astream_chat_to_completion_decorator,
@@ -36,7 +36,7 @@ from bound.adapter.llama.base.llms.generic_utils import (
     stream_chat_to_completion_decorator,
     stream_completion_to_chat_decorator,
 )
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -50,12 +50,12 @@ from bound.adapter.llama.base.llms.types import (
     ToolCallBlock,
     TextBlock,
 )
-from bound.adapter.llama.bridge.pydantic import (
+from anchor.inter.bound.bridge.pydantic import (
     Field,
     PrivateAttr,
 )
 from xphi.loop.callback import CallbackManager
-from bound.adapter.llama.constants import (
+from anchor.inter.bound.constants import (
     DEFAULT_TEMPERATURE,
 )
 from xphi.loop.flow.llm.callbacks import (
@@ -65,9 +65,9 @@ from xphi.loop.flow.llm.callbacks import (
 from xphi.loop.flow.llm.function_calling import FunctionCallingLLM
 from xphi.loop.flow.llm.llm import ToolSelection, Model
 from xphi.loop.flow.llm.utils import parse_partial_json
-from bound.adapter.llama.prompts import PromptTemplate
+from anchor.inter.bound.prompts import PromptTemplate
 from xphi.loop.prog.utils import FlexibleModel
-from bound.adapter.llama.types import BaseOutputParser, PydanticProgramMode
+from anchor.inter.bound.types import BaseOutputParser, PydanticProgramMode
 from anchor.inter.llms.openai.utils import (
     O1_MODELS,
     create_retry_decorator,
@@ -96,7 +96,7 @@ from openai.types.chat.chat_completion_chunk import (
 dispatcher = instrument.get_dispatcher(__name__)
 
 if TYPE_CHECKING:
-    from bound.adapter.llama.tools.types import BaseTool
+    from anchor.inter.bound.tools.types import BaseTool
 
 DEFAULT_OPENAI_MODEL = "gpt-3.5-turbo"
 

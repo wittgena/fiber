@@ -1,15 +1,16 @@
 # xphi.scope.manager
 import asyncio
-from contextlib import asynccontextmanager, nullcontext
+from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Any, AsyncGenerator, Optional, Callable
+from unittest.mock import patch
 
+from anchor.provider.dsp.adapter.thch import ThCh
 from anchor.provider.dsp.local import LocalLM
 from anchor.provider.dsp.instance import DSPInstance
 
 from xphi.scope.surface.config import SurfaceConfig
 from xphi.scope.dsp.context import runtime
 from xphi.scope.surface.registry import get_surface_class
-from bound.adapter.bridge.dsp.thch import folding_thch
 
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 from watcher.plane.emitter import get_emitter
@@ -23,7 +24,7 @@ class SurfaceManager:
         try:
             surface_class = get_surface_class(surface_type)
         except (ImportError, AttributeError, ValueError) as e:
-            log.warning(f"🚨 '{surface_type}' Surface 로드 실패: {e}. 기본 'local' 환경으로 Fallback 합니다.")
+            log.warning(f"🚨 Failed to load '{surface_type}' Surface: {e}. Fallback to default 'local' environment.")
             surface_class = get_surface_class("local")
             
         self.impl = surface_class(config)
@@ -45,7 +46,7 @@ class SurfaceManager:
 
 
 def _instantiate_lm(model_name: str) -> Optional[Any]:
-    """LM 엔진 인스턴스화 전담 팩토리"""
+    """Dedicated factory for instantiating LM engines."""
     if not model_name:
         return None
     
@@ -61,6 +62,8 @@ def _instantiate_lm(model_name: str) -> Optional[Any]:
 @asynccontextmanager
 async def managed_scope(**kwargs):
     use_thch = kwargs.pop("use_thch", False)
+    
+    ## Separate arguments for Surface and DSP configs
     surface_fields = {f for f in SurfaceConfig.__dataclass_fields__}
     surface_kwargs = {}
     dsp_kwargs = {}
@@ -83,20 +86,27 @@ async def managed_scope(**kwargs):
     facet_type = "logical" if config.surface_type == "local" else "infra"
     surface_name = manager.impl.__class__.__name__.replace("Surface", "").lower()
     
-    with runtime.bind(**dsp_kwargs):
-        with folding_thch() if use_thch else nullcontext():
-            async with scope_trace(name=surface_name, facet=facet_type):
-                log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
-                if use_thch:
-                    log.info("[managed_scope] 🌉 ThCh Meta-Compilation Bridge Activated.")
-                
-                try:
-                    await manager.up()
-                    yield manager 
-                except Exception as e:
-                    log.error(f"🚨 [managed_scope] pipeline exception: {type(e).__name__} - {e}")
-                    raise
-                finally:
-                    log.info("[managed_scope] 인프라 자원 안전 회수 시퀀스 트리거")
-                    await manager.down()
-                    log.info("[+] Context Manager closed safely.")
+    ## Flatten and safely manage nested context managers using AsyncExitStack
+    async with AsyncExitStack() as stack:
+        ## Bind DSPy runtime context
+        stack.enter_context(runtime.bind(**dsp_kwargs))
+        
+        ## Safely inject ThCh adapter (Thread-safe mock patch confined to this scope)
+        if use_thch:
+            stack.enter_context(patch("xphi.xor.opt.manifold.model.cot.ChainOfThought", new=ThCh))
+            log.info("[managed_scope] 🌉 ThCh Meta-Compilation Bridge Activated.")
+
+        ## Enter asynchronous trace scope
+        await stack.enter_async_context(scope_trace(name=surface_name, facet=facet_type))
+        log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
+        
+        try:
+            await manager.up()
+            yield manager 
+        except Exception as e:
+            log.error(f"🚨 [managed_scope] pipeline exception: {type(e).__name__} - {e}")
+            raise
+        finally:
+            log.info("[managed_scope] Triggering safe teardown sequence for infrastructure resources.")
+            await manager.down()
+            log.info("[+] Context Manager closed safely.")

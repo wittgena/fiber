@@ -7,9 +7,9 @@
 
 from typing import Any, List
 
-from bound.adapter.llama.base.embeddings.base import BaseEmbedding
+from anchor.inter.bound.base.embeddings.base import BaseEmbedding
 from xphi.loop.flow.embedding.multi_modal_base import MultiModalEmbedding
-from bound.adapter.llama.schema import ImageType
+from anchor.inter.bound.schema import ImageType
 
 
 class MockEmbedding(BaseEmbedding):

@@ -23,9 +23,9 @@ import enum
 import logging
 from typing import Dict, List
 
-from bound.adapter.llama.async_utils import asyncio_run
+from anchor.inter.bound.async_utils import asyncio_run
 from xphi.loop.flow.reader.base import BaseReader
-from bound.adapter.llama.schema import Document
+from anchor.inter.bound.schema import Document
 from anchor.inter.readers.github.collaborators.github_client import (
     BaseGitHubCollaboratorsClient,
     GitHubCollaboratorsClient,

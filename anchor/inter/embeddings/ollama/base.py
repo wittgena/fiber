@@ -2,10 +2,10 @@
 ## @lineage: bound.inter.embeddings.ollama.base
 from typing import Any, Dict, List, Optional, Union
 
-from bound.adapter.llama.base.embeddings.base import BaseEmbedding
-from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
+from anchor.inter.bound.base.embeddings.base import BaseEmbedding
+from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
 from xphi.loop.callback.base import CallbackManager
-from bound.adapter.llama.constants import DEFAULT_EMBED_BATCH_SIZE
+from anchor.inter.bound.constants import DEFAULT_EMBED_BATCH_SIZE
 
 from ollama import Client, AsyncClient
 

@@ -12,7 +12,7 @@ from urllib.error import URLError, HTTPError
 from pathlib import Path
 
 import anchor.inter as inter_path
-import bound.adapter.llama as llama_bound
+import anchor.inter.bound as llama_bound
 import xphi.loop as xphi_loop
 import xphi.loop.flow as xphi_flow
 

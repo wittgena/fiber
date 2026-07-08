@@ -14,7 +14,7 @@ from bound.surface.legacy.provider import ProviderTypesSet
 from anchor.provider.cost.unit import generic_cost_per_token
 from anchor.registry.router.locator import get_llm_provider
 from anchor.provider.token.counter import token_counter
-from bound.surface.switch.params import ModelResponse, ModelResponseStream
+from anchor.bind.switch.params import ModelResponse, ModelResponseStream
 
 from bound.surface.legacy.openai.types import (
     HttpxBinaryResponseContent,

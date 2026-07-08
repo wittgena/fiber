@@ -6,9 +6,9 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 
 from bound.surface.hf.utils import format_query, format_text
 from bound.surface.hf.embedding.pooling import Pooling
-from bound.adapter.llama.base.embeddings.base import BaseEmbedding, Embedding
-from bound.adapter.llama.bridge.pydantic import Field, PrivateAttr
-from bound.adapter.bridge.hf import HFInferenceBridge
+from anchor.inter.bound.base.embeddings.base import BaseEmbedding, Embedding
+from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
+from bound.surface.hf.bridge import HFInferenceBridge
 
 logger = logging.getLogger(__name__)
 

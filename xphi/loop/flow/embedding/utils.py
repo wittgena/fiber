@@ -6,10 +6,10 @@
 """Embedding utils for LlamaIndex."""
 import os
 from typing import TYPE_CHECKING, List, Optional, Union
-from bound.adapter.llama.base.embeddings.base import BaseEmbedding
+from anchor.inter.bound.base.embeddings.base import BaseEmbedding
 from xphi.loop.callback import CallbackManager
 from xphi.loop.flow.embedding.mock_embed_model import MockEmbedding
-from bound.adapter.llama.utils import get_cache_dir
+from anchor.inter.bound.utils import get_cache_dir
 
 EmbedType = Union[BaseEmbedding, str]
 

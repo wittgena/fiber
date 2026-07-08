@@ -13,8 +13,8 @@ from fsspec import AbstractFileSystem
 from io import BytesIO
 
 from xphi.loop.flow.reader.base import BaseReader
-from bound.adapter.llama.schema import Document, ImageDocument
-from bound.adapter.llama.utils import infer_torch_device
+from anchor.inter.bound.schema import Document, ImageDocument
+from anchor.inter.bound.utils import infer_torch_device
 
 
 class ImageReader(BaseReader):
@@ -80,7 +80,7 @@ class ImageReader(BaseReader):
         fs: Optional[AbstractFileSystem] = None,
     ) -> List[Document]:
         """Parse file."""
-        from bound.adapter.llama.img_utils import img_2_b64
+        from anchor.inter.bound.img_utils import img_2_b64
         from PIL import Image
 
         # load document image

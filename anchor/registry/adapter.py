@@ -11,9 +11,9 @@
 """
 from typing import Dict, Optional
 
-from bound.adapter.inter.base import BaseProviderAdapter, OpenAICompatibleAdapter, GenericHTTPAdapter
-from bound.adapter.inter.llm import InterLLMAdapter
-from bound.adapter.inter.embedding import InterEmbeddingAdapter
+from anchor.inter.bound.adapter.base import BaseProviderAdapter, OpenAICompatibleAdapter, GenericHTTPAdapter
+from anchor.inter.bound.adapter.llm import InterLLMAdapter
+from anchor.inter.bound.adapter.embedding import InterEmbeddingAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("registry.adapter")

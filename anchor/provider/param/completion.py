@@ -1,12 +1,4 @@
 # anchor.provider.param.completion
-## @lineage: anchor.provider.model.param.completion
-## @lineage: anchor.surface.model.param.completion
-## @lineage: anchor.surface.model.types.completion
-## @lineage: anchor.surface.model.legacy.types.completion
-## @lineage: bound.adapter.legacy.llm.types.completion
-## @lineage: anchor.surface.legacy.llm.types.completion
-## @lineage: anchor.surface.legacy.types.completion
-## @lineage: anchor.model.types.completion
 from typing import Iterable, List, Optional, Union
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import Literal, Required, TypedDict

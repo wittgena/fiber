@@ -23,13 +23,13 @@ from typing import (
 
 
 import xphi.loop.inst as instrument
-from bound.adapter.llama.base.llms.generic_utils import (
+from anchor.inter.bound.base.llms.generic_utils import (
     chat_to_completion_decorator,
     achat_to_completion_decorator,
     stream_chat_to_completion_decorator,
     astream_chat_to_completion_decorator,
 )
-from bound.adapter.llama.base.llms.types import (
+from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -41,15 +41,15 @@ from bound.adapter.llama.base.llms.types import (
     MessageRole,
     ToolCallBlock,
 )
-from bound.adapter.llama.bridge.pydantic import BaseModel, Field, PrivateAttr
+from anchor.inter.bound.bridge.pydantic import BaseModel, Field, PrivateAttr
 from xphi.loop.callback import CallbackManager
-from bound.adapter.llama.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
+from anchor.inter.bound.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
 from xphi.loop.flow.llm.callbacks import llm_chat_callback, llm_completion_callback
 from xphi.loop.flow.llm.function_calling import FunctionCallingLLM
 from xphi.loop.flow.llm.llm import ToolSelection, Model
-from bound.adapter.llama.prompts import PromptTemplate
+from anchor.inter.bound.prompts import PromptTemplate
 from xphi.loop.prog.utils import FlexibleModel, create_flexible_model
-from bound.adapter.llama.types import PydanticProgramMode
+from anchor.inter.bound.types import PydanticProgramMode
 from anchor.inter.llms.google_genai.utils import (
     chat_from_gemini_response,
     chat_message_to_gemini,
@@ -70,7 +70,7 @@ dispatcher = instrument.get_dispatcher(__name__)
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
 if TYPE_CHECKING:
-    from bound.adapter.llama.tools.types import BaseTool
+    from anchor.inter.bound.tools.types import BaseTool
 
 from phase.gov.proto.gate import uuid4 
 from watcher.plane.emitter import get_emitter

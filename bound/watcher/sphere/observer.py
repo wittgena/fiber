@@ -1,4 +1,5 @@
 # bound.watcher.sphere.observer
+## @lineage: xphi.watcher.sphere.observer
 """
 @desc: Topos-aligned Phase Observation Loop
 @flow:
