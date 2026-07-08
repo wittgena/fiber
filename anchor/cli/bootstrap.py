@@ -26,7 +26,7 @@ _MOCK_INTELLIGENCE_DATA = {
             "localhost", 
             "127.0.0.1", 
             "fiber.internal",
-            "nexus.next-phase.com"  # 👈 추가됨: 빌더의 프라이빗 레지스트리 통신 허용
+            "nexus.next-phase.com"
         ],
         "restricted_domains": [
             "api.openai.com", 
