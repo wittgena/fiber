@@ -43,6 +43,7 @@ DEFAULT_BOUND_SKELETON = {
         "surface": ":io:/surface",
         "contract": ":contract:",
         "spec": ":contract:/spec",
+        "scheme": ":contract:/scheme",
         "registry": ":contract:/registry",
         "xor": ":xor:",
         "lib": ":contract:/lib",
