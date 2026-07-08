@@ -1,8 +1,5 @@
 # bound.adapter.ledger
-## @lineage: bound.bridge.adapter.ledger
-## @lineage: bound.adapter.bridge.ledger
 """
-@manifold: bound.adapter.bridge.ledger
 @desc: 
 - Interceptor Bridge middleware decoupling Agent/Ingress execution from Kernel Ledger sealing.
 - Acts as a structural adapter: translates both flat legacy payloads and strict 
@@ -12,23 +9,19 @@ import uuid
 from typing import Any, Dict, Optional
 from watcher.plane.emitter import get_emitter
 from watcher.kernel.ledger import ToposLedger, LogicStream as KernelLogicStream, SealedKernel
-
-## @action: Import strict ingress schema for native adaptation
 from xphi.proxy.ingress.schema import LogicStream as IngressLogicStream
 
 log = get_emitter("kernel.bridge", phase="KERNEL")
 
 class LedgerBridge:
-    """
-    @desc: Compliant middleware & Adapter. Agents and Ingress layers interact ONLY with this bridge.
-    """
+    """@desc: Compliant middleware & Adapter"""
     def __init__(self, ledger: Optional[ToposLedger] = None):
         self.ledger = ledger or ToposLedger()
 
     async def authorize_ingress(self, stream: IngressLogicStream) -> bool:
         """
-        @desc: Structural adapter for Ingress validation.
-        Unpacks the 3D rigid Ingress schema into the 2D flat context required by the legacy Ledger.
+        @desc: Structural adapter for Ingress validation
+        - Unpacks the 3D rigid Ingress schema into the 2D flat context required by the legacy Ledger
         """
         action_id = str(stream.meta.stream_id)
         payload = {

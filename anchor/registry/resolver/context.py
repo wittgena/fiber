@@ -1,5 +1,4 @@
 # anchor.registry.resolver.context
-## @lineage: xphi.agent.resolver.context
 import asyncio
 import socket
 from typing import List, Optional, Tuple, Dict, Any, Type, Protocol
@@ -8,10 +7,6 @@ from anchor.registry.model.tier import model_tier_registry
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")
-
-class SchemeResolverProtocol(Protocol):
-    def select(self, is_external: bool = False) -> Tuple[str, str]:
-        ...
 
 class ContextResolver:
     """@desc: Diagnoses infrastructure state to determine optimal model architecture and Surface Scope parameters."""
@@ -61,55 +56,3 @@ class ContextResolver:
             "model": resolved_model  
         }
         return scope_kwargs, resolved_model, use_proxy
-
-
-class TaskOrchestrator:
-    """@desc: Routes and executes sub-tasks based on request type within the mounted context manager sandbox."""
-    
-    # SchemeResolverProtocol을 타입으로 지정하여 외부에서 주입받음
-    def __init__(self, run_context: dict, launcher_cls: Type[Any], scheme_resolver: SchemeResolverProtocol):
-        self.run_context = run_context
-        self.launcher_cls = launcher_cls
-        self.scheme_resolver = scheme_resolver
-
-    async def execute_prompt(self, instruction: str):
-        """Single prompt execution task."""
-        app = self.launcher_cls("RootAgentApp", run_context=self.run_context)
-        trace = await app.setup_default_nodes().run_task(instruction=instruction)
-        
-        log.info("\n" + "="*50)
-        log.info(f"FINAL HYBRID RESIDUE (TRACE) FOR: '{instruction[:30]}...'")
-        log.info(trace)
-        log.info("="*50)
-
-    async def start_interactive_mode(self):
-        """Interactive CLI loop task."""
-        use_proxy = self.run_context.get("use_proxy", False)
-        log.info(f"Interactive CLI Mode started (Proxy Mode: {use_proxy}). Type 'exit' to terminate.")
-        
-        while True:
-            try:
-                prompt = await asyncio.to_thread(input, "\n🤖 [Agent Prompt]> ")
-                prompt = prompt.strip()
-                
-                if not prompt: 
-                    continue
-                if prompt.lower() in ['exit', 'quit']:
-                    log.info("Exiting interactive manifold...")
-                    break
-                    
-                await self.execute_prompt(prompt)
-            except (KeyboardInterrupt, EOFError):
-                log.info("\nSession context disrupted. Exiting...")
-                break
-
-    async def run_benchmark_scenario(self, is_external: bool):
-        """Automated benchmark task for default scenarios."""
-        pool_name, selected_scenario = self.scheme_resolver.select(is_external=is_external)
-        
-        log.info("\n" + "🚀"*17)
-        log.info(f"Initiating {pool_name} Auto-Benchmark Sequence.")
-        log.info(f"Selected Scenario: [ {selected_scenario} ]")
-        log.info("🚀"*17 + "\n")
-        
-        await self.execute_prompt(selected_scenario)
