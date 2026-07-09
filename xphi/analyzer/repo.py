@@ -1,5 +1,4 @@
 # xphi.analyzer.repo
-## @lineage: bound.surface.analyzer.repo
 from pathlib import Path
 from typing import Dict, Any
 

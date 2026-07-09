@@ -1,92 +1,122 @@
 # anchor.registry.resolver.ext
+import json
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict, Any, Optional, Union
+from watcher.plane.emitter import get_emitter
+
+log = get_emitter("resolver.ext")
+
+DEFAULT_RULESET = {
+    "constants": {
+        "owner": "ext-phase",
+        "tag": "v0.14.22",
+        "repo_name": "inter-llama",
+        "core_namespace": "llama_index",
+        "api_base": "https://api.github.com/repos",
+        "raw_base": "https://raw.githubusercontent.com",
+        "local_path": "anchor/ext/inter-llama"
+    },
+    "templates": {
+        "local": "{local_path}/llama-index-integrations/{category}",
+        "repo": "https://github.com/{owner}/{repo_name}.git",
+        "source": "llama-index-integrations/{category_pkg}/llama-index-{category_dir}-{name_dir}/{core_namespace}/{category_pkg}/{name_pkg}",
+        "api": "{api_base}/{owner}/{repo_name}/contents/llama-index-integrations/{category}",
+        "api_content": "{api_base}/{owner}/{repo_name}/contents/llama-index-integrations/{category_pkg}/llama-index-{category_dir}-{name_dir}/{core_namespace}/{category_pkg}/{name_pkg}",
+        "raw": "{raw_base}/{owner}/llama_index/{tag}/llama-index-integrations/{category}/llama-index-{category_dir}-{name_dir}",
+        "prefix": "llama-index-{category_dir}-"
+    },
+    "routes": {
+        "local": "local",
+        "repo": "repo",
+        "source": "source",
+        "api": "api",
+        "api_content": "api_content",
+        "raw": "raw",
+        "prefix": "prefix"
+    }
+}
 
 class ExtResolver:
-    """@desc: Resolves external dependency paths and URLs for integration scanners/analyzers across various categories."""
+    _RULESET_PATH = Path(__file__).parent / "ruleset.json"
+    RULES = DEFAULT_RULESET.copy()
     
-    ## Basic metadata
-    DEFAULT_EXT_REPO = "ext-phase"
-    DEFAULT_TAG = "v0.14.22"
-    GITHUB_REPO_NAME = "inter-llama"
-    
-    ## Relative path templates
-    BASE_INTEGRATION_SUBPATH = "llama-index-integrations/{category}"
-    DEFAULT_LOCAL_PATH = "anchor/ext/inter-llama/llama-index-integrations/{category}"
+    try:
+        if _RULESET_PATH.exists():
+            with open(_RULESET_PATH, "r", encoding="utf-8") as f:
+                RULES.update(json.load(f))
+                log.debug(f"[init] Successfully loaded custom ruleset from {_RULESET_PATH}")
+    except (json.JSONDecodeError, IOError) as e:
+        log.warning(f"Failed to load {_RULESET_PATH}. Using DEFAULT_RULESET. Error: {e}")
 
     @classmethod
-    def resolve_local_path(cls, category: str = "llms", override_path: Optional[str] = None) -> Path:
-        """@desc: Returns the absolute path to the locally cloned integration module for the given category."""
-        if override_path:
-            return Path.cwd() / override_path
+    def _ctx(cls, **kwargs) -> Dict[str, Any]:
+        ctx = {**cls.RULES["constants"], **kwargs}
+        category = ctx.setdefault("category", "llms")
+
+        ctx["category_pkg"] = category.replace("-", "_")
+        ctx["category_dir"] = category.replace("_", "-")
+        if "name" in ctx:
+            name = ctx["name"]
+            ctx["name_pkg"] = name.replace("-", "_")
+            ctx["name_dir"] = name.replace("_", "-")
             
-        subpath = cls.DEFAULT_LOCAL_PATH.format(category=category)
-        return Path.cwd() / subpath
+        log.debug(f"[_ctx] Generated context keys: {list(ctx.keys())}")
+        return ctx
 
     @classmethod
-    def resolve_github_repo_url(cls, repo_owner: str = DEFAULT_EXT_REPO) -> str:
-        """@desc: Returns the direct Git clone URL."""
-        return f"https://github.com/{repo_owner}/{cls.GITHUB_REPO_NAME}.git"
+    def _fmt(cls, template_key: str, **kwargs) -> str:
+        template = cls.RULES["templates"].get(template_key)
+        if not template:
+            log.warning(f"[_fmt] Missing template for key: '{template_key}'")
+            return ""
+            
+        formatted_result = template.format(**cls._ctx(**kwargs))
+        log.debug(f"[_fmt] Template [{template_key}] resolved to -> {formatted_result}")
+        return formatted_result
 
     @classmethod
-    def resolve_source_subpath(cls, category: str, integration_name: str) -> str:
-        """@desc: Resolves the exact source code directory path within the LlamaIndex structure."""
-        category_dir = category.replace("_", "-")
-        name_dir = integration_name.replace("_", "-")
-        category_pkg = category.replace("-", "_")
-        name_pkg = integration_name.replace("-", "_")
+    def get(cls, route: str, override: Optional[str] = None, **kwargs) -> Union[str, Path, None]:
+        log.debug(f"[get] Requested route: '{route}', override: {override}, kwargs: {kwargs}")
         
-        return (
-            f"llama-index-integrations/{category_pkg}/"
-            f"llama-index-{category_dir}-{name_dir}/"
-            f"llama_index/{category_pkg}/{name_pkg}"
-        )
+        template_key = cls.RULES.get("routes", {}).get(route)
+        if not template_key:
+            log.error(f"[get] Unrecognized route requested: '{route}'")
+            return None
 
-    @classmethod
-    def resolve_github_api(cls, category: str = "llms", repo_owner: str = DEFAULT_EXT_REPO) -> str:
-        """@desc: Returns the GitHub API URL used to query the top-level directory contents of a specific integration category."""
-        subpath = cls.BASE_INTEGRATION_SUBPATH.format(category=category)
-        return f"https://api.github.com/repos/{repo_owner}/{cls.GITHUB_REPO_NAME}/contents/{subpath}"
-
-    @classmethod
-    def resolve_github_api_contents(
-        cls, 
-        category: str, 
-        integration_name: str, 
-        repo_owner: str = DEFAULT_EXT_REPO
-    ) -> str:
-        """@desc: Returns the GitHub API URL for extracting a specific integration's deep source code directory."""
-        subpath = cls.resolve_source_subpath(category, integration_name)
-        return f"https://api.github.com/repos/{repo_owner}/{cls.GITHUB_REPO_NAME}/contents/{subpath}"
-
-    @classmethod
-    def resolve_github_raw(
-        cls, 
-        integration_name: str, 
-        category: str = "llms", 
-        tag: str = DEFAULT_TAG, 
-        repo_owner: str = DEFAULT_EXT_REPO
-    ) -> str:
-        """@desc: Returns the base GitHub raw URL for fetching standard files (like pyproject.toml) of a specific integration target."""
-        category_dir = category.replace("_", "-")
-        name_dir = integration_name.replace("_", "-")
+        formatted_str = cls._fmt(template_key, **kwargs)
         
-        target_dir = f"llama-index-{category_dir}-{name_dir}"
-        subpath = cls.BASE_INTEGRATION_SUBPATH.format(category=category)
+        if route == "local":
+            final_path = Path.cwd() / (override or formatted_str)
+            log.debug(f"[get] Returning Path object: {final_path}")
+            return final_path
         
-        return f"https://raw.githubusercontent.com/{repo_owner}/llama_index/{tag}/{subpath}/{target_dir}"
+        return formatted_str
 
     @classmethod
-    def resolve_context(
-        cls, 
-        category: str = "llms", 
-        override_local: Optional[str] = None,
-        tag: str = DEFAULT_TAG
-    ) -> Dict[str, str]:
-        """@desc: Returns a comprehensive dictionary containing all necessary paths and URLs for the specified category."""
+    def inspect_route(cls, route: str, override: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """
+        [DEBUG] 특정 라우트의 템플릿 매핑, 컨텍스트 상태, 최종 결과를 한 번에 덤프하여 확인합니다.
+        """
+        template_key = cls.RULES.get("routes", {}).get(route)
+        
+        debug_data = {
+            "requested_route": route,
+            "mapped_template_key": template_key,
+            "raw_template": cls.RULES.get("templates", {}).get(template_key) if template_key else None,
+            "injected_kwargs": kwargs,
+            "resolved_context": cls._ctx(**kwargs),
+            "override_path": override,
+            "final_output": str(cls.get(route, override=override, **kwargs))
+        }
+        
+        log.debug(f"[inspect_route] Route Dump:\n{json.dumps(debug_data, indent=2, ensure_ascii=False)}")
+        return debug_data
+
+    @classmethod
+    def context(cls, category: str = "llms", tag: Optional[str] = None) -> Dict[str, str]:
         return {
-            "local_path": str(cls.resolve_local_path(category, override_local)),
-            "api_url": cls.resolve_github_api(category),
-            "tag": tag,
-            "ext_repo": cls.DEFAULT_EXT_REPO
+            "local_path": str(cls.get("local", category=category)),
+            "api_url": str(cls.get("api", category=category)),
+            "tag": tag or cls.RULES["constants"]["tag"],
+            "ext_repo": cls.RULES["constants"]["owner"]
         }

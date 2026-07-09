@@ -18,7 +18,9 @@ from arch.contract.registry.unified import contract
 from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("llm.scanner", phase="SYSTEM")
+log = get_emitter("scan.llm", phase="SYSTEM")
+
+TARGET_REPO = "brane"
 
 @dataclass
 class LLMCapabilities:
@@ -40,24 +42,24 @@ class LLMInfo:
     capabilities: Optional[LLMCapabilities] = None
     source_repo: Optional[str] = None
 
+
 class LLMScanner:
     KNOWN_LLM_BASES = {
         "BaseLLM", "LLM", "CustomLLM", 
         "FunctionCallingLLM", "OpenAILike", "MultiModalLLM"
     }
 
-    def __init__(self, base_path: Optional[str | Path] = None, target: Optional[str] = None):
-        self.base_path = ExtResolver.resolve_local_path(
-            category="llms", 
-            override_path=str(base_path) if base_path else None
-        )
+    def __init__(self, target: Optional[str] = None):
+        self.base_path = ExtResolver.get("local")
         self.target = target
+        self.prefix = str(ExtResolver.get("prefix"))
+        self.core_namespace = ExtResolver.RULES["constants"]["core_namespace"]
 
     def _get_module_path(self, file_path: Path) -> str:
         try:
             parts = file_path.parts
-            if "llama_index" in parts:
-                idx = parts.index("llama_index")
+            if self.core_namespace in parts:
+                idx = parts.index(self.core_namespace)
                 return ".".join(parts[idx:]).replace(".py", "")
             return ".".join(file_path.relative_to(Path.cwd()).parts).replace(".py", "")
         except Exception as e:
@@ -85,23 +87,22 @@ class LLMScanner:
         return {"lineage": lineage, "accepted_kwargs": list(accepted_kwargs), "capabilities": capabilities}
 
     def _scan_local(self) -> Dict[str, LLMInfo]:
-        log.info(f"[*] Scanning locally cloned LLM modules at: {self.base_path}")
+        log.info(f"[*] Scanning locally cloned modules at: {self.base_path}")
         registry: Dict[str, LLMInfo] = {}
 
         if self.target:
-            target_dir = self.base_path / f"llama-index-llms-{self.target}"
+            target_dir = self.base_path / f"{self.prefix}{self.target}"
             if target_dir.exists() and target_dir.is_dir():
                 dirs_to_scan = [target_dir]
             else:
                 log.warning(f"[-] Target directory not found locally: {target_dir}")
                 return registry
         else:
-            dirs_to_scan = [d for d in self.base_path.iterdir() if d.is_dir() and d.name.startswith("llama-index-llms-")]
+            dirs_to_scan = [d for d in self.base_path.iterdir() if d.is_dir() and d.name.startswith(self.prefix)]
 
         for repo_dir in dirs_to_scan:
-            provider_key = repo_dir.name.replace("llama-index-llms-", "")
+            provider_key = repo_dir.name.replace(self.prefix, "")
             layout_meta = ProjectLayout.resolve(repo_dir)
-
             if not layout_meta.base_py_locations:
                 log.debug(f"[-] No base.py found in {repo_dir.name}. Saving layout meta only.")
                 registry[provider_key] = LLMInfo(
@@ -156,21 +157,20 @@ class LLMScanner:
                 status="no_llm_class_found", type="local_scanned", layout=layout_meta,
                 tags=[provider_key], source_repo=str(repo_dir.resolve())
             )
-
         return registry
 
     def _scan_remote(self) -> Dict[str, LLMInfo]:
-        log.info("[*] Fetching remote LLM catalog from GitHub (Fallback mode)...")
+        log.info("[*] Fetching remote catalog from GitHub (Fallback mode)...")
         registry = {}
 
-        api_url = ExtResolver.resolve_github_api(category="llms")
+        api_url = str(ExtResolver.get("api"))
         req = urllib.request.Request(api_url, headers={'User-Agent': 'Theoria-Mutation-Agent'})
+        
         try:
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 for item in json.loads(response.read().decode()):
-                    if item.get("type") == "dir" and item.get("name", "").startswith("llama-index-llms-"):
-                        llm_name = item["name"].replace("llama-index-llms-", "")
-                        
+                    if item.get("type") == "dir" and item.get("name", "").startswith(self.prefix):
+                        llm_name = item["name"].replace(self.prefix, "")
                         if self.target and llm_name != self.target:
                             continue
 
@@ -185,25 +185,22 @@ class LLMScanner:
             return {}
 
     def scan(self) -> Dict[str, Any]:
-        raw_result = self._scan_local() if self.base_path.exists() else self._scan_remote()
+        raw_result = self._scan_local() if self.base_path and self.base_path.exists() else self._scan_remote()
         return {k: asdict(v) for k, v in raw_result.items()}
 
-
 def entry_task(args):
-    parser = argparse.ArgumentParser(description="Brane LlamaIndex LLM Scanner (Unified Edition)")
-    parser.add_argument("--repo", type=str, default="brane", help="Target repository context")
-    parser.add_argument("--base-path", type=str, default=None, help="Override default local scan path")
+    parser = argparse.ArgumentParser(description="Brane LlamaIndex Component Scanner (Unified Edition)")
     parser.add_argument("--out", type=str, default=None, help="Output JSON path (optional)")
-    parser.add_argument("--target", type=str, default=None, help="Specific LLM target to scan (e.g., 'openai')")
+    parser.add_argument("--target", type=str, default=None, help="Specific target to scan (e.g., 'openai')")
     parsed_args = parser.parse_args(args)
 
     def _execute_scan():
         if (cwd := str(Path.cwd())) not in sys.path: sys.path.insert(0, cwd)
         target_msg = f" (Target: {parsed_args.target})" if parsed_args.target else " (Bulk Scan)"
-        log.info(f"[*] Initializing scanner for repo [{parsed_args.repo}]{target_msg}")
+        log.info(f"[*] Initializing scanner for repo [{TARGET_REPO}]{target_msg}")
         
         try:
-            result = LLMScanner(base_path=parsed_args.base_path, target=parsed_args.target).scan()
+            result = LLMScanner(target=parsed_args.target).scan()
             json_output = json.dumps(result, indent=4, ensure_ascii=False)
             
             if parsed_args.out:
@@ -221,8 +218,8 @@ def entry_task(args):
     return CliTaskAdapter(_execute_scan)
 
 @contract.cli(
-    name="llm.scan", 
-    args=["--repo", "--base-path", "--out", "--target"], 
+    name="scan.llm", 
+    args=["--out", "--target"], 
     tags=["llama", "scanner", "llm"], 
     entry="entry_task"
 )
@@ -230,7 +227,8 @@ def main(args=None):
     if args is not None: return entry_task(args)
     bound_args, remain = parse_local(sys.argv[1:])
     if bound_args.local: entry_task(remain).run()
-    else: dispatch_cli("llm.scan", entry_task, __file__)
+    else: dispatch_cli("scan.llm", entry_task, __file__)
+
 
 if __name__ == "__main__":
     main()
