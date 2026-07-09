@@ -16,6 +16,7 @@ import anchor.inter.bound as llama_bound
 import xphi.loop as xphi_loop
 import xphi.loop.flow as xphi_flow
 
+from anchor.registry.resolver.ext import ExtResolver
 from arch.contract.registry.unified import contract, registry
 from phase.bind.resolver import find_current_self, get_invoker
 from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
@@ -26,14 +27,8 @@ log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
 
 SELF_ROOT = find_current_self()
 
-ACCOUNT = "ext-phase"
-REPO = "inter-llama"
-GITHUB_API_BASE = f"https://api.github.com/repos/{ACCOUNT}/{REPO}/contents"
-GITHUB_REPO_URL = f"https://github.com/{ACCOUNT}/{REPO}.git"
-
 TARGET_REPO = "brane"
 DEST_PATH = inter_path.__name__
-DEFAULT_TAG =  "v0.14.22"
 
 LLAMA_BOUND_PATH = llama_bound.__name__
 LOOP_PATH = xphi_loop.__name__
@@ -50,11 +45,18 @@ IMPORT_ALIGN_MAP = [
 ]
 
 class GitHubExtractor:
-    """GitHub API 및 Git Sparse-Checkout을 활용한 소스코드 추출기"""
-    def __init__(self, target_subpath: str, dest_dir: Path, tag: str):
-        self.target_subpath = target_subpath
+    """GitHub API and Git Sparse-Checkout based source code extractor"""
+    
+    def __init__(self, category: str, name: str, dest_dir: Path, tag: str):
+        self.category = category
+        self.name = name
         self.dest_dir = dest_dir
         self.tag = tag
+        
+        # Delegate URL and path resolutions to ExtResolver
+        self.target_subpath = ExtResolver.resolve_source_subpath(category, name)
+        self.api_base_url = ExtResolver.resolve_github_api_contents(category, name)
+        self.git_repo_url = ExtResolver.resolve_github_repo_url()
 
     def _run_command_sync(self, cmd: list, cwd=None, check=True):
         log.signal(f"[RUN] {' '.join(cmd)}")
@@ -100,7 +102,7 @@ class GitHubExtractor:
                 "git", "clone", "--depth", "1", 
                 "--filter=blob:none", "--sparse", 
                 "--branch", self.tag, 
-                GITHUB_REPO_URL, temp_dir
+                self.git_repo_url, temp_dir
             ])
             self._run_command_sync(["git", "sparse-checkout", "set", self.target_subpath], cwd=temp_dir)
 
@@ -117,7 +119,7 @@ class GitHubExtractor:
     def fetch(self):
         log.info(f"[*] Synthesized source path: {self.target_subpath}")
         self.dest_dir.mkdir(parents=True, exist_ok=True)
-        api_target_url = f"{GITHUB_API_BASE}/{self.target_subpath}?ref={self.tag}"
+        api_target_url = f"{self.api_base_url}?ref={self.tag}"
 
         try:
             log.info("[*] Attempting file-level extraction via GitHub API...")
@@ -133,7 +135,8 @@ class GitHubExtractor:
         self._fallback_git_sparse_checkout()
 
 class IsolatedProcessRunner:
-    """독립된 서브프로세스 실행 및 로그 스트리밍을 담당하는 유틸리티 클래스"""
+    """Utility class for isolated subprocess execution and log streaming"""
+    
     @staticmethod
     def execute_subtask(command_name: str, args: list):
         log.signal(f"[Sub-Task] Resolving contract for isolated execution: {command_name}")
@@ -175,30 +178,25 @@ class IsolatedProcessRunner:
         return True
 
 class LlamaTransductor:
-    """LlamaIndex 통합 모듈 추출 및 의존성 변환을 지휘하는 메인 파이프라인"""
+    """Main pipeline orchestrating the extraction and dependency mutation of integration modules"""
     
-    def __init__(self, category: str, name: str, tag: str = DEFAULT_TAG):
+    def __init__(self, category: str, name: str, tag: str = ExtResolver.DEFAULT_TAG):
         self.category = category
         self.name = name
         self.tag = tag
         
-        category_dir = category.replace("_", "-")
-        name_dir = name.replace("_", "-")
+        # Calculate local destination path following Python package naming conventions
         category_pkg = category.replace("-", "_")
         name_pkg = name.replace("-", "_")
         
-        self.target_subpath = (
-            f"llama-index-integrations/{category_pkg}/"
-            f"llama-index-{category_dir}-{name_dir}/"
-            f"llama_index/{category_pkg}/{name_pkg}"
-        )
-
         new_path_parts = DEST_PATH.split(".")
         self.dest_dir = SELF_ROOT / TARGET_REPO / Path(*new_path_parts) / category_pkg / name_pkg
-        self.extractor = GitHubExtractor(self.target_subpath, self.dest_dir, self.tag)
+        
+        # Initialize extractor using ExtResolver logic seamlessly
+        self.extractor = GitHubExtractor(category, name, self.dest_dir, self.tag)
 
     def mutate_dependencies(self):
-        """다중 의존성 치환 및 경로 정렬 (격리된 실행 환경)"""
+        """Sequential dependency substitution and path alignment within an isolated environment"""
         log.info("\n## @mutate: Isolated Subprocess Execution")
         log.signal("[TASK] Executing 'align.imports' sequentially...")
         
@@ -217,7 +215,7 @@ class LlamaTransductor:
         log.info("\n[SUCCESS] All isolated mutation processes completed.")
 
     def run(self):
-        """가독성을 극대화한 메인 동기화 파이프라인"""
+        """Main synchronized execution pipeline"""
         if not (SELF_ROOT / TARGET_REPO).is_dir():
             log.error(f"[ERROR] Cannot find repository '{TARGET_REPO}'. Make sure it is at the top of '.self/'.")
             sys.exit(1)
@@ -233,10 +231,10 @@ class LlamaTransductor:
             raise
 
 def entry_task(args):
-    parser = argparse.ArgumentParser(description="Brane LlamaIndex Integration Transductor")
+    parser = argparse.ArgumentParser(description="Brane Integration Extraction Transductor")
     parser.add_argument("--category", required=True, help="Integration category (e.g., readers, llms)")
     parser.add_argument("--name", required=True, help="Integration name (e.g., database, openai)")
-    parser.add_argument("--tag", default=DEFAULT_TAG, help=f"Target GitHub tag or branch (default: {DEFAULT_TAG})")
+    parser.add_argument("--tag", default=ExtResolver.DEFAULT_TAG, help=f"Target GitHub tag or branch (default: {ExtResolver.DEFAULT_TAG})")
     
     parsed_args = parser.parse_args(args)
     runner = LlamaTransductor(category=parsed_args.category, name=parsed_args.name, tag=parsed_args.tag)

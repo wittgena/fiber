@@ -1,8 +1,4 @@
 # anchor.cli.adapter.trans.synth
-## @lineage: xphi.adapter.trans.synth
-## @lineage: xphi.trans.synth
-## @lineage: xphi.flow.trans.synth
-## @lineage: xphi.manager.rule.synth
 import os
 import sys
 import ast

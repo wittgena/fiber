@@ -1,10 +1,4 @@
 # anchor.cli.adapter.scan.llm
-## @lineage: xphi.adapter.scan.llm
-## @lineage: xphi.trans.llm.scanner
-## @lineage: xphi.flow.llm.scanner
-## @lineage: xphi.flow.scanner.llm
-## @lineage: xphi.manager.scanner.llm
-import os
 import sys
 import ast
 import importlib
@@ -13,66 +7,62 @@ import json
 import urllib.request
 import argparse
 from pathlib import Path
-from typing import Dict, Any, Set
+from typing import Dict, Any, Set, List, Optional
+from dataclasses import dataclass, field, asdict
 
-import anchor.inter.llms as base_path
 from anchor.inter.bound.base.llms.base import BaseLLM 
+from anchor.registry.resolver.ext import ExtResolver
+from bound.adapter.mapper.repo.inter import ProjectLayout
+
 from arch.contract.registry.unified import contract
 from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
 from watcher.plane.emitter import get_emitter
 
-EXT_REPO = "ext-phase"
 log = get_emitter("llm.scanner", phase="SYSTEM")
 
+@dataclass
+class LLMCapabilities:
+    is_function_calling: bool = False
+    is_openai_like: bool = False
+    is_multimodal: bool = False
+    supports_structured_outputs: bool = False
+
+@dataclass
+class LLMInfo:
+    status: str
+    type: str
+    layout: Optional[ProjectLayout] = None
+    tags: List[str] = field(default_factory=list)
+    module: Optional[str] = None
+    class_name: Optional[str] = None 
+    lineage: List[str] = field(default_factory=list)
+    accepted_kwargs: List[str] = field(default_factory=list)
+    capabilities: Optional[LLMCapabilities] = None
+    source_repo: Optional[str] = None
+
 class LLMScanner:
-    """Dual-mode LLM scanner with Deep Introspection for Local Modules"""
-    
     KNOWN_LLM_BASES = {
         "BaseLLM", "LLM", "CustomLLM", 
         "FunctionCallingLLM", "OpenAILike", "MultiModalLLM"
     }
 
-    GITHUB_LLMS_API = f"https://api.github.com/repos/{EXT_REPO}/llama_index/contents/llama-index-integrations/llms"
-
-    def __init__(self, base_path: str):
-        self.base_path = Path(base_path)
+    def __init__(self, base_path: Optional[str | Path] = None, target: Optional[str] = None):
+        self.base_path = ExtResolver.resolve_local_path(
+            category="llms", 
+            override_path=str(base_path) if base_path else None
+        )
+        self.target = target
 
     def _get_module_path(self, file_path: Path) -> str:
         try:
             parts = file_path.parts
-            if "bound" in parts:
-                idx = parts.index("bound")
-                module_parts = parts[idx:]
-                return ".".join(module_parts).replace(".py", "")
-            
-            rel_path = file_path.relative_to(Path.cwd())
-            return ".".join(rel_path.parts).replace(".py", "")
+            if "llama_index" in parts:
+                idx = parts.index("llama_index")
+                return ".".join(parts[idx:]).replace(".py", "")
+            return ".".join(file_path.relative_to(Path.cwd()).parts).replace(".py", "")
         except Exception as e:
             log.error(f"[ERROR] Failed to parse module path: {file_path} - {e}")
             return ""
-
-    def _scan_remote_catalog(self) -> Dict[str, Dict[str, Any]]:
-        log.info("[*] Fetching remote LLM catalog from GitHub...")
-        registry = {}
-        req = urllib.request.Request(self.GITHUB_LLMS_API, headers={'User-Agent': 'Theoria-Mutation-Agent'})
-        
-        try:
-            with urllib.request.urlopen(req) as response:
-                items = json.loads(response.read().decode())
-                for item in items:
-                    if item.get("type") == "dir" and item.get("name", "").startswith("llama-index-llms-"):
-                        llm_name = item["name"].replace("llama-index-llms-", "")
-                        registry[llm_name] = {
-                            "status": "available_for_mutation",
-                            "source_repo": item.get("html_url"),
-                            "type": "remote_catalog",
-                            "tags": [llm_name]
-                        }
-            log.info(f"[+] Acquired {len(registry)} remote module catalogs.")
-            return registry
-        except Exception as e:
-            log.error(f"[-] Remote scan failed: {e}")
-            return {}
 
     def _extract_rich_metadata(self, obj: Any) -> Dict[str, Any]:
         mro = inspect.getmro(obj)
@@ -86,119 +76,134 @@ class LLMScanner:
             
         accepted_kwargs.update(["additional_kwargs", "callback_manager", "system_prompt"])
 
-        capabilities = {
-            "is_function_calling": "FunctionCallingLLM" in lineage,
-            "is_openai_like": "OpenAILike" in lineage,
-            "is_multimodal": "MultiModalLLM" in lineage,
-            "supports_structured_outputs": hasattr(obj, "astructured_predict")
-        }
+        capabilities = LLMCapabilities(
+            is_function_calling="FunctionCallingLLM" in lineage,
+            is_openai_like="OpenAILike" in lineage,
+            is_multimodal="MultiModalLLM" in lineage,
+            supports_structured_outputs=hasattr(obj, "astructured_predict")
+        )
+        return {"lineage": lineage, "accepted_kwargs": list(accepted_kwargs), "capabilities": capabilities}
 
-        return {
-            "lineage": lineage,
-            "accepted_kwargs": list(accepted_kwargs),
-            "capabilities": capabilities
-        }
+    def _scan_local(self) -> Dict[str, LLMInfo]:
+        log.info(f"[*] Scanning locally cloned LLM modules at: {self.base_path}")
+        registry: Dict[str, LLMInfo] = {}
 
-    def _scan_local_installed(self) -> Dict[str, Dict[str, Any]]:
-        log.info(f"[*] Scanning locally installed LLM modules at: {self.base_path}")
-        registry = {}
-        
-        if not self.base_path.exists():
-            log.warning(f"[-] Base path not found: {self.base_path}")
-            return registry
+        if self.target:
+            target_dir = self.base_path / f"llama-index-llms-{self.target}"
+            if target_dir.exists() and target_dir.is_dir():
+                dirs_to_scan = [target_dir]
+            else:
+                log.warning(f"[-] Target directory not found locally: {target_dir}")
+                return registry
+        else:
+            dirs_to_scan = [d for d in self.base_path.iterdir() if d.is_dir() and d.name.startswith("llama-index-llms-")]
 
-        for file_path in self.base_path.rglob("base.py"):
-            module_path = self._get_module_path(file_path)
-            if not module_path:
+        for repo_dir in dirs_to_scan:
+            provider_key = repo_dir.name.replace("llama-index-llms-", "")
+            layout_meta = ProjectLayout.resolve(repo_dir)
+
+            if not layout_meta.base_py_locations:
+                log.debug(f"[-] No base.py found in {repo_dir.name}. Saving layout meta only.")
+                registry[provider_key] = LLMInfo(
+                    status="layout_only", type="local_scanned",
+                    layout=layout_meta, tags=[provider_key],
+                    source_repo=str(repo_dir.resolve())
+                )
                 continue
 
-            provider_key = file_path.parent.name
-            found_class_info = None
+            target_base_py = Path(layout_meta.base_py_locations[0])
+            module_path = self._get_module_path(target_base_py)
+            if not module_path: continue
 
+            found_info = None
             try:
                 module = importlib.import_module(module_path)
                 for name, obj in inspect.getmembers(module, inspect.isclass):
                     if issubclass(obj, BaseLLM) and obj is not BaseLLM:
                         rich_meta = self._extract_rich_metadata(obj)
-                        
-                        found_class_info = {
-                            "status": "installed",
-                            "module": module_path,
-                            "class": name,
-                            "type": "local_dynamic_scanned",
-                            "tags": [provider_key],
-                            **rich_meta  
-                        }
+                        found_info = LLMInfo(
+                            status="installed", type="local_dynamic_scanned",
+                            module=module_path, class_name=name, layout=layout_meta,
+                            tags=[provider_key], lineage=rich_meta["lineage"],
+                            accepted_kwargs=rich_meta["accepted_kwargs"],
+                            capabilities=rich_meta["capabilities"], source_repo=str(repo_dir.resolve())
+                        )
                         break
-            except ImportError as e:
-                log.debug(f"[Import Warning] Skipped deep scan due to missing dependencies ({module_path}): {e}")
             except Exception as e:
-                log.error(f"[Inspect Error] Fatal error during dynamic scan ({module_path}): {e}")
+                log.debug(f"[Import Warning] Skipped dynamic scan ({module_path}): {e}")
 
-            if not found_class_info:
+            if not found_info:
                 try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        tree = ast.parse(f.read())
-                    
-                    for node in ast.walk(tree):
-                        if isinstance(node, ast.ClassDef):
-                            base_names = [b.id for b in node.bases if isinstance(b, ast.Name)]
-                            if any(name in self.KNOWN_LLM_BASES for name in base_names):
-                                found_class_info = {
-                                    "status": "installed",
-                                    "module": module_path,
-                                    "class": node.name,
-                                    "type": "local_ast_scanned",
-                                    "tags": [provider_key],
-                                    "lineage": base_names, 
-                                    "accepted_kwargs": [], 
-                                    "capabilities": {
-                                        "is_function_calling": "FunctionCallingLLM" in base_names,
-                                        "is_openai_like": "OpenAILike" in base_names
-                                    }
-                                }
-                                break
+                    with open(target_base_py, "r", encoding="utf-8") as f:
+                        for node in ast.walk(ast.parse(f.read())):
+                            if isinstance(node, ast.ClassDef):
+                                base_names = [b.id for b in node.bases if isinstance(b, ast.Name)]
+                                if any(name in self.KNOWN_LLM_BASES for name in base_names):
+                                    found_info = LLMInfo(
+                                        status="installed", type="local_ast_scanned",
+                                        module=module_path, class_name=node.name, layout=layout_meta,
+                                        tags=[provider_key], lineage=base_names,
+                                        capabilities=LLMCapabilities(
+                                            is_function_calling="FunctionCallingLLM" in base_names,
+                                            is_openai_like="OpenAILike" in base_names
+                                        ), source_repo=str(repo_dir.resolve())
+                                    )
+                                    break
                 except Exception as e:
                     log.debug(f"[AST Warning] Parse failure: {e}")
 
-            if found_class_info:
-                registry[provider_key] = found_class_info
+            registry[provider_key] = found_info if found_info else LLMInfo(
+                status="no_llm_class_found", type="local_scanned", layout=layout_meta,
+                tags=[provider_key], source_repo=str(repo_dir.resolve())
+            )
 
         return registry
 
-    def scan(self, target: str = "local") -> Dict[str, Dict[str, Any]]:
-        if target == "remote":
-            return self._scan_remote_catalog()
-        elif target == "local":
-            return self._scan_local_installed()
-        else:
-            raise ValueError(f"[ERROR] Unsupported target: {target}")
+    def _scan_remote(self) -> Dict[str, LLMInfo]:
+        log.info("[*] Fetching remote LLM catalog from GitHub (Fallback mode)...")
+        registry = {}
+
+        api_url = ExtResolver.resolve_github_api(category="llms")
+        req = urllib.request.Request(api_url, headers={'User-Agent': 'Theoria-Mutation-Agent'})
+        try:
+            with urllib.request.urlopen(req) as response:
+                for item in json.loads(response.read().decode()):
+                    if item.get("type") == "dir" and item.get("name", "").startswith("llama-index-llms-"):
+                        llm_name = item["name"].replace("llama-index-llms-", "")
+                        
+                        if self.target and llm_name != self.target:
+                            continue
+
+                        registry[llm_name] = LLMInfo(
+                            status="available_for_mutation", type="remote_catalog",
+                            source_repo=item.get("html_url"), tags=[llm_name]
+                        )
+            log.info(f"[+] Acquired {len(registry)} remote module catalogs.")
+            return registry
+        except Exception as e:
+            log.error(f"[-] Remote scan failed: {e}")
+            return {}
+
+    def scan(self) -> Dict[str, Any]:
+        raw_result = self._scan_local() if self.base_path.exists() else self._scan_remote()
+        return {k: asdict(v) for k, v in raw_result.items()}
 
 
 def entry_task(args):
-    parser = argparse.ArgumentParser(description="Brane LlamaIndex LLM Scanner")
-    parser.add_argument("--target", type=str, choices=["local", "remote"], default="local", help="Scan target: 'local' or 'remote'")
-    parser.add_argument("--repo", type=str, default="brane", help="Target repository context (e.g., brane)") # <-- --repo 인자 추가
+    parser = argparse.ArgumentParser(description="Brane LlamaIndex LLM Scanner (Unified Edition)")
+    parser.add_argument("--repo", type=str, default="brane", help="Target repository context")
+    parser.add_argument("--base-path", type=str, default=None, help="Override default local scan path")
     parser.add_argument("--out", type=str, default=None, help="Output JSON path (optional)")
+    parser.add_argument("--target", type=str, default=None, help="Specific LLM target to scan (e.g., 'openai')")
     parsed_args = parser.parse_args(args)
 
     def _execute_scan():
-        current_dir = str(Path.cwd())
-        if current_dir not in sys.path:
-            sys.path.insert(0, current_dir)
-
-        # [핵심 로직] 기존 import 객체를 활용하여 실제 OS 경로(Absolute Path) 추출
-        if hasattr(base_path, '__path__'):
-            actual_base_path = base_path.__path__[0]
-        else:
-            actual_base_path = os.path.dirname(base_path.__file__)
-
-        log.info(f"[*] Initializing scanner for repo [{parsed_args.repo}]")
+        if (cwd := str(Path.cwd())) not in sys.path: sys.path.insert(0, cwd)
+        target_msg = f" (Target: {parsed_args.target})" if parsed_args.target else " (Bulk Scan)"
+        log.info(f"[*] Initializing scanner for repo [{parsed_args.repo}]{target_msg}")
         
-        # __name__ 대신 도출된 실제 경로 문자열 전달
-        scanner = LLMScanner(base_path=actual_base_path)
         try:
-            result = scanner.scan(target=parsed_args.target)
+            result = LLMScanner(base_path=parsed_args.base_path, target=parsed_args.target).scan()
             json_output = json.dumps(result, indent=4, ensure_ascii=False)
             
             if parsed_args.out:
@@ -207,7 +212,7 @@ def entry_task(args):
                 out_path.write_text(json_output, encoding="utf-8")
                 log.signal(f"[SUCCESS] Scanned features written to: {out_path.resolve()}")
             else:
-                log.info(f"\n[{parsed_args.target.upper()} SCAN RESULT]\n{json_output}")
+                log.info(f"\n[SCAN RESULT]\n{json_output}")
                 
         except Exception as e:
             log.error(f"[ERROR] Scanner execution failed: {e}")
@@ -215,23 +220,17 @@ def entry_task(args):
 
     return CliTaskAdapter(_execute_scan)
 
-
-# args 목록에 --repo 추가
 @contract.cli(
-    name="llm.scanner", 
-    args=["--target", "--repo", "--out"],
-    tags=["llama", "scanner", "llm"],
-    entry="entry_task" 
+    name="llm.scan", 
+    args=["--repo", "--base-path", "--out", "--target"], 
+    tags=["llama", "scanner", "llm"], 
+    entry="entry_task"
 )
 def main(args=None):
-    if args is not None:
-        return entry_task(args)
-    
+    if args is not None: return entry_task(args)
     bound_args, remain = parse_local(sys.argv[1:])
-    if bound_args.local:
-        entry_task(remain).run()
-    else:
-        dispatch_cli("llm.scanner", entry_task, __file__)
+    if bound_args.local: entry_task(remain).run()
+    else: dispatch_cli("llm.scan", entry_task, __file__)
 
 if __name__ == "__main__":
     main()

@@ -1,7 +1,4 @@
 # anchor.cli.adapter.scan.reader
-## @lineage: xphi.adapter.scan.reader
-## @lineage: xphi.trans.reader.scan
-## @lineage: xphi.flow.reader.scan
 import os
 import ast
 from pathlib import Path
