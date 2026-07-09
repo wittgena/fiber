@@ -1,6 +1,4 @@
-# bound.transport.aiohttp
-## @lineage: bound.transport.channel.aiohttp
-## @lineage: bound.channel.aiohttp
+# bound.transport.http.aio
 import asyncio
 import contextlib
 import os
@@ -143,8 +141,6 @@ class AiohttpTransport(AiohttpTransport):
     ):
         self.client = client
         self._ssl_verify = ssl_verify
-        
-        # [개선됨] litellm 전역 객체 대신 인자 또는 환경변수로 로컬 상태 초기화
         if disable_trust_env is not None:
             self._disable_trust_env = disable_trust_env
         else:

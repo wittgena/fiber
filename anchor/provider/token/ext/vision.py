@@ -1,13 +1,11 @@
 # anchor.provider.token.ext.vision
-## @lineage: anchor.provider.model.token.ext.vision
-## @lineage: anchor.model.token.ext.vision
 import base64
 import io
 import struct
 from typing import Tuple, Union
 
 from anchor.provider.token.url_utils import SafeHttpClient
-from bound.transport.http import _get_httpx_client
+from bound.transport.http.factory import get_client
 from bound.surface.legacy.config.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,
@@ -32,7 +30,7 @@ class VisionMetadataExtractor:
         img_data = None
         if data.startswith(("http://", "https://")):
             try:
-                client = _get_httpx_client()
+                client = get_client(is_async=False)
                 safe_client = SafeHttpClient(client)
                 response = safe_client.get(data)
                 max_bytes = int(MAX_IMAGE_URL_DOWNLOAD_SIZE_MB * 1024 * 1024)

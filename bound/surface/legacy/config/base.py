@@ -17,13 +17,12 @@ from typing import (
 import httpx
 from pydantic import BaseModel
 
-from bound.transport.stream.wrapper import CustomStreamWrapper
 from anchor.bind.switch.params import ModelResponse
-
 from bound.channel.param.format import map_developer_role_to_system_role, type_to_response_format_param
-
 from bound.surface.legacy.config.constants import DEFAULT_MAX_TOKENS, RESPONSE_FORMAT_TOOL_NAME
-from bound.transport.http import AsyncHTTPHandler, HTTPHandler
+from bound.transport.http.client import AsyncHTTPClient
+from bound.transport.http.sync import HTTPClient
+from bound.transport.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.openai.types import (
     AllMessageValues,
     ChatCompletionToolChoiceFunctionParam,
@@ -325,7 +324,7 @@ class BaseConfig(ABC):
         headers: dict,
         data: dict,
         messages: list,
-        client: Optional[AsyncHTTPHandler] = None,
+        client: Optional[AsyncHTTPClient] = None,
         json_mode: Optional[bool] = None,
         signed_json_body: Optional[bytes] = None,
     ) -> "CustomStreamWrapper":
@@ -340,7 +339,7 @@ class BaseConfig(ABC):
         headers: dict,
         data: dict,
         messages: list,
-        client: Optional[Union[HTTPHandler, AsyncHTTPHandler]] = None,
+        client: Optional[Union[HTTPClient, AsyncHTTPClient]] = None,
         json_mode: Optional[bool] = None,
         signed_json_body: Optional[bytes] = None,
     ) -> "CustomStreamWrapper":

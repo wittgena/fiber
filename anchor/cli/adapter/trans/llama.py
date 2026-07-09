@@ -18,7 +18,7 @@ import xphi.loop.flow as xphi_flow
 
 from xphi.analyzer.parser.github import GitHubExtractor
 
-from anchor.cli.runner import IsolatedProcessRunner
+from anchor.cli.runner import IsoRunner
 from anchor.registry.resolver.ext import ExtResolver
 from arch.contract.registry.unified import contract, registry
 from phase.bind.resolver import find_current_self, get_invoker
@@ -72,13 +72,13 @@ class LlamaTransductor:
         
         for old_pkg, new_pkg in IMPORT_ALIGN_MAP:
             log.info(f"  -> Aligning import: '{old_pkg}' to '{new_pkg}'")
-            IsolatedProcessRunner.execute_subtask(
+            IsoRunner.execute_subtask(
                 command_name="align.imports", 
                 args=["--local", "--old", old_pkg, "--new", new_pkg, "--repo", TARGET_REPO]
             )
         
         log.signal("[TASK] Executing 'align.path' sequentially...")
-        IsolatedProcessRunner.execute_subtask(
+        IsoRunner.execute_subtask(
             command_name="align.path", 
             args=["--local", "--repo", TARGET_REPO]
         )

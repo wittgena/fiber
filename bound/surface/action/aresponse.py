@@ -27,11 +27,10 @@ from anchor.registry.router.locator import get_llm_provider
 
 from bound.channel.param.litellm import get_litellm_params, infer_openai_data_residency
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.transport.ws import ResponseWebsocketHandler
+from bound.transport.http.ws import ResponseWebsocketHandler
 from bound.transport.client.wrapper import client
 from bound.transport.response.identity import ResponseIdentityManager
 
-from bound.transport.response.api.handler import ResponseApiHandler
 from bound.surface.action.response import responses
 from bound.transport.response.api.response_crud import delete_responses, get_responses, list_input_items, cancel_responses, compact_responses
 

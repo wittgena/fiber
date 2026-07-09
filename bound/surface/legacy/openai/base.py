@@ -25,11 +25,9 @@ if TYPE_CHECKING:
 
 from bound.surface.legacy.config.resolver import config
 from bound.surface.exception import BaseLLMException
-from bound.transport.http import (
-    _DEFAULT_TTL_FOR_HTTPX_CLIENTS,
-    AsyncHTTPHandler,
-    get_ssl_configuration,
-)
+from bound.surface.legacy.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
+from bound.transport.http.client import AsyncHTTPClient
+from bound.transport.http.security import get_ssl_configuration
 from xphi.scope.mock.transport.openai import MockOpenAITransport
 
 
@@ -221,7 +219,7 @@ class BaseOpenAILLM:
 
         return httpx.AsyncClient(
             verify=ssl_config,
-            transport=AsyncHTTPHandler._create_async_transport(
+            transport=AsyncHTTPClient._create_async_transport(
                 ssl_context=(
                     ssl_config if isinstance(ssl_config, ssl.SSLContext) else None
                 ),

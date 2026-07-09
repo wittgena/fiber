@@ -1,5 +1,4 @@
 # bound.surface.action.response
-## @lineage: bound.channel.action.api.response
 import asyncio
 import contextvars
 from dataclasses import dataclass, field
@@ -19,6 +18,7 @@ from typing import (
 )
 import httpx
 from pydantic import BaseModel
+
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import request_timeout
 from bound.surface.legacy.openai.types import (
@@ -31,10 +31,10 @@ from bound.surface.legacy.openai.types import (
     ResponsesAPIResponse,
     ToolChoice,
     ToolParam,
+    ResponseText
 )
 from anchor.provider.param.response import *
 from anchor.provider.param.legacy import GenericLiteLLMParams
-from bound.surface.legacy.openai.types import ResponseText
 
 from anchor.registry.router.config import ProviderConfigManager
 from anchor.registry.router.locator import get_llm_provider
@@ -48,12 +48,12 @@ from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.transport.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
 from bound.channel.api import APIBridge
 from bound.transport.response.identity import ResponseIdentityManager
+from bound.transport.response.api.context import ResponseAPIContext, ContextBuilder
 
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("api.response")
-
 LiteLLMLoggingObj = Any
 
 api_handler = ResponseApiHandler()
@@ -65,34 +65,12 @@ def _has_file_search_tool(tools: Optional[Any]) -> bool:
         return False
     return any(isinstance(t, dict) and t.get("type") == "file_search" for t in tools)
 
-@dataclass
-class ResponsesContext:
-    """전처리가 완료된 Responses API 요청 상태 객체"""
-    model: str
-    input: Union[str, ResponseInputParam]
-    custom_llm_provider: str
-    tools: Optional[Iterable[ToolParam]]
-    text: Optional[Any]
-    
-    # 설정 및 파라미터
-    responses_api_provider_config: Optional[BaseResponsesAPIConfig]
-    litellm_params: GenericLiteLLMParams
-    response_api_optional_params: ResponsesAPIOptionalRequestParams
-    responses_api_request_params: Dict[str, Any]
-    
-    # 메타 및 유틸리티 플래그
-    log_delegator: Optional[LiteLLMLoggingObj]
-    use_chat_completions_api: bool
-    is_async: bool
-    timeout: Union[float, httpx.Timeout]
-    
-    # Dispatch를 위해 전달받은 명시적 인자 모음
-    explicit_args: Dict[str, Any]
-    kwargs: Dict[str, Any]
-    original_kwargs: Dict[str, Any]
 
 class ResponsesPreprocessor:
-    """raw 파라미터를 검증, 조립하여 ResponsesContext를 생성하는 빌더"""
+    """
+    Validates, normalizes, and applies business logic to raw parameters,
+    ultimately delegating to ContextBuilder to yield a unified ResponseAPIContext.
+    """
     def __init__(self, explicit_args: Dict[str, Any], kwargs: Dict[str, Any]):
         self.explicit_args = explicit_args
         self.kwargs = kwargs
@@ -111,7 +89,8 @@ class ResponsesPreprocessor:
         self.litellm_params = GenericLiteLLMParams(**kwargs)
         self.merged_vars = {**explicit_args, **kwargs}
 
-    def build(self) -> ResponsesContext:
+    def build(self) -> ResponseAPIContext:
+        ## Mutate and normalize core parameters
         self._format_text()
         self._normalize_model_and_provider()
         self._apply_prompt_management()
@@ -124,37 +103,39 @@ class ResponsesPreprocessor:
                 model=self.model, provider=self.custom_llm_provider
             )
 
-        # Build final parameter sets
+        ## Sync mutated attributes back to explicit_args for the ContextBuilder
+        self.explicit_args.update({
+            "model": self.model,
+            "input": self.input,
+            "tools": self.tools,
+            "text": self.text,
+            "custom_llm_provider": self.custom_llm_provider
+        })
+
+        ## Delegate to ContextBuilder to create the structured payload
+        ctx = ContextBuilder.from_explicit_args(
+            explicit_args=self.explicit_args,
+            litellm_params=self.litellm_params,
+            is_async=self.is_async,
+            responses_api_provider_config=provider_config,
+            log_delegator=self.log_delegator,
+            client=self.kwargs.get("client"),
+            shared_session=self.kwargs.get("shared_session"),
+        )
+
+        ## Evaluate optional bridge parameters and attach transient states to the context
         response_api_optional_params = APIBridge.get_requested_response_api_optional_param(self.merged_vars)
-        responses_api_request_params = dict(APIBridge.get_optional_params_responses_api(
+        ctx._responses_api_request_params = dict(APIBridge.get_optional_params_responses_api(
             model=self.model,
             responses_api_provider_config=provider_config,
             response_api_optional_params=response_api_optional_params,
             allowed_openai_params=self.explicit_args.get("allowed_openai_params"),
         ))
+        
+        ctx._raw_kwargs = self.kwargs
+        ctx._use_chat_completions_api = self.use_chat_completions_api
 
-        timeout = self.explicit_args.get("timeout")
-        if timeout is None:
-            timeout = request_timeout
-
-        return ResponsesContext(
-            model=self.model,
-            input=self.input,
-            custom_llm_provider=self.custom_llm_provider,
-            tools=self.tools,
-            text=self.text,
-            responses_api_provider_config=provider_config,
-            litellm_params=self.litellm_params,
-            response_api_optional_params=response_api_optional_params,
-            responses_api_request_params=responses_api_request_params,
-            log_delegator=self.log_delegator,
-            use_chat_completions_api=self.use_chat_completions_api,
-            is_async=self.is_async,
-            timeout=timeout,
-            explicit_args=self.explicit_args,
-            kwargs=self.kwargs,
-            original_kwargs=self.original_kwargs,
-        )
+        return ctx
 
     def _format_text(self):
         self.text = APIBridge.convert_text_format_to_text_param(
@@ -197,7 +178,7 @@ class ResponsesPreprocessor:
         original_model = self.model
 
         client_input = [{"role": "user", "content": self.input}] if isinstance(self.input, str) else [
-            item for item in self.input if isinstance(item, dict) and "role" in item # type: ignore[misc]
+            item for item in self.input if isinstance(item, dict) and "role" in item
         ]
 
         if hasattr(self.log_delegator, "should_run_prompt_management_hooks") and \
@@ -251,9 +232,13 @@ class ResponsesPreprocessor:
             else:
                 log.warning(f"[Responses] Invalid reasoning_effort value: '{reasoning_effort}'. Ignored.")
 
+
 class ResponsesDispatcher:
-    """생성된 ResponsesContext를 기반으로 적절한 핸들러로 라우팅하는 역할"""
-    def __init__(self, context: ResponsesContext):
+    """
+    Routes the structured ResponseAPIContext to the appropriate endpoint.
+    Eliminates long parameter lists by passing the unified context directly.
+    """
+    def __init__(self, context: ResponseAPIContext):
         self.ctx = context
 
     def execute(self) -> Any:
@@ -266,104 +251,106 @@ class ResponsesDispatcher:
         return self._dispatch_final_api()
 
     def _dispatch_mcp(self) -> Optional[Any]:
-        if not MCPHandler._should_use_litellm_mcp_gateway(tools=self.ctx.tools):
+        if not MCPHandler._should_use_litellm_mcp_gateway(tools=self.ctx.payload.tools):
             return None
             
         mcp_kwargs = {
-            **self.ctx.explicit_args,
-            "input": self.ctx.input,
-            "model": self.ctx.model,
-            "tools": self.ctx.tools,
-            "custom_llm_provider": self.ctx.custom_llm_provider,
-            "timeout": self.ctx.timeout,
-            **self.ctx.kwargs
+            **self.ctx._raw_kwargs,
+            "input": self.ctx.payload.input,
+            "model": self.ctx.payload.model,
+            "tools": self.ctx.payload.tools,
+            "custom_llm_provider": self.ctx.provider.custom_llm_provider,
+            "timeout": self.ctx.exec.timeout,
         }
         
         if self.ctx.is_async:
             from bound.surface.action.aresponse import aresponses_api_with_mcp
             return aresponses_api_with_mcp(**mcp_kwargs)
+            
         from bound.surface.action.aresponse import aresponses_api_with_mcp
         return run_async_function(aresponses_api_with_mcp, **mcp_kwargs)
 
     def _dispatch_file_search(self) -> Optional[Any]:
         from bound.surface.action.search import aresponses_with_emulated_file_search
         
-        if not _has_file_search_tool(self.ctx.tools) or not (
-            self.ctx.responses_api_provider_config is None
-            or self.ctx.use_chat_completions_api is True
-            or not self.ctx.responses_api_provider_config.supports_native_file_search()
+        provider_config = self.ctx.provider.responses_api_provider_config
+        if not _has_file_search_tool(self.ctx.payload.tools) or not (
+            provider_config is None
+            or self.ctx._use_chat_completions_api is True
+            or not provider_config.supports_native_file_search()
         ):
             return None
 
         emulated_kwargs = {
-            **self.ctx.explicit_args,
-            "custom_llm_provider": self.ctx.custom_llm_provider,
-            "timeout": self.ctx.timeout,
-            **{k: v for k, v in self.ctx.kwargs.items() if k not in {"call_id", "aresponses"}}
+            "custom_llm_provider": self.ctx.provider.custom_llm_provider,
+            "timeout": self.ctx.exec.timeout,
+            **{k: v for k, v in self.ctx._raw_kwargs.items() if k not in {"call_id", "aresponses"}}
         }
-        if self.ctx.use_chat_completions_api:
+        if self.ctx._use_chat_completions_api:
             emulated_kwargs["use_chat_completions_api"] = True
 
         if self.ctx.is_async:
             return aresponses_with_emulated_file_search(
-                input=self.ctx.input, model=self.ctx.model, tools=self.ctx.tools, **emulated_kwargs
+                input=self.ctx.payload.input, model=self.ctx.payload.model, tools=self.ctx.payload.tools, **emulated_kwargs
             )
         return run_async_function(
             aresponses_with_emulated_file_search,
-            input=self.ctx.input, model=self.ctx.model, tools=self.ctx.tools, **emulated_kwargs
+            input=self.ctx.payload.input, model=self.ctx.payload.model, tools=self.ctx.payload.tools, **emulated_kwargs
         )
 
     def _dispatch_final_api(self) -> Any:
-        if self.ctx.log_delegator:
-            self.ctx.log_delegator.update_from_kwargs(
-                kwargs=self.ctx.kwargs,
-                model=self.ctx.model,
-                user=self.ctx.explicit_args.get("user"),
-                optional_params=self.ctx.responses_api_request_params,
+        ctx = self.ctx
+        
+        ## Apply Pre-call Logging
+        if ctx.provider.logging_obj:
+            ctx.provider.logging_obj.update_from_kwargs(
+                kwargs=ctx._raw_kwargs,
+                model=ctx.payload.model,
+                user=ctx.payload.user,
+                optional_params=ctx._responses_api_request_params,
                 litellm_params={
-                    **self.ctx.responses_api_request_params,
-                    "aresponses": self.ctx.is_async,
-                    "call_id": self.ctx.kwargs.get("call_id"),
-                    "model_info": self.ctx.kwargs.get("model_info"),
+                    **ctx._responses_api_request_params,
+                    "aresponses": ctx.is_async,
+                    "call_id": ctx._raw_kwargs.get("call_id"),
+                    "model_info": ctx._raw_kwargs.get("model_info"),
                     "data_residency": infer_openai_data_residency(
-                        self.ctx.custom_llm_provider, self.ctx.litellm_params.api_base
+                        ctx.provider.custom_llm_provider, ctx.provider.litellm_params.api_base
                     ),
-                    "metadata": self.ctx.kwargs.get("litellm_metadata", self.ctx.kwargs.get("metadata")),
+                    "metadata": ctx._raw_kwargs.get("litellm_metadata", ctx._raw_kwargs.get("metadata")),
                 },
-                custom_llm_provider=self.ctx.custom_llm_provider,
+                custom_llm_provider=ctx.provider.custom_llm_provider,
             )
 
-        final_input = APIBridge._restore_encrypted_content_item_ids_in_input(self.ctx.input)
-        if self.ctx.custom_llm_provider is None:
+        ## Final Input Restoration
+        final_input = APIBridge._restore_encrypted_content_item_ids_in_input(ctx.payload.input)
+        if ctx.provider.custom_llm_provider is None:
             raise ValueError("custom_llm_provider is required but passed as None")
 
-        response = api_handler.api_handler(
-            model=self.ctx.model,
-            input=final_input,
-            responses_api_provider_config=self.ctx.responses_api_provider_config,
-            response_api_optional_request_params=self.ctx.responses_api_request_params,
-            custom_llm_provider=self.ctx.custom_llm_provider,
-            litellm_params=self.ctx.litellm_params,
-            logging_obj=self.ctx.log_delegator,
-            extra_headers=self.ctx.explicit_args.get("extra_headers"),
-            extra_body=self.ctx.explicit_args.get("extra_body"),
-            timeout=self.ctx.timeout,
-            _is_async=self.ctx.is_async,
-            client=self.ctx.kwargs.get("client"),
-            fake_stream=self.ctx.responses_api_provider_config.should_fake_stream(
-                model=self.ctx.model, stream=self.ctx.explicit_args.get("stream"), custom_llm_provider=self.ctx.custom_llm_provider
-            ) if self.ctx.responses_api_provider_config else False,
-            litellm_metadata=self.ctx.kwargs.get("litellm_metadata", {}),
-            shared_session=self.ctx.kwargs.get("shared_session"),
-        )
+        # Mutate the input within the payload for the final handler
+        ctx.payload.input = final_input
+        
+        # Determine fake stream requirements and stash it in execution context
+        provider_config = ctx.provider.responses_api_provider_config
+        fake_stream = False
+        if provider_config:
+            fake_stream = provider_config.should_fake_stream(
+                model=ctx.payload.model, 
+                stream=ctx.payload.stream, 
+                custom_llm_provider=ctx.provider.custom_llm_provider
+            )
+        ctx.exec.extra_body["_fake_stream"] = fake_stream
 
+        ## [개선] 15개의 흩어진 인자 대신 단일 Context 객체 패싱
+        response = api_handler.response_api_handler(ctx=ctx)
+
+        ## Post-processing identity mappings
         if isinstance(response, ResponsesAPIResponse):
             response = APIBridge._update_responses_api_response_id_with_model_id(
                 responses_api_response=response,
-                litellm_metadata=self.ctx.kwargs.get("litellm_metadata", {}),
-                custom_llm_provider=self.ctx.custom_llm_provider,
+                litellm_metadata=ctx._raw_kwargs.get("litellm_metadata", {}),
+                custom_llm_provider=ctx.provider.custom_llm_provider,
             )
-            response._hidden_params["custom_llm_provider"] = self.ctx.custom_llm_provider
+            response._hidden_params["custom_llm_provider"] = ctx.provider.custom_llm_provider
             
         return response
 
@@ -402,7 +389,11 @@ def responses(
     custom_llm_provider: Optional[str] = None,
     **kwargs,
 ):
-    """모든 요청 파라미터를 수집하여 Preprocessor로 Context를 빌드하고, Dispatcher를 통해 적절한 내부 핸들러로 라우팅"""
+    """
+    Entrypoint for responses API. 
+    Aggregates parameters, builds the structured Context via Preprocessor, 
+    and dispatches to the underlying handlers.
+    """
     explicit_args = {
         "input": input, "model": model, "include": include, "instructions": instructions,
         "max_output_tokens": max_output_tokens, "prompt": prompt, "metadata": metadata,
@@ -421,7 +412,6 @@ def responses(
         dispatcher = ResponsesDispatcher(context=context)
         return dispatcher.execute()
     except Exception as e:
-        ## 에러 발생 시, 원본 kwargs와 explicit_args를 병합하여 디버깅 정보 제공
         completion_kwargs = {**explicit_args, **kwargs}
         raise config.exception_type(
             model=explicit_args.get("model", model),

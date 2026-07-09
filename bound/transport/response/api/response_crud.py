@@ -1,32 +1,31 @@
 # bound.transport.response.api.response_crud
-## @lineage: bound.transport.channel.response.api.response_crud
-## @lineage: bound.channel.action.api.response_crud
 import asyncio
 import contextvars
-from dataclasses import dataclass
 from functools import partial
-from typing import Any, Coroutine, Dict, List, Literal, Optional, Union
+from typing import Any, Coroutine, Dict, List, Literal, Optional, Union, cast
 
 import httpx
 from pydantic import BaseModel
 
+from anchor.provider.param.response import *
+from anchor.provider.param.legacy import GenericLiteLLMParams
+from anchor.registry.router.config import ProviderConfigManager
+from anchor.registry.router.locator import get_llm_provider
+
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import request_timeout
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from anchor.registry.router.locator import get_llm_provider
 from bound.surface.legacy.openai.types import (
     ResponseInputParam,
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
 )
-from anchor.provider.param.response import *
-from anchor.provider.param.legacy import GenericLiteLLMParams
-from anchor.registry.router.config import ProviderConfigManager
-from bound.transport.response.api.handler import ResponseApiHandler
 from bound.channel.param.litellm import infer_openai_data_residency
-from bound.transport.client.wrapper import client
 from bound.channel.api import APIBridge
+from bound.transport.response.api.handler import ResponseApiHandler
+from bound.transport.client.wrapper import client
 from bound.transport.response.identity import ResponseIdentityManager
+from bound.transport.response.api.context import ResponseAPIContext, ContextBuilder, ExecutionContext, ProviderContext, LLMPayloadContext
 
 from watcher.plane.emitter import get_emitter
 
@@ -34,21 +33,11 @@ log = get_emitter("api.response_crud")
 LiteLLMLoggingObj = Any
 api_handler = ResponseApiHandler()
 
-@dataclass
-class ResponseCRUDContext:
-    """ID 기반 CRUD 요청을 위한 공통 상태 벡터"""
-    action: Literal["DELETE", "GET", "LIST", "CANCEL"]
-    response_id: str
-    custom_llm_provider: str
-    responses_api_provider_config: BaseResponsesAPIConfig
-    litellm_params: GenericLiteLLMParams
-    log_delegator: Optional[LiteLLMLoggingObj]
-    is_async: bool
-    explicit_args: Dict[str, Any]
-    kwargs: Dict[str, Any]
 
 class ResponseCRUDPreprocessor:
-    """response_id를 디코딩하고 Provider를 검증하여 CRUD Context를 빌드"""
+    """
+    response_id를 디코딩하고 Provider를 검증하여 범용 ResponseAPIContext를 빌드합니다.
+    """
     def __init__(self, action: Literal["DELETE", "GET", "LIST", "CANCEL"], explicit_args: Dict[str, Any], kwargs: Dict[str, Any]):
         self.action = action
         self.explicit_args = explicit_args
@@ -58,13 +47,13 @@ class ResponseCRUDPreprocessor:
         self.custom_llm_provider = explicit_args.get("custom_llm_provider")
         self.log_delegator = kwargs.get("log_delegator")
         
-        # Async Flag Mapping (adelete_responses, aget_responses 등)
+        # Async Flag Mapping
         async_flag_key = f"a{action.lower()}_responses" if action != "LIST" else "alist_input_items"
         self.is_async = kwargs.pop(async_flag_key, False) is True
         
         self.litellm_params = GenericLiteLLMParams(**kwargs)
 
-    def build(self) -> ResponseCRUDContext:
+    def build(self) -> ResponseAPIContext:
         # ID 디코딩 및 Provider 추론
         decoded = ResponseIdentityManager._decode_responses_api_response_id(response_id=self.raw_response_id)
         response_id = decoded.get("response_id") or self.raw_response_id
@@ -79,84 +68,88 @@ class ResponseCRUDPreprocessor:
         if provider_config is None:
             raise ValueError(f"{self.action} responses is not supported for {custom_llm_provider}")
 
-        return ResponseCRUDContext(
-            action=self.action,
-            response_id=response_id,
-            custom_llm_provider=custom_llm_provider,
-            responses_api_provider_config=provider_config,
-            litellm_params=self.litellm_params,
-            log_delegator=self.log_delegator,
+        # [개선] 15개가 넘는 파라미터를 3개의 명확한 카테고리(Execution, Provider, Payload)로 조립
+        exec_ctx = ExecutionContext(
             is_async=self.is_async,
-            explicit_args=self.explicit_args,
-            kwargs=self.kwargs,
+            timeout=self.explicit_args.get("timeout") or request_timeout,
+            client=self.kwargs.get("client"),
+            shared_session=self.kwargs.get("shared_session"),
+            extra_headers=self.explicit_args.get("extra_headers") or {},
+            extra_body=self.explicit_args.get("extra_body") or {},
+            extra_query=self.explicit_args.get("extra_query") or {},
         )
 
+        provider_ctx = ProviderContext(
+            custom_llm_provider=custom_llm_provider,
+            litellm_params=self.litellm_params,
+            responses_api_provider_config=provider_config,
+            logging_obj=self.log_delegator,
+        )
+
+        payload_ctx = LLMPayloadContext(
+            response_id=response_id,
+            include=self.explicit_args.get("include"),
+        )
+
+        ctx = ResponseAPIContext(exec=exec_ctx, provider=provider_ctx, payload=payload_ctx)
+        
+        # Dispatcher나 Handler에서 참조할 수 있도록 원본/명시적 인자 부착
+        ctx._action = self.action
+        ctx._explicit_args = self.explicit_args
+        ctx._raw_kwargs = self.kwargs
+        
+        return ctx
+
+
 class ResponseCRUDDispatcher:
-    """정제된 CRUD Context를 바탕으로 적절한 api_handler 메서드 호출"""
-    def __init__(self, context: ResponseCRUDContext):
+    """
+    정제된 ResponseAPIContext를 바탕으로 적절한 api_handler 메서드에 단일 객체를 넘깁니다.
+    """
+    def __init__(self, context: ResponseAPIContext):
         self.ctx = context
 
     def execute(self) -> Any:
         # Pre Call logging
-        if self.ctx.log_delegator:
-            merged_kwargs = {**self.ctx.explicit_args, **self.ctx.kwargs}
-            self.ctx.log_delegator.update_from_kwargs(
+        if self.ctx.provider.logging_obj:
+            merged_kwargs = {**self.ctx._explicit_args, **self.ctx._raw_kwargs}
+            self.ctx.provider.logging_obj.update_from_kwargs(
                 kwargs=merged_kwargs,
                 model=None,
-                optional_params={"response_id": self.ctx.response_id},
-                litellm_params={"call_id": self.ctx.kwargs.get("call_id")},
-                custom_llm_provider=self.ctx.custom_llm_provider,
+                optional_params={"response_id": self.ctx.payload.response_id},
+                litellm_params={"call_id": self.ctx._raw_kwargs.get("call_id")},
+                custom_llm_provider=self.ctx.provider.custom_llm_provider,
             )
 
-        timeout = self.ctx.explicit_args.get("timeout") or request_timeout
-        common_args = {
-            "response_id": self.ctx.response_id,
-            "custom_llm_provider": self.ctx.custom_llm_provider,
-            "responses_api_provider_config": self.ctx.responses_api_provider_config,
-            "litellm_params": self.ctx.litellm_params,
-            "logging_obj": self.ctx.log_delegator,
-            "extra_headers": self.ctx.explicit_args.get("extra_headers"),
-            "extra_body": self.ctx.explicit_args.get("extra_body"),
-            "timeout": timeout,
-            "_is_async": self.ctx.is_async,
-            "client": self.ctx.kwargs.get("client"),
-            "shared_session": self.ctx.kwargs.get("shared_session"),
-        }
+        # [개선] 복잡한 **common_args 언패킹 제거, 단일 ctx 전달
+        action = getattr(self.ctx, "_action", "")
+        if action == "DELETE":
+            response = api_handler.delete_response_api_handler(ctx=self.ctx)
+        elif action == "GET":
+            response = api_handler.get_responses(ctx=self.ctx)
+        elif action == "CANCEL":
+            response = api_handler.cancel_response_api_handler(ctx=self.ctx)
+        elif action == "LIST":
+            response = api_handler.list_responses_input_items(ctx=self.ctx)
+        else:
+            raise ValueError(f"Unknown CRUD action: {action}")
 
-        # 라우팅
-        if self.ctx.action == "DELETE":
-            response = api_handler.delete_api_handler(**common_args)
-        elif self.ctx.action == "GET":
-            response = api_handler.get_responses(**common_args)
-        elif self.ctx.action == "CANCEL":
-            response = api_handler.cancel_api_handler(**common_args)
-        elif self.ctx.action == "LIST":
-            response = api_handler.list_responses_input_items(
-                **common_args,
-                after=self.ctx.explicit_args.get("after"),
-                before=self.ctx.explicit_args.get("before"),
-                include=self.ctx.explicit_args.get("include"),
-                limit=self.ctx.explicit_args.get("limit", 20),
-                order=self.ctx.explicit_args.get("order", "desc"),
-            )
-
-        # ID 후처리 업데이트 (ResponsesAPIResponse 타입일 경우)
+        # ID 후처리 업데이트
         if isinstance(response, ResponsesAPIResponse):
             response = APIBridge._update_responses_api_response_id_with_model_id(
                 responses_api_response=response,
-                litellm_metadata=self.ctx.kwargs.get("litellm_metadata", {}),
-                custom_llm_provider=self.ctx.custom_llm_provider,
+                litellm_metadata=self.ctx._raw_kwargs.get("litellm_metadata", {}),
+                custom_llm_provider=self.ctx.provider.custom_llm_provider,
             )
         return response
 
+
 def _execute_crud(action: Literal["DELETE", "GET", "LIST", "CANCEL"], explicit_args: Dict, kwargs: Dict) -> Any:
-    """CRUD 공통 실행 래퍼 (예외 처리 포함)"""
+    """CRUD 공통 실행 래퍼"""
     try:
         context = ResponseCRUDPreprocessor(action, explicit_args, kwargs).build()
         return ResponseCRUDDispatcher(context).execute()
     except Exception as e:
         custom_llm_provider = explicit_args.get("custom_llm_provider")
-        # 에러 발생 시 디코딩 시도 (로그용)
         if not custom_llm_provider and "response_id" in explicit_args:
             decoded = ResponseIdentityManager._decode_responses_api_response_id(explicit_args["response_id"])
             custom_llm_provider = decoded.get("custom_llm_provider")
@@ -168,6 +161,7 @@ def _execute_crud(action: Literal["DELETE", "GET", "LIST", "CANCEL"], explicit_a
             completion_kwargs={**explicit_args, **kwargs},
             extra_kwargs=kwargs,
         )
+
 
 # --- CRUD Client Interfaces ---
 
@@ -208,7 +202,6 @@ def compact_responses(
     
     try:
         log_delegator = kwargs.get("log_delegator")
-        call_id = kwargs.get("call_id")
         is_async = kwargs.pop("acompact_responses", False) is True
         litellm_params = GenericLiteLLMParams(**kwargs)
 
@@ -231,10 +224,23 @@ def compact_responses(
         if provider_config is None:
             raise ValueError(f"COMPACT responses is not supported for {resolved_provider}")
 
-        # Build Optional Params
+        # [개선] 별도로 흩어져 있던 Compact 파라미터 빌드 과정을 ContextBuilder로 흡수
+        explicit_args["model"] = resolved_model
+        explicit_args["custom_llm_provider"] = resolved_provider
+        
+        ctx = ContextBuilder.from_explicit_args(
+            explicit_args=explicit_args,
+            litellm_params=litellm_params,
+            is_async=is_async,
+            responses_api_provider_config=provider_config,
+            log_delegator=log_delegator,
+            client=kwargs.get("client"),
+            shared_session=kwargs.get("shared_session"),
+        )
+        
         merged_vars = {**explicit_args, **kwargs, "custom_llm_provider": resolved_provider}
         response_api_optional_params = APIBridge.get_requested_response_api_optional_param(merged_vars)
-        responses_api_request_params = dict(APIBridge.get_optional_params_responses_api(
+        ctx._responses_api_request_params = dict(APIBridge.get_optional_params_responses_api(
             model=resolved_model,
             responses_api_provider_config=provider_config,
             response_api_optional_params=response_api_optional_params,
@@ -246,32 +252,20 @@ def compact_responses(
             log_delegator.update_from_kwargs(
                 kwargs=merged_vars,
                 model=resolved_model,
-                optional_params=responses_api_request_params,
+                optional_params=ctx._responses_api_request_params,
                 litellm_params={
-                    **responses_api_request_params,
-                    "call_id": call_id,
+                    **ctx._responses_api_request_params,
+                    "call_id": kwargs.get("call_id"),
                     "data_residency": infer_openai_data_residency(resolved_provider, litellm_params.api_base),
                 },
                 custom_llm_provider=resolved_provider,
             )
 
         # Execute
-        restored_input = APIBridge._restore_encrypted_content_item_ids_in_input(input)
-        response = api_handler.compact_api_handler(
-            model=resolved_model,
-            input=restored_input,
-            responses_api_provider_config=provider_config,
-            response_api_optional_request_params=responses_api_request_params,
-            litellm_params=litellm_params,
-            logging_obj=log_delegator,
-            custom_llm_provider=resolved_provider,
-            extra_headers=extra_headers,
-            extra_body=extra_body,
-            timeout=timeout or request_timeout,
-            _is_async=is_async,
-            client=kwargs.get("client"),
-            shared_session=kwargs.get("shared_session"),
-        )
+        ctx.payload.input = APIBridge._restore_encrypted_content_item_ids_in_input(input)
+        
+        # [개선] 10여개의 인자를 ctx 단 하나로 교체
+        response = api_handler.compact_response_api_handler(ctx=ctx)
 
         if isinstance(response, ResponsesAPIResponse):
             response = APIBridge._update_responses_api_response_id_with_model_id(

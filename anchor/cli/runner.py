@@ -12,7 +12,7 @@ _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
 SELF_ROOT = find_current_self()
 
-class IsolatedProcessRunner:
+class IsoRunner:
     @staticmethod
     def execute_subtask(command_name: str, args: list):
         log.signal(f"[Sub-Task] Resolving contract for isolated execution: {command_name}")
