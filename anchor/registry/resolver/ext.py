@@ -33,7 +33,8 @@ DEFAULT_RULESET = {
         "api_content": "api_content",
         "raw": "raw",
         "prefix": "prefix"
-    }
+    },
+    "base_class": { "BaseLLM", "LLM", "CustomLLM",  "FunctionCallingLLM", "OpenAILike", "MultiModalLLM"}
 }
 
 class ExtResolver:

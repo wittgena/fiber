@@ -1,8 +1,4 @@
 # xphi.scope.mock.exception
-## @lineage: xphi.xor.tester.mock.exception
-## @lineage: anchor.tester.mock.exception
-## @lineage: anchor.surface.testing.mock.exception
-## @lineage: anchor.testing.mock.exception
 """
 @phase: Mock Generation Boundary (Exceptions)
 @desc: Safely generates standardized API exceptions for testing resilience and fallback topologies.

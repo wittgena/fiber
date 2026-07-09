@@ -1,7 +1,4 @@
 # bound.adapter.mapper.exception
-## @lineage: bound.bridge.channel.mapper.exception
-## @lineage: bound.channel.bridge.mapper.exception
-## @lineage: bound.surface.mapper.exception
 """
 @desc: 
 - Standardized LLM Provider exception mapping module

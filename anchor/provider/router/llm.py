@@ -1,7 +1,4 @@
 # anchor.provider.router.llm
-## @lineage: bound.bridge.router.llm
-## @lineage: bound.transport.router.llm
-## @lineage: bound.router.adapter.llm
 """
 @manifold: Hybrid Microkernel Router
 @flow: Native Registry ⊕ Dynamic Scanner -> Unified Routing Table -> Lazy Instantiation
@@ -12,15 +9,15 @@ import inspect
 from typing import Dict, Any, Optional, Set
 
 from anchor.registry.model.cost import get_provider_for_model
-from anchor.cli.adapter.scan.llm import LLMScanner
 import anchor.inter.llms as llm_pkg 
+from anchor.provider.router.scan.installed import LLMInstalledScanner
 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.router")
 
 _LLM_PKG_NAME = llm_pkg.__name__
-_LLM_PKG_PATH = _LLM_PKG_NAME.replace(".", "/")
+_LLM_PKG = _LLM_PKG_NAME.replace(".", "/")
 
 class TopologyMissingError(Exception):
     """해당 모듈(Topology)이 시스템에 존재하지 않을 때 발생하는 치명적 오류"""
@@ -79,21 +76,15 @@ DEFAULT_LLM_REGISTRY = {
 }
 
 class LLMRouter:
-    def __init__(self, base_path: str = _LLM_PKG_PATH):
-        self.scanner = LLMScanner(base_path=base_path)
-        
-        ## @bind: Initialize native registry
+    def __init__(self, base_pkg: str = _LLM_PKG):
+        self.scanner = LLMInstalledScanner(base_pkg=base_pkg)
         self.registry = {k: v.copy() for k, v in DEFAULT_LLM_REGISTRY.items()}
-        
-        ## @state: 에러 폭주를 막기 위한 내부 서킷 브레이커 (Dead-letter 캐시)
         self._blacklisted_providers: Set[str] = set()
-        
-        ## @merge: Absorb dynamic transduced modules
         self._merge_dynamic_registry()
 
     def _merge_dynamic_registry(self):
         log.debug("[Router] Scanning for dynamically trans-ed modules...")
-        scanned_data = self.scanner.scan(target="local")
+        scanned_data = self.scanner.scan()
         
         dynamic_count = 0
         for provider, info in scanned_data.items():
