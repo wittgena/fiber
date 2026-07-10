@@ -90,7 +90,7 @@ from typing_extensions import (
 )
 
 from bound.surface.legacy.base import BaseOpenAIResponse
-from anchor.provider.param.response import (
+from bound.surface.legacy.param.response import (
     GenericResponseOutputItem,
     OutputCodeInterpreterCall,
     OutputFunctionToolCall,

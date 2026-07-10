@@ -1,22 +1,18 @@
 # bound.surface.legacy.completor
-## @lineage: anchor.provider.legacy.completor
-## @lineage: bound.adapter.provider.completor
-## @lineage: bound.bridge.provider.completor
-## @lineage: xphi.adapter.provider.completor
-## @lineage: bound.channel.action.handler.completor
 import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
-from bound.surface.legacy.config.base import BaseConfig
-from anchor.bind.switch.params import ModelResponse
-from bound.surface.legacy.config.resolver import config
-
-from bound.transport.http import AsyncHTTPHandler, HTTPHandler, _get_httpx_client, get_async_httpx_client
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.adapter.switch.params import ModelResponse
 from anchor.registry.router.config import ProviderConfigManager
-from bound.surface.legacy.provider import ProviderTypes
+from anchor.registry.model.config.base import BaseConfig
+from anchor.registry.model.config.resolver import config
+from bound.surface.legacy.info import ProviderTypes
+from bound.transport.client import AsyncHTTPClient
+from bound.transport.sync import HTTPClient
+from bound.transport.factory import get_async_client, get_http_client
+from bound.transport.stream.wrapper import CustomStreamWrapper
 
 from watcher.plane.emitter import get_emitter
 
@@ -36,7 +32,7 @@ class RequestContext:
     stream: bool
     api_key: Optional[str]
     headers: Dict[str, Any]
-    client: Optional[Union[HTTPHandler, AsyncHTTPHandler]]
+    client: Optional[Union[HTTPClient, AsyncHTTPClient]]
     shared_session: Optional[Any]
     
     # 셋업 과정에서 채워지는 내부 상태
@@ -65,7 +61,7 @@ class CompletionHandler:
         fake_stream: bool = False,
         api_key: Optional[str] = None,
         headers: Optional[Dict[str, Any]] = None,
-        client: Optional[Union[HTTPHandler, AsyncHTTPHandler]] = None,
+        client: Optional[Union[HTTPClient, AsyncHTTPClient]] = None,
         provider_config: Optional[BaseConfig] = None,
         shared_session: Optional[Any] = None,
     ):
@@ -132,13 +128,10 @@ class CompletionHandler:
         )
         log.debug(f"[Prepare] 컨텍스트 세팅 완료. 최종 호출 URL: {ctx.api_base}")
 
-    # ------------------------------------------------------------------
-    # 2-A. 비동기 (Async) 실행 흐름
-    # ------------------------------------------------------------------
     async def _run_async(self, ctx: RequestContext, model_response: ModelResponse, encoding: Any):
-        if not isinstance(ctx.client, AsyncHTTPHandler):
+        if not isinstance(ctx.client, AsyncHTTPClient):
             log.debug("[AsyncFlow] 새로운 Async HTTP Client를 생성합니다.")
-            client = get_async_httpx_client(
+            client = get_async_client(
                 llm_provider=ProviderTypes(ctx.custom_llm_provider),
                 params={"ssl_verify": ctx.litellm_params.get("ssl_verify", None)},
                 shared_session=ctx.shared_session,
@@ -180,9 +173,9 @@ class CompletionHandler:
     # 2-B. 동기 (Sync) 실행 흐름
     # ------------------------------------------------------------------
     def _run_sync(self, ctx: RequestContext, model_response: ModelResponse, encoding: Any):
-        if not isinstance(ctx.client, HTTPHandler):
+        if not isinstance(ctx.client, HTTPClient):
             log.debug("[SyncFlow] 새로운 Sync HTTP Client를 생성합니다.")
-            client = _get_httpx_client(params={"ssl_verify": ctx.litellm_params.get("ssl_verify", None)})
+            client = get_http_client(params={"ssl_verify": ctx.litellm_params.get("ssl_verify", None)})
         else:
             log.debug("[SyncFlow] 기존에 주입된 Sync HTTP Client를 재사용합니다.")
             client = ctx.client
@@ -278,7 +271,7 @@ class CompletionHandler:
             error_text = getattr(error_response, "text", error_text)
 
         if provider_config is None:
-            from bound.surface.legacy.config.base import BaseLLMException
+            from anchor.registry.model.config.base import BaseLLMException
             log.error(f"[ErrorHandler] Provider config 없음. BaseLLMException 발생: {error_text}")
             raise BaseLLMException(status_code=status_code, message=error_text, headers=error_headers)
 

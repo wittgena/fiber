@@ -1,6 +1,4 @@
 # bound.watcher.topos
-## @lineage: xphi.watcher.plane.topos
-## @lineage: bound.watcher.plane.topos
 """
 @desc: Native topological telemetry
 - Preserves legacy dependency signatures while transparently collapsing 

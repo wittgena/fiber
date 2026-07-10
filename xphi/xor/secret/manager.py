@@ -1,10 +1,4 @@
 # xphi.xor.secret.manager
-## @lineage: xphi.xor.auth.secret.manager
-## @lineage: bound.xor.secret.manager
-## @lineage: xor.secret.manager
-## @lineage: bound.channel.secret.manager
-## @lineage: channel.secret.manager
-## @lineage: channel.secret.handler.manager
 import ast
 import os
 import time
@@ -12,8 +6,8 @@ import traceback
 import httpx
 from typing import Optional, Union, Dict, Tuple
 
-from bound.transport.http import HTTPHandler
-from bound.surface.legacy.config.resolver import config
+from bound.transport.sync import HTTPClient
+from anchor.registry.model.config.resolver import config
 from xphi.xor.secret.handler.client import get_secret_from_vendor
 
 from watcher.plane.emitter import get_emitter
@@ -77,7 +71,7 @@ class SecretManager:
 
         # OIDC Provider 분기 처리 (기존 로직 유지, 의존성만 제거)
         if oidc_provider == "google":
-            with HTTPHandler(timeout=self.http_timeout) as client:
+            with HTTPClient(timeout=self.http_timeout) as client:
                 resp = client.get(
                     "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity",
                     params={"audience": oidc_aud},
@@ -99,7 +93,7 @@ class SecretManager:
             req_token = os.getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
             if not req_url or not req_token:
                 raise ValueError("ACTIONS_ID_TOKEN_REQUEST_URL or TOKEN not found")
-            with HTTPHandler(timeout=self.http_timeout) as client:
+            with HTTPClient(timeout=self.http_timeout) as client:
                 resp = client.get(
                     req_url,
                     params={"audience": oidc_aud},

@@ -1,4 +1,7 @@
 # bound.transport.stream.check
+## @lineage: bound.surface.bridge.stream.check
+## @lineage: bound.surface.bridge.channel.stream.check
+## @lineage: bound.channel.stream.check
 from typing import Any
 from bound.surface.legacy.types import Delta, ModelResponseBase, ModelResponseStream
 

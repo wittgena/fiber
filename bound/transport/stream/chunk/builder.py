@@ -1,4 +1,7 @@
 # bound.transport.stream.chunk.builder
+## @lineage: bound.surface.bridge.stream.chunk.builder
+## @lineage: bound.surface.bridge.channel.stream.chunk.builder
+## @lineage: bound.channel.stream.chunk.builder
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -28,10 +31,10 @@ if TYPE_CHECKING:
 from bound.surface.legacy.types import TextChoices, TextCompletionResponse
 from bound.surface.exception import APIError
 
-from bound.surface.legacy.config.resolver import config
-from anchor.provider.token.counter import token_counter
+from anchor.registry.model.config.resolver import config
+from bound.surface.token.counter import token_counter
 from bound.transport.stream.chunk.processor import ChunkProcessor
-from anchor.bind.switch.params import Choices, Message, ModelResponse, Usage
+from bound.adapter.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("blm.main")

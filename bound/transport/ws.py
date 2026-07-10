@@ -1,6 +1,7 @@
 # bound.transport.ws
-## @lineage: bound.transport.channel.ws
-## @lineage: bound.channel.ws
+## @lineage: bound.surface.bridge.transport.ws
+## @lineage: bound.surface.legacy.transport.ws
+## @lineage: bound.transport.http.ws
 from __future__ import annotations
 import json
 import ssl
@@ -12,20 +13,28 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 import websockets
 from websockets.asyncio.client import ClientConnection
 
-from anchor.provider.param.legacy import GenericLiteLLMParams
+from bound.surface.legacy.param.legacy import GenericLiteLLMParams
 import bound.surface.legacy.openai.types as openai_types
-from bound.surface.legacy.config.resolver import config
-from bound.transport.client.executor import executor
-from bound.transport.response.identity import ResponseIdentityManager
+from anchor.registry.model.config.resolver import config
+from anchor.executor.legacy import executor
+from bound.transport.stream.api.identity import IdentityRouter
 from bound.watcher.delegator import LogDelegator
-from bound.transport.http import get_shared_realtime_ssl_context
-from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.surface.legacy.config.constants import REALTIME_WEBSOCKET_MAX_MESSAGE_SIZE_BYTES
+from anchor.registry.model.config.response import BaseResponsesAPIConfig
+from anchor.registry.model.config.constants import REALTIME_WEBSOCKET_MAX_MESSAGE_SIZE_BYTES
+from bound.ingress.stream.security import get_ssl_configuration
 from xphi.xor.secret.redact import redact_string
 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("channel.ws")
+
+_shared_realtime_ssl_context: Optional[Union[bool, str, ssl.SSLContext]] = None
+
+def get_shared_realtime_ssl_context() -> Union[bool, str, ssl.SSLContext]:
+    global _shared_realtime_ssl_context
+    if _shared_realtime_ssl_context is None:
+        _shared_realtime_ssl_context = get_ssl_configuration()
+    return _shared_realtime_ssl_context
 
 @dataclass
 class RealtimeSessionContext:

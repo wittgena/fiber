@@ -7,9 +7,9 @@ import openai
 
 _MINIMAL_ERROR_RESPONSE: Optional[httpx.Response] = None
 
-class LiteLLMCommonStrings(Enum):
-    redacted_by_litellm = "redacted by litellm. 'litellm.turn_off_message_logging=True'"
-    llm_provider_not_provided = "Unmapped LLM provider for this endpoint. You passed model={model}, custom_llm_provider={custom_llm_provider}. Check supported provider and route: https://docs.litellm.ai/docs/providers"
+class BraneCommonStrings(Enum):
+    redacted_by_litellm = "redacted by brane. 'brane.turn_off_message_logging=True'"
+    llm_provider_not_provided = "Unmapped LLM provider for this endpoint. You passed model={model}, custom_llm_provider={custom_llm_provider}."
 
 def _get_minimal_error_response() -> httpx.Response:
     """Get a cached minimal httpx.Response object for error cases."""
@@ -61,7 +61,7 @@ class AuthenticationError(openai.AuthenticationError):  # type: ignore
         num_retries: Optional[int] = None,
     ):
         self.status_code = 401
-        self.message = "litellm.AuthenticationError: {}".format(message)
+        self.message = "brane.AuthenticationError: {}".format(message)
         self.llm_provider = llm_provider
         self.model = model
         self.debug_info = debug_info
@@ -69,9 +69,7 @@ class AuthenticationError(openai.AuthenticationError):  # type: ignore
         self.num_retries = num_retries
         self.response = response or httpx.Response(
             status_code=self.status_code,
-            request=httpx.Request(
-                method="GET", url="https://litellm.ai"
-            ),  # mock request object
+            request=httpx.Request(method="GET", url="https://litellm.ai"),
         )
         super().__init__(
             self.message, response=self.response, body=None
@@ -80,17 +78,17 @@ class AuthenticationError(openai.AuthenticationError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -126,17 +124,17 @@ class NotFoundError(openai.NotFoundError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -177,17 +175,17 @@ class BadRequestError(openai.BadRequestError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -240,17 +238,17 @@ class UnprocessableEntityError(openai.UnprocessableEntityError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -286,17 +284,17 @@ class Timeout(openai.APITimeoutError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -325,17 +323,17 @@ class PermissionDeniedError(openai.PermissionDeniedError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -377,17 +375,17 @@ class RateLimitError(openai.RateLimitError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -419,17 +417,17 @@ class ContextWindowExceededError(BadRequestError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -462,17 +460,17 @@ class RejectedRequestError(BadRequestError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -515,9 +513,9 @@ class ContentPolicyViolationError(BadRequestError):  # type: ignore
         """
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -557,17 +555,17 @@ class ServiceUnavailableError(openai.APIStatusError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -607,17 +605,17 @@ class BadGatewayError(openai.APIStatusError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -657,17 +655,17 @@ class InternalServerError(openai.InternalServerError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -698,17 +696,17 @@ class APIError(openai.APIError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -737,17 +735,17 @@ class APIConnectionError(openai.APIConnectionError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -775,17 +773,17 @@ class APIResponseValidationError(openai.APIResponseValidationError):  # type: ig
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
     def __repr__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         return _message
 
 
@@ -918,9 +916,9 @@ class MockException(openai.APIError):
         super().__init__(self.message, request=request, body=None)  # type: ignore
 
 
-class LiteLLMUnknownProvider(BadRequestError):
+class BraneUnknownProvider(BadRequestError):
     def __init__(self, model: str, custom_llm_provider: Optional[str] = None):
-        self.message = LiteLLMCommonStrings.llm_provider_not_provided.value.format(
+        self.message = BraneCommonStrings.llm_provider_not_provided.value.format(
             model=model, custom_llm_provider=custom_llm_provider
         )
         super().__init__(
@@ -1029,9 +1027,9 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
     def __str__(self):
         _message = self.message
         if self.num_retries:
-            _message += f" LiteLLM Retried: {self.num_retries} times"
+            _message += f" Brane Retried: {self.num_retries} times"
         if self.max_retries:
-            _message += f", LiteLLM Max Retries: {self.max_retries}"
+            _message += f", Brane Max Retries: {self.max_retries}"
         if self.original_exception:
             _message += f" Original exception: {type(self.original_exception).__name__}: {str(self.original_exception)}"
         return _message

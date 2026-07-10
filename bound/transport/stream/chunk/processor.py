@@ -1,4 +1,7 @@
 # bound.transport.stream.chunk.processor
+## @lineage: bound.surface.bridge.stream.chunk.processor
+## @lineage: bound.surface.bridge.channel.stream.chunk.processor
+## @lineage: bound.channel.stream.chunk.processor
 ## @lineage: bound.bridge.transport.stream.chunk.processor
 ## @lineage: bound.broker.transport.stream.chunk.processor
 ## @lineage: bound.channel.transport.stream.chunk.processor
@@ -34,7 +37,7 @@ from bound.surface.legacy.types import (
 )
 
 from bound.surface.legacy.openai.types import ChatCompletionRedactedThinkingBlock, ChatCompletionThinkingBlock
-from anchor.provider.token.counter import token_counter
+from bound.surface.token.counter import token_counter
 from watcher.plane.emitter import get_emitter 
 
 log = get_emitter("chunk.processor")

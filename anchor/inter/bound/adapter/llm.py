@@ -19,8 +19,8 @@ from anchor.inter.bound.base.llms.types import ChatMessage, MessageRole
 from anchor.inter.bound.adapter.base import BaseProviderAdapter
 from bound.adapter.mapper.state import StateMapper
 
-from bound.adapter.action.preprocessor import CompletionContext
-from anchor.provider.router.llm import LLMRouter, TopologyMissingError
+from bound.surface.action.process.pre import CompletionContext
+from anchor.registry.router.llm import LLMRouter, TopologyMissingError
 from bound.transport.stream.wrapper import CustomStreamWrapper
 
 from phase.gov.proto.gate import uuid4 

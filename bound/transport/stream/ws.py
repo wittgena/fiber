@@ -1,4 +1,7 @@
 # bound.transport.stream.ws
+## @lineage: bound.surface.bridge.stream.ws
+## @lineage: bound.surface.bridge.channel.stream.ws
+## @lineage: bound.channel.stream.ws
 ## @lineage: bound.transport.stream.iterator
 """deprecated"""
 from __future__ import annotations
@@ -11,9 +14,9 @@ from functools import lru_cache
 from typing import Any, Dict, List, Literal, Optional
 import httpx
 import bound.surface.legacy.openai.types as openai_types
-from bound.surface.legacy.config.resolver import config
-from bound.transport.client.executor import executor
-from bound.transport.response.identity import ResponseIdentityManager
+from anchor.registry.model.config.resolver import config
+from anchor.executor.legacy import executor
+from bound.transport.stream.api.identity import IdentityRouter
 from bound.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter
@@ -255,7 +258,7 @@ class ResponseWSHandler:
             pass
 
     def _get_history_messages(self, previous_response_id: str) -> List[Dict[str, Any]]:
-        decoded = ResponseIdentityManager._decode_responses_api_response_id(previous_response_id)
+        decoded = IdentityRouter._decode_responses_api_response_id(previous_response_id)
         raw_id = decoded.get("response_id", previous_response_id)
         return list(self._session_history.get(raw_id, []))
 
@@ -270,7 +273,7 @@ class ResponseWSHandler:
         )
         if not encoded_id:
             return None
-        decoded = ResponseIdentityManager._decode_responses_api_response_id(encoded_id)
+        decoded = IdentityRouter._decode_responses_api_response_id(encoded_id)
         return decoded.get("response_id", encoded_id)
 
     @staticmethod

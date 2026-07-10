@@ -15,7 +15,7 @@ log = logging.getLogger("around")
 CURRENT_SCRIPT = Path(__file__).absolute()
 CURRENT_DIR = CURRENT_SCRIPT.parent
 PTH_FILENAME = "brane.pth"
-CORES = ["brane", "surgent", "fiber", "theoria"]
+CORES = ["brane", "surgent", "nexus", "theoria"]
 
 ## Default minimum skeleton to prevent resolver crashes if bound.json doesn't exist
 DEFAULT_BOUND_SKELETON = {
@@ -54,7 +54,7 @@ DEFAULT_BOUND_SKELETON = {
     },
     "channels": {
         "namespaces": [
-            "theoria", "brane", "fiber", "ext", "surgent", "psi", "delta", "xor", "watcher"
+            "theoria", "brane", "nexus", "ext", "surgent", "psi", "delta", "xor", "watcher"
         ],
         "xphi": {
             "pattern": "^(theoria|psi|delta|meta|xphi|ion|ex|xe|xor|loop|field|watcher):"

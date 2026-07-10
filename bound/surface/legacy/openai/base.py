@@ -23,14 +23,12 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-from bound.surface.legacy.config.resolver import config
+from anchor.registry.model.config.resolver import config
 from bound.surface.exception import BaseLLMException
-from bound.transport.http import (
-    _DEFAULT_TTL_FOR_HTTPX_CLIENTS,
-    AsyncHTTPHandler,
-    get_ssl_configuration,
-)
-from xphi.scope.mock.transport.openai import MockOpenAITransport
+from anchor.registry.model.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
+from bound.transport.client import AsyncHTTPClient
+from bound.ingress.stream.security import get_ssl_configuration
+from xphi.xor.mock.transport.openai import MockOpenAITransport
 
 
 def _get_client_init_params(cls: type) -> Tuple[str, ...]:
@@ -221,7 +219,7 @@ class BaseOpenAILLM:
 
         return httpx.AsyncClient(
             verify=ssl_config,
-            transport=AsyncHTTPHandler._create_async_transport(
+            transport=AsyncHTTPClient._create_async_transport(
                 ssl_context=(
                     ssl_config if isinstance(ssl_config, ssl.SSLContext) else None
                 ),

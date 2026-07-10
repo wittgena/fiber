@@ -1,4 +1,7 @@
 # bound.transport.stream.wrapper
+## @lineage: bound.surface.bridge.stream.wrapper
+## @lineage: bound.surface.bridge.channel.stream.wrapper
+## @lineage: bound.channel.stream.wrapper
 import asyncio
 import collections.abc
 import datetime
@@ -26,19 +29,19 @@ from pydantic import BaseModel
 from bound.surface.exception import OpenAIError
 from bound.adapter.mapper.exception import exception_type
 from bound.surface.legacy.openai.types import OpenAIChatCompletionChunk
-from bound.surface.legacy.provider import ProviderTypes
-from anchor.provider.param.legacy import GenericLiteLLMParams
+from bound.surface.legacy.info import ProviderTypes
+from bound.surface.legacy.param.legacy import GenericLiteLLMParams
 from bound.surface.legacy.types import Delta, CallTypes, GenericStreamingChunk as GChunk
 
-from bound.surface.legacy.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
-from bound.surface.legacy.config.resolver import config
-from anchor.bind.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
+from anchor.registry.model.config.resolver import config
+from bound.adapter.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 
-from bound.channel.rule import Rules
-from bound.transport.client.executor import executor
-from bound.channel.api import get_api_base
+from bound.surface.bridge.rule import Rules
+from anchor.executor.legacy import executor
+from anchor.registry.model.api.base import get_api_base
 from bound.adapter.mapper.reason import map_finish_reason
-from bound.channel.convert.header import process_response_headers
+from bound.transport.convert.header import process_response_headers
 from bound.transport.stream.chunk.builder import stream_chunk_builder
 from bound.transport.stream.check import is_model_response_stream_empty
 

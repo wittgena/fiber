@@ -6,10 +6,10 @@ import re
 from typing import TYPE_CHECKING, Any, Optional, get_args, get_origin
 import json_repair
 import pydantic
-from anchor.provider.dsp.base import BaseLM
+from bound.surface.dsp.base import BaseLM
 
 if TYPE_CHECKING:
-    from anchor.bind.switch.params import ModelResponseStream
+    from bound.adapter.switch.params import ModelResponseStream
     from arch.xor.manifold.sign.signature import Signature
 
 CUSTOM_TYPE_START_IDENTIFIER = "<<CUSTOM-TYPE-START-IDENTIFIER>>"

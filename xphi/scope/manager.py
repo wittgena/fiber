@@ -4,9 +4,9 @@ from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Any, AsyncGenerator, Optional, Callable
 from unittest.mock import patch
 
-from anchor.provider.dsp.adapter.thch import ThCh
-from anchor.provider.dsp.local import LocalLM
-from anchor.provider.dsp.instance import DSPInstance
+from bound.adapter.dsp.thch import ThCh
+from bound.surface.dsp.local import LocalLM
+from bound.surface.dsp.instance import DSPInstance
 
 from xphi.scope.surface.config import SurfaceConfig
 from xphi.scope.dsp.context import runtime

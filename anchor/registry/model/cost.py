@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable, Union
 
 from anchor.registry.io import RegistryIO
-from bound.surface.legacy.provider import ProviderTypes
-from bound.surface.legacy.config.resolver import config
+from bound.surface.legacy.info import ProviderTypes
+from anchor.registry.model.config.resolver import config
 
 from phase.bind.resolver import resolve_path 
 from watcher.plane.emitter import get_emitter 
