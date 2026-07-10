@@ -1,7 +1,5 @@
-# anchor.provider.param.response
-## @lineage: anchor.provider.model.param.response
-## @lineage: anchor.surface.model.param.response
-## @lineage: anchor.surface.model.types.response
+# bound.adapter.mapper.param.response
+## @lineage: anchor.provider.param.response
 from typing import List, Literal, Optional, Union
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from pydantic import PrivateAttr
@@ -10,10 +8,8 @@ from bound.surface.legacy.base import BaseOpenAIResponse
 
 Phase = Optional[Literal["commentary", "final_answer"]]
 
-
 class GenericResponseOutputItemContentAnnotation(BaseOpenAIResponse):
     """Annotation for content in a message"""
-
     type: Optional[str]
     start_index: Optional[int]
     end_index: Optional[int]
@@ -21,18 +17,14 @@ class GenericResponseOutputItemContentAnnotation(BaseOpenAIResponse):
     title: Optional[str]
     pass
 
-
 class OutputText(BaseOpenAIResponse):
     """Text output content from an assistant message"""
-
     type: Optional[str]  # "output_text"
     text: Optional[str]
     annotations: Optional[List[GenericResponseOutputItemContentAnnotation]]
 
-
 class OutputFunctionToolCall(BaseOpenAIResponse):
     """A tool call to run a function"""
-
     arguments: Optional[str]
     call_id: Optional[str]
     name: Optional[str]
@@ -60,7 +52,6 @@ class OutputCodeInterpreterCallLog(BaseOpenAIResponse):
 
 class OutputCodeInterpreterCall(BaseOpenAIResponse):
     """A code interpreter / code execution call output"""
-
     type: Literal["code_interpreter_call"]
     id: str
     code: Optional[str]
@@ -72,10 +63,6 @@ class OutputCodeInterpreterCall(BaseOpenAIResponse):
 def build_code_interpreter_log_outputs(
     content: Any,
 ) -> Optional[List[OutputCodeInterpreterCallLog]]:
-    """Convert Anthropic bash_code_execution stdout/stderr to log outputs.
-
-    Shared by streaming (handler.py) and non-streaming (transformation.py) paths.
-    """
     if not isinstance(content, dict):
         return None
     parts = []
@@ -86,13 +73,7 @@ def build_code_interpreter_log_outputs(
     logs = "".join(parts)
     return [OutputCodeInterpreterCallLog(type="logs", logs=logs)] if logs else None
 
-
 class GenericResponseOutputItem(BaseOpenAIResponse):
-    """
-    Generic response API output item
-
-    """
-
     type: str  # "message"
     id: str
     status: str  # "completed", "in_progress", etc.
@@ -100,18 +81,7 @@ class GenericResponseOutputItem(BaseOpenAIResponse):
     content: List[OutputText]
     phase: Phase = None
 
-
 class DeleteResponseResult(BaseOpenAIResponse):
-    """
-    Result of a delete response request
-
-    {
-        "id": "resp_6786a1bec27481909a17d673315b29f6",
-        "object": "response",
-        "deleted": true
-    }
-    """
-
     id: Optional[str]
     object: Optional[str]
     deleted: Optional[bool]

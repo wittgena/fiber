@@ -1,4 +1,5 @@
-# anchor.provider.token.counter
+# anchor.registry.provider.token.counter
+## @lineage: anchor.provider.token.counter
 ## @lineage: anchor.provider.model.token.counter
 ## @lineage: anchor.model.token.counter
 import json

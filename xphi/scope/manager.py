@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Any, AsyncGenerator, Optional, Callable
 from unittest.mock import patch
 
-from anchor.provider.dsp.adapter.thch import ThCh
+from bound.adapter.dsp.thch import ThCh
 from anchor.provider.dsp.local import LocalLM
 from anchor.provider.dsp.instance import DSPInstance
 

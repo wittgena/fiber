@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Dict, Any
 
-from anchor.provider.router.workflow import Workflow, Event, StartEvent, StopEvent, ErrorEvent, step
+from anchor.registry.router.workflow import Workflow, Event, StartEvent, StopEvent, ErrorEvent, step
 from bound.adapter.mapper.inter.project import IntegrationManifest, ProjectLayout
 from xphi.analyzer.parser.inter import (
     PyProjectParser, 

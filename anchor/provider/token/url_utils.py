@@ -1,4 +1,5 @@
-# anchor.provider.token.url_utils
+# anchor.registry.provider.token.url_utils
+## @lineage: anchor.provider.token.url_utils
 ## @lineage: anchor.provider.model.token.url_utils
 ## @lineage: anchor.model.token.url_utils
 ## @lineage: anchor.surface.model.token.url_utils

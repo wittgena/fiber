@@ -1,4 +1,5 @@
-# anchor.provider.param.rerank
+# bound.adapter.mapper.param.rerank
+## @lineage: anchor.provider.param.rerank
 ## @lineage: anchor.provider.model.param.rerank
 ## @lineage: anchor.surface.model.param.rerank
 ## @lineage: anchor.surface.model.types.rerank

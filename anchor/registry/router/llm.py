@@ -1,4 +1,5 @@
-# anchor.provider.router.llm
+# anchor.registry.router.llm
+## @lineage: anchor.provider.router.llm
 """
 @manifold: Hybrid Microkernel Router
 @flow: Native Registry ⊕ Dynamic Scanner -> Unified Routing Table -> Lazy Instantiation
@@ -10,7 +11,7 @@ from typing import Dict, Any, Optional, Set
 
 from anchor.registry.model.cost import get_provider_for_model
 import anchor.inter.llms as llm_pkg 
-from anchor.provider.router.scan.installed import LLMInstalledScanner
+from anchor.registry.router.scan.installed import LLMInstalledScanner
 
 from watcher.plane.emitter import get_emitter
 

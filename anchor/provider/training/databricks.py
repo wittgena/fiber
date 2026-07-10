@@ -1,4 +1,5 @@
-# anchor.provider.dsp.training.databricks
+# anchor.registry.provider.training.databricks
+## @lineage: anchor.provider.dsp.training.databricks
 ## @lineage: xphi.xor.dsp.training.databricks
 ## @lineage: anchor.model.dsp.training.databricks
 ## @lineage: anchor.model.dsp.databricks
@@ -9,8 +10,8 @@ import time
 from typing import TYPE_CHECKING, Any
 import orjson
 import requests
-from anchor.provider.dsp.training.base import Provider, TrainingJob
-from anchor.provider.dsp.training.format import TrainDataFormat, get_finetune_directory
+from anchor.provider.training.base import Provider, TrainingJob
+from anchor.provider.training.format import TrainDataFormat, get_finetune_directory
 
 if TYPE_CHECKING:
     from databricks.sdk import WorkspaceClient

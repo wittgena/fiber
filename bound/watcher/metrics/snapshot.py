@@ -1,6 +1,4 @@
-# bound.watcher.metrics
-## @lineage: xphi.watcher.plane.metrics
-## @lineage: bound.watcher.plane.metrics
+# bound.watcher.metrics.snapshot
 import copy
 import time
 from typing import final

@@ -7,7 +7,7 @@ from anchor.bind.switch.params import ModelResponse, ModelResponseStream
 from bound.adapter.action.preprocessor import CompletionPreprocessor
 from anchor.registry.adapter import AdapterRegistry
 from bound.transport.stream.wrapper import CustomStreamWrapper
-from anchor.provider.router.llm import TopologyMissingError
+from anchor.registry.router.llm import TopologyMissingError
 
 from watcher.plane.emitter import get_emitter
 

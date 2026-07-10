@@ -1,4 +1,5 @@
-# anchor.provider.param.legacy
+# bound.adapter.mapper.param.legacy
+## @lineage: anchor.provider.param.legacy
 ## @lineage: anchor.provider.model.param.legacy
 ## @lineage: anchor.surface.model.param.legacy
 ## @lineage: anchor.provider.info.router

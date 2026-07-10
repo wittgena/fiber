@@ -1,6 +1,4 @@
-# bound.watcher.observer.global
-## @lineage: xphi.watcher.plane.observer
-## @lineage: bound.watcher.plane.observer
+# bound.watcher.observer.bound
 from __future__ import annotations
 import asyncio
 import math

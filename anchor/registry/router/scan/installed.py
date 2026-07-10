@@ -1,4 +1,5 @@
-# anchor.provider.router.scan.installed
+# anchor.registry.router.scan.installed
+## @lineage: anchor.provider.router.scan.installed
 import importlib
 import inspect
 import pkgutil

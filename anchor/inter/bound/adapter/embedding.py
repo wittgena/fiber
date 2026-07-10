@@ -10,7 +10,7 @@
 from typing import List, Union
 from bound.adapter.action.preprocessor import EmbeddingContext
 from anchor.inter.bound.adapter.base import BaseProviderAdapter
-from anchor.provider.router.embedding import EmbeddingRouter
+from anchor.registry.router.embedding import EmbeddingRouter
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     """

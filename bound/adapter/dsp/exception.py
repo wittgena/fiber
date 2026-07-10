@@ -1,5 +1,5 @@
-# anchor.provider.dsp.adapter.exception
-## @lineage: bound.adapter.dsp.exception
+# bound.adapter.dsp.exception
+## @lineage: anchor.provider.dsp.adapter.exception
 from arch.xor.manifold.sign.signature import Signature
 
 class AdapterParseError(Exception):

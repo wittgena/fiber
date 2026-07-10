@@ -1,5 +1,7 @@
 # bound.adapter.mapper.inter.llm
 from typing import Dict, Any, Set, List, Optional
+from dataclasses import dataclass, field
+from bound.adapter.mapper.inter.project import ProjectLayout
 
 @dataclass
 class LLMCapabilities:

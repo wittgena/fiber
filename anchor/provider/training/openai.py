@@ -1,4 +1,5 @@
-# anchor.provider.dsp.training.openai
+# anchor.registry.provider.training.openai
+## @lineage: anchor.provider.dsp.training.openai
 ## @lineage: xphi.xor.dsp.training.openai
 ## @lineage: anchor.model.dsp.training.openai
 ## @lineage: anchor.model.dsp.openai
@@ -7,8 +8,8 @@ import time
 from datetime import datetime
 from typing import Any
 import openai
-from anchor.provider.dsp.training.base import Provider, TrainingJob
-from anchor.provider.dsp.training.format import TrainDataFormat, TrainingStatus, save_data
+from anchor.provider.training.base import Provider, TrainingJob
+from anchor.provider.training.format import TrainDataFormat, TrainingStatus, save_data
 
 class TrainingJobOpenAI(TrainingJob):
     def __init__(self, *args, **kwargs):

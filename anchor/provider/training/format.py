@@ -1,4 +1,5 @@
-# anchor.provider.dsp.training.format
+# anchor.registry.provider.training.format
+## @lineage: anchor.provider.dsp.training.format
 ## @lineage: xphi.xor.dsp.handler.train
 import os
 import hashlib
@@ -6,10 +7,10 @@ from pathlib import Path
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 import orjson
-from anchor.provider.dsp.adapter.signature import SignatureAdapter
+from bound.adapter.dsp.signature import SignatureAdapter
 
 if TYPE_CHECKING:
-    from anchor.provider.dsp.adapter.base import Adapter
+    from bound.adapter.dsp.base import Adapter
 
 _DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".spi_cache")
 SPI_CACHEDIR = os.environ.get("SPI_CACHEDIR") or _DEFAULT_CACHE_DIR

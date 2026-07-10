@@ -1,22 +1,21 @@
-# anchor.provider.cost.calculator
-## @lineage: anchor.model.cost.calculator
+# anchor.registry.provider.cost.calculator
 import time
 from typing import TYPE_CHECKING, Any, List, Literal, Optional, Tuple, Union, cast
 from httpx import Response
 from pydantic import BaseModel
 from functools import lru_cache
 
+from anchor.bind.switch.params import ModelResponse, ModelResponseStream
+
 from anchor.registry.model.cost import model_cost, lookup_base_model_info
 from anchor.registry.router.locator import get_llm_provider
 from anchor.provider.cost.builtin import BuiltInToolCostTracker
-from anchor.provider.cost.transform import UsageTransform
 from anchor.provider.token.counter import token_counter
-from anchor.provider.cost.unit import CostCalculatorUtils, generic_cost_per_token
-from anchor.provider.param.rerank import RerankBilledUnits, RerankResponse
+from anchor.provider.cost.unit import UnitCostCalculator, UsageTransform, _IMAGE_RESPONSE_CALL_TYPES
 
+from anchor.provider.param.rerank import RerankBilledUnits, RerankResponse
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE, DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
-from anchor.bind.switch.params import ModelResponse, ModelResponseStream
 from bound.surface.legacy.openai.types import (
     HttpxBinaryResponseContent,
     OpenAIModerationResponse,
@@ -30,6 +29,12 @@ from bound.surface.legacy.types import (
     CallTypesLiteral, LiteLLMRealtimeStreamLoggingObject,
     StandardBuiltInToolsParams, Usage, CallTypes, CostPerToken, 
     EmbeddingResponse, ImageResponse, TextCompletionResponse, TranscriptionResponse
+)
+
+from anchor.provider.cost.support import (
+    PricingPolicyManager,
+    ProviderContextResolver,
+    UsageTelemetryParser
 )
 
 from watcher.plane.emitter import get_emitter
@@ -51,26 +56,6 @@ _RERANK_CALL_TYPES = frozenset({CallTypes.rerank.value, CallTypes.arerank.value}
 _SEARCH_CALL_TYPES = frozenset({CallTypes.search.value, CallTypes.asearch.value})
 _AREALTIME_CALL_TYPE = CallTypes.arealtime.value
 _MCP_CALL_TYPE = CallTypes.call_mcp_tool.value
-
-## @refactor: support 모듈로부터 순수 연산/파싱 헬퍼 임포트
-from anchor.provider.cost.support import (
-    _cost_per_token_custom_pricing_helper,
-    _get_additional_costs, 
-    _transcription_usage_has_token_details, 
-    get_replicate_completion_pricing,
-    _get_provider_for_cost_calc,
-    _select_model_name_for_cost_calc,
-    _get_response_model,
-    _map_traffic_type_to_service_tier,
-    _get_usage_object,
-    _apply_cost_discount,
-    _apply_cost_margin,
-    get_response_cost_from_hidden_params,
-    BaseTokenUsageProcessor,
-    RealtimeAPITokenUsageProcessor,
-    _infer_call_type,
-    handle_realtime_stream_cost_calculation
-)
 
 # =============================================================================
 # Entry 1: cost_per_token 
@@ -98,11 +83,9 @@ def cost_per_token(  # noqa: PLR0915
     response: Optional[Any] = None,
     request_model: Optional[str] = None,
 ) -> Tuple[float, float]:
-    """Calculate input and output costs based on token usage and model metadata."""
     if model is None:
         raise Exception("Invalid arg. Model cannot be none.")
 
-    # 1. Usage 블록 정규화
     if usage_object is not None:
         usage_block = usage_object
     else:
@@ -146,8 +129,8 @@ def cost_per_token(  # noqa: PLR0915
     if _is_anthropic_style:
         _normalized_prompt_tokens += _cache_read_tokens + _cache_creation_tokens
 
-    # 2. 커스텀 가격 덮어쓰기 로직
-    response_cost = _cost_per_token_custom_pricing_helper(
+    # [REFACTORED] PricingPolicyManager 사용
+    response_cost = PricingPolicyManager.calculate_custom_pricing(
         prompt_tokens=_normalized_prompt_tokens,
         completion_tokens=completion_tokens,
         response_time_ms=response_time_ms,
@@ -159,7 +142,6 @@ def cost_per_token(  # noqa: PLR0915
     if response_cost is not None:
         return response_cost[0], response_cost[1]
 
-    # 3. 모델 이름 및 Provider 분석
     prompt_tokens_cost_usd_dollar: float = 0
     completion_tokens_cost_usd_dollar: float = 0
     caller_supplied_provider = custom_llm_provider is not None
@@ -200,16 +182,11 @@ def cost_per_token(  # noqa: PLR0915
     elif model_without_prefix in model_cost:
         model = model_without_prefix
 
-    # =========================================================================
-    # [KEY ARCHITECTURE CHANGE] 
-    # 하드코딩된 벤더별 분기(openai, anthropic, gemini)를 모두 날렸습니다.
-    # 이제 모든 과금 규칙은 model_cost 메타데이터와 generic 엔진이 통일해서 처리합니다.
-    # =========================================================================
     model_info = lookup_base_model_info(model=model, custom_llm_provider=custom_llm_provider)
 
-    # Token 기반 과금 체계인 경우 (가장 흔함)
     if (model_info.get("input_cost_per_token") or 0.0) > 0 or (model_info.get("output_cost_per_token") or 0.0) > 0:
-        return generic_cost_per_token(
+        # [KEY CHANGE 2] cost.util.generic_cost_per_token 대신 UnitCostCalculator 사용
+        return UnitCostCalculator.generic_cost_per_token(
             model=model,
             usage=usage_block,
             custom_llm_provider=custom_llm_provider,
@@ -217,7 +194,6 @@ def cost_per_token(  # noqa: PLR0915
             data_residency=data_residency,
         )
 
-    # Time 기반 과금 체계인 경우 (오디오, 비디오, 특정 오픈소스 모델 등)
     if model_info.get("input_cost_per_second") is not None and response_time_ms is not None:
         prompt_tokens_cost_usd_dollar = model_info["input_cost_per_second"] * response_time_ms / 1000  # type: ignore
 
@@ -255,9 +231,9 @@ def completion_cost(  # noqa: PLR0915
     service_tier: Optional[str] = None,
     data_residency: Optional[str] = None,
 ) -> float:
-    """Wrapper that resolves contexts (usage object, models) and calculates total cost."""
     try:
-        call_type = _infer_call_type(call_type, completion_response) or "completion"
+        # [REFACTORED] UsageTelemetryParser 활용
+        call_type = UsageTelemetryParser.infer_call_type(call_type, completion_response) or "completion"
 
         if call_type in ("aimage_generation", "image_generation") and isinstance(model, str) and not model and custom_llm_provider == "azure":
             model = "dall-e-2"
@@ -270,7 +246,8 @@ def completion_cost(  # noqa: PLR0915
         cache_read_input_tokens: Optional[int] = None
         audio_transcription_file_duration: float = 0.0
         
-        cost_per_token_usage_object: Optional[Usage] = _get_usage_object(completion_response)
+        # [REFACTORED] UsageTelemetryParser 활용
+        cost_per_token_usage_object: Optional[Usage] = UsageTelemetryParser.extract_usage(completion_response)
         rerank_billed_units: Optional[RerankBilledUnits] = None
 
         if service_tier is None and optional_params is not None:
@@ -280,7 +257,8 @@ def completion_cost(  # noqa: PLR0915
         if service_tier is None and cost_per_token_usage_object is not None:
             service_tier = getattr(cost_per_token_usage_object, "service_tier", None) if isinstance(cost_per_token_usage_object, BaseModel) else cost_per_token_usage_object.get("service_tier")
 
-        selected_model = _select_model_name_for_cost_calc(
+        # [REFACTORED] ProviderContextResolver 활용
+        selected_model = ProviderContextResolver.resolve_selected_model(
             model=model,
             completion_response=completion_response,
             custom_llm_provider=custom_llm_provider,
@@ -289,7 +267,7 @@ def completion_cost(  # noqa: PLR0915
             router_model_id=router_model_id,
         )
 
-        potential_model_names = [selected_model, _get_response_model(completion_response)]
+        potential_model_names = [selected_model, ProviderContextResolver.resolve_response_model(completion_response)]
         if model is not None:
             potential_model_names.append(model)
 
@@ -322,7 +300,8 @@ def completion_cost(  # noqa: PLR0915
                             provider_specific = hidden_params.get("provider_specific_fields") or {}
                             raw_traffic_type = provider_specific.get("traffic_type")
                             if raw_traffic_type:
-                                service_tier = _map_traffic_type_to_service_tier(raw_traffic_type)
+                                # [REFACTORED] ProviderContextResolver 활용
+                                service_tier = ProviderContextResolver.map_traffic_to_tier(raw_traffic_type)
                 else:
                     if current_model is None:
                         raise ValueError(f"Model is None. Passed completion_response={completion_response}")
@@ -341,8 +320,9 @@ def completion_cost(  # noqa: PLR0915
                     except Exception as e:
                         log.debug(f"Error inferring custom_llm_provider - {str(e)}")
 
-                if CostCalculatorUtils._call_type_has_image_response(call_type) and isinstance(completion_response, ImageResponse):
-                    return CostCalculatorUtils.route_image_generation_cost_calculator(
+                # [KEY CHANGE 3] CostCalculatorUtils 대신 _IMAGE_RESPONSE_CALL_TYPES 상수와 UnitCostCalculator 직접 사용
+                if call_type in _IMAGE_RESPONSE_CALL_TYPES and isinstance(completion_response, ImageResponse):
+                    return UnitCostCalculator.route_image_generation_cost_calculator(
                         model=current_model,
                         custom_llm_provider=custom_llm_provider,
                         completion_response=completion_response,
@@ -363,7 +343,9 @@ def completion_cost(  # noqa: PLR0915
                 elif call_type == _AREALTIME_CALL_TYPE and isinstance(completion_response, LiteLLMRealtimeStreamLoggingObject):
                     if cost_per_token_usage_object is None or custom_llm_provider is None:
                         raise ValueError("usage object and custom_llm_provider required for realtime streams.")
-                    return handle_realtime_stream_cost_calculation(
+                    
+                    # [REFACTORED] UsageTelemetryParser 활용
+                    return UsageTelemetryParser.process_realtime_stream(
                         results=completion_response.results,
                         combined_usage_object=cost_per_token_usage_object,
                         custom_llm_provider=custom_llm_provider,
@@ -372,10 +354,11 @@ def completion_cost(  # noqa: PLR0915
                     )
 
                 if "togethercomputer" in current_model or "together_ai" in current_model or custom_llm_provider == "together_ai":
-                    pass # Keep size-based pricing space logic here if needed
+                    pass 
 
                 elif (current_model in getattr(config, "replicate_models", []) or "replicate" in current_model) and current_model not in model_cost:
-                    return get_replicate_completion_pricing(completion_response, total_time)
+                    # [REFACTORED] PricingPolicyManager 활용
+                    return PricingPolicyManager.get_replicate_pricing(completion_response, total_time)
 
                 request_model_for_cost = log_delegator.model if log_delegator else None
 
@@ -421,7 +404,8 @@ def completion_cost(  # noqa: PLR0915
                         if hidden_model and "model_router" in hidden_model.lower():
                             model_for_additional_costs = hidden_model
 
-                additional_costs = _get_additional_costs(
+                # [REFACTORED] PricingPolicyManager 활용
+                additional_costs = PricingPolicyManager.get_additional_costs(
                     model=model_for_additional_costs or current_model,
                     custom_llm_provider=custom_llm_provider,
                     prompt_tokens=prompt_tokens or 0,
@@ -434,12 +418,14 @@ def completion_cost(  # noqa: PLR0915
                 discount_percent = discount_amount = margin_percent = margin_fixed_amount = margin_total_amount = 0.0
 
                 if getattr(config, "cost_discount_config", None):
-                    _final_cost, discount_percent, discount_amount = _apply_cost_discount(
+                    # [REFACTORED] PricingPolicyManager 활용
+                    _final_cost, discount_percent, discount_amount = PricingPolicyManager.apply_discount(
                         base_cost=_final_cost, custom_llm_provider=custom_llm_provider
                     )
 
                 if getattr(config, "cost_margin_config", None):
-                    _final_cost, margin_percent, margin_fixed_amount, margin_total_amount = _apply_cost_margin(
+                    # [REFACTORED] PricingPolicyManager 활용
+                    _final_cost, margin_percent, margin_fixed_amount, margin_total_amount = PricingPolicyManager.apply_margin(
                         base_cost=_final_cost, custom_llm_provider=custom_llm_provider
                     )
                 return _final_cost
@@ -477,14 +463,14 @@ def response_cost_calculator(
     service_tier: Optional[str] = None,
     data_residency: Optional[str] = None,
 ) -> float:
-    """Highest-level facade/entry point to resolve cache hits and delegate calculation."""
     try:
         if cache_hit:
             return 0.0
 
         if isinstance(response_object, BaseModel) and hasattr(response_object, "_hidden_params"):
             response_object._hidden_params["optional_params"] = optional_params
-            provider_response_cost = get_response_cost_from_hidden_params(response_object._hidden_params)
+            # [REFACTORED] PricingPolicyManager 활용
+            provider_response_cost = PricingPolicyManager.extract_cost_from_headers(response_object._hidden_params)
             if provider_response_cost is not None:
                 return provider_response_cost
 
@@ -508,7 +494,6 @@ def response_cost_calculator(
         raise e
 
 def _is_known_usage_objects(usage_obj):
-    """Returns True if the usage obj is a known Usage type"""
     return (
         isinstance(usage_obj, Usage)
         or isinstance(usage_obj, ResponseAPIUsage)

@@ -1,4 +1,5 @@
-# anchor.provider.dsp.training.base
+# anchor.registry.provider.training.base
+## @lineage: anchor.provider.dsp.training.base
 ## @lineage: xphi.xor.dsp.training.base
 ## @lineage: anchor.model.dsp.training.base
 ## @lineage: anchor.model.dsp.base
@@ -7,7 +8,7 @@ from abc import abstractmethod
 from concurrent.futures import Future
 from threading import Thread
 from typing import TYPE_CHECKING, Any
-from anchor.provider.dsp.training.format import TrainDataFormat
+from anchor.provider.training.format import TrainDataFormat
 
 class TrainingJob(Future):
     def __init__(

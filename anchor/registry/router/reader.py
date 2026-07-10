@@ -1,4 +1,5 @@
-# anchor.provider.router.reader
+# anchor.registry.router.reader
+## @lineage: anchor.provider.router.reader
 ## @lineage: bound.bridge.router.reader
 ## @lineage: bound.transport.router.reader
 ## @lineage: bound.router.adapter.reader

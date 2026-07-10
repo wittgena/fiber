@@ -16,7 +16,7 @@ class searchable(Protocol):
     def search(self, *args, **kwargs) -> Dict:
         ...
 
-class ReaderSearch:
+class ReaderSearcher:
     """
     AST를 이용해 import 없이 'load_data'가 있는 클래스를 정적으로 식별하는 스캐너.
     어떤 추상 클래스도 상속받지 않으며, 스스로의 목적에 맞는 search() 행위만 가집니다.
@@ -65,7 +65,7 @@ class ReaderSearch:
         return registry
 
 if __name__ == "__main__":
-    searchner = ReaderSearch(TARGET_PATH)
+    searchner = ReaderSearcher(TARGET_PATH)
     if isinstance(searchner, searchable):
         log.info("[System] ReaderSearch가 유효한 searchnable 객체로 인식되었습니다.")
         

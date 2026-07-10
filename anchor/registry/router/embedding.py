@@ -1,4 +1,5 @@
-# anchor.provider.router.embedding
+# anchor.registry.router.embedding
+## @lineage: anchor.provider.router.embedding
 ## @lineage: bound.bridge.router.embedding
 ## @lineage: bound.transport.router.embedding
 ## @lineage: bound.router.adapter.embedding

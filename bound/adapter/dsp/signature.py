@@ -1,13 +1,13 @@
-# anchor.provider.dsp.adapter.signature
-## @lineage: bound.adapter.dsp.signature
+# bound.adapter.dsp.signature
+## @lineage: anchor.provider.dsp.adapter.signature
 ## @lineage: bound.adapter.opt.signature
 import textwrap
 from typing import Any, NamedTuple
 from pydantic.fields import FieldInfo
 
-from anchor.provider.dsp.adapter.base import Adapter
-from anchor.provider.dsp.adapter.exception import AdapterParseError
-from anchor.provider.dsp.adapter.parser import MarkdownRegexParser, JSONRepairParser
+from bound.adapter.dsp.base import Adapter
+from bound.adapter.dsp.exception import AdapterParseError
+from bound.adapter.dsp.parser import MarkdownRegexParser, JSONRepairParser
 
 from xphi.xor.opt.formatter import (
     format_field_value,
