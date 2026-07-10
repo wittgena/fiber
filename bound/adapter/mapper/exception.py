@@ -11,8 +11,8 @@ import traceback
 from typing import Any, Optional, Dict
 import httpx
 
-from bound.surface.legacy.config.resolver import config
-from bound.surface.legacy.provider import ProviderTypes
+from anchor.registry.model.config.resolver import config
+from bound.surface.legacy.info import ProviderTypes
 from bound.surface.exception import (
     APIConnectionError,
     APIError,
@@ -95,7 +95,7 @@ def exception_type(
         extra_information = f"\nModel: {model}"
         try:
             # [FIX 1] 지연 임포트(Lazy Import) 적용하여 순환 참조(Circular Dependency) 고리 완벽 차단
-            from bound.surface.bridge.api import get_api_base
+            from anchor.registry.model.api.base import get_api_base
             _api_base = get_api_base(model=model or "", optional_params=extra_kwargs)
             if _api_base: 
                 extra_information += f"\nAPI Base: `{_api_base}`"

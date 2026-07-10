@@ -15,10 +15,10 @@ from weakref import WeakKeyDictionary
 from anchor.executor.legacy import executor
 
 from bound.surface.legacy.types import CallTypes
-from bound.surface.legacy.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
-from bound.surface.legacy.config.resolver import config
+from anchor.registry.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
+from anchor.registry.model.config.resolver import config
 from bound.surface.bridge.rule import Rules
-from bound.surface.bridge.stream.chunk.builder import stream_chunk_builder
+from bound.transport.stream.chunk.builder import stream_chunk_builder
 from bound.watcher.delegator import LogDelegator
 
 from xphi.xor.secret.credential import CredentialAccessor

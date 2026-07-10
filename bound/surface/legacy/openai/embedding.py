@@ -23,9 +23,9 @@ if TYPE_CHECKING:
 import openai
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
-from bound.surface.legacy.config.constants import DEFAULT_MAX_RETRIES
+from anchor.registry.model.config.constants import DEFAULT_MAX_RETRIES
 from bound.surface.legacy.types import EmbeddingResponse
-from bound.surface.bridge.convert.response import convert_to_model_response_object
+from bound.transport.convert.response import convert_to_model_response_object
 from bound.surface.legacy.openai.base import BaseOpenAILLM, OpenAIError
 from watcher.plane.emitter import get_emitter
 

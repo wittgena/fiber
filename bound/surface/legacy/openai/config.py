@@ -29,19 +29,19 @@ from openai.types.file_deleted import FileDeleted
 from pydantic import BaseModel
 from typing_extensions import overload
 
-from bound.surface.legacy.config.resolver import config
-from bound.surface.legacy.config.constants import DEFAULT_MAX_RETRIES
+from anchor.registry.model.config.resolver import config
+from anchor.registry.model.config.constants import DEFAULT_MAX_RETRIES
 from bound.surface.legacy.openai.response import BaseModelResponseIterator
-from bound.surface.legacy.config.base import BaseConfig
+from anchor.registry.model.config.base import BaseConfig
 from bound.surface.exception import BaseLLMException
-from anchor.bind.switch.params import ModelResponse, ModelResponseStream
-from bound.surface.legacy.provider import ProviderTypes
+from bound.adapter.switch.params import ModelResponse, ModelResponseStream
+from bound.surface.legacy.info import ProviderTypes
 from bound.surface.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from bound.surface.legacy.openai.types import *
 
 from bound.watcher.delegator import LogDelegator
-from bound.surface.bridge.convert.response import convert_to_model_response_object
-from bound.surface.bridge.stream.wrapper import CustomStreamWrapper
+from bound.transport.convert.response import convert_to_model_response_object
+from bound.transport.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
     BaseOpenAILLM,

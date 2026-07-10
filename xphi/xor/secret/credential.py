@@ -1,7 +1,7 @@
 # xphi.xor.secret.credential
 ## @lineage: xphi.xor.auth.secret.credential
 from typing import List
-from bound.surface.legacy.config.resolver import config
+from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.types import CredentialItem
 
 class CredentialAccessor:

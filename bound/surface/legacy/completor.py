@@ -4,15 +4,15 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
-from anchor.bind.switch.params import ModelResponse
+from bound.adapter.switch.params import ModelResponse
 from anchor.registry.router.config import ProviderConfigManager
-from bound.surface.legacy.config.base import BaseConfig
-from bound.surface.legacy.config.resolver import config
-from bound.surface.legacy.provider import ProviderTypes
-from bound.surface.bridge.transport.client import AsyncHTTPClient
-from bound.surface.bridge.transport.sync import HTTPClient
-from bound.surface.bridge.transport.factory import get_async_client, get_http_client
-from bound.surface.bridge.stream.wrapper import CustomStreamWrapper
+from anchor.registry.model.config.base import BaseConfig
+from anchor.registry.model.config.resolver import config
+from bound.surface.legacy.info import ProviderTypes
+from bound.transport.client import AsyncHTTPClient
+from bound.transport.sync import HTTPClient
+from bound.transport.factory import get_async_client, get_http_client
+from bound.transport.stream.wrapper import CustomStreamWrapper
 
 from watcher.plane.emitter import get_emitter
 
@@ -271,7 +271,7 @@ class CompletionHandler:
             error_text = getattr(error_response, "text", error_text)
 
         if provider_config is None:
-            from bound.surface.legacy.config.base import BaseLLMException
+            from anchor.registry.model.config.base import BaseLLMException
             log.error(f"[ErrorHandler] Provider config 없음. BaseLLMException 발생: {error_text}")
             raise BaseLLMException(status_code=status_code, message=error_text, headers=error_headers)
 

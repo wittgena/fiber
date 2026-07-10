@@ -12,8 +12,8 @@ from openai.lib import _parsing, _pydantic
 from pydantic import BaseModel
 from bound.surface.legacy.openai.types import AllMessageValues, ChatCompletionToolCallChunk
 from bound.surface.legacy.base import PydanticObjectBase
-from bound.surface.legacy.provider import ProviderSpecificModelInfo
-from anchor.bind.switch.params import Message
+from bound.surface.legacy.info import ProviderSpecificModelInfo
+from bound.adapter.switch.params import Message
 
 from watcher.plane.emitter import get_emitter
 

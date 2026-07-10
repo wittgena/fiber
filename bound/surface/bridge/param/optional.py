@@ -27,10 +27,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, TypeVar, U
 
 from bound.surface.exception import UnsupportedParamsError
 from bound.surface.bridge.param.format import type_to_response_format_param
-from bound.surface.legacy.config.base import BaseConfig
+from anchor.registry.model.config.base import BaseConfig
 
-from bound.surface.legacy.config.resolver import config
-from bound.surface.legacy.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
+from anchor.registry.model.config.resolver import config
+from anchor.registry.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
 
 from bound.surface.legacy.anthropic import AnthropicThinkingParam
 from bound.surface.legacy.openai.types import AllMessageValues, OpenAIWebSearchOptions

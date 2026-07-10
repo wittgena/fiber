@@ -18,8 +18,8 @@ from typing import (
     cast,
     get_args,
 )
-from bound.surface.legacy.config.resolver import config
-from bound.surface.legacy.config.constants import (
+from anchor.registry.model.config.resolver import config
+from anchor.registry.model.config.constants import (
     DEFAULT_EMBEDDING_PARAM_VALUES,
     OPENAI_EMBEDDING_PARAMS,
 )

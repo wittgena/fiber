@@ -7,7 +7,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
-from anchor.bind.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
+from bound.adapter.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
 from bound.watcher.snapshot.metrics import Metrics
 from phase.gov.proto.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context

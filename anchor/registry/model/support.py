@@ -6,9 +6,9 @@ from anchor.registry.model.cost import model_cost, lookup_base_model_info
 from anchor.registry.router.locator import get_llm_provider
 from anchor.registry.router.config import get_provider_info, ProviderConfigManager
 
-from bound.surface.legacy.provider import ProviderTypes, ProviderTypesSet
+from bound.surface.legacy.info import ProviderTypes, ProviderTypesSet
 from bound.surface.exception import BadRequestError
-from bound.surface.legacy.config.resolver import config
+from anchor.registry.model.config.resolver import config
 
 from watcher.plane.emitter import get_emitter
 

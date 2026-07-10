@@ -11,8 +11,8 @@ import asyncio
 from typing import Optional, Dict, Any, cast
 
 from bound.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
-from bound.adapter.protocol.acp.conn.base import Connection, StreamEvent, StreamDirection
-from bound.adapter.protocol.acp.conn.queue import RpcTask, RpcTaskKind
+from bound.transport.protocol.acp.conn.base import Connection, StreamEvent, StreamDirection
+from bound.transport.protocol.acp.conn.queue import RpcTask, RpcTaskKind
 
 from arch.bound.sandbox.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter

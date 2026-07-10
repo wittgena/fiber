@@ -6,8 +6,8 @@ import traceback
 import httpx
 from typing import Optional, Union, Dict, Tuple
 
-from bound.surface.bridge.transport.sync import HTTPClient
-from bound.surface.legacy.config.resolver import config
+from bound.transport.sync import HTTPClient
+from anchor.registry.model.config.resolver import config
 from xphi.xor.secret.handler.client import get_secret_from_vendor
 
 from watcher.plane.emitter import get_emitter

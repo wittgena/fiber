@@ -6,9 +6,9 @@ from functools import lru_cache
 from typing import Callable, Optional, Union
 from enum import Enum
 
-from bound.surface.legacy.provider import ProviderTypes, ProviderTypesSet, ProviderSpecificModelInfo
-from bound.surface.legacy.config.resolver import config
-from bound.surface.legacy.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
+from bound.surface.legacy.info import ProviderTypes, ProviderTypesSet, ProviderSpecificModelInfo
+from anchor.registry.model.config.resolver import config
+from anchor.registry.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 from bound.surface.bridge.param.format import BaseLLMModelInfo
 
 class ProviderConfigManager:

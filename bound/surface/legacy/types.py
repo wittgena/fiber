@@ -57,15 +57,15 @@ from bound.surface.legacy.openai.types import (
     ResponsesAPIResponse,
     WebSearchOptions,
 )
-from bound.surface.legacy.provider import ProviderSpecificModelInfo
+from bound.surface.legacy.info import ProviderSpecificModelInfo
 
 if TYPE_CHECKING:
-    from anchor.provider.param.embedding import VectorStoreSearchResponse
+    from bound.surface.legacy.param.embedding import VectorStoreSearchResponse
 else:
     VectorStoreSearchResponse = Any
 
-from bound.surface.legacy.provider import ProviderTypes
-from anchor.provider.param.legacy import CustomPricingLiteLLMParams
+from bound.surface.legacy.info import ProviderTypes
+from bound.surface.legacy.param.legacy import CustomPricingLiteLLMParams
 
 def _generate_id():  # private helper function
     return "chatcmpl-" + str(uuid.uuid4())
