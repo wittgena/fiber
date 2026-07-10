@@ -1,5 +1,5 @@
-# anchor.registry.provider.token.splitter
-## @lineage: anchor.provider.token.splitter
+# anchor.provider.token.splitter
+## @lineage: anchor.registry.provider.token.splitter
 ## @lineage: anchor.provider.model.token.splitter
 ## @lineage: anchor.model.token.splitter
 from functools import lru_cache

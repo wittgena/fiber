@@ -26,8 +26,8 @@ if TYPE_CHECKING:
 from bound.surface.legacy.config.resolver import config
 from bound.surface.exception import BaseLLMException
 from bound.surface.legacy.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
-from bound.transport.http.client import AsyncHTTPClient
-from bound.transport.http.security import get_ssl_configuration
+from bound.surface.legacy.transport.client import AsyncHTTPClient
+from bound.ingress.stream.security import get_ssl_configuration
 from xphi.scope.mock.transport.openai import MockOpenAITransport
 
 

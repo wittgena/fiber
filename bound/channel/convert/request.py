@@ -8,7 +8,7 @@ from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.surface.legacy.config.resolver import config
 from bound.channel.param.format import type_to_response_format_param
 from bound.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
-from bound.transport.response.identity import ResponseIdentityManager
+from bound.surface.legacy.response.identity import ResponseIdentityManager
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("convert.request")

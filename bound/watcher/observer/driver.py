@@ -1,3 +1,4 @@
+# bound.watcher.observer.driver
 import time
 import traceback
 import warnings
@@ -153,3 +154,12 @@ class DriverObserver:
                 node.on_rupture(error, state)
             except Exception as e:
                 warnings.warn(f"Critical: Rupture projection failed: {e}", RuntimeWarning)
+
+def create_topological_observer(model_name: str, config: dict, initial_metrics: Metrics | None = None) -> DriverObserver:
+    """위상 노드들이 완벽히 결속된 DriverObserver를 반환합니다."""
+    observer = DriverObserver(model_name=model_name, config=config, initial_metrics=initial_metrics)
+    observer.register_node(TopoPhase.BOUND, UsageParserNode())
+    observer.register_node(TopoPhase.ANCHOR, ManifestCostNode(config.get("cost_manifest")))
+    observer.register_node(TopoPhase.PROJECTION, CentralEmitterNode())
+    
+    return observer

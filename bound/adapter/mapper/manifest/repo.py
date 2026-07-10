@@ -1,4 +1,5 @@
-# bound.adapter.mapper.repo.manifest
+# bound.adapter.mapper.manifest.repo
+## @lineage: bound.adapter.mapper.repo.manifest
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 

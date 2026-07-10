@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 from dataclasses import asdict
 
-from anchor.cli.adapter.scan.llm import LLMScanner
+from anchor.cli.adapter.search.llm import LLMSearcher
 from xphi.analyzer.repo import InterAnalyzer
 
 from arch.contract.registry.unified import contract
@@ -24,14 +24,14 @@ class LLMAnalyzer:
     async def _pipe(self) -> dict:
         """@desc: Asynchronous execution of the scan -> analyze pipeline for one target."""
         log.info(f"[*] [Phase 1] Initializing Scout (Scanner) to locate target: [{self.target}]")
-        scanner = LLMScanner()
-        scan_results = scanner.scan()
+        searcher = LLMSearcher()
+        results = searcher.search()
         
-        if self.target not in scan_results:
+        if self.target not in results:
             log.error(f"[-] Target integration '{self.target}' not found in the monorepo catalog.")
             return {}
 
-        info = scan_results[self.target]
+        info = results[self.target]
         layout = info.get("layout")
         
         if not layout or not layout.get("root_dir"):

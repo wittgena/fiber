@@ -1,5 +1,5 @@
-# anchor.registry.provider.dsp.instance
-## @lineage: anchor.provider.dsp.instance
+# anchor.provider.dsp.instance
+## @lineage: anchor.registry.provider.dsp.instance
 import re
 import threading
 import warnings

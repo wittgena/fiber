@@ -1,4 +1,5 @@
-# anchor.registry.provider.training.openai
+# anchor.provider.training.openai
+## @lineage: anchor.registry.provider.training.openai
 ## @lineage: anchor.provider.dsp.training.openai
 ## @lineage: xphi.xor.dsp.training.openai
 ## @lineage: anchor.model.dsp.training.openai

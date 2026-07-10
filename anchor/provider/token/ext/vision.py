@@ -1,12 +1,12 @@
-# anchor.registry.provider.token.ext.vision
-## @lineage: anchor.provider.token.ext.vision
+# anchor.provider.token.ext.vision
+## @lineage: anchor.registry.provider.token.ext.vision
 import base64
 import io
 import struct
 from typing import Tuple, Union
 
 from anchor.provider.token.url_utils import SafeHttpClient
-from bound.transport.http.factory import get_client
+from bound.surface.legacy.transport.factory import get_client
 from bound.surface.legacy.config.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

@@ -1,5 +1,5 @@
-# anchor.registry.provider.dsp.cache
-## @lineage: anchor.provider.dsp.cache
+# anchor.provider.dsp.cache
+## @lineage: anchor.registry.provider.dsp.cache
 ## @lineage: xphi.xor.dsp.handler.cache
 import os
 import copy

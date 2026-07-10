@@ -1,5 +1,5 @@
-# anchor.registry.provider.token.window
-## @lineage: anchor.provider.token.window
+# anchor.provider.token.window
+## @lineage: anchor.registry.provider.token.window
 ## @lineage: anchor.provider.model.token.window
 ## @lineage: anchor.model.token.window
 import copy

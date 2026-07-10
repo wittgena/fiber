@@ -1,5 +1,5 @@
-# anchor.registry.provider.dsp.local
-## @lineage: anchor.provider.dsp.local
+# anchor.provider.dsp.local
+## @lineage: anchor.registry.provider.dsp.local
 ## @lineage: xphi.xor.dsp.llm.local
 ## @lineage: anchor.model.dsp.llm.local
 import asyncio

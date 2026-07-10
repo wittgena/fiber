@@ -1,4 +1,5 @@
-# anchor.registry.provider.training.databricks
+# anchor.provider.training.databricks
+## @lineage: anchor.registry.provider.training.databricks
 ## @lineage: anchor.provider.dsp.training.databricks
 ## @lineage: xphi.xor.dsp.training.databricks
 ## @lineage: anchor.model.dsp.training.databricks

@@ -1,16 +1,14 @@
 # anchor.registry.router.reader
-## @lineage: anchor.provider.router.reader
-## @lineage: bound.bridge.router.reader
-## @lineage: bound.transport.router.reader
-## @lineage: bound.router.adapter.reader
-## @lineage: bound.bridge.adapter.reader
-## @lineage: xphi.trans.reader.route
 import os
 import importlib
 import inspect
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from anchor.cli.adapter.scan.reader import ReaderScanner
+
+from anchor.cli.adapter.search.reader import ReaderSearcher
+from watcher.plane.emitter import get_emitter
+
+log = get_emitter("router.reader")
 
 DEFAULT_REGISTRY = {
     "pdf": {
@@ -43,23 +41,18 @@ DEFAULT_REGISTRY = {
 class DataRouter:
     def __init__(self, readers_base_path: str = "anchor/inter/readers"):
         self.base_path = Path(readers_base_path)
-        # 클래스 레벨의 DEFAULT_REGISTRY 오염을 막기 위해 복사하여 사용
         self.registry = {k: v.copy() for k, v in DEFAULT_REGISTRY.items()}
-        self._is_scanned = False  # 무의미한 중복 I/O 스캔 방지용 플래그
+        self._is_searched = False  # 무의미한 중복 I/O 스캔 방지용 플래그
 
     def _fallback_scan(self, target_tag: str) -> Optional[str]:
         """정적 맵에 없을 때만 ReaderScanner를 호출하여 레지스트리를 병합"""
-        if self._is_scanned:
+        if self._is_searched:
             return None # 이미 전체 스캔을 마쳤음에도 없다면 지원하지 않는 포맷
 
-        print(f"[*] '{target_tag}'에 대한 정적 맵이 없습니다. ReaderScanner를 호출합니다...")
-        
-        # 외부 Scanner 단자에 위임
-        scanner = ReaderScanner(self.base_path)
-        scanned_data = scanner.scan()
-        
-        # 스캔 결과를 내부 Registry 규격에 맞춰 병합
-        for format_key, meta in scanned_data.items():
+        log.info(f"[*] '{target_tag}'에 대한 정적 맵이 없습니다. ReaderScanner를 호출합니다...")
+        searcher = ReaderSearcher(self.base_path)
+        seached_data = searcher.search()
+        for format_key, meta in seached_data.items():
             if format_key not in self.registry:
                 self.registry[format_key] = {
                     "module": meta["module"],
@@ -68,7 +61,7 @@ class DataRouter:
                     "tags": [format_key]
                 }
         
-        self._is_scanned = True # 스캔 완료 상태 기록
+        self._is_searched = True # 스캔 완료 상태 기록
 
         # 병합된 레지스트리에서 target_tag 다시 탐색 (정확도 우선 -> 부분 일치)
         if target_tag in self.registry:
@@ -131,7 +124,7 @@ if __name__ == "__main__":
     router = DataRouter()
     
     # [시나리오 1] 정적 맵 정상 동작 (Fast Path)
-    print("LLM Tools Schema:", router.get_llm_tool_schema())
+    log.info("LLM Tools Schema:", router.get_llm_tool_schema())
     
     # [시나리오 2] 스캐너 동작 확인 (Slow Path)
     # 정적 맵에 없는 'xml'을 호출하면 내부에서 ReaderScanner가 가동되고 레지스트리가 병합됩니다.
@@ -139,4 +132,4 @@ if __name__ == "__main__":
         router.route_and_load("xml", file_path="sample.xml")
     except Exception as e:
         # 런타임 에러 처리 (sample.xml이 없거나, xml 관련 의존성이 없을 경우)
-        print(f"Result: {e}")
+        log.info(f"Result: {e}")

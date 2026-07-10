@@ -9,7 +9,7 @@ import uuid
 from typing import Any, Dict, Optional
 from watcher.plane.emitter import get_emitter
 from watcher.kernel.ledger import ToposLedger, LogicStream as KernelLogicStream, SealedKernel
-from xphi.proxy.ingress.schema import LogicStream as IngressLogicStream
+from bound.ingress.proxy.schema import LogicStream as IngressLogicStream
 
 log = get_emitter("kernel.bridge", phase="KERNEL")
 

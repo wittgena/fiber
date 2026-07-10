@@ -1,5 +1,5 @@
-# anchor.registry.provider.dsp.base
-## @lineage: anchor.provider.dsp.base
+# anchor.provider.dsp.base
+## @lineage: anchor.registry.provider.dsp.base
 ## @lineage: xphi.xor.dsp.llm.base
 ## @lineage: anchor.model.dsp.llm.base
 ## @lineage: anchor.model.llm.base

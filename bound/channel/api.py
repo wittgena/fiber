@@ -9,7 +9,7 @@ from anchor.registry.router.locator import get_llm_provider
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
-from bound.transport.response.identity import ResponseIdentityManager
+from bound.surface.legacy.response.identity import ResponseIdentityManager
 from bound.channel.convert.request import RequestBuilder, IdentityMutator, _get_val
 from watcher.plane.emitter import get_emitter
 

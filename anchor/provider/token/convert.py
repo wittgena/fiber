@@ -1,5 +1,5 @@
-# anchor.registry.provider.token.convert
-## @lineage: anchor.provider.token.convert
+# anchor.provider.token.convert
+## @lineage: anchor.registry.provider.token.convert
 ## @lineage: anchor.provider.model.token.convert
 ## @lineage: anchor.model.token.convert
 from typing import Dict, List, Type, Union, cast

@@ -1,5 +1,5 @@
-# anchor.registry.provider.cost.builtin
-## @lineage: anchor.provider.cost.builtin
+# anchor.provider.cost.builtin
+## @lineage: anchor.registry.provider.cost.builtin
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from anchor.bind.switch.params import Message, ModelResponse, Usage

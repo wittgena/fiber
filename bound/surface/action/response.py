@@ -39,16 +39,16 @@ from anchor.provider.param.legacy import GenericLiteLLMParams
 from anchor.registry.router.config import ProviderConfigManager
 from anchor.registry.router.locator import get_llm_provider
 
-from bound.transport.mcp.handler import MCPHandler
-from bound.transport.response.api.handler import ResponseApiHandler
+from bound.adapter.protocol.mcp.handler import MCPHandler
+from bound.surface.legacy.response.api.handler import ResponseApiHandler
 from bound.channel.convert.asyncify import run_async_function
 from bound.channel.param.litellm import infer_openai_data_residency
-from bound.transport.client.wrapper import client
+from bound.surface.legacy.client.wrapper import client
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.transport.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
+from bound.surface.legacy.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
 from bound.channel.api import APIBridge
-from bound.transport.response.identity import ResponseIdentityManager
-from bound.transport.response.api.context import ResponseAPIContext, ContextBuilder
+from bound.surface.legacy.response.identity import ResponseIdentityManager
+from bound.surface.legacy.response.api.context import ResponseAPIContext, ContextBuilder
 
 from phase.gov.proto.gate import uuid
 from watcher.plane.emitter import get_emitter

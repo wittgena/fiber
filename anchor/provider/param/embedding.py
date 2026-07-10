@@ -1,5 +1,5 @@
-# bound.adapter.mapper.param.embedding
-## @lineage: anchor.provider.param.embedding
+# anchor.provider.param.embedding
+## @lineage: bound.adapter.mapper.param.embedding
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
