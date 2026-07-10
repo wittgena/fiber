@@ -3,7 +3,7 @@
 @module: anchor.bind.surface.matrix
 @desc: Distributed Policy Orchestrator & System Bootstrapper
 """
-from bound.surface.bridge.channel.ext import ignite
+from bound.surface.bridge.ext import ignite
 from bound.ingress.receptor import PolymorphicReceptor
 from bound.surface.bridge.memory import BridgeFactory
 

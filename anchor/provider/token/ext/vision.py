@@ -6,7 +6,7 @@ import struct
 from typing import Tuple, Union
 
 from anchor.provider.token.url_utils import SafeHttpClient
-from bound.surface.legacy.transport.factory import get_client
+from bound.surface.bridge.transport.factory import get_client
 from bound.surface.legacy.config.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

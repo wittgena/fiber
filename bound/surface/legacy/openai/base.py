@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 from bound.surface.legacy.config.resolver import config
 from bound.surface.exception import BaseLLMException
 from bound.surface.legacy.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
-from bound.surface.legacy.transport.client import AsyncHTTPClient
+from bound.surface.bridge.transport.client import AsyncHTTPClient
 from bound.ingress.stream.security import get_ssl_configuration
-from xphi.scope.mock.transport.openai import MockOpenAITransport
+from xphi.xor.mock.transport.openai import MockOpenAITransport
 
 
 def _get_client_init_params(cls: type) -> Tuple[str, ...]:

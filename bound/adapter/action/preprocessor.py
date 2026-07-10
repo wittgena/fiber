@@ -29,9 +29,9 @@ from anchor.registry.router.config import ProviderConfigManager
 from anchor.registry.router.locator import get_llm_provider
 from bound.surface.legacy.provider import ProviderTypes
 from bound.surface.legacy.openai.types import AllMessageValues
-from bound.surface.bridge.channel.param.optional import get_optional_params
-from bound.surface.bridge.channel.param.litellm import get_litellm_params
-from bound.surface.bridge.channel.param.validator import (
+from bound.surface.bridge.param.optional import get_optional_params
+from bound.surface.bridge.param.litellm import get_litellm_params
+from bound.surface.bridge.param.validator import (
     validate_and_fix_openai_messages,
     validate_and_fix_openai_tools,
     validate_and_fix_thinking_param,
@@ -321,7 +321,7 @@ class EmbeddingPreprocessor:
         )
 
         ## 파라미터 분리 (LiteLLM legacy params vs Model params)
-        from bound.surface.bridge.channel.param.embedding import get_optional_params_embeddings
+        from bound.surface.bridge.param.embedding import get_optional_params_embeddings
         optional_params = get_optional_params_embeddings(
             model=self.model,
             custom_llm_provider=resolved_provider,

@@ -31,7 +31,7 @@ from typing_extensions import overload
 
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.config.constants import DEFAULT_MAX_RETRIES
-from bound.surface.legacy.response.iterator import BaseModelResponseIterator
+from bound.surface.legacy.openai.response import BaseModelResponseIterator
 from bound.surface.legacy.config.base import BaseConfig
 from bound.surface.exception import BaseLLMException
 from anchor.bind.switch.params import ModelResponse, ModelResponseStream
@@ -40,8 +40,8 @@ from bound.surface.legacy.types import EmbeddingResponse, ImageResponse, LiteLLM
 from bound.surface.legacy.openai.types import *
 
 from bound.watcher.delegator import LogDelegator
-from bound.surface.bridge.channel.convert.response import convert_to_model_response_object
-from bound.surface.bridge.channel.stream.wrapper import CustomStreamWrapper
+from bound.surface.bridge.convert.response import convert_to_model_response_object
+from bound.surface.bridge.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
     BaseOpenAILLM,

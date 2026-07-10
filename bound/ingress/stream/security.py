@@ -17,7 +17,7 @@ from aiohttp import TCPConnector
 from bound.surface.legacy.config.resolver import config
 from bound.surface.exception import Timeout
 from bound.surface.legacy.config.constants import AIOHTTP_SO_KEEPALIVE, AIOHTTP_TCP_KEEPCNT, AIOHTTP_TCP_KEEPIDLE, AIOHTTP_TCP_KEEPINTVL, DEFAULT_SSL_CIPHERS
-from bound.surface.legacy.transport.base import VerifyTypes
+from bound.surface.bridge.transport.base import VerifyTypes
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("http.security")

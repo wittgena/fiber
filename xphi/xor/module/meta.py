@@ -12,7 +12,7 @@ from arch.xor.manifold.sample import Sample
 from arch.xor.manifold.sample import Prediction
 from xphi.xor.module.base import BaseModule
 from xphi.xor.opt.callback.base import with_callbacks
-from xphi.xor.module.executor.runner import ParallelRunner
+from anchor.executor.dsp import DSPRunner
 
 from arch.contract.exp.nest import NestedAttr
 from watcher.plane.emitter import get_emitter
@@ -140,7 +140,7 @@ class Module(BaseModule, metaclass=ProgramMeta):
         straggler_limit: int = 3,
     ) -> list[Sample] | tuple[list[Sample], list[Sample], list[Exception]]:
         exec_pairs = [(self, example.inputs()) for example in examples]
-        parallel_executor = ParallelRunner(
+        parallel_executor = DSPRunner(
             num_threads=num_threads,
             max_errors=max_errors,
             return_failed_examples=return_failed_examples,

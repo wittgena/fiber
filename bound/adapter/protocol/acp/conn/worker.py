@@ -7,7 +7,7 @@ from typing import Any, Protocol
 from enum import Enum
 
 from bound.adapter.protocol.acp.conn.queue import MessageQueue
-from xphi.xor.store.message import MessageStateStore
+from arch.xor.store.message import MessageStateStore
 
 from phase.runtime.task.supervisor import TaskSupervisor
 

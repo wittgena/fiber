@@ -5,7 +5,7 @@ import inspect
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from anchor.cli.adapter.search.reader import ReaderSearcher
+from anchor.bind.adapter.search.reader import ReaderSearcher
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("router.reader")

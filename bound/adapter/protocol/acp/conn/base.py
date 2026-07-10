@@ -18,7 +18,7 @@ from bound.adapter.protocol.acp.conn.queue import MessageQueue, RpcTask, InMemor
 from bound.adapter.protocol.acp.conn.sender import MessageSender, SenderFactory
 from bound.watcher.topos import span_context
 
-from xphi.xor.store.message import MessageStateStore, InMemoryMessageStateStore
+from arch.xor.store.message import MessageStateStore, InMemoryMessageStateStore
 from phase.runtime.task.supervisor import TaskSupervisor
 
 JsonValue = Any

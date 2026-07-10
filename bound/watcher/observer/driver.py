@@ -155,6 +155,101 @@ class DriverObserver:
             except Exception as e:
                 warnings.warn(f"Critical: Rupture projection failed: {e}", RuntimeWarning)
 
+class UsageParserNode(ObserverNode):
+    """
+    [Phase: BOUND]
+    LLM 응답 객체(ModelResponse)로부터 사용량(Token Usage) 정보를 추출하여 
+    위상 상태(TopologyState)의 `parsed_usage` 객체에 바인딩합니다.
+    """
+    def on_flow(self, state: TopologyState) -> None:
+        if not state.response:
+            return
+            
+        usage = getattr(state.response, "usage", None)
+        if not usage:
+            return
+
+        # dict 타입이든 Pydantic/Object 타입이든 안전하게 속성을 가져오는 헬퍼
+        def _get_val(obj: Any, key: str, default: int = 0) -> int:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
+        prompt = _get_val(usage, "prompt_tokens", 0)
+        completion = _get_val(usage, "completion_tokens", 0)
+        
+        # 최신 LLM API(예: OpenAI)의 캐시 및 추론 토큰 세부 정보 추출
+        prompt_details = _get_val(usage, "prompt_tokens_details", {})
+        cache_read = _get_val(prompt_details, "cached_tokens", 0)
+        
+        completion_details = _get_val(usage, "completion_tokens_details", {})
+        reasoning = _get_val(completion_details, "reasoning_tokens", 0)
+
+        # 상태에 결속 (is_meaningful 설정)
+        state.parsed_usage = ParsedUsage(
+            prompt=prompt,
+            completion=completion,
+            cache_read=cache_read,
+            cache_write=0,  # 필요한 경우 매니페스트나 헤더에서 추가 파싱
+            reasoning=reasoning,
+            is_meaningful=(prompt + completion > 0)
+        )
+
+
+class ManifestCostNode(ObserverNode):
+    """
+    [Phase: ANCHOR]
+    추출된 토큰 사용량과 주입된 Cost Manifest(요금표)를 바탕으로 
+    이번 호출의 비용(Cost)을 계산하여 상태에 결속시킵니다.
+    """
+    def __init__(self, cost_manifest: dict | None = None):
+        self.manifest = cost_manifest or {}
+
+    def on_flow(self, state: TopologyState) -> None:
+        if not state.parsed_usage.is_meaningful:
+            return
+            
+        # 매니페스트에서 모델 요금 정보 조회
+        model_rates = self.manifest.get(state.model_name, {})
+        if not model_rates:
+            return
+            
+        # 요금표 (일반적으로 1토큰 당 가격으로 환산되어 있다고 가정)
+        prompt_rate = model_rates.get("prompt_token_cost", 0.0)
+        completion_rate = model_rates.get("completion_token_cost", 0.0)
+        
+        # 캐시 히트 등 복잡한 요금 할인이 있다면 이 부분에서 추가 로직 적용
+        state.cost = (
+            state.parsed_usage.prompt * prompt_rate + 
+            state.parsed_usage.completion * completion_rate
+        )
+
+
+class CentralEmitterNode(ObserverNode):
+    """
+    [Phase: PROJECTION]
+    최종적으로 결속된 상태를 외부(Log, Telemetry, UI)로 투영(Emit)합니다.
+    오류가 발생한(Rupture) 경우의 로깅도 이곳에서 처리됩니다.
+    """
+    def on_flow(self, state: TopologyState) -> None:
+        if state.is_internal_call:
+            return  # 내부 서브콜은 메인 텔레메트리 로그에서 제외
+            
+        emitter.info(
+            f"🟢 [FLOW: SUCCESS] Model: {state.model_name} | "
+            f"Latency: {state.latency_sec:.3f}s | "
+            f"Cost: ${state.cost:.6f} | "
+            f"Tokens: [P:{state.parsed_usage.prompt} / C:{state.parsed_usage.completion} / R:{state.parsed_usage.reasoning}]"
+        )
+
+    def on_rupture(self, error: BaseException, state: TopologyState) -> None:
+        # 에러 발생 시 즉각적으로 로깅
+        emitter.error(
+            f"🔴 [FLOW: RUPTURE] Model: {state.model_name} | "
+            f"Failed after {state.latency_sec:.3f}s | "
+            f"Error: {type(error).__name__} - {str(error)}"
+        )
+
 def create_topological_observer(model_name: str, config: dict, initial_metrics: Metrics | None = None) -> DriverObserver:
     """위상 노드들이 완벽히 결속된 DriverObserver를 반환합니다."""
     observer = DriverObserver(model_name=model_name, config=config, initial_metrics=initial_metrics)

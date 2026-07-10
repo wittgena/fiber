@@ -22,9 +22,9 @@ from bound.surface.exception import Timeout
 from bound.adapter.mapper.exception import exception_type
 from anchor.bind.switch.params import ModelResponse
 from bound.adapter.action.core import async_core_completion
-from bound.surface.legacy.client.wrapper import client
-from bound.surface.bridge.channel.convert.asyncify import run_async_function
-from bound.surface.bridge.channel.stream.wrapper import CustomStreamWrapper
+from bound.surface.action.client.wrapper import client
+from bound.surface.bridge.convert.asyncify import run_async_function
+from bound.surface.bridge.stream.wrapper import CustomStreamWrapper
 from bound.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter

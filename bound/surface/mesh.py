@@ -12,7 +12,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Dict, AsyncGenerator
 
-from bound.surface.bridge.channel.ext import ignite
+from bound.surface.bridge.ext import ignite
 from bound.watcher.audit.gatekeeper import SecurityError
 
 from arch.bound.sandbox.tunnel import TunnelFactory, UniversalFacade

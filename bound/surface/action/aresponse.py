@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from bound.surface.legacy.config.resolver import config
 from bound.adapter.protocol.mcp.handler import MCPHandler
 from bound.adapter.protocol.mcp.parser.payload import MCPPayloadParser
-from bound.surface.bridge.channel.stream.mcp import MCPStreamIterator
+from bound.surface.bridge.stream.mcp import MCPStreamIterator
 from bound.adapter.protocol.mcp.event.tool import create_mcp_list_tools_events
 
 from anchor.provider.param.response import *
@@ -25,16 +25,16 @@ from anchor.registry.router.config import ProviderConfigManager
 from bound.surface.legacy.provider import ProviderTypes
 from anchor.registry.router.locator import get_llm_provider
 
-from bound.surface.bridge.channel.param.litellm import get_litellm_params, infer_openai_data_residency
+from bound.surface.bridge.param.litellm import get_litellm_params, infer_openai_data_residency
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
-from bound.surface.legacy.transport.ws import ResponseWebsocketHandler
-from bound.surface.legacy.client.wrapper import client
-from bound.surface.legacy.response.identity import ResponseIdentityManager
+from bound.surface.bridge.transport.ws import ResponseWebsocketHandler
+from bound.surface.action.client.wrapper import client
+from bound.surface.response.identity import ResponseIdentityManager
 
 from bound.surface.action.response import responses
-from bound.surface.legacy.response.api.response_crud import delete_responses, get_responses, list_input_items, cancel_responses, compact_responses
+from bound.surface.response.api.response_crud import delete_responses, get_responses, list_input_items, cancel_responses, compact_responses
 
-from bound.surface.bridge.channel.stream.iterator import ResponseStreamIterator
+from bound.surface.response.stream.iterator import ResponseStreamIterator
 from xphi.xor.secret.manager import get_secret_str
 
 from phase.gov.proto.gate import uuid

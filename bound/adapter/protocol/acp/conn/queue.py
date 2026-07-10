@@ -1,7 +1,5 @@
 # bound.adapter.protocol.acp.conn.queue
-## @lineage: bound.transport.acp.conn.queue
 from __future__ import annotations
-
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
@@ -12,7 +10,7 @@ from contextlib import suppress
 from typing import Any, Protocol
 from enum import Enum
 
-from xphi.xor.store.message import MessageStateStore
+from arch.xor.store.message import MessageStateStore
 from phase.runtime.task.supervisor import TaskSupervisor
 
 RequestRunner = Callable[[dict[str, Any]], Awaitable[Any]]

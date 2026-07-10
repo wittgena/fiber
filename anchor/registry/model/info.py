@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from anchor.registry.model.cost import lookup_base_model_info
 from anchor.registry.router.config import get_provider_info
 from bound.surface.legacy.types import ModelInfo
-from bound.surface.bridge.channel.param.format import BaseLLMModelInfo, type_to_response_format_param
+from bound.surface.bridge.param.format import BaseLLMModelInfo, type_to_response_format_param
 from bound.surface.legacy.config.resolver import config
 
 """@phase.1: Model Info (Cost, Context, Provider Meta)"""

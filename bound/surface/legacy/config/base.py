@@ -18,11 +18,11 @@ import httpx
 from pydantic import BaseModel
 
 from anchor.bind.switch.params import ModelResponse
-from bound.surface.bridge.channel.param.format import map_developer_role_to_system_role, type_to_response_format_param
+from bound.surface.bridge.param.format import map_developer_role_to_system_role, type_to_response_format_param
 from bound.surface.legacy.config.constants import DEFAULT_MAX_TOKENS, RESPONSE_FORMAT_TOOL_NAME
-from bound.surface.legacy.transport.client import AsyncHTTPClient
-from bound.surface.legacy.transport.sync import HTTPClient
-from bound.surface.bridge.channel.stream.wrapper import CustomStreamWrapper
+from bound.surface.bridge.transport.client import AsyncHTTPClient
+from bound.surface.bridge.transport.sync import HTTPClient
+from bound.surface.bridge.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.openai.types import (
     AllMessageValues,
     ChatCompletionToolChoiceFunctionParam,
