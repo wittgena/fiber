@@ -6,7 +6,7 @@ import inspect
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass
 
-from bound.watcher.metrics.snapshot import Metrics
+from bound.watcher.snapshot.metrics import Metrics
 from bound.watcher.observer.driver import DriverObserver, create_topological_observer
 
 from phase.gov.proto.gate import uuid4

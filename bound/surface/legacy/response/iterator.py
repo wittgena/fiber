@@ -6,7 +6,7 @@ import json
 from abc import abstractmethod
 from typing import List, Optional, Union, cast
 from bound.surface.legacy.types import GenericStreamingChunk
-from bound.channel.stream.wrapper import CustomStreamWrapper
+from bound.surface.bridge.channel.stream.wrapper import CustomStreamWrapper
 from anchor.bind.switch.params import Choices, Delta, ModelResponse, ModelResponseStream, StreamingChoices
 
 def convert_model_response_to_streaming(

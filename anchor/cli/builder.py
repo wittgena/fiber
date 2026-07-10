@@ -1,5 +1,4 @@
 # anchor.cli.builder
-## @lineage: anchor.cli.secure.builder
 import argparse
 import subprocess
 import os
@@ -12,7 +11,7 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 
-from anchor.bind.surface.ignite import ignite, _fetch_agent_intelligence
+from bound.surface.bridge.channel.ext import ignite, _fetch_agent_intelligence
 from xphi.reflect.proxy.pypi.client import PypiMCPClient
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
@@ -23,12 +22,10 @@ REPO = "brane"
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
 
-
 class BuildMode(Enum):
     SECURE_LEGACY = "secure"
     MIGRATE_TOML = "toml"
     MIGRATE_UVLOCK = "uvlock"
-
 
 class ProjectManager:
     """@desc: Handles project dependency file discovery and format conversion"""
@@ -198,7 +195,6 @@ class BuildEngine:
         else:
             self._run(["uv", "pip", "install", "-r", lock_file, "--require-hashes", "--no-deps"])
         log.info("   🎉 Secure installation complete.")
-
 
 class BuilderWorkflow:
     """@desc: Orchestrates the build pipeline sequentially"""

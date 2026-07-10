@@ -5,8 +5,8 @@
 import datetime
 from typing import Any, Optional, Union
 
-from bound.channel.convert.header import process_response_headers
-from bound.channel.api import get_api_base
+from bound.surface.bridge.channel.convert.header import process_response_headers
+from bound.surface.bridge.channel.api import get_api_base
 from bound.adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
 from bound.surface.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
 from bound.surface.legacy.config.constants import LITELLM_DETAILED_TIMING

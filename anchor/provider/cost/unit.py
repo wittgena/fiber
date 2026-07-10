@@ -15,7 +15,7 @@ from bound.surface.legacy.types import (
     Usage,
     DataResidency
 )
-from bound.surface.model.info import get_model_info
+from anchor.registry.model.info import get_model_info
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("cost.unit")

@@ -40,8 +40,8 @@ from bound.surface.legacy.types import EmbeddingResponse, ImageResponse, LiteLLM
 from bound.surface.legacy.openai.types import *
 
 from bound.watcher.delegator import LogDelegator
-from bound.channel.convert.response import convert_to_model_response_object
-from bound.channel.stream.wrapper import CustomStreamWrapper
+from bound.surface.bridge.channel.convert.response import convert_to_model_response_object
+from bound.surface.bridge.channel.stream.wrapper import CustomStreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
     BaseOpenAILLM,

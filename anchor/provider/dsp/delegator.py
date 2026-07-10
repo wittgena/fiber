@@ -10,7 +10,7 @@ from bound.surface.action.completion import completion, acompletion
 from bound.surface.action.response import responses
 from bound.surface.action.aresponse import aresponses
 from xphi.scope.dsp.context import runtime
-from bound.channel.stream.chunk.builder import stream_chunk_builder
+from bound.surface.bridge.channel.stream.chunk.builder import stream_chunk_builder
 
 from watcher.plane.emitter import get_emitter
 

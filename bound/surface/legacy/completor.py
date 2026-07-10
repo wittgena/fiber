@@ -12,7 +12,7 @@ from bound.surface.legacy.provider import ProviderTypes
 from bound.surface.legacy.transport.client import AsyncHTTPClient
 from bound.surface.legacy.transport.sync import HTTPClient
 from bound.surface.legacy.transport.factory import get_async_client, get_http_client
-from bound.channel.stream.wrapper import CustomStreamWrapper
+from bound.surface.bridge.channel.stream.wrapper import CustomStreamWrapper
 
 from watcher.plane.emitter import get_emitter
 

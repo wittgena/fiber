@@ -21,8 +21,8 @@ from bound.surface.legacy.openai.types import (
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
 )
-from bound.channel.param.litellm import infer_openai_data_residency
-from bound.channel.api import APIBridge
+from bound.surface.bridge.channel.param.litellm import infer_openai_data_residency
+from bound.surface.bridge.channel.api import APIBridge
 from bound.surface.legacy.response.api.handler import ResponseApiHandler
 from bound.surface.legacy.client.wrapper import client
 from bound.surface.legacy.response.identity import ResponseIdentityManager

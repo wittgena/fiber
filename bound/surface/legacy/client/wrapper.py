@@ -18,8 +18,8 @@ from bound.surface.legacy.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_
 from bound.surface.legacy.config.resolver import config
 from bound.surface.legacy.client.executor import executor
 from bound.surface.legacy.client.logging import GLOBAL_LOGGING_WORKER
-from bound.channel.rule import Rules
-from bound.channel.stream.chunk.builder import stream_chunk_builder
+from bound.surface.bridge.channel.rule import Rules
+from bound.surface.bridge.channel.stream.chunk.builder import stream_chunk_builder
 from bound.watcher.delegator import LogDelegator
 from xphi.xor.secret.credential import CredentialAccessor
 

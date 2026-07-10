@@ -17,7 +17,7 @@ from bound.surface.legacy.openai.types import ResponseInputParam, ResponsesAPIRe
 from bound.surface.legacy.transport.client import AsyncHTTPClient
 from bound.surface.legacy.transport.sync import HTTPClient
 from bound.surface.legacy.transport.factory import get_client
-from bound.channel.stream.iterator import ResponseStreamIterator, MockResponsesAPIStreamingIterator, ResponsesAPIStreamingIterator, SyncResponsesAPIStreamingIterator
+from bound.surface.bridge.channel.stream.iterator import ResponseStreamIterator, MockResponsesAPIStreamingIterator, ResponsesAPIStreamingIterator, SyncResponsesAPIStreamingIterator
 from bound.surface.legacy.response.api.context import ResponseAPIContext
 
 from watcher.plane.emitter import get_emitter 

@@ -41,12 +41,12 @@ from anchor.registry.router.locator import get_llm_provider
 
 from bound.adapter.protocol.mcp.handler import MCPHandler
 from bound.surface.legacy.response.api.handler import ResponseApiHandler
-from bound.channel.convert.asyncify import run_async_function
-from bound.channel.param.litellm import infer_openai_data_residency
+from bound.surface.bridge.channel.convert.asyncify import run_async_function
+from bound.surface.bridge.channel.param.litellm import infer_openai_data_residency
 from bound.surface.legacy.client.wrapper import client
 from bound.surface.legacy.config.response import BaseResponsesAPIConfig
 from bound.surface.legacy.response.template import update_responses_input_with_model_file_ids, update_responses_tools_with_model_file_ids
-from bound.channel.api import APIBridge
+from bound.surface.bridge.channel.api import APIBridge
 from bound.surface.legacy.response.identity import ResponseIdentityManager
 from bound.surface.legacy.response.api.context import ResponseAPIContext, ContextBuilder
 
