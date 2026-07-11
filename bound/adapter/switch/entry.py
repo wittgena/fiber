@@ -19,10 +19,10 @@ if LITELLM_CONVERT_SWITCH:
 
 if not LITELLM_CONVERT_SWITCH:
     try:
-        from bound.surface.action.completion import completion, acompletion
-        from bound.surface.action.embedding import embedding, aembedding
-        from bound.surface.action.response import responses
-        from bound.surface.action.response import aresponses
+        from bound.surface.client.action.completion import completion, acompletion
+        from bound.surface.client.action.embedding import embedding, aembedding
+        from bound.surface.client.action.response import responses
+        from bound.surface.client.action.response import aresponses
     except ImportError as e:
         raise ImportError(
             f"Failed to load execution boundaries from internal bound modules. "

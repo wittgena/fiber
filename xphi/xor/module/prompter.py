@@ -6,8 +6,8 @@ from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
 from typeguard import TypeCheckError, check_type
 
-from bound.surface.dsp.base import BaseLM
-from bound.surface.dsp.instance import DSPInstance
+from bound.surface.client.dsp.base import BaseLM
+from bound.surface.client.dsp.instance import DSPInstance
 from bound.adapter.dsp.signature import SignatureAdapter
 
 from xphi.scope.dsp.context import runtime

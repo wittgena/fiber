@@ -1,11 +1,4 @@
 # bound.adapter.mapper.traverser
-## @lineage: bound.bridge.channel.mapper.traverser
-## @lineage: bound.channel.bridge.mapper.traverser
-## @lineage: bound.surface.mapper.traverser
-## @lineage: anchor.surface.mapper.traverser
-## @lineage: anchor.provider.mapper.traverser
-## @lineage: bound.adapter.provider.state.traverser
-## @lineage: bound.adapter.provider.state.traverse_rule
 import os
 import json
 import asyncio

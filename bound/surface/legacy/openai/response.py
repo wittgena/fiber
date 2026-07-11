@@ -4,7 +4,7 @@ import json
 from abc import abstractmethod
 from typing import List, Optional, Union, cast
 from bound.surface.legacy.types import GenericStreamingChunk
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.transport.stream.wrapper import StreamWrapper
 from bound.adapter.switch.params import Choices, Delta, ModelResponse, ModelResponseStream, StreamingChoices
 
 def convert_model_response_to_streaming(
@@ -63,7 +63,7 @@ class BaseModelResponseIterator:
     @staticmethod
     def _string_to_dict_parser(str_line: str) -> Optional[dict]:
         stripped_json_chunk: Optional[dict] = None
-        stripped_chunk = CustomStreamWrapper._strip_sse_data_from_chunk(
+        stripped_chunk = StreamWrapper._strip_sse_data_from_chunk(
             str_line
         )
         try:

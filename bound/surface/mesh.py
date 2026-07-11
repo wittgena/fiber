@@ -12,8 +12,8 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Dict, AsyncGenerator
 
-from bound.surface.bridge.ext import ignite
-from bound.watcher.audit.gatekeeper import SecurityError
+from bound.adapter.bridge.ext import ignite
+from xphi.watcher.audit.gatekeeper import SecurityError
 
 from arch.bound.sandbox.tunnel import TunnelFactory, UniversalFacade
 from phase.runtime.node import NodeRuntime
@@ -174,7 +174,7 @@ class GatewayOrchestrator:
     async def bootstrap(cls) -> NodeRuntime:
         # 지연 임포트(Lazy Import)로 순환 참조 방지
         from bound.ingress.receptor import PolymorphicReceptor
-        from bound.surface.bridge.memory import BridgeFactory
+        from bound.adapter.bridge.memory import BridgeFactory
         
         topology = os.getenv("GATEWAY_TOPOLOGY", "EMBEDDED_BYPASS")
         log.info(f"[Orchestrator] Bootstrapping Unified Membrane in {topology} mode.")

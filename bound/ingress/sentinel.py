@@ -9,7 +9,7 @@ import asyncio
 import random
 from typing import Dict, Any, Callable, List
 from bound.ingress.router import IngressRouter
-from bound.watcher.topos import flow_scope
+from xphi.watcher.topos import flow_scope
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("chaos.sentinel", phase="SIMULATION")

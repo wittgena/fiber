@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.registry.model.config.resolver import config
-from bound.surface.bridge.param.format import type_to_response_format_param
+from bound.surface.client.param.format import type_to_response_format_param
 from bound.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
 from bound.transport.stream.api.identity import IdentityRouter
 from watcher.plane.emitter import get_emitter
@@ -91,7 +91,7 @@ class RequestBuilder:
         special_params = params.pop("kwargs", {})
         additional_drop_params = params.pop("additional_drop_params", None)
 
-        from bound.surface.bridge.param.optional import PreProcessNonDefaultParams
+        from bound.surface.client.param.optional import PreProcessNonDefaultParams
 
         non_default = PreProcessNonDefaultParams.base_pre_process_non_default_params(
             passed_params=params, 

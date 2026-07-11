@@ -1,19 +1,4 @@
 # bound.transport.stream.chunk.processor
-## @lineage: bound.surface.bridge.stream.chunk.processor
-## @lineage: bound.surface.bridge.channel.stream.chunk.processor
-## @lineage: bound.channel.stream.chunk.processor
-## @lineage: bound.bridge.transport.stream.chunk.processor
-## @lineage: bound.broker.transport.stream.chunk.processor
-## @lineage: bound.channel.transport.stream.chunk.processor
-## @lineage: bound.bridge.stream.chunk.processor
-## @lineage: bound.client.handler.stream.chunk.processor
-## @lineage: bound.handler.support.stream.chunk.processor
-## @lineage: bound.channel.handler.support.stream.chunk.processor
-## @lineage: bound.handler.stream.chunk.processor
-## @lineage: channel.bound.stream.chunk.processor
-## @lineage: channel.bound.handler.chunk.processor
-## @lineage: gate.bound.handler.chunk.processor
-## @lineage: gate.bound.stream.chunk_processor
 import base64
 import time
 from typing_extensions import TypedDict
@@ -101,10 +86,6 @@ class ChunkProcessor:
 
     @staticmethod
     def _get_chunk_id(chunks: List[Dict[str, Any]]) -> str:
-        """
-        Chunks:
-        [{"id": ""}, {"id": "1"}, {"id": "1"}]
-        """
         for chunk in chunks:
             if chunk.get("id"):
                 return chunk["id"]
@@ -114,19 +95,10 @@ class ChunkProcessor:
     def _get_model_from_chunks(
         chunks: List[Dict[str, Any]], first_chunk_model: str
     ) -> str:
-        """
-        Get the actual model from chunks, preferring a model that differs from the first chunk.
-
-        For Azure Model Router, the first chunk may have the request model (e.g., 'azure-model-router')
-        while subsequent chunks have the actual model (e.g., 'gpt-4.1-nano-2025-04-14').
-        This method finds the actual model for accurate cost calculation.
-        """
-        # Look for a model in chunks that differs from the first chunk's model
         for chunk in chunks:
             chunk_model = chunk.get("model")
             if chunk_model and chunk_model != first_chunk_model:
                 return chunk_model
-        # Fall back to first chunk's model if no different model found
         return first_chunk_model
 
     def build_base_response(self, chunks: List[Dict[str, Any]]) -> ModelResponse:
@@ -740,15 +712,6 @@ class ChunkProcessor:
 
 
 def concatenate_base64_list(base64_strings: List[str]) -> str:
-    """
-    Concatenates a list of base64-encoded strings.
-
-    Args:
-        base64_strings (List[str]): A list of base64 strings to concatenate.
-
-    Returns:
-        str: The concatenated result as a base64-encoded string.
-    """
     # Decode each base64 string and collect the resulting bytes
     combined_bytes = b"".join(base64.b64decode(b64_str) for b64_str in base64_strings)
 

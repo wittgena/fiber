@@ -19,14 +19,14 @@ from bound.surface.legacy.openai.types import ResponseInputParam, ResponsesAPIRe
 
 from bound.transport.client import AsyncHTTPClient
 from bound.transport.factory import get_client
-from bound.transport.stream.iterator import ResponseStreamIterator
-from bound.surface.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from bound.transport.stream.iterator.response import ResponseStreamIterator
+from bound.adapter.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from bound.transport.stream.api.context import ResponseAPIContext, ContextBuilder, ExecutionContext, ProviderContext, LLMPayloadContext
 from bound.transport.stream.api.identity import IdentityRouter
 from anchor.registry.model.api.base import APIBridge
-from bound.surface.bridge.param.litellm import infer_openai_data_residency
-from bound.surface.action.client.wrapper import client
+from bound.surface.client.param.litellm import infer_openai_data_residency
+from bound.surface.client.action.client.wrapper import client
 
 from watcher.plane.emitter import get_emitter 
 

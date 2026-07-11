@@ -39,9 +39,9 @@ from bound.surface.legacy.info import ProviderTypes
 from bound.surface.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from bound.surface.legacy.openai.types import *
 
-from bound.watcher.delegator import LogDelegator
+from xphi.watcher.delegator import LogDelegator
 from bound.transport.convert.response import convert_to_model_response_object
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.transport.stream.wrapper import StreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
     BaseOpenAILLM,

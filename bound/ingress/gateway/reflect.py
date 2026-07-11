@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse, Response
 
 from anchor.registry.proxy.setting import gateway_settings, pypi_settings
-from xphi.reflect.server.auth.token.introspect import IntrospectionTokenVerifier
+from bound.reflect.server.auth.token.introspect import IntrospectionTokenVerifier
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("proxy.gateway")

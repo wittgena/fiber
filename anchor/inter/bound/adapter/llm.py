@@ -19,9 +19,9 @@ from anchor.inter.bound.base.llms.types import ChatMessage, MessageRole
 from anchor.inter.bound.adapter.base import BaseProviderAdapter
 from bound.adapter.mapper.state import StateMapper
 
-from bound.surface.action.process.pre import CompletionContext
+from bound.surface.client.action.process.pre import CompletionContext
 from anchor.registry.router.llm import LLMRouter, TopologyMissingError
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.transport.stream.wrapper import StreamWrapper
 
 from phase.gov.proto.gate import uuid4 
 from phase.bind.resolver import find_current_self, get_invoker
@@ -113,7 +113,7 @@ class InterLLMAdapter(BaseProviderAdapter):
                         yield chunk.raw
 
             log.debug(f"[InterLLM-{req_id}] 🔄 Returning CustomStreamWrapper")
-            return CustomStreamWrapper(
+            return StreamWrapper(
                 completion_stream=stream_generator(), 
                 model=ctx.model, 
                 custom_llm_provider=ctx.custom_llm_provider, 

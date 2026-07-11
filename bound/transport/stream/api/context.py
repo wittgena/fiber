@@ -19,7 +19,7 @@ from bound.surface.legacy.openai.types import (
 )
 from bound.transport.client import AsyncHTTPClient
 from bound.transport.sync import HTTPClient
-from bound.watcher.delegator import LogDelegator
+from xphi.watcher.delegator import LogDelegator
 
 
 @dataclass

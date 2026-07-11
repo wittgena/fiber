@@ -18,7 +18,7 @@ import bound.surface.legacy.openai.types as openai_types
 from anchor.registry.model.config.resolver import config
 from anchor.executor.legacy import executor
 from bound.transport.stream.api.identity import IdentityRouter
-from bound.watcher.delegator import LogDelegator
+from xphi.watcher.delegator import LogDelegator
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.registry.model.config.constants import REALTIME_WEBSOCKET_MAX_MESSAGE_SIZE_BYTES
 from bound.ingress.stream.security import get_ssl_configuration

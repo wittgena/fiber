@@ -12,7 +12,7 @@ from bound.surface.legacy.info import ProviderTypes
 from bound.transport.client import AsyncHTTPClient
 from bound.transport.sync import HTTPClient
 from bound.transport.factory import get_async_client, get_http_client
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.transport.stream.wrapper import StreamWrapper
 
 from watcher.plane.emitter import get_emitter
 
@@ -152,7 +152,7 @@ class CompletionHandler:
                 
             response = await self._execute_http_call(client.post, ctx)
             log.debug("[AsyncFlow] 기본 Stream Wrapper 생성을 완료했습니다.")
-            return CustomStreamWrapper(
+            return StreamWrapper(
                 completion_stream=ctx.provider_config.get_model_response_iterator(
                     streaming_response=response.aiter_lines(), sync_stream=False
                 ),
@@ -192,7 +192,7 @@ class CompletionHandler:
                 
             response = self._execute_http_call(client.post, ctx)
             log.debug("[SyncFlow] 기본 Stream Wrapper 생성을 완료했습니다.")
-            return CustomStreamWrapper(
+            return StreamWrapper(
                 completion_stream=ctx.provider_config.get_model_response_iterator(
                     streaming_response=response.iter_lines(), sync_stream=True, json_mode=ctx.json_mode
                 ),

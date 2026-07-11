@@ -9,7 +9,7 @@ and bridges validated logic streams into the core ledger matrix.
 """
 from bound.ingress.stream.transducer import SpecValidator
 from bound.adapter.ledger import LedgerBridge
-from bound.watcher.topos import unified_flow_span
+from xphi.watcher.topos import unified_flow_span
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("ingress.router")

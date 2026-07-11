@@ -1,5 +1,4 @@
 # bound.adapter.dsp.thch
-## @lineage: anchor.provider.dsp.adapter.thch
 import inspect
 from threading import Lock
 from typing import Any, Annotated, get_args, get_origin
@@ -14,20 +13,17 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scope.thch")
 
-# Thread-safe 캐시 저장소
 _SIGNATURE_CACHE: dict[type[BaseModel], type[Signature]] = {}
 _CACHE_LOCK = Lock()
 
 def _compile_to_sign(proto_cls: type[BaseModel]) -> type[Signature]:
     """[런타임 형질 변환기] Pydantic BaseModel -> DSPy Signature"""
-    # 1. 캐시 확인 (원본 클래스 변형 방지)
     with _CACHE_LOCK:
         if proto_cls in _SIGNATURE_CACHE:
             return _SIGNATURE_CACHE[proto_cls]
 
     meta_fields = {}
     
-    # 2. Pydantic V2 필드 및 Annotated 분석
     for field_name, field_info in proto_cls.model_fields.items():
         desc = field_info.description or ""
         field_type_hint = proto_cls.__annotations__.get(field_name)

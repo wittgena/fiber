@@ -13,8 +13,8 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 
-from bound.surface.bridge.ext import ignite, _fetch_agent_intelligence
-from xphi.reflect.proxy.pypi.client import PypiMCPClient
+from bound.adapter.bridge.ext import ignite, _fetch_agent_intelligence
+from bound.reflect.proxy.pypi.client import PypiMCPClient
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 
@@ -94,7 +94,7 @@ class SecurityWarden:
         """
         try:
             from xphi.xor.auth.credentials import CredentialStore
-            from xphi.reflect.server.auth.client.provider import ClientCredentialsOAuthProvider
+            from bound.reflect.server.auth.client.provider import ClientCredentialsOAuthProvider
             
             store = CredentialStore()
             mcp_storage = store.as_mcp_storage("brane-builder")
@@ -244,7 +244,7 @@ def _ensure_proxy_active(registry_url: str) -> PypiMCPClient:
 
     log.info(f"🚀 [Proxy] Auto-booting internal MCP Proxy on port {port}...")
     try:
-        import xphi.reflect.proxy.pypi.server as proxy_server
+        import bound.reflect.proxy.pypi.server as proxy_server
         client = PypiMCPClient(sys.executable, proxy_server.__name__)
     except Exception as e:
         log.error(f"Failed to instantiate proxy client: {e}")

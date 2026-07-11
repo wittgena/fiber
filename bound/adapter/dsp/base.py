@@ -5,7 +5,7 @@
 from typing import Any, get_origin
 import json_repair
 
-from bound.surface.dsp.base import BaseLM
+from bound.surface.client.dsp.base import BaseLM
 
 from xphi.xor.opt.manifold.model.basetype import Type
 from xphi.xor.opt.manifold.model.basetype import split_message_content_for_custom_types

@@ -30,7 +30,7 @@ from bound.surface.legacy.info import ProviderTypes
 from bound.surface.legacy.types import EmbeddingResponse
 from bound.transport.convert.response import convert_to_model_response_object
 from anchor.registry.router.config import ProviderConfigManager
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.transport.stream.wrapper import StreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
     BaseOpenAILLM,
@@ -216,7 +216,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
     # ------------------------------------------------------------------
     # 2. 메인 실행 (동기 / 비동기)
     # ------------------------------------------------------------------
-    def completion(self, ctx: OpenAIContext, model_response: ModelResponse) -> Union[ModelResponse, CustomStreamWrapper]:
+    def completion(self, ctx: OpenAIContext, model_response: ModelResponse) -> Union[ModelResponse, StreamWrapper]:
         """동기(Sync) 처리 엔트리 포인트"""
         client = self._get_openai_client(
             is_async=False, api_key=ctx.api_key, api_base=ctx.api_base, 
@@ -240,7 +240,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
                     continue
                 raise self._format_error(e)
 
-    async def acompletion(self, ctx: OpenAIContext, model_response: ModelResponse) -> Union[ModelResponse, CustomStreamWrapper]:
+    async def acompletion(self, ctx: OpenAIContext, model_response: ModelResponse) -> Union[ModelResponse, StreamWrapper]:
         """비동기(Async) 처리 엔트리 포인트"""
         client = self._get_openai_client(
             is_async=True, api_key=ctx.api_key, api_base=ctx.api_base, 
@@ -296,7 +296,7 @@ class OpenAIChatCompletion(BaseLLM, BaseOpenAILLM):
     def _process_response(self, ctx: OpenAIContext, model_response: ModelResponse, headers: dict, response: Any):
         """스트림과 논스트림 응답을 통일성 있게 포맷팅하여 반환"""
         if ctx.stream:
-            return CustomStreamWrapper(
+            return StreamWrapper(
                 completion_stream=response,
                 model=ctx.model,
                 custom_llm_provider="openai",
