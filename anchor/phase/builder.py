@@ -1,6 +1,5 @@
-# anchor.builder
-## @lineage: anchor.bind.builder
-## @lineage: anchor.cli.builder
+# anchor.phase.builder
+## @lineage: anchor.builder
 import argparse
 import subprocess
 import os
@@ -13,7 +12,7 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 
-from bound.bridge.ext import ignite, _fetch_agent_intelligence
+from anchor.phase.bridge.ext import ignite, _fetch_agent_intelligence
 from bound.reflect.proxy.pypi.client import PypiMCPClient
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter

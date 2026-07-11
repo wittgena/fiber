@@ -1,16 +1,15 @@
 # bound.ingress.proxy.gatekeeper
-## @lineage: xphi.proxy.gatekeeper
 import sys
 import base64
 import json
 import time
 import asyncio
-from bound.adapter.ledger import LedgerBridge
+from bound.adapter.compiler import CompilerBridge
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("proxy.gatekeeper")
 
-bridge = LedgerBridge()
+bridge = CompilerBridge()
 quarantine_db = {}  
 auth_policy = {"strict_mode": True, "expected_token": "temp_oidc_token_12345"}
 

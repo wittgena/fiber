@@ -1,7 +1,6 @@
-# bound.ingress.receptor
-## @lineage: anchor.bind.surface.ingress
+# anchor.phase.ingress.receptor
+## @lineage: bound.ingress.receptor
 """
-@module: anchor.bind.surface.ingress
 @desc: Polymorphic Ingress Boundary (Data Plane Receptor).
        Binds external proxy traffic into Brane's internal routing mechanisms.
 """
@@ -14,7 +13,7 @@ from arch.proto.event.psi import PsiEvent, PsiCarrier
 from phase.runtime.node import NodeRuntime
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("surface.ingress", phase="anchor")
+log = get_emitter("ingress.receptor", phase="anchor")
 
 class PolymorphicReceptor:
     """
@@ -55,4 +54,5 @@ class PolymorphicReceptor:
             log.info("[Receptor] Local Daemon port detected. Starting IPC Socket...")
             await asyncio.sleep(36000)
         else:
-            log.info("[Receptor] Embedded Bypass mode. Listening directly via method calls.")
+            log.info("[Receptor] Embedded Bypass mode. Listening directly via method calls. (Holding loop)")
+            await asyncio.Event().wait()

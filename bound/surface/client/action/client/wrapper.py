@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from functools import wraps
 from weakref import WeakKeyDictionary
 
-from anchor.executor.legacy import executor
+from anchor.phase.executor.legacy import executor
 
 from bound.surface.legacy.types import CallTypes
 from anchor.registry.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY

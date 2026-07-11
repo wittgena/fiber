@@ -8,7 +8,7 @@ Intercepts macroscopic network traffic, enforces strict spec invariants,
 and bridges validated logic streams into the core ledger matrix.
 """
 from bound.ingress.stream.transducer import SpecValidator
-from bound.adapter.ledger import LedgerBridge
+from bound.adapter.compiler import CompilerBridge
 from xphi.watcher.topos import unified_flow_span
 from watcher.plane.emitter import get_emitter
 
@@ -19,7 +19,7 @@ class IngressRouter:
     @desc: Orchestrates transduction and topological sealing.
     Maintains clean boundaries by delegating structural adaptation to the Bridge.
     """
-    def __init__(self, bridge: LedgerBridge):
+    def __init__(self, bridge: CompilerBridge):
         self.validator = SpecValidator()
         self.bridge = bridge
 

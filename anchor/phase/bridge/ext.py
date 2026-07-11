@@ -1,8 +1,4 @@
-# bound.bridge.ext
-## @lineage: bound.adapter.bridge.ext
-## @lineage: bound.surface.bridge.ext
-## @lineage: bound.surface.bridge.channel.ext
-## @lineage: anchor.bind.surface.ignite
+# anchor.phase.bridge.ext
 import sys
 import json
 import os

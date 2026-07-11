@@ -12,7 +12,7 @@ from arch.xor.manifold.sample import Sample
 from arch.xor.manifold.sample import Prediction
 from xphi.xor.module.base import BaseModule
 from xphi.xor.opt.callback.base import with_callbacks
-from anchor.executor.dsp import DSPRunner
+from anchor.phase.executor.dsp import DSPRunner
 
 from arch.contract.exp.nest import NestedAttr
 from watcher.plane.emitter import get_emitter

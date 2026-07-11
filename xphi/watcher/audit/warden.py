@@ -1,18 +1,24 @@
-# xphi.watcher.audit.warden
-## @lineage: bound.watcher.audit.warden
 """
 @desc: 
 - CPython Runtime Audit Hook (PEP 578) based outbound control module.
-- Monitors runtime events based on externally injected security policies and permanently records them to the immutable Merkle-backed store
+- Monitors runtime events based on externally injected security policies and 
+  permanently records them to the immutable Merkle-backed store.
 """
 import sys
 import os
+import threading
 from typing import Set, Tuple, Any, Dict
-from watcher.plane.emitter import get_emitter
+
+from watcher.kernel.compiler import ToposState
 from watcher.kernel.store import KernelStore, ToposBlob
-from watcher.kernel.ledger import ToposState
+from watcher.plane.emitter import get_emitter
 
 log = get_emitter("audit.warden", phase="KERNEL")
+
+class WardenTLS(threading.local):
+    """@desc: Thread-local storage to safely track audit hook reentrancy state."""
+    def __init__(self):
+        self.in_hook = False
 
 class AuditWarden:
     """
@@ -28,11 +34,14 @@ class AuditWarden:
     }
     _is_active: bool = False
     _store: KernelStore = None 
+    
+    ## 💡 [CRITICAL FIX] Thread-local storage to prevent infinite recursion
+    _tls = WardenTLS()
 
     @classmethod
     def inject_policies(cls, policies: Dict[str, list], overwrite: bool = False) -> None:
         """
-        @desc: Injects security policies from external sources (e.g., Agent, Config, Bootstrap)
+        @desc: Injects security policies from external sources (e.g., Agent, Config, Bootstrap).
         - overwrite=True: Completely replaces existing policies.
         - overwrite=False: Merges with existing policies.
         @injection.phase: Pre-flight or Dynamic Runtime
@@ -61,7 +70,7 @@ class AuditWarden:
         """
         @desc: Records detected global security events directly to the Merkle DAG Store.
                Acts as an Out-of-Band (OOB) system anomaly log.
-        @action: Synchronous Blob generation and storage
+        @action: Synchronous Blob generation and storage (Supports Consensus FOLLOWER bypass)
         """
         if not cls._store:
             return
@@ -73,63 +82,77 @@ class AuditWarden:
             tension=tension_penalty, 
             details=details
         )
-        blob_hash = cls._store.save_transition(blob)
-        log.debug(f"[Warden: Ledger] System anomaly recorded. Blob Hash: {blob_hash[:8]}")
+        
+        try:
+            blob_hash = cls._store.save_transition(blob)
+            log.debug(f"[Warden: Ledger] System anomaly recorded. Blob Hash: {blob_hash[:8]}")
+        except Exception as e:
+            log.error(f"[Warden: Ledger] Failed to record anomaly to store: {e}")
 
     @classmethod
     def _audit_hook(cls, event: str, args: Tuple[Any, ...]) -> None:
         """
         @desc: Core callback hook triggered by CPython internal events.
-               WARNING: Avoid heavy logic or creating new sockets here to prevent infinite recursion.
         @guard.layer: CPython Interpreter Level
         """
-        ## @guard.check: Socket Connection Control
-        if event == "socket.connect":
-            if len(args) < 2:
-                return
-            sock, address = args[:2]
-            host = cls._resolve_host(address)
+        # Prevent reentrancy: Ignore events triggered by the Warden itself (e.g., Redis Sync Client)
+        if cls._tls.in_hook:
+            return
 
-            ## @guard.check: Whitelist validation based on injected policies
-            if host not in cls._policies["allowed_hosts"]:
-                port = address[1] if isinstance(address, tuple) and len(address) > 1 else "Unknown"
-                strict_mode = os.environ.get("BRANE_AIRGAP_MODE", "0") == "1"
+        cls._tls.in_hook = True
+        try:
+            ## @guard.check: Socket Connection Control
+            if event == "socket.connect":
+                if len(args) < 2:
+                    return
+                sock, address = args[:2]
+                host = cls._resolve_host(address)
 
-                if strict_mode:
-                    ## @action: Fail-Closed (Strict Mode Enforcement)
-                    msg = f"Unauthorized external network call blocked: {host}:{port}"
-                    log.critical(f"[WARDEN: BLOCK] {msg}")
-                    cls._record_to_store("egress.block", -1.0, msg)
-                    raise PermissionError(f"[Brane Warden Air-Gap] Connection to {host}:{port} is blocked.")
-                else:
-                    ## @action: Audit Logging & Telemetry (Audit Mode)
-                    msg = f"Third-party external communication detected: {host}:{port}"
-                    log.warning(f"[WARDEN: AUDIT] {msg}")
-                    cls._record_to_store("egress.audit", -0.2, msg)
+                ## @guard.check: Whitelist validation based on injected policies
+                if host not in cls._policies["allowed_hosts"]:
+                    port = address[1] if isinstance(address, tuple) and len(address) > 1 else "Unknown"
+                    strict_mode = os.environ.get("BRANE_AIRGAP_MODE", "0") == "1"
+
+                    if strict_mode:
+                        ## @action: Fail-Closed (Strict Mode Enforcement)
+                        msg = f"Unauthorized external network call blocked: {host}:{port}"
+                        log.critical(f"[WARDEN: BLOCK] {msg}")
+                        cls._record_to_store("egress.block", -1.0, msg)
+                        raise PermissionError(f"[Brane Warden Air-Gap] Connection to {host}:{port} is blocked.")
+                    else:
+                        ## @action: Audit Logging & Telemetry (Audit Mode)
+                        msg = f"Third-party external communication detected: {host}:{port}"
+                        log.warning(f"[WARDEN: AUDIT] {msg}")
+                        cls._record_to_store("egress.audit", -0.2, msg)
+                        
+                        ## @guard.check: High-risk restricted domain inspection
+                        if any(domain in host for domain in cls._policies["restricted_domains"]):
+                            alert_msg = f"Direct connection attempt to restricted domain ({host}). Check proxy integration."
+                            log.error(f"[WARDEN: ALERT] {alert_msg}")
+                            cls._record_to_store("egress.alert", -0.5, alert_msg)
+
+            ## @guard.check: High-level HTTP request monitoring (urllib)
+            elif event == "urllib.Request":
+                # 💡 [Robustness] Safely cast to string to prevent AttributeError on malformed requests
+                url = str(args[0]) if args else "Unknown"
+                if not any(url.startswith(f"http://{h}") or url.startswith(f"https://{h}") for h in cls._policies["allowed_hosts"]):
+                    msg = f"Outbound HTTP request detected: {url}"
+                    log.info(f"[WARDEN: HTTP] {msg}")
+                    cls._record_to_store("http.audit", -0.1, msg)
+
+            ## @guard.check: Subprocess spawning and shell escape monitoring
+            elif event in ("os.system", "subprocess.Popen"):
+                cmd = str(args[0]) if args else "Unknown"
+                msg = f"Subprocess execution detected: {cmd}"
+                log.debug(f"[WARDEN: OS] {msg}")
+                
+                ## @guard.check: Dangerous command policy enforcement
+                if any(d in cmd for d in cls._policies["dangerous_cmds"]):
+                    cls._record_to_store("os.shell_escape_alert", -0.8, msg)
                     
-                    ## @guard.check: High-risk restricted domain inspection
-                    if any(domain in host for domain in cls._policies["restricted_domains"]):
-                        alert_msg = f"Direct connection attempt to restricted domain ({host}). Check Fiber proxy integration."
-                        log.error(f"[WARDEN: ALERT] {alert_msg}")
-                        cls._record_to_store("egress.alert", -0.5, alert_msg)
-
-        ## @guard.check: High-level HTTP request monitoring (urllib)
-        elif event == "urllib.Request":
-            url = args[0] if args else "Unknown"
-            if not any(url.startswith(f"http://{h}") or url.startswith(f"https://{h}") for h in cls._policies["allowed_hosts"]):
-                msg = f"Outbound HTTP request detected: {url}"
-                log.info(f"[WARDEN: HTTP] {msg}")
-                cls._record_to_store("http.audit", -0.1, msg)
-
-        ## @guard.check: Subprocess spawning and shell escape monitoring
-        elif event in ("os.system", "subprocess.Popen"):
-            cmd = args[0] if args else "Unknown"
-            msg = f"Subprocess execution detected: {cmd}"
-            log.debug(f"[WARDEN: OS] {msg}")
-            
-            ## @guard.check: Dangerous command policy enforcement
-            if any(d in str(cmd) for d in cls._policies["dangerous_cmds"]):
-                cls._record_to_store("os.shell_escape_alert", -0.8, msg)
+        finally:
+            # Release reentrancy guard regardless of exceptions
+            cls._tls.in_hook = False
 
     @classmethod
     def install(cls, initial_policies: Dict[str, list] = None, store_instance: KernelStore = None) -> None:

@@ -16,7 +16,7 @@ from websockets.asyncio.client import ClientConnection
 from bound.surface.legacy.param.legacy import GenericLiteLLMParams
 import bound.surface.legacy.openai.types as openai_types
 from anchor.registry.model.config.resolver import config
-from anchor.executor.legacy import executor
+from anchor.phase.executor.legacy import executor
 from bound.bridge.response.stream.identity import IdentityRouter
 from xphi.watcher.delegator import LogDelegator
 from anchor.registry.model.config.response import BaseResponsesAPIConfig

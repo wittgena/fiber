@@ -1,8 +1,4 @@
 # bound.reflect.proxy.pypi.rule.projector
-## @lineage: xphi.reflect.proxy.pypi.rule.projector
-## @lineage: xphi.proxy.rule.projector
-## @lineage: bound.watcher.server.rule.projector
-## @lineage: xphi.proxy.pypi.projector
 import sys
 import re
 import json
@@ -13,7 +9,7 @@ from dataclasses import dataclass
 from aiohttp import web, ClientSession
 from pydantic import BaseModel, Field
 
-from bound.adapter.ledger import LedgerBridge
+from bound.adapter.compiler import CompilerBridge
 from bound.ingress.proxy.gatekeeper import GatekeeperRejection
 from watcher.plane.emitter import get_emitter
 
@@ -124,4 +120,4 @@ class MetaProjector:
             )
             raise GatekeeperRejection(403, "Blocked by Topological Tension")
 
-projector = MetaProjector(LedgerBridge())
+projector = MetaProjector(CompilerBridge())

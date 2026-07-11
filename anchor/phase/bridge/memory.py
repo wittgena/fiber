@@ -1,8 +1,6 @@
-# bound.bridge.memory
-## @lineage: bound.adapter.bridge.memory
-## @lineage: bound.surface.bridge.memory
+# anchor.phase.bridge.memory
+## @lineage: bound.bridge.memory
 """
-@module: anchor.bind.surface.bridge
 @desc: 
 - Environment-aware Topology Bridge. 
 - Facilitates zero-latency, direct memory coupling between the Data Plane (Ingress) 
@@ -12,7 +10,7 @@ import os
 import asyncio
 from typing import Optional, Dict, Any, cast
 
-from bound.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
+from anchor.phase.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
 from bound.bridge.protocol.acp.conn.base import Connection, StreamEvent, StreamDirection
 from bound.bridge.protocol.acp.conn.queue import RpcTask, RpcTaskKind
 

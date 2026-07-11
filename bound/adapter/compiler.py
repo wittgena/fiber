@@ -1,27 +1,27 @@
-# bound.adapter.ledger
+# bound.adapter.compiler
 """
 @desc: 
-- Interceptor Bridge middleware decoupling Agent/Ingress execution from Kernel Ledger sealing.
+- Interceptor Bridge middleware decoupling Agent/Ingress execution from Kernel Compiler sealing.
 - Acts as a structural adapter: translates both flat legacy payloads and strict 
   ingress logic streams into the topological kernel context.
 """
 import uuid
 from typing import Any, Dict, Optional
-from watcher.plane.emitter import get_emitter
-from watcher.kernel.ledger import ToposLedger, LogicStream as KernelLogicStream, SealedKernel
 from bound.ingress.proxy.schema import LogicStream as IngressLogicStream
+from watcher.kernel.compiler import ToposCompiler, LogicStream as KernelLogicStream, SealedKernel
+from watcher.plane.emitter import get_emitter
 
 log = get_emitter("kernel.bridge", phase="KERNEL")
 
-class LedgerBridge:
-    """@desc: Compliant middleware & Adapter"""
-    def __init__(self, ledger: Optional[ToposLedger] = None):
-        self.ledger = ledger or ToposLedger()
+class CompilerBridge:
+    """@desc: Compliant middleware & Adapter bridging Ingress to the ToposCompiler"""
+    def __init__(self, compiler: Optional[ToposCompiler] = None):
+        self.compiler = compiler or ToposCompiler()
 
     async def authorize_ingress(self, stream: IngressLogicStream) -> bool:
         """
-        @desc: Structural adapter for Ingress validation
-        - Unpacks the 3D rigid Ingress schema into the 2D flat context required by the legacy Ledger
+        @desc: Structural adapter for Ingress validation.
+        - Unpacks the 3D rigid Ingress schema into the 2D flat context required by the core Compiler.
         """
         action_id = str(stream.meta.stream_id)
         payload = {
@@ -41,7 +41,7 @@ class LedgerBridge:
     async def authorize(self, action_id: str, payload: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:
         """
         @desc: The single choke-point for agent action validation.
-        @flow: Raw Context -> KernelLogicStream -> ToposLedger -> Boolean Signal
+        @flow: Raw Context -> KernelLogicStream -> ToposCompiler -> Boolean Signal
         """
         if metadata is None:
             metadata = {}
@@ -53,10 +53,11 @@ class LedgerBridge:
             metadata=metadata
         )
 
-        log.debug(f"[Bridge] Requesting ledger authorization for stream: {kernel_stream.id}")
+        log.debug(f"[Bridge] Requesting compiler authorization for stream: {kernel_stream.id}")
 
         try:
-            sealed_kernel: Optional[SealedKernel] = await self.ledger.compile_kernel(kernel_stream)
+            # 💡 [Aligned] Delegate to the compiler's sealing routine
+            sealed_kernel: Optional[SealedKernel] = await self.compiler.compile_kernel(kernel_stream)
 
             if sealed_kernel is not None:
                 log.info(f"[Bridge] AUTHORIZED: Stream {kernel_stream.id} successfully sealed into {sealed_kernel.kernel_id}.")
@@ -66,11 +67,11 @@ class LedgerBridge:
                 return False
 
         except Exception as e:
-            ## @failure.mode: Fail-Closed. Any error in the ledger denies execution.
-            log.error(f"[Bridge] Ledger evaluation failed with exception: {e}. Defaulting to BLOCKED.")
+            ## @failure.mode: Fail-Closed. Any error in the compiler denies execution.
+            log.error(f"[Bridge] Compiler evaluation failed with exception: {e}. Defaulting to BLOCKED.")
             return False
 
-class BypassBridge(LedgerBridge):
+class BypassBridge(CompilerBridge):
     """@desc: A development/testing dummy bridge. Auto-authorizes actions (DEV MODE)."""
     async def authorize(self, action_id: str, payload: Any, metadata: Optional[Dict[str, Any]] = None) -> bool:
         log.debug(f"[Bridge: Bypass] Auto-authorizing action {action_id} (DEV MODE).")
