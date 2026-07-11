@@ -1,4 +1,4 @@
-# anchor.registry.resolver.scheme
+# bound.resolver.scheme
 import random
 from typing import Dict, Any, Tuple
 

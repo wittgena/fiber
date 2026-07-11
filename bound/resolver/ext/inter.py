@@ -1,10 +1,11 @@
-# anchor.registry.resolver.ext
+# bound.resolver.ext.inter
+## @lineage: anchor.registry.resolver.ext
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("resolver.ext")
+log = get_emitter("ext.inter")
 
 DEFAULT_RULESET = {
     "constants": {
