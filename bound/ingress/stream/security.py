@@ -17,7 +17,7 @@ from aiohttp import TCPConnector
 from anchor.registry.model.config.resolver import config
 from bound.surface.exception import Timeout
 from anchor.registry.model.config.constants import AIOHTTP_SO_KEEPALIVE, AIOHTTP_TCP_KEEPCNT, AIOHTTP_TCP_KEEPIDLE, AIOHTTP_TCP_KEEPINTVL, DEFAULT_SSL_CIPHERS
-from bound.transport.base import VerifyTypes
+from bound.bridge.transport.base import VerifyTypes
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("http.security")

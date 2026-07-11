@@ -21,9 +21,9 @@ from pydantic import BaseModel
 from bound.adapter.switch.params import ModelResponse
 from bound.surface.client.param.format import map_developer_role_to_system_role, type_to_response_format_param
 from anchor.registry.model.config.constants import DEFAULT_MAX_TOKENS, RESPONSE_FORMAT_TOOL_NAME
-from bound.transport.client import AsyncHTTPClient
-from bound.transport.sync import HTTPClient
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.bridge.transport.client import AsyncHTTPClient
+from bound.bridge.transport.client import HTTPClient
+from bound.surface.stream.wrapper import StreamWrapper
 from bound.surface.legacy.openai.types import (
     AllMessageValues,
     ChatCompletionToolChoiceFunctionParam,

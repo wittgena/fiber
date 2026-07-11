@@ -21,7 +21,7 @@ from bound.adapter.mapper.state import StateMapper
 
 from bound.surface.client.action.process.pre import CompletionContext
 from anchor.registry.router.llm import LLMRouter, TopologyMissingError
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.surface.stream.wrapper import StreamWrapper
 
 from phase.gov.proto.gate import uuid4 
 from phase.bind.resolver import find_current_self, get_invoker

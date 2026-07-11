@@ -18,8 +18,8 @@ from anchor.executor.legacy import executor
 from bound.surface.legacy.types import CallTypes
 from anchor.registry.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from anchor.registry.model.config.resolver import config
-from bound.adapter.bridge.rule import Rules
-from bound.transport.stream.chunk.builder import stream_chunk_builder
+from bound.bridge.rule import Rules
+from bound.surface.stream.chunk import stream_chunk_builder
 from xphi.watcher.delegator import LogDelegator
 
 from xphi.xor.secret.credential import CredentialAccessor

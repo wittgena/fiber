@@ -28,9 +28,9 @@ from bound.adapter.switch.params import ModelResponse, ModelResponseStream
 
 from bound.surface.legacy.info import ProviderTypes
 from bound.surface.legacy.types import EmbeddingResponse
-from bound.transport.convert.response import convert_to_model_response_object
+from bound.adapter.transport.response import convert_to_model_response_object
 from anchor.registry.router.config import ProviderConfigManager
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.surface.stream.wrapper import StreamWrapper
 from bound.surface.legacy.base import BaseLLM
 from bound.surface.legacy.openai.base import (
     BaseOpenAILLM,

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 from anchor.registry.model.config.resolver import config
 from bound.surface.exception import BaseLLMException
 from anchor.registry.model.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
-from bound.transport.client import AsyncHTTPClient
+from bound.bridge.transport.client import AsyncHTTPClient
 from bound.ingress.stream.security import get_ssl_configuration
 from xphi.xor.mock.transport.openai import MockOpenAITransport
 

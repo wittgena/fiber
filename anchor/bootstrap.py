@@ -4,9 +4,9 @@
 @module: anchor.bind.surface.matrix
 @desc: Distributed Policy Orchestrator & System Bootstrapper
 """
-from bound.adapter.bridge.ext import ignite
+from bound.bridge.ext import ignite
 from bound.ingress.receptor import PolymorphicReceptor
-from bound.adapter.bridge.memory import BridgeFactory
+from bound.bridge.memory import BridgeFactory
 
 from phase.runtime.node import NodeRuntime
 

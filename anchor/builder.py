@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 
-from bound.adapter.bridge.ext import ignite, _fetch_agent_intelligence
+from bound.bridge.ext import ignite, _fetch_agent_intelligence
 from bound.reflect.proxy.pypi.client import PypiMCPClient
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter

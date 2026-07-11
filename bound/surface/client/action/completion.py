@@ -24,8 +24,8 @@ from bound.adapter.mapper.exception import exception_type
 from bound.surface.client.action.process.core import async_core_completion
 from bound.surface.exception import Timeout
 from bound.surface.client.action.client.wrapper import client
-from bound.transport.convert.asyncify import run_async_function
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.adapter.transport.asyncify import run_async_function
+from bound.surface.stream.wrapper import StreamWrapper
 
 from xphi.watcher.trace.dd import tracer
 from xphi.watcher.delegator import LogDelegator
