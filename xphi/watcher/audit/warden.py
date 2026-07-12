@@ -10,6 +10,8 @@ import os
 import threading
 from typing import Set, Tuple, Any, Dict
 
+from xphi.watcher.audit.tracer import get_network_caller_origin
+
 from watcher.kernel.compiler import ToposState
 from watcher.kernel.store import KernelStore, ToposBlob
 from watcher.plane.emitter import get_emitter
@@ -35,8 +37,6 @@ class AuditWarden:
     }
     _is_active: bool = False
     _store: KernelStore = None 
-    
-    ## 💡 [CRITICAL FIX] Thread-local storage to prevent infinite recursion
     _tls = WardenTLS()
 
     @classmethod
@@ -113,16 +113,17 @@ class AuditWarden:
                 if host not in cls._policies["allowed_hosts"]:
                     port = address[1] if isinstance(address, tuple) and len(address) > 1 else "Unknown"
                     strict_mode = os.environ.get("BRANE_AIRGAP_MODE", "0") == "1"
+                    caller_info = get_network_caller_origin()
 
                     if strict_mode:
                         ## @action: Fail-Closed (Strict Mode Enforcement)
-                        msg = f"Unauthorized external network call blocked: {host}:{port}"
+                        msg = f"Unauthorized external network call blocked: {host}:{port} | Origin: {caller_info}"
                         log.critical(f"[WARDEN: BLOCK] {msg}")
                         cls._record_to_store("egress.block", -1.0, msg)
-                        raise PermissionError(f"[Brane Warden Air-Gap] Connection to {host}:{port} is blocked.")
+                        raise PermissionError(f"[Brane Warden Air-Gap] Connection to {host}:{port} is blocked. | Origin: {caller_info}")
                     else:
                         ## @action: Audit Logging & Telemetry (Audit Mode)
-                        msg = f"Third-party external communication detected: {host}:{port}"
+                        msg = f"Third-party external communication detected: {host}:{port} | Origin: {caller_info}"
                         log.warning(f"[WARDEN: AUDIT] {msg}")
                         cls._record_to_store("egress.audit", -0.2, msg)
                         
@@ -134,7 +135,6 @@ class AuditWarden:
 
             ## @guard.check: High-level HTTP request monitoring (urllib)
             elif event == "urllib.Request":
-                # 💡 [Robustness] Safely cast to string to prevent AttributeError on malformed requests
                 url = str(args[0]) if args else "Unknown"
                 if not any(url.startswith(f"http://{h}") or url.startswith(f"https://{h}") for h in cls._policies["allowed_hosts"]):
                     msg = f"Outbound HTTP request detected: {url}"
@@ -167,7 +167,6 @@ class AuditWarden:
             return
 
         cls._store = store_instance or KernelStore()
-            
         if initial_policies:
             cls.inject_policies(initial_policies, overwrite=True)
 
@@ -178,7 +177,6 @@ class AuditWarden:
             mode = "STRICT (AIR-GAPPED)" if os.environ.get("BRANE_AIRGAP_MODE") == "1" else "AUDIT (LOGGING)"
             log.info(f"[Warden] System Runtime Audit Hook established. Egress control mode: {mode}")
             cls._record_to_store("system.warden_init", 0.0, f"Warden initialized in {mode} mode.")
-            
         except Exception as e:
             ## @failure.mode: Initialization Failure (Cannot guarantee system boundary)
             log.critical(f"[Warden] Failed to install audit hook: {e}")

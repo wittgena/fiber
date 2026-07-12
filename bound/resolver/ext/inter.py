@@ -1,5 +1,4 @@
 # bound.resolver.ext.inter
-## @lineage: anchor.registry.resolver.ext
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
@@ -96,11 +95,7 @@ class ExtResolver:
 
     @classmethod
     def inspect_route(cls, route: str, override: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-        """
-        [DEBUG] 특정 라우트의 템플릿 매핑, 컨텍스트 상태, 최종 결과를 한 번에 덤프하여 확인합니다.
-        """
         template_key = cls.RULES.get("routes", {}).get(route)
-        
         debug_data = {
             "requested_route": route,
             "mapped_template_key": template_key,

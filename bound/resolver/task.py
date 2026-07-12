@@ -23,9 +23,6 @@ class TaskResolver:
         self.launcher_cls = launcher_cls
         self.blueprint_manager = blueprint_manager
 
-    # ==========================================
-    # 1. Environment & Context Resolution (Merged from ContextResolver)
-    # ==========================================
     @classmethod
     def _check_network_connectivity(cls, host: str = "8.8.8.8", port: int = 53, timeout: float = 2.0) -> bool:
         """Validates physical network boundaries."""

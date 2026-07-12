@@ -1,10 +1,4 @@
 # bound.bridge.protocol.mcp.handler
-## @lineage: bound.transport.protocol.mcp.handler
-## @lineage: bound.adapter.protocol.mcp.handler
-## @lineage: bound.transport.mcp.handler
-## @lineage: bound.bridge.mcp.handler
-## @lineage: bound.adapter.mcp.handler
-## @lineage: xphi.adapter.mcp.handler
 """
 @phase: Adapter MCP
 @desc: Translates MCP protocols into Brane-native topologies and safely executes tools.
@@ -41,7 +35,7 @@ def split_server_prefix_from_name(prefixed_name: str) -> Tuple[str, str]:
             return parts[1], parts[0]
     return prefixed_name, ""
 
-class MCPToolCompiler:
+class MCPCompiler:
     @staticmethod
     def filter_by_allowed(tools: List[Any], allowed_configs: List[Any]) -> List[Any]:
         """@desc: Pure function to filter tools based on explicit proxy configurations."""
@@ -103,7 +97,7 @@ class MCPToolCompiler:
             openai_tools.append(openai_tool)
         return openai_tools
 
-class MCPToolExecutor:
+class MCPExecutor:
     @staticmethod
     async def execute_all(
         tool_calls: List[Any], 
@@ -113,7 +107,7 @@ class MCPToolExecutor:
     ) -> List[Dict[str, Any]]:
         results = []
         for call in tool_calls:
-            result = await MCPToolExecutor._execute_single(call, server_map, auth_context, **kwargs)
+            result = await MCPExecutor._execute_single(call, server_map, auth_context, **kwargs)
             results.append(result)
         return results
 
@@ -259,14 +253,14 @@ class MCPHandler:
         )
         
         # 2. Compile: Filter
-        filtered_tools = MCPToolCompiler.filter_by_allowed(fetched_tools, mcp_tools_with_litellm_proxy)
+        filtered_tools = MCPCompiler.filter_by_allowed(fetched_tools, mcp_tools_with_litellm_proxy)
         
         # 3. Compile: Deduplicate
-        return MCPToolCompiler.deduplicate(filtered_tools, allowed_servers)
+        return MCPCompiler.deduplicate(filtered_tools, allowed_servers)
 
     @staticmethod
     def _transform_mcp_tools_to_openai(mcp_tools: List[Any], target_format: str = "responses") -> List[Any]:
-        return MCPToolCompiler.transform_to_openai(mcp_tools, target_format)
+        return MCPCompiler.transform_to_openai(mcp_tools, target_format)
 
     @staticmethod
     def _should_auto_execute_tools(tools: List[Any]) -> bool:
@@ -300,4 +294,4 @@ class MCPHandler:
         **kwargs
     ) -> List[Dict[str, Any]]:
         # Delegation to safe internal executor
-        return await MCPToolExecutor.execute_all(tool_calls, tool_server_map, user_api_key_auth, **kwargs)
+        return await MCPExecutor.execute_all(tool_calls, tool_server_map, user_api_key_auth, **kwargs)

@@ -14,19 +14,14 @@ logger = logging.getLogger("resolver.logtail")
 WORKSPACE_ROOT = resolve_path("workspace")
 
 class LogtailResolver:
-    """
-    @desc: Translates static rulesets into a dynamic routing and tailing topology.
-    """
-    # [압축된 RULESET] 어떤 파일을 추적하여 어떤 스트림 키로, 어떤 핸들러에게 전달할지 정의
+    """@desc: Translates static rulesets into a dynamic routing and tailing topology"""
     DEFAULT_RULESET = {
         "global_config": {
             "root_path": str(WORKSPACE_ROOT)
         },
         "targets": [
-            # 스트림 식별자(stream_key), 상대경로(path), 핸들러 매핑(handler)
             {"stream_key": "chain_state", "path": "state/contract_registry.jsonl", "handler": "topos_mapper"},
             {"stream_key": "issue_events", "path": "issue/registry.jsonl", "handler": "topos_mapper"} 
-            # (추후 다른 맵퍼가 추가되면 handler 문자열만 변경하여 연결 가능)
         ]
     }
 
