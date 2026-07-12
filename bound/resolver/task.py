@@ -1,25 +1,80 @@
 # bound.resolver.task
 ## @lineage: anchor.registry.resolver.task
 import asyncio
-from typing import Any, Protocol, Tuple, Type
+import socket
+from typing import Any, Tuple, Type, Dict, Optional
 from watcher.plane.emitter import get_emitter
+from anchor.registry.model.tier import model_tier_registry
+
+from agent.handler.scheme.manager import UniversalBlueprintManager
+from arch.topos.state.surge.blueprint import SurgeBlueprint
 
 log = get_emitter("resolver.task")
 
-class SchemeResolverProtocol(Protocol):
-    def select(self, category: Any) -> Tuple[str, Any]:
-        ...
-
 class TaskResolver:
-    """@desc: Routes and executes sub-tasks based on request type within the mounted context manager sandbox."""
+    """
+    @desc: Unified Orchestrator for Context Resolution and Task Execution.
+           Diagnoses environment state, maps fallbacks, and executes prompts/DAGs.
+    """
+    ULTIMATE_LOCAL_MODEL = "local-gemma-3"
     
-    def __init__(self, run_context: dict, launcher_cls: Type[Any], scheme_resolver: SchemeResolverProtocol):
+    def __init__(self, run_context: dict, launcher_cls: Type[Any], blueprint_manager: UniversalBlueprintManager):
         self.run_context = run_context
         self.launcher_cls = launcher_cls
-        self.scheme_resolver = scheme_resolver
+        self.blueprint_manager = blueprint_manager
 
+    # ==========================================
+    # 1. Environment & Context Resolution (Merged from ContextResolver)
+    # ==========================================
+    @classmethod
+    def _check_network_connectivity(cls, host: str = "8.8.8.8", port: int = 53, timeout: float = 2.0) -> bool:
+        """Validates physical network boundaries."""
+        try:
+            socket.setdefaulttimeout(timeout)
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((host, port))
+            return True
+        except OSError:
+            return False
+
+    @classmethod
+    def resolve_environment(cls, requested_model: Optional[str], requested_proxy: bool) -> Tuple[Dict[str, Any], str, bool]:
+        """Returns the optimal (Scope Params, Resolved Model, Use Proxy) layout."""
+        resolved_model = requested_model
+        use_proxy = requested_proxy
+        is_online = cls._check_network_connectivity()
+
+        if not is_online:
+            log.warning("🚨 [System Offline] Network connectivity lost.")
+            log.warning(f"🔄 Forcing fallback to Local Engine: {cls.ULTIMATE_LOCAL_MODEL}")
+            resolved_model = cls.ULTIMATE_LOCAL_MODEL
+            if use_proxy:
+                log.warning("⚠️ Remote proxy cannot be used offline. Disabling proxy surface.")
+                use_proxy = False
+        elif not resolved_model:
+            optimal_model = model_tier_registry.get_optimal_model(requires_tools=True)
+            if optimal_model:
+                resolved_model = f"gemini/{optimal_model}"
+                log.info(f"✅ Registry resolved optimal model: {resolved_model}")
+            else:
+                log.warning(f"⚠️ Registry exhausted. Falling back to local model: {cls.ULTIMATE_LOCAL_MODEL}")
+                resolved_model = cls.ULTIMATE_LOCAL_MODEL
+                if use_proxy:
+                    log.info("ℹ️ Disabling remote proxy to align with local model execution.")
+                    use_proxy = False
+
+        scope_kwargs = {
+            "use_proxy": use_proxy,
+            "show_logs": True,
+            "model": resolved_model  
+        }
+        return scope_kwargs, resolved_model, use_proxy
+
+    # ==========================================
+    # 2. Execution Pipelines
+    # ==========================================
     async def execute_prompt(self, instruction: str):
-        """단일 텍스트 프롬프트 실행 파이프라인 (Legacy / Interactive)"""
+        """Standard Text-based Execution Pipeline (Interactive/Legacy)."""
         app = self.launcher_cls("RootAgentApp", run_context=self.run_context)
         trace = await app.setup_default_nodes().run_task(instruction=instruction)
         
@@ -28,22 +83,19 @@ class TaskResolver:
         log.info(trace)
         log.info("="*50)
 
-    async def execute_scheme(self, blueprint: Any):
-        """구조화된 객체(SchemeBlueprint) 실행 파이프라인"""
+    async def run_surge_blueprint(self, blueprint: SurgeBlueprint):
+        """Structured DAG Execution Pipeline (Schemes, Transactions, Resolutions)."""
         app = self.launcher_cls("RootAgentApp", run_context=self.run_context)
-        # 런처에 새로 추가된 run_scheme 메서드 호출
         trace = await app.setup_default_nodes().run_scheme(blueprint=blueprint)
         
         log.info("\n" + "="*50)
-        
-        # blueprint 객체가 context(EntryNode)를 가지고 있다고 가정하고 로깅
-        entry_name = getattr(blueprint.context, "entry", "Unknown Context") if hasattr(blueprint, "context") else "Structured Scheme"
+        entry_name = getattr(blueprint, "topology_name", "Structured Scheme")
         log.info(f"FINAL HYBRID RESIDUE (TRACE) FOR SCHEME: '{entry_name}'")
         log.info(trace)
         log.info("="*50)
 
     async def start_interactive_mode(self):
-        """Interactive CLI loop task."""
+        """Interactive CLI loop manifold."""
         use_proxy = self.run_context.get("use_proxy", False)
         log.info(f"Interactive CLI Mode started (Proxy Mode: {use_proxy}). Type 'exit' to terminate.")
         
@@ -62,18 +114,3 @@ class TaskResolver:
             except (KeyboardInterrupt, EOFError):
                 log.info("\nSession context disrupted. Exiting...")
                 break
-
-    async def run_benchmark_scenario(self, category: Any):
-        """Automated benchmark task for Topos dimension scenarios."""
-        pool_name, selected_scenario = self.scheme_resolver.select(category=category)
-        
-        log.info("\n" + "🚀"*17)
-        log.info(f"Initiating [ {pool_name.upper()} ] Auto-Benchmark Sequence.")
-        if isinstance(selected_scenario, str):
-            log.info(f"Selected Prompt: \n[ {selected_scenario} ]")
-            log.info("🚀"*17 + "\n")
-            await self.execute_prompt(selected_scenario)
-        else:
-            log.info(f"Selected Blueprint Target: [ {category.value} ]")
-            log.info("🚀"*17 + "\n")
-            await self.execute_scheme(blueprint=selected_scenario)
