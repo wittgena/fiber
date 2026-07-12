@@ -1,5 +1,4 @@
 # bound.resolver.context
-## @lineage: anchor.registry.resolver.context
 import asyncio
 import socket
 from typing import List, Optional, Tuple, Dict, Any, Type, Protocol
