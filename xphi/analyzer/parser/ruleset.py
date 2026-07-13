@@ -1,7 +1,7 @@
 # xphi.analyzer.parser.ruleset
 import json
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, Callable
 from luqum.parser import parse as luqum_parse
 from luqum.tree import AndOperation, Group
 from elasticsearch.dsl import Q
@@ -88,15 +88,10 @@ class ElasticDSLRulesetParser(AbstractRulesetParser):
         queries = []
         for key, value in kv_dict.items():
             if isinstance(value, list):
-                # 리스트는 terms 쿼리로 변환 (예: tags IN ["debug", "load-test"])
                 q = Q("terms", **{key: value})
             else:
-                # 단일 값은 term 쿼리로 변환 (예: environment == "production")
                 q = Q("term", **{key: value})
-                
-            # 노이즈 필터인 경우 ~ (NOT 연산자)를 붙여줍니다.
             queries.append(~q if is_exclusion else q)
-            
         if not queries: return None
         
         # 생성된 여러 Q 객체를 & (AND) 연산자로 결합하여 단일 Q 반환
@@ -153,7 +148,7 @@ class ElasticDSLRulesetParser(AbstractRulesetParser):
             kw_q = self._keywords_to_q(target.get("keywords", []))
             apply_exclusions = target.get("apply_exclusions", False)
             
-            # 파이썬 객체인 Q를 결합하기만 하면, Elasticsearch DSL이 내부적으로 트리를 구성함
+            ## 파이썬 객체인 Q를 결합하기만 하면, Elasticsearch DSL이 내부적으로 트리를 구성함
             final_q = None
             for q_obj in [base_q, cond_q, excl_q if apply_exclusions else None, kw_q]:
                 if q_obj is not None:
@@ -163,3 +158,43 @@ class ElasticDSLRulesetParser(AbstractRulesetParser):
                 compiled_queries.append((final_q, tag))
                 
         return compiled_queries
+
+class LocalStreamRulesetParser(AbstractRulesetParser):
+    """
+    @desc: 동일한 룰셋 형식을 받아, 로컬 로그 스트림(문자열)을 실시간으로 
+           평가할 수 있는 파이썬 람다/함수(Callable)들의 조합으로 컴파일합니다.
+    """
+    def _keywords_to_evaluator(self, keywords: List[Dict[str, List[str]]]) -> Optional[Callable[[str], bool]]:
+        if not keywords: return None
+        
+        def evaluator(line: str) -> bool:
+            line_lower = line.lower()
+            # 키워드 그룹(리스트 요소) 간에는 AND 연산 적용 (ES 로직과 동일)
+            for group in keywords:
+                if "AND" in group and group["AND"]:
+                    # AND 내부는 모두 존재해야 함 (all)
+                    if not all(val.lower() in line_lower for val in group["AND"]):
+                        return False
+                elif "OR" in group and group["OR"]:
+                    # OR 내부는 하나라도 존재해야 함 (any)
+                    if not any(val.lower() in line_lower for val in group["OR"]):
+                        return False
+            return True
+            
+        return evaluator
+
+    def parse_ruleset(self, ruleset: Dict[str, Any], target_tags: Optional[List[str]] = None) -> List[Tuple[Callable[[str], bool], str]]:
+        compiled_evaluators = []
+        
+        for target in ruleset.get("targets", []):
+            tag = target.get("tag")
+            if target_tags and tag not in target_tags: continue
+            
+            # 스트림의 경우 구조화된 condition(service=api 등)은 
+            # 이미 컨테이너를 지정해서 수집하므로 생략하거나, JSON 로그일 경우 확장 가능합니다.
+            kw_evaluator = self._keywords_to_evaluator(target.get("keywords", []))
+            
+            if kw_evaluator:
+                compiled_evaluators.append((kw_evaluator, tag))
+                
+        return compiled_evaluators

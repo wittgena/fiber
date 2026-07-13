@@ -4,12 +4,12 @@
 - Resolves structured log rulesets into Elasticsearch JSON queries
 - Aligned with the unified 'resolve()' interface pattern
 """
-import logging
 import json
 from typing import List, Tuple, Dict, Any, Optional
 from xphi.analyzer.parser.ruleset import ElasticDSLRulesetParser
+from watcher.plane.emitter import get_emitter
 
-logger = logging.getLogger("resolver.log")
+log = get_emitter("resolver.log")
 
 class LogResolver:
     """@desc: Translates high-level domain rulesets into deeply nested Elasticsearch queries."""
@@ -40,18 +40,18 @@ class LogResolver:
             for q_obj, tag in parsed_queries:
                 resolved_results.append((q_obj.to_dict(), tag))
                 
-            logger.info(f"✅ Successfully resolved {len(resolved_results)} log queries.")
+            log.info(f"✅ Successfully resolved {len(resolved_results)} log queries.")
             return resolved_results
             
         except Exception as e:
-            logger.error(f"🚨 Failed to resolve log ruleset: {str(e)}")
+            log.error(f"🚨 Failed to resolve log ruleset: {str(e)}")
             return []
 
 if __name__ == "__main__":
     resolver = LogResolver()
     resolved_queries = resolver.resolve()
-    print("=== [Resolved Elasticsearch JSON Queries] ===")
+    log.info("=== [Resolved Elasticsearch JSON Queries] ===")
     for es_json, tag in resolved_queries:
-        print(f"\n[Tag]: {tag}")
-        print(json.dumps(es_json, indent=2))
-        print("-" * 60)
+        log.info(f"\n[Tag]: {tag}")
+        log.info(json.dumps(es_json, indent=2))
+        log.info("-" * 60)
