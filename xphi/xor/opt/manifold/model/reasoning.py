@@ -5,7 +5,7 @@
 from typing import TYPE_CHECKING, Any, Optional
 import pydantic
 
-from bound.surface.client.dsp.base import BaseLM
+from bound.surface.dsp.base import BaseLM
 from xphi.xor.opt.manifold.model.basetype import Type
 
 if TYPE_CHECKING:

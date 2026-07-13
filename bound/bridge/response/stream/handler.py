@@ -27,8 +27,8 @@ from bound.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
 from bound.bridge.response.stream.context import ResponseAPIContext, ContextBuilder, ExecutionContext, ProviderContext, LLMPayloadContext
 from bound.bridge.response.stream.identity import IdentityRouter
 from anchor.registry.model.api.base import APIBridge
-from bound.surface.client.param.litellm import infer_openai_data_residency
-from bound.surface.client.action.client.wrapper import client
+from bound.surface.legacy.action.param.litellm import infer_openai_data_residency
+from bound.surface.legacy.action.client.wrapper import client
 
 from watcher.plane.emitter import get_emitter 
 
