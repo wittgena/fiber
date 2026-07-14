@@ -1,6 +1,4 @@
 # bound.bridge.protocol.acp.conn.worker
-## @lineage: bound.transport.protocol.acp.conn.worker
-## @lineage: bound.adapter.protocol.acp.conn.worker
 from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable

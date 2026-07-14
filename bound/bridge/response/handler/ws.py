@@ -21,7 +21,7 @@ from bound.bridge.response.stream.identity import IdentityRouter
 from xphi.watcher.delegator import LogDelegator
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.registry.model.config.constants import REALTIME_WEBSOCKET_MAX_MESSAGE_SIZE_BYTES
-from bound.ingress.stream.security import get_ssl_configuration
+from anchor.phase.ingress.stream.security import get_ssl_configuration
 from xphi.xor.secret.redact import redact_string
 
 from watcher.plane.emitter import get_emitter

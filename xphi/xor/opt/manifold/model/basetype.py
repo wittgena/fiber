@@ -6,7 +6,7 @@ import re
 from typing import TYPE_CHECKING, Any, Optional, get_args, get_origin
 import json_repair
 import pydantic
-from bound.surface.dsp.base import BaseLM
+from anchor.dsp.base import BaseLM
 
 if TYPE_CHECKING:
     from bound.adapter.switch.params import ModelResponseStream

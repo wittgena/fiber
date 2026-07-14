@@ -7,7 +7,7 @@
 """
 import uuid
 from typing import Any, Dict, Optional
-from bound.ingress.proxy.schema import LogicStream as IngressLogicStream
+from anchor.phase.ingress.proxy.schema import LogicStream as IngressLogicStream
 from watcher.kernel.compiler import ToposCompiler, LogicStream as KernelLogicStream, SealedKernel
 from watcher.plane.emitter import get_emitter
 

@@ -5,8 +5,8 @@ from typing import Any, AsyncGenerator, Optional, Callable
 from unittest.mock import patch
 
 from bound.adapter.dsp.thch import ThCh
-from bound.surface.dsp.local import LocalLM
-from bound.surface.dsp.instance import DSPInstance
+from anchor.dsp.local import LocalLM
+from anchor.dsp.instance import DSPInstance
 
 from xphi.scope.surface.config import SurfaceConfig
 from xphi.scope.dsp.context import runtime

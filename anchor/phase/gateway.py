@@ -1,10 +1,10 @@
 # anchor.phase.gateway
 import os
 import asyncio
-from anchor.phase.bridge.ext import ignite
-from anchor.phase.bridge.memory import BridgeFactory
+from bound.bridge.ext import ignite
+from bound.bridge.memory import BridgeFactory
 from anchor.phase.ingress.receptor import PolymorphicReceptor
-from anchor.phase.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
+from bound.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
 from arch.bound.sandbox.tunnel import TunnelFactory
 from watcher.plane.emitter import get_emitter
 

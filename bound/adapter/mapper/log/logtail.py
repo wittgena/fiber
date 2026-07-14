@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 from anchor.registry.router.workflow import Workflow, step, Event, StartEvent, StopEvent
-from bound.surface.dsp.base import BaseLM
+from anchor.dsp.base import BaseLM
 from bound.adapter.dsp.base import Adapter
 from xphi.xor.opt.manifold.model.reasoning import Reasoning
 

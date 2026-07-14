@@ -1,6 +1,4 @@
 # bound.bridge.protocol.acp.conn.queue
-## @lineage: bound.transport.protocol.acp.conn.queue
-## @lineage: bound.adapter.protocol.acp.conn.queue
 from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable

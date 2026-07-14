@@ -1,7 +1,4 @@
 # bound.bridge.protocol.acp.conn.base
-## @lineage: bound.transport.protocol.acp.conn.base
-## @lineage: bound.adapter.protocol.acp.conn.base
-## @lineage: bound.transport.acp.conn.base
 from __future__ import annotations
 import asyncio
 import contextlib
