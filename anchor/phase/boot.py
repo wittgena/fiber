@@ -4,8 +4,9 @@ import uvloop
 
 import anchor.inter.readers as reader_pkg
 from anchor.phase.gateway import PhaseGateway
+from anchor.phase.bridge.signal import PhaseBridge
+
 import bound.adapter.switch.compat.patch 
-from bound.adapter.cli.search.reader import ReaderSearcher
 
 from arch.contract.executor import BaseExecutor
 from arch.contract.registry.unified import registry
@@ -13,10 +14,10 @@ from arch.topos.bound.tunnel import TunnelFactory
 from arch.contract.event.bus import AsyncEventBus
 
 from phase.bind.redirector import PhaseAirlock
-from phase.reflect.context.builder import ContextBuilder
-from phase.reflect.swarm.executor import SwarmExecutor
+from phase.executor.swarm import SwarmExecutor
 from phase.runtime.node import NodeRuntime, install_os_signal
 
+from watcher.plane.observer.surface import default_plane
 from watcher.plane.flow.executor import FlowExecutor
 from watcher.plane.emitter import get_emitter
 from watcher.kernel.store import KernelStore
@@ -85,15 +86,8 @@ async def main_async():
     log.info("[Boot] Initiating System Bootstrap Sequence...")
     system_bus = AsyncEventBus()
     
-    from watcher.kernel.bridge.signal import SignalBridgeWatcher
-    from watcher.plane.surface import default_plane
-    
-    bridge_watcher = SignalBridgeWatcher(event_bus=system_bus)
+    bridge_watcher = PhaseBridge(event_bus=system_bus)
     default_plane.attach(bridge_watcher)
-    
-    ## 의존성 및 Provider 등록
-    reader_searcher = ReaderSearcher(READER_PATH)
-    ContextBuilder.register_provider("reader.searcher", SearcherAdapter(reader_searcher))
 
     ## 핵심 런타임 및 Executor 구성
     completion_signal = asyncio.Event()

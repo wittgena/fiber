@@ -1,8 +1,8 @@
 # anchor.phase.ingress.receptor
-## @lineage: bound.ingress.receptor
 """
-@desc: Polymorphic Ingress Boundary (Data Plane Receptor).
-       Binds external proxy traffic into Brane's internal routing mechanisms.
+@desc: 
+- Polymorphic Ingress Boundary (Data Plane Receptor)
+- Binds external proxy traffic into Brane's internal routing mechanisms
 """
 import asyncio
 import os
@@ -10,7 +10,6 @@ from typing import Optional, Dict, Any
 
 from arch.contract.event.bus import AsyncEventBus
 from arch.contract.event.psi import PsiEvent, PsiCarrier
-from phase.runtime.node import NodeRuntime
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("ingress.receptor", phase="anchor")
@@ -20,10 +19,10 @@ class PolymorphicReceptor:
     @role: Context-aware traffic receiver. 
     @action: Routes traffic directly via memory bridge (if local) or via EventBus (if distributed).
     """
-    def __init__(self, node: NodeRuntime, bridge: Optional[Any] = None):
-        self.node = node
-        self.bus: AsyncEventBus = node.bus
-        self.bridge = bridge  # Injected by Orchestrator
+    # [CHANGED] IPhaseAtor 의존성 전체를 제거하고, AsyncEventBus를 직접 주입받음
+    def __init__(self, bus: AsyncEventBus, bridge: Optional[Any] = None):
+        self.bus = bus
+        self.bridge = bridge
         self.mode = os.environ.get("GATEWAY_TOPOLOGY", "EMBEDDED_BYPASS")
         
     async def ingest_traffic(self, raw_payload: Dict[str, Any], source: str) -> Dict[str, Any]:
