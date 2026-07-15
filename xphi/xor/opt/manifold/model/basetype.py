@@ -10,7 +10,7 @@ from anchor.dsp.base import BaseLM
 
 if TYPE_CHECKING:
     from bound.adapter.switch.params import ModelResponseStream
-    from arch.xor.manifold.sign.signature import Signature
+    from arch.xor.sign.signature import Signature
 
 CUSTOM_TYPE_START_IDENTIFIER = "<<CUSTOM-TYPE-START-IDENTIFIER>>"
 CUSTOM_TYPE_END_IDENTIFIER = "<<CUSTOM-TYPE-END-IDENTIFIER>>"

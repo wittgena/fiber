@@ -19,11 +19,11 @@ from anchor.inter.bound.base.llms.types import ChatMessage, MessageRole
 from anchor.inter.bound.adapter.base import BaseProviderAdapter
 from bound.adapter.mapper.state import StateMapper
 
-from bound.surface.legacy.action.process.pre import CompletionContext
+from bound.adapter.surface.legacy.action.process.pre import CompletionContext
 from anchor.registry.router.llm import LLMRouter, TopologyMissingError
-from bound.surface.stream.wrapper import StreamWrapper
+from bound.transport.stream.wrapper import StreamWrapper
 
-from phase.gov.proto.gate import uuid4 
+from arch.gov.gate import uuid4 
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 

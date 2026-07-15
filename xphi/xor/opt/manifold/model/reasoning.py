@@ -1,7 +1,4 @@
 # xphi.xor.opt.manifold.model.reasoning
-## @lineage: bound.adapter.opt.model.reasoning
-## @lineage: xphi.xor.dsp.model.reasoning
-## @lineage: xphi.reflect.dsp.model.reasoning
 from typing import TYPE_CHECKING, Any, Optional
 import pydantic
 
@@ -9,7 +6,7 @@ from anchor.dsp.base import BaseLM
 from xphi.xor.opt.manifold.model.basetype import Type
 
 if TYPE_CHECKING:
-    from arch.xor.manifold.sign.signature import Signature
+    from arch.xor.sign.signature import Signature
 
 
 class Reasoning(Type):

@@ -1,5 +1,4 @@
 # xphi.xor.opt.formatter
-## @lineage: xphi.xor.opt.utils
 import ast
 import enum
 import inspect
@@ -16,7 +15,7 @@ from xphi.xor.opt.manifold.model.reasoning import Reasoning
 from xphi.xor.opt.manifold.model.basetype import Type as SpiType
 from xphi.xor.opt.manifold.code import Code
 
-from arch.xor.manifold.sign.utils import get_spi_field_type
+from arch.xor.sign.utils import get_spi_field_type
 
 def _annotation_is_subclass(annotation: Any, expected_base: type) -> bool:
     try:

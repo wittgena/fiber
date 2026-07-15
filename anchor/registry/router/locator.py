@@ -4,10 +4,10 @@ from typing import Optional, Tuple, Dict, Callable
 from urllib.parse import urlparse
 
 from anchor.registry.model.cost import get_provider_for_model
-from bound.surface.legacy.param.legacy import LiteLLM_Params
+from bound.adapter.surface.legacy.param.legacy import LiteLLM_Params
 from anchor.registry.model.config.resolver import config
 from anchor.registry.model.config.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
-from xphi.xor.secret.manager import get_secret_str, get_secret 
+from xphi.xor.secure.secret.manager import get_secret_str, get_secret 
 
 from watcher.plane.emitter import get_emitter
 

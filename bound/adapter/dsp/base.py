@@ -1,7 +1,4 @@
 # bound.adapter.dsp.base
-## @lineage: anchor.provider.dsp.adapter.base
-## @lineage: bound.adapter.opt.base
-## @lineage: xphi.xor.dsp.adapter
 from typing import Any, get_origin
 import json_repair
 
@@ -11,13 +8,12 @@ from xphi.xor.opt.manifold.model.basetype import Type
 from xphi.xor.opt.manifold.model.basetype import split_message_content_for_custom_types
 from bound.adapter.dsp.exception import AdapterParseError
 
-from xphi.xor.opt.manifold.history import History
 from xphi.xor.opt.manifold.tool import Tool, ToolCalls
 from xphi.xor.opt.manifold.model.reasoning import Reasoning
 from xphi.xor.opt.callback.base import BaseCallback, with_callbacks
 
-from arch.xor.manifold.sign.signature import Signature
-from phase.gov.proto.gate import uuid4
+from arch.xor.sign.signature import Signature
+from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
@@ -104,7 +100,6 @@ class Adapter:
             tool_calls = None
             text = None
 
-            ## @fix: ModelResponse 객체, Dict, Str 등 다양한 형태의 응답을 안전하게 해체(Unwrap)합니다.
             if isinstance(output, str):
                 text = output
             elif isinstance(output, dict):
@@ -112,7 +107,6 @@ class Adapter:
                 output_logprobs = output.get("logprobs")
                 tool_calls = output.get("tool_calls")
             elif hasattr(output, "choices") and len(output.choices) > 0:
-                # LiteLLM/OpenAI 호환 ModelResponse 객체인 경우
                 choice = output.choices[0]
                 if hasattr(choice, "message"):
                     text = getattr(choice.message, "content", None)
@@ -120,13 +114,10 @@ class Adapter:
                 elif hasattr(choice, "text"):
                     text = choice.text
             elif hasattr(output, "text"):
-                # 단순 Text 객체인 경우
                 text = output.text
             else:
-                # 최후의 수단: 문자열 변환
                 text = str(output)
 
-            # 빈 문자열 처리
             if not text and not tool_calls:
                 text = None
 
@@ -149,13 +140,12 @@ class Adapter:
                 )
 
             if tool_calls and tool_call_output_field_name:
-                # 툴 콜 형식이 객체인 경우와 dict인 경우를 모두 안전하게 처리
                 formatted_tool_calls = []
                 for v in tool_calls:
                     if isinstance(v, dict):
                         func_name = v.get("function", {}).get("name")
                         args_str = v.get("function", {}).get("arguments", "{}")
-                    else: # 객체인 경우
+                    else:
                         func = getattr(v, "function", None)
                         func_name = getattr(func, "name", "") if func else ""
                         args_str = getattr(func, "arguments", "{}") if func else "{}"
@@ -234,23 +224,14 @@ class Adapter:
 
     def format(self, signature: type[Signature], demos: list[dict[str, Any]], inputs: dict[str, Any]) -> list[dict[str, Any]]:
         inputs_copy = dict(inputs)
-        history_field_name = self._get_history_field_name(signature)
-        if history_field_name:
-            signature_without_history = signature.delete(history_field_name)
-            conversation_history = self.format_conversation_history(signature_without_history, history_field_name, inputs_copy)
         
         messages = []
         system_message = self.format_system_message(signature)
         messages.append({"role": "system", "content": system_message})
         messages.extend(self.format_demos(signature, demos))
         
-        if history_field_name:
-            content = self.format_user_message_content(signature_without_history, inputs_copy, main_request=True)
-            messages.extend(conversation_history)
-            messages.append({"role": "user", "content": content})
-        else:
-            content = self.format_user_message_content(signature, inputs_copy, main_request=True)
-            messages.append({"role": "user", "content": content})
+        content = self.format_user_message_content(signature, inputs_copy, main_request=True)
+        messages.append({"role": "user", "content": content})
 
         messages = split_message_content_for_custom_types(messages)
         return messages
@@ -283,11 +264,6 @@ class Adapter:
             messages.append({"role": "assistant", "content": self.format_assistant_message_content(signature, demo, missing_field_message="Not supplied for this conversation history message. ")})
         return messages
 
-    def _get_history_field_name(self, signature: type[Signature]) -> str:
-        for name, field in signature.input_fields.items():
-            if field.annotation == History: return name
-        return None
-
     def _get_tool_call_input_field_name(self, signature: type[Signature]) -> str:
         for name, field in signature.input_fields.items():
             origin = get_origin(field.annotation)
@@ -299,16 +275,6 @@ class Adapter:
         for name, field in signature.output_fields.items():
             if field.annotation == ToolCalls: return name
         return None
-
-    def format_conversation_history(self, signature: type[Signature], history_field_name: str, inputs: dict[str, Any]) -> list[dict[str, Any]]:
-        conversation_history = inputs[history_field_name].messages if history_field_name in inputs else None
-        if conversation_history is None: return []
-        messages = []
-        for message in conversation_history:
-            messages.append({"role": "user", "content": self.format_user_message_content(signature, message)})
-            messages.append({"role": "assistant", "content": self.format_assistant_message_content(signature, message)})
-        del inputs[history_field_name]
-        return messages
 
     def parse(self, signature: type[Signature], completion: str) -> dict[str, Any]:
         raise NotImplementedError

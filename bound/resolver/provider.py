@@ -11,7 +11,7 @@ from anchor.registry.router.locator import get_llm_provider
 from anchor.registry.model.config.resolver import config
 from anchor.registry.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 
-from bound.surface.legacy.info import ProviderTypesSet
+from bound.adapter.surface.legacy.info import ProviderTypesSet
 
 from watcher.plane.emitter import get_emitter
 

@@ -3,10 +3,10 @@
 from typing import Any
 from pydantic.fields import FieldInfo
 
-from arch.xor.manifold.sign.field import InputField, OutputField
-from arch.xor.manifold.sign.signature import Signature, ensure_signature
-from xphi.xor.module.meta import Module
-from xphi.xor.module.prompter import Predict
+from arch.xor.sign.field import InputField, OutputField
+from arch.xor.sign.signature import Signature, ensure_signature
+from xphi.xor.opt.module.meta import Module
+from xphi.xor.opt.module.prompter import Predict
 
 class ChainOfThought(Module):
     def __init__(

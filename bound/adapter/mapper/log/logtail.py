@@ -19,8 +19,8 @@ from anchor.dsp.base import BaseLM
 from bound.adapter.dsp.base import Adapter
 from xphi.xor.opt.manifold.model.reasoning import Reasoning
 
-from arch.xor.manifold.sign.signature import Signature
-from arch.xor.manifold.sign.field import InputField, OutputField
+from arch.xor.sign.signature import Signature
+from arch.xor.sign.field import InputField, OutputField
 from phase.bind.resolver import find_current_self, resolve_path
 from phase.bind.folding import folding
 from watcher.plane.emitter import get_emitter, flow_scope

@@ -1,6 +1,6 @@
 # bound.adapter.dsp.exception
 ## @lineage: anchor.provider.dsp.adapter.exception
-from arch.xor.manifold.sign.signature import Signature
+from arch.xor.sign.signature import Signature
 
 class AdapterParseError(Exception):
     """Exception raised when adapter cannot parse the LM response."""

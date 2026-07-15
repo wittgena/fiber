@@ -67,20 +67,20 @@ if LITELLM_CONVERT_SWITCH:
 
 if not LITELLM_CONVERT_SWITCH:
     try:
-        from bound.surface.legacy.openai.types import ResponseAPIUsage, ResponsesAPIResponse
-        from bound.surface.legacy.openai.types import ResponsesAPIStreamingResponse
-        from bound.surface.legacy.openai.types import ToolParam
-        from bound.surface.legacy.openai.types import ChatCompletionToolParam
-        from bound.surface.legacy.openai.types import OutputFunctionToolCall
-        from bound.surface.legacy.openai.types import ResponseInputParam
-        from bound.surface.legacy.openai.types import ResponsesAPIResponse
-        from bound.surface.legacy.openai.types import ChatCompletionToolParamFunctionChunk
-        from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
-        from bound.surface.legacy.openai.types import OutputTextDeltaEvent, RefusalDeltaEvent, ReasoningSummaryTextDeltaEvent, ResponseCompletedEvent
+        from bound.adapter.surface.legacy.openai.types import ResponseAPIUsage, ResponsesAPIResponse
+        from bound.adapter.surface.legacy.openai.types import ResponsesAPIStreamingResponse
+        from bound.adapter.surface.legacy.openai.types import ToolParam
+        from bound.adapter.surface.legacy.openai.types import ChatCompletionToolParam
+        from bound.adapter.surface.legacy.openai.types import OutputFunctionToolCall
+        from bound.adapter.surface.legacy.openai.types import ResponseInputParam
+        from bound.adapter.surface.legacy.openai.types import ResponsesAPIResponse
+        from bound.adapter.surface.legacy.openai.types import ChatCompletionToolParamFunctionChunk
+        from bound.adapter.surface.legacy.openai.types import ResponsesAPIStreamEvents
+        from bound.adapter.surface.legacy.openai.types import OutputTextDeltaEvent, RefusalDeltaEvent, ReasoningSummaryTextDeltaEvent, ResponseCompletedEvent
         ## ---
-        from bound.surface.legacy.param.response import GenericResponseOutputItem
-        from bound.surface.legacy.param.rerank import RerankResponse
-        from bound.surface.legacy.param.completion import (
+        from bound.adapter.surface.legacy.param.response import GenericResponseOutputItem
+        from bound.adapter.surface.legacy.param.rerank import RerankResponse
+        from bound.adapter.surface.legacy.param.completion import (
             ChatCompletionMessageParam,
             ChatCompletionSystemMessageParam,
             ChatCompletionUserMessageParam,
@@ -90,7 +90,7 @@ if not LITELLM_CONVERT_SWITCH:
             ChatCompletionMessageToolCallParam,
             ChatCompletionContentPartParam
         )
-        from bound.surface.legacy.types import (
+        from bound.adapter.surface.legacy.types import (
             ChatCompletionDeltaToolCall,
             ChatCompletionRedactedThinkingBlock,
             CompletionTokensDetailsWrapper,
@@ -102,9 +102,9 @@ if not LITELLM_CONVERT_SWITCH:
             TranscriptionUsageDurationObject,
             TranscriptionUsageTokensObject,
         )
-        from bound.surface.legacy.types import Usage
-        from bound.surface.legacy.types import TextChoices, TextCompletionResponse, TranscriptionResponse
-        from bound.surface.legacy.types import ModelResponse, ModelResponseStream, Delta, StreamingChoices, Choices, Message
-        from bound.surface.legacy.types import ChatCompletionMessageToolCall
+        from bound.adapter.surface.legacy.types import Usage
+        from bound.adapter.surface.legacy.types import TextChoices, TextCompletionResponse, TranscriptionResponse
+        from bound.adapter.surface.legacy.types import ModelResponse, ModelResponseStream, Delta, StreamingChoices, Choices, Message
+        from bound.adapter.surface.legacy.types import ChatCompletionMessageToolCall
     except ImportError as e:
         raise ImportError(f"Failed to load fallback types from internal modules. Error: {e}")

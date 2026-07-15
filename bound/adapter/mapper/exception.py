@@ -12,8 +12,8 @@ from typing import Any, Optional, Dict
 import httpx
 
 from anchor.registry.model.config.resolver import config
-from bound.surface.legacy.info import ProviderTypes
-from bound.surface.exception import (
+from bound.adapter.surface.legacy.info import ProviderTypes
+from bound.adapter.surface.exception import (
     APIConnectionError,
     APIError,
     AuthenticationError,
@@ -29,7 +29,7 @@ from bound.surface.exception import (
     Timeout,
     UnprocessableEntityError,
 )
-from xphi.xor.secret.redact import redact_string
+from xphi.xor.secure.secret.redact import redact_string
 
 from watcher.plane.emitter import get_emitter
 
