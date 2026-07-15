@@ -22,11 +22,11 @@ import atexit
 from typing import Callable, List, Dict, Any
 from pathlib import Path
 
-from arch.topos.bound.sandbox.adapter.config import resolve_default_config
-from arch.topos.bound.sandbox.tunnel import TunnelFactory
+from arch.topos.bound.adapter.config import resolve_default_config
+from arch.topos.bound.tunnel import TunnelFactory
 from arch.contract.interface import IEventBus, IPhaseAtor, IPhaseField 
 from arch.contract.event.psi import PsiEvent, PsiCarrier
-from arch.topos.bound.sandbox.surface import SurfaceMQ, SurfaceClient
+from arch.topos.bound.surface import SurfaceMQ, SurfaceClient
 from phase.bind.resolver import find_current_self, resolve_path
 from phase.bind.client.stream import StreamClient
 from watcher.plane.emitter import get_logger

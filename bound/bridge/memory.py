@@ -14,7 +14,7 @@ from bound.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDec
 from bound.bridge.protocol.acp.conn.base import Connection, StreamEvent, StreamDirection
 from bound.bridge.protocol.acp.conn.queue import RpcTask, RpcTaskKind
 
-from arch.topos.bound.sandbox.tunnel import UniversalFacade
+from arch.topos.bound.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bridge.memory")

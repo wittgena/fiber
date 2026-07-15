@@ -5,7 +5,7 @@ from bound.bridge.ext import ignite
 from bound.bridge.memory import BridgeFactory
 from anchor.phase.ingress.receptor import PolymorphicReceptor
 from bound.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
-from arch.topos.bound.sandbox.tunnel import TunnelFactory
+from arch.topos.bound.tunnel import TunnelFactory
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("phase.gateway")

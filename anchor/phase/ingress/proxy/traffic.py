@@ -6,7 +6,7 @@ import math
 import random
 import time
 from typing import Optional, Any
-from arch.topos.bound.sandbox.tunnel import TunnelFactory
+from arch.topos.bound.tunnel import TunnelFactory
 from arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType, PhaseField
 from watcher.plane.emitter import get_emitter
 
