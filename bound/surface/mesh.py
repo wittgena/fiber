@@ -1,5 +1,5 @@
 # bound.surface.mesh
-## @lineage: bound.surface.matrix.mesh
+## @lineage: anchor.phase.surface.mesh
 """
 @desc: Distributed Policy Orchestrator (Control Plane for Envoy ext_proc)
 @flow: Syscall Sandbox -> Broker Initialization -> Policy Engine & State Mesh Assembly -> Stream Handler Activation
@@ -12,14 +12,11 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Dict, AsyncGenerator
 
-from bound.surface.bridge.ext import ignite
-from bound.watcher.audit.gatekeeper import SecurityError
-
-from arch.bound.sandbox.tunnel import TunnelFactory, UniversalFacade
-from phase.runtime.node import NodeRuntime
+from xphi.watcher.audit.gatekeeper import SecurityError
+from arch.bound.sandbox.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("surface.matrix")
+log = get_emitter("surface.mesh")
 
 class RoutingAction(str, Enum):
     """Enumeration of available routing interventions."""
@@ -41,7 +38,7 @@ class NodeHealthMetrics:
     active_connections: int = 0
     # Extending this struct scales the cluster state visibility
 
-def _enforce_syscall_sandbox() -> None:
+def enforce_syscall_sandbox() -> None:
     """
     @desc: Establishes a zero-trust runtime environment upon module initialization.
     Intercepts and drops unauthorized OS-level system calls via Python's audit hook.
@@ -163,50 +160,4 @@ class ExtProcStreamHandler:
         """Binds to the specified port and maintains the gRPC listener loop."""
         log.info("[Gateway] ExtProc Stream Handler bound to gRPC port 50051...")
         # Mocking the gRPC aio server run loop
-        await asyncio.sleep(36000) 
-
-class GatewayOrchestrator:
-    """
-    @role: Grand Unified Bootstrapper.
-    @desc: Resolves topology, injects dependencies, and wires Ingress, Bridge, and Matrix together.
-    """
-    @classmethod
-    async def bootstrap(cls) -> NodeRuntime:
-        # 지연 임포트(Lazy Import)로 순환 참조 방지
-        from bound.ingress.receptor import PolymorphicReceptor
-        from bound.surface.bridge.memory import BridgeFactory
-        
-        topology = os.getenv("GATEWAY_TOPOLOGY", "EMBEDDED_BYPASS")
-        log.info(f"[Orchestrator] Bootstrapping Unified Membrane in {topology} mode.")
-
-        ## System Immunity & Base Runtime
-        _enforce_syscall_sandbox()
-        ignite()
-        node = NodeRuntime()
-        
-        ## Provision Infrastructure Substrate
-        broker_facade = await TunnelFactory.get_default()
-
-        ## Control Plane Initialization
-        policy_engine = RoutingPolicyEngine(broker_facade)
-        state_mesh = ClusterStateMesh(broker_facade)
-        await policy_engine.synchronize_initial_state()
-
-        ## Topology Bridge Resolution (Data Plane <-> Control Plane)
-        ## 만약 ACP 기반 연동이 필요하다면 여기에 acp_conn 인스턴스를 넘깁니다.
-        bridge = BridgeFactory.resolve_bridge(topology, policy_engine, state_mesh)
-
-        ## Data Plane Assembly
-        receptor = PolymorphicReceptor(node, bridge)
-
-        ## Ignite Background Loops
-        asyncio.create_task(policy_engine.watch_policy_updates())
-        asyncio.create_task(state_mesh.start_mesh_sync())
-        await node.start()
-
-        if topology == "EXT_PROC":
-            stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
-            asyncio.create_task(stream_handler.serve())
-        else:
-            asyncio.create_task(receptor.listen())
-        return node
+        await asyncio.sleep(36000)

@@ -37,7 +37,7 @@ DEFAULT_BOUND_SKELETON = {
         "io": ":io:",
         "ext": ":anchor:/ext",
         "memory": ":anchor:/memory",
-        "ledger": ":memory:/ledger",
+        "ledger": ":anchor:/ledger",
         "log": ":io:/log",
         "sandbox": ":workspace:/sandbox",
         "surface": ":io:/surface",

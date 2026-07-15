@@ -13,7 +13,7 @@ import httpx
 
 from anchor.registry.model.config.resolver import config
 if TYPE_CHECKING:
-    from bound.transport.stream.wrapper import CustomStreamWrapper
+    from bound.surface.stream.wrapper import StreamWrapper
     from bound.surface.legacy.types import ModelResponse, TextCompletionResponse
 
 class PydanticObjectBase(BaseModel):

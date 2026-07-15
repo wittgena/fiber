@@ -13,16 +13,21 @@ if LITELLM_CONVERT_SWITCH:
         from litellm import completion, acompletion
         from litellm import embedding, aembedding
         from litellm.responses.main import responses
-        from litellm.responses.main import aresponses 
+        from litellm.responses.main import aresponses
+        from litellm.responses.streaming_iterator import SyncResponsesAPIStreamingIterator
+        from litellm.cost_calculator import completion_cost
+
     except ImportError:
         LITELLM_CONVERT_SWITCH = False
 
 if not LITELLM_CONVERT_SWITCH:
     try:
-        from bound.surface.action.completion import completion, acompletion
-        from bound.surface.action.embedding import embedding, aembedding
-        from bound.surface.action.response import responses
-        from bound.surface.action.response import aresponses
+        from bound.surface.legacy.action.completion import completion, acompletion
+        from bound.surface.legacy.action.embedding import embedding, aembedding
+        from bound.surface.legacy.action.response import responses
+        from bound.surface.legacy.action.response import aresponses
+        from bound.surface.stream.iterator.response import SyncResponsesAPIStreamingIterator
+        from bound.surface.legacy.cost.calculator import completion_cost
     except ImportError as e:
         raise ImportError(
             f"Failed to load execution boundaries from internal bound modules. "

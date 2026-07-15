@@ -1,11 +1,9 @@
 # anchor.inter.bound.adapter.base
-## @lineage: bound.adapter.inter.base
-## @lineage: bound.adapter.provider.base
 from typing import Any, Dict, List, Optional, Union
 from bound.adapter.switch.params import ModelResponse
-from bound.surface.action.process.pre import CompletionContext
+from bound.surface.legacy.action.process.pre import CompletionContext
 from bound.surface.legacy.completor import CompletionHandler
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.surface.stream.wrapper import StreamWrapper
 from xphi.xor.secret.manager import get_secret_bool
 from bound.surface.legacy.openai.completion import OpenAIChatCompletion
 
@@ -14,7 +12,7 @@ from watcher.plane.emitter import get_emitter
 log = get_emitter("adapter.base")
 
 class BaseProviderAdapter:
-    def execute(self, ctx: CompletionContext) -> Union[ModelResponse, CustomStreamWrapper]:
+    def execute(self, ctx: CompletionContext) -> Union[ModelResponse, StreamWrapper]:
         raise NotImplementedError()
 
 class OpenAICompatibleAdapter(BaseProviderAdapter):

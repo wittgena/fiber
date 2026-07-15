@@ -8,7 +8,7 @@
 ## @lineage: anchor.channel.switch.chat.adapter
 ## @lineage: anchor.switch.chat.adapter
 from typing import AsyncGenerator, Protocol, Any
-from bound.surface.action.completion import acompletion
+from bound.surface.legacy.action.completion import acompletion
 from bound.adapter.switch.params import ModelResponse
 
 class SimpleMessage(dict):

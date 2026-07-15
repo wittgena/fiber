@@ -1,6 +1,4 @@
 # bound.adapter.cli.trans.llama
-## @lineage: anchor.bind.adapter.trans.llama
-## @lineage: anchor.cli.adapter.trans.llama
 import os
 import sys
 import shutil
@@ -18,10 +16,10 @@ import anchor.inter.bound as llama_bound
 import xphi.loop as xphi_loop
 import xphi.loop.flow as xphi_flow
 
-from xphi.analyzer.parser.github import GitHubExtractor
+from xphi.analyzer.extractor.github import GitHubExtractor
 
-from anchor.executor.iso import IsoRunner
-from anchor.registry.resolver.ext import ExtResolver
+from anchor.phase.executor.iso import IsoRunner
+from bound.resolver.ext.inter import ExtResolver
 from arch.contract.registry.unified import contract, registry
 from phase.bind.resolver import find_current_self, get_invoker
 from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli

@@ -7,7 +7,7 @@ from typing import Dict, Any
 from dataclasses import asdict
 
 from anchor.inter.bound.base.llms.base import BaseLLM
-from anchor.registry.resolver.ext import ExtResolver
+from bound.resolver.ext.inter import ExtResolver
 from bound.adapter.mapper.inter.llm import LLMCapabilities, LLMInfo
 
 from watcher.plane.emitter import get_emitter

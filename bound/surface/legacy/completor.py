@@ -9,10 +9,10 @@ from anchor.registry.router.config import ProviderConfigManager
 from anchor.registry.model.config.base import BaseConfig
 from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.info import ProviderTypes
-from bound.transport.client import AsyncHTTPClient
-from bound.transport.sync import HTTPClient
-from bound.transport.factory import get_async_client, get_http_client
-from bound.transport.stream.wrapper import CustomStreamWrapper
+from bound.bridge.transport.client import AsyncHTTPClient
+from bound.bridge.transport.client import HTTPClient
+from bound.bridge.transport.client import get_client
+from bound.surface.stream.wrapper import StreamWrapper
 
 from watcher.plane.emitter import get_emitter
 
@@ -131,7 +131,8 @@ class CompletionHandler:
     async def _run_async(self, ctx: RequestContext, model_response: ModelResponse, encoding: Any):
         if not isinstance(ctx.client, AsyncHTTPClient):
             log.debug("[AsyncFlow] 새로운 Async HTTP Client를 생성합니다.")
-            client = get_async_client(
+            client = get_client(
+                is_async=True,
                 llm_provider=ProviderTypes(ctx.custom_llm_provider),
                 params={"ssl_verify": ctx.litellm_params.get("ssl_verify", None)},
                 shared_session=ctx.shared_session,
@@ -152,7 +153,7 @@ class CompletionHandler:
                 
             response = await self._execute_http_call(client.post, ctx)
             log.debug("[AsyncFlow] 기본 Stream Wrapper 생성을 완료했습니다.")
-            return CustomStreamWrapper(
+            return StreamWrapper(
                 completion_stream=ctx.provider_config.get_model_response_iterator(
                     streaming_response=response.aiter_lines(), sync_stream=False
                 ),
@@ -175,7 +176,7 @@ class CompletionHandler:
     def _run_sync(self, ctx: RequestContext, model_response: ModelResponse, encoding: Any):
         if not isinstance(ctx.client, HTTPClient):
             log.debug("[SyncFlow] 새로운 Sync HTTP Client를 생성합니다.")
-            client = get_http_client(params={"ssl_verify": ctx.litellm_params.get("ssl_verify", None)})
+            client = get_client(is_async=False, params={"ssl_verify": ctx.litellm_params.get("ssl_verify", None)})
         else:
             log.debug("[SyncFlow] 기존에 주입된 Sync HTTP Client를 재사용합니다.")
             client = ctx.client
@@ -192,7 +193,7 @@ class CompletionHandler:
                 
             response = self._execute_http_call(client.post, ctx)
             log.debug("[SyncFlow] 기본 Stream Wrapper 생성을 완료했습니다.")
-            return CustomStreamWrapper(
+            return StreamWrapper(
                 completion_stream=ctx.provider_config.get_model_response_iterator(
                     streaming_response=response.iter_lines(), sync_stream=True, json_mode=ctx.json_mode
                 ),
