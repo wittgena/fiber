@@ -23,7 +23,7 @@ from bound.surface.stream.support import preserve_upstream_non_openai_attributes
 from xphi.analyzer.parser.stream.chunk import StreamChunkParser
 
 from arch.gov.gate import uuid
-from xphi.watcher.delegator import LogDelegator 
+from bound.watcher.delegator import LogDelegator 
 from watcher.plane.emitter import get_emitter
 
 AUDIO_ATTRIBUTE = "audio"

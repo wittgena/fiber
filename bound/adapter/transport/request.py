@@ -8,7 +8,7 @@ from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.action.param.format import type_to_response_format_param
 from bound.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
-from bound.bridge.response.stream.identity import IdentityRouter
+from bound.bridge.transport.response.stream.identity import IdentityRouter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("convert.request")

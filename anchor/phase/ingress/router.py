@@ -1,16 +1,12 @@
 # anchor.phase.ingress.router
-## @lineage: bound.ingress.router
-## @lineage: xphi.proxy.ingress.router
-## @lineage: bound.transport.stream.ingress.router
 """
-@manifold: bound.transport.stream.ingress.router
 @desc: Ingress entry point. 
 Intercepts macroscopic network traffic, enforces strict spec invariants, 
 and bridges validated logic streams into the core ledger matrix.
 """
-from anchor.phase.ingress.stream.transducer import SpecValidator
+from xphi.xor.secure.stream.transducer import SpecValidator
 from bound.adapter.compiler import CompilerBridge
-from xphi.watcher.topos import unified_flow_span
+from bound.watcher.topos import unified_flow_span
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("ingress.router")

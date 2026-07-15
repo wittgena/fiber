@@ -1,6 +1,4 @@
 # xphi.xor.opt.manifold.code
-## @lineage: xphi.xor.manifold.code
-## @lineage: xphi.opt.manifold.code
 import re
 from typing import Any, ClassVar
 import pydantic

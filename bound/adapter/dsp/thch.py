@@ -5,7 +5,7 @@ from threading import Lock
 from typing import Any, Annotated, get_args, get_origin, Union
 from pydantic import BaseModel
 
-from xphi.xor.module.meta import Module
+from xphi.xor.opt.module.meta import Module
 from xphi.xor.opt.manifold.model.cot import ChainOfThought 
 
 from arch.xor.sign.field import InputField, OutputField

@@ -1,7 +1,4 @@
 # anchor.phase.ingress.proxy.schema
-## @lineage: bound.ingress.proxy.schema
-## @lineage: xphi.proxy.ingress.schema
-## @lineage: bound.transport.stream.ingress.schema
 from pydantic import BaseModel, Field
 from typing import Any, Dict
 from enum import Enum

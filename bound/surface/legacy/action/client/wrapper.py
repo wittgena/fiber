@@ -1,7 +1,4 @@
 # bound.surface.legacy.action.client.wrapper
-## @lineage: bound.surface.client.action.client.wrapper
-## @lineage: bound.surface.action.client.wrapper
-## @lineage: bound.surface.legacy.client.wrapper
 import asyncio
 import contextvars
 import datetime
@@ -15,15 +12,15 @@ from functools import wraps
 from weakref import WeakKeyDictionary
 
 from anchor.phase.executor.legacy import executor
-
-from bound.surface.legacy.types import CallTypes
 from anchor.registry.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from anchor.registry.model.config.resolver import config
-from bound.bridge.rule import Rules
-from bound.surface.stream.chunk import stream_chunk_builder
-from xphi.watcher.delegator import LogDelegator
 
-from xphi.xor.secret.credential import CredentialAccessor
+from bound.bridge.transport.rule import Rules
+from bound.surface.stream.chunk import stream_chunk_builder
+from bound.surface.legacy.types import CallTypes
+from bound.watcher.delegator import LogDelegator
+
+from xphi.xor.secure.secret.validator import CredentialAccessor
 
 from watcher.plane.emitter import get_emitter
 
@@ -396,3 +393,4 @@ def client(original_function):
         return await call_executor.run_async()
 
     return wrapper_async if is_coroutine else wrapper
+

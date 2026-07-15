@@ -1,6 +1,4 @@
 # anchor.phase.ingress.sentinel
-## @lineage: bound.ingress.sentinel
-## @lineage: bound.defense.sentinel
 """
 @desc: 
 - Endogenous Security Chaos Sentinel
@@ -10,7 +8,7 @@ import asyncio
 import random
 from typing import Dict, Any, Callable, List
 from anchor.phase.ingress.router import IngressRouter
-from xphi.watcher.topos import flow_scope
+from bound.watcher.topos import flow_scope
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("chaos.sentinel", phase="SIMULATION")

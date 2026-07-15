@@ -21,18 +21,18 @@ from bound.surface.legacy.openai.types import (
     ResponsesAPIResponse, ToolChoice, ToolParam, ResponseText
 )
 
-from bound.bridge.protocol.mcp.handler import MCPHandler
-from bound.bridge.protocol.mcp.parser.payload import MCPPayloadParser
+from bound.bridge.transport.protocol.mcp.handler import MCPHandler
+from bound.bridge.transport.protocol.mcp.parser.payload import MCPPayloadParser
 from bound.surface.stream.iterator.mcp import MCPStreamIterator
 from bound.surface.stream.iterator.response import ResponseStreamIterator
-from bound.bridge.protocol.mcp.event.tool import create_mcp_list_tools_events
-from bound.bridge.response.handler.ws import ResponseWebsocketHandler
+from bound.bridge.transport.protocol.mcp.event.tool import create_mcp_list_tools_events
+from bound.bridge.transport.response.handler.ws import ResponseWebsocketHandler
 
 from anchor.registry.model.api.base import APIBridge
 from bound.surface.legacy.action.param.litellm import get_litellm_params, infer_openai_data_residency
-from bound.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
-from bound.bridge.response.stream.identity import IdentityRouter
-from bound.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
+from bound.bridge.transport.response.stream.context import ResponseAPIContext, ContextBuilder
+from bound.bridge.transport.response.stream.identity import IdentityRouter
+from bound.bridge.transport.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
 from bound.surface.legacy.action.client.wrapper import client
 from bound.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
@@ -405,7 +405,7 @@ async def _aresponses_websocket(model: str, websocket: Any, api_base: Optional[s
     provider_config = ProviderConfigManager.get_provider_responses_api_config(model=model, provider=ProviderTypes(_custom_llm_provider)) if _custom_llm_provider else None
 
     resolved_api_base = dyn_base or litellm_params.api_base or getattr(config, "api_base", None)
-    from xphi.xor.secret.manager import get_secret_str
+    from xphi.xor.secure.secret.manager import get_secret_str
     resolved_api_key = dyn_key or litellm_params.api_key or getattr(config, "api_key", None) or getattr(config, "openai_key", None) or get_secret_str("OPENAI_API_KEY")
 
     _explicit_keys = {"user_api_key_dict", "litellm_metadata", "custom_llm_provider", "model", "websocket", "log_delegator", "api_base", "api_key", "timeout"}

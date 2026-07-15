@@ -35,7 +35,7 @@ from bound.bridge.transport.base import (
     _HTTPX_CLIENT_CACHE,
     httpxSpecialProvider,
 )
-from anchor.phase.ingress.stream.security import (
+from bound.bridge.transport.secure.stream import (
     _safe_read_response,
     MaskedHTTPStatusError,
     _build_aiohttp_keepalive_socket_factory,

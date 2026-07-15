@@ -3,10 +3,10 @@ import asyncio
 import uvloop
 
 import anchor.inter.readers as reader_pkg
-from anchor.phase.gateway import PhaseGateway
-from anchor.phase.bridge.signal import PhaseBridge
+from anchor.phase.kernel.gateway import KernelGateway
 
 import bound.adapter.switch.compat.patch 
+from bound.bridge.phase.signal import PhaseSignal
 
 from arch.contract.executor import BaseExecutor
 from arch.contract.registry.unified import registry
@@ -86,7 +86,7 @@ async def main_async():
     log.info("[Boot] Initiating System Bootstrap Sequence...")
     system_bus = AsyncEventBus()
     
-    bridge_watcher = PhaseBridge(event_bus=system_bus)
+    bridge_watcher = PhaseSignal(event_bus=system_bus)
     default_plane.attach(bridge_watcher)
 
     ## 핵심 런타임 및 Executor 구성
@@ -97,7 +97,7 @@ async def main_async():
 
     ## Gateway 토폴로지 결합 (핵심: boot가 gateway를 호출)
     log.info("[Boot] Attaching Gateway Topology...")
-    await PhaseGateway.assemble(node)
+    await KernelGateway.assemble(node)
 
     ## 전체 시스템 라이프사이클 시작 및 대기
     try:

@@ -32,9 +32,9 @@ from anchor.phase.executor.legacy import executor
 from bound.adapter.transport.header import process_response_headers
 from anchor.registry.model.api.base import get_api_base
 from anchor.registry.model.api.base import APIBridge
-from bound.bridge.response.stream.identity import IdentityRouter
+from bound.bridge.transport.response.stream.identity import IdentityRouter
 
-from xphi.watcher.delegator import LogDelegator
+from bound.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.iterator")

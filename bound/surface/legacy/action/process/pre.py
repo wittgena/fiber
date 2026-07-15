@@ -38,7 +38,7 @@ from bound.surface.legacy.action.param.validator import (
     validate_chat_completion_tool_choice,
     validate_openai_optional_params
 )
-from xphi.watcher.delegator import LogDelegator
+from bound.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.preprocessor")

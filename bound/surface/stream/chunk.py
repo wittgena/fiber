@@ -25,7 +25,7 @@ import openai
 import tiktoken
 
 if TYPE_CHECKING:
-    from xphi.watcher.delegator import LogDelegator
+    from bound.watcher.delegator import LogDelegator
 
 from bound.surface.legacy.types import TextChoices, TextCompletionResponse
 from bound.surface.exception import APIError

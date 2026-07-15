@@ -12,7 +12,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Dict, AsyncGenerator
 
-from xphi.watcher.audit.gatekeeper import SecurityError
+from bound.watcher.audit.gatekeeper import SecurityError
 from arch.topos.bound.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter
 

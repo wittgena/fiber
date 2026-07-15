@@ -28,8 +28,8 @@ from bound.surface.legacy.action.client.wrapper import client
 from bound.adapter.transport.asyncify import run_async_function
 from bound.surface.stream.wrapper import StreamWrapper
 
-from xphi.watcher.trace.dd import tracer
-from xphi.watcher.delegator import LogDelegator
+from bound.watcher.trace.dd import tracer
+from bound.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter
 

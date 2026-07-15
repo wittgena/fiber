@@ -8,10 +8,10 @@ from bound.adapter.switch.params import ResponsesAPIResponse, ResponsesAPIStream
 from bound.surface.legacy.openai.types import OutputItemDoneEvent
 from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
 
-from bound.bridge.protocol.mcp.handler import MCPHandler
-from bound.bridge.protocol.mcp.parser.header import MCPHeaderParser
-from bound.bridge.protocol.mcp.parser.payload import MCPPayloadParser
-from bound.bridge.protocol.mcp.event.call import create_mcp_call_events
+from bound.bridge.transport.protocol.mcp.handler import MCPHandler
+from bound.bridge.transport.protocol.mcp.parser.header import MCPHeaderParser
+from bound.bridge.transport.protocol.mcp.parser.payload import MCPPayloadParser
+from bound.bridge.transport.protocol.mcp.event.call import create_mcp_call_events
 from bound.surface.stream.iterator.response import ResponseStreamIterator
 
 from arch.gov.gate import uuid
