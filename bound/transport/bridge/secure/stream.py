@@ -18,7 +18,7 @@ import httpx
 from aiohttp import TCPConnector
 
 from anchor.registry.model.config.resolver import config
-from bound.surface.exception import Timeout
+from bound.adapter.surface.exception import Timeout
 from anchor.registry.model.config.constants import AIOHTTP_SO_KEEPALIVE, AIOHTTP_TCP_KEEPCNT, AIOHTTP_TCP_KEEPIDLE, AIOHTTP_TCP_KEEPINTVL, DEFAULT_SSL_CIPHERS
 from bound.transport.bridge.base import VerifyTypes
 from watcher.plane.emitter import get_emitter

@@ -22,9 +22,9 @@ import json
 
 from bound.adapter.switch.params import ResponsesAPIResponse, ModelResponse
 from mcp_types import EmbeddedResource, ImageContent, TextContent
-from bound.surface.legacy.types import Choices
-from bound.surface.token.convert import convert_list_message_to_dict
-from bound.surface.legacy.param.response import GenericResponseOutputItem, OutputText
+from bound.adapter.surface.legacy.types import Choices
+from bound.adapter.surface.token.convert import convert_list_message_to_dict
+from bound.adapter.surface.legacy.param.response import GenericResponseOutputItem, OutputText
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter

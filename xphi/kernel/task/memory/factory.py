@@ -4,7 +4,7 @@ import os
 import asyncio
 from typing import Optional, Dict, Any, cast
 
-from bound.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
+from bound.proxy.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
 from acp.connection import Connection, StreamEvent, StreamDirection
 from xphi.kernel.task.queue import RpcTask, RpcTaskKind
 

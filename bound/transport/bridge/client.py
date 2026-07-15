@@ -23,8 +23,8 @@ from anchor.registry.model.config.constants import (
     AIOHTTP_TTL_DNS_CACHE,
 )
 
-from bound.surface.exception import Timeout
-from bound.surface.legacy.info import ProviderTypes
+from bound.adapter.surface.exception import Timeout
+from bound.adapter.surface.legacy.info import ProviderTypes
 from bound.transport.bridge.base import (
     VerifyTypes,
     _DEFAULT_TIMEOUT,

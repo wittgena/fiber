@@ -4,16 +4,16 @@ import types
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast, Literal
 import httpx
-from bound.surface.legacy.openai.types import (
+from bound.adapter.surface.legacy.openai.types import (
     ResponseInputParam,
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
     ResponsesAPIStreamingResponse,
 )
-from bound.surface.legacy.param.response import DeleteResponseResult
-from bound.surface.legacy.param.legacy import GenericLiteLLMParams
-from bound.surface.legacy.info import ProviderTypes
-from bound.surface.exception import BaseLLMException
+from bound.adapter.surface.legacy.param.response import DeleteResponseResult
+from bound.adapter.surface.legacy.param.legacy import GenericLiteLLMParams
+from bound.adapter.surface.legacy.info import ProviderTypes
+from bound.adapter.surface.exception import BaseLLMException
 
 LiteLLMLoggingObj = Any
 

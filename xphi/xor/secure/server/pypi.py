@@ -8,8 +8,8 @@ import time
 from aiohttp import web, ClientSession
 
 from xphi.xor.secure.server.mcp import SecureMCPServer
-from anchor.phase.ingress.pypi.rule.projector import projector, SecurityContext, MetaRuleDef
-from anchor.registry.proxy.setting import pypi_settings, ServerRunConfig, tool_get_time
+from bound.proxy.ingress.pypi.rule.projector import projector, SecurityContext, MetaRuleDef
+from bound.proxy.setting import pypi_settings, ServerRunConfig, tool_get_time
 
 from watcher.plane.emitter import get_emitter
 

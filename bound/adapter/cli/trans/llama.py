@@ -18,7 +18,7 @@ import xphi.loop.flow as xphi_flow
 
 from xphi.analyzer.extractor.github import GitHubExtractor
 
-from anchor.phase.executor.iso import IsoRunner
+from xphi.xor.executor.iso import IsoRunner
 from bound.resolver.ext.inter import ExtResolver
 from arch.contract.registry.unified import contract, registry
 from phase.bind.resolver import find_current_self, get_invoker

@@ -7,7 +7,7 @@
 import uuid
 import time
 from typing import List
-from bound.surface.legacy.openai.types import ResponsesAPIResponse
+from bound.adapter.surface.legacy.openai.types import ResponsesAPIResponse
 
 def create_mock_mcp_response(
     input_text: str,

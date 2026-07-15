@@ -7,7 +7,7 @@
 import json
 from typing import Dict
 from pydantic import ValidationError
-from anchor.phase.ingress.proxy.schema import (
+from bound.proxy.ingress.schema import (
     LogicStream,
     StreamMetadata,
     StreamIdentity,

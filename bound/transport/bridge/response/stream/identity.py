@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Iterable, Optional, Type
 from starlette.datastructures import Headers
 
-from bound.surface.legacy.param.response import DecodedResponseId
+from bound.adapter.surface.legacy.param.response import DecodedResponseId
 from bound.transport.mcp.parser.header import MCPHeaderParser
 from watcher.plane.emitter import get_emitter
 
