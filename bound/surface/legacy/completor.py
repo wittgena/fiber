@@ -9,9 +9,9 @@ from anchor.registry.router.config import ProviderConfigManager
 from anchor.registry.model.config.base import BaseConfig
 from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.info import ProviderTypes
-from bound.bridge.transport.client import AsyncHTTPClient
-from bound.bridge.transport.client import HTTPClient
-from bound.bridge.transport.client import get_client
+from bound.transport.bridge.client import AsyncHTTPClient
+from bound.transport.bridge.client import HTTPClient
+from bound.transport.bridge.client import get_client
 from bound.surface.stream.wrapper import StreamWrapper
 
 from watcher.plane.emitter import get_emitter

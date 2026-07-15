@@ -21,20 +21,20 @@ from bound.surface.legacy.openai.types import (
     ResponsesAPIResponse, ToolChoice, ToolParam, ResponseText
 )
 
-from bound.bridge.transport.protocol.mcp.handler import MCPHandler
-from bound.bridge.transport.protocol.mcp.parser.payload import MCPPayloadParser
+from bound.transport.mcp.handler import MCPHandler
+from bound.transport.mcp.parser.payload import MCPPayloadParser
 from bound.surface.stream.iterator.mcp import MCPStreamIterator
 from bound.surface.stream.iterator.response import ResponseStreamIterator
-from bound.bridge.transport.protocol.mcp.event.tool import create_mcp_list_tools_events
-from bound.bridge.transport.response.handler.ws import ResponseWebsocketHandler
+from bound.transport.mcp.event.tool import create_mcp_list_tools_events
+from bound.transport.bridge.response.handler.ws import ResponseWebsocketHandler
 
 from anchor.registry.model.api.base import APIBridge
 from bound.surface.legacy.action.param.litellm import get_litellm_params, infer_openai_data_residency
-from bound.bridge.transport.response.stream.context import ResponseAPIContext, ContextBuilder
-from bound.bridge.transport.response.stream.identity import IdentityRouter
-from bound.bridge.transport.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
+from bound.transport.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
+from bound.transport.bridge.response.stream.identity import IdentityRouter
+from bound.transport.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
 from bound.surface.legacy.action.client.wrapper import client
-from bound.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from bound.transport.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter

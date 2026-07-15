@@ -7,7 +7,7 @@ import struct
 from typing import Tuple, Union
 
 from bound.surface.token.url_utils import SafeHttpClient
-from bound.bridge.transport.client import get_client
+from bound.transport.bridge.client import get_client
 from anchor.registry.model.config.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

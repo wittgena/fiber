@@ -18,7 +18,7 @@ from bound.surface.legacy.types import Delta, GenericStreamingChunk as GChunk
 
 from bound.adapter.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 from bound.adapter.mapper.reason import map_finish_reason
-from bound.adapter.transport.header import process_response_headers
+from bound.transport.adapter.header import process_response_headers
 from bound.surface.stream.support import preserve_upstream_non_openai_attributes
 from xphi.analyzer.parser.stream.chunk import StreamChunkParser
 

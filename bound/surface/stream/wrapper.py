@@ -18,7 +18,7 @@ from bound.surface.exception import OpenAIError
 from bound.adapter.mapper.exception import exception_type
 from bound.surface.legacy.types import CallTypes
 from bound.adapter.switch.params import ModelResponse, ModelResponseStream
-from bound.bridge.transport.rule import Rules
+from bound.transport.bridge.rule import Rules
 from bound.surface.stream.chunk import stream_chunk_builder
 from bound.surface.stream.support import _next_sync_or_exhausted
 from bound.surface.stream.processor.chunk import StreamChunkProcessor

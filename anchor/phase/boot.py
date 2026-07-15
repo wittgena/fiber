@@ -3,10 +3,10 @@ import asyncio
 import uvloop
 
 import anchor.inter.readers as reader_pkg
-from anchor.phase.kernel.gateway import KernelGateway
+from xphi.kernel.gateway import KernelGateway
 
 import bound.adapter.switch.compat.patch 
-from bound.bridge.phase.signal import PhaseSignal
+from bound.watcher.phase.signal import PhaseSignal
 
 from arch.contract.executor import BaseExecutor
 from arch.contract.registry.unified import registry

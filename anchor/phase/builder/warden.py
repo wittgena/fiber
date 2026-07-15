@@ -13,7 +13,7 @@ import anyio
 import httpx
 
 from anchor.phase.ingress.pypi.client import PypiMCPClient
-from bound.bridge.mock.ext import ignite, _fetch_agent_intelligence
+from xphi.xor.mock.ext.vuln import ignite, _fetch_agent_intelligence
 
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter

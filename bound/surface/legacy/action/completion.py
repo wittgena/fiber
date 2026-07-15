@@ -1,8 +1,4 @@
 # bound.surface.legacy.action.completion
-## @lineage: bound.surface.client.action.completion
-## @lineage: bound.surface.action.completion
-## @lineage: bound.channel.action.completion
-## @lineage: bound.channel.client.action.completion
 import uuid
 import httpx
 import asyncio
@@ -25,10 +21,10 @@ from bound.adapter.mapper.exception import exception_type
 from bound.surface.legacy.action.process.core import async_core_completion
 from bound.surface.exception import Timeout
 from bound.surface.legacy.action.client.wrapper import client
-from bound.adapter.transport.asyncify import run_async_function
+from bound.transport.adapter.asyncify import run_async_function
 from bound.surface.stream.wrapper import StreamWrapper
 
-from bound.watcher.trace.dd import tracer
+from bound.surface.legacy.trace.dd import tracer
 from bound.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter

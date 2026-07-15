@@ -8,8 +8,8 @@ from anchor.registry.router.locator import get_llm_provider
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
-from bound.bridge.transport.response.stream.identity import IdentityRouter
-from bound.adapter.transport.request import RequestBuilder, IdentityMutator, _get_val
+from bound.transport.bridge.response.stream.identity import IdentityRouter
+from bound.transport.adapter.request import RequestBuilder, IdentityMutator, _get_val
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bridge.api")

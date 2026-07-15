@@ -15,7 +15,7 @@ from anchor.phase.executor.legacy import executor
 from anchor.registry.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from anchor.registry.model.config.resolver import config
 
-from bound.bridge.transport.rule import Rules
+from bound.transport.bridge.rule import Rules
 from bound.surface.stream.chunk import stream_chunk_builder
 from bound.surface.legacy.types import CallTypes
 from bound.watcher.delegator import LogDelegator

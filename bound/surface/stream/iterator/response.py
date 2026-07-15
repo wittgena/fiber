@@ -19,7 +19,7 @@ from typing import Any, Optional, Union
 from bound.adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
 from bound.surface.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
 from anchor.registry.model.config.constants import LITELLM_DETAILED_TIMING
-from bound.bridge.tosync import SyncStreamAdapter
+from bound.transport.adapter.tosync import SyncStreamAdapter
 
 import bound.surface.legacy.openai.types as openai_types
 
@@ -29,10 +29,10 @@ from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
 from bound.surface.legacy.types import CallTypes
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.phase.executor.legacy import executor
-from bound.adapter.transport.header import process_response_headers
+from bound.transport.adapter.header import process_response_headers
 from anchor.registry.model.api.base import get_api_base
 from anchor.registry.model.api.base import APIBridge
-from bound.bridge.transport.response.stream.identity import IdentityRouter
+from bound.transport.bridge.response.stream.identity import IdentityRouter
 
 from bound.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter

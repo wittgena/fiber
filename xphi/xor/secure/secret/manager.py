@@ -7,7 +7,7 @@ import traceback
 import httpx
 from typing import Optional, Union, Dict, Tuple
 
-from bound.bridge.transport.client import HTTPClient
+from bound.transport.bridge.client import HTTPClient
 from anchor.registry.model.config.resolver import config
 from xphi.xor.secure.secret.client import get_secret_from_vendor
 
