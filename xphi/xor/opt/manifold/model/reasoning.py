@@ -9,7 +9,7 @@ from anchor.dsp.base import BaseLM
 from xphi.xor.opt.manifold.model.basetype import Type
 
 if TYPE_CHECKING:
-    from arch.xor.manifold.sign.signature import Signature
+    from arch.xor.sign.signature import Signature
 
 
 class Reasoning(Type):

@@ -20,7 +20,7 @@ from bound.surface.exception import ContextWindowExceededError
 from xphi.scope.dsp.context import runtime
 from xphi.xor.opt.callback.base import BaseCallback
 
-from phase.gov.proto.gate import uuid4
+from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

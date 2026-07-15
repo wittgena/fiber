@@ -19,7 +19,7 @@ from bound.adapter.mapper.inter.project import ProjectLayout
 from bound.adapter.mapper.inter.llm import LLMCapabilities, LLMInfo
 
 from arch.contract.registry.unified import contract
-from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
+from phase.reflect.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("search.llm", phase="SYSTEM")

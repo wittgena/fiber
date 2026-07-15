@@ -16,8 +16,8 @@ from xphi.xor.opt.manifold.tool import Tool, ToolCalls
 from xphi.xor.opt.manifold.model.reasoning import Reasoning
 from xphi.xor.opt.callback.base import BaseCallback, with_callbacks
 
-from arch.xor.manifold.sign.signature import Signature
-from phase.gov.proto.gate import uuid4
+from arch.xor.sign.signature import Signature
+from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

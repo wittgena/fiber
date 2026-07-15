@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, Union, cast
 from bound.surface.legacy.action.response import aresponses
 from bound.surface.legacy.openai.types import ResponseOutputItem, ResponsesAPIResponse
 from bound.surface.legacy.param.embedding import VectorStoreSearchResult
-from phase.gov.proto.gate import uuid4 
+from arch.gov.gate import uuid4 
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("search.file")

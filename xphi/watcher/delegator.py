@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from xphi.watcher.snapshot.metrics import Metrics
 from xphi.watcher.observer.driver import DriverObserver, create_topological_observer
 
-from phase.gov.proto.gate import uuid4
+from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context
 
 emitter = get_emitter("watcher.delegator")

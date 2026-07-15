@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, AsyncGenerator
 
 from xphi.watcher.audit.gatekeeper import SecurityError
-from arch.bound.sandbox.tunnel import UniversalFacade
+from arch.topos.bound.sandbox.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("surface.mesh")

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from bound.adapter.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
 from xphi.watcher.snapshot.metrics import Metrics
-from phase.gov.proto.gate import uuid4
+from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context
 
 emitter = get_emitter("observer.driver")

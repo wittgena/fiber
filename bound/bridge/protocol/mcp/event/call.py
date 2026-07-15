@@ -15,7 +15,7 @@ from bound.surface.legacy.openai.types import (
     MCPCallInProgressEvent,
 )
 from bound.adapter.switch.params import ResponsesAPIStreamingResponse
-from phase.gov.proto.gate import uuid
+from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("event.call")

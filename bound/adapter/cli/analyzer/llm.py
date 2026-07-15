@@ -12,7 +12,7 @@ from bound.adapter.cli.search.llm import LLMSearcher
 from xphi.analyzer.repo import InterAnalyzer
 
 from arch.contract.registry.unified import contract
-from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
+from phase.reflect.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("analyzer.llm", phase="SYSTEM")

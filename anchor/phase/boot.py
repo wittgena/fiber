@@ -7,14 +7,15 @@ from anchor.phase.gateway import PhaseGateway
 import bound.adapter.switch.compat.patch 
 from bound.adapter.cli.search.reader import ReaderSearcher
 
-from arch.contract.base.executor import BaseExecutor
+from arch.contract.executor import BaseExecutor
 from arch.contract.registry.unified import registry
-from arch.bound.sandbox.tunnel import TunnelFactory
+from arch.topos.bound.sandbox.tunnel import TunnelFactory
+from arch.contract.event.bus import AsyncEventBus
 
 from phase.bind.redirector import PhaseAirlock
-from phase.runtime.builder import CouplerBuilder
+from phase.reflect.context.builder import ContextBuilder
+from phase.reflect.swarm.executor import SwarmExecutor
 from phase.runtime.node import NodeRuntime, install_os_signal
-from phase.runtime.swarm.executor import SwarmExecutor
 
 from watcher.plane.flow.executor import FlowExecutor
 from watcher.plane.emitter import get_emitter
@@ -82,10 +83,17 @@ class RoutingExecutor(BaseExecutor):
 
 async def main_async():
     log.info("[Boot] Initiating System Bootstrap Sequence...")
+    system_bus = AsyncEventBus()
+    
+    from watcher.kernel.bridge.signal import SignalBridgeWatcher
+    from watcher.plane.surface import default_plane
+    
+    bridge_watcher = SignalBridgeWatcher(event_bus=system_bus)
+    default_plane.attach(bridge_watcher)
     
     ## 의존성 및 Provider 등록
     reader_searcher = ReaderSearcher(READER_PATH)
-    CouplerBuilder.register_provider("reader.searcher", SearcherAdapter(reader_searcher))
+    ContextBuilder.register_provider("reader.searcher", SearcherAdapter(reader_searcher))
 
     ## 핵심 런타임 및 Executor 구성
     completion_signal = asyncio.Event()

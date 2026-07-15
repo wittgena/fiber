@@ -15,9 +15,9 @@ import httpx
 from typing import List, Dict, Any, Optional
 from xphi.watcher.prom.adapter import IPromAdapter, DeclarativePromAdapter
 
-from arch.proto.event.psi import PsiEvent
+from arch.contract.event.psi import PsiEvent
 from arch.contract.interface import IPhaseAtor, IPhaseField
-from arch.proto.event.bus import AsyncEventBus
+from arch.contract.event.bus import AsyncEventBus
 from arch.contract.registry.unified import contract
 from watcher.plane.emitter import get_emitter
 

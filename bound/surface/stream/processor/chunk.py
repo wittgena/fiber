@@ -22,7 +22,7 @@ from bound.adapter.transport.header import process_response_headers
 from bound.surface.stream.support import preserve_upstream_non_openai_attributes
 from xphi.analyzer.parser.stream.chunk import StreamChunkParser
 
-from phase.gov.proto.gate import uuid
+from arch.gov.gate import uuid
 from xphi.watcher.delegator import LogDelegator 
 from watcher.plane.emitter import get_emitter
 

@@ -33,7 +33,7 @@ from typing_extensions import Required, TypedDict
 
 EventHookType = Any
 
-from phase.gov.proto.gate import uuid
+from arch.gov.gate import uuid
 from bound.surface.legacy.base import BaseOpenAIResponse, PydanticObjectBase
 from bound.adapter.mapper.reason import map_finish_reason
 from bound.surface.legacy.base import HiddenParams

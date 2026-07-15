@@ -5,8 +5,8 @@ import threading
 from typing import Any
 
 from xphi.scope.dsp.context import runtime, get_context_propagator
-from arch.xor.manifold.sample import Sample
-from arch.proto.wrapper.opt import OptExecutor
+from arch.xor.sample import Sample
+from arch.xor.proto.opt import OptExecutor
 
 class DSPRunner:
     def __init__(

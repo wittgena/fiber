@@ -5,8 +5,8 @@ import json
 import logging
 from dataclasses import dataclass, asdict
 from typing import Dict, Any, List, Optional
-from arch.contract.state.spec import TransRule, NodeType, PhaseSpec
-from phase.gov.proto.flow import PhaseFlow, FlowState
+from watcher.kernel.state.spec import TransRule, NodeType, PhaseSpec
+from arch.gov.flow import PhaseFlow, FlowState
 
 log = logging.getLogger("PR.Gatekeeper")
 

@@ -19,7 +19,7 @@ from typing import Dict, Any, Optional, List, Protocol, Tuple
 import redis.asyncio as redis_async
 
 from xphi.watcher.snapshot.sphere import UniversalPhaseSnapshot
-from arch.proto.event.bus import AsyncEventBus
+from arch.contract.event.bus import AsyncEventBus
 from arch.contract.interface import (
     IPhaseAtor,
     IPhaseField,

@@ -36,7 +36,7 @@ from bound.bridge.response.stream.handler import ResponseApiHandler, _build_cont
 from bound.surface.legacy.action.client.wrapper import client
 from bound.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
-from phase.gov.proto.gate import uuid
+from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.response")

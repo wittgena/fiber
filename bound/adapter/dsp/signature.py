@@ -17,7 +17,7 @@ from xphi.xor.opt.formatter import (
 )
 from xphi.xor.opt.callback.base import BaseCallback
 
-from arch.xor.manifold.sign.signature import Signature
+from arch.xor.sign.signature import Signature
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

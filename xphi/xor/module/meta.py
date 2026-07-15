@@ -8,8 +8,8 @@ from xphi.scope.dsp.context import runtime
 from xphi.scope.dsp.usage import track_usage
 from xphi.watcher.format import pretty_print_history
 
-from arch.xor.manifold.sample import Sample
-from arch.xor.manifold.sample import Prediction
+from arch.xor.sample import Sample
+from arch.xor.sample import Prediction
 from xphi.xor.module.base import BaseModule
 from xphi.xor.opt.callback.base import with_callbacks
 from anchor.phase.executor.dsp import DSPRunner

@@ -11,7 +11,7 @@ from typing import Any
 
 from anchor.dsp.base import BaseLM
 
-from phase.gov.proto.gate import uuid4
+from arch.gov.gate import uuid4
 from phase.bind.client.engine.local import LLMEngine
 from watcher.plane.emitter import get_emitter
 

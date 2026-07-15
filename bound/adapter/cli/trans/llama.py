@@ -22,7 +22,7 @@ from anchor.phase.executor.iso import IsoRunner
 from bound.resolver.ext.inter import ExtResolver
 from arch.contract.registry.unified import contract, registry
 from phase.bind.resolver import find_current_self, get_invoker
-from phase.runtime.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
+from phase.reflect.cli.executor import CliTaskAdapter, parse_local, dispatch_cli
 from watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))

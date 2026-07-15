@@ -6,8 +6,8 @@ import math
 import random
 import time
 from typing import Optional, Any
-from arch.bound.sandbox.tunnel import TunnelFactory
-from arch.proto.event.psi import PsiEvent, PsiCarrier, CarrierType, PhaseField
+from arch.topos.bound.sandbox.tunnel import TunnelFactory
+from arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType, PhaseField
 from watcher.plane.emitter import get_emitter
 
 class TrafficOracle:

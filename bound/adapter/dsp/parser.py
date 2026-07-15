@@ -6,7 +6,7 @@ from typing import Any, Protocol
 import json_repair
 import regex
 
-from arch.xor.manifold.sign.signature import Signature
+from arch.xor.sign.signature import Signature
 from bound.adapter.dsp.exception import AdapterParseError
 from xphi.xor.opt.formatter import parse_value
 from watcher.plane.emitter import get_emitter

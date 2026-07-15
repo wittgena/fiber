@@ -23,7 +23,7 @@ from bound.surface.legacy.action.process.pre import CompletionContext
 from anchor.registry.router.llm import LLMRouter, TopologyMissingError
 from bound.surface.stream.wrapper import StreamWrapper
 
-from phase.gov.proto.gate import uuid4 
+from arch.gov.gate import uuid4 
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
 from anchor.inter.bound.base.llms.types import ChatMessage, MessageRole
-from phase.gov.proto.gate import uuid4 
+from arch.gov.gate import uuid4 
 from phase.bind.resolver import get_invoker
 from watcher.plane.emitter import get_emitter
 

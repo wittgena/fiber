@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from xphi.xor.module.meta import Module
 from xphi.xor.opt.manifold.model.cot import ChainOfThought 
 
-from arch.xor.manifold.sign.field import InputField, OutputField
-from arch.xor.manifold.sign.signature import Signature
+from arch.xor.sign.field import InputField, OutputField
+from arch.xor.sign.signature import Signature
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scope.thch")

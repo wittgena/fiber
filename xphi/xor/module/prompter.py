@@ -15,9 +15,9 @@ from xphi.xor.opt.manifold.parameter import Parameter
 from xphi.xor.opt.callback.base import BaseCallback
 from xphi.xor.module.meta import Module
 
-from arch.xor.manifold.sample import Prediction
-from arch.xor.manifold.sign.signature import Signature, ensure_signature
-from phase.gov.proto.gate import uuid4
+from arch.xor.sample import Prediction
+from arch.xor.sign.signature import Signature, ensure_signature
+from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

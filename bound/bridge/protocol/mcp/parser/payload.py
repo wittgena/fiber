@@ -23,7 +23,7 @@ from bound.surface.legacy.types import Choices
 from bound.surface.token.convert import convert_list_message_to_dict
 from bound.surface.legacy.param.response import GenericResponseOutputItem, OutputText
 
-from phase.gov.proto.gate import uuid
+from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("mcp.payload")

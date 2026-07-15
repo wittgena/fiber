@@ -8,8 +8,8 @@ import asyncio
 import os
 from typing import Optional, Dict, Any
 
-from arch.proto.event.bus import AsyncEventBus
-from arch.proto.event.psi import PsiEvent, PsiCarrier
+from arch.contract.event.bus import AsyncEventBus
+from arch.contract.event.psi import PsiEvent, PsiCarrier
 from phase.runtime.node import NodeRuntime
 from watcher.plane.emitter import get_emitter
 
