@@ -11,10 +11,10 @@ from pydantic import BaseModel
 from anchor.registry.model.api.base import get_api_base
 from anchor.registry.model.config.resolver import config
 
-from bound.adapter.surface.legacy.openai.types import OpenAIChatCompletionChunk
-from bound.adapter.surface.legacy.info import ProviderTypes
-from bound.adapter.surface.legacy.param.legacy import GenericLiteLLMParams
-from bound.adapter.surface.legacy.types import Delta, GenericStreamingChunk as GChunk
+from bound.surface.legacy.openai.types import OpenAIChatCompletionChunk
+from bound.surface.legacy.info import ProviderTypes
+from bound.surface.legacy.param.legacy import GenericLiteLLMParams
+from bound.surface.legacy.types import Delta, GenericStreamingChunk as GChunk
 
 from bound.adapter.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 from bound.adapter.mapper.reason import map_finish_reason

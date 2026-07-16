@@ -17,16 +17,16 @@ import datetime
 from typing import Any, Optional, Union
 
 from bound.adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
-from bound.adapter.surface.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
+from bound.surface.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
 from anchor.registry.model.config.constants import LITELLM_DETAILED_TIMING
 from bound.transport.adapter.tosync import SyncStreamAdapter
 
-import bound.adapter.surface.legacy.openai.types as openai_types
+import bound.surface.legacy.openai.types as openai_types
 
 from anchor.registry.model.config.resolver import config
 from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS, STREAM_SSE_DONE_STRING
-from bound.adapter.surface.legacy.openai.types import ResponsesAPIStreamEvents
-from bound.adapter.surface.legacy.types import CallTypes
+from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
+from bound.surface.legacy.types import CallTypes
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from xphi.xor.executor.legacy import executor
 from bound.transport.adapter.header import process_response_headers

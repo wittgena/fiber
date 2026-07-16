@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Optional, Tuple,
 from pydantic import BaseModel
 from anchor.registry.model.config.resolver import config as global_config
 from anchor.registry.model.config.constants import DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
-from bound.adapter.surface.legacy.types import CostPerToken
+from bound.surface.legacy.types import CostPerToken
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("cost.policy")

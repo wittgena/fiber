@@ -19,7 +19,7 @@ from anchor.inter.bound.base.llms.types import ChatMessage, MessageRole
 from anchor.inter.bound.adapter.base import BaseProviderAdapter
 from bound.adapter.mapper.state import StateMapper
 
-from bound.adapter.surface.legacy.action.process.pre import CompletionContext
+from bound.surface.legacy.action.process.pre import CompletionContext
 from anchor.registry.router.llm import LLMRouter, TopologyMissingError
 from bound.transport.stream.wrapper import StreamWrapper
 

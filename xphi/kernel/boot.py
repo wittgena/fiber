@@ -17,7 +17,7 @@ from phase.bind.redirector import PhaseAirlock
 from phase.executor.swarm import SwarmExecutor
 from phase.runtime.node import NodeRuntime, install_os_signal
 
-from watcher.plane.observer.surface import default_plane
+from watcher.plane.regulator import default_plane
 from watcher.plane.flow.executor import FlowExecutor
 from watcher.plane.emitter import get_emitter
 from watcher.kernel.store import KernelStore

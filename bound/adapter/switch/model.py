@@ -17,8 +17,8 @@ if LITELLM_CONVERT_SWITCH:
 if not LITELLM_CONVERT_SWITCH:
     try:
         from anchor.registry.model.support import get_supported_openai_params, supports_vision
-        from bound.adapter.surface.token.splitter import create_pretrained_tokenizer
-        from bound.adapter.surface.token.counter import token_counter
+        from bound.surface.token.splitter import create_pretrained_tokenizer
+        from bound.surface.token.counter import token_counter
     except ImportError as e:
         raise ImportError(
             f"Failed to load execution boundaries from internal bound modules. "

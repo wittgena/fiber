@@ -2,7 +2,7 @@
 ## @lineage: bound.bridge.channel.mapper.reason
 ## @lineage: bound.channel.bridge.mapper.reason
 ## @lineage: bound.channel.bridge.map.reason
-from bound.adapter.surface.legacy.openai.types import OpenAIChatCompletionFinishReason
+from bound.surface.legacy.openai.types import OpenAIChatCompletionFinishReason
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("map.reason")

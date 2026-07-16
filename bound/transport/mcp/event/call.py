@@ -6,9 +6,9 @@
 ## @lineage: bound.adapter.protocol.mcp.event.call
 ## @lineage: bound.bridge.mcp.event.call
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
-from bound.adapter.surface.legacy.openai.types import OutputItemDoneEvent
-from bound.adapter.surface.legacy.openai.types import ResponsesAPIStreamEvents
-from bound.adapter.surface.legacy.openai.types import (
+from bound.surface.legacy.openai.types import OutputItemDoneEvent
+from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
+from bound.surface.legacy.openai.types import (
     BaseOpenAIResponse,
     MCPCallArgumentsDeltaEvent,
     MCPCallArgumentsDoneEvent,

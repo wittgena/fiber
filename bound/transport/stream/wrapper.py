@@ -14,9 +14,9 @@ from xphi.xor.executor.legacy import executor
 from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from anchor.registry.model.config.resolver import config
 
-from bound.adapter.surface.exception import OpenAIError
+from bound.surface.exception import OpenAIError
 from bound.adapter.mapper.exception import exception_type
-from bound.adapter.surface.legacy.types import CallTypes
+from bound.surface.legacy.types import CallTypes
 from bound.adapter.switch.params import ModelResponse, ModelResponseStream
 from bound.transport.bridge.rule import Rules
 from bound.transport.stream.chunk import stream_chunk_builder
@@ -280,7 +280,7 @@ class StreamWrapper:
         self._handle_stream_fallback_error(e)
 
     def _handle_stream_fallback_error(self, e: Exception) -> NoReturn:
-        from bound.adapter.surface.exception import MidStreamFallbackError
+        from bound.surface.exception import MidStreamFallbackError
 
         if isinstance(e, OpenAIError):
             mapped_exception: Exception = e

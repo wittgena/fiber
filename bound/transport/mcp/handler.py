@@ -12,8 +12,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 from fastapi import HTTPException
 
-from bound.adapter.surface.exception import BlockedPiiEntityError, GuardrailRaisedException
-from bound.adapter.surface.legacy.types import CallTypes, StandardLoggingMCPToolCall
+from bound.surface.exception import BlockedPiiEntityError, GuardrailRaisedException
+from bound.surface.legacy.types import CallTypes, StandardLoggingMCPToolCall
 from bound.transport.mcp.tool.transform import transform_mcp_tool_to_openai_responses_api_tool, transform_mcp_tool_to_openai_tool
 from bound.transport.mcp.parser.payload import MCPPayloadParser
 from bound.transport.mcp.tool.manager import ToolCatalogManager

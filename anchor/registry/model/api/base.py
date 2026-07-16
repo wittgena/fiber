@@ -3,11 +3,11 @@
 from typing import Any, Dict, Mapping, List, Optional, Type, Union, cast, get_type_hints, overload
 from pydantic import BaseModel
 
-from bound.adapter.surface.legacy.param.legacy import LiteLLM_Params
+from bound.surface.legacy.param.legacy import LiteLLM_Params
 from anchor.registry.router.locator import get_llm_provider
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from anchor.registry.model.config.resolver import config
-from bound.adapter.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
+from bound.surface.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
 from bound.transport.bridge.response.stream.identity import IdentityRouter
 from bound.transport.adapter.request import RequestBuilder, IdentityMutator, _get_val
 from watcher.plane.emitter import get_emitter

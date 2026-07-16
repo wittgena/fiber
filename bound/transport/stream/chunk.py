@@ -27,11 +27,11 @@ import tiktoken
 if TYPE_CHECKING:
     from bound.watcher.delegator import LogDelegator
 
-from bound.adapter.surface.legacy.types import TextChoices, TextCompletionResponse
-from bound.adapter.surface.exception import APIError
+from bound.surface.legacy.types import TextChoices, TextCompletionResponse
+from bound.surface.exception import APIError
 
 from anchor.registry.model.config.resolver import config
-from bound.adapter.surface.token.counter import token_counter
+from bound.surface.token.counter import token_counter
 from bound.transport.stream.processor.builder import ChunkBuilderProcessor
 from bound.adapter.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter

@@ -22,12 +22,12 @@ if LITELLM_CONVERT_SWITCH:
 
 if not LITELLM_CONVERT_SWITCH:
     try:
-        from bound.adapter.surface.legacy.action.completion import completion, acompletion
-        from bound.adapter.surface.legacy.action.embedding import embedding, aembedding
-        from bound.adapter.surface.legacy.action.response import responses
-        from bound.adapter.surface.legacy.action.response import aresponses
+        from bound.surface.legacy.action.completion import completion, acompletion
+        from bound.surface.legacy.action.embedding import embedding, aembedding
+        from bound.surface.legacy.action.response import responses
+        from bound.surface.legacy.action.response import aresponses
         from bound.transport.stream.iterator.response import SyncResponsesAPIStreamingIterator
-        from bound.adapter.surface.legacy.cost.calculator import completion_cost
+        from bound.surface.legacy.cost.calculator import completion_cost
     except ImportError as e:
         raise ImportError(
             f"Failed to load execution boundaries from internal bound modules. "

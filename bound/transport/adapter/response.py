@@ -9,7 +9,7 @@ from typing_extensions import Required, TypedDict
 
 from anchor.registry.model.config.constants import RESPONSE_FORMAT_TOOL_NAME
 from bound.transport.adapter.header import get_response_headers
-from bound.adapter.surface.legacy.openai.types import (
+from bound.surface.legacy.openai.types import (
     ChatCompletionThinkingBlock,
     ImageURLListItem,
     OpenAIModerationResponse,
@@ -40,9 +40,9 @@ from bound.adapter.switch.params import (
     Choices, 
     Delta
 )
-from bound.adapter.surface.exception import APIError
+from bound.surface.exception import APIError
 
-from bound.adapter.surface.legacy.types import Logprobs as TextCompletionLogprobs
+from bound.surface.legacy.types import Logprobs as TextCompletionLogprobs
 
 from watcher.plane.emitter import get_emitter 
 

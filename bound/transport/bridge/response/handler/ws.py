@@ -15,8 +15,8 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 import websockets
 from websockets.asyncio.client import ClientConnection
 
-from bound.adapter.surface.legacy.param.legacy import GenericLiteLLMParams
-import bound.adapter.surface.legacy.openai.types as openai_types
+from bound.surface.legacy.param.legacy import GenericLiteLLMParams
+import bound.surface.legacy.openai.types as openai_types
 from anchor.registry.model.config.resolver import config
 from xphi.xor.executor.legacy import executor
 from bound.transport.bridge.response.stream.identity import IdentityRouter

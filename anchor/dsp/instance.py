@@ -15,7 +15,7 @@ from anchor.dsp.training.base import Provider, ReinforceJob, TrainingJob
 from anchor.dsp.delegator import DSPDelegator
 from anchor.dsp.cache import request_cache
 from anchor.dsp.training.format import TrainDataFormat
-from bound.adapter.surface.exception import ContextWindowExceededError
+from bound.surface.exception import ContextWindowExceededError
 
 from xphi.scope.dsp.context import runtime
 from xphi.xor.opt.callback.base import BaseCallback

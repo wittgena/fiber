@@ -7,7 +7,7 @@ from arch.contract.event.next import LogEvent
 from arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType 
 from arch.contract.event.bus import AsyncEventBus
 
-from watcher.plane.observer.surface import EventObserver
+from watcher.plane.observer.event import EventObserver
 from watcher.plane.emitter import get_emitter
 
 class PhaseSignal(EventObserver):
