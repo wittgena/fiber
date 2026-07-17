@@ -1,5 +1,4 @@
 # bound.watcher.audit.tracer
-## @lineage: xphi.watcher.audit.tracer
 import traceback
 
 IGNORE_FILES = (

@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 from watcher.kernel.state.spec import TransRule, NodeType, PhaseSpec
 from arch.gov.flow import PhaseFlow, FlowState
 
-log = logging.getLogger("PR.Gatekeeper")
+log = logging.getLogger("audit.pr")
 
 @dataclass
 class SurgentManifest:

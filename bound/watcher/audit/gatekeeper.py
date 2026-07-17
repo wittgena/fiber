@@ -1,5 +1,4 @@
 # bound.watcher.audit.gatekeeper
-## @lineage: xphi.watcher.audit.gatekeeper
 """@desc: Runtime Dependency Gatekeeper & Dynamic Quarantine Implementation"""
 import importlib
 from typing import Any, Dict, Optional

@@ -1,7 +1,4 @@
 # bound.proxy.eco.cost.unit.calc
-## @lineage: bound.surface.eco.cost.unit.calc
-## @lineage: bound.surface.cost.unit.calc
-## @lineage: bound.surface.cost.unit
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, TypedDict, cast
 from bound.surface.legacy.types import (
     CacheCreationTokenDetails,

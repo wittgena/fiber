@@ -1,6 +1,4 @@
 # bound.proxy.eco.cost.policy
-## @lineage: bound.surface.eco.cost.policy
-## @lineage: bound.surface.cost.policy
 import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Optional, Tuple, Union, cast
 from pydantic import BaseModel
