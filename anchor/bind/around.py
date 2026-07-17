@@ -34,6 +34,7 @@ DEFAULT_BOUND_SKELETON = {
     },
     "paths": {
         "brane": "brane",
+        "nexus": "nexus",
         "io": ":io:",
         "ext": ":anchor:/ext",
         "memory": ":anchor:/memory",
