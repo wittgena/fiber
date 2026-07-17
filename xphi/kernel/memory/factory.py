@@ -1,12 +1,12 @@
-# xphi.kernel.task.memory.factory
-## @lineage: anchor.phase.kernel.task.memory.factory
+# xphi.kernel.memory.factory
+## @lineage: xphi.kernel.task.memory.factory
 import os
 import asyncio
 from typing import Optional, Dict, Any, cast
 
 from bound.proxy.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
 from acp.connection import Connection, StreamEvent, StreamDirection
-from xphi.kernel.task.queue import RpcTask, RpcTaskKind
+from watcher.kernel.message.queue import RpcTask, RpcTaskKind
 
 from arch.topos.bound.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter

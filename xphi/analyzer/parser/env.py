@@ -12,10 +12,7 @@ from pathlib import Path
 from types import UnionType
 from typing import IO, Annotated, Any, Literal, Union, cast, get_args, get_origin
 from pydantic import BaseModel, SecretStr, TypeAdapter
-from arch.topos.state.disc import (
-    DiscMixin,
-    get_known_concrete_subclasses,
-)
+from arch.topos.surge.disc import DiscMixin, get_known_concrete_subclasses
 from arch.contract.event.next import ToposId
 
 class MissingType:

@@ -122,12 +122,7 @@ class DataRouter:
 
 if __name__ == "__main__":
     router = DataRouter()
-    
-    # [시나리오 1] 정적 맵 정상 동작 (Fast Path)
     log.info("LLM Tools Schema:", router.get_llm_tool_schema())
-    
-    # [시나리오 2] 스캐너 동작 확인 (Slow Path)
-    # 정적 맵에 없는 'xml'을 호출하면 내부에서 ReaderScanner가 가동되고 레지스트리가 병합됩니다.
     try:
         router.route_and_load("xml", file_path="sample.xml")
     except Exception as e:

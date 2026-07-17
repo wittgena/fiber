@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Dict, Any, Union
 
 from xphi.kernel.contract.proposer import execute_proposer
-from xphi.kernel.contract.validator import ContractValidator
 
 from arch.contract.registry.path import path_registry
 from arch.contract.discovery import discover_modules
@@ -20,6 +19,7 @@ from phase.bind.resolver import find_current_self
 from phase.executor.dynamics import DynamicsExecutor
 from phase.runtime.node import NodeRuntime
 
+from arch.contract.validator import ContractValidator
 from watcher.xe.cont import LoopCarrier
 from watcher.plane.emitter import get_emitter
 

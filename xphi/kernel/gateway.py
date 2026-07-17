@@ -1,14 +1,12 @@
 # xphi.kernel.gateway
-## @lineage: anchor.phase.kernel.gateway
-## @lineage: anchor.phase.gateway
 import os
 import asyncio
 
 from bound.proxy.ingress.receptor import PolymorphicReceptor
-
-from xphi.kernel.task.memory.factory import BridgeFactory
-from xphi.xor.mock.ext.vuln import ignite
 from bound.proxy.surface.mesh import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
+
+from xphi.kernel.memory.factory import BridgeFactory
+from xphi.xor.mock.ext.vuln import ignite
 
 from arch.topos.bound.tunnel import TunnelFactory
 from arch.contract.event.bus import AsyncEventBus
