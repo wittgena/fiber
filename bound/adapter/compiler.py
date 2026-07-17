@@ -56,9 +56,7 @@ class CompilerBridge:
         log.debug(f"[Bridge] Requesting compiler authorization for stream: {kernel_stream.id}")
 
         try:
-            # 💡 [Aligned] Delegate to the compiler's sealing routine
             sealed_kernel: Optional[SealedKernel] = await self.compiler.compile_kernel(kernel_stream)
-
             if sealed_kernel is not None:
                 log.info(f"[Bridge] AUTHORIZED: Stream {kernel_stream.id} successfully sealed into {sealed_kernel.kernel_id}.")
                 return True

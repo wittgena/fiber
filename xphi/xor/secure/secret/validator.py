@@ -45,12 +45,10 @@ class Cipher:
         fernet = self._fernet
         if fernet is None:
             secret_key = self.secret_key.encode()
-            # Hash the key to make sure we have a 256 bit value
             fernet_key = b64encode(hashlib.sha256(secret_key).digest())
             fernet = Fernet(fernet_key)
             object.__setattr__(self, "_fernet", fernet)
         return fernet
-
 
 class CredentialAccessor:
     @staticmethod

@@ -1,6 +1,4 @@
 # bound.watcher.audit.pr
-## @lineage: xphi.watcher.audit.pr
-## @lineage: meta.ops.pr.gatekeeper
 import hashlib
 import json
 import logging
