@@ -1,6 +1,4 @@
 # bound.proxy.surface.mesh
-## @lineage: bound.surface.mesh
-## @lineage: anchor.phase.surface.mesh
 """
 @desc: Distributed Policy Orchestrator (Control Plane for Envoy ext_proc)
 @flow: Syscall Sandbox -> Broker Initialization -> Policy Engine & State Mesh Assembly -> Stream Handler Activation
@@ -13,7 +11,8 @@ from enum import Enum
 from dataclasses import dataclass, field
 from typing import Optional, Dict, AsyncGenerator
 
-from bound.watcher.audit.gatekeeper import SecurityError
+from bound.proxy.surface.security import SecurityError
+
 from arch.topos.bound.tunnel import UniversalFacade
 from watcher.plane.emitter import get_emitter
 
