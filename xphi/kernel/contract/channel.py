@@ -12,8 +12,7 @@ from xphi.kernel.contract.proposer import execute_proposer
 from arch.contract.registry.path import path_registry
 from arch.contract.discovery import discover_modules
 from arch.contract.event.psi import PsiCarrier, PsiEvent
-from arch.topos.edge.treg import FrameRegistry, TregEdge, PhaseState
-from arch.topos.edge.trajectory import SignatureBound, TrajectoryXor
+from arch.topos.edge.trajectory import SignatureBound, TrajectoryXor, FrameRegistry, TregEdge, PhaseState
 
 from phase.bind.resolver import find_current_self
 from phase.executor.dynamics import DynamicsExecutor
