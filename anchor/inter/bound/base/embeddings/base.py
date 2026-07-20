@@ -16,12 +16,12 @@ from anchor.inter.bound.bridge.pydantic import (
     ConfigDict,
     model_validator,
 )
-from xphi.loop.callback.base import CallbackManager
-from xphi.loop.callback.schema import CBEventType, EventPayload
+from xor.loop.callback.base import CallbackManager
+from xor.loop.callback.schema import CBEventType, EventPayload
 from anchor.inter.bound.constants import (
     DEFAULT_EMBED_BATCH_SIZE,
 )
-from xphi.loop.inst import DispatcherSpanMixin
+from xor.loop.inst import DispatcherSpanMixin
 from anchor.inter.bound.schema import BaseNode, MetadataMode, TransformComponent
 from anchor.inter.bound.utils import get_tqdm_iterable
 from anchor.inter.bound.async_utils import run_jobs
@@ -30,11 +30,11 @@ from anchor.inter.bound.async_utils import run_jobs
 Embedding = List[float]
 
 
-from xphi.loop.inst.events.embedding import (
+from xor.loop.inst.events.embedding import (
     EmbeddingEndEvent,
     EmbeddingStartEvent,
 )
-import xphi.loop.inst as instrument
+import xor.loop.inst as instrument
 
 dispatcher = instrument.get_dispatcher(__name__)
 

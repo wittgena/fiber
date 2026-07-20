@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from anchor.inter.bound.base.embeddings.base import BaseEmbedding
 from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
-from xphi.loop.callback.base import CallbackManager
+from xor.loop.callback.base import CallbackManager
 from anchor.inter.bound.constants import DEFAULT_EMBED_BATCH_SIZE
 
 from ollama import Client, AsyncClient

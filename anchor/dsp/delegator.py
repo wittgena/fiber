@@ -12,7 +12,7 @@ from asyncer import syncify
 from bound.surface.legacy.action.completion import completion, acompletion
 from bound.surface.legacy.action.response import responses
 from bound.surface.legacy.action.response import aresponses
-from xphi.scope.dsp.context import runtime
+from xor.scope.dsp.context import runtime
 from bound.transport.stream.chunk import stream_chunk_builder
 
 from watcher.plane.emitter import get_emitter

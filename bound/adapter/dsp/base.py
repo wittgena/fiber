@@ -4,13 +4,13 @@ import json_repair
 
 from anchor.dsp.base import BaseLM
 
-from xphi.xor.opt.manifold.model.basetype import Type
-from xphi.xor.opt.manifold.model.basetype import split_message_content_for_custom_types
+from xor.opt.manifold.model.basetype import Type
+from xor.opt.manifold.model.basetype import split_message_content_for_custom_types
 from bound.adapter.dsp.exception import AdapterParseError
 
-from xphi.xor.opt.manifold.tool import Tool, ToolCalls
-from xphi.xor.opt.manifold.model.reasoning import Reasoning
-from xphi.xor.opt.callback.base import BaseCallback, with_callbacks
+from xor.opt.manifold.tool import Tool, ToolCalls
+from xor.opt.manifold.model.reasoning import Reasoning
+from xor.opt.callback.base import BaseCallback, with_callbacks
 
 from arch.xor.sign.signature import Signature
 from arch.gov.gate import uuid4

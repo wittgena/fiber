@@ -4,7 +4,7 @@ from bound.adapter.switch.params import ModelResponse
 from bound.surface.legacy.action.process.pre import CompletionContext
 from bound.surface.legacy.completor import CompletionHandler
 from bound.transport.stream.wrapper import StreamWrapper
-from xphi.xor.secure.secret.manager import get_secret_bool
+from xor.secure.secret.manager import get_secret_bool
 from bound.surface.legacy.openai.completion import OpenAIChatCompletion
 
 from watcher.plane.emitter import get_emitter

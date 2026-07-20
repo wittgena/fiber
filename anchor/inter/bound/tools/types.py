@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from anchor.inter.bound.base.llms.types import ContentBlock, TextBlock
 from anchor.inter.bound.bridge.pydantic import BaseModel, PrivateAttr
-from xphi.loop.inst import DispatcherSpanMixin
+from xor.loop.inst import DispatcherSpanMixin
 from deprecated import deprecated
 
 

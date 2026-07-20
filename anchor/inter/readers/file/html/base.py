@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
-from xphi.loop.flow.reader.base import BaseReader
+from xor.loop.flow.reader.base import BaseReader
 from anchor.inter.bound.schema import Document
 
 if TYPE_CHECKING:

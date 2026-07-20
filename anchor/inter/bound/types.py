@@ -31,7 +31,7 @@ from anchor.inter.bound.bridge.pydantic import (
     GetJsonSchemaHandler,
 )
 from anchor.inter.bound.bridge.pydantic_core import CoreSchema, core_schema
-from xphi.loop.inst import DispatcherSpanMixin
+from xor.loop.inst import DispatcherSpanMixin
 
 Model = TypeVar("Model", bound=BaseModel)
 
@@ -40,7 +40,7 @@ TokenAsyncGen = AsyncGenerator[str, None]
 RESPONSE_TEXT_TYPE = Union[BaseModel, str, TokenGen, TokenAsyncGen]
 
 if TYPE_CHECKING:
-    from xphi.loop.prog.utils import FlexibleModel
+    from xor.loop.prog.utils import FlexibleModel
 
 
 # TODO: move into a `core` folder

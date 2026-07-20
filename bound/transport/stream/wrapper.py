@@ -10,7 +10,7 @@ from typing import Any, AsyncIterator, Callable, Iterator, List, NoReturn, Optio
 import anyio
 import httpx
 
-from xphi.xor.executor.legacy import executor
+from xor.executor.legacy import executor
 from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from anchor.registry.model.config.resolver import config
 

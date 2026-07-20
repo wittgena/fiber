@@ -13,10 +13,10 @@ from anchor.inter.bound.base.embeddings.base import BaseEmbedding
 from anchor.inter.bound.schema import TransformComponent
 from anchor.inter.bound.types import PydanticProgramMode
 
-from xphi.loop.callback.base import BaseCallbackHandler, CallbackManager
-from xphi.loop.flow.embedding.utils import EmbedType, resolve_embed_model
-from xphi.loop.flow.llm.llm import LLM
-from xphi.loop.flow.llm.utils import LLMType, resolve_llm
+from xor.loop.callback.base import BaseCallbackHandler, CallbackManager
+from xor.loop.flow.embedding.utils import EmbedType, resolve_embed_model
+from xor.loop.flow.llm.llm import LLM
+from xor.loop.flow.llm.utils import LLMType, resolve_llm
 
 @dataclass
 class _Settings:

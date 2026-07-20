@@ -16,12 +16,12 @@ from anchor.inter.bound.bridge.pydantic import (
     model_serializer,
 )
 from anchor.inter.bound.constants import DEFAULT_EMBED_BATCH_SIZE
-from xphi.loop.inst import DispatcherSpanMixin
-from xphi.loop.inst.events.embedding import (
+from xor.loop.inst import DispatcherSpanMixin
+from xor.loop.inst.events.embedding import (
     SparseEmbeddingEndEvent,
     SparseEmbeddingStartEvent,
 )
-import xphi.loop.inst as instrument
+import xor.loop.inst as instrument
 from anchor.inter.bound.utils import get_tqdm_iterable
 from anchor.inter.bound.async_utils import run_jobs
 

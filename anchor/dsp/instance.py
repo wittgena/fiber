@@ -17,8 +17,8 @@ from anchor.dsp.cache import request_cache
 from anchor.dsp.training.format import TrainDataFormat
 from bound.surface.exception import ContextWindowExceededError
 
-from xphi.scope.dsp.context import runtime
-from xphi.xor.opt.callback.base import BaseCallback
+from xor.scope.dsp.context import runtime
+from xor.opt.callback.base import BaseCallback
 
 from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter

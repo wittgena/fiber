@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, cast, Any
 from fsspec import AbstractFileSystem
 from io import BytesIO
 
-from xphi.loop.flow.reader.base import BaseReader
+from xor.loop.flow.reader.base import BaseReader
 from anchor.inter.bound.schema import Document, ImageDocument
 from anchor.inter.bound.utils import infer_torch_device
 

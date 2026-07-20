@@ -17,7 +17,7 @@ from typing import Dict, Any
 from anchor.registry.router.workflow import Workflow, step, Event, StartEvent, StopEvent
 from anchor.dsp.base import BaseLM
 from bound.adapter.dsp.base import Adapter
-from xphi.xor.opt.manifold.model.reasoning import Reasoning
+from xor.opt.manifold.model.reasoning import Reasoning
 
 from arch.xor.sign.signature import Signature
 from arch.xor.sign.field import InputField, OutputField

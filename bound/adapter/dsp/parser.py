@@ -8,7 +8,7 @@ import regex
 
 from arch.xor.sign.signature import Signature
 from bound.adapter.dsp.exception import AdapterParseError
-from xphi.xor.opt.formatter import parse_value
+from xor.opt.formatter import parse_value
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

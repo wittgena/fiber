@@ -6,7 +6,7 @@
 ## @lineage: bridge.llama.llms.anthropic.base
 import json
 import logging
-import xphi.loop.inst as instrument
+import xor.loop.inst as instrument
 from importlib.metadata import version as get_version
 from typing import (
     TYPE_CHECKING,
@@ -24,7 +24,7 @@ from typing import (
     Union,
     cast,
 )
-from xphi.loop.flow.llm.utils import parse_partial_json
+from xor.loop.flow.llm.utils import parse_partial_json
 from anchor.inter.bound.base.llms.types import (
     ChatMessage,
     ChatResponse,
@@ -39,13 +39,13 @@ from anchor.inter.bound.base.llms.types import TextBlock as LITextBlock
 from anchor.inter.bound.base.llms.types import CitationBlock as LICitationBlock
 from anchor.inter.bound.base.llms.types import ThinkingBlock as LIThinkingBlock
 from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
-from xphi.loop.callback import CallbackManager
+from xor.loop.callback import CallbackManager
 from anchor.inter.bound.constants import DEFAULT_TEMPERATURE
-from xphi.loop.flow.llm.callbacks import (
+from xor.loop.flow.llm.callbacks import (
     llm_chat_callback,
     llm_completion_callback,
 )
-from xphi.loop.flow.llm.function_calling import FunctionCallingLLM, ToolSelection
+from xor.loop.flow.llm.function_calling import FunctionCallingLLM, ToolSelection
 from anchor.inter.bound.types import BaseOutputParser, PydanticProgramMode, Model
 from anchor.inter.bound.prompts import PromptTemplate
 from anchor.inter.bound.utils import Tokenizer
@@ -86,7 +86,7 @@ from anthropic.types import (
 
 if TYPE_CHECKING:
     from anchor.inter.bound.tools.types import BaseTool
-    from xphi.loop.prog.utils import FlexibleModel
+    from xor.loop.prog.utils import FlexibleModel
 
 
 logger = logging.getLogger(__name__)

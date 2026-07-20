@@ -22,7 +22,7 @@ from typing import (
 )
 
 
-import xphi.loop.inst as instrument
+import xor.loop.inst as instrument
 from anchor.inter.bound.base.llms.generic_utils import (
     chat_to_completion_decorator,
     achat_to_completion_decorator,
@@ -42,13 +42,13 @@ from anchor.inter.bound.base.llms.types import (
     ToolCallBlock,
 )
 from anchor.inter.bound.bridge.pydantic import BaseModel, Field, PrivateAttr
-from xphi.loop.callback import CallbackManager
+from xor.loop.callback import CallbackManager
 from anchor.inter.bound.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
-from xphi.loop.flow.llm.callbacks import llm_chat_callback, llm_completion_callback
-from xphi.loop.flow.llm.function_calling import FunctionCallingLLM
-from xphi.loop.flow.llm.llm import ToolSelection, Model
+from xor.loop.flow.llm.callbacks import llm_chat_callback, llm_completion_callback
+from xor.loop.flow.llm.function_calling import FunctionCallingLLM
+from xor.loop.flow.llm.llm import ToolSelection, Model
 from anchor.inter.bound.prompts import PromptTemplate
-from xphi.loop.prog.utils import FlexibleModel, create_flexible_model
+from xor.loop.prog.utils import FlexibleModel, create_flexible_model
 from anchor.inter.bound.types import PydanticProgramMode
 from anchor.inter.llms.google_genai.utils import (
     chat_from_gemini_response,

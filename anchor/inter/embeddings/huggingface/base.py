@@ -18,9 +18,9 @@ from anchor.inter.bound.base.embeddings.base import (
     Embedding,
 )
 from anchor.inter.bound.bridge.pydantic import Field, PrivateAttr
-from xphi.loop.callback import CallbackManager
+from xor.loop.callback import CallbackManager
 from llama_index.embeddings.huggingface.pooling import Pooling
-from xphi.loop.flow.embedding.multi_modal_base import MultiModalEmbedding
+from xor.loop.flow.embedding.multi_modal_base import MultiModalEmbedding
 from anchor.inter.bound.utils import get_cache_dir, infer_torch_device
 from llama_index.embeddings.huggingface.utils import (
     DEFAULT_HUGGINGFACE_EMBEDDING_MODEL,

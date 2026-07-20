@@ -28,7 +28,7 @@ from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATIO
 from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
 from bound.surface.legacy.types import CallTypes
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
-from xphi.xor.executor.legacy import executor
+from xor.executor.legacy import executor
 from bound.transport.adapter.header import process_response_headers
 from anchor.registry.model.api.base import get_api_base
 from anchor.registry.model.api.base import APIBridge

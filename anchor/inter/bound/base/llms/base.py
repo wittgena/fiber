@@ -24,8 +24,8 @@ from anchor.inter.bound.base.llms.types import (
     TextBlock,
 )
 from anchor.inter.bound.bridge.pydantic import Field, model_validator, ConfigDict
-from xphi.loop.callback import CallbackManager
-from xphi.loop.inst import DispatcherSpanMixin
+from xor.loop.callback import CallbackManager
+from xor.loop.inst import DispatcherSpanMixin
 from anchor.inter.bound.schema import BaseComponent
 
 

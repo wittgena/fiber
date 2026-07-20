@@ -42,7 +42,7 @@ from anchor.inter.bound.base.llms.types import (
     ToolCallBlock,
     ContentBlock,
 )
-from xphi.loop.prog.utils import _repair_incomplete_json
+from xor.loop.prog.utils import _repair_incomplete_json
 from tenacity import (
     before_sleep_log,
     retry,

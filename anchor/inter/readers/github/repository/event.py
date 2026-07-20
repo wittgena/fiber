@@ -1,7 +1,7 @@
 # anchor.inter.readers.github.repository.event
 from typing import Optional
 
-from xphi.loop.inst.events import BaseEvent
+from xor.loop.inst.events import BaseEvent
 from anchor.inter.bound.schema import Document
 
 

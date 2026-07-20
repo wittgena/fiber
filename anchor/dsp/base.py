@@ -11,8 +11,8 @@ import datetime
 import uuid
 from typing import Any, TextIO
 
-from xphi.scope.dsp.context import runtime
-from xphi.xor.opt.callback.base import with_callbacks
+from xor.scope.dsp.context import runtime
+from xor.opt.callback.base import with_callbacks
 from bound.watcher.format import pretty_print_history
 from watcher.plane.emitter import get_emitter
 

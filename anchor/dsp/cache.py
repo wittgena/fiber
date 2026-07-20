@@ -20,7 +20,7 @@ from cachetools import LRUCache
 from diskcache import FanoutCache
 from anchor.registry.model.config.resolver import config
 from watcher.plane.emitter import get_emitter
-from xphi.scope.dsp.context import runtime
+from xor.scope.dsp.context import runtime
 
 log = get_emitter(__name__)
 

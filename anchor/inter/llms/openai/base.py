@@ -25,7 +25,7 @@ from typing import (
 import httpx
 import tiktoken
 
-import xphi.loop.inst as instrument
+import xor.loop.inst as instrument
 from anchor.inter.bound.base.llms.generic_utils import (
     achat_to_completion_decorator,
     acompletion_to_chat_decorator,
@@ -54,19 +54,19 @@ from anchor.inter.bound.bridge.pydantic import (
     Field,
     PrivateAttr,
 )
-from xphi.loop.callback import CallbackManager
+from xor.loop.callback import CallbackManager
 from anchor.inter.bound.constants import (
     DEFAULT_TEMPERATURE,
 )
-from xphi.loop.flow.llm.callbacks import (
+from xor.loop.flow.llm.callbacks import (
     llm_chat_callback,
     llm_completion_callback,
 )
-from xphi.loop.flow.llm.function_calling import FunctionCallingLLM
-from xphi.loop.flow.llm.llm import ToolSelection, Model
-from xphi.loop.flow.llm.utils import parse_partial_json
+from xor.loop.flow.llm.function_calling import FunctionCallingLLM
+from xor.loop.flow.llm.llm import ToolSelection, Model
+from xor.loop.flow.llm.utils import parse_partial_json
 from anchor.inter.bound.prompts import PromptTemplate
-from xphi.loop.prog.utils import FlexibleModel
+from xor.loop.prog.utils import FlexibleModel
 from anchor.inter.bound.types import BaseOutputParser, PydanticProgramMode
 from anchor.inter.llms.openai.utils import (
     O1_MODELS,
@@ -1192,7 +1192,7 @@ class OpenAI(FunctionCallingLLM):
         Union[Model, List[Model], "FlexibleModel", List["FlexibleModel"]], None, None
     ]:
         if self._should_use_structure_outputs():
-            from xphi.loop.prog.streaming_utils import (
+            from xor.loop.prog.streaming_utils import (
                 process_streaming_content_incremental,
             )
 
@@ -1228,7 +1228,7 @@ class OpenAI(FunctionCallingLLM):
             ) -> AsyncGenerator[
                 Union[Model, List[Model], FlexibleModel, List[FlexibleModel]], None
             ]:
-                from xphi.loop.prog.streaming_utils import (
+                from xor.loop.prog.streaming_utils import (
                     process_streaming_content_incremental,
                 )
 

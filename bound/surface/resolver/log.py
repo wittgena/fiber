@@ -7,7 +7,7 @@
 """
 import json
 from typing import List, Tuple, Dict, Any, Optional
-from xphi.analyzer.parser.ruleset import ElasticDSLRulesetParser
+from xor.opt.analyzer.parser.ruleset import ElasticDSLRulesetParser
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.log")

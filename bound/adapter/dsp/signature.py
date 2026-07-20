@@ -9,13 +9,13 @@ from bound.adapter.dsp.base import Adapter
 from bound.adapter.dsp.exception import AdapterParseError
 from bound.adapter.dsp.parser import MarkdownRegexParser, JSONRepairParser
 
-from xphi.xor.opt.formatter import (
+from xor.opt.formatter import (
     format_field_value,
     get_annotation_name,
     get_field_description_string,
     translate_field_type,
 )
-from xphi.xor.opt.callback.base import BaseCallback
+from xor.opt.callback.base import BaseCallback
 
 from arch.xor.sign.signature import Signature
 from watcher.plane.emitter import get_emitter

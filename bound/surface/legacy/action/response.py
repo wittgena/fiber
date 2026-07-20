@@ -406,7 +406,7 @@ async def _aresponses_websocket(model: str, websocket: Any, api_base: Optional[s
     provider_config = ProviderConfigManager.get_provider_responses_api_config(model=model, provider=ProviderTypes(_custom_llm_provider)) if _custom_llm_provider else None
 
     resolved_api_base = dyn_base or litellm_params.api_base or getattr(config, "api_base", None)
-    from xphi.xor.secure.secret.manager import get_secret_str
+    from xor.secure.secret.manager import get_secret_str
     resolved_api_key = dyn_key or litellm_params.api_key or getattr(config, "api_key", None) or getattr(config, "openai_key", None) or get_secret_str("OPENAI_API_KEY")
 
     _explicit_keys = {"user_api_key_dict", "litellm_metadata", "custom_llm_provider", "model", "websocket", "log_delegator", "api_base", "api_key", "timeout"}

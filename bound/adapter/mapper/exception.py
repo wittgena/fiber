@@ -29,7 +29,7 @@ from bound.surface.exception import (
     Timeout,
     UnprocessableEntityError,
 )
-from xphi.xor.secure.secret.redact import redact_string
+from xor.secure.secret.redact import redact_string
 
 from watcher.plane.emitter import get_emitter
 

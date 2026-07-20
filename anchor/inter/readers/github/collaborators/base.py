@@ -24,7 +24,7 @@ import logging
 from typing import Dict, List
 
 from anchor.inter.bound.async_utils import asyncio_run
-from xphi.loop.flow.reader.base import BaseReader
+from xor.loop.flow.reader.base import BaseReader
 from anchor.inter.bound.schema import Document
 from anchor.inter.readers.github.collaborators.github_client import (
     BaseGitHubCollaboratorsClient,
