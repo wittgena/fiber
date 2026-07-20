@@ -5,9 +5,9 @@ from typing import Type
 from xor.scope.surface.config import BaseSurface
 
 SURFACE_REGISTRY = {
-    "local": "xphi.scope.surface.local.LocalSurface",
-    "sandbox": "xphi.scope.surface.sandbox.SandboxSurface",
-    "proxy": "xphi.scope.surface.proxy.ProxySurface"
+    "local": "xor.scope.surface.local.LocalSurface",
+    "sandbox": "xor.scope.surface.sandbox.SandboxSurface",
+    "proxy": "xor.scope.surface.proxy.ProxySurface"
 }
 
 def get_surface_class(surface_type: str) -> Type[BaseSurface]:
