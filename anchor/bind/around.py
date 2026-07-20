@@ -15,7 +15,7 @@ log = logging.getLogger("around")
 CURRENT_SCRIPT = Path(__file__).absolute()
 CURRENT_DIR = CURRENT_SCRIPT.parent
 PTH_FILENAME = "brane.pth"
-CORES = ["brane", "surgent", "nexus", "theoria"]
+CORES = ["brane", "surgent", "nexus", "xphi"]
 
 ## Default minimum skeleton to prevent resolver crashes if bound.json doesn't exist
 DEFAULT_BOUND_SKELETON = {
@@ -56,7 +56,7 @@ DEFAULT_BOUND_SKELETON = {
     },
     "channels": {
         "namespaces": [
-            "theoria", "brane", "nexus", "ext", "surgent", "psi", "delta", "xor", "watcher"
+            "theoria", "brane", "nexus", "xphi", "ext", "surgent", "psi", "delta", "xor", "watcher"
         ],
         "xphi": {
             "pattern": "^(theoria|psi|delta|meta|xphi|ion|ex|xe|xor|loop|field|watcher):"
@@ -82,7 +82,7 @@ def determine_execution_mode() -> str:
 def resolve_workspace_root() -> Path:
     """
     @helper: Dynamically resolve the workspace root (e.g., 'self/') without relying on cwd.
-    @desc: Traverses upwards looking for a known core directory (e.g., 'brane' or 'theoria') to identify the root.
+    @desc: Traverses upwards looking for a known core directory (e.g., 'brane' or 'xphi') to identify the root.
     """
     current = CURRENT_DIR
     while current.parent != current:
