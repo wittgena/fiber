@@ -30,7 +30,8 @@ DEFAULT_BOUND_SKELETON = {
         "memory": "anchor/memory",
         "workspace": "anchor/ext/workspace",
         "xor": "anchor/io/xor",
-        "contract": "anchor/io/contract"
+        "contract": "anchor/io/contract",
+        "phase": "xphi/phase"
     },
     "paths": {
         "brane": "brane",
@@ -43,6 +44,7 @@ DEFAULT_BOUND_SKELETON = {
         "log": ":io:/log",
         "ailog": ":io:/ailog",
         "sandbox": ":workspace:/sandbox",
+        "time": ":phase:/wasm/time",
         "surface": ":io:/surface",
         "contract": ":contract:",
         "spec": ":contract:/spec",
