@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
-from adapter.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
+from eco.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
 from xor.watcher.snapshot.metrics import Metrics
 from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context

@@ -28,13 +28,13 @@ import tiktoken
 if TYPE_CHECKING:
     from xor.watcher.delegator import LogDelegator
 
-from adapter.legacy.types import TextChoices, TextCompletionResponse
+from eco.legacy.types import TextChoices, TextCompletionResponse
 from bound.exception import APIError
 
 from bound.resolver.model.config.resolver import config
 from bound.eco.token.counter import token_counter
 from bound.stream.processor.builder import ChunkBuilderProcessor
-from adapter.switch.params import Choices, Message, ModelResponse, Usage
+from eco.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.chunk")

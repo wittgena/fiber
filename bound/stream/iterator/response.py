@@ -17,17 +17,17 @@ from openai._streaming import SSEDecoder
 import datetime
 from typing import Any, Optional, Union
 
-from adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
-from adapter.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
+from eco.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
+from eco.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
 from bound.resolver.model.config.constants import LITELLM_DETAILED_TIMING
 from bound.adapter.tosync import SyncStreamAdapter
 
-import adapter.legacy.openai.types as openai_types
+import eco.legacy.openai.types as openai_types
 
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS, STREAM_SSE_DONE_STRING
-from adapter.legacy.openai.types import ResponsesAPIStreamEvents
-from adapter.legacy.types import CallTypes
+from eco.legacy.openai.types import ResponsesAPIStreamEvents
+from eco.legacy.types import CallTypes
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from xor.executor.legacy import executor
 from bound.adapter.header import process_response_headers

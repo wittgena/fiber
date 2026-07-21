@@ -15,8 +15,8 @@ from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 import websockets
 from websockets.asyncio.client import ClientConnection
 
-from adapter.legacy.param.legacy import GenericLiteLLMParams
-import adapter.legacy.openai.types as openai_types
+from eco.legacy.param.legacy import GenericLiteLLMParams
+import eco.legacy.openai.types as openai_types
 from bound.resolver.model.config.resolver import config
 from xor.executor.legacy import executor
 from bound.bridge.response.stream.identity import IdentityRouter

@@ -6,15 +6,15 @@ import types
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast, Literal
 import httpx
-from adapter.legacy.openai.types import (
+from eco.legacy.openai.types import (
     ResponseInputParam,
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
     ResponsesAPIStreamingResponse,
 )
-from adapter.legacy.param.response import DeleteResponseResult
-from adapter.legacy.param.legacy import GenericLiteLLMParams
-from adapter.legacy.info import ProviderTypes
+from eco.legacy.param.response import DeleteResponseResult
+from eco.legacy.param.legacy import GenericLiteLLMParams
+from eco.legacy.info import ProviderTypes
 from bound.exception import BaseLLMException
 
 LiteLLMLoggingObj = Any

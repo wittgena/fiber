@@ -9,17 +9,17 @@ import inspect
 from typing import Any, Coroutine, Dict, List, Literal, Optional, Union, Tuple
 import httpx
 
-from adapter.legacy.param.response import DeleteResponseResult
-from adapter.legacy.param.legacy import GenericLiteLLMParams
+from eco.legacy.param.response import DeleteResponseResult
+from eco.legacy.param.legacy import GenericLiteLLMParams
 from xor.router.config import ProviderConfigManager
 from xor.router.locator import get_llm_provider
 
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
-from adapter.legacy.info import ProviderTypes
+from eco.legacy.info import ProviderTypes
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import request_timeout
-from adapter.legacy.types import CallTypes
-from adapter.legacy.openai.types import ResponseInputParam, ResponsesAPIResponse
+from eco.legacy.types import CallTypes
+from eco.legacy.openai.types import ResponseInputParam, ResponsesAPIResponse
 
 from bound.bridge.client import AsyncHTTPClient
 from bound.bridge.client import get_client
@@ -29,8 +29,8 @@ from bound.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
 from bound.bridge.response.stream.context import ResponseAPIContext, ContextBuilder, ExecutionContext, ProviderContext, LLMPayloadContext
 from bound.bridge.response.stream.identity import IdentityRouter
 from bound.resolver.model.api.base import APIBridge
-from adapter.legacy.action.param.litellm import infer_openai_data_residency
-from adapter.legacy.action.client.wrapper import client
+from eco.legacy.action.param.litellm import infer_openai_data_residency
+from eco.legacy.action.client.wrapper import client
 
 from watcher.plane.emitter import get_emitter 
 

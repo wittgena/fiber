@@ -11,8 +11,8 @@ from pydantic import BaseModel, ConfigDict
 
 from bound.resolver.model.cost import lookup_base_model_info
 from xor.router.config import get_provider_info
-from adapter.legacy.types import ModelInfo
-from adapter.legacy.action.param.format import BaseLLMModelInfo, type_to_response_format_param
+from eco.legacy.types import ModelInfo
+from eco.legacy.action.param.format import BaseLLMModelInfo, type_to_response_format_param
 from bound.resolver.model.config.resolver import config
 
 """@phase.1: Model Info (Cost, Context, Provider Meta)"""

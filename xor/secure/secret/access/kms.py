@@ -3,7 +3,7 @@
 ## @lineage: xphi.xor.secret.kms
 import enum
 from typing import Dict, List, Literal, Optional
-from adapter.legacy.base import PydanticObjectBase
+from eco.legacy.base import PydanticObjectBase
 
 class KeyManagementSystem(enum.Enum):
     GOOGLE_KMS = "google_kms"

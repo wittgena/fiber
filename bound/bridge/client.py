@@ -25,7 +25,7 @@ from bound.resolver.model.config.constants import (
 )
 
 from bound.exception import Timeout
-from adapter.legacy.info import ProviderTypes
+from eco.legacy.info import ProviderTypes
 from bound.bridge.base import (
     VerifyTypes,
     _DEFAULT_TIMEOUT,

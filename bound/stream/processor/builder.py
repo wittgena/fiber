@@ -7,8 +7,8 @@ import time
 from typing_extensions import TypedDict
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
-from adapter.legacy.openai.types import ChatCompletionAssistantContentValue, ChatCompletionAudioDelta
-from adapter.legacy.types import (
+from eco.legacy.openai.types import ChatCompletionAssistantContentValue, ChatCompletionAudioDelta
+from eco.legacy.types import (
     ChatCompletionAudioResponse,
     ChatCompletionMessageToolCall,
     Choices,
@@ -24,7 +24,7 @@ from adapter.legacy.types import (
     CompletionTokensDetails, 
 )
 
-from adapter.legacy.openai.types import ChatCompletionRedactedThinkingBlock, ChatCompletionThinkingBlock
+from eco.legacy.openai.types import ChatCompletionRedactedThinkingBlock, ChatCompletionThinkingBlock
 from bound.eco.token.counter import token_counter
 from watcher.plane.emitter import get_emitter 
 

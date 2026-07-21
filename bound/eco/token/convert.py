@@ -13,7 +13,7 @@ import time
 import random
 from functools import lru_cache
 
-from adapter.legacy.openai.types import AllMessageValues
+from eco.legacy.openai.types import AllMessageValues
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.convert")

@@ -21,11 +21,11 @@ from typing import (
 from copy import deepcopy
 import json
 
-from adapter.switch.params import ResponsesAPIResponse, ModelResponse
+from eco.switch.params import ResponsesAPIResponse, ModelResponse
 from mcp_types import EmbeddedResource, ImageContent, TextContent
-from adapter.legacy.types import Choices
+from eco.legacy.types import Choices
 from bound.eco.token.convert import convert_list_message_to_dict
-from adapter.legacy.param.response import GenericResponseOutputItem, OutputText
+from eco.legacy.param.response import GenericResponseOutputItem, OutputText
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter

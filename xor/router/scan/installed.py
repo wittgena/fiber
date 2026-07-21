@@ -9,9 +9,9 @@ import pkgutil
 from typing import Dict, Any
 from dataclasses import asdict
 
-from adapter.llama.anchor.bound.base.llms.base import BaseLLM
+from eco.llama.anchor.bound.base.llms.base import BaseLLM
 
-from adapter.mapper.inter.llm import LLMCapabilities, LLMInfo
+from eco.mapper.inter.llm import LLMCapabilities, LLMInfo
 from bound.resolver.ext.inter import ExtResolver
 
 from watcher.plane.emitter import get_emitter

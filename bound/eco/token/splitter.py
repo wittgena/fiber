@@ -8,7 +8,7 @@ from tokenizers import Tokenizer
 import tiktoken
 
 from bound.eco.token.convert import get_default_encoding
-from adapter.legacy.types import CustomHuggingfaceTokenizer, SelectTokenizerResponse
+from eco.legacy.types import CustomHuggingfaceTokenizer, SelectTokenizerResponse
 from bound.resolver.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 from watcher.plane.emitter import get_emitter
 

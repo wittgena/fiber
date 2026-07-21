@@ -8,7 +8,7 @@ from bound.resolver.model.cost import model_cost, lookup_base_model_info
 from xor.router.locator import get_llm_provider
 from xor.router.config import get_provider_info, ProviderConfigManager
 
-from adapter.legacy.info import ProviderTypes, ProviderTypesSet
+from eco.legacy.info import ProviderTypes, ProviderTypesSet
 from bound.exception import BadRequestError
 from bound.resolver.model.config.resolver import config
 

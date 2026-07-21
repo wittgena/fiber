@@ -13,9 +13,9 @@
 """
 from typing import Dict, Optional
 
-from adapter.llama.anchor.bound.adapter.base import BaseProviderAdapter, OpenAICompatibleAdapter, GenericHTTPAdapter
-from adapter.llama.anchor.bound.adapter.llm import InterLLMAdapter
-from adapter.llama.anchor.bound.adapter.embedding import InterEmbeddingAdapter
+from eco.llama.anchor.bound.adapter.base import BaseProviderAdapter, OpenAICompatibleAdapter, GenericHTTPAdapter
+from eco.llama.anchor.bound.adapter.llm import InterLLMAdapter
+from eco.llama.anchor.bound.adapter.embedding import InterEmbeddingAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("registry.adapter")

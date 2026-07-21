@@ -2,7 +2,7 @@
 ## @lineage: bound.transport.adapter.header
 import httpx
 from typing import Optional, Union
-from adapter.legacy.types import OPENAI_RESPONSE_HEADERS
+from eco.legacy.types import OPENAI_RESPONSE_HEADERS
 
 def process_response_headers(response_headers: Union[httpx.Headers, dict]) -> dict:
     openai_headers = {}

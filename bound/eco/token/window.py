@@ -13,7 +13,7 @@ import tiktoken
 from bound.eco.token.counter import token_counter
 from bound.eco.token.convert import get_default_encoding
 from bound.resolver.model.cost import model_cost
-from adapter.legacy.openai.types import AllMessageValues
+from eco.legacy.openai.types import AllMessageValues
 from bound.resolver.model.config.constants import DEFAULT_TRIM_RATIO
 
 from watcher.plane.emitter import get_emitter

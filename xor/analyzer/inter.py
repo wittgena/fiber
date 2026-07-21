@@ -13,7 +13,7 @@ try:
 except ImportError:
     import toml as tomllib
 
-from adapter.mapper.inter.project import (
+from eco.mapper.inter.project import (
     ProjectMeta, 
     WorkflowCommand, 
     UsageSnippet, 

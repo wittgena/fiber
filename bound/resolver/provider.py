@@ -12,7 +12,7 @@ from xor.router.locator import get_llm_provider
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 
-from adapter.legacy.info import ProviderTypesSet
+from eco.legacy.info import ProviderTypesSet
 
 from watcher.plane.emitter import get_emitter
 

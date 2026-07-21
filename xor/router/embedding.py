@@ -5,7 +5,7 @@
 import importlib
 from typing import Any
 
-import adapter.llama.anchor.embeddings as embedding_pkg
+import eco.llama.anchor.embeddings as embedding_pkg
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("embedding.router")

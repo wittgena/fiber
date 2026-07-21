@@ -16,9 +16,9 @@ from bound.resolver.model.config.constants import LITELLM_MAX_STREAMING_DURATION
 from bound.resolver.model.config.resolver import config
 
 from bound.exception import OpenAIError
-from adapter.mapper.exception import exception_type
-from adapter.legacy.types import CallTypes
-from adapter.switch.params import ModelResponse, ModelResponseStream
+from eco.mapper.exception import exception_type
+from eco.legacy.types import CallTypes
+from eco.switch.params import ModelResponse, ModelResponseStream
 from bound.bridge.rule import Rules
 from bound.stream.chunk import stream_chunk_builder
 from bound.stream.support import _next_sync_or_exhausted

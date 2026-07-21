@@ -9,7 +9,7 @@ import re
 from typing import Any, Dict, Iterable, Optional, Type
 from starlette.datastructures import Headers
 
-from adapter.legacy.param.response import DecodedResponseId
+from eco.legacy.param.response import DecodedResponseId
 from bound.mcp.parser.header import MCPHeaderParser
 from watcher.plane.emitter import get_emitter
 

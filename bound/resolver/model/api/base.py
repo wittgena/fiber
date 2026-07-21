@@ -5,11 +5,11 @@
 from typing import Any, Dict, Mapping, List, Optional, Type, Union, cast, get_type_hints, overload
 from pydantic import BaseModel
 
-from adapter.legacy.param.legacy import LiteLLM_Params
+from eco.legacy.param.legacy import LiteLLM_Params
 from xor.router.locator import get_llm_provider
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from bound.resolver.model.config.resolver import config
-from adapter.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
+from eco.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
 from bound.bridge.response.stream.identity import IdentityRouter
 from bound.adapter.request import RequestBuilder, IdentityMutator, _get_val
 from watcher.plane.emitter import get_emitter

@@ -20,13 +20,13 @@ from typing import (
 import httpx
 from pydantic import BaseModel
 
-from adapter.switch.params import ModelResponse
-from adapter.legacy.action.param.format import map_developer_role_to_system_role, type_to_response_format_param
+from eco.switch.params import ModelResponse
+from eco.legacy.action.param.format import map_developer_role_to_system_role, type_to_response_format_param
 from bound.resolver.model.config.constants import DEFAULT_MAX_TOKENS, RESPONSE_FORMAT_TOOL_NAME
 from bound.bridge.client import AsyncHTTPClient
 from bound.bridge.client import HTTPClient
 from bound.stream.wrapper import StreamWrapper
-from adapter.legacy.openai.types import (
+from eco.legacy.openai.types import (
     AllMessageValues,
     ChatCompletionToolChoiceFunctionParam,
     ChatCompletionToolChoiceObjectParam,

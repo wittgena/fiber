@@ -19,18 +19,18 @@ from typing import (
     cast,
 )
 
-from adapter.legacy.anthropic import (
+from eco.legacy.anthropic import (
     AnthropicMessagesToolResultParam,
     AnthropicMessagesToolUseParam,
 )
-from adapter.legacy.openai.types import (
+from eco.legacy.openai.types import (
     AllMessageValues,
     ChatCompletionNamedToolChoiceParam,
     ChatCompletionToolParam,
     OpenAIMessageContent,
 )
-from adapter.legacy.types import SelectTokenizerResponse
-from adapter.switch.params import Message
+from eco.legacy.types import SelectTokenizerResponse
+from eco.switch.params import Message
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
 

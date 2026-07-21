@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable, Union
 
 from bound.resolver.io import RegistryIO
-from adapter.legacy.info import ProviderTypes
+from eco.legacy.info import ProviderTypes
 from bound.resolver.model.config.resolver import config
 
 from phase.bind.resolver import resolve_path 

@@ -11,8 +11,8 @@ import httpx
 from aiohttp import ClientSession
 
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
-from adapter.legacy.param.legacy import GenericLiteLLMParams
-from adapter.legacy.openai.types import (
+from eco.legacy.param.legacy import GenericLiteLLMParams
+from eco.legacy.openai.types import (
     PromptObject,
     Reasoning,
     ResponseIncludable,
