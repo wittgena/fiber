@@ -5,7 +5,7 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from agent.call.action.tool.mcp import MCPActionDefinition
+from atoa.call.action.tool.mcp import MCPActionDefinition
 
 from eco.call.mcp.config import MCPConfig
 from eco.call.mcp.exception import MCPTimeoutError
