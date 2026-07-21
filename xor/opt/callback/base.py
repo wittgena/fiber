@@ -149,7 +149,7 @@ def with_callbacks(fn):
 
     def _get_active_callbacks(instance):
         """Get combined global and instance-level callbacks."""
-        from xor.scope.dsp.context import runtime
+        from xor.opt.context import runtime
         return runtime.get("callbacks", []) + getattr(instance, "callbacks", [])
 
     if inspect.iscoroutinefunction(fn):

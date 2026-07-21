@@ -6,7 +6,7 @@
 import threading
 from typing import Any
 
-from xor.scope.dsp.context import runtime, get_context_propagator
+from xor.opt.context import runtime, get_context_propagator
 from arch.xor.sample import Sample
 from arch.xor.proto.opt import OptExecutor
 

@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any, Optional
 import pydantic
 
-from anchor.dsp.base import BaseLM
+from xor.opt.dsp.lm import BaseLM
 from xor.opt.manifold.model.basetype import Type
 
 if TYPE_CHECKING:

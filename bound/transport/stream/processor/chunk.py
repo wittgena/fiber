@@ -20,7 +20,7 @@ from bound.adapter.switch.params import ModelResponse, ModelResponseStream, Stre
 from bound.adapter.mapper.reason import map_finish_reason
 from bound.transport.adapter.header import process_response_headers
 from bound.transport.stream.support import preserve_upstream_non_openai_attributes
-from xor.opt.analyzer.parser.stream.chunk import StreamChunkParser
+from bound.transport.stream.parser import StreamChunkParser
 
 from arch.gov.gate import uuid
 from bound.watcher.delegator import LogDelegator 

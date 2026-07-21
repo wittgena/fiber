@@ -5,7 +5,7 @@ import concurrent.futures
 from dataclasses import dataclass
 from typing import Any
 from asyncer import syncify
-from xor.scope.dsp.context import runtime
+from xor.opt.context import runtime
 from xor.opt.callback.base import BaseCallback
 
 @dataclass

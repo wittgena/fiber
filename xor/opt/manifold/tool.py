@@ -7,7 +7,7 @@ import pydantic
 from jsonschema import ValidationError, validate
 from pydantic import BaseModel, TypeAdapter, create_model
 
-from xor.scope.dsp.context import runtime
+from xor.opt.context import runtime
 from xor.opt.manifold.model.basetype import Type
 from xor.opt.callback.base import with_callbacks
 
