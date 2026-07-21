@@ -31,16 +31,16 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, TypeVar, U
 
 from bound.exception import UnsupportedParamsError
 from adapter.legacy.action.param.format import type_to_response_format_param
-from bound.registry.model.config.base import BaseConfig
+from bound.resolver.model.config.base import BaseConfig
 
-from bound.registry.model.config.resolver import config
-from bound.registry.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
 
 from adapter.legacy.anthropic import AnthropicThinkingParam
 from adapter.legacy.openai.types import AllMessageValues, OpenAIWebSearchOptions
 from adapter.legacy.types import Embedding, Function, ProviderTypes
-from router.config import ProviderConfigManager
-from bound.registry.model.support import get_supported_openai_params
+from xor.router.config import ProviderConfigManager
+from bound.resolver.model.support import get_supported_openai_params
 
 from watcher.plane.emitter import get_emitter
 

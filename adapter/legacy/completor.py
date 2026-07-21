@@ -7,14 +7,14 @@ from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
 from adapter.switch.params import ModelResponse
-from router.config import ProviderConfigManager
-from bound.registry.model.config.base import BaseConfig
-from bound.registry.model.config.resolver import config
+from xor.router.config import ProviderConfigManager
+from bound.resolver.model.config.base import BaseConfig
+from bound.resolver.model.config.resolver import config
 from adapter.legacy.info import ProviderTypes
-from bound.transport.bridge.client import AsyncHTTPClient
-from bound.transport.bridge.client import HTTPClient
-from bound.transport.bridge.client import get_client
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.bridge.client import AsyncHTTPClient
+from bound.bridge.client import HTTPClient
+from bound.bridge.client import get_client
+from bound.stream.wrapper import StreamWrapper
 
 from watcher.plane.emitter import get_emitter
 
@@ -274,7 +274,7 @@ class CompletionHandler:
             error_text = getattr(error_response, "text", error_text)
 
         if provider_config is None:
-            from bound.registry.model.config.base import BaseLLMException
+            from bound.resolver.model.config.base import BaseLLMException
             log.error(f"[ErrorHandler] Provider config 없음. BaseLLMException 발생: {error_text}")
             raise BaseLLMException(status_code=status_code, message=error_text, headers=error_headers)
 

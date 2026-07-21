@@ -13,9 +13,9 @@ from openai._models import BaseModel as OpenAIObject
 from pydantic import BaseModel, ConfigDict
 import httpx
 
-from bound.registry.model.config.resolver import config
+from bound.resolver.model.config.resolver import config
 if TYPE_CHECKING:
-    from bound.transport.stream.wrapper import StreamWrapper
+    from bound.stream.wrapper import StreamWrapper
     from adapter.legacy.types import ModelResponse, TextCompletionResponse
 
 class PydanticObjectBase(BaseModel):

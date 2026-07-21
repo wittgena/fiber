@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING, Any, List, Literal, Optional, Tuple, Union, ca
 from pydantic import BaseModel
 from functools import lru_cache
 
-from bound.registry.model.cost import model_cost, lookup_base_model_info
-from router.locator import get_llm_provider
-from bound.registry.model.config.resolver import config
+from bound.resolver.model.cost import model_cost, lookup_base_model_info
+from xor.router.locator import get_llm_provider
+from bound.resolver.model.config.resolver import config
 
 from adapter.legacy.cost.builtin import BuiltInToolCostTracker
-from bound.token.counter import token_counter
+from bound.eco.token.counter import token_counter
 from bound.eco.cost.unit.calc import UnitCostCalculator
 from bound.eco.cost.policy import CostPolicy
 from adapter.legacy.cost.parser import (

@@ -27,7 +27,7 @@ if not LITELLM_CONVERT_SWITCH:
         from adapter.legacy.action.embedding import embedding, aembedding
         from adapter.legacy.action.response import responses
         from adapter.legacy.action.response import aresponses
-        from bound.transport.stream.iterator.response import SyncResponsesAPIStreamingIterator
+        from bound.stream.iterator.response import SyncResponsesAPIStreamingIterator
         from adapter.legacy.cost.calculator import completion_cost
     except ImportError as e:
         raise ImportError(

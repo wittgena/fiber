@@ -10,9 +10,9 @@ from typing import Any, Dict, List, Optional, Union
 from adapter.mapper.exception import exception_type
 from adapter.switch.params import ModelResponse, ModelResponseStream
 from adapter.legacy.action.process.pre import CompletionPreprocessor
-from bound.registry.adapter import AdapterRegistry
-from bound.transport.stream.wrapper import StreamWrapper
-from router.llm import TopologyMissingError
+from bound.resolver.adapter import AdapterRegistry
+from bound.stream.wrapper import StreamWrapper
+from xor.router.llm import TopologyMissingError
 
 from watcher.plane.emitter import get_emitter
 

@@ -7,10 +7,10 @@ from httpx import Response
 from pydantic import BaseModel
 from functools import lru_cache
 
-from bound.registry.model.cost import model_cost
-from router.locator import get_llm_provider
-from bound.registry.model.config.resolver import config
-from bound.registry.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
+from bound.resolver.model.cost import model_cost
+from xor.router.locator import get_llm_provider
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 
 from adapter.legacy.info import ProviderTypesSet
 

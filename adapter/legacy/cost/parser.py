@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, List, Literal, Optional, Tuple, Union, ca
 from httpx import Response
 from pydantic import BaseModel
 
-from bound.registry.model.info import get_model_info
+from bound.resolver.model.info import get_model_info
 from adapter.switch.params import ModelResponse, ModelResponseStream
 from bound.eco.cost.unit.calc import UnitCostCalculator
 from adapter.legacy.param.rerank import RerankBilledUnits, RerankResponse

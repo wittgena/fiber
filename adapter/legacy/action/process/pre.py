@@ -21,14 +21,14 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Callable, Optional, Tuple, Type, Union, cast
 from dataclasses import dataclass, field
 
-from bound.registry.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
+from bound.resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from adapter.legacy.types import EmbeddingResponse
 from adapter.switch.params import ModelResponse
 from adapter.legacy.types import all_litellm_params
-from bound.registry.model.config.resolver import config
-from bound.registry.model.support import supports_httpx_timeout
-from router.config import ProviderConfigManager
-from router.locator import get_llm_provider
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.support import supports_httpx_timeout
+from xor.router.config import ProviderConfigManager
+from xor.router.locator import get_llm_provider
 from adapter.legacy.info import ProviderTypes
 from adapter.legacy.openai.types import AllMessageValues
 from adapter.legacy.action.param.optional import get_optional_params
@@ -308,7 +308,7 @@ class EmbeddingPreprocessor:
         self.kwargs = kwargs
 
     def build(self) -> EmbeddingContext:
-        from router.locator import get_llm_provider
+        from xor.router.locator import get_llm_provider
         
         # 1. Provider 식별
         custom_llm_provider = self.kwargs.get("custom_llm_provider")

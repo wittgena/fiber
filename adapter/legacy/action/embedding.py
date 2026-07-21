@@ -21,7 +21,7 @@ from adapter.legacy.types import EmbeddingResponse
 from adapter.mapper.exception import exception_type
 from adapter.legacy.action.client.wrapper import client
 from adapter.legacy.action.process.pre import EmbeddingPreprocessor
-from bound.registry.adapter import AdapterRegistry
+from bound.resolver.adapter import AdapterRegistry
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.embedding")

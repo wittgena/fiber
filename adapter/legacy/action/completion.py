@@ -1,6 +1,4 @@
 # adapter.legacy.action.completion
-## @lineage: bound.surface.legacy.action.completion
-## @lineage: bound.adapter.surface.legacy.action.completion
 import uuid
 import httpx
 import asyncio
@@ -23,8 +21,8 @@ from adapter.mapper.exception import exception_type
 from adapter.legacy.action.process.core import async_core_completion
 from bound.exception import Timeout
 from adapter.legacy.action.client.wrapper import client
-from bound.transport.adapter.asyncify import run_async_function
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.adapter.tosync import run_async_function
+from bound.stream.wrapper import StreamWrapper
 
 from adapter.legacy.trace.dd import tracer
 from xor.watcher.delegator import LogDelegator

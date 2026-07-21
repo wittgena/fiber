@@ -22,17 +22,17 @@ import openai
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
 
-from bound.registry.model.config.base import BaseConfig
+from bound.resolver.model.config.base import BaseConfig
 from bound.exception import BaseLLMException
-from bound.registry.model.config.resolver import config
-from bound.registry.model.config.constants import DEFAULT_MAX_RETRIES
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
 from adapter.switch.params import ModelResponse, ModelResponseStream
 
 from adapter.legacy.info import ProviderTypes
 from adapter.legacy.types import EmbeddingResponse
-from bound.transport.adapter.response import convert_to_model_response_object
-from router.config import ProviderConfigManager
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.adapter.response import convert_to_model_response_object
+from xor.router.config import ProviderConfigManager
+from bound.stream.wrapper import StreamWrapper
 from adapter.legacy.base import BaseLLM
 from adapter.legacy.openai.base import (
     BaseOpenAILLM,

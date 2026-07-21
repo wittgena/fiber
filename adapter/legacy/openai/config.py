@@ -31,10 +31,10 @@ from openai.types.file_deleted import FileDeleted
 from pydantic import BaseModel
 from typing_extensions import overload
 
-from bound.registry.model.config.resolver import config
-from bound.registry.model.config.constants import DEFAULT_MAX_RETRIES
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
 from adapter.legacy.openai.response import BaseModelResponseIterator
-from bound.registry.model.config.base import BaseConfig
+from bound.resolver.model.config.base import BaseConfig
 from bound.exception import BaseLLMException
 from adapter.switch.params import ModelResponse, ModelResponseStream
 from adapter.legacy.info import ProviderTypes
@@ -42,8 +42,8 @@ from adapter.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from adapter.legacy.openai.types import *
 
 from xor.watcher.delegator import LogDelegator
-from bound.transport.adapter.response import convert_to_model_response_object
-from bound.transport.stream.wrapper import StreamWrapper
+from bound.adapter.response import convert_to_model_response_object
+from bound.stream.wrapper import StreamWrapper
 from adapter.legacy.base import BaseLLM
 from adapter.legacy.openai.base import (
     BaseOpenAILLM,

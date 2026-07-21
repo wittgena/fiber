@@ -14,11 +14,11 @@ from functools import wraps
 from weakref import WeakKeyDictionary
 
 from xor.executor.legacy import executor
-from bound.registry.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
-from bound.registry.model.config.resolver import config
+from bound.resolver.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
+from bound.resolver.model.config.resolver import config
 
-from bound.transport.bridge.rule import Rules
-from bound.transport.stream.chunk import stream_chunk_builder
+from bound.bridge.rule import Rules
+from bound.stream.chunk import stream_chunk_builder
 from adapter.legacy.types import CallTypes
 from xor.watcher.delegator import LogDelegator
 

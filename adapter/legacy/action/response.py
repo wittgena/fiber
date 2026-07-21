@@ -14,29 +14,29 @@ from pydantic import BaseModel
 
 from adapter.legacy.param.response import *
 from adapter.legacy.param.legacy import GenericLiteLLMParams
-from router.config import ProviderConfigManager
-from router.locator import get_llm_provider
+from xor.router.config import ProviderConfigManager
+from xor.router.locator import get_llm_provider
 
-from bound.registry.model.config.resolver import config
+from bound.resolver.model.config.resolver import config
 from adapter.legacy.openai.types import (
     AllMessageValues, PromptObject, Reasoning, ResponseIncludable, ResponseInputParam,
     ResponsesAPIResponse, ToolChoice, ToolParam, ResponseText
 )
 
-from bound.transport.mcp.handler import MCPHandler
-from bound.transport.mcp.parser.payload import MCPPayloadParser
-from bound.transport.stream.iterator.mcp import MCPStreamIterator
-from bound.transport.stream.iterator.response import ResponseStreamIterator
-from bound.transport.mcp.event.tool import create_mcp_list_tools_events
-from bound.transport.bridge.response.handler.ws import ResponseWebsocketHandler
+from bound.mcp.handler import MCPHandler
+from bound.mcp.parser.payload import MCPPayloadParser
+from bound.stream.iterator.mcp import MCPStreamIterator
+from bound.stream.iterator.response import ResponseStreamIterator
+from bound.mcp.event.tool import create_mcp_list_tools_events
+from bound.bridge.response.handler.ws import ResponseWebsocketHandler
 
-from bound.registry.model.api.base import APIBridge
+from bound.resolver.model.api.base import APIBridge
 from adapter.legacy.action.param.litellm import get_litellm_params, infer_openai_data_residency
-from bound.transport.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
-from bound.transport.bridge.response.stream.identity import IdentityRouter
-from bound.transport.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
+from bound.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
+from bound.bridge.response.stream.identity import IdentityRouter
+from bound.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
 from adapter.legacy.action.client.wrapper import client
-from bound.transport.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from bound.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter

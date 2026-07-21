@@ -8,7 +8,7 @@
 import time
 from typing import Dict, Any, Optional
 from watcher.plane.emitter import get_emitter
-from bound.registry.model.cost import ModelCostRegistry
+from bound.resolver.model.cost import ModelCostRegistry
 
 log = get_emitter("eco.esitmator")
 
