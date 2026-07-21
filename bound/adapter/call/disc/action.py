@@ -1,5 +1,4 @@
 # bound.adapter.call.disc.action
-## @lineage: agent.disc.schema.action
 from abc import ABC
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
@@ -10,7 +9,6 @@ from bound.adapter.call.action.message import ImageContent, TextContent
 from bound.adapter.call.action.message import content_to_str
 
 from arch.topos.surge.disc import DiscMixin
-from arch.contract.exp.atomic import display_dict
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
@@ -18,6 +16,45 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 S = TypeVar("S", bound="Schema")
+
+def display_dict(data) -> Text:
+    content = Text()
+    if isinstance(data, dict):
+        for field_name, field_value in data.items():
+            if field_value is None:
+                continue
+            content.append(f"\n  {field_name}: ", style="bold")
+            if isinstance(field_value, str):
+                if "\n" in field_value:
+                    content.append("\n")
+                    for line in field_value.split("\n"):
+                        content.append(f"    {line}\n")
+                else:
+                    content.append(f'"{field_value}"')
+            elif isinstance(field_value, (list, dict)):
+                content.append(str(field_value))
+            else:
+                content.append(str(field_value))
+    elif isinstance(data, list):
+        content.append(f"[List with {len(data)} items]\n")
+        for i, item in enumerate(data):
+            content.append(f"  [{i}]: ", style="bold")
+            if isinstance(item, str):
+                content.append(f'"{item}"\n')
+            else:
+                content.append(f"{item}\n")
+    elif isinstance(data, str):
+        if "\n" in data:
+            content.append("String:\n")
+            for line in data.split("\n"):
+                content.append(f"  {line}\n")
+        else:
+            content.append(f'"{data}"')
+    elif data is None:
+        content.append("null")
+    else:
+        content.append(str(data))
+    return content
 
 def py_type(spec: dict[str, Any]) -> Any:
     """Map JSON schema types to Python types."""

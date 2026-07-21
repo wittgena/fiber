@@ -11,7 +11,7 @@ from bound.adapter.switch.params import ModelResponse, ModelResponseStream
 from bound.surface.legacy.action.process.pre import CompletionPreprocessor
 from anchor.registry.adapter import AdapterRegistry
 from bound.transport.stream.wrapper import StreamWrapper
-from anchor.registry.router.llm import TopologyMissingError
+from bound.router.llm import TopologyMissingError
 
 from watcher.plane.emitter import get_emitter
 

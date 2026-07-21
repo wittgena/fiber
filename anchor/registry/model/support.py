@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Optional, Literal, List, Dict, ClassVar
 
 from anchor.registry.model.cost import model_cost, lookup_base_model_info
-from anchor.registry.router.locator import get_llm_provider
-from anchor.registry.router.config import get_provider_info, ProviderConfigManager
+from bound.router.locator import get_llm_provider
+from bound.router.config import get_provider_info, ProviderConfigManager
 
 from bound.surface.legacy.info import ProviderTypes, ProviderTypesSet
 from bound.surface.exception import BadRequestError

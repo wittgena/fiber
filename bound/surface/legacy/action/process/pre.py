@@ -26,8 +26,8 @@ from bound.adapter.switch.params import ModelResponse
 from bound.surface.legacy.types import all_litellm_params
 from anchor.registry.model.config.resolver import config
 from anchor.registry.model.support import supports_httpx_timeout
-from anchor.registry.router.config import ProviderConfigManager
-from anchor.registry.router.locator import get_llm_provider
+from bound.router.config import ProviderConfigManager
+from bound.router.locator import get_llm_provider
 from bound.surface.legacy.info import ProviderTypes
 from bound.surface.legacy.openai.types import AllMessageValues
 from bound.surface.legacy.action.param.optional import get_optional_params
@@ -307,7 +307,7 @@ class EmbeddingPreprocessor:
         self.kwargs = kwargs
 
     def build(self) -> EmbeddingContext:
-        from anchor.registry.router.locator import get_llm_provider
+        from bound.router.locator import get_llm_provider
         
         # 1. Provider 식별
         custom_llm_provider = self.kwargs.get("custom_llm_provider")

@@ -38,7 +38,7 @@ from anchor.registry.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM
 from bound.surface.legacy.anthropic import AnthropicThinkingParam
 from bound.surface.legacy.openai.types import AllMessageValues, OpenAIWebSearchOptions
 from bound.surface.legacy.types import Embedding, Function, ProviderTypes
-from anchor.registry.router.config import ProviderConfigManager
+from bound.router.config import ProviderConfigManager
 from anchor.registry.model.support import get_supported_openai_params
 
 from watcher.plane.emitter import get_emitter

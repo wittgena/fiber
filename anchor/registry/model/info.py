@@ -8,7 +8,7 @@ from typing import Optional, ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from anchor.registry.model.cost import lookup_base_model_info
-from anchor.registry.router.config import get_provider_info
+from bound.router.config import get_provider_info
 from bound.surface.legacy.types import ModelInfo
 from bound.surface.legacy.action.param.format import BaseLLMModelInfo, type_to_response_format_param
 from anchor.registry.model.config.resolver import config

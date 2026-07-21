@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
 from bound.adapter.switch.params import ModelResponse
-from anchor.registry.router.config import ProviderConfigManager
+from bound.router.config import ProviderConfigManager
 from anchor.registry.model.config.base import BaseConfig
 from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.info import ProviderTypes

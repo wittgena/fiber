@@ -14,7 +14,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, Any
 
-from anchor.registry.router.workflow import Workflow, step, Event, StartEvent, StopEvent
+from arch.xor.workflow import Workflow, step, Event, StartEvent, StopEvent
 from xor.opt.dsp.lm import BaseLM
 from xor.opt.adapter.base import Adapter
 from xor.opt.manifold.model.reasoning import Reasoning

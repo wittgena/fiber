@@ -5,7 +5,7 @@ import os
 import ast
 from pathlib import Path
 from typing import Dict, Protocol, runtime_checkable
-import anchor.inter as inter_path
+import llama.anchor as inter_path
 from phase.bind.resolver import find_current_self
 from watcher.plane.emitter import get_emitter
 

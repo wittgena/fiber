@@ -11,8 +11,8 @@ import httpx
 
 from bound.surface.legacy.param.response import DeleteResponseResult
 from bound.surface.legacy.param.legacy import GenericLiteLLMParams
-from anchor.registry.router.config import ProviderConfigManager
-from anchor.registry.router.locator import get_llm_provider
+from bound.router.config import ProviderConfigManager
+from bound.router.locator import get_llm_provider
 
 from anchor.registry.model.config.response import BaseResponsesAPIConfig
 from bound.surface.legacy.info import ProviderTypes

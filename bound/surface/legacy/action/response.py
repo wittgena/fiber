@@ -13,8 +13,8 @@ from pydantic import BaseModel
 
 from bound.surface.legacy.param.response import *
 from bound.surface.legacy.param.legacy import GenericLiteLLMParams
-from anchor.registry.router.config import ProviderConfigManager
-from anchor.registry.router.locator import get_llm_provider
+from bound.router.config import ProviderConfigManager
+from bound.router.locator import get_llm_provider
 
 from anchor.registry.model.config.resolver import config
 from bound.surface.legacy.openai.types import (
