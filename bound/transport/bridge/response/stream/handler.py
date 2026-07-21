@@ -9,17 +9,17 @@ import inspect
 from typing import Any, Coroutine, Dict, List, Literal, Optional, Union, Tuple
 import httpx
 
-from bound.surface.legacy.param.response import DeleteResponseResult
-from bound.surface.legacy.param.legacy import GenericLiteLLMParams
-from bound.router.config import ProviderConfigManager
-from bound.router.locator import get_llm_provider
+from adapter.legacy.param.response import DeleteResponseResult
+from adapter.legacy.param.legacy import GenericLiteLLMParams
+from router.config import ProviderConfigManager
+from router.locator import get_llm_provider
 
-from anchor.registry.model.config.response import BaseResponsesAPIConfig
-from bound.surface.legacy.info import ProviderTypes
-from anchor.registry.model.config.resolver import config
-from anchor.registry.model.config.constants import request_timeout
-from bound.surface.legacy.types import CallTypes
-from bound.surface.legacy.openai.types import ResponseInputParam, ResponsesAPIResponse
+from bound.registry.model.config.response import BaseResponsesAPIConfig
+from adapter.legacy.info import ProviderTypes
+from bound.registry.model.config.resolver import config
+from bound.registry.model.config.constants import request_timeout
+from adapter.legacy.types import CallTypes
+from adapter.legacy.openai.types import ResponseInputParam, ResponsesAPIResponse
 
 from bound.transport.bridge.client import AsyncHTTPClient
 from bound.transport.bridge.client import get_client
@@ -28,9 +28,9 @@ from bound.transport.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from bound.transport.bridge.response.stream.context import ResponseAPIContext, ContextBuilder, ExecutionContext, ProviderContext, LLMPayloadContext
 from bound.transport.bridge.response.stream.identity import IdentityRouter
-from anchor.registry.model.api.base import APIBridge
-from bound.surface.legacy.action.param.litellm import infer_openai_data_residency
-from bound.surface.legacy.action.client.wrapper import client
+from bound.registry.model.api.base import APIBridge
+from adapter.legacy.action.param.litellm import infer_openai_data_residency
+from adapter.legacy.action.client.wrapper import client
 
 from watcher.plane.emitter import get_emitter 
 

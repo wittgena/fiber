@@ -7,8 +7,8 @@ import hashlib
 from base64 import b64encode
 from cryptography.fernet import Fernet
 
-from anchor.registry.model.config.resolver import config
-from bound.surface.legacy.types import CredentialItem
+from bound.registry.model.config.resolver import config
+from adapter.legacy.types import CredentialItem
 
 class Cipher:
     def __init__(self, secret_key: str):

@@ -12,8 +12,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 from fastapi import HTTPException
 
-from bound.surface.exception import BlockedPiiEntityError, GuardrailRaisedException
-from bound.surface.legacy.types import CallTypes, StandardLoggingMCPToolCall
+from bound.exception import BlockedPiiEntityError, GuardrailRaisedException
+from adapter.legacy.types import CallTypes, StandardLoggingMCPToolCall
 from bound.transport.mcp.tool.transform import transform_mcp_tool_to_openai_responses_api_tool, transform_mcp_tool_to_openai_tool
 from bound.transport.mcp.parser.payload import MCPPayloadParser
 from bound.transport.mcp.tool.manager import ToolCatalogManager
@@ -216,7 +216,7 @@ class MCPExecutor:
 class MCPHandler:
     @staticmethod
     def _convert_to_auth_context(user_api_key_auth: Any):
-        from bound.adapter.proxy.reverse import BraneAuthContext
+        from adapter.proxy.reverse import BraneAuthContext
         user_id = getattr(user_api_key_auth, "user_id", None) or getattr(user_api_key_auth, "end_user_id", "anonymous")
         user_role = getattr(user_api_key_auth, "user_role", None)
         is_admin = user_role in ["admin", "proxy_admin"]

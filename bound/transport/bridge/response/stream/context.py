@@ -10,9 +10,9 @@ from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 import httpx
 from aiohttp import ClientSession
 
-from anchor.registry.model.config.response import BaseResponsesAPIConfig
-from bound.surface.legacy.param.legacy import GenericLiteLLMParams
-from bound.surface.legacy.openai.types import (
+from bound.registry.model.config.response import BaseResponsesAPIConfig
+from adapter.legacy.param.legacy import GenericLiteLLMParams
+from adapter.legacy.openai.types import (
     PromptObject,
     Reasoning,
     ResponseIncludable,
@@ -23,7 +23,7 @@ from bound.surface.legacy.openai.types import (
 )
 from bound.transport.bridge.client import AsyncHTTPClient
 from bound.transport.bridge.client import HTTPClient
-from bound.watcher.delegator import LogDelegator
+from xor.watcher.delegator import LogDelegator
 
 
 @dataclass

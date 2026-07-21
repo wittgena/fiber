@@ -14,8 +14,8 @@ from httpx import USE_CLIENT_DEFAULT, AsyncHTTPTransport, HTTPTransport
 from httpx._types import RequestFiles
 import certifi
 
-from anchor.registry.model.config.resolver import config
-from anchor.registry.model.config.constants import (
+from bound.registry.model.config.resolver import config
+from bound.registry.model.config.constants import (
     AIOHTTP_CONNECTOR_LIMIT,
     AIOHTTP_CONNECTOR_LIMIT_PER_HOST,
     AIOHTTP_KEEPALIVE_TIMEOUT,
@@ -23,8 +23,8 @@ from anchor.registry.model.config.constants import (
     AIOHTTP_TTL_DNS_CACHE,
 )
 
-from bound.surface.exception import Timeout
-from bound.surface.legacy.info import ProviderTypes
+from bound.exception import Timeout
+from adapter.legacy.info import ProviderTypes
 from bound.transport.bridge.base import (
     VerifyTypes,
     _DEFAULT_TIMEOUT,

@@ -6,9 +6,9 @@
 ## @lineage: bound.adapter.protocol.mcp.event.call
 ## @lineage: bound.bridge.mcp.event.call
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
-from bound.surface.legacy.openai.types import OutputItemDoneEvent
-from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
-from bound.surface.legacy.openai.types import (
+from adapter.legacy.openai.types import OutputItemDoneEvent
+from adapter.legacy.openai.types import ResponsesAPIStreamEvents
+from adapter.legacy.openai.types import (
     BaseOpenAIResponse,
     MCPCallArgumentsDeltaEvent,
     MCPCallArgumentsDoneEvent,
@@ -16,7 +16,7 @@ from bound.surface.legacy.openai.types import (
     MCPCallFailedEvent,
     MCPCallInProgressEvent,
 )
-from bound.adapter.switch.params import ResponsesAPIStreamingResponse
+from adapter.switch.params import ResponsesAPIStreamingResponse
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
 

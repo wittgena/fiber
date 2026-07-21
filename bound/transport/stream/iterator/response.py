@@ -16,25 +16,25 @@ from openai._streaming import SSEDecoder
 import datetime
 from typing import Any, Optional, Union
 
-from bound.adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
-from bound.surface.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
-from anchor.registry.model.config.constants import LITELLM_DETAILED_TIMING
+from adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
+from adapter.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
+from bound.registry.model.config.constants import LITELLM_DETAILED_TIMING
 from bound.transport.adapter.tosync import SyncStreamAdapter
 
-import bound.surface.legacy.openai.types as openai_types
+import adapter.legacy.openai.types as openai_types
 
-from anchor.registry.model.config.resolver import config
-from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS, STREAM_SSE_DONE_STRING
-from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents
-from bound.surface.legacy.types import CallTypes
-from anchor.registry.model.config.response import BaseResponsesAPIConfig
+from bound.registry.model.config.resolver import config
+from bound.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS, STREAM_SSE_DONE_STRING
+from adapter.legacy.openai.types import ResponsesAPIStreamEvents
+from adapter.legacy.types import CallTypes
+from bound.registry.model.config.response import BaseResponsesAPIConfig
 from xor.executor.legacy import executor
 from bound.transport.adapter.header import process_response_headers
-from anchor.registry.model.api.base import get_api_base
-from anchor.registry.model.api.base import APIBridge
+from bound.registry.model.api.base import get_api_base
+from bound.registry.model.api.base import APIBridge
 from bound.transport.bridge.response.stream.identity import IdentityRouter
 
-from bound.watcher.delegator import LogDelegator
+from xor.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.iterator")

@@ -13,8 +13,8 @@ import sys
 import time
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 import httpx
-from anchor.registry.model.config.resolver import config
-from anchor.registry.model.config.constants import (
+from bound.registry.model.config.resolver import config
+from bound.registry.model.config.constants import (
     COMPLETION_HTTP_FALLBACK_SECONDS,
     HTTP_HANDLER_CONNECT_TIMEOUT_SECONDS,
 )

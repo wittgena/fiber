@@ -5,9 +5,9 @@ import json
 from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate
 from typing import Optional
-from anchor.registry.model.config.resolver import config
-from anchor.registry.model.config.constants import DEFAULT_MAX_RECURSE_DEPTH
-from bound.surface.exception import JSONSchemaValidationError, APIResponseValidationError
+from bound.registry.model.config.resolver import config
+from bound.registry.model.config.constants import DEFAULT_MAX_RECURSE_DEPTH
+from bound.exception import JSONSchemaValidationError, APIResponseValidationError
 
 class Rules:
     def __init__(self) -> None:

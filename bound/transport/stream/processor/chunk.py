@@ -8,22 +8,22 @@ import traceback
 from typing import Any, Dict, List, Optional, Union, cast, Tuple
 from pydantic import BaseModel
 
-from anchor.registry.model.api.base import get_api_base
-from anchor.registry.model.config.resolver import config
+from bound.registry.model.api.base import get_api_base
+from bound.registry.model.config.resolver import config
 
-from bound.surface.legacy.openai.types import OpenAIChatCompletionChunk
-from bound.surface.legacy.info import ProviderTypes
-from bound.surface.legacy.param.legacy import GenericLiteLLMParams
-from bound.surface.legacy.types import Delta, GenericStreamingChunk as GChunk
+from adapter.legacy.openai.types import OpenAIChatCompletionChunk
+from adapter.legacy.info import ProviderTypes
+from adapter.legacy.param.legacy import GenericLiteLLMParams
+from adapter.legacy.types import Delta, GenericStreamingChunk as GChunk
 
-from bound.adapter.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
-from bound.adapter.mapper.reason import map_finish_reason
+from adapter.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from adapter.mapper.reason import map_finish_reason
 from bound.transport.adapter.header import process_response_headers
 from bound.transport.stream.support import preserve_upstream_non_openai_attributes
 from bound.transport.stream.parser import StreamChunkParser
 
 from arch.gov.gate import uuid
-from bound.watcher.delegator import LogDelegator 
+from xor.watcher.delegator import LogDelegator 
 from watcher.plane.emitter import get_emitter
 
 AUDIO_ATTRIBUTE = "audio"

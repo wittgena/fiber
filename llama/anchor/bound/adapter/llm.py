@@ -15,13 +15,13 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from bound.router.locator import get_llm_provider
+from router.locator import get_llm_provider
 from llama.anchor.bound.base.llms.types import ChatMessage, MessageRole
 from llama.anchor.bound.adapter.base import BaseProviderAdapter
-from bound.adapter.mapper.state import StateMapper
+from adapter.mapper.state import StateMapper
 
-from bound.surface.legacy.action.process.pre import CompletionContext
-from bound.router.llm import LLMRouter, TopologyMissingError
+from adapter.legacy.action.process.pre import CompletionContext
+from router.llm import LLMRouter, TopologyMissingError
 from bound.transport.stream.wrapper import StreamWrapper
 
 from arch.gov.gate import uuid4 

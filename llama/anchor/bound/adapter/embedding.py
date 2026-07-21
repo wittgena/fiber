@@ -9,9 +9,9 @@
 @desc: Dynamically binds Brane contexts to LlamaIndex embedding topologies for spatial vector translation.
 """
 from typing import List, Union
-from bound.surface.legacy.action.process.pre import EmbeddingContext
+from adapter.legacy.action.process.pre import EmbeddingContext
 from llama.anchor.bound.adapter.base import BaseProviderAdapter
-from bound.router.embedding import EmbeddingRouter
+from router.embedding import EmbeddingRouter
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     """

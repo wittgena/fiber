@@ -4,9 +4,9 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 from starlette.datastructures import Headers
 
-from bound.adapter.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
-from bound.surface.legacy.openai.types import OutputItemDoneEvent
-from bound.surface.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
+from adapter.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
+from adapter.legacy.openai.types import OutputItemDoneEvent
+from adapter.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
 
 from bound.transport.mcp.handler import MCPHandler
 from bound.transport.mcp.parser.header import MCPHeaderParser
@@ -321,7 +321,7 @@ class MCPStreamIterator(ResponseStreamIterator):
         return chunk
 
     async def _create_initial_response_iterator(self) -> None:
-        from bound.surface.legacy.action.response import aresponses
+        from adapter.legacy.action.response import aresponses
         """Create the initial response iterator by making the first LLM call"""
         try:
             # Make the initial response API call - but avoid the MCP wrapper
@@ -474,7 +474,7 @@ class MCPStreamIterator(ResponseStreamIterator):
             self.tool_results = []
 
     async def _create_follow_up_iterator(self) -> None:
-        from bound.surface.legacy.action.response import aresponses
+        from adapter.legacy.action.response import aresponses
         """Create the follow-up response iterator with tool results"""
         if not self.collected_response or not hasattr(self, "tool_results"):
             return

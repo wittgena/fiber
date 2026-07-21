@@ -11,19 +11,19 @@ import anyio
 import httpx
 
 from xor.executor.legacy import executor
-from anchor.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
-from anchor.registry.model.config.resolver import config
+from bound.registry.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
+from bound.registry.model.config.resolver import config
 
-from bound.surface.exception import OpenAIError
-from bound.adapter.mapper.exception import exception_type
-from bound.surface.legacy.types import CallTypes
-from bound.adapter.switch.params import ModelResponse, ModelResponseStream
+from bound.exception import OpenAIError
+from adapter.mapper.exception import exception_type
+from adapter.legacy.types import CallTypes
+from adapter.switch.params import ModelResponse, ModelResponseStream
 from bound.transport.bridge.rule import Rules
 from bound.transport.stream.chunk import stream_chunk_builder
 from bound.transport.stream.support import _next_sync_or_exhausted
 from bound.transport.stream.processor.chunk import StreamChunkProcessor
 
-from bound.watcher.delegator import LogDelegator 
+from xor.watcher.delegator import LogDelegator 
 from watcher.plane.emitter import get_emitter
 
 _SYNC_ITER_EXHAUSTED = object()
@@ -280,7 +280,7 @@ class StreamWrapper:
         self._handle_stream_fallback_error(e)
 
     def _handle_stream_fallback_error(self, e: Exception) -> NoReturn:
-        from bound.surface.exception import MidStreamFallbackError
+        from bound.exception import MidStreamFallbackError
 
         if isinstance(e, OpenAIError):
             mapped_exception: Exception = e

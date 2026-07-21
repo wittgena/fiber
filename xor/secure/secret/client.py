@@ -7,7 +7,7 @@ import httpx
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union
 
-from anchor.registry.model.config.resolver import config
+from bound.registry.model.config.resolver import config
 from xor.secure.secret.access.kms import KeyManagementSystem
 
 from watcher.plane.emitter import get_emitter

@@ -25,15 +25,15 @@ import openai
 import tiktoken
 
 if TYPE_CHECKING:
-    from bound.watcher.delegator import LogDelegator
+    from xor.watcher.delegator import LogDelegator
 
-from bound.surface.legacy.types import TextChoices, TextCompletionResponse
-from bound.surface.exception import APIError
+from adapter.legacy.types import TextChoices, TextCompletionResponse
+from bound.exception import APIError
 
-from anchor.registry.model.config.resolver import config
-from bound.surface.token.counter import token_counter
+from bound.registry.model.config.resolver import config
+from bound.token.counter import token_counter
 from bound.transport.stream.processor.builder import ChunkBuilderProcessor
-from bound.adapter.switch.params import Choices, Message, ModelResponse, Usage
+from adapter.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.chunk")

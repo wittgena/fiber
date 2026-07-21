@@ -7,14 +7,14 @@ import traceback
 from typing import Dict, Iterable, List, Literal, Optional, Tuple, Union, cast
 from typing_extensions import Required, TypedDict
 
-from anchor.registry.model.config.constants import RESPONSE_FORMAT_TOOL_NAME
+from bound.registry.model.config.constants import RESPONSE_FORMAT_TOOL_NAME
 from bound.transport.adapter.header import get_response_headers
-from bound.surface.legacy.openai.types import (
+from adapter.legacy.openai.types import (
     ChatCompletionThinkingBlock,
     ImageURLListItem,
     OpenAIModerationResponse,
 )
-from bound.adapter.switch.params import (
+from adapter.switch.params import (
     ChatCompletionDeltaToolCall,
     ChatCompletionRedactedThinkingBlock,
     CompletionTokensDetailsWrapper,
@@ -26,7 +26,7 @@ from bound.adapter.switch.params import (
     TranscriptionUsageDurationObject,
     TranscriptionUsageTokensObject,
 )
-from bound.adapter.switch.params import (
+from adapter.switch.params import (
     TextChoices,
     TextCompletionResponse,
     TranscriptionResponse,
@@ -40,9 +40,9 @@ from bound.adapter.switch.params import (
     Choices, 
     Delta
 )
-from bound.surface.exception import APIError
+from bound.exception import APIError
 
-from bound.surface.legacy.types import Logprobs as TextCompletionLogprobs
+from adapter.legacy.types import Logprobs as TextCompletionLogprobs
 
 from watcher.plane.emitter import get_emitter 
 

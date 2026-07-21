@@ -9,7 +9,7 @@ import httpx
 from typing import Optional, Union, Dict, Tuple
 
 from bound.transport.bridge.client import HTTPClient
-from anchor.registry.model.config.resolver import config
+from bound.registry.model.config.resolver import config
 from xor.secure.secret.client import get_secret_from_vendor
 
 from watcher.plane.emitter import get_emitter

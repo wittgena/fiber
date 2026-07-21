@@ -14,7 +14,7 @@ from typing import Any, TextIO
 
 from xor.opt.context import runtime
 from xor.opt.callback.base import with_callbacks
-from bound.watcher.format import pretty_print_history
+from xor.watcher.format import pretty_print_history
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

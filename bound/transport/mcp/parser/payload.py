@@ -20,11 +20,11 @@ from typing import (
 from copy import deepcopy
 import json
 
-from bound.adapter.switch.params import ResponsesAPIResponse, ModelResponse
+from adapter.switch.params import ResponsesAPIResponse, ModelResponse
 from mcp_types import EmbeddedResource, ImageContent, TextContent
-from bound.surface.legacy.types import Choices
-from bound.surface.token.convert import convert_list_message_to_dict
-from bound.surface.legacy.param.response import GenericResponseOutputItem, OutputText
+from adapter.legacy.types import Choices
+from bound.token.convert import convert_list_message_to_dict
+from adapter.legacy.param.response import GenericResponseOutputItem, OutputText
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
