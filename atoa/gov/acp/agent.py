@@ -10,21 +10,21 @@ from pydantic import Field
 
 from watcher.plane.observer.span import unified_flow_span
 
-from atoa.disc.ator import Ator
-from atoa.disc.event.llm.system import SystemPromptEvent
+from atoa.agent.disc.ator import Ator
+from atoa.agent.disc.event.llm.system import SystemPromptEvent
 from eco.call.disc.tool import Tool
 
-from atoa.driver.tensor import Driver
+from atoa.call.driver.tensor import Driver
 from eco.call.action.message import TextContent
 from atoa.gov.acp.client import ACPClient
 from atoa.gov.acp.step import ACPTrajectory
 from atoa.gov.acp.connection import ACPConnectionManifold
 
-from atoa.context.gov.command import UpdateAgentState
+from atoa.gov.context.command import UpdateAgentState
 
 if TYPE_CHECKING:
     from atoa.call.types import ConversationCallbackType
-    from atoa.context.gov.protocol import ConvStateProtocol
+    from atoa.gov.context.protocol import ConvStateProtocol
 
 from atoa.gov.acp.support import (
     _extract_token_usage,

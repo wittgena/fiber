@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from atoa.context.gov.protol import ConvStateProtocol
+    from atoa.gov.context.protol import ConvStateProtocol
 from rich.text import Text
 from eco.call.action.message import ImageContent, TextContent
 from atoa.call.action.executor import ActionExecutor

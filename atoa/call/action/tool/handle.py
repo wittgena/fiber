@@ -13,13 +13,13 @@ from rich.text import Text
 
 from eco.call.disc.action import Action, Observation
 if TYPE_CHECKING:
-    from atoa.disc.base.conv import ProtoConv
+    from atoa.agent.disc.base.conv import ProtoConv
 
 from atoa.call.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 from arch.xor.parser.action import ActionSchemaCompiler
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from atoa.disc.status import ConverStatus
+    from atoa.agent.disc.status import ConverStatus
     state = getattr(conv, "state", None) if conv else None
     msg = f"Task marked as finished: {action.summary}" if getattr(action, "summary", None) else "Task marked as finished."
     if state: state.execution_status = ConverStatus.FINISHED
@@ -29,7 +29,7 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
     return ObsClass.from_text(text="Your thought has been logged.")
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from atoa.disc.status import ConverStatus
+    from atoa.agent.disc.status import ConverStatus
     state = getattr(conv, "state", None) if conv else None
     msg = "Message successfully delivered to the user."
     if state:
@@ -42,8 +42,8 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
     return ObsClass.from_text(text=msg)
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from atoa.disc.status import ConverStatus
-    from atoa.disc.event.llm.observation import ObservationEvent
+    from atoa.agent.disc.status import ConverStatus
+    from atoa.agent.disc.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
 
     state = getattr(conv, "state", None) if conv else None
@@ -82,7 +82,7 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
     return ObsClass.from_text(text=msg, **kwargs)
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from atoa.disc.status import ConverStatus
+    from atoa.agent.disc.status import ConverStatus
     state = getattr(conv, "state", None) if conv else None
     msg = (
         f"[Semantic Telemetry 📡] Broadcasted to '{action.channel}'.\n"

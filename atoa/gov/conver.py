@@ -10,30 +10,30 @@ from eco.call.disc.action import Action, Observation
 
 from watcher.plane.observer.span import observe
 
-from atoa.context.parser import render_template
-from atoa.disc.event.llm.message import MessageEvent
-from atoa.disc.event.llm.action import ActionEvent
-from atoa.disc.event.llm.observation import ObservationEvent, UserRejectObservation
-from atoa.disc.event.conv.error import ConversationErrorEvent
-from atoa.disc.event.conv.pause import PauseEvent
-from atoa.disc.status import ConverStatus
-from atoa.disc.memory.profile import LLMProfileStore
+from atoa.agent.parser import render_template
+from atoa.agent.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.event.llm.observation import ObservationEvent, UserRejectObservation
+from atoa.agent.disc.event.conv.error import ConversationErrorEvent
+from atoa.agent.disc.event.conv.pause import PauseEvent
+from atoa.agent.disc.status import ConverStatus
+from atoa.agent.disc.memory.profile import LLMProfileStore
 from atoa.exception.conv.connection import ConversationRunError
 
-from atoa.driver.tensor import Driver
+from atoa.call.driver.tensor import Driver
 
-from atoa.context.gov.command import TransitionStatus, UpdateAgentState
-from atoa.context.gov.state import ConversationState
+from atoa.gov.context.command import TransitionStatus, UpdateAgentState
+from atoa.gov.context.state import ConversationState
 
 from arch.xor.store.file import LocalFileStore
 from xor.store.log import LogStore
-from atoa.context.gov.message.parser.title import generate_conversation_title
-from atoa.context.gov.message.parser.builder import MessageBuilder, LLMFacade
+from atoa.gov.context.message.parser.title import generate_conversation_title
+from atoa.gov.context.message.parser.builder import MessageBuilder, LLMFacade
 
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from atoa.context.gov.context import ConvContext
+    from atoa.gov.context.context import ConvContext
     convType = ConvContext
 else:
     convType = Any

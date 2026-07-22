@@ -11,7 +11,7 @@ from typing import (
 from eco.call.disc.action import Action, Observation
 
 if TYPE_CHECKING:
-    from atoa.disc.base.conv import ToolExecutionContextProtocol
+    from atoa.agent.disc.base.conv import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)
 ObservationT = TypeVar("ObservationT", bound=Observation)

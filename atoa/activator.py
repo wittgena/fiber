@@ -1,6 +1,4 @@
 # atoa.activator
-## @lineage: gov.activator
-## @lineage: gov.engine.activator
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
@@ -15,15 +13,15 @@ from eco.call.event.base import Event
 from eco.call.disc.action import Action, Observation
 from eco.call.action.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
-from atoa.context.parser import format_context_exceeded_message, ActionParser
-from atoa.disc.ator import Ator
-from atoa.disc.event.llm.action import ActionEvent
-from atoa.disc.event.llm.message import MessageEvent
-from atoa.disc.event.llm.system import SystemPromptEvent, TokenEvent
-from atoa.disc.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from atoa.disc.event.batch.action import ActionBatch
-from atoa.disc.status import ConverStatus
-from atoa.disc.base.conv import ProtoConv
+from atoa.agent.parser import format_context_exceeded_message, ActionParser
+from atoa.agent.disc.ator import Ator
+from atoa.agent.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.event.llm.system import SystemPromptEvent, TokenEvent
+from atoa.agent.disc.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from atoa.agent.disc.event.batch.action import ActionBatch
+from atoa.agent.disc.status import ConverStatus
+from atoa.agent.disc.base.conv import ProtoConv
 from atoa.call.types import ConversationCallbackType, ConversationTokenCallbackType
 from atoa.call.response import LLMResponse
 
@@ -33,15 +31,16 @@ from atoa.gov.action.tension import TensionHandler
 from atoa.gov.action.eval import EvalReflector
 from atoa.gov.action.evaluator import ActionEvaluator 
 
-from atoa.context.gov.protocol import ConvStateProtocol
-from atoa.context.gov.command import TransitionStatus
+from atoa.gov.context.protocol import ConvStateProtocol
+from atoa.gov.context.command import TransitionStatus
 from atoa.gov.organizer import DagOrganizer
 
-import atoa.security.analyzer as analyzer
-import atoa.security.eval as risk
+import atoa.gov.security.analyzer as analyzer
+import atoa.gov.security.eval as risk
 from atoa.call.action.factory import CoreAction
 
-from xor.executor.parallel import ParallelExecutor
+# [NEW] BatchExecutorProtocol 및 CognitiveExecutor 임포트
+from xor.executor.parallel import ParallelExecutor, CognitiveExecutor, BatchExecutorProtocol
 
 from arch.gov.state.compiler import StateCompiler
 from arch.gov.state.projector import StateProjector
@@ -53,7 +52,10 @@ log = get_emitter(__name__)
 INIT_STATE_PREFIX_SCAN_WINDOW = 3
 
 class Activator(Ator):
-    parallel_executor: ParallelExecutor = Field(default_factory=ParallelExecutor, exclude=True)
+    # [MODIFIED] 다형성 확보를 위해 Protocol 타입 적용 및 cognitive_executor 추가
+    parallel_executor: BatchExecutorProtocol = Field(default_factory=ParallelExecutor, exclude=True)
+    cognitive_executor: BatchExecutorProtocol = Field(default_factory=CognitiveExecutor, exclude=True)
+    
     step_handlers: list[StepHandler] = Field(default_factory=list, exclude=True)
     is_graph_mode: bool = Field(default=False, exclude=True)
     dag_materials: Dict[str, Any] = Field(default_factory=dict, exclude=True)
@@ -62,6 +64,7 @@ class Activator(Ator):
     def model_post_init(self, __context: object) -> None:
         super().model_post_init(__context)
         self.parallel_executor = ParallelExecutor(max_workers=self.tool_concurrency_limit)
+        self.cognitive_executor = CognitiveExecutor() # [NEW] 인지 도구용 경량 실행기 초기화
         self.step_handlers = self._build_default_handlers()
         if self.reflector:
             self.evaluator = ActionEvaluator(self.reflector)
@@ -152,7 +155,6 @@ class Activator(Ator):
             ctx.system_prompt_kwargs.setdefault("llm_security_analyzer", True)
         return data
 
-    # [개선점] 구체 클래스 대신 ConvStateProtocol 사용
     def init_state(self, state: ConvStateProtocol, on_event: ConversationCallbackType) -> None:
         """@desc: Bootstrap state and inject system prompts via AgentContext."""
         super().init_state(state, on_event=on_event)
@@ -191,7 +193,7 @@ class Activator(Ator):
         on_event(event)
 
     def _execute_actions(self, conversation: ProtoConv, action_events: list[ActionEvent], on_event: ConversationCallbackType) -> None:
-        """@desc: Resolve concurrent action nodes."""
+        """@desc: Resolve concurrent action nodes (Dual-track Execution)."""
         state = conversation.state
         
         def check_refinement(ae: ActionEvent) -> tuple[bool, str | None]:
@@ -199,23 +201,50 @@ class Activator(Ator):
                 return self.evaluator.check_iterative_refinement(conversation, ae)
             return False, None
 
-        batch = ActionBatch.prepare(
-            action_events,
-            state=state,
-            executor=self.parallel_executor,
-            tool_runner=lambda ae: self._execute_action_event(conversation, ae),
-            tools=self.tools_map,
-        )
-        batch.emit(on_event)
-        
-        # [개선점] setattr 우회 기법 제거 및 명시적인 Command 패턴(apply) 사용
-        batch.finalize(
-            on_event=on_event,
-            check_iterative_refinement=check_refinement,
-            mark_finished=lambda: state.apply(
-                TransitionStatus(new_status=ConverStatus.FINISHED, reason="Action batch execution finalized")
-            ),
-        )
+        # [NEW] 1. 인지 도구와 외부 도구를 분리 (라우팅)
+        cognitive_actions = [ae for ae in action_events if CoreAction.is_safe_cognitive(ae.tool_name)]
+        external_actions = [ae for ae in action_events if not CoreAction.is_safe_cognitive(ae.tool_name)]
+
+        batches = []
+
+        # [NEW] 2. 내부 인지 액션은 CognitiveExecutor 할당 (상태 전이 우선 처리)
+        if cognitive_actions:
+            batches.append(ActionBatch.prepare(
+                cognitive_actions,
+                state=state,
+                executor=self.cognitive_executor,
+                tool_runner=lambda ae: self._execute_action_event(conversation, ae),
+                tools=self.tools_map,
+            ))
+
+        # [NEW] 3. 외부 I/O 액션은 ParallelExecutor 할당
+        if external_actions:
+            batches.append(ActionBatch.prepare(
+                external_actions,
+                state=state,
+                executor=self.parallel_executor,
+                tool_runner=lambda ae: self._execute_action_event(conversation, ae),
+                tools=self.tools_map,
+            ))
+
+        # [NEW] 4. 배치 순차 실행 및 Finalize 단일화
+        for i, batch in enumerate(batches):
+            batch.emit(on_event)
+            
+            # 마지막 Batch일 때만 대화 상태를 FINISHED로 전환
+            is_last_batch = (i == len(batches) - 1)
+            
+            def mark_finished(last=is_last_batch):
+                if last:
+                    state.apply(
+                        TransitionStatus(new_status=ConverStatus.FINISHED, reason="Action batch execution finalized")
+                    )
+
+            batch.finalize(
+                on_event=on_event,
+                check_iterative_refinement=check_refinement,
+                mark_finished=mark_finished,
+            )
     
     @observe(name="agent.step", ignore_inputs=["state", "on_event"])
     def step(
@@ -242,7 +271,6 @@ class Activator(Ator):
         )
 
         if any(state.confirmation_policy.should_confirm(r) for r in risks):
-            # [개선점] 직접 할당 금지, Command 패턴 강제
             state.apply(TransitionStatus(new_status=ConverStatus.WAITING_FOR_USER, reason="Action exceeds security confirmation threshold"))
             return True
         return False

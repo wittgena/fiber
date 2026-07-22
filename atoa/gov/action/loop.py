@@ -3,9 +3,9 @@
 ## @lineage: gov.engine.action.loop
 import json
 
-from atoa.disc.status import ConverStatus
-from atoa.disc.event.llm.action import ActionEvent
-from atoa.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.status import ConverStatus
+from atoa.agent.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.event.llm.message import MessageEvent
 from atoa.exception.types import (
     FunctionCallValidationError,
     LLMContextWindowExceedError,
@@ -13,10 +13,10 @@ from atoa.exception.types import (
 )
 
 from atoa.gov.action.step import StepHandler
-from atoa.context.gov.message.parser.builder import MessageBuilder, LLMFacade
-from atoa.context.gov.state import ConversationState
+from atoa.gov.context.message.parser.builder import MessageBuilder, LLMFacade
+from atoa.gov.context.state import ConversationState
 from eco.call.action.message import Message, TextContent
-from atoa.context.gov.command import TransitionStatus
+from atoa.gov.context.command import TransitionStatus
 
 from watcher.plane.emitter import get_emitter
 logger = get_emitter(__name__)

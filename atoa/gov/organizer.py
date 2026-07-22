@@ -8,8 +8,8 @@ from typing import Dict, Any, Set
 
 from eco.call.action.message import Message, TextContent
 
-from atoa.disc.event.llm.message import MessageEvent
-from atoa.disc.base.conv import ProtoConv
+from atoa.agent.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.base.conv import ProtoConv
 
 from atoa.gov.action.loop import (
     LLMInvocationHandler, 

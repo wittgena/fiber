@@ -1,6 +1,4 @@
 # atoa.call.action.factory
-## @lineage: sandbox.factory.action
-## @lineage: gov.sandbox.factory.action
 from collections.abc import Callable, Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -12,7 +10,7 @@ from atoa.call.action.definition import ActionAnnotations, ActionDefinition
 from atoa.call.action.executor import ActionExecutor
 
 if TYPE_CHECKING:
-    from atoa.disc.base.conv import ProtoConv
+    from atoa.agent.disc.base.conv import ProtoConv
 
 class MessageIntent(str, Enum):
     REPORT = "report"
@@ -89,13 +87,17 @@ def build_action(
     if hide_observation:
         DynamicObservation.visualize = property(lambda self: Text())
 
-    ## Executor 합성
+    ## Executor 합성 (호환성을 위해 유지는 하되, 실제 실행 의존도는 낮춤)
     class DynamicExecutor(ActionExecutor):
         def __call__(self, action: DynamicAction, conversation: "ProtoConv | None" = None) -> Observation:
             return handler(action, conversation, DynamicObservation)
             
     DynamicExecutor.__name__ = f"{name.capitalize()}Executor"
     DynamicExecutor.__module__ = __name__
+
+    ## [NEW] Tool 자체에 실행 컨텍스트 바인딩 (직렬화 유실 방지)
+    def _execute_tool(self, action: DynamicAction, conversation: "ProtoConv | None" = None) -> Observation:
+        return handler(action, conversation, DynamicObservation)
 
     ## ActionDefinition 서브클래스 런타임 동적 생성
     tool_class_name = f"{name.capitalize()}Tool"
@@ -107,7 +109,7 @@ def build_action(
     DynamicToolClass = type(
         tool_class_name,
         (ActionDefinition,), 
-        {"create": _stub_create}
+        {"create": _stub_create, "__call__": _execute_tool}
     )
 
     return ActionProxy(

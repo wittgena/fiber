@@ -17,7 +17,7 @@ from eco.call.disc.tool import Tool
 from eco.call.disc.action import Action, Observation, Schema
 
 from atoa.call.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
-from atoa.security.eval import SecurityRisk
+from atoa.gov.security.eval import SecurityRisk
 
 from arch.topos.surge.model import SurgeBaseModel
 from arch.topos.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses

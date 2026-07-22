@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import Field, PrivateAttr
 
 from atoa.gov.acp.conn import ClientSideConnection
-from atoa.driver.tensor import Driver
+from atoa.call.driver.tensor import Driver
 
 from watcher.plane.emitter import get_emitter, flow_scope
 

@@ -1,19 +1,16 @@
 # xor.executor.parallel
-## @lineage: sandbox.executor.parallel
-## @lineage: gov.sandbox.executor.parallel
-## @lineage: gov.engine.executor.parallel
 from __future__ import annotations
 from collections.abc import Callable, Sequence, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Final
-from atoa.disc.event.llm.observation import AgentErrorEvent
+from typing import TYPE_CHECKING, Final, Protocol, runtime_checkable
+from atoa.agent.disc.event.llm.observation import AgentErrorEvent
 import threading
 from xor.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
     from eco.call.event.base import Event
-    from atoa.disc.event.llm_convertible import ActionEvent
+    from atoa.agent.disc.event.llm_convertible import ActionEvent
     from atoa.call.action.definition import DeclaredResources, ActionDefinition
 
 from watcher.plane.emitter import get_logger
@@ -31,7 +28,6 @@ _DEFAULT_TIMEOUT: Final[float] = 30.0
 
 class ResourceLockTimeout(TimeoutError):
     """A lock could not be acquired within the allowed timeout."""
-
 
 class ResourceLockManager:
     def __init__(
@@ -88,7 +84,19 @@ class ResourceLockManager:
             for key in reversed(acquired):
                 self._release_lock(key)
 
+@runtime_checkable
+class BatchExecutorProtocol(Protocol):
+    """ActionBatch에서 도구를 실행하기 위한 공통 인터페이스"""
+    def execute_batch(
+        self,
+        action_events: Sequence[ActionEvent],
+        tool_runner: Callable[[ActionEvent], list[Event]],
+        tools: dict[str, ActionDefinition] | None = None,
+    ) -> list[list[Event]]:
+        ...
+
 class ParallelExecutor:
+    """외부 I/O 호출(웹, 파일 시스템 등)을 병렬로 처리하고 락(Lock)을 관리하는 실행기"""
     def __init__(
         self,
         max_workers: int = 1,
@@ -135,8 +143,10 @@ class ParallelExecutor:
 
             resources = self._extract_declared_resources(action, tool)
             lock_keys = self._resolve_lock_keys(resources, tool)
+            
             if not lock_keys:
                 return tool_runner(action)
+                
             with self._lock_manager.lock(*lock_keys):
                 return tool_runner(action)
 
@@ -179,3 +189,55 @@ class ParallelExecutor:
         if resources is None or not resources.declared:
             return [f"tool:{tool.name}"]
         return list(resources.keys)
+
+
+# ---------------------------------------------------------
+# [NEW] CognitiveExecutor (내부 인지 도구용 실행기)
+# ---------------------------------------------------------
+class CognitiveExecutor:
+    """
+    내부 인지 및 제어 흐름(lang, think, finish 등)을 처리하기 위한 동기식 순차 실행기.
+    - 메인 스레드에서 즉시 실행됨.
+    - I/O Lock(ResourceLockManager)을 사용하지 않음.
+    - 불필요한 스레드 풀 오버헤드 방지.
+    """
+    def execute_batch(
+        self,
+        action_events: Sequence[ActionEvent],
+        tool_runner: Callable[[ActionEvent], list[Event]],
+        tools: dict[str, ActionDefinition] | None = None,
+    ) -> list[list[Event]]:
+        if not action_events:
+            return []
+            
+        results = []
+        for action in action_events:
+            try:
+                # 락 관리나 스레드 위임 없이 즉시 동기 실행
+                events = tool_runner(action)
+                results.append(events)
+                
+            except ValueError as e:
+                logger.info(f"Cognitive Tool error in '{action.tool_name}': {e}")
+                results.append([
+                    AgentErrorEvent(
+                        error=f"Error executing cognitive tool '{action.tool_name}': {e}",
+                        tool_name=action.tool_name,
+                        tool_call_id=action.tool_call_id,
+                    )
+                ])
+                
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error in cognitive tool '{action.tool_name}': {e}",
+                    exc_info=True,
+                )
+                results.append([
+                    AgentErrorEvent(
+                        error=f"Error executing cognitive tool '{action.tool_name}': {e}",
+                        tool_name=action.tool_name,
+                        tool_call_id=action.tool_call_id,
+                    )
+                ])
+                
+        return results

@@ -1,8 +1,4 @@
 # xor.router.llm
-## @lineage: router.llm
-## @lineage: bound.router.llm
-## @lineage: anchor.registry.router.llm
-## @lineage: anchor.provider.router.llm
 """
 @manifold: Hybrid Microkernel Router
 @flow: Native Registry ⊕ Dynamic Scanner -> Unified Routing Table -> Lazy Instantiation
@@ -16,7 +12,6 @@ from bound.resolver.model.cost import get_provider_for_model
 from xor.router.scan.installed import LLMInstalledScanner
 
 import eco.llama.anchor.llms as llm_pkg 
-
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.router")

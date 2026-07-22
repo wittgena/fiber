@@ -3,15 +3,15 @@
 ## @lineage: gov.engine.action.evaluator
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from atoa.disc.schema.reflect import ReflectorResult, ReflectorBase
+from atoa.agent.disc.schema.reflect import ReflectorResult, ReflectorBase
 from eco.call.event.base import LLMConvertibleEvent
-from atoa.disc.event.llm.action import ActionEvent
-from atoa.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.event.llm.message import MessageEvent
 from watcher.plane.emitter import get_logger
 from atoa.call.action.factory import CoreAction
 
 if TYPE_CHECKING:
-    from atoa.disc.base.conv import ProtoConv
+    from atoa.agent.disc.base.conv import ProtoConv
 
 logger = get_logger(__name__)
 ITERATIVE_REFINEMENT_ITERATION_KEY = "iterative_refinement_iteration"

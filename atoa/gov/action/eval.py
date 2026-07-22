@@ -8,9 +8,9 @@ import json
 from typing import TYPE_CHECKING, Any
 from dataclasses import dataclass, field
 
-from atoa.disc.event.llm.action import ActionEvent
-from atoa.disc.event.llm.message import MessageEvent
-from atoa.disc.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from atoa.agent.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
 from atoa.gov.action.step import StepContext, StepHandler
 
 from eco.call.action.message import Message, TextContent

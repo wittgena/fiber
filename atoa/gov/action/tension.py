@@ -6,13 +6,13 @@ import json
 from typing import TYPE_CHECKING, Any
 from dataclasses import dataclass, field
 
-from atoa.disc.status import ConverStatus
-from atoa.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.status import ConverStatus
+from atoa.agent.disc.event.llm.action import ActionEvent
 from eco.call.disc.action import Action
 
 from atoa.gov.action.step import StepHandler
-import atoa.security.analyzer as analyzer
-import atoa.security.eval as risk
+import atoa.gov.security.analyzer as analyzer
+import atoa.gov.security.eval as risk
 
 from watcher.plane.emitter import get_emitter
 

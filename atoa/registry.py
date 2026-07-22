@@ -8,7 +8,7 @@ from types import MappingProxyType
 from typing import ClassVar, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, ConfigDict
-from atoa.driver.tensor import Driver
+from atoa.call.driver.tensor import Driver
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

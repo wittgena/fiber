@@ -15,13 +15,13 @@ from acp.helpers import text_block
 from watcher.plane.observer.span import observe, unified_flow_span
 from watcher.plane.emitter import get_emitter
 
-from atoa.disc.event.acp import ACPToolCallEvent
-from atoa.disc.event.llm.message import MessageEvent
-from atoa.disc.event.llm.action import ActionEvent
-from atoa.disc.event.llm.observation import ObservationEvent
-from atoa.disc.event.conv.error import ConversationErrorEvent
+from atoa.agent.disc.event.acp import ACPToolCallEvent
+from atoa.agent.disc.event.llm.message import MessageEvent
+from atoa.agent.disc.event.llm.action import ActionEvent
+from atoa.agent.disc.event.llm.observation import ObservationEvent
+from atoa.agent.disc.event.conv.error import ConversationErrorEvent
 
-from atoa.disc.status import ConverStatus
+from atoa.agent.disc.status import ConverStatus
 from eco.call.action.message import Message, MessageToolCall, TextContent
 
 # 매직 스트링 대신 사용할 동적 액션 SSoT Enum
@@ -38,7 +38,7 @@ from atoa.gov.acp.support import (
 if TYPE_CHECKING:
     from atoa.call.types import ConversationCallbackType, ConversationTokenCallbackType
     # 무거운 ConvContext 대신 코어 엔진 명세(Protocol)만 참조
-    from atoa.disc.base.conv import EngineContextProtocol
+    from atoa.agent.disc.base.conv import EngineContextProtocol
 
 log = get_emitter(name="acp.step", phase="agent_execution")
 
