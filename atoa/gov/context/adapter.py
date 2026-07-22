@@ -1,6 +1,5 @@
 # atoa.gov.context.adapter
-## @lineage: atoa.context.gov.adapter
-## @lineage: gov.conv.adapter
+import json
 from pathlib import Path
 from collections.abc import Mapping
 from typing import Any
@@ -28,13 +27,11 @@ from atoa.gov.security.analyzer import SecurityAnalyzerBase
 from atoa.gov.security.confirm import ConfirmationPolicyBase
 from atoa.gov.security.confirm import NeverConfirm
 
-from atoa.gov.conver import Conver
-from atoa.gov.conver import AgentSessionManager, AgentSidecar
-
-from atoa.agent.disc.ator import Ator
+from atoa.gov.conver import Conver, AgentSessionManager, AgentSidecar
 from bound.resolver.secret import SecretValue
-
 from watcher.plane.emitter import get_emitter
+
+from arch.topos.bound.tunnel import TunnelFactory
 
 log = get_emitter(__name__)
 
@@ -57,7 +54,6 @@ class AgentCommunicator:
         if hasattr(self._context, "_on_event"):
             self._context._on_event(event)
         else:
-            # IOManager 기반이므로 .events.append() 역시 백그라운드 큐를 타거나 즉시 수행됩니다.
             self._context.state.events.append(event)
 
     def send_message(self, message: str | Message, sender: str | None = None) -> None:
@@ -65,25 +61,12 @@ class AgentCommunicator:
             message = Message(role="user", content=[TextContent(text=message)])
 
         state = self._context.state
-        ator = self._context.ator
         
-        # [개선됨] 락(with state:) 블록 제거 및 Command 패턴 적용
         if state.execution_status in [ConverStatus.FINISHED, ConverStatus.STUCK]:
             state.apply(TransitionStatus(new_status=ConverStatus.IDLE, reason="User sent a new message"))
 
         activated_skill_names: list[str] = []
         extended_content: list[TextContent] = []
-
-        if ator.agent_context:
-            ctx = ator.agent_context.get_user_message_suffix(
-                user_message=message, 
-                skip_skill_names=state.activated_knowledge_skills
-            )
-            if ctx:
-                content, activated_skill_names = ctx
-                extended_content.append(content)
-                # skills 업데이트는 헬퍼 메서드이므로 (Command 적용이 복잡하다면) Tracker에서 무시하거나 UpdateAgentState로 처리
-                state.activated_knowledge_skills.extend(activated_skill_names)
 
         user_msg_event = MessageEvent(
             source="user",
@@ -95,6 +78,7 @@ class AgentCommunicator:
         self._dispatch(user_msg_event)
 
     def ask(self, question: str) -> str:
+        """Sidecar는 Gov 로컬에서 독립 실행되므로 동기 호출을 유지합니다."""
         return self._sidecar.ask(question)
 
 
@@ -108,13 +92,13 @@ class ExecutionController:
         self._context = context
         self._runner = Conver(context)
 
-    def run(self) -> None:
-        self._runner.run()
+    async def run(self) -> None:
+        await self._runner.run()
 
     def pause(self) -> None:
         self._runner.pause()
 
-    def close(self) -> None:
+    async def close(self) -> None:
         if getattr(self._context, "_cleanup_initiated", False):
             return
         self._context._cleanup_initiated = True
@@ -125,12 +109,19 @@ class ExecutionController:
         except AttributeError:
             pass
             
+        # [핵심 변경] self._context.id.hex -> str(self._context.id) 로 안전하게 변환
+        conv_id_str = str(self._context.id)
+        
         try:
-            self._context.ator.close()
+            tunnel = await TunnelFactory.get_default()
+            control_channel = f"agent_control:{conv_id_str}"
+            payload = {"command": "shutdown", "conversation_id": conv_id_str}
+            await tunnel.publish(control_channel, json.dumps(payload))
+            log.info(f"Published shutdown signal to remote Agent via {control_channel}")
         except Exception as e:
-            log.warning(f"Error closing agent: {e}")
+            log.warning(f"Error publishing close signal to agent: {e}")
             
-        # Executor 정리 로직
+        # Executor 정리 로직 (Gov 로컬 툴 정리)
         if getattr(self._context, "delete_on_close", True):
             self._runner.close_executors()
 
@@ -208,22 +199,17 @@ class EngineContextAdapter:
 
     @property
     def state(self) -> ConvStateProtocol:
-        # [개선됨] 구체 클래스 대신 프로토콜 타입을 반환하여 외부의 무분별한 조작 방지
         return self._context.state
-
-    @property
-    def ator(self) -> Ator:
-        return self._context.ator
 
     @property
     def conversation_stats(self) -> ConversationStats:
         return self._context.conversation_stats
 
-    def switch_profile(self, profile_name: str) -> None:
-        self._session_manager.switch_profile(profile_name)
+    async def switch_profile(self, profile_name: str) -> None:
+        await self._session_manager.switch_profile(profile_name)
 
     def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str:
         return self._sidecar.generate_title(llm, max_length)
     
     def ensure_agent_ready(self) -> None:
-        self._session_manager.ensure_agent_ready()
+        pass

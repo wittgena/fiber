@@ -1,10 +1,4 @@
 # atoa.call.action.resolver
-## @lineage: agent.call.action.resolver
-## @lineage: gov.conv.action.resolver
-"""
-@desc: Table-driven Dynamic Action Generation Factory (Universal Registry)
-@flow: Single Source of Truth for all state-manipulation actions and tools.
-"""
 import json
 from pathlib import Path
 from threading import RLock

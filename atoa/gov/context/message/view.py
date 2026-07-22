@@ -1,9 +1,4 @@
 # atoa.gov.context.message.view
-## @lineage: atoa.context.gov.message.view
-## @lineage: gov.conv.message.view
-## @lineage: meta.agent.message.view
-## @lineage: meta.ops.agent.message.view
-## @lineage: gov.conv.message.index
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import pairwise
@@ -18,6 +13,8 @@ from atoa.agent.disc.event.llm.action import ActionEvent
 from atoa.agent.disc.event.llm.observation import ObservationBaseEvent
 
 from watcher.plane.emitter import get_logger
+
+log = get_logger(__name__)
 
 class ViewIndex(set[int]):
     def find_next(self, threshold: int) -> int:

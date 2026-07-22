@@ -1,11 +1,11 @@
 # atoa.call.action.tool.terminal
 import os
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Optional
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from atoa.gov.context.protol import ConvStateProtocol
+    from atoa.gov.context.protocol import ConvStateProtocol
 from rich.text import Text
 from eco.call.action.message import ImageContent, TextContent
 from atoa.call.action.executor import ActionExecutor
@@ -163,14 +163,34 @@ class TerminalTool(ActionDefinition[TerminalAction, TerminalObservation]):
     @classmethod
     def create(
         cls,
-        conv_state: "ConvStateProtocol",
+        conv_state: Optional["ConvStateProtocol"] = None, # [핵심 변경] Optional 허용
         username: str | None = None,
         no_change_timeout_seconds: int | None = None,
         terminal_type: Literal["tmux", "subprocess"] | None = None,
         shell_path: str | None = None,
         executor: ActionExecutor | None = None,
     ) -> Sequence["TerminalTool"]:
-        from agent.engine.tool.terminal.executor import TerminalExecutor
+        
+        # 기본 툴 껍데기(Schema) 생성
+        tool_instance = cls(
+            action_type=TerminalAction,
+            observation_type=TerminalObservation,
+            description=TOOL_DESCRIPTION,
+            annotations=ActionAnnotations(
+                title="terminal",
+                readOnlyHint=False,
+                destructiveHint=True,
+                idempotentHint=False,
+                openWorldHint=True,
+            ),
+        )
+
+        # [핵심 변경] conv_state가 없으면 실행기 없이 껍데기만 반환 (Agent 로딩용)
+        if conv_state is None:
+            return [tool_instance]
+
+        # conv_state가 주어지면 실제 환경 바인딩 (Gov 런타임용)
+        from gov.sandbox.engine.tool.terminal.executor import TerminalExecutor
 
         working_dir = conv_state.workspace.working_dir
         if not os.path.isdir(working_dir):
@@ -185,19 +205,4 @@ class TerminalTool(ActionDefinition[TerminalAction, TerminalObservation]):
                 shell_path=shell_path,
                 full_output_save_dir=conv_state.env_observation_dir,
             )
-
-        return [
-            cls(
-                action_type=TerminalAction,
-                observation_type=TerminalObservation,
-                description=TOOL_DESCRIPTION,
-                annotations=ActionAnnotations(
-                    title="terminal",
-                    readOnlyHint=False,
-                    destructiveHint=True,
-                    idempotentHint=False,
-                    openWorldHint=True,
-                ),
-                # executor=executor,
-            ).set_executor(executor)
-        ]
+        return [tool_instance.set_executor(executor)]

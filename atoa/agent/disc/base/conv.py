@@ -1,6 +1,4 @@
 # atoa.agent.disc.base.conv
-## @lineage: atoa.disc.base.conv
-## @lineage: agent.disc.base.conv
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from pathlib import Path

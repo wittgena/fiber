@@ -1,7 +1,4 @@
 # atoa.call.action.tool.mcp
-## @lineage: agent.call.action.tool.mcp
-## @lineage: gov.conv.action.tool.mcp
-## @lineage: gov.policy.action.tool.mcp
 import re
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any

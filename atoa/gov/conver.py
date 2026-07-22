@@ -1,6 +1,6 @@
 # atoa.gov.conver
-## @lineage: gov.conver
-## @lineage: gov.engine.conver
+import json
+import asyncio
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -9,20 +9,22 @@ from eco.call.action.message import Message, TextContent
 from eco.call.disc.action import Action, Observation
 
 from watcher.plane.observer.span import observe
+from watcher.plane.emitter import get_emitter
 
 from atoa.agent.parser import render_template
 from atoa.agent.disc.event.llm.message import MessageEvent
 from atoa.agent.disc.event.llm.action import ActionEvent
 from atoa.agent.disc.event.llm.observation import ObservationEvent, UserRejectObservation
+from atoa.agent.disc.event.llm.system import SystemPromptEvent
+
 from atoa.agent.disc.event.conv.error import ConversationErrorEvent
 from atoa.agent.disc.event.conv.pause import PauseEvent
 from atoa.agent.disc.status import ConverStatus
-from atoa.agent.disc.memory.profile import LLMProfileStore
 from atoa.exception.conv.connection import ConversationRunError
 
 from atoa.call.driver.tensor import Driver
 
-from atoa.gov.context.command import TransitionStatus, UpdateAgentState
+from atoa.gov.context.command import TransitionStatus
 from atoa.gov.context.state import ConversationState
 
 from arch.xor.store.file import LocalFileStore
@@ -30,11 +32,12 @@ from xor.store.log import LogStore
 from atoa.gov.context.message.parser.title import generate_conversation_title
 from atoa.gov.context.message.parser.builder import MessageBuilder, LLMFacade
 
-from watcher.plane.emitter import get_emitter
+from arch.topos.bound.payload import StreamPayloadAdapter
+from arch.topos.bound.tunnel import TunnelFactory, UniversalFacade
 
 if TYPE_CHECKING:
     from atoa.gov.context.context import ConvContext
-    convType = ConvContext
+    convType = ConvContext | Any
 else:
     convType = Any
 
@@ -44,88 +47,77 @@ MAX_ABSOLUTE_ITERATIONS = 7
 
 class AgentSessionManager:
     """
-    @desc: 에이전트의 라이프사이클(초기화, LLM 프로필 스위칭, 레지스트리 관리)을 전담하는 클래스.
+    @desc: 대화 상태와 연관된 LLM 프로필 및 환경 메타데이터를 관리합니다.
+           (Agent 객체를 직접 다루지 않고, 통신 채널을 통해 제어 메시지를 발행합니다.)
     """
     def __init__(self, conv: convType):
         self.conv = conv
-        self._profile_store = LLMProfileStore()
 
-    def register_file_based_agents(self) -> None:
-        # Note: AtorLoader 와 _GLOBAL_REGISTRY 가 import 되어야 정상 동작합니다.
-        try:
-            from meta.agent.loader import AtorLoader, _GLOBAL_REGISTRY
-            AtorLoader.register_files(self.conv.workspace.working_dir, _GLOBAL_REGISTRY)
-        except ImportError:
-            log.warning("AtorLoader could not be imported; skipping file-based agent registration.")
-
-    def ensure_agent_ready(self) -> None:
-        # [개선점] Public 속성(is_agent_ready) 사용
-        if getattr(self.conv, "is_agent_ready", False):
-            return
-
-        # [개선점] with 락(Lock) 제거
-        self.register_file_based_agents()
-        self.conv.ator.init_state(self.conv.state, on_event=self.conv._on_event)
-        self.conv.llm_registry.subscribe(self.conv.state.stats.register_llm)
+    async def switch_profile(self, profile_name: str) -> None:
+        """
+        @desc: 메모리 객체 교체 대신, Agent 노드에게 프로필 변경 제어 메시지를 브로드캐스트합니다.
+        """
+        tunnel = await TunnelFactory.get_default()
         
-        registered = set(self.conv.llm_registry.list_usage_ids())
-        for llm in list(self.conv.ator.get_all_llms()):
-            if llm.usage_id not in registered:
-                self.conv.llm_registry.add(llm)
-
-        self.conv.is_agent_ready = True
-
-    def switch_profile(self, profile_name: str) -> None:
-        usage_id = f"profile:{profile_name}"
-        try:
-            new_llm = self.conv.llm_registry.get(usage_id)
-        except KeyError:
-            new_llm = self._profile_store.load(profile_name)
-            new_llm = new_llm.model_copy(update={"usage_id": usage_id})
-            self.conv.llm_registry.add(new_llm)
-            
-        # [개선점] with 락 제거 및 Command 패턴 활용 (agent 모델 통째 교체 방지 또는 우회)
-        new_ator = self.conv.ator.model_copy(update={"llm": new_llm})
-        self.conv.ator = new_ator
-        # 상태에 에이전트를 업데이트할 때도 직접 할당 대신 적용 (ConversationState 내부에서 처리 가능)
-        self.conv.state.agent = new_ator 
-        log.info(f"Agent profile switched to: {profile_name}")
+        # [핵심 변경] .hex 제거 및 안전한 문자열 변환
+        conv_id_str = str(self.conv.id)
+        control_channel = f"agent_control:{conv_id_str}"
+        command_payload = {
+            "command": "switch_profile",
+            "profile_name": profile_name,
+            "conversation_id": conv_id_str
+        }
+        
+        await tunnel.publish(control_channel, json.dumps(command_payload))
+        log.info(f"[SessionManager] Requested Agent profile switch to: {profile_name} via {control_channel}")
 
 
 class AgentSidecar:
-    """@desc: 대화 컨텍스트를 활용한 OOB(Out-Of-Band) 부가 기능 및 메타 질의를 전담하는 클래스"""
+    """
+    @desc: OOB(Out-Of-Band) 부가 기능(타이틀 생성, 메타 질문 등).
+           Ator 의존성을 완전히 제거하고 Gov에 등록된 LLMFacade와 Context만으로 독립 실행합니다.
+    """
     def __init__(self, conv: convType, session_manager: AgentSessionManager):
         self.conv = conv
         self.session = session_manager
 
-    def ask(self, question: str) -> str:
-        self.session.ensure_agent_ready()
-        agent_response = self.conv.ator.ask(question)
-        if agent_response is not None:
-            return agent_response
+    def _get_fallback_llm(self) -> Driver:
+        """llm_registry가 없을 경우를 대비한 안전한 Fallback"""
+        registry = getattr(self.conv, "llm_registry", None)
+        if registry:
+            return registry.get_default()
+        
+        # Registry가 없으면 state에 저장된 agent_config 등을 활용해 복원 시도, 없으면 기본값
+        config_llm = self.conv.state.agent_config.get("llm") if hasattr(self.conv.state, "agent_config") else None
+        if config_llm and isinstance(config_llm, dict):
+            return Driver(**config_llm)
+        return Driver(model="gpt-4o") # 시스템 기본값
 
+    def ask(self, question: str) -> str:
         template_dir = Path(__file__).parent.parent.parent / "context" / "prompts" / "templates"
         question_text = render_template(str(template_dir), "ask_agent_template.j2", question=question)
 
         user_message = Message(role="user", content=[TextContent(text=question_text)])
-        
         messages = MessageBuilder.prepare_llm_messages(
             self.conv.state.events, additional_messages=[user_message]
         )
 
-        try:
-            question_llm = self.conv.llm_registry.get("ask-agent-llm")
-        except KeyError:
-            question_llm = self.conv.ator.llm.model_copy(
-                update={"usage_id": "ask-agent-llm"},
-                deep=True,
-            )
-            self.conv.llm_registry.add(question_llm)
+        registry = getattr(self.conv, "llm_registry", None)
+        if registry:
+            try:
+                question_llm = registry.get("ask-agent-llm")
+            except KeyError:
+                question_llm = registry.get_default().model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
+                registry.add(question_llm)
+        else:
+            question_llm = self._get_fallback_llm().model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
+
+        available_tools = list(getattr(self.conv, "tools", {}).values())
 
         response = LLMFacade.make_completion(
             llm=question_llm, 
             messages=messages, 
-            tools=list(self.conv.ator.tools_map.values())
+            tools=available_tools
         )
         
         message = response.message
@@ -138,75 +130,85 @@ class AgentSidecar:
 
     @observe(name="sidecar.generate_title", ignore_inputs=["llm"])
     def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str:
-        llm_to_use = llm or self.conv.ator.llm
+        llm_to_use = llm or self._get_fallback_llm()
         if llm_to_use.model == "acp-managed":
             llm_to_use = None
         return generate_conversation_title(events=self.conv.state.events, llm=llm_to_use, max_length=max_length)
 
 
 class Conver:
-    """@desc: 대화의 실행 루프, 도구 호출, 액션 거절, 일시정지 등 '실행 및 제어 흐름' 전반을 통제"""
+    """
+    @desc: 이벤트 기반 비동기 Orchestrator. 
+           Agent(두뇌)에게 상태를 던지고(produce), 결정(Action/Message)을 받아(consume) 
+           환경(도구 실행/보안)을 통제합니다.
+    """
     def __init__(self, conversation: convType):
         self.conv = conversation
         self.session = AgentSessionManager(self.conv)
         self.sidecar = AgentSidecar(self.conv, self.session)
 
     @observe(name="conver.run")
-    def run(self) -> None:
-        """@desc: Core iterative loop for the Agent's cognitive process"""
-        self.session.ensure_agent_ready()
-        
-        # [개선점] 락 제거 및 Command 패턴
+    async def run(self) -> None:
         if self.conv.state.execution_status in [
             ConverStatus.IDLE, ConverStatus.PAUSED,
             ConverStatus.ERROR, ConverStatus.STUCK,
         ]:
             self.conv.state.apply(TransitionStatus(new_status=ConverStatus.RUNNING, reason="Engine loop started"))
 
+        tunnel = await TunnelFactory.get_default()
+        conv_id_str = str(self.conv.id)
+        agent_task_topic = f"agent:tasks:{conv_id_str}"
+        agent_response_topic = f"agent:responses:{conv_id_str}"
+        consumer_group = "gov_orchestrator"
+
         iteration = 0
         try:
             while True:
                 log.debug(f"[ConvRunner] Execution iteration: {iteration}")
-                
-                if iteration >= MAX_ABSOLUTE_ITERATIONS:
-                    self._halt_execution(
-                        "AbsoluteMaxIterationsReached",
-                        f"Topological Rupture: Absolute system iterations limit ({MAX_ABSOLUTE_ITERATIONS}) reached."
-                    )
-
-                # [개선점] 내부 루프 검사에서도 락 제거
-                if self.conv.state.execution_status in [
-                    ConverStatus.PAUSED, ConverStatus.STUCK, 
-                    ConverStatus.FINISHED, ConverStatus.ERROR, ConverStatus.NEEDS_REPLAN
-                ]:
+                if self._check_halt_conditions(iteration):
                     break
 
-                # Cognitive Livelock (Stuck & Drift) Detection
-                if getattr(self.conv, "_stuck_detector", None) and self.conv._stuck_detector.is_stuck():
-                    self._halt_execution("AgentStuck", "Cognitive Livelock (Stuck pattern) detected.")
+                ## 상태 스냅샷을 구성하고 어댑터를 통해 안전하게 직렬화(Encode)
+                step_payload = {
+                    "conversation_id": conv_id_str,
+                    "iteration": iteration,
+                    "events": [e.model_dump() for e in self.conv.state.events]
+                }
                 
-                if getattr(self.conv, "_drift_detector", None) and self.conv._drift_detector.is_drifting():
-                    self._halt_execution("AgentDrift", "Topological Drift detected: Agent is wandering without progress.")
+                await tunnel.stream_produce(
+                    topic=agent_task_topic, 
+                    payload=StreamPayloadAdapter.encode(step_payload)
+                )
+                log.debug(f"[ConvRunner] Step request produced to {agent_task_topic}")
 
-                if self.conv.state.execution_status == ConverStatus.WAITING_FOR_USER:
-                    self.conv.state.apply(TransitionStatus(new_status=ConverStatus.RUNNING, reason="Resuming from user wait"))
+                ## Agent의 응답 대기
+                stream_results = await tunnel.stream_consume(
+                    topic=agent_response_topic, 
+                    group=consumer_group, 
+                    consumer="conver_worker_1", 
+                    count=1, 
+                    block=30000 
+                )
 
-                # Actuate Agent Step
-                self.conv.ator.step(self.conv, on_event=self.conv._on_event, on_token=self.conv._on_token)
+                if not stream_results:
+                    log.warning("[ConvRunner] Agent response timeout. Retrying loop...")
+                    continue
+
+                ## 응답 수신 후 어댑터를 통해 역직렬화(Decode)
+                for stream_name, messages in stream_results:
+                    for message_id, message_data in messages:
+                        try:
+                            parsed_decision = StreamPayloadAdapter.decode(message_data)
+                            await self._process_agent_decision(parsed_decision)
+                        finally:
+                            await tunnel.stream_ack(agent_response_topic, consumer_group, message_id)
+
                 iteration += 1
-
                 if self.conv.state.execution_status in [
                     ConverStatus.WAITING_FOR_USER, ConverStatus.FINISHED,
                     ConverStatus.STUCK, ConverStatus.ERROR, ConverStatus.NEEDS_REPLAN
                 ]:
                     break
-
-                if iteration >= getattr(self.conv, "max_iteration_per_run", MAX_ABSOLUTE_ITERATIONS):
-                    self._halt_execution(
-                        "MaxIterationsReached",
-                        f"User-defined iterations limit reached."
-                    )
-
         except Exception as e:
             if not isinstance(e, ConversationRunError):
                 self.conv.state.apply(TransitionStatus(new_status=ConverStatus.ERROR, reason=f"Unhandled exception: {e}"))
@@ -214,8 +216,66 @@ class Conver:
                 raise ConversationRunError(self.conv.state.id, e, persistence_dir=self.conv.state.persistence_dir) from e
             raise
 
+    async def _process_agent_decision(self, data: dict) -> None:
+        decision_type = data.get("type")
+        
+        if decision_type == "action":
+            tool_name = data.get("tool_name")
+            action_kwargs = data.get("action_args", {})
+            action_obj = Action(name=tool_name, parameters=action_kwargs)
+            
+            action_event = ActionEvent(action=action_obj, tool_name=tool_name, tool_call_id=data.get("call_id"))
+            self.conv._on_event(action_event)
+            
+            try:
+                obs = self.execute_tool(tool_name, action_obj)
+                obs_event = ObservationEvent(observation=obs, tool_name=tool_name, action_id=action_event.id)
+                self.conv._on_event(obs_event)
+            except Exception as e:
+                log.error(f"[ConvRunner] Tool execution failed: {e}")
+                error_obs = Observation(error=str(e))
+                self.conv._on_event(ObservationEvent(observation=error_obs, tool_name=tool_name, action_id=action_event.id))
+                
+        elif decision_type == "message":
+            msg_event = MessageEvent.model_validate(data.get("event_payload"))
+            self.conv._on_event(msg_event)
+            
+        elif decision_type == "system_prompt":
+            sys_event = SystemPromptEvent.model_validate(data.get("event_payload"))
+            self.conv._on_event(sys_event)
+            
+        elif decision_type == "finish":
+            self.conv.state.apply(TransitionStatus(new_status=ConverStatus.WAITING_FOR_USER, reason="Agent finalized turn"))
+
+    def _check_halt_conditions(self, iteration: int) -> bool:
+        if iteration >= MAX_ABSOLUTE_ITERATIONS:
+            self._halt_execution(
+                "AbsoluteMaxIterationsReached",
+                f"Topological Rupture: Absolute system iterations limit ({MAX_ABSOLUTE_ITERATIONS}) reached."
+            )
+
+        if self.conv.state.execution_status in [
+            ConverStatus.PAUSED, ConverStatus.STUCK, 
+            ConverStatus.FINISHED, ConverStatus.ERROR, ConverStatus.NEEDS_REPLAN
+        ]:
+            return True
+
+        if getattr(self.conv, "_stuck_detector", None) and self.conv._stuck_detector.is_stuck():
+            self._halt_execution("AgentStuck", "Cognitive Livelock (Stuck pattern) detected.")
+        
+        if getattr(self.conv, "_drift_detector", None) and self.conv._drift_detector.is_drifting():
+            self._halt_execution("AgentDrift", "Topological Drift detected: Agent is wandering without progress.")
+
+        if self.conv.state.execution_status == ConverStatus.WAITING_FOR_USER:
+            self.conv.state.apply(TransitionStatus(new_status=ConverStatus.RUNNING, reason="Resuming from user wait"))
+            
+        max_iter = getattr(self.conv, "max_iteration_per_run", MAX_ABSOLUTE_ITERATIONS)
+        if iteration >= max_iter:
+            self._halt_execution("MaxIterationsReached", "User-defined iterations limit reached.")
+            
+        return False
+
     def _halt_execution(self, code: str, detail: str) -> None:
-        """내부 헬퍼: 중단 이벤트를 발생시키고 스택을 끊습니다."""
         log.error(detail)
         new_status = ConverStatus.STUCK if "Stuck" in code or "Drift" in code else ConverStatus.ERROR
         self.conv.state.apply(TransitionStatus(new_status=new_status, reason=detail))
@@ -227,7 +287,6 @@ class Conver:
         if self.conv.state.execution_status == ConverStatus.PAUSED:
             return
             
-        # [개선점] 락 제거 및 커맨드 패턴 적용
         if self.conv.state.execution_status in [ConverStatus.IDLE, ConverStatus.RUNNING]:
             self.conv.state.apply(TransitionStatus(new_status=ConverStatus.PAUSED, reason="Agent execution pause requested"))
             self.conv._on_event(PauseEvent())
@@ -236,7 +295,6 @@ class Conver:
     def reject_pending_actions(self, reason: str = "User rejected the action") -> None:
         pending_actions = ConversationState.get_unmatched_actions(self.conv.state.events)
         
-        # [개선점] 락 제거 및 커맨드 패턴 적용
         if self.conv.state.execution_status == ConverStatus.WAITING_FOR_USER:
             self.conv.state.apply(TransitionStatus(new_status=ConverStatus.IDLE, reason="User rejected pending action(s)"))
 
@@ -255,18 +313,19 @@ class Conver:
             log.info(f"Rejected pending action: {action_event} - {reason}")
 
     def execute_tool(self, tool_name: str, action: Action) -> Observation:
-        self.session.ensure_agent_ready()
-        tool = self.conv.ator.tools_map.get(tool_name)
+        local_tools_map = getattr(self.conv, "tools", {})
+        tool = local_tools_map.get(tool_name)
+        
         if tool is None:
-            available_tools = list(self.conv.ator.tools_map.keys())
-            raise KeyError(f"Tool '{tool_name}' not found. Available tools: {available_tools}")
+            available_tools = list(local_tools_map.keys())
+            raise KeyError(f"Tool '{tool_name}' not found in Gov Environment. Available tools: {available_tools}")
 
-        if not tool.executor:
-            raise NotImplementedError(f"Tool '{tool_name}' has no executor")
+        if not getattr(tool, "executor", None):
+            raise NotImplementedError(f"Tool '{tool_name}' has no configured executor in Gov Env.")
+        
         return tool(action, self.conv)
 
     def rerun_actions(self, rerun_log_path: str | Path | None = None) -> bool:
-        self.session.ensure_agent_ready()
         rerun_log: LogStore | None = None
         if rerun_log_path is not None:
             log_dir = Path(rerun_log_path)
@@ -274,18 +333,20 @@ class Conver:
             file_store = LocalFileStore(str(log_dir))
             rerun_log = LogStore(file_store, dir_path="events")
 
+        local_tools_map = getattr(self.conv, "tools", {})
         action_count = 0
+        
         for event in self.conv.state.events:
             if not isinstance(event, ActionEvent) or event.action is None:
                 continue
 
             action_count += 1
             tool_name = event.tool_name
-            tool = self.conv.ator.tools_map.get(tool_name)
+            tool = local_tools_map.get(tool_name)
             
             if tool is None:
                 raise KeyError(f"Tool '{tool_name}' not found during rerun.")
-            if not tool.executor:
+            if not getattr(tool, "executor", None):
                 log.warning(f"Skipping action {action_count}: tool '{tool_name}' has no executor")
                 continue
 
@@ -311,16 +372,16 @@ class Conver:
         return True
 
     def close_executors(self) -> None:
-        """@desc: 도구 실행기들의 리소스를 깔끔하게 정리합니다."""
         try:
-            tools_map = self.conv.ator.tools_map
+            local_tools_map = getattr(self.conv, "tools", {})
         except (AttributeError, RuntimeError):
             return
             
-        for tool in tools_map.values():
+        for tool in local_tools_map.values():
             try:
-                executable_tool = tool.as_executable()
-                executable_tool.executor.close()
+                if hasattr(tool, "as_executable"):
+                    executable_tool = tool.as_executable()
+                    executable_tool.executor.close()
             except NotImplementedError:
                 continue
             except Exception as e:

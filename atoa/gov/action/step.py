@@ -1,24 +1,17 @@
 # atoa.gov.action.step
-## @lineage: gov.action.step
-## @lineage: gov.engine.action.step
 from abc import ABC, abstractmethod
-import json
-from typing import TYPE_CHECKING, Any
-from dataclasses import dataclass, field
-from pydantic import PrivateAttr, ValidationError, model_validator
-from atoa.call.types import ConversationCallbackType, ConversationTokenCallbackType
+from typing import TYPE_CHECKING, Any, Callable, Awaitable
+from dataclasses import dataclass
 from atoa.call.response import LLMResponse
-from eco.call.action.message import Message, TextContent
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from atoa.agent.disc.base.conv import ProtoConv
-    from atoa.activator import Activator
+    from atoa.activator import Activator, AgentStateSnapshot
     ActivatorType = Activator | Any
-    ConvType = ProtoConv | Any
+    SnapshotType = AgentStateSnapshot | Any
 else:
     ActivatorType = Any
-    ConvType = Any
+    SnapshotType = Any
 
 logger = get_emitter(__name__)
 
@@ -28,12 +21,15 @@ class StepContext:
 
 class StepHandler(ABC):
     @abstractmethod
-    def handle(
+    async def handle_async(
         self,
         activator: ActivatorType,
-        conversation: ConvType,
-        on_event: ConversationCallbackType,
-        on_token: ConversationTokenCallbackType | None,
+        snapshot: SnapshotType,
+        on_event: Callable[[Any], Awaitable[None]],
         context: StepContext
     ) -> bool:
+        """
+        @desc: 비동기 파이프라인 전용 핸들러. 
+               상태 변경이나 도구 실행 대신, on_event 콜백을 통해 Gov(환경)로 의사를 전달합니다.
+        """
         pass

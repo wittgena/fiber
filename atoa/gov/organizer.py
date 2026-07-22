@@ -1,6 +1,4 @@
 # atoa.gov.organizer
-## @lineage: gov.organizer
-## @lineage: gov.engine.organizer
 import time
 import json
 from pathlib import Path
@@ -21,8 +19,8 @@ from atoa.gov.action.step import StepHandler, StepContext
 from atoa.gov.action.tension import TensionHandler
 from atoa.gov.action.eval import EvalReflector
 
-from watcher.plane.observer.span import unified_flow_span
 from arch.gov.state.vocab import SigType, SpecKey
+from watcher.plane.observer.span import unified_flow_span
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter("dag.organizer")

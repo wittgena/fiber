@@ -1,42 +1,44 @@
 # atoa.gov.context.context
-## @lineage: atoa.context.gov.context
-## @lineage: gov.conv.context
-import atexit
 import warnings
 from collections.abc import Mapping
 from pathlib import Path
-
-from xor.secure.secret.validator import Cipher
-from atoa.agent.disc.ator import Ator
-from eco.call.disc.action import Action, Observation
+from typing import Any
 
 from atoa.registry import LLMRegistry
 from atoa.call.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
-    StuckDetectionThresholds,
 )
 from atoa.agent.disc.base.conv import ProtoConv
 from atoa.call.driver.tensor import Driver
-
 from atoa.gov.context.message.visualizer import ConversationVisualizer
 from atoa.gov.context.state import ConversationState
-from eco.call.action.message import Message
-
 from atoa.gov.security.analyzer import SecurityAnalyzerBase
 from atoa.gov.security.confirm import ConfirmationPolicyBase
-from agent.workspace import SandboxWorkspace
 
 from bound.resolver.secret import SecretValue
+
+from eco.call.action.message import Message
+from eco.call.disc.action import Action, Observation
+
+from gov.sandbox.agent.workspace import SandboxWorkspace
+from xor.secure.secret.validator import Cipher
+
 from arch.contract.event.next import next_id
 from atoa.gov.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
 
+
 class ConvContext(ProtoConv):
+    """
+    @desc: Gov 환경에서 대화의 상태(State)와 제어(Adapters), 그리고 로컬 툴(Tools)을 
+           응집하는 최상위 런타임 래퍼입니다. (원격 Agent 워커와는 Tunnel로 소통합니다.)
+    """
     def __init__(
         self,
-        ator: Ator,
         workspace: str | Path | SandboxWorkspace,
+        agent_id: str = "default-agent",     # [핵심] Ator 객체 대신 ID 주입
+        agent_config: dict[str, Any] | None = None,
         persistence_dir: str | Path | None = None,
         conversation_id: ConversationID | None = None,
         callbacks: list[ConversationCallbackType] | None = None,
@@ -50,7 +52,6 @@ class ConvContext(ProtoConv):
     ):
         super().__init__()
         self._cleanup_initiated = False
-        self._ator = ator
 
         if isinstance(workspace, (str, Path)):
             workspace = SandboxWorkspace(working_dir=workspace)
@@ -60,11 +61,14 @@ class ConvContext(ProtoConv):
             ws_path.mkdir(parents=True, exist_ok=True)
 
         desired_id = conversation_id or next_id()
+        desired_id_str = str(desired_id) # [버그 수정] .hex 제거
+        
         self._state = ConversationState.create(
             id=desired_id,
-            agent=ator,
+            agent_id=agent_id,
+            agent_config=agent_config,
             workspace=self._workspace,
-            persistence_dir=str(Path(persistence_dir) / desired_id.hex) if persistence_dir else None,
+            persistence_dir=str(Path(persistence_dir) / desired_id_str) if persistence_dir else None,
             max_iterations=max_iteration_per_run,
             stuck_detection=stuck_detection,
             cipher=cipher,
@@ -82,15 +86,17 @@ class ConvContext(ProtoConv):
         composed = (callbacks or []) + [_default_callback]
         self._on_event = self._compose_callbacks(composed)
         self._on_token = self._compose_callbacks(token_callbacks) if token_callbacks else None
+        
         self.llm_registry = LLMRegistry()
+        self.tools = {} # [추가] ActionResolver가 Gov용 실행기를 바인딩할 공간
 
         self._communicator = AgentCommunicator(self)
         self._controller = ExecutionController(self)
         self._security = SecurityManager(self)
         self._engine = EngineContextAdapter(self)
 
-        atexit.register(self.close)
-        self._start_observability_span(str(desired_id))
+        # [수정] atexit.register(self.close) 제거 (비동기 함수이므로 불가)
+        self._start_observability_span(desired_id_str)
 
     @staticmethod
     def _compose_callbacks(callbacks):
@@ -105,14 +111,12 @@ class ConvContext(ProtoConv):
     def state(self) -> ConversationState: return self._state
     @property
     def workspace(self) -> SandboxWorkspace: return self._workspace
-    @property
-    def ator(self) -> Ator: return self._ator
+    
+    # [수정] @property def ator(self) 완전 삭제 (Decoupling 완성)
+    
     @property
     def conversation_stats(self): return self._state.stats
 
-    # =========================================================
-    # 명시적 위임 (Bypass) - 에러 없이 어댑터로 토스!
-    # =========================================================
     def _warn_deprecation(self, method_name: str, adapter_name: str):
         warnings.warn(
             f"[Deprecation] Conv.{method_name}() 직접 호출은 금지되었습니다. "
@@ -121,7 +125,25 @@ class ConvContext(ProtoConv):
             stacklevel=3
         )
 
-    # 1. Communicator 위임
+    # ---------------------------------------------------
+    # [A] 비동기 전환된 제어 메서드들 (Async Wrappers)
+    # ---------------------------------------------------
+    async def run(self) -> None:
+        self._warn_deprecation("run", "ExecutionController")
+        await self._controller.run()
+
+    async def close(self) -> None:
+        if self._cleanup_initiated: return
+        self._warn_deprecation("close", "ExecutionController")
+        await self._controller.close()
+
+    async def switch_profile(self, profile_name: str) -> None:
+        self._warn_deprecation("switch_profile", "EngineContextAdapter")
+        await self._engine.switch_profile(profile_name)
+
+    # ---------------------------------------------------
+    # [B] 동기 유지 제어 메서드들 (Sync Wrappers)
+    # ---------------------------------------------------
     def send_message(self, message: str | Message, sender: str | None = None) -> None:
         self._warn_deprecation("send_message", "AgentCommunicator")
         self._communicator.send_message(message, sender)
@@ -130,19 +152,9 @@ class ConvContext(ProtoConv):
         self._warn_deprecation("ask", "AgentCommunicator")
         return self._communicator.ask(question)
 
-    # 2. Controller 위임
-    def run(self) -> None:
-        self._warn_deprecation("run", "ExecutionController")
-        self._controller.run()
-
     def pause(self) -> None:
         self._warn_deprecation("pause", "ExecutionController")
         self._controller.pause()
-
-    def close(self) -> None:
-        if self._cleanup_initiated: return
-        self._warn_deprecation("close", "ExecutionController")
-        self._controller.close()
 
     def rerun_actions(self, rerun_log_path: str | Path | None = None) -> bool:
         self._warn_deprecation("rerun_actions", "ExecutionController")
@@ -152,7 +164,6 @@ class ConvContext(ProtoConv):
         self._warn_deprecation("execute_tool", "ExecutionController")
         return self._controller.execute_tool(tool_name, action)
 
-    # 3. SecurityManager 위임
     def reject_pending_actions(self, reason: str = "User rejected the action") -> None:
         self._warn_deprecation("reject_pending_actions", "SecurityManager")
         self._security.reject_pending_actions(reason)
@@ -177,7 +188,6 @@ class ConvContext(ProtoConv):
     def confirmation_policy_active(self) -> bool:
         return self._security.confirmation_policy_active
 
-    # 4. EngineContextAdapter 위임
     def condense(self) -> None:
         self._warn_deprecation("condense", "EngineContextAdapter")
         self._engine.condense()
@@ -185,11 +195,3 @@ class ConvContext(ProtoConv):
     def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str:
         self._warn_deprecation("generate_title", "EngineContextAdapter")
         return self._engine.generate_title(llm, max_length)
-
-    def switch_profile(self, profile_name: str) -> None:
-        self._warn_deprecation("switch_profile", "EngineContextAdapter")
-        self._engine.switch_profile(profile_name)
-
-    def __del__(self) -> None:
-        try: self.close()
-        except Exception: pass

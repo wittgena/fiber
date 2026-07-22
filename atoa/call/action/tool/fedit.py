@@ -152,7 +152,7 @@ class FileEditorTool(ActionDefinition[FileEditorAction, FileEditorObservation]):
 
     @classmethod
     def create(cls, conv_state: "ConversationState") -> Sequence["FileEditorTool"]:
-        from agent.engine.tool.fedit.executor import FileEditorExecutor
+        from gov.sandbox.engine.tool.fedit.executor import FileEditorExecutor
         executor = FileEditorExecutor(workspace_root=conv_state.workspace.working_dir)
 
         description_lines = TOOL_DESCRIPTION.split("\n")

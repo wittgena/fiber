@@ -1,6 +1,5 @@
 # atoa.gov.context.state
-## @lineage: atoa.context.gov.state
-## @lineage: gov.conv.state
+import os
 import json
 import inspect
 from collections.abc import Sequence
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
 else:
     SecurityType = Any
 
-from atoa.agent.disc.ator import Ator
+# [개선] Ator 메모리 참조 제거 (import Ator 제거)
 from bound.resolver.secret import SecretRegistry
 
 from atoa.gov.context.io.manager import IOManager
@@ -50,16 +49,20 @@ log = get_emitter(__name__)
 
 class ConversationState(SurgeBaseModel):
     id: ConversationID = Field(description="Unique conversation ID")
-    agent: Ator = Field(
-        ...,
-        description=(
-            "The agent running in the conversation. "
-            "Persisted to allow resuming conversations and handling configuration changes."
-        ),
+    
+    # [핵심 변경] 무거운 Ator 객체 대신 Agent의 식별자와 설정 메타데이터만 보유
+    agent_id: str = Field(
+        default="default-agent",
+        description="Identifier for the remote Agent node/profile handling this conversation."
     )
+    agent_config: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Serialized configuration or profile metadata of the agent (e.g., allowed tools, LLM model info)."
+    )
+    
     workspace: BaseWorkspace = Field(
         ...,
-        description="Workspace used by the agent to execute commands and read/write files.",
+        description="Workspace used by the Gov Engine to execute commands and read/write files.",
     )
     persistence_dir: str | None = Field(
         default="workspace/conv",
@@ -140,8 +143,9 @@ class ConversationState(SurgeBaseModel):
     def create(
         cls: type["ConversationState"],
         id: ConversationID,
-        agent: Ator,
         workspace: BaseWorkspace,
+        agent_id: str = "default-agent",  # [개선] Ator 런타임 객체 대신 ID 주입
+        agent_config: dict[str, Any] | None = None,
         persistence_dir: str | None = None,
         max_iterations: int = 500,
         stuck_detection: bool = True,
@@ -161,25 +165,25 @@ class ConversationState(SurgeBaseModel):
                     f"but persisted state has {state.id}"
                 )
 
-            agent.verify(state.agent, events=state.events)
+            # [개선] 메모리 객체 기반의 agent.verify(...) 제거
             state.autosave_enabled = True
-            state.agent = agent
+            state.agent_id = agent_id
+            if agent_config:
+                state.agent_config = agent_config
             state.workspace = workspace
             state.max_iterations = max_iterations
 
             log.info(
                 f"Resumed conversation {state.id} from persistent storage.\n"
-                f"State: {state.model_dump(exclude={'agent'})}\n"
-                f"Agent: {state.agent.model_dump_succint()}"
+                f"State: {state.model_dump(exclude={'agent_config'})}\n"
+                f"Agent ID: {state.agent_id}"
             )
             return state
 
-        if agent is None:
-            raise ValueError("agent is required when initializing a new ConversationState")
-
         state = cls(
             id=id,
-            agent=agent,
+            agent_id=agent_id,
+            agent_config=agent_config or {},
             workspace=workspace,
             persistence_dir=persistence_dir,
             max_iterations=max_iterations,
@@ -191,7 +195,7 @@ class ConversationState(SurgeBaseModel):
         state.save_base_state()  # 최초 상태 스냅샷 저장
         state.autosave_enabled = True
         
-        log.info(f"Created new conversation {state.id}")
+        log.info(f"Created new conversation {state.id} for Agent {state.agent_id}")
         return state
 
     def apply(self, command: StateCommand) -> None:
