@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from pydantic import field_validator
 
 from atoa.gov.security.eval import SecurityRisk
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 
 class ConfirmationPolicyBase(DiscMixin, ABC):
     @abstractmethod

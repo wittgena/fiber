@@ -43,12 +43,13 @@ else:
 
 log = get_emitter("executor.conver")
 MAX_ABSOLUTE_ITERATIONS = 7
+MAX_CONSECUTIVE_TIMEOUTS = 3  # 연속 타임아웃 허용치
 
 
 class AgentSessionManager:
     """
-    @desc: 대화 상태와 연관된 메타데이터를 관리합니다. 
-           Agent 객체를 직접 제어하지 않고, 터널(Redis)을 통해 제어 명령을 브로드캐스트합니다.
+    @desc: Manages metadata associated with the conversation state.
+           Broadcasts control commands via Tunnel (Redis) instead of directly controlling the Agent.
     """
     def __init__(self, conv: convType):
         self.conv = conv
@@ -69,8 +70,8 @@ class AgentSessionManager:
 
 class AgentSidecar:
     """
-    @desc: 대화의 메인 루프(Conver) 밖에서 일어나는 부가 기능(타이틀 생성, 메타 질문 등)을 담당합니다.
-           무상태 Agent(Activator)를 깨우지 않고 Gov에 등록된 LLMFacade만을 사용해 가볍게 동작합니다.
+    @desc: Handles auxiliary functions (e.g., title generation, meta-questions) outside the main Conver loop.
+           Runs dynamically using the registered LLMFacade without waking up the stateless Agent (Activator).
     """
     def __init__(self, conv: convType, session_manager: AgentSessionManager):
         self.conv = conv
@@ -122,10 +123,10 @@ class AgentSidecar:
 
 class Conver:
     """
-    @desc: 대화(Flow)의 신체이자 환경(Environment)을 관장하는 핵심 오케스트레이터입니다.
-           - Agent(무상태 두뇌)에게 현재 상태를 전송(Produce)
-           - Agent의 결정을 수신(Consume)하여 물리적 도구를 실행(Execute)
-           - 모든 결과를 Context(상태)에 기록
+    @desc: Core orchestrator acting as the physical environment for the Agent.
+           - Produces state payloads for the stateless Agent (Brain).
+           - Consumes Agent decisions and executes physical tools.
+           - Appends all results to the Context.
     """
     def __init__(self, conversation: convType):
         self.conv = conversation
@@ -134,7 +135,7 @@ class Conver:
 
     @observe(name="conver.run")
     async def run(self) -> None:
-        """이벤트 기반 비동기 제어 루프"""
+        """Event-driven async control loop."""
         if self.conv.state.execution_status in [
             ConverStatus.IDLE, ConverStatus.PAUSED,
             ConverStatus.ERROR, ConverStatus.STUCK,
@@ -148,38 +149,66 @@ class Conver:
         consumer_group = "gov_orchestrator"
 
         iteration = 0
+        consecutive_timeouts = 0  # [개선 1] 타임아웃 방어용 카운터
+
         try:
             while True:
                 log.debug(f"[ConvRunner] Execution iteration: {iteration}")
                 if self._check_halt_conditions(iteration):
                     break
 
-                # [Phase 1] 상태 스냅샷 구성 및 발송 (Encode)
+                # [Phase 1] Construct and Produce State Snapshot
+                current_topo = len(self.conv.state.events)
+                is_rupture = self.conv.state.execution_status == ConverStatus.NEEDS_REPLAN
+
                 step_payload = {
                     "conversation_id": conv_id_str,
                     "iteration": iteration,
-                    "events": [e.model_dump() for e in self.conv.state.events]
+                    "events": [e.model_dump(mode="json") for e in self.conv.state.events],
+                    "_telemetry": {
+                        "topo": current_topo,
+                        "press": 0,
+                        "rupture": is_rupture,
+                        "tick": iteration
+                    }
                 }
+                
                 await tunnel.stream_produce(
                     topic=agent_task_topic, 
                     payload=StreamPayloadAdapter.encode(step_payload)
                 )
                 log.debug(f"[ConvRunner] Step request produced to {agent_task_topic}")
 
-                # [Phase 2] Agent 응답 대기
-                stream_results = await tunnel.stream_consume(
-                    topic=agent_response_topic, 
-                    group=consumer_group, 
-                    consumer="conver_worker_1", 
-                    count=1, 
-                    block=30000 
-                )
+                # [Phase 2] Await Agent Response with Timeout Handling
+                stream_results = []
+                try:
+                    stream_results = await tunnel.stream_consume(
+                        topic=agent_response_topic, 
+                        group=consumer_group, 
+                        consumer="conver_worker_1", 
+                        count=1, 
+                        block=30000 
+                    )
+                    consecutive_timeouts = 0  # 성공 시 카운터 초기화
+                except (TimeoutError, ConnectionError) as te:
+                    # [개선 1] 소켓 레벨의 타임아웃/연결 예외를 삼켜 크래시 방지
+                    log.warning(f"[ConvRunner] Redis stream consume timed out (Socket Level): {te}")
+                    consecutive_timeouts += 1
+                except Exception as e:
+                    if "Timeout" in type(e).__name__:
+                        log.warning(f"[ConvRunner] Redis stream consume timed out (Library Level): {e}")
+                        consecutive_timeouts += 1
+                    else:
+                        raise e
 
                 if not stream_results:
+                    if consecutive_timeouts >= MAX_CONSECUTIVE_TIMEOUTS:
+                        self._halt_execution("AgentTimeout", f"에이전트 응답 없음 ({MAX_CONSECUTIVE_TIMEOUTS}회 연속 타임아웃)")
+                        break
                     log.warning("[ConvRunner] Agent response timeout. Retrying loop...")
                     continue
 
-                # [Phase 3] 결정 수신 및 물리적 반영 (Decode & Process)
+                # [Phase 3] Consume Decision & Execute Physical Action
                 for stream_name, messages in stream_results:
                     for message_id, message_data in messages:
                         try:
@@ -190,7 +219,7 @@ class Conver:
 
                 iteration += 1
                 
-                # 상태가 RUNNING이 아니면 루프 종료
+                # Terminate loop if state exits RUNNING mode
                 if self.conv.state.execution_status in [
                     ConverStatus.WAITING_FOR_USER, ConverStatus.FINISHED,
                     ConverStatus.STUCK, ConverStatus.ERROR, ConverStatus.NEEDS_REPLAN
@@ -205,29 +234,29 @@ class Conver:
             raise
 
     async def _process_agent_decision(self, data: dict) -> None:
-        """Agent가 보내온 의도(Intent)를 파싱하여 상태에 기록하고 도구를 실행합니다."""
+        """Parses the Agent's intent, updates the state, and executes tools."""
         decision_type = data.get("type")
+        telemetry = data.get("_telemetry", {})  # [개선 3] 텔레메트리 획득
         
         if decision_type == "action":
-            # 1. 완벽하게 덤프된 객체를 Pydantic을 이용해 그대로 수화(Hydration)
             action_event = ActionEvent.model_validate(data.get("event_payload"))
             self.conv._on_event(action_event)
-            
             tool_name = action_event.tool_name
             action_obj = action_event.action
             
             try:
-                # 2. 물리적 도구 실행 시도
                 obs = self.execute_tool(tool_name, action_obj)
-                
-                # 3. 순수 인지 도구(think 등)는 obs가 None으로 반환되며 Observation을 생성하지 않음
                 if obs is not None:
-                    obs_event = ObservationEvent(observation=obs, tool_name=tool_name, action_id=action_event.id)
+                    obs_event = ObservationEvent(
+                        observation=obs, 
+                        tool_name=tool_name, 
+                        action_id=action_event.id,
+                        tool_call_id=action_event.tool_call_id 
+                    )
                     self.conv._on_event(obs_event)
                     
             except Exception as e:
                 log.error(f"[ConvRunner] Tool execution failed: {e}")
-                # 4. 강제 조립으로 인한 검증 에러 방지를 위해 전용 AgentErrorEvent 방출
                 error_event = AgentErrorEvent(
                     source="environment",
                     error=str(e),
@@ -244,13 +273,41 @@ class Conver:
             sys_event = SystemPromptEvent.model_validate(data.get("event_payload"))
             self.conv._on_event(sys_event)
             
+        # [개선 2] 명시적 error 이벤트 처리 추가
+        elif decision_type == "error":
+            try:
+                error_event = AgentErrorEvent.model_validate(data.get("event_payload", {}))
+                self.conv._on_event(error_event)
+            except Exception as e:
+                log.error(f"[ConvRunner] Failed to parse agent error event: {e}")
+
+            new_status = ConverStatus.NEEDS_REPLAN if telemetry.get("rupture") else ConverStatus.STUCK
+            self.conv.state.apply(TransitionStatus(new_status=new_status, reason="Agent reported an error."))
+            
         elif decision_type == "finish":
-            self.conv.state.apply(TransitionStatus(new_status=ConverStatus.WAITING_FOR_USER, reason="Agent finalized turn"))
+            # [개선 3] Rupture(비정상 강제 종료)와 일반 종료 구분
+            if telemetry.get("rupture"):
+                payload = data.get("event_payload", {})
+                reason = payload.get("error", "Agent execution forcibly ruptured (e.g., Livelock/Tension).") if isinstance(payload, dict) else str(payload)
+                
+                log.warning(f"[ConvRunner] Received RUPTURE finish signal: {reason}")
+                
+                # 강제 종료에 의한 것이므로 재조정(NEEDS_REPLAN) 상태로 전이
+                self.conv.state.apply(TransitionStatus(new_status=ConverStatus.NEEDS_REPLAN, reason=reason))
+                
+                # 페이로드가 AgentErrorEvent 데이터라면 추가 기록
+                if isinstance(payload, dict) and "error" in payload:
+                    try:
+                        self.conv._on_event(AgentErrorEvent.model_validate(payload))
+                    except:
+                        pass
+            else:
+                self.conv.state.apply(TransitionStatus(new_status=ConverStatus.WAITING_FOR_USER, reason="Agent finalized turn"))
 
     def execute_tool(self, tool_name: str, action: Action) -> Observation | None:
         """
-        도구를 실행합니다. 
-        단, 물리적 실행기(Executor)가 없는 인지 도구(think, finish 등)는 예외를 발생시키지 않고 안전하게 통과시킵니다.
+        Executes the tool. 
+        Safely bypasses cognitive tools (e.g., think, finish, bridge) without raising execution exceptions.
         """
         local_tools_map = getattr(self.conv, "tools", {})
         tool = local_tools_map.get(tool_name)
@@ -260,7 +317,6 @@ class Conver:
             raise KeyError(f"Tool '{tool_name}' not found in Gov Environment. Available tools: {available_tools}")
 
         if not getattr(tool, "executor", None):
-            # 인지 도구(Cognitive Tool) 면책 특권: 물리적 실행 없이 None 반환
             if CoreAction.is_safe_cognitive(tool_name) or tool_name in ["finish", "bridge", "signal", "lang"]:
                 log.debug(f"[ConvRunner] Cognitive action '{tool_name}' processed without physical execution.")
                 return None
@@ -275,6 +331,7 @@ class Conver:
                 "AbsoluteMaxIterationsReached",
                 f"Topological Rupture: Absolute system iterations limit ({MAX_ABSOLUTE_ITERATIONS}) reached."
             )
+            return True
 
         if self.conv.state.execution_status in [
             ConverStatus.PAUSED, ConverStatus.STUCK, 
@@ -284,9 +341,11 @@ class Conver:
 
         if getattr(self.conv, "_stuck_detector", None) and self.conv._stuck_detector.is_stuck():
             self._halt_execution("AgentStuck", "Cognitive Livelock (Stuck pattern) detected.")
+            return True
         
         if getattr(self.conv, "_drift_detector", None) and self.conv._drift_detector.is_drifting():
             self._halt_execution("AgentDrift", "Topological Drift detected: Agent is wandering without progress.")
+            return True
 
         if self.conv.state.execution_status == ConverStatus.WAITING_FOR_USER:
             self.conv.state.apply(TransitionStatus(new_status=ConverStatus.RUNNING, reason="Resuming from user wait"))
@@ -294,16 +353,15 @@ class Conver:
         max_iter = getattr(self.conv, "max_iteration_per_run", MAX_ABSOLUTE_ITERATIONS)
         if iteration >= max_iter:
             self._halt_execution("MaxIterationsReached", "User-defined iterations limit reached.")
+            return True
             
         return False
 
     def _halt_execution(self, code: str, detail: str) -> None:
         log.error(detail)
-        new_status = ConverStatus.STUCK if "Stuck" in code or "Drift" in code else ConverStatus.ERROR
+        new_status = ConverStatus.STUCK if "Stuck" in code or "Drift" in code or "Timeout" in code else ConverStatus.ERROR
         self.conv.state.apply(TransitionStatus(new_status=new_status, reason=detail))
-        
         self.conv._on_event(ConversationErrorEvent(source="environment", code=code, detail=detail))
-        raise ConversationRunError(self.conv.state.id, Exception(detail), persistence_dir=self.conv.state.persistence_dir)
 
     def pause(self) -> None:
         if self.conv.state.execution_status == ConverStatus.PAUSED:

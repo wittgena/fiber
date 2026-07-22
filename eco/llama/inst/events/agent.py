@@ -1,11 +1,4 @@
 # eco.llama.inst.events.agent
-## @lineage: adapter.llama.inst.events.agent
-## @lineage: llama.inst.events.agent
-## @lineage: xor.loop.inst.events.agent
-## @lineage: xphi.loop.inst.events.agent
-## @lineage: bound.adapter.llama.instrumentation.events.agent
-## @lineage: bound.adapter.instrumentation.events.agent
-## @lineage: anchor.adapter.instrumentation.events.agent
 from typing import Any, Optional
 
 from eco.llama.anchor.bound.bridge.pydantic import model_validator, field_validator

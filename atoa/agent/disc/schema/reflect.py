@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from rich.text import Text
 
 from eco.agent.event.base import LLMConvertibleEvent
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 
 class IterativeRefinementConfig(BaseModel):
     success_threshold: float = Field(

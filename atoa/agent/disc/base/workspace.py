@@ -8,7 +8,7 @@ from pydantic import BeforeValidator, Field
 from arch.gov.tool.command.workspace import CommandResult, FileOperationResult
 from arch.gov.tool.git import GitChange, GitDiff
 
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

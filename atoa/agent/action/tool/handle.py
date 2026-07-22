@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from atoa.agent.disc.base.conv import ProtoConv
 
 from atoa.agent.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
-from arch.xor.parser.action import ActionSchemaCompiler
+from arch.xor.block.parser.action import ActionSchemaCompiler
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
     from atoa.agent.disc.status import ConverStatus

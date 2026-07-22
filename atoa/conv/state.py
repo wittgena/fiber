@@ -43,7 +43,7 @@ from atoa.conv.context.command import (
     UpdateTags
 )
 
-from arch.topos.surge.disc import SurgeBaseModel
+from arch.topos.bound.surge.disc import SurgeBaseModel
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

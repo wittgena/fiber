@@ -24,7 +24,7 @@ from atoa.agent.action.resolver import ActionResolver
 
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import UniversalFacade
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

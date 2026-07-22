@@ -23,7 +23,7 @@ from eco.agent.residue.convset import (
 from atoa.agent.disc.schema.metadata import SettingsSchema, SettingsValueType, SettingsChoiceValue, SettingsChoice
 
 from eco.agent.residue.depre import warn_deprecated
-from arch.topos.surge.disc import SurgeBaseModel
+from arch.topos.bound.surge.disc import SurgeBaseModel
 
 ReflectorMode = Literal["finish_and_message", "all_actions"]
 SecurityAnalyzerType = Literal["llm", "none"]

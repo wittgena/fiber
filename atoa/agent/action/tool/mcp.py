@@ -16,7 +16,7 @@ from atoa.agent.action.definition import ActionAnnotations, ActionDefinition
 from atoa.agent.action.executor import ActionExecutor
 from atoa.agent.action.mcp import MCPAction, MCPObservation
 
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

@@ -6,7 +6,7 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from arch.xor.parser.action import ActionSchemaCompiler, DEFAULT
+from arch.xor.block.parser.action import ActionSchemaCompiler, DEFAULT
 from eco.agent.disc.action import Observation
 from eco.agent.disc.tool import Tool
 from eco.agent.disc.action import Action

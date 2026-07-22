@@ -14,7 +14,7 @@ from rich.text import Text
 from eco.agent.event.types import EventID, SourceType
 from eco.agent.action.message import ImageContent, Message, TextContent
 
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 from arch.contract.event.next import ToposId, next_id
 
 N_CHAR_PREVIEW = 500

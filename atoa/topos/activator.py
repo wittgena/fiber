@@ -1,5 +1,4 @@
 # atoa.topos.activator
-## @lineage: atoa.activator
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
@@ -54,7 +53,7 @@ class AgentStateSnapshot:
                 self.events.append(parsed)
 
     def _parse_event(self, data: dict) -> Event | None:
-        """더 견고해진 이벤트 복원 파서"""
+        """Robust event reconstruction parser"""
         try:
             if "system_prompt" in data:
                 return SystemPromptEvent.model_validate(data)
@@ -75,7 +74,7 @@ class AgentStateSnapshot:
 
 class Activator(Ator):
     """
-    @desc: DAG 및 동적 토폴로지 기반의 인지 오케스트레이터.
+    @desc: DAG and dynamic topology-based cognitive orchestrator.
     """
     step_handlers: list[StepHandler] = Field(default_factory=list, exclude=True)
     is_graph_mode: bool = Field(default=False, exclude=True)
@@ -183,11 +182,13 @@ class Activator(Ator):
         if snapshot.iteration == 0:
             sys_event = self._generate_system_prompt_event(secret_infos=task_payload.get("secret_infos", []))
             snapshot.events.insert(0, sys_event)
-            await self._emit_event_to_gov(sys_event, tunnel, response_topic)
+            await self._emit_event_to_gov(sys_event, tunnel, response_topic, snapshot)
 
-        async def async_on_event(event: Event):
-            snapshot.events.append(event)
-            await self._emit_event_to_gov(event, tunnel, response_topic)
+        async def async_on_event(event: Any):
+            # [개선 1] Event 모델을 상속받은 객체만 events 리스트에 추가 (TransitionStatus 방어)
+            if isinstance(event, Event):
+                snapshot.events.append(event)
+            await self._emit_event_to_gov(event, tunnel, response_topic, snapshot)
 
         for handler in self.step_handlers:
             if hasattr(handler, "handle_async"):
@@ -198,30 +199,56 @@ class Activator(Ator):
             if handled:
                 break
 
-    async def _emit_event_to_gov(self, event: Event, tunnel: UniversalFacade, response_topic: str) -> None:
+    async def _emit_event_to_gov(self, event: Any, tunnel: UniversalFacade, response_topic: str, snapshot: Optional[AgentStateSnapshot] = None) -> None:
         from arch.topos.bound.payload import StreamPayloadAdapter 
         
         payload_raw = None
+        current_topo = len(snapshot.events) if snapshot else 0
+        current_tick = snapshot.iteration if snapshot else 0
         
         if isinstance(event, ActionEvent):
+            current_press = getattr(event, "completion_tokens", 50) 
             payload_raw = {
                 "type": "action",
-                "event_payload": event.model_dump()
+                "event_payload": event.model_dump(mode="json"),
+                "_telemetry": {"topo": current_topo, "press": current_press, "rupture": False, "tick": current_tick}
             }
             log.debug(f"[{self.name}] Emitted Action: {event.tool_name}")
         elif isinstance(event, MessageEvent):
+            current_press = getattr(event, "completion_tokens", 20)
             payload_raw = {
                 "type": "message",
-                "event_payload": event.model_dump()
+                "event_payload": event.model_dump(mode="json"),
+                "_telemetry": {"topo": current_topo, "press": current_press, "rupture": False, "tick": current_tick}
             }
             log.debug(f"[{self.name}] Emitted Message Event")
         elif isinstance(event, SystemPromptEvent):
             payload_raw = {
                 "type": "system_prompt",
-                "event_payload": event.model_dump()
+                "event_payload": event.model_dump(mode="json"),
+                "_telemetry": {"topo": current_topo, "press": 0, "rupture": False, "tick": current_tick}
             }
-        elif getattr(event, "is_finish_signal", False):
-            payload_raw = {"type": "finish"}
+        elif isinstance(event, AgentErrorEvent):
+            payload_raw = {
+                "type": "error",
+                "event_payload": event.model_dump(mode="json"),
+                "_telemetry": {"topo": current_topo, "press": 0, "rupture": True, "tick": current_tick}
+            }
+            log.debug(f"[{self.name}] Emitted AgentErrorEvent")
+
+        if getattr(event, "is_finish_signal", False) or type(event).__name__ == "TransitionStatus":
+            payload_data = event.model_dump(mode="json") if hasattr(event, "model_dump") else str(event)
+            payload_raw = {
+                "type": "finish", 
+                "event_payload": payload_data,
+                "_telemetry": {
+                    "topo": current_topo, 
+                    "press": 0, 
+                    "rupture": True,
+                    "tick": current_tick
+                }
+            }
+            log.debug(f"[{self.name}] Emitted Finish/Transition Signal (Loop Breaker)")
 
         if payload_raw:
             await tunnel.stream_produce(

@@ -1,6 +1,4 @@
 # atoa.agent.disc.event.batch.action
-## @lineage: atoa.disc.event.batch.action
-## @lineage: agent.disc.event.batch.action
 from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field

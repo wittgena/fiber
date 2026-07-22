@@ -8,7 +8,7 @@ from rich.text import Text
 from eco.agent.action.message import ImageContent, TextContent
 from eco.agent.action.message import content_to_str
 
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

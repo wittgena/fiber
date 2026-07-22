@@ -9,7 +9,7 @@ from eco.agent.event.base import Event
 from atoa.agent.disc.event.llm.action import ActionEvent
 from atoa.gov.security.eval import SecurityRisk
 
-from arch.topos.surge.disc import DiscMixin
+from arch.topos.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)
