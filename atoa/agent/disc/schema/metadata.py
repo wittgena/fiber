@@ -4,7 +4,7 @@
 from typing import TYPE_CHECKING, Any, Literal
 from pydantic import Field
 
-from eco.call.residue.convset import SettingProminence
+from eco.agent.residue.convset import SettingProminence
 from arch.topos.surge.disc import SurgeBaseModel
 
 SettingsValueType = Literal[

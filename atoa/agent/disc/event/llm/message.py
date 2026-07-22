@@ -9,9 +9,9 @@ from pydantic import ConfigDict, Field
 from rich.text import Text
 
 from atoa.agent.disc.schema.reflect import ReflectorResult
-from eco.call.event.base import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from eco.call.event.types import SourceType
-from eco.call.action.message import (
+from eco.agent.event.base import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from eco.agent.event.types import SourceType
+from eco.agent.action.message import (
     ImageContent,
     Message,
     RedactedThinkingBlock,

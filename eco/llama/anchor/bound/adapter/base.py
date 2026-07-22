@@ -3,11 +3,11 @@
 ## @lineage: llama.anchor.bound.adapter.base
 ## @lineage: anchor.inter.bound.adapter.base
 from typing import Any, Dict, List, Optional, Union
-from eco.switch.params import ModelResponse
+from gateway.adapter.switch.params import ModelResponse
 from eco.legacy.action.process.pre import CompletionContext
 from eco.legacy.completor import CompletionHandler
-from bound.stream.wrapper import StreamWrapper
-from xor.secure.secret.manager import get_secret_bool
+from gateway.stream.wrapper import StreamWrapper
+from bound.xor.secure.secret.manager import get_secret_bool
 from eco.legacy.openai.completion import OpenAIChatCompletion
 
 from watcher.plane.emitter import get_emitter

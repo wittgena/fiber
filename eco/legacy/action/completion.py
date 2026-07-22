@@ -16,17 +16,17 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
-from eco.switch.params import ModelResponse
+from gateway.adapter.switch.params import ModelResponse
 
-from eco.mapper.exception import exception_type
+from gateway.adapter.mapper.exception import exception_type
 from eco.legacy.action.process.core import async_core_completion
-from bound.exception import Timeout
+from eco.exception import Timeout
 from eco.legacy.action.client.wrapper import client
-from bound.adapter.tosync import run_async_function
-from bound.stream.wrapper import StreamWrapper
+from gateway.adapter.tosync import run_async_function
+from gateway.stream.wrapper import StreamWrapper
 
 from eco.legacy.trace.dd import tracer
-from xor.watcher.delegator import LogDelegator
+from bound.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter
 

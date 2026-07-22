@@ -13,8 +13,8 @@
 ## @lineage: bound.event.conv.pause
 ## @lineage: bound.event.user_action
 from rich.text import Text
-from eco.call.event.base import Event
-from eco.call.event.types import SourceType
+from eco.agent.event.base import Event
+from eco.agent.event.types import SourceType
 
 class PauseEvent(Event):
     source: SourceType = "user"

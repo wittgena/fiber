@@ -5,17 +5,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from atoa.call.types import ConversationCallbackType
-from eco.call.event.base import Event
+from atoa.agent.types import ConversationCallbackType
+from eco.agent.event.base import Event
 from atoa.agent.disc.event.llm.action import ActionEvent
 from atoa.agent.disc.event.llm.message import MessageEvent
 from atoa.agent.disc.event.llm.observation import UserRejectObservation
-from atoa.gov.context.protocol import ConvStateProtocol
+from atoa.conv.context.protocol import ConvStateProtocol
 
-from xor.executor.parallel import ParallelExecutor
-from eco.call.action.message import Message, TextContent
-from atoa.call.action.definition import ActionDefinition
-from atoa.call.action.factory import CoreAction
+from bound.executor.parallel import ParallelExecutor
+from eco.agent.action.message import Message, TextContent
+from atoa.agent.action.definition import ActionDefinition
+from atoa.agent.action.factory import CoreAction
 
 from watcher.plane.emitter import get_emitter
 

@@ -5,7 +5,7 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, Any
 
-from eco.call.event.base import Event
+from eco.agent.event.base import Event
 from atoa.agent.disc.event.llm.action import ActionEvent
 from atoa.gov.security.eval import SecurityRisk
 

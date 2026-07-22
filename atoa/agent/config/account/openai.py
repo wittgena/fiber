@@ -20,7 +20,7 @@ from authlib.jose.errors import JoseError
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 from httpx import AsyncClient, Client
 
-from xor.secure.auth.credentials import (
+from bound.xor.secure.auth.credentials import (
     CredentialStore,
     OAuthCredentials,
     get_credentials_dir,
@@ -28,7 +28,7 @@ from xor.secure.auth.credentials import (
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from atoa.call.driver.tensor import Driver
+    from atoa.agent.driver.tensor import Driver
 
 SupportedVendor = Literal["openai"]
 logger = get_logger(__name__)

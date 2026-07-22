@@ -4,8 +4,8 @@
 import uuid
 from typing import Any
 from pydantic import Field, field_validator
-from eco.call.event.base import Event
-from eco.call.event.types import SourceType
+from eco.agent.event.base import Event
+from eco.agent.event.types import SourceType
 
 FULL_STATE_KEY = "full_state"
 

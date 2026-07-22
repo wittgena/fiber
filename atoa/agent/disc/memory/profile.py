@@ -17,8 +17,8 @@ from watcher.plane.emitter import get_logger
 from phase.bind.resolver import resolve_path
 
 if TYPE_CHECKING:
-    from atoa.call.driver.tensor import Driver
-    from atoa.call.driver.factory import DriverFactory
+    from atoa.agent.driver.tensor import Driver
+    from atoa.agent.driver.factory import DriverFactory
 
 _DEFAULT_PROFILE_DIR: Final[Path] = resolve_path("io") / "profiles"
 _LOCK_TIMEOUT_SECONDS: Final[float] = 30.0
@@ -148,7 +148,7 @@ class LLMProfileStore:
                 )
 
             try:
-                from atoa.call.driver.tensor import Driver
+                from atoa.agent.driver.tensor import Driver
 
                 llm_instance = DriverFactory.load_from_json(str(profile_path))
             except Exception as e:

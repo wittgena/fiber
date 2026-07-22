@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, SecretStr, field_validator, field_seriali
 from typing import Any
 import os
 
-from xor.secure.secret.validator import serialize_secret, validate_secret
+from bound.xor.secure.secret.validator import serialize_secret, validate_secret
 
 class VendorSubstrateMixin(BaseModel):
     """

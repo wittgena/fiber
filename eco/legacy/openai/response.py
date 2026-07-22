@@ -7,8 +7,8 @@ import json
 from abc import abstractmethod
 from typing import List, Optional, Union, cast
 from eco.legacy.types import GenericStreamingChunk
-from bound.stream.wrapper import StreamWrapper
-from eco.switch.params import Choices, Delta, ModelResponse, ModelResponseStream, StreamingChoices
+from gateway.stream.wrapper import StreamWrapper
+from gateway.adapter.switch.params import Choices, Delta, ModelResponse, ModelResponseStream, StreamingChoices
 
 def convert_model_response_to_streaming(
     model_response: ModelResponse,

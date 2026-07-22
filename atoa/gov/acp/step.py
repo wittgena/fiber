@@ -9,7 +9,7 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 from acp.exceptions import RequestError as ACPRequestError
-from bound.resolver.acp.schema import PromptResponse
+from resolver.acp.schema import PromptResponse
 
 from acp.helpers import text_block
 from watcher.plane.observer.span import observe, unified_flow_span
@@ -22,10 +22,10 @@ from atoa.agent.disc.event.llm.observation import ObservationEvent
 from atoa.agent.disc.event.conv.error import ConversationErrorEvent
 
 from atoa.agent.disc.status import ConverStatus
-from eco.call.action.message import Message, MessageToolCall, TextContent
+from eco.agent.action.message import Message, MessageToolCall, TextContent
 
 # 매직 스트링 대신 사용할 동적 액션 SSoT Enum
-from atoa.call.action.factory import CoreAction
+from atoa.agent.action.factory import CoreAction
 
 from atoa.gov.acp.support import (
     _USAGE_UPDATE_TIMEOUT,
@@ -36,7 +36,7 @@ from atoa.gov.acp.support import (
 )
 
 if TYPE_CHECKING:
-    from atoa.call.types import ConversationCallbackType, ConversationTokenCallbackType
+    from atoa.agent.types import ConversationCallbackType, ConversationTokenCallbackType
     # 무거운 ConvContext 대신 코어 엔진 명세(Protocol)만 참조
     from atoa.agent.disc.base.conv import EngineContextProtocol
 
@@ -211,7 +211,7 @@ class ACPTrajectory:
         if not finish_tool:
             # 장애 극복(Fallback): 만약 FINISH 도구가 없다면 임시 스키마를 동적으로 생성
             log.warning(f"Tool '{CoreAction.FINISH}' not found in tools_map. Falling back to generic schema.")
-            from eco.call.disc.action import Action, Observation
+            from eco.agent.disc.action import Action, Observation
             class DynamicFinishAction(Action): summary: str
             class DynamicFinishObservation(Observation): pass
         else:

@@ -26,11 +26,11 @@ from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
 if TYPE_CHECKING:
     from aiohttp import ClientSession
 
-from bound.resolver.model.config.resolver import config
-from bound.exception import BaseLLMException
-from bound.resolver.model.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
-from bound.bridge.client import AsyncHTTPClient
-from bound.bridge.secure.stream import get_ssl_configuration
+from resolver.model.config.resolver import config
+from eco.exception import BaseLLMException
+from resolver.model.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
+from gateway.stream.bridge.client import AsyncHTTPClient
+from gateway.stream.bridge.secure.stream import get_ssl_configuration
 from eco.legacy.openai.mock import MockOpenAITransport
 
 

@@ -7,7 +7,7 @@ import json
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from eco.call.event.base import LLMConvertibleEvent
+from eco.agent.event.base import LLMConvertibleEvent
 from atoa.agent.disc.event.llm.system import SystemPromptEvent
 from atoa.agent.disc.schema.reflect import ReflectorBase, ReflectorResult
 
@@ -31,8 +31,8 @@ class Reflector(ReflectorBase, ReflectorClient):
     """@desc: Structural API-Based Evaluator Manifold"""
     
     def evaluate(self, events: Sequence[LLMConvertibleEvent], git_patch: str | None = None) -> ReflectorResult:
-        from atoa.gov.context.message.view import View
-        from eco.call.event.base import LLMConvertibleEvent
+        from atoa.conv.view import View
+        from eco.agent.event.base import LLMConvertibleEvent
         from atoa.agent.disc.event.llm.system import SystemPromptEvent
 
         ## @phase.extraction: Isolate system baseline and tool manifolds

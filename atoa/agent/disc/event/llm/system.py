@@ -6,10 +6,10 @@ import json
 from pydantic import Field, model_validator
 from rich.text import Text
 from typing import TYPE_CHECKING, Any
-from eco.call.event.base import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
-from eco.call.event.types import SourceType
-from eco.call.action.message import Message, TextContent
-from atoa.call.action.definition import ActionDefinition
+from eco.agent.event.base import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
+from eco.agent.event.types import SourceType
+from eco.agent.action.message import Message, TextContent
+from atoa.agent.action.definition import ActionDefinition
 
 class SystemPromptEvent(LLMConvertibleEvent):
     source: SourceType = "agent"

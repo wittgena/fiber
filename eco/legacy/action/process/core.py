@@ -8,12 +8,12 @@
 ## @lineage: bound.transport.channel.action.core
 ## @lineage: bound.channel.action.core
 from typing import Any, Dict, List, Optional, Union
-from eco.mapper.exception import exception_type
-from eco.switch.params import ModelResponse, ModelResponseStream
+from gateway.adapter.mapper.exception import exception_type
+from gateway.adapter.switch.params import ModelResponse, ModelResponseStream
 from eco.legacy.action.process.pre import CompletionPreprocessor
-from bound.resolver.adapter import AdapterRegistry
-from bound.stream.wrapper import StreamWrapper
-from xor.router.llm import TopologyMissingError
+from resolver.adapter import AdapterRegistry
+from gateway.stream.wrapper import StreamWrapper
+from eco.llama.router.llm import TopologyMissingError
 
 from watcher.plane.emitter import get_emitter
 

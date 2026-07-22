@@ -32,19 +32,19 @@ from openai.types.file_deleted import FileDeleted
 from pydantic import BaseModel
 from typing_extensions import overload
 
-from bound.resolver.model.config.resolver import config
-from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
+from resolver.model.config.resolver import config
+from resolver.model.config.constants import DEFAULT_MAX_RETRIES
 from eco.legacy.openai.response import BaseModelResponseIterator
-from bound.resolver.model.config.base import BaseConfig
-from bound.exception import BaseLLMException
-from eco.switch.params import ModelResponse, ModelResponseStream
+from resolver.model.config.base import BaseConfig
+from eco.exception import BaseLLMException
+from gateway.adapter.switch.params import ModelResponse, ModelResponseStream
 from eco.legacy.info import ProviderTypes
 from eco.legacy.types import EmbeddingResponse, ImageResponse, LiteLLMBatch
 from eco.legacy.openai.types import *
 
-from xor.watcher.delegator import LogDelegator
-from bound.adapter.response import convert_to_model_response_object
-from bound.stream.wrapper import StreamWrapper
+from bound.watcher.delegator import LogDelegator
+from gateway.adapter.response import convert_to_model_response_object
+from gateway.stream.wrapper import StreamWrapper
 from eco.legacy.base import BaseLLM
 from eco.legacy.openai.base import (
     BaseOpenAILLM,

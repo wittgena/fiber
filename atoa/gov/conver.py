@@ -5,8 +5,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from eco.call.action.message import Message, TextContent
-from eco.call.disc.action import Action, Observation
+from eco.agent.action.message import Message, TextContent
+from eco.agent.disc.action import Action, Observation
 
 from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_emitter
@@ -14,29 +14,29 @@ from watcher.plane.emitter import get_emitter
 from atoa.agent.parser import render_template
 from atoa.agent.disc.event.llm.message import MessageEvent
 from atoa.agent.disc.event.llm.action import ActionEvent
-from atoa.agent.disc.event.llm.observation import ObservationEvent, UserRejectObservation
+from atoa.agent.disc.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from atoa.agent.disc.event.llm.system import SystemPromptEvent
 
 from atoa.agent.disc.event.conv.error import ConversationErrorEvent
 from atoa.agent.disc.event.conv.pause import PauseEvent
 from atoa.agent.disc.status import ConverStatus
-from atoa.exception.conv.connection import ConversationRunError
+from atoa.gov.exception.conv.connection import ConversationRunError
 
-from atoa.call.driver.tensor import Driver
+from atoa.agent.driver.tensor import Driver
+from atoa.agent.action.factory import CoreAction
 
-from atoa.gov.context.command import TransitionStatus
-from atoa.gov.context.state import ConversationState
+from atoa.conv.context.command import TransitionStatus
+from atoa.conv.state import ConversationState
+from atoa.conv.parser.title import generate_conversation_title
+from atoa.conv.parser.builder import MessageBuilder, LLMFacade
 
 from arch.xor.store.file import LocalFileStore
-from xor.store.log import LogStore
-from atoa.gov.context.message.parser.title import generate_conversation_title
-from atoa.gov.context.message.parser.builder import MessageBuilder, LLMFacade
-
+from bound.xor.store.log import LogStore
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import TunnelFactory, UniversalFacade
 
 if TYPE_CHECKING:
-    from atoa.gov.context.context import ConvContext
+    from atoa.conv.wrapper import ConvContext
     convType = ConvContext | Any
 else:
     convType = Any
@@ -47,19 +47,14 @@ MAX_ABSOLUTE_ITERATIONS = 7
 
 class AgentSessionManager:
     """
-    @desc: 대화 상태와 연관된 LLM 프로필 및 환경 메타데이터를 관리합니다.
-           (Agent 객체를 직접 다루지 않고, 통신 채널을 통해 제어 메시지를 발행합니다.)
+    @desc: 대화 상태와 연관된 메타데이터를 관리합니다. 
+           Agent 객체를 직접 제어하지 않고, 터널(Redis)을 통해 제어 명령을 브로드캐스트합니다.
     """
     def __init__(self, conv: convType):
         self.conv = conv
 
     async def switch_profile(self, profile_name: str) -> None:
-        """
-        @desc: 메모리 객체 교체 대신, Agent 노드에게 프로필 변경 제어 메시지를 브로드캐스트합니다.
-        """
         tunnel = await TunnelFactory.get_default()
-        
-        # [핵심 변경] .hex 제거 및 안전한 문자열 변환
         conv_id_str = str(self.conv.id)
         control_channel = f"agent_control:{conv_id_str}"
         command_payload = {
@@ -74,24 +69,22 @@ class AgentSessionManager:
 
 class AgentSidecar:
     """
-    @desc: OOB(Out-Of-Band) 부가 기능(타이틀 생성, 메타 질문 등).
-           Ator 의존성을 완전히 제거하고 Gov에 등록된 LLMFacade와 Context만으로 독립 실행합니다.
+    @desc: 대화의 메인 루프(Conver) 밖에서 일어나는 부가 기능(타이틀 생성, 메타 질문 등)을 담당합니다.
+           무상태 Agent(Activator)를 깨우지 않고 Gov에 등록된 LLMFacade만을 사용해 가볍게 동작합니다.
     """
     def __init__(self, conv: convType, session_manager: AgentSessionManager):
         self.conv = conv
         self.session = session_manager
 
     def _get_fallback_llm(self) -> Driver:
-        """llm_registry가 없을 경우를 대비한 안전한 Fallback"""
         registry = getattr(self.conv, "llm_registry", None)
         if registry:
             return registry.get_default()
         
-        # Registry가 없으면 state에 저장된 agent_config 등을 활용해 복원 시도, 없으면 기본값
         config_llm = self.conv.state.agent_config.get("llm") if hasattr(self.conv.state, "agent_config") else None
         if config_llm and isinstance(config_llm, dict):
             return Driver(**config_llm)
-        return Driver(model="gpt-4o") # 시스템 기본값
+        return Driver(model="gpt-4o") 
 
     def ask(self, question: str) -> str:
         template_dir = Path(__file__).parent.parent.parent / "context" / "prompts" / "templates"
@@ -102,20 +95,11 @@ class AgentSidecar:
             self.conv.state.events, additional_messages=[user_message]
         )
 
-        registry = getattr(self.conv, "llm_registry", None)
-        if registry:
-            try:
-                question_llm = registry.get("ask-agent-llm")
-            except KeyError:
-                question_llm = registry.get_default().model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
-                registry.add(question_llm)
-        else:
-            question_llm = self._get_fallback_llm().model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
-
+        llm_to_use = self._get_fallback_llm().model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
         available_tools = list(getattr(self.conv, "tools", {}).values())
 
         response = LLMFacade.make_completion(
-            llm=question_llm, 
+            llm=llm_to_use, 
             messages=messages, 
             tools=available_tools
         )
@@ -138,9 +122,10 @@ class AgentSidecar:
 
 class Conver:
     """
-    @desc: 이벤트 기반 비동기 Orchestrator. 
-           Agent(두뇌)에게 상태를 던지고(produce), 결정(Action/Message)을 받아(consume) 
-           환경(도구 실행/보안)을 통제합니다.
+    @desc: 대화(Flow)의 신체이자 환경(Environment)을 관장하는 핵심 오케스트레이터입니다.
+           - Agent(무상태 두뇌)에게 현재 상태를 전송(Produce)
+           - Agent의 결정을 수신(Consume)하여 물리적 도구를 실행(Execute)
+           - 모든 결과를 Context(상태)에 기록
     """
     def __init__(self, conversation: convType):
         self.conv = conversation
@@ -149,6 +134,7 @@ class Conver:
 
     @observe(name="conver.run")
     async def run(self) -> None:
+        """이벤트 기반 비동기 제어 루프"""
         if self.conv.state.execution_status in [
             ConverStatus.IDLE, ConverStatus.PAUSED,
             ConverStatus.ERROR, ConverStatus.STUCK,
@@ -168,20 +154,19 @@ class Conver:
                 if self._check_halt_conditions(iteration):
                     break
 
-                ## 상태 스냅샷을 구성하고 어댑터를 통해 안전하게 직렬화(Encode)
+                # [Phase 1] 상태 스냅샷 구성 및 발송 (Encode)
                 step_payload = {
                     "conversation_id": conv_id_str,
                     "iteration": iteration,
                     "events": [e.model_dump() for e in self.conv.state.events]
                 }
-                
                 await tunnel.stream_produce(
                     topic=agent_task_topic, 
                     payload=StreamPayloadAdapter.encode(step_payload)
                 )
                 log.debug(f"[ConvRunner] Step request produced to {agent_task_topic}")
 
-                ## Agent의 응답 대기
+                # [Phase 2] Agent 응답 대기
                 stream_results = await tunnel.stream_consume(
                     topic=agent_response_topic, 
                     group=consumer_group, 
@@ -194,7 +179,7 @@ class Conver:
                     log.warning("[ConvRunner] Agent response timeout. Retrying loop...")
                     continue
 
-                ## 응답 수신 후 어댑터를 통해 역직렬화(Decode)
+                # [Phase 3] 결정 수신 및 물리적 반영 (Decode & Process)
                 for stream_name, messages in stream_results:
                     for message_id, message_data in messages:
                         try:
@@ -204,11 +189,14 @@ class Conver:
                             await tunnel.stream_ack(agent_response_topic, consumer_group, message_id)
 
                 iteration += 1
+                
+                # 상태가 RUNNING이 아니면 루프 종료
                 if self.conv.state.execution_status in [
                     ConverStatus.WAITING_FOR_USER, ConverStatus.FINISHED,
                     ConverStatus.STUCK, ConverStatus.ERROR, ConverStatus.NEEDS_REPLAN
                 ]:
                     break
+                    
         except Exception as e:
             if not isinstance(e, ConversationRunError):
                 self.conv.state.apply(TransitionStatus(new_status=ConverStatus.ERROR, reason=f"Unhandled exception: {e}"))
@@ -217,24 +205,36 @@ class Conver:
             raise
 
     async def _process_agent_decision(self, data: dict) -> None:
+        """Agent가 보내온 의도(Intent)를 파싱하여 상태에 기록하고 도구를 실행합니다."""
         decision_type = data.get("type")
         
         if decision_type == "action":
-            tool_name = data.get("tool_name")
-            action_kwargs = data.get("action_args", {})
-            action_obj = Action(name=tool_name, parameters=action_kwargs)
-            
-            action_event = ActionEvent(action=action_obj, tool_name=tool_name, tool_call_id=data.get("call_id"))
+            # 1. 완벽하게 덤프된 객체를 Pydantic을 이용해 그대로 수화(Hydration)
+            action_event = ActionEvent.model_validate(data.get("event_payload"))
             self.conv._on_event(action_event)
             
+            tool_name = action_event.tool_name
+            action_obj = action_event.action
+            
             try:
+                # 2. 물리적 도구 실행 시도
                 obs = self.execute_tool(tool_name, action_obj)
-                obs_event = ObservationEvent(observation=obs, tool_name=tool_name, action_id=action_event.id)
-                self.conv._on_event(obs_event)
+                
+                # 3. 순수 인지 도구(think 등)는 obs가 None으로 반환되며 Observation을 생성하지 않음
+                if obs is not None:
+                    obs_event = ObservationEvent(observation=obs, tool_name=tool_name, action_id=action_event.id)
+                    self.conv._on_event(obs_event)
+                    
             except Exception as e:
                 log.error(f"[ConvRunner] Tool execution failed: {e}")
-                error_obs = Observation(error=str(e))
-                self.conv._on_event(ObservationEvent(observation=error_obs, tool_name=tool_name, action_id=action_event.id))
+                # 4. 강제 조립으로 인한 검증 에러 방지를 위해 전용 AgentErrorEvent 방출
+                error_event = AgentErrorEvent(
+                    source="environment",
+                    error=str(e),
+                    tool_name=tool_name,
+                    tool_call_id=action_event.tool_call_id
+                )
+                self.conv._on_event(error_event)
                 
         elif decision_type == "message":
             msg_event = MessageEvent.model_validate(data.get("event_payload"))
@@ -246,6 +246,28 @@ class Conver:
             
         elif decision_type == "finish":
             self.conv.state.apply(TransitionStatus(new_status=ConverStatus.WAITING_FOR_USER, reason="Agent finalized turn"))
+
+    def execute_tool(self, tool_name: str, action: Action) -> Observation | None:
+        """
+        도구를 실행합니다. 
+        단, 물리적 실행기(Executor)가 없는 인지 도구(think, finish 등)는 예외를 발생시키지 않고 안전하게 통과시킵니다.
+        """
+        local_tools_map = getattr(self.conv, "tools", {})
+        tool = local_tools_map.get(tool_name)
+        
+        if tool is None:
+            available_tools = list(local_tools_map.keys())
+            raise KeyError(f"Tool '{tool_name}' not found in Gov Environment. Available tools: {available_tools}")
+
+        if not getattr(tool, "executor", None):
+            # 인지 도구(Cognitive Tool) 면책 특권: 물리적 실행 없이 None 반환
+            if CoreAction.is_safe_cognitive(tool_name) or tool_name in ["finish", "bridge", "signal", "lang"]:
+                log.debug(f"[ConvRunner] Cognitive action '{tool_name}' processed without physical execution.")
+                return None
+            else:
+                raise NotImplementedError(f"Physical Tool '{tool_name}' has no configured executor in Gov Env.")
+        
+        return tool(action, self.conv)
 
     def _check_halt_conditions(self, iteration: int) -> bool:
         if iteration >= MAX_ABSOLUTE_ITERATIONS:
@@ -310,20 +332,7 @@ class Conver:
                 rejection_reason=reason,
             )
             self.conv._on_event(rejection_event)
-            log.info(f"Rejected pending action: {action_event} - {reason}")
-
-    def execute_tool(self, tool_name: str, action: Action) -> Observation:
-        local_tools_map = getattr(self.conv, "tools", {})
-        tool = local_tools_map.get(tool_name)
-        
-        if tool is None:
-            available_tools = list(local_tools_map.keys())
-            raise KeyError(f"Tool '{tool_name}' not found in Gov Environment. Available tools: {available_tools}")
-
-        if not getattr(tool, "executor", None):
-            raise NotImplementedError(f"Tool '{tool_name}' has no configured executor in Gov Env.")
-        
-        return tool(action, self.conv)
+            log.info(f"Rejected pending action: {action_event.tool_name} - {reason}")
 
     def rerun_actions(self, rerun_log_path: str | Path | None = None) -> bool:
         rerun_log: LogStore | None = None
@@ -347,14 +356,14 @@ class Conver:
             if tool is None:
                 raise KeyError(f"Tool '{tool_name}' not found during rerun.")
             if not getattr(tool, "executor", None):
-                log.warning(f"Skipping action {action_count}: tool '{tool_name}' has no executor")
+                log.warning(f"Skipping action {action_count}: tool '{tool_name}' has no physical executor")
                 continue
 
             try:
                 log.info(f"Rerunning action {action_count}: {tool_name}")
                 observation = tool(event.action, self.conv)
 
-                if rerun_log is not None:
+                if rerun_log is not None and observation is not None:
                     rerun_log.append(event)
                     obs_event = ObservationEvent(
                         source="environment",

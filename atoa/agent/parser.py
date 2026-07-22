@@ -1,7 +1,4 @@
 # atoa.agent.parser
-## @lineage: atoa.context.parser
-## @lineage: agent.context.parser
-## @lineage: agent.disc.action.parser
 from __future__ import annotations
 import os
 import sys
@@ -20,19 +17,19 @@ from jinja2 import (
 
 from atoa.agent.disc.event.llm.action import ActionEvent
 from atoa.agent.disc.event.llm.observation import AgentErrorEvent
-from eco.call.disc.action import Action
+from atoa.agent.action.definition import ActionDefinition
+import atoa.gov.security.eval as risk
+from atoa.gov.security.analyzer import SecurityAnalyzerBase
+from atoa.conv.parser.toolcall import ToolCallParser
 
-from eco.call.action.message import (
+from eco.agent.disc.action import Action
+from eco.agent.action.message import (
     MessageToolCall,
     ReasoningItemModel,
     RedactedThinkingBlock,
     TextContent,
     ThinkingBlock,
 )
-from atoa.call.action.definition import ActionDefinition
-import atoa.gov.security.eval as risk
-from atoa.gov.security.analyzer import SecurityAnalyzerBase
-from atoa.gov.context.message.parser.toolcall import ToolCallParser
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

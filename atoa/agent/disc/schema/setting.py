@@ -13,7 +13,7 @@ from pydantic import (
     field_validator,
 )
 from pydantic.fields import FieldInfo
-from eco.call.residue.convset import (
+from eco.agent.residue.convset import (
     SETTINGS_METADATA_KEY,
     SETTINGS_SECTION_METADATA_KEY,
     SettingProminence,
@@ -22,7 +22,7 @@ from eco.call.residue.convset import (
 )
 from atoa.agent.disc.schema.metadata import SettingsSchema, SettingsValueType, SettingsChoiceValue, SettingsChoice
 
-from eco.call.residue.depre import warn_deprecated
+from eco.agent.residue.depre import warn_deprecated
 from arch.topos.surge.disc import SurgeBaseModel
 
 ReflectorMode = Literal["finish_and_message", "all_actions"]

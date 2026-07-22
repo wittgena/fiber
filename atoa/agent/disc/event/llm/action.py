@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING
 from pydantic import Field
 from rich.text import Text
 from atoa.agent.disc.schema.reflect import ReflectorResult
-from eco.call.event.base import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from eco.call.event.types import SourceType, ToolCallID
-from eco.call.action.message import (
+from eco.agent.event.base import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from eco.agent.event.types import SourceType, ToolCallID
+from eco.agent.action.message import (
     Message,
     MessageToolCall,
     ReasoningItemModel,
@@ -17,7 +17,7 @@ from eco.call.action.message import (
     ThinkingBlock,
 )
 from atoa.gov.security.eval import SecurityRisk
-from eco.call.disc.action import Action
+from eco.agent.disc.action import Action
 
 
 class ActionEvent(LLMConvertibleEvent):

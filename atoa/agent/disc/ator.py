@@ -10,17 +10,17 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from atoa.agent.context import AtorContext
-from eco.call.disc.tool import Tool
+from eco.agent.disc.tool import Tool
 from atoa.agent.disc.schema.reflect import ReflectorBase
-from atoa.call.driver.tensor import Driver
+from atoa.agent.driver.tensor import Driver
 
-from eco.call.mcp.client import MCPClient
-from eco.call.mcp.factory import create_mcp_tools
-from atoa.call.action.tool.mcp import MCPExecutor
-from atoa.call.action.definition import ActionDefinition
+from eco.agent.mcp.client import MCPClient
+from eco.agent.mcp.factory import create_mcp_tools
+from atoa.agent.action.tool.mcp import MCPExecutor
+from atoa.agent.action.definition import ActionDefinition
 
-from atoa.call.action.factory import CoreAction
-from atoa.call.action.resolver import ActionResolver
+from atoa.agent.action.factory import CoreAction
+from atoa.agent.action.resolver import ActionResolver
 
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import UniversalFacade

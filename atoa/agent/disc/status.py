@@ -1,6 +1,4 @@
 # atoa.agent.disc.status
-## @lineage: atoa.disc.status
-## @lineage: agent.disc.status
 from enum import Enum
 from typing import Any, Protocol, TYPE_CHECKING
 

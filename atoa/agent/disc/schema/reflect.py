@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Literal, Any, ClassVar
 from pydantic import BaseModel, Field
 from rich.text import Text
 
-from eco.call.event.base import LLMConvertibleEvent
+from eco.agent.event.base import LLMConvertibleEvent
 from arch.topos.surge.disc import DiscMixin
 
 class IterativeRefinementConfig(BaseModel):

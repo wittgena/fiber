@@ -15,12 +15,12 @@ import frontmatter
 from pydantic import BaseModel, Field
 
 from atoa.agent.disc.memory.profile import LLMProfileStore
-from eco.call.residue.depre import warn_deprecated
+from eco.agent.residue.depre import warn_deprecated
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from atoa.activator import Activator
-    from atoa.call.driver.tensor import Driver
+    from atoa.topos.activator import Activator
+    from atoa.agent.driver.tensor import Driver
     from atoa.gov.security.confirm import ConfirmationPolicyBase
 
 logger = get_logger(__name__)
@@ -145,9 +145,9 @@ class AtorRegistry:
     def create_factory_from_def(self, agent_def: AtorDefinition) -> Callable[["Driver"], "Activator"]:
         """@desc: Creates an Activator instantiation closure."""
         def _factory(llm: "Driver") -> "Activator":
-            from atoa.activator import Activator
+            from atoa.topos.activator import Activator
             from atoa.agent.context import AtorContext
-            from eco.call.disc.tool import Tool
+            from eco.agent.disc.tool import Tool
             
             if agent_def.model and agent_def.model != "inherit":
                 store = self._get_profile_store(agent_def.profile_store_dir)

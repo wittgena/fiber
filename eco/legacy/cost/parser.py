@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any, List, Literal, Optional, Tuple, Union, ca
 from httpx import Response
 from pydantic import BaseModel
 
-from bound.resolver.model.info import get_model_info
-from eco.switch.params import ModelResponse, ModelResponseStream
-from bound.eco.cost.unit.calc import UnitCostCalculator
+from resolver.model.info import get_model_info
+from gateway.adapter.switch.params import ModelResponse, ModelResponseStream
+from gateway.cost.unit.calc import UnitCostCalculator
 from eco.legacy.param.rerank import RerankBilledUnits, RerankResponse
 from eco.legacy.openai.types import (
     HttpxBinaryResponseContent,

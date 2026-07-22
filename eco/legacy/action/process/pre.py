@@ -22,14 +22,14 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Callable, Optional, Tuple, Type, Union, cast
 from dataclasses import dataclass, field
 
-from bound.resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
+from resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from eco.legacy.types import EmbeddingResponse
-from eco.switch.params import ModelResponse
+from gateway.adapter.switch.params import ModelResponse
 from eco.legacy.types import all_litellm_params
-from bound.resolver.model.config.resolver import config
-from bound.resolver.model.support import supports_httpx_timeout
-from xor.router.config import ProviderConfigManager
-from xor.router.locator import get_llm_provider
+from resolver.model.config.resolver import config
+from resolver.model.support import supports_httpx_timeout
+from eco.llama.router.config import ProviderConfigManager
+from eco.llama.router.locator import get_llm_provider
 from eco.legacy.info import ProviderTypes
 from eco.legacy.openai.types import AllMessageValues
 from eco.legacy.action.param.optional import get_optional_params
@@ -41,7 +41,7 @@ from eco.legacy.action.param.validator import (
     validate_chat_completion_tool_choice,
     validate_openai_optional_params
 )
-from xor.watcher.delegator import LogDelegator
+from bound.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.preprocessor")
@@ -309,7 +309,7 @@ class EmbeddingPreprocessor:
         self.kwargs = kwargs
 
     def build(self) -> EmbeddingContext:
-        from xor.router.locator import get_llm_provider
+        from eco.llama.router.locator import get_llm_provider
         
         # 1. Provider 식별
         custom_llm_provider = self.kwargs.get("custom_llm_provider")

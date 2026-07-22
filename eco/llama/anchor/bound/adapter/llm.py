@@ -17,14 +17,14 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from xor.router.locator import get_llm_provider
+from eco.llama.router.locator import get_llm_provider
 from eco.llama.anchor.bound.base.llms.types import ChatMessage, MessageRole
 from eco.llama.anchor.bound.adapter.base import BaseProviderAdapter
-from eco.mapper.state import StateMapper
+from gateway.adapter.mapper.state import StateMapper
 
 from eco.legacy.action.process.pre import CompletionContext
-from xor.router.llm import LLMRouter, TopologyMissingError
-from bound.stream.wrapper import StreamWrapper
+from eco.llama.router.llm import LLMRouter, TopologyMissingError
+from gateway.stream.wrapper import StreamWrapper
 
 from arch.gov.gate import uuid4 
 from phase.bind.resolver import find_current_self, get_invoker

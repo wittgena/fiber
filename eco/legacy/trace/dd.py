@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 else:
     DD_TRACER = Any
 
-from xor.secure.secret.manager import get_secret_bool
+from bound.xor.secure.secret.manager import get_secret_bool
 
 class NullSpan:
     """A no-op span implementation."""

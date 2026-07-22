@@ -13,8 +13,8 @@
 ## @lineage: bound.event.conv.log
 ## @lineage: bound.event.llm.completion_log
 from pydantic import Field
-from eco.call.event.base import Event
-from eco.call.event.types import SourceType
+from eco.agent.event.base import Event
+from eco.agent.event.types import SourceType
 
 class LLMCompletionLogEvent(Event):
     source: SourceType = "environment"

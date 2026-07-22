@@ -14,10 +14,10 @@
 from typing import Literal
 from pydantic import Field
 from rich.text import Text
-from eco.call.event.base import N_CHAR_PREVIEW, LLMConvertibleEvent
-from eco.call.event.types import EventID, SourceType, ToolCallID
-from eco.call.action.message import Message, TextContent, content_to_str
-from eco.call.disc.action import Observation
+from eco.agent.event.base import N_CHAR_PREVIEW, LLMConvertibleEvent
+from eco.agent.event.types import EventID, SourceType, ToolCallID
+from eco.agent.action.message import Message, TextContent, content_to_str
+from eco.agent.disc.action import Observation
 
 
 # Source of action rejection - used to distinguish user rejections from hook blocks

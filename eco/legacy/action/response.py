@@ -15,29 +15,29 @@ from pydantic import BaseModel
 
 from eco.legacy.param.response import *
 from eco.legacy.param.legacy import GenericLiteLLMParams
-from xor.router.config import ProviderConfigManager
-from xor.router.locator import get_llm_provider
+from eco.llama.router.config import ProviderConfigManager
+from eco.llama.router.locator import get_llm_provider
 
-from bound.resolver.model.config.resolver import config
+from resolver.model.config.resolver import config
 from eco.legacy.openai.types import (
     AllMessageValues, PromptObject, Reasoning, ResponseIncludable, ResponseInputParam,
     ResponsesAPIResponse, ToolChoice, ToolParam, ResponseText
 )
 
-from bound.mcp.handler import MCPHandler
-from bound.mcp.parser.payload import MCPPayloadParser
-from bound.stream.iterator.mcp import MCPStreamIterator
-from bound.stream.iterator.response import ResponseStreamIterator
-from bound.mcp.event.tool import create_mcp_list_tools_events
-from bound.bridge.response.handler.ws import ResponseWebsocketHandler
+from eco.mcp.handler import MCPHandler
+from eco.mcp.parser.payload import MCPPayloadParser
+from gateway.stream.iterator.mcp import MCPStreamIterator
+from gateway.stream.iterator.response import ResponseStreamIterator
+from eco.mcp.event.tool import create_mcp_list_tools_events
+from gateway.stream.bridge.response.handler.ws import ResponseWebsocketHandler
 
-from bound.resolver.model.api.base import APIBridge
+from resolver.model.api.base import APIBridge
 from eco.legacy.action.param.litellm import get_litellm_params, infer_openai_data_residency
-from bound.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
-from bound.bridge.response.stream.identity import IdentityRouter
-from bound.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
+from gateway.stream.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
+from gateway.stream.bridge.response.stream.identity import IdentityRouter
+from gateway.stream.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
 from eco.legacy.action.client.wrapper import client
-from bound.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from gateway.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
@@ -408,7 +408,7 @@ async def _aresponses_websocket(model: str, websocket: Any, api_base: Optional[s
     provider_config = ProviderConfigManager.get_provider_responses_api_config(model=model, provider=ProviderTypes(_custom_llm_provider)) if _custom_llm_provider else None
 
     resolved_api_base = dyn_base or litellm_params.api_base or getattr(config, "api_base", None)
-    from xor.secure.secret.manager import get_secret_str
+    from bound.xor.secure.secret.manager import get_secret_str
     resolved_api_key = dyn_key or litellm_params.api_key or getattr(config, "api_key", None) or getattr(config, "openai_key", None) or get_secret_str("OPENAI_API_KEY")
 
     _explicit_keys = {"user_api_key_dict", "litellm_metadata", "custom_llm_provider", "model", "websocket", "log_delegator", "api_base", "api_key", "timeout"}

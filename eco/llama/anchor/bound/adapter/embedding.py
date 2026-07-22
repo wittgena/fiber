@@ -13,7 +13,7 @@
 from typing import List, Union
 from eco.legacy.action.process.pre import EmbeddingContext
 from eco.llama.anchor.bound.adapter.base import BaseProviderAdapter
-from xor.router.embedding import EmbeddingRouter
+from eco.llama.router.embedding import EmbeddingRouter
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     """

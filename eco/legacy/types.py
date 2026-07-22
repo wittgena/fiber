@@ -38,7 +38,7 @@ EventHookType = Any
 
 from arch.gov.gate import uuid
 from eco.legacy.base import BaseOpenAIResponse, PydanticObjectBase
-from eco.mapper.reason import map_finish_reason
+from gateway.adapter.mapper.reason import map_finish_reason
 from eco.legacy.base import HiddenParams
 from eco.legacy.openai.types import (
     AllMessageValues,

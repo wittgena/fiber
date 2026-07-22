@@ -11,10 +11,10 @@ from watcher.plane.observer.span import unified_flow_span
 from atoa.agent.disc.ator import Ator
 from atoa.agent.disc.event.llm.system import SystemPromptEvent
 from atoa.agent.disc.event.llm.message import MessageEvent
-from eco.call.disc.tool import Tool
+from eco.agent.disc.tool import Tool
 
-from atoa.call.driver.tensor import Driver
-from eco.call.action.message import Message, TextContent
+from atoa.agent.driver.tensor import Driver
+from eco.agent.action.message import Message, TextContent
 from atoa.gov.acp.client import ACPClient
 from atoa.gov.acp.step import ACPTrajectory
 from atoa.gov.acp.connection import ACPConnectionManifold

@@ -1,16 +1,16 @@
 # atoa.agent.context
-## @lineage: atoa.context.ator
 from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, Field
 
-from bound.resolver.model.info import get_model_prompt_spec
-from bound.resolver.secret import SecretSource, SecretValue
-
 from atoa.agent.parser import render_template
-from eco.call.action.message import Message, TextContent
+
+from resolver.model.info import get_model_prompt_spec
+from resolver.secret import SecretSource, SecretValue
+
+from eco.agent.action.message import Message, TextContent
 
 from phase.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter

@@ -1,20 +1,9 @@
 # atoa.agent.disc.event.acp
-## @lineage: atoa.disc.event.acp
-## @lineage: agent.disc.event.acp
-## @lineage: agent.loop.event.acp
-## @lineage: gov.gateway.io.event.acp
-## @lineage: gov.medium.io.event.acp
-## @lineage: gov.io.event.acp
-## @lineage: bound.io.event.acp
-## @lineage: langos.io.event.acp
-## @lineage: ator.flow.event.acp
-## @lineage: ator.event.acp
-## @lineage: agent.event.acp
 from __future__ import annotations
 from typing import Any
 from rich.text import Text
-from eco.call.event.base import Event
-from eco.call.event.types import SourceType
+from eco.agent.event.base import Event
+from eco.agent.event.types import SourceType
 
 _MAX_DISPLAY_CHARS = 500
 

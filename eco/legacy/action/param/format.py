@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from eco.legacy.openai.types import AllMessageValues, ChatCompletionToolCallChunk
 from eco.legacy.base import PydanticObjectBase
 from eco.legacy.info import ProviderSpecificModelInfo
-from eco.switch.params import Message
+from gateway.adapter.switch.params import Message
 
 from watcher.plane.emitter import get_emitter
 
