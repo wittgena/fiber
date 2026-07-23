@@ -17,12 +17,12 @@ from atoa.conv.state import ConversationState
 from atoa.gov.security.analyzer import SecurityAnalyzerBase
 from atoa.gov.security.confirm import ConfirmationPolicyBase
 
-from resolver.secret import SecretValue
+from bound.resolver.secret import SecretValue
 
 from eco.agent.action.message import Message
 from eco.agent.disc.action import Action, Observation
 
-from gov.sandbox.agent.workspace import SandboxWorkspace
+from atoa.gov.agent.workspace import SandboxWorkspace
 from bound.xor.secure.secret.validator import Cipher
 
 from arch.contract.event.next import next_id

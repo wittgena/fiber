@@ -11,7 +11,7 @@ import json
 import re
 from collections.abc import Iterable
 from typing import Any, Literal, NotRequired, TypedDict, cast
-from gateway.adapter.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from bound.gateway.adapter.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 from atoa.gov.exception.types import (
     FunctionCallConversionError,
     FunctionCallValidationError,

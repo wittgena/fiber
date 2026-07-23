@@ -9,7 +9,7 @@ import importlib
 import inspect
 from typing import Dict, Any, Optional, Set
 
-from resolver.model.cost import get_provider_for_model
+from bound.resolver.model.cost import get_provider_for_model
 from eco.llama.router.scan.installed import LLMInstalledScanner
 
 import eco.llama.anchor.llms as llm_pkg 

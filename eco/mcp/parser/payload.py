@@ -22,10 +22,10 @@ from typing import (
 from copy import deepcopy
 import json
 
-from gateway.adapter.switch.params import ResponsesAPIResponse, ModelResponse
+from bound.gateway.adapter.switch.params import ResponsesAPIResponse, ModelResponse
 from mcp_types import EmbeddedResource, ImageContent, TextContent
 from eco.legacy.types import Choices
-from gateway.token.convert import convert_list_message_to_dict
+from bound.gateway.token.convert import convert_list_message_to_dict
 from eco.legacy.param.response import GenericResponseOutputItem, OutputText
 
 from arch.gov.gate import uuid

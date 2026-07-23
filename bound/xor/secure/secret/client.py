@@ -8,7 +8,7 @@ import httpx
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union
 
-from resolver.model.config.resolver import config
+from bound.resolver.model.config.resolver import config
 from bound.xor.secure.secret.access.kms import KeyManagementSystem
 
 from watcher.plane.emitter import get_emitter

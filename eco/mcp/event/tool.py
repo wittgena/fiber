@@ -19,7 +19,7 @@ from eco.legacy.openai.types import (
     MCPListToolsFailedEvent,
     MCPListToolsInProgressEvent,
 )
-from gateway.adapter.switch.params import ResponsesAPIStreamingResponse, ToolParam
+from bound.gateway.adapter.switch.params import ResponsesAPIStreamingResponse, ToolParam
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tool.event")

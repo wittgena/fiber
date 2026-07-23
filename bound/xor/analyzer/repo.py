@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 from arch.xor.workflow import Workflow, Event, StartEvent, StopEvent, ErrorEvent, step
-from gateway.adapter.mapper.inter.project import IntegrationManifest, ProjectLayout
+from bound.gateway.adapter.mapper.inter.project import IntegrationManifest, ProjectLayout
 from bound.xor.analyzer.inter import (
     PyProjectParser, 
     MakefileParser, 

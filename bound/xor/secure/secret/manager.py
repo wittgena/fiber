@@ -9,8 +9,8 @@ import traceback
 import httpx
 from typing import Optional, Union, Dict, Tuple
 
-from gateway.stream.bridge.client import HTTPClient
-from resolver.model.config.resolver import config
+from bound.gateway.stream.bridge.client import HTTPClient
+from bound.resolver.model.config.resolver import config
 from bound.xor.secure.secret.client import get_secret_from_vendor
 
 from watcher.plane.emitter import get_emitter

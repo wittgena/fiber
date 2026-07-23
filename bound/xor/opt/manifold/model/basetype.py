@@ -11,7 +11,7 @@ import pydantic
 from bound.xor.opt.dsp.lm import BaseLM
 
 if TYPE_CHECKING:
-    from gateway.adapter.switch.params import ModelResponseStream
+    from bound.gateway.adapter.switch.params import ModelResponseStream
     from arch.xor.sign.signature import Signature
 
 CUSTOM_TYPE_START_IDENTIFIER = "<<CUSTOM-TYPE-START-IDENTIFIER>>"

@@ -22,12 +22,12 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Callable, Optional, Tuple, Type, Union, cast
 from dataclasses import dataclass, field
 
-from resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
+from bound.resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from eco.legacy.types import EmbeddingResponse
-from gateway.adapter.switch.params import ModelResponse
+from bound.gateway.adapter.switch.params import ModelResponse
 from eco.legacy.types import all_litellm_params
-from resolver.model.config.resolver import config
-from resolver.model.support import supports_httpx_timeout
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.support import supports_httpx_timeout
 from eco.llama.router.config import ProviderConfigManager
 from eco.llama.router.locator import get_llm_provider
 from eco.legacy.info import ProviderTypes

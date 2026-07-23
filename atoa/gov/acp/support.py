@@ -141,7 +141,7 @@ def _estimate_cost_from_tokens(
     Returns 0.0 if pricing is unavailable for the model.
     """
     try:
-        from resolver.model.config.resolver import config
+        from bound.resolver.model.config.resolver import config
 
         cost_map = config.model_cost
         info = cost_map.get(model, {})

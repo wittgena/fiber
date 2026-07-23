@@ -19,10 +19,10 @@
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
 from eco.legacy.types import EmbeddingResponse
-from gateway.adapter.mapper.exception import exception_type
+from bound.gateway.adapter.mapper.exception import exception_type
 from eco.legacy.action.client.wrapper import client
 from eco.legacy.action.process.pre import EmbeddingPreprocessor
-from resolver.adapter import AdapterRegistry
+from bound.resolver.adapter import AdapterRegistry
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.embedding")

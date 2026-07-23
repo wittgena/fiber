@@ -14,7 +14,7 @@ try:
 except ImportError:
     import toml as tomllib
 
-from gateway.adapter.mapper.inter.project import (
+from bound.gateway.adapter.mapper.inter.project import (
     ProjectMeta, 
     WorkflowCommand, 
     UsageSnippet, 

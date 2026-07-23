@@ -23,8 +23,8 @@ from typing import (
     cast,
     get_args,
 )
-from resolver.model.config.resolver import config
-from resolver.model.config.constants import (
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import (
     DEFAULT_EMBEDDING_PARAM_VALUES,
     OPENAI_EMBEDDING_PARAMS,
 )
@@ -35,7 +35,7 @@ from eco.exception import (
     MockException
 )
 from eco.legacy.action.param.optional import PreProcessNonDefaultParams, add_provider_specific_params_to_optional_params
-from resolver.model.support import get_supported_openai_params
+from bound.resolver.model.support import get_supported_openai_params
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("provider.param_embedding")

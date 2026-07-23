@@ -7,8 +7,8 @@ from pydantic import BaseModel, Field
 
 from atoa.agent.parser import render_template
 
-from resolver.model.info import get_model_prompt_spec
-from resolver.secret import SecretSource, SecretValue
+from bound.resolver.model.info import get_model_prompt_spec
+from bound.resolver.secret import SecretSource, SecretValue
 
 from eco.agent.action.message import Message, TextContent
 

@@ -9,7 +9,7 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 from acp.exceptions import RequestError as ACPRequestError
-from resolver.acp.schema import PromptResponse
+from bound.resolver.acp.schema import PromptResponse
 
 from acp.helpers import text_block
 from watcher.plane.observer.span import observe, unified_flow_span

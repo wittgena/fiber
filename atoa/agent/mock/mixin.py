@@ -9,16 +9,16 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, TypeGuard
-from gateway.adapter.switch.params import ChatCompletionToolParam
-from gateway.adapter.switch.params import Message as LiteLLMMessage
-from gateway.adapter.switch.params import Choices, ModelResponse, StreamingChoices
+from bound.gateway.adapter.switch.params import ChatCompletionToolParam
+from bound.gateway.adapter.switch.params import Message as LiteLLMMessage
+from bound.gateway.adapter.switch.params import Choices, ModelResponse, StreamingChoices
 from atoa.gov.exception.types import LLMNoResponseError
 from atoa.agent.mock.converter import (
     STOP_WORDS,
     convert_fnto_non,
     convert_to_fncall,
 )
-from resolver.model.info import get_features
+from bound.resolver.model.info import get_features
 
 class _HostSupports(Protocol):
     model: str

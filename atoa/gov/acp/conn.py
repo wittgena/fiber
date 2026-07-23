@@ -12,7 +12,7 @@ from acp.interfaces import Agent, Client
 from acp.meta import AGENT_METHODS
 
 from acp.connection import Connection
-from resolver.acp.schema import (
+from bound.resolver.acp.schema import (
     AcpMcpServer,
     AudioContentBlock,
     AuthenticateRequest,

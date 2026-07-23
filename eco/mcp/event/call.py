@@ -18,7 +18,7 @@ from eco.legacy.openai.types import (
     MCPCallFailedEvent,
     MCPCallInProgressEvent,
 )
-from gateway.adapter.switch.params import ResponsesAPIStreamingResponse
+from bound.gateway.adapter.switch.params import ResponsesAPIStreamingResponse
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter
 

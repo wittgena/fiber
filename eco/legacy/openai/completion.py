@@ -23,17 +23,17 @@ import openai
 from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
 
-from resolver.model.config.base import BaseConfig
+from bound.resolver.model.config.base import BaseConfig
 from eco.exception import BaseLLMException
-from resolver.model.config.resolver import config
-from resolver.model.config.constants import DEFAULT_MAX_RETRIES
-from gateway.adapter.switch.params import ModelResponse, ModelResponseStream
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
+from bound.gateway.adapter.switch.params import ModelResponse, ModelResponseStream
 
 from eco.legacy.info import ProviderTypes
 from eco.legacy.types import EmbeddingResponse
-from gateway.adapter.response import convert_to_model_response_object
+from bound.gateway.adapter.response import convert_to_model_response_object
 from eco.llama.router.config import ProviderConfigManager
-from gateway.stream.wrapper import StreamWrapper
+from bound.gateway.stream.wrapper import StreamWrapper
 from eco.legacy.base import BaseLLM
 from eco.legacy.openai.base import (
     BaseOpenAILLM,

@@ -7,8 +7,8 @@
 import warnings
 from typing import ClassVar
 
-from gateway.adapter.switch.params import ResponsesAPIResponse
-from gateway.adapter.switch.params import ModelResponse
+from bound.gateway.adapter.switch.params import ResponsesAPIResponse
+from bound.gateway.adapter.switch.params import ModelResponse
 from pydantic import BaseModel, ConfigDict
 
 from eco.agent.action.message import Message

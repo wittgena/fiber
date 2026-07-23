@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING, Any, List, Literal, Optional, Tuple, Union, ca
 from pydantic import BaseModel
 from functools import lru_cache
 
-from resolver.model.cost import model_cost, lookup_base_model_info
+from bound.resolver.model.cost import model_cost, lookup_base_model_info
 from eco.llama.router.locator import get_llm_provider
-from resolver.model.config.resolver import config
+from bound.resolver.model.config.resolver import config
 
 from eco.legacy.cost.builtin import BuiltInToolCostTracker
-from gateway.token.counter import token_counter
-from gateway.cost.unit.calc import UnitCostCalculator
-from gateway.cost.policy import CostPolicy
+from bound.gateway.token.counter import token_counter
+from bound.gateway.cost.unit.calc import UnitCostCalculator
+from bound.gateway.cost.policy import CostPolicy
 from eco.legacy.cost.parser import (
     UsageTelemetryParser, 
     AnyResponseObject,
@@ -28,7 +28,7 @@ from eco.legacy.cost.parser import (
 
 from eco.legacy.types import CallTypesLiteral, StandardBuiltInToolsParams, Usage, CostPerToken
 from eco.legacy.param.rerank import RerankBilledUnits
-from resolver.provider import ProviderResolver
+from bound.resolver.provider import ProviderResolver
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("cost.calculator")

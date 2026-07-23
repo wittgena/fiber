@@ -8,7 +8,7 @@ import hashlib
 from base64 import b64encode
 from cryptography.fernet import Fernet
 
-from resolver.model.config.resolver import config
+from bound.resolver.model.config.resolver import config
 from eco.legacy.types import CredentialItem
 
 class Cipher:

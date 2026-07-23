@@ -12,8 +12,8 @@ from dataclasses import asdict
 
 from eco.llama.anchor.bound.base.llms.base import BaseLLM
 
-from gateway.adapter.mapper.inter.llm import LLMCapabilities, LLMInfo
-from resolver.ext.inter import ExtResolver
+from bound.gateway.adapter.mapper.inter.llm import LLMCapabilities, LLMInfo
+from bound.resolver.ext.inter import ExtResolver
 
 from watcher.plane.emitter import get_emitter
 

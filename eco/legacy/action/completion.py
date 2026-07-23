@@ -16,14 +16,14 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
-from gateway.adapter.switch.params import ModelResponse
+from bound.gateway.adapter.switch.params import ModelResponse
 
-from gateway.adapter.mapper.exception import exception_type
+from bound.gateway.adapter.mapper.exception import exception_type
 from eco.legacy.action.process.core import async_core_completion
 from eco.exception import Timeout
 from eco.legacy.action.client.wrapper import client
-from gateway.adapter.tosync import run_async_function
-from gateway.stream.wrapper import StreamWrapper
+from bound.gateway.adapter.tosync import run_async_function
+from bound.gateway.stream.wrapper import StreamWrapper
 
 from eco.legacy.trace.dd import tracer
 from bound.watcher.delegator import LogDelegator

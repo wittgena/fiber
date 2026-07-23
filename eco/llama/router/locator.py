@@ -7,9 +7,9 @@ import re
 from typing import Optional, Tuple, Dict, Callable
 from urllib.parse import urlparse
 
-from resolver.model.cost import get_provider_for_model
-from resolver.model.config.resolver import config
-from resolver.model.config.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
+from bound.resolver.model.cost import get_provider_for_model
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 
 from eco.legacy.param.legacy import LiteLLM_Params
 

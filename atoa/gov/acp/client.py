@@ -14,7 +14,7 @@ from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 from pydantic import Field, PrivateAttr
 
-from resolver.acp.schema import (
+from bound.resolver.acp.schema import (
     AgentMessageChunk,
     AgentThoughtChunk,
     AllowedOutcome,

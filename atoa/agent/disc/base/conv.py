@@ -12,7 +12,7 @@ from bound.watcher.stats import ConversationStats
 from atoa.agent.types import ConversationID
 from atoa.agent.driver.tensor import Driver
 from eco.agent.action.message import Message
-from resolver.secret import SecretValue
+from bound.resolver.secret import SecretValue
 from atoa.conv.context.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:

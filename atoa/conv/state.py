@@ -29,9 +29,9 @@ else:
     SecurityType = Any
 
 # [개선] Ator 메모리 참조 제거 (import Ator 제거)
-from resolver.secret import SecretRegistry
+from bound.resolver.secret import SecretRegistry
 
-from gateway.stream.bridge.io.manager import IOManager
+from bound.gateway.stream.bridge.io.manager import IOManager
 from bound.xor.store.log import LogStore, VirtualEventLogProxy
 from atoa.conv.context.command import (
     StateCommand, 

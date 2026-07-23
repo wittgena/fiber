@@ -14,12 +14,12 @@ from dataclasses import dataclass
 from functools import wraps
 from weakref import WeakKeyDictionary
 
-from bound.executor.legacy import executor
-from resolver.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
-from resolver.model.config.resolver import config
+from atoa.executor.legacy import executor
+from bound.resolver.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
+from bound.resolver.model.config.resolver import config
 
-from gateway.stream.bridge.rule import Rules
-from gateway.stream.chunk import stream_chunk_builder
+from bound.gateway.stream.bridge.rule import Rules
+from bound.gateway.stream.chunk import stream_chunk_builder
 from eco.legacy.types import CallTypes
 from bound.watcher.delegator import LogDelegator
 

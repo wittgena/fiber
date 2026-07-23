@@ -19,7 +19,7 @@ from atoa.conv.context.command import StateCommand
 if TYPE_CHECKING:
     from atoa.agent.disc.status import ConverStatus
     from atoa.agent.disc.ator import Ator
-    from resolver.secret import SecretRegistry
+    from bound.resolver.secret import SecretRegistry
     from atoa.gov.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:

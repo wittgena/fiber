@@ -19,7 +19,7 @@ from eco.exception import (
 )
 from eco.legacy.action.completion import completion as litellm_completion
 from eco.legacy.action.response import responses as litellm_responses
-from gateway.adapter.switch.params import (
+from bound.gateway.adapter.switch.params import (
     Delta, 
     ModelResponseStream, 
     StreamingChoices,
@@ -28,13 +28,13 @@ from gateway.adapter.switch.params import (
     ResponseInputParam,
     ResponsesAPIResponse
 )
-from gateway.adapter.switch.params import (
+from bound.gateway.adapter.switch.params import (
     OutputTextDeltaEvent,
     RefusalDeltaEvent,
     ReasoningSummaryTextDeltaEvent,
     ResponseCompletedEvent
 )
-from gateway.stream.iterator.response import SyncResponsesAPIStreamingIterator
+from bound.gateway.stream.iterator.response import SyncResponsesAPIStreamingIterator
 
 from atoa.agent.conv.chat import select_chat_options, select_responses_options
 from bound.watcher.snapshot.metrics import MetricsSnapshot

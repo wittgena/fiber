@@ -27,16 +27,16 @@ from pydantic.json_schema import SkipJsonSchema
 from functools import cached_property
 from pathlib import Path
 
-from resolver.model.info import get_features
-from resolver.model.support import supports_vision
-from resolver.model.config.resolver import config
+from bound.resolver.model.info import get_features
+from bound.resolver.model.support import supports_vision
+from bound.resolver.model.config.resolver import config
 
-from gateway.token.splitter import create_pretrained_tokenizer
-from gateway.token.counter import token_counter
-from gateway.adapter.switch.params import ModelResponse
-from gateway.stream.wrapper import StreamWrapper
+from bound.gateway.token.splitter import create_pretrained_tokenizer
+from bound.gateway.token.counter import token_counter
+from bound.gateway.adapter.switch.params import ModelResponse
+from bound.gateway.stream.wrapper import StreamWrapper
 from eco.legacy.action.completion import completion as brane_completion
-from gateway.stream.chunk import stream_chunk_builder
+from bound.gateway.stream.chunk import stream_chunk_builder
 from bound.watcher.snapshot.metrics import Metrics
 from bound.watcher.delegator import DriverObserver
 

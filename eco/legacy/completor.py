@@ -7,15 +7,15 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
-from gateway.adapter.switch.params import ModelResponse
+from bound.gateway.adapter.switch.params import ModelResponse
 from eco.llama.router.config import ProviderConfigManager
-from resolver.model.config.base import BaseConfig
-from resolver.model.config.resolver import config
+from bound.resolver.model.config.base import BaseConfig
+from bound.resolver.model.config.resolver import config
 from eco.legacy.info import ProviderTypes
-from gateway.stream.bridge.client import AsyncHTTPClient
-from gateway.stream.bridge.client import HTTPClient
-from gateway.stream.bridge.client import get_client
-from gateway.stream.wrapper import StreamWrapper
+from bound.gateway.stream.bridge.client import AsyncHTTPClient
+from bound.gateway.stream.bridge.client import HTTPClient
+from bound.gateway.stream.bridge.client import get_client
+from bound.gateway.stream.wrapper import StreamWrapper
 
 from watcher.plane.emitter import get_emitter
 
@@ -275,7 +275,7 @@ class CompletionHandler:
             error_text = getattr(error_response, "text", error_text)
 
         if provider_config is None:
-            from resolver.model.config.base import BaseLLMException
+            from bound.resolver.model.config.base import BaseLLMException
             log.error(f"[ErrorHandler] Provider config 없음. BaseLLMException 발생: {error_text}")
             raise BaseLLMException(status_code=status_code, message=error_text, headers=error_headers)
 

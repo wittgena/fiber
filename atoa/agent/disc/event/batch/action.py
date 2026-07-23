@@ -10,7 +10,7 @@ from atoa.agent.disc.event.llm.message import MessageEvent
 from atoa.agent.disc.event.llm.observation import UserRejectObservation
 from atoa.conv.context.protocol import ConvStateProtocol
 
-from bound.executor.parallel import ParallelExecutor
+from atoa.executor.parallel import ParallelExecutor
 from eco.agent.action.message import Message, TextContent
 from atoa.agent.action.definition import ActionDefinition
 from atoa.agent.action.factory import CoreAction

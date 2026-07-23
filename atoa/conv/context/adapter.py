@@ -29,7 +29,7 @@ from atoa.gov.security.confirm import ConfirmationPolicyBase
 from atoa.gov.security.confirm import NeverConfirm
 
 from atoa.gov.conver import Conver, AgentSessionManager, AgentSidecar
-from resolver.secret import SecretValue
+from bound.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
 
 from arch.topos.bound.tunnel import TunnelFactory

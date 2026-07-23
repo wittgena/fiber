@@ -18,7 +18,7 @@ from eco.legacy.param.legacy import GenericLiteLLMParams
 from eco.llama.router.config import ProviderConfigManager
 from eco.llama.router.locator import get_llm_provider
 
-from resolver.model.config.resolver import config
+from bound.resolver.model.config.resolver import config
 from eco.legacy.openai.types import (
     AllMessageValues, PromptObject, Reasoning, ResponseIncludable, ResponseInputParam,
     ResponsesAPIResponse, ToolChoice, ToolParam, ResponseText
@@ -26,18 +26,18 @@ from eco.legacy.openai.types import (
 
 from eco.mcp.handler import MCPHandler
 from eco.mcp.parser.payload import MCPPayloadParser
-from gateway.stream.iterator.mcp import MCPStreamIterator
-from gateway.stream.iterator.response import ResponseStreamIterator
+from bound.gateway.stream.iterator.mcp import MCPStreamIterator
+from bound.gateway.stream.iterator.response import ResponseStreamIterator
 from eco.mcp.event.tool import create_mcp_list_tools_events
-from gateway.stream.bridge.response.handler.ws import ResponseWebsocketHandler
+from bound.gateway.stream.bridge.response.handler.ws import ResponseWebsocketHandler
 
-from resolver.model.api.base import APIBridge
+from bound.resolver.model.api.base import APIBridge
 from eco.legacy.action.param.litellm import get_litellm_params, infer_openai_data_residency
-from gateway.stream.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
-from gateway.stream.bridge.response.stream.identity import IdentityRouter
-from gateway.stream.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
+from bound.gateway.stream.bridge.response.stream.context import ResponseAPIContext, ContextBuilder
+from bound.gateway.stream.bridge.response.stream.identity import IdentityRouter
+from bound.gateway.stream.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
 from eco.legacy.action.client.wrapper import client
-from gateway.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from bound.gateway.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter

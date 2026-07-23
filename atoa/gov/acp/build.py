@@ -8,7 +8,7 @@ from acp.exceptions import RequestError
 from acp.interfaces import Client
 from acp.meta import CLIENT_METHODS
 from atoa.gov.acp.router.message import MessageRouter
-from resolver.acp.schema import (
+from bound.resolver.acp.schema import (
     CreateTerminalRequest,
     KillTerminalRequest,
     ReadTextFileRequest,

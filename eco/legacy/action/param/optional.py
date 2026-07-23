@@ -32,16 +32,16 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, TypeVar, U
 
 from eco.exception import UnsupportedParamsError
 from eco.legacy.action.param.format import type_to_response_format_param
-from resolver.model.config.base import BaseConfig
+from bound.resolver.model.config.base import BaseConfig
 
-from resolver.model.config.resolver import config
-from resolver.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
+from bound.resolver.model.config.resolver import config
+from bound.resolver.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
 
 from eco.legacy.anthropic import AnthropicThinkingParam
 from eco.legacy.openai.types import AllMessageValues, OpenAIWebSearchOptions
 from eco.legacy.types import Embedding, Function, ProviderTypes
 from eco.llama.router.config import ProviderConfigManager
-from resolver.model.support import get_supported_openai_params
+from bound.resolver.model.support import get_supported_openai_params
 
 from watcher.plane.emitter import get_emitter
 

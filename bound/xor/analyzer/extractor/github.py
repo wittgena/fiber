@@ -12,7 +12,7 @@ import subprocess
 import urllib.request
 from pathlib import Path
 
-from resolver.ext.inter import ExtResolver
+from bound.resolver.ext.inter import ExtResolver
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 
