@@ -3,7 +3,7 @@
 ## @lineage: llama.anchor.bound.adapter.base
 ## @lineage: anchor.inter.bound.adapter.base
 from typing import Any, Dict, List, Optional, Union
-from bound.gateway.adapter.switch.params import ModelResponse
+from bound.gateway.switch.params import ModelResponse
 from eco.legacy.action.process.pre import CompletionContext
 from eco.legacy.completor import CompletionHandler
 from bound.gateway.stream.wrapper import StreamWrapper

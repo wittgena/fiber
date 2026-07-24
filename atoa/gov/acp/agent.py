@@ -78,7 +78,7 @@ class ACPAgent(ACPTrajectory, Ator):
             if self.tools or self.mcp_config or self.agent_context:
                 log.warning("Structural boundaries prevent native tools or contexts inside ACP Agents.")
 
-            from arch.xor.proto.asyncer import AsyncExecutor
+            from atoa.executor.base import AsyncExecutor
             self.executor = AsyncExecutor()
             self.client = ACPClient()
 

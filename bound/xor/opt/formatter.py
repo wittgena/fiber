@@ -1,6 +1,4 @@
 # bound.xor.opt.formatter
-## @lineage: xor.opt.formatter
-## @lineage: xphi.xor.opt.formatter
 import ast
 import enum
 import inspect
@@ -13,9 +11,7 @@ import pydantic
 from pydantic import TypeAdapter
 from pydantic.fields import FieldInfo
 
-from bound.xor.opt.manifold.model.reasoning import Reasoning
-from bound.xor.opt.manifold.model.basetype import Type as SpiType
-from bound.xor.opt.manifold.code import Code
+from bound.xor.opt.reasoning import Code, Reasoning, Type as SpiType
 
 from arch.xor.sign.utils import get_spi_field_type
 

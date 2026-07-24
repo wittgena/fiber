@@ -1,7 +1,4 @@
 # bound.xor.opt.usage
-## @lineage: xor.opt.usage
-## @lineage: xor.scope.dsp.usage
-## @lineage: xphi.scope.dsp.usage
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Generator

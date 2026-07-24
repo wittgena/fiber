@@ -4,7 +4,7 @@
 ## @lineage: bound.transport.stream.support
 ## @lineage: bound.surface.stream.support
 from typing import Any, List
-from bound.gateway.adapter.switch.params import ModelResponseStream, Usage
+from bound.gateway.switch.params import ModelResponseStream, Usage
 from watcher.plane.emitter import get_emitter
 
 _SYNC_ITER_EXHAUSTED = object()

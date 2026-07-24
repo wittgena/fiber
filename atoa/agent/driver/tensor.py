@@ -31,9 +31,9 @@ from bound.resolver.model.info import get_features
 from bound.resolver.model.support import supports_vision
 from bound.resolver.model.config.resolver import config
 
-from bound.gateway.token.splitter import create_pretrained_tokenizer
-from bound.gateway.token.counter import token_counter
-from bound.gateway.adapter.switch.params import ModelResponse
+from eco.tenant.token.splitter import create_pretrained_tokenizer
+from eco.tenant.token.counter import token_counter
+from bound.gateway.switch.params import ModelResponse
 from bound.gateway.stream.wrapper import StreamWrapper
 from eco.legacy.action.completion import completion as brane_completion
 from bound.gateway.stream.chunk import stream_chunk_builder

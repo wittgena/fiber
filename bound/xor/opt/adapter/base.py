@@ -1,20 +1,12 @@
 # bound.xor.opt.adapter.base
-## @lineage: xor.opt.adapter.base
-## @lineage: bound.adapter.dsp.base
 from typing import Any, get_origin
 import json_repair
 
-from bound.xor.opt.dsp.lm import BaseLM
-
-from bound.xor.opt.manifold.model.basetype import Type
-from bound.xor.opt.manifold.model.basetype import split_message_content_for_custom_types
-from bound.xor.opt.adapter.exception import AdapterParseError
-
-from bound.xor.opt.manifold.tool import Tool, ToolCalls
-from bound.xor.opt.manifold.model.reasoning import Reasoning
+from bound.xor.opt.lm import BaseLM
+from bound.xor.opt.reasoning import Type, split_message_content_for_custom_types, Reasoning, Tool, ToolCalls
 from bound.xor.opt.callback.base import BaseCallback, with_callbacks
 
-from arch.xor.sign.signature import Signature
+from arch.xor.sign.signature import Signature, AdapterParseError
 from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter
 

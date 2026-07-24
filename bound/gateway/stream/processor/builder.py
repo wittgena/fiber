@@ -27,7 +27,7 @@ from eco.legacy.types import (
 )
 
 from eco.legacy.openai.types import ChatCompletionRedactedThinkingBlock, ChatCompletionThinkingBlock
-from bound.gateway.token.counter import token_counter
+from eco.tenant.token.counter import token_counter
 from watcher.plane.emitter import get_emitter 
 
 log = get_emitter("chunk.processor")

@@ -21,7 +21,7 @@ from atoa.agent.action.tool.schema.browser import (
     BrowserObservation,
 )
 from atoa.agent.command import sanitized_env
-from arch.xor.proto.asyncer import AsyncExecutor
+from atoa.executor.base import AsyncExecutor
 from watcher.plane.emitter import get_logger
 from atoa.gov.tool.browser.server import BrowserServer 
 

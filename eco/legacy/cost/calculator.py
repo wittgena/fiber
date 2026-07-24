@@ -13,9 +13,9 @@ from eco.llama.router.locator import get_llm_provider
 from bound.resolver.model.config.resolver import config
 
 from eco.legacy.cost.builtin import BuiltInToolCostTracker
-from bound.gateway.token.counter import token_counter
-from bound.gateway.cost.unit.calc import UnitCostCalculator
-from bound.gateway.cost.policy import CostPolicy
+from eco.tenant.token.counter import token_counter
+from eco.tenant.cost.unit.calc import UnitCostCalculator
+from eco.tenant.cost.policy import CostPolicy
 from eco.legacy.cost.parser import (
     UsageTelemetryParser, 
     AnyResponseObject,

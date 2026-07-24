@@ -26,7 +26,7 @@ from eco.legacy.openai.types import ResponseInputParam, ResponsesAPIResponse
 from bound.gateway.stream.bridge.client import AsyncHTTPClient
 from bound.gateway.stream.bridge.client import get_client
 from bound.gateway.stream.iterator.response import ResponseStreamIterator
-from bound.gateway.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from arch.gov.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from bound.gateway.stream.bridge.response.stream.context import ResponseAPIContext, ContextBuilder, ExecutionContext, ProviderContext, LLMPayloadContext
 from bound.gateway.stream.bridge.response.stream.identity import IdentityRouter

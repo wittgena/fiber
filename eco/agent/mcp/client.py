@@ -17,7 +17,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 from eco.agent.mcp.exception import MCPError
 from eco.agent.mcp.config import MCPConfig
 
-from arch.xor.proto.asyncer import AsyncExecutor
+from atoa.executor.base import AsyncExecutor
 
 class MCPClient(AnchorClient):
     """@desc: Unified MCP Client that bridges AnchorClient with stdio execution via MCPConfig"""

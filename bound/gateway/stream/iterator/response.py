@@ -19,10 +19,10 @@ from openai._streaming import SSEDecoder
 import datetime
 from typing import Any, Optional, Union
 
-from bound.gateway.adapter.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
+from bound.mapper.key import adapt_payload_for_external_litellm, get_legacy_key
 from eco.legacy.types import EmbeddingResponse, HiddenParams, ModelResponse, TranscriptionResponse
 from bound.resolver.model.config.constants import LITELLM_DETAILED_TIMING
-from bound.gateway.adapter.tosync import SyncStreamAdapter
+from arch.gov.bridge.tosync import SyncStreamAdapter
 
 import eco.legacy.openai.types as openai_types
 
@@ -32,7 +32,7 @@ from eco.legacy.openai.types import ResponsesAPIStreamEvents
 from eco.legacy.types import CallTypes
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from atoa.executor.legacy import executor
-from bound.gateway.adapter.header import process_response_headers
+from bound.gateway.header import process_response_headers
 from bound.resolver.model.api.base import get_api_base
 from bound.resolver.model.api.base import APIBridge
 from bound.gateway.stream.bridge.response.stream.identity import IdentityRouter

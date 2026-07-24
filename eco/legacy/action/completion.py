@@ -16,13 +16,13 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
-from bound.gateway.adapter.switch.params import ModelResponse
+from bound.gateway.switch.params import ModelResponse
 
-from bound.gateway.adapter.mapper.exception import exception_type
+from bound.mapper.exception import exception_type
 from eco.legacy.action.process.core import async_core_completion
 from eco.exception import Timeout
 from eco.legacy.action.client.wrapper import client
-from bound.gateway.adapter.tosync import run_async_function
+from arch.gov.bridge.tosync import run_async_function
 from bound.gateway.stream.wrapper import StreamWrapper
 
 from eco.legacy.trace.dd import tracer

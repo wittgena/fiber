@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 
 from bound.resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from eco.legacy.types import EmbeddingResponse
-from bound.gateway.adapter.switch.params import ModelResponse
+from bound.gateway.switch.params import ModelResponse
 from eco.legacy.types import all_litellm_params
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.support import supports_httpx_timeout

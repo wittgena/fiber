@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
-from bound.gateway.adapter.switch.params import ModelResponse
+from bound.gateway.switch.params import ModelResponse
 from eco.llama.router.config import ProviderConfigManager
 from bound.resolver.model.config.base import BaseConfig
 from bound.resolver.model.config.resolver import config

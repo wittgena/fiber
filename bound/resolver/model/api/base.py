@@ -12,7 +12,7 @@ from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from bound.resolver.model.config.resolver import config
 from eco.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
 from bound.gateway.stream.bridge.response.stream.identity import IdentityRouter
-from bound.gateway.adapter.request import RequestBuilder, IdentityMutator, _get_val
+from bound.gateway.request import RequestBuilder, IdentityMutator, _get_val
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bridge.api")

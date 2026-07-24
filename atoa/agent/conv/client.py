@@ -14,7 +14,7 @@ from pydantic import (
     field_validator,
 )
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
-from bound.gateway.adapter.switch.params import ChatCompletionToolParam
+from bound.gateway.switch.params import ChatCompletionToolParam
 from atoa.agent.conv.template import ChatTemplateRenderer
 
 class UsageTokens(BaseModel):

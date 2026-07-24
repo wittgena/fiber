@@ -34,9 +34,9 @@ from eco.legacy.types import TextChoices, TextCompletionResponse
 from eco.exception import APIError
 
 from bound.resolver.model.config.resolver import config
-from bound.gateway.token.counter import token_counter
+from eco.tenant.token.counter import token_counter
 from bound.gateway.stream.processor.builder import ChunkBuilderProcessor
-from bound.gateway.adapter.switch.params import Choices, Message, ModelResponse, Usage
+from bound.gateway.switch.params import Choices, Message, ModelResponse, Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.chunk")

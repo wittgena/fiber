@@ -19,7 +19,7 @@
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
 from eco.legacy.types import EmbeddingResponse
-from bound.gateway.adapter.mapper.exception import exception_type
+from bound.mapper.exception import exception_type
 from eco.legacy.action.client.wrapper import client
 from eco.legacy.action.process.pre import EmbeddingPreprocessor
 from bound.resolver.adapter import AdapterRegistry

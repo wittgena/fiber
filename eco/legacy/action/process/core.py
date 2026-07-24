@@ -8,8 +8,8 @@
 ## @lineage: bound.transport.channel.action.core
 ## @lineage: bound.channel.action.core
 from typing import Any, Dict, List, Optional, Union
-from bound.gateway.adapter.mapper.exception import exception_type
-from bound.gateway.adapter.switch.params import ModelResponse, ModelResponseStream
+from bound.mapper.exception import exception_type
+from bound.gateway.switch.params import ModelResponse, ModelResponseStream
 from eco.legacy.action.process.pre import CompletionPreprocessor
 from bound.resolver.adapter import AdapterRegistry
 from bound.gateway.stream.wrapper import StreamWrapper

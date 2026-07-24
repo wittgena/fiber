@@ -7,7 +7,7 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 from starlette.datastructures import Headers
 
-from bound.gateway.adapter.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
+from bound.gateway.switch.params import ResponsesAPIResponse, ResponsesAPIStreamingResponse
 from eco.legacy.openai.types import OutputItemDoneEvent
 from eco.legacy.openai.types import ResponsesAPIStreamEvents, BaseOpenAIResponse, MCPCallCompletedEvent
 

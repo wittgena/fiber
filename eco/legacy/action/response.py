@@ -37,7 +37,7 @@ from bound.gateway.stream.bridge.response.stream.context import ResponseAPIConte
 from bound.gateway.stream.bridge.response.stream.identity import IdentityRouter
 from bound.gateway.stream.bridge.response.stream.handler import ResponseApiHandler, _build_context, _execute_with_bridge
 from eco.legacy.action.client.wrapper import client
-from bound.gateway.adapter.tosync import AsyncToSyncBridge, SyncStreamAdapter
+from arch.gov.bridge.tosync import AsyncToSyncBridge, SyncStreamAdapter
 
 from arch.gov.gate import uuid
 from watcher.plane.emitter import get_emitter

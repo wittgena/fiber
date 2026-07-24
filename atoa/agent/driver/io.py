@@ -19,7 +19,7 @@ from eco.exception import (
 )
 from eco.legacy.action.completion import completion as litellm_completion
 from eco.legacy.action.response import responses as litellm_responses
-from bound.gateway.adapter.switch.params import (
+from bound.gateway.switch.params import (
     Delta, 
     ModelResponseStream, 
     StreamingChoices,
@@ -28,7 +28,7 @@ from bound.gateway.adapter.switch.params import (
     ResponseInputParam,
     ResponsesAPIResponse
 )
-from bound.gateway.adapter.switch.params import (
+from bound.gateway.switch.params import (
     OutputTextDeltaEvent,
     RefusalDeltaEvent,
     ReasoningSummaryTextDeltaEvent,

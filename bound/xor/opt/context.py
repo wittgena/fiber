@@ -1,7 +1,4 @@
 # bound.xor.opt.context
-## @lineage: xor.opt.context
-## @lineage: xor.scope.dsp.context
-## @lineage: xphi.scope.dsp.context
 import contextvars
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace

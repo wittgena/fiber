@@ -18,9 +18,9 @@ from bound.resolver.model.config.constants import LITELLM_MAX_STREAMING_DURATION
 from bound.resolver.model.config.resolver import config
 
 from eco.exception import OpenAIError
-from bound.gateway.adapter.mapper.exception import exception_type
+from bound.mapper.exception import exception_type
 from eco.legacy.types import CallTypes
-from bound.gateway.adapter.switch.params import ModelResponse, ModelResponseStream
+from bound.gateway.switch.params import ModelResponse, ModelResponseStream
 from bound.gateway.stream.bridge.rule import Rules
 from bound.gateway.stream.chunk import stream_chunk_builder
 from bound.gateway.stream.support import _next_sync_or_exhausted

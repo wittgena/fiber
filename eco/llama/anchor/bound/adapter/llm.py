@@ -20,7 +20,7 @@ from typing import AsyncGenerator, Generator, Any, List
 from eco.llama.router.locator import get_llm_provider
 from eco.llama.anchor.bound.base.llms.types import ChatMessage, MessageRole
 from eco.llama.anchor.bound.adapter.base import BaseProviderAdapter
-from bound.gateway.adapter.mapper.state import StateMapper
+from bound.mapper.state import StateMapper
 
 from eco.legacy.action.process.pre import CompletionContext
 from eco.llama.router.llm import LLMRouter, TopologyMissingError

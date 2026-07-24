@@ -7,8 +7,8 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
 from bound.resolver.model.cost import ModelCostRegistry 
-from bound.gateway.cost.policy import CostPolicy
-from bound.gateway.cost.unit.calc import UnitCostCalculator
+from eco.tenant.cost.policy import CostPolicy
+from eco.tenant.cost.unit.calc import UnitCostCalculator
 
 from eco.legacy.types import Usage, ModelInfo
 

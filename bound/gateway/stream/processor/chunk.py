@@ -19,9 +19,9 @@ from eco.legacy.info import ProviderTypes
 from eco.legacy.param.legacy import GenericLiteLLMParams
 from eco.legacy.types import Delta, GenericStreamingChunk as GChunk
 
-from bound.gateway.adapter.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
-from bound.gateway.adapter.mapper.reason import map_finish_reason
-from bound.gateway.adapter.header import process_response_headers
+from bound.gateway.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from bound.mapper.reason import map_finish_reason
+from bound.gateway.header import process_response_headers
 from bound.gateway.stream.support import preserve_upstream_non_openai_attributes
 from bound.gateway.stream.parser import StreamChunkParser
 
