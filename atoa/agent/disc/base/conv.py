@@ -8,7 +8,7 @@ from watcher.plane.observer.span import end_active_span, should_enable_observabi
 
 from atoa.gov.security.confirm import ConfirmationPolicyBase
 from eco.agent.disc.action import Action, Observation
-from bound.watcher.stats import ConversationStats
+from eco.watcher.stats import ConversationStats
 from atoa.agent.types import ConversationID
 from atoa.agent.driver.tensor import Driver
 from eco.agent.action.message import Message

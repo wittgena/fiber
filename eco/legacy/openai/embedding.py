@@ -28,7 +28,7 @@ from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel
 from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
 from eco.legacy.types import EmbeddingResponse
-from bound.gateway.response import convert_to_model_response_object
+from bound.gateway.parser.response import convert_to_model_response_object
 from eco.legacy.openai.base import BaseOpenAILLM, OpenAIError
 from watcher.plane.emitter import get_emitter
 

@@ -21,7 +21,7 @@ from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
     from atoa.agent.response import LLMResponse
-    from bound.watcher.snapshot.metrics import Metrics
+    from eco.watcher.snapshot.metrics import Metrics
 
 logger = get_logger(__name__)
 

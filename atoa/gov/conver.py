@@ -31,7 +31,7 @@ from atoa.conv.parser.title import generate_conversation_title
 from atoa.conv.parser.builder import MessageBuilder, LLMFacade
 
 from arch.xor.store.file import LocalFileStore
-from bound.xor.store.log import LogStore
+from atoa.gov.store.log import LogStore
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import TunnelFactory, UniversalFacade
 

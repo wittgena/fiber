@@ -11,8 +11,8 @@ from eco.agent.event.base import Event
 from eco.agent.event.types import EventID
 
 from atoa.gov.security.confirm import ConfirmationPolicyBase
-from bound.watcher.stats import ConversationStats
-from bound.xor.store.log import LogStore
+from eco.watcher.stats import ConversationStats
+from atoa.gov.store.log import LogStore
 
 from atoa.conv.context.command import StateCommand
 

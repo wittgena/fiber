@@ -20,7 +20,7 @@ from atoa.agent.disc.status import ConverStatus
 from atoa.agent.types import ConversationCallbackType, ConversationID, ConversationTags
 
 from atoa.gov.security.confirm import ConfirmationPolicyBase, NeverConfirm
-from bound.watcher.stats import ConversationStats
+from eco.watcher.stats import ConversationStats
 
 if TYPE_CHECKING:
     from atoa.gov.security.analyzer import SecurityAnalyzerBase
@@ -31,8 +31,8 @@ else:
 # [개선] Ator 메모리 참조 제거 (import Ator 제거)
 from bound.resolver.secret import SecretRegistry
 
-from bound.gateway.stream.bridge.io.manager import IOManager
-from bound.xor.store.log import LogStore, VirtualEventLogProxy
+from bound.gateway.io.manager import IOManager
+from atoa.gov.store.log import LogStore, VirtualEventLogProxy
 from atoa.conv.context.command import (
     StateCommand, 
     TransitionStatus, 

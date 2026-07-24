@@ -1,18 +1,11 @@
 # eco.llama.router.scan.installed
-## @lineage: xor.router.scan.installed
-## @lineage: router.scan.installed
-## @lineage: bound.router.scan.installed
-## @lineage: anchor.registry.router.scan.installed
-## @lineage: anchor.provider.router.scan.installed
 import importlib
 import inspect
 import pkgutil
 from typing import Dict, Any
 from dataclasses import asdict
-
 from eco.llama.anchor.bound.base.llms.base import BaseLLM
-
-from bound.mapper.inter.llm import LLMCapabilities, LLMInfo
+from eco.llama.router.mapper.llm import LLMCapabilities, LLMInfo
 from bound.resolver.ext.inter import ExtResolver
 
 from watcher.plane.emitter import get_emitter

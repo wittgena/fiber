@@ -7,14 +7,14 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
 import httpx
 
-from bound.gateway.switch.params import ModelResponse
+from eco.legacy.switch.params import ModelResponse
 from eco.llama.router.config import ProviderConfigManager
 from bound.resolver.model.config.base import BaseConfig
 from bound.resolver.model.config.resolver import config
 from eco.legacy.info import ProviderTypes
-from bound.gateway.stream.bridge.client import AsyncHTTPClient
-from bound.gateway.stream.bridge.client import HTTPClient
-from bound.gateway.stream.bridge.client import get_client
+from bound.gateway.client import AsyncHTTPClient
+from bound.gateway.client import HTTPClient
+from bound.gateway.client import get_client
 from bound.gateway.stream.wrapper import StreamWrapper
 
 from watcher.plane.emitter import get_emitter

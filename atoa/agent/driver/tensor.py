@@ -33,12 +33,12 @@ from bound.resolver.model.config.resolver import config
 
 from eco.tenant.token.splitter import create_pretrained_tokenizer
 from eco.tenant.token.counter import token_counter
-from bound.gateway.switch.params import ModelResponse
+from eco.legacy.switch.params import ModelResponse
 from bound.gateway.stream.wrapper import StreamWrapper
 from eco.legacy.action.completion import completion as brane_completion
-from bound.gateway.stream.chunk import stream_chunk_builder
-from bound.watcher.snapshot.metrics import Metrics
-from bound.watcher.delegator import DriverObserver
+from bound.gateway.stream.wrapper import stream_chunk_builder
+from eco.watcher.snapshot.metrics import Metrics
+from eco.watcher.delegator import DriverObserver
 
 from eco.exception import (
     APIConnectionError,

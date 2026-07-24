@@ -1,18 +1,16 @@
 # bound.resolver.model.api.base
-## @lineage: resolver.model.api.base
-## @lineage: bound.registry.model.api.base
-## @lineage: anchor.registry.model.api.base
-## @lineage: bound.surface.bridge.api
 from typing import Any, Dict, Mapping, List, Optional, Type, Union, cast, get_type_hints, overload
 from pydantic import BaseModel
 
 from eco.legacy.param.legacy import LiteLLM_Params
 from eco.llama.router.locator import get_llm_provider
+from eco.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
+
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from bound.resolver.model.config.resolver import config
-from eco.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
-from bound.gateway.stream.bridge.response.stream.identity import IdentityRouter
-from bound.gateway.request import RequestBuilder, IdentityMutator, _get_val
+from bound.gateway.parser.stream.identity import IdentityRouter
+from bound.gateway.parser.request import RequestBuilder, IdentityMutator, _get_val
+
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bridge.api")

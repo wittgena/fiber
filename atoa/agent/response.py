@@ -7,12 +7,12 @@
 import warnings
 from typing import ClassVar
 
-from bound.gateway.switch.params import ResponsesAPIResponse
-from bound.gateway.switch.params import ModelResponse
+from eco.legacy.switch.params import ResponsesAPIResponse
+from eco.legacy.switch.params import ModelResponse
 from pydantic import BaseModel, ConfigDict
 
 from eco.agent.action.message import Message
-from bound.watcher.snapshot.metrics import MetricsSnapshot
+from eco.watcher.snapshot.metrics import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 

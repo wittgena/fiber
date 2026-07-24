@@ -19,7 +19,7 @@ from atoa.agent.types import ConversationID
 from atoa.agent.driver.tensor import Driver
 
 from eco.agent.action.message import Message, TextContent
-from bound.watcher.stats import ConversationStats
+from eco.watcher.stats import ConversationStats
 from atoa.agent.disc.status import ConverStatus
 from atoa.conv.context.protocol import ConvStateProtocol
 

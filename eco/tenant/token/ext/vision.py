@@ -13,7 +13,7 @@ import struct
 from typing import Tuple, Union
 
 from eco.tenant.token.url_utils import SafeHttpClient
-from bound.gateway.stream.bridge.client import get_client
+from bound.gateway.client import get_client
 from bound.resolver.model.config.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

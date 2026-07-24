@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 
 from bound.resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
 from eco.legacy.types import EmbeddingResponse
-from bound.gateway.switch.params import ModelResponse
+from eco.legacy.switch.params import ModelResponse
 from eco.legacy.types import all_litellm_params
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.support import supports_httpx_timeout
@@ -41,7 +41,7 @@ from eco.legacy.action.param.validator import (
     validate_chat_completion_tool_choice,
     validate_openai_optional_params
 )
-from bound.watcher.delegator import LogDelegator
+from eco.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.preprocessor")

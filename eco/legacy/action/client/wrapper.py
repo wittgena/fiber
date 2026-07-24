@@ -1,7 +1,4 @@
 # eco.legacy.action.client.wrapper
-## @lineage: adapter.legacy.action.client.wrapper
-## @lineage: bound.surface.legacy.action.client.wrapper
-## @lineage: bound.adapter.surface.legacy.action.client.wrapper
 import asyncio
 import contextvars
 import datetime
@@ -18,10 +15,10 @@ from atoa.executor.legacy import executor
 from bound.resolver.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from bound.resolver.model.config.resolver import config
 
-from bound.gateway.stream.bridge.rule import Rules
-from bound.gateway.stream.chunk import stream_chunk_builder
+from bound.gateway.io.rule import Rules
+from bound.gateway.stream.wrapper import stream_chunk_builder
 from eco.legacy.types import CallTypes
-from bound.watcher.delegator import LogDelegator
+from eco.watcher.delegator import LogDelegator
 
 from bound.xor.secure.secret.validator import CredentialAccessor
 

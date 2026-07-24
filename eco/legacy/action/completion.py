@@ -1,5 +1,4 @@
 # eco.legacy.action.completion
-## @lineage: adapter.legacy.action.completion
 import uuid
 import httpx
 import asyncio
@@ -16,7 +15,7 @@ from copy import deepcopy
 from functools import partial
 from typing import Any, Dict, List, Literal, Optional, Tuple, Type, Union, cast
 
-from bound.gateway.switch.params import ModelResponse
+from eco.legacy.switch.params import ModelResponse
 
 from bound.mapper.exception import exception_type
 from eco.legacy.action.process.core import async_core_completion
@@ -26,7 +25,7 @@ from arch.gov.bridge.tosync import run_async_function
 from bound.gateway.stream.wrapper import StreamWrapper
 
 from eco.legacy.trace.dd import tracer
-from bound.watcher.delegator import LogDelegator
+from eco.watcher.delegator import LogDelegator
 
 from watcher.plane.emitter import get_emitter
 

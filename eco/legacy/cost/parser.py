@@ -9,7 +9,7 @@ from httpx import Response
 from pydantic import BaseModel
 
 from bound.resolver.model.info import get_model_info
-from bound.gateway.switch.params import ModelResponse, ModelResponseStream
+from eco.legacy.switch.params import ModelResponse, ModelResponseStream
 from eco.tenant.cost.unit.calc import UnitCostCalculator
 from eco.legacy.param.rerank import RerankBilledUnits, RerankResponse
 from eco.legacy.openai.types import (

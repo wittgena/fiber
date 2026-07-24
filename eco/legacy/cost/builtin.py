@@ -5,7 +5,7 @@
 ## @lineage: bound.surface.cost.builtin
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
-from bound.gateway.switch.params import Message, ModelResponse, Usage
+from eco.legacy.switch.params import Message, ModelResponse, Usage
 from eco.legacy.openai.types import FileSearchTool, ResponsesAPIResponse, WebSearchOptions
 from eco.legacy.types import ModelInfo, SearchContextCostPerQuery, StandardBuiltInToolsParams, PromptTokensDetailsWrapper
 

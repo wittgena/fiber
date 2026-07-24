@@ -29,8 +29,8 @@ if TYPE_CHECKING:
 from bound.resolver.model.config.resolver import config
 from eco.exception import BaseLLMException
 from bound.resolver.model.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
-from bound.gateway.stream.bridge.client import AsyncHTTPClient
-from bound.gateway.stream.bridge.secure.stream import get_ssl_configuration
+from bound.gateway.client import AsyncHTTPClient
+from bound.gateway.stream.secure import get_ssl_configuration
 from eco.legacy.openai.mock import MockOpenAITransport
 
 

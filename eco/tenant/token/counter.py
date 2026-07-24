@@ -33,7 +33,7 @@ from eco.legacy.openai.types import (
     OpenAIMessageContent,
 )
 from eco.legacy.types import SelectTokenizerResponse
-from bound.gateway.switch.params import Message
+from eco.legacy.switch.params import Message
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
 

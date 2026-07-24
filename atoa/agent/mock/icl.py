@@ -8,7 +8,7 @@
 import sys
 import runpy
 from typing import Final
-from bound.gateway.switch.params import ChatCompletionToolParam
+from eco.legacy.switch.params import ChatCompletionToolParam
 from phase.bind.resolver import resolve_path 
 
 RES_ROOT = resolve_path("res")

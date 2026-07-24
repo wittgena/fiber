@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Final, Protocol, runtime_checkable
 from atoa.agent.disc.event.llm.observation import AgentErrorEvent
 import threading
-from bound.xor.store.fifo import FIFOLock
+from atoa.gov.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
     from eco.agent.event.base import Event

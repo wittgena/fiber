@@ -27,11 +27,11 @@ from bound.resolver.model.config.base import BaseConfig
 from eco.exception import BaseLLMException
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
-from bound.gateway.switch.params import ModelResponse, ModelResponseStream
+from eco.legacy.switch.params import ModelResponse, ModelResponseStream
 
 from eco.legacy.info import ProviderTypes
 from eco.legacy.types import EmbeddingResponse
-from bound.gateway.response import convert_to_model_response_object
+from bound.gateway.parser.response import convert_to_model_response_object
 from eco.llama.router.config import ProviderConfigManager
 from bound.gateway.stream.wrapper import StreamWrapper
 from eco.legacy.base import BaseLLM

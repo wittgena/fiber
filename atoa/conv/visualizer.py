@@ -22,7 +22,7 @@ from atoa.agent.disc.event.llm.system import SystemPromptEvent
 from atoa.conv.context.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:
-    from bound.watcher.stats import ConversationStats
+    from eco.watcher.stats import ConversationStats
 
 logger = logging.getLogger(__name__)
 

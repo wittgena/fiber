@@ -9,9 +9,9 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, TypeGuard
-from bound.gateway.switch.params import ChatCompletionToolParam
-from bound.gateway.switch.params import Message as LiteLLMMessage
-from bound.gateway.switch.params import Choices, ModelResponse, StreamingChoices
+from eco.legacy.switch.params import ChatCompletionToolParam
+from eco.legacy.switch.params import Message as LiteLLMMessage
+from eco.legacy.switch.params import Choices, ModelResponse, StreamingChoices
 from atoa.gov.exception.types import LLMNoResponseError
 from atoa.agent.mock.converter import (
     STOP_WORDS,

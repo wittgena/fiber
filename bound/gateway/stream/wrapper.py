@@ -1,41 +1,46 @@
 # bound.gateway.stream.wrapper
-## @lineage: gateway.stream.wrapper
-## @lineage: bound.stream.wrapper
-## @lineage: bound.transport.stream.wrapper
-## @lineage: bound.surface.stream.wrapper
 import asyncio
 import collections.abc
 import datetime
 import threading
 import time
 import traceback
-from typing import Any, AsyncIterator, Callable, Iterator, List, NoReturn, Optional
+from typing import Any, AsyncIterator, Callable, Iterator, List, NoReturn, Optional, Dict, Union, cast
 import anyio
 import httpx
+import json
 
 from atoa.executor.legacy import executor
+
+from eco.legacy.types import TextChoices, TextCompletionResponse
+from eco.exception import APIError
+from eco.tenant.token.counter import token_counter
+from eco.exception import OpenAIError
+from eco.legacy.types import CallTypes
+from eco.legacy.switch.params import ModelResponse, ModelResponseStream
+
 from bound.resolver.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from bound.resolver.model.config.resolver import config
-
-from eco.exception import OpenAIError
 from bound.mapper.exception import exception_type
-from eco.legacy.types import CallTypes
-from bound.gateway.switch.params import ModelResponse, ModelResponseStream
-from bound.gateway.stream.bridge.rule import Rules
-from bound.gateway.stream.chunk import stream_chunk_builder
-from bound.gateway.stream.support import _next_sync_or_exhausted
-from bound.gateway.stream.processor.chunk import StreamChunkProcessor
+from bound.gateway.io.rule import Rules
+from bound.gateway.stream.processor import StreamChunkProcessor
 
-from bound.watcher.delegator import LogDelegator 
+from eco.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
-_SYNC_ITER_EXHAUSTED = object()
 log = get_emitter("streaming.wrapper")
+
+_SYNC_ITER_EXHAUSTED = object()
+def _next_sync_or_exhausted(it: Any) -> Any:
+    try:
+        return next(it)
+    except StopIteration:
+        return _SYNC_ITER_EXHAUSTED
 
 class StreamWrapper:
     """
     스트림 연결 유지, 비동기/동기 순회(Iterator), 로깅 및 예외 처리를 담당하는 메인 래퍼.
-    실제 청크의 파싱 및 규격 조립은 내부의 `StreamChunkProcessor`에게 위임(Composition)합니다.
+    실제 청크의 파싱 및 단일 패스(Single-pass) 규격 조립은 내부의 `StreamChunkProcessor`에게 위임합니다.
     """
     def __init__(
         self,
@@ -59,21 +64,18 @@ class StreamWrapper:
         self.rules = Rules()
         self.stream_options = stream_options or getattr(logging_obj, "stream_options", None)
         self.messages = getattr(logging_obj, "messages", None)
-        self.chunks: List = []
         
         # Stream Usage 설정
         self.send_stream_usage = (self.stream_options is not None and self.stream_options.get("include_usage", False))
         self.sent_stream_usage = False
 
-        # 2. 🚀 The Magic: 청크 데이터 처리를 전담할 프로세서 컴포지션
-        # 래퍼의 chunks 리스트 참조를 주입하여 상태를 완벽히 공유(Call by Reference)
+        # 2. 🚀 The Magic: 청크 데이터 처리 및 점진적 조립을 전담할 프로세서 컴포지션
         self.processor = StreamChunkProcessor(
             model=self.model,
             custom_llm_provider=self.custom_llm_provider,
             logging_obj=self.logging_obj,
             completion_stream=self.completion_stream,
             _response_headers=_response_headers,
-            chunks_ref=self.chunks  
         )
 
     def _check_max_streaming_duration(self) -> None:
@@ -137,7 +139,7 @@ class StreamWrapper:
                     chunk = next(self.completion_stream)
                     
                 if chunk is not None and chunk != b"":
-                    # 🚀 1. 프로세서에게 데이터 정제를 전적으로 위임
+                    # 🚀 1. 프로세서에게 데이터 정제 및 최종 객체 누적(Incremental Build) 위임
                     processed_chunk = self.processor.process_raw_chunk(chunk)
                     
                     if processed_chunk is None:
@@ -154,12 +156,7 @@ class StreamWrapper:
                     # 4. Rules 엔진 검사
                     self.rules.post_call_rules(input=self.processor.response_uptil_now, model=self.model)
 
-                    # 5. 스트림 청크 누적 (Usage 청크 대비 딥카피 방어)
-                    if getattr(processed_chunk, "usage", None) is not None:
-                        self.chunks.append(processed_chunk.model_copy())
-                    else:
-                        self.chunks.append(processed_chunk)
-
+                    # [메모리 해방] 더 이상 self.chunks.append()를 수행하지 않습니다.
                     return processed_chunk
 
         except StopIteration:
@@ -184,7 +181,7 @@ class StreamWrapper:
                     if self.custom_llm_provider == "gemini" and hasattr(chunk, "parts") and len(chunk.parts) == 0: 
                         continue
                     
-                    # 🚀 1. 프로세서에게 데이터 정제를 전적으로 위임
+                    # 🚀 1. 프로세서에게 데이터 정제 및 최종 객체 누적 위임
                     processed_chunk = self.processor.process_raw_chunk(chunk)
                     if processed_chunk is None: 
                         continue
@@ -194,11 +191,7 @@ class StreamWrapper:
 
                     self.rules.post_call_rules(input=self.processor.response_uptil_now, model=self.model)
 
-                    # 2. 누적 및 Usage 포맷팅 제어
-                    if hasattr(processed_chunk, "usage") and getattr(processed_chunk, "usage", None) is not None:
-                        self.chunks.append(processed_chunk.model_copy())
-                    else:
-                        self.chunks.append(processed_chunk)
+                    # [메모리 해방] 더 이상 self.chunks.append()를 수행하지 않습니다.
 
                     # 3. 마지막 청크 Hook 호출 (프로세서의 상태를 참조)
                     if self.processor.sent_last_chunk:
@@ -224,7 +217,6 @@ class StreamWrapper:
                             continue
                         
                         self.rules.post_call_rules(input=self.processor.response_uptil_now, model=self.model)
-                        self.chunks.append(processed_chunk)
                         return processed_chunk
 
         except (StopAsyncIteration, StopIteration):
@@ -238,12 +230,9 @@ class StreamWrapper:
             self._handle_stream_error(e)
 
     def _handle_stream_completion(self, cache_hit: bool, is_async: bool = False):
-        """스트림이 정상 종료되었을 때, 전체 데이터를 재조립하여 캐싱 및 성공 로그를 남깁니다."""
-        complete_streaming_response = stream_chunk_builder(
-            chunks=self.chunks,
-            messages=self.messages,
-            logging_obj=self.logging_obj,
-        )
+        """스트림이 정상 종료되었을 때, 프로세서에서 최종 완성된 응답을 가져와 캐싱 및 성공 로그를 남깁니다."""
+        # [변경] 느린 ChunkBuilder 대신 Processor가 점진적으로 조립해둔 완성 객체를 O(1)로 가져옵니다.
+        complete_streaming_response = self.processor.get_complete_response()
 
         if complete_streaming_response is not None:
             try:
@@ -364,3 +353,151 @@ class StreamWrapper:
         except Exception as e:
             log.exception(f"Error in post-call streaming deployment hook: {str(e)}")
             return chunk
+
+def stream_chunk_builder_text_completion(
+    chunks: list, messages: Optional[List] = None
+) -> TextCompletionResponse:
+    """레거시 Text Completion API(/v1/completions)를 위한 빌더 (기존 로직 유지)"""
+    id = chunks[0]["id"]
+    object = chunks[0]["object"]
+    created = chunks[0]["created"]
+    model = chunks[0]["model"]
+    system_fingerprint = chunks[0].get("system_fingerprint", None)
+    finish_reason = chunks[-1]["choices"][0]["finish_reason"]
+    logprobs = chunks[-1]["choices"][0]["logprobs"]
+
+    response = {
+        "id": id,
+        "object": object,
+        "created": created,
+        "model": model,
+        "system_fingerprint": system_fingerprint,
+        "choices": [
+            {
+                "text": None,
+                "index": 0,
+                "logprobs": logprobs,
+                "finish_reason": finish_reason,
+            }
+        ],
+        "usage": {
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            "total_tokens": None,
+        },
+    }
+    content_list = []
+    for chunk in chunks:
+        choices = chunk["choices"]
+        for choice in choices:
+            if (
+                choice is not None
+                and hasattr(choice, "text")
+                and choice.get("text") is not None
+            ):
+                _choice = choice.get("text")
+                content_list.append(_choice)
+
+    combined_content = "".join(content_list)
+    response["choices"][0]["text"] = combined_content
+
+    try:
+        response["usage"]["prompt_tokens"] = token_counter(
+            model=model, messages=messages
+        )
+    except Exception:
+        log.debug("token_counter failed, assuming prompt tokens is 0")
+        response["usage"]["prompt_tokens"] = 0
+        
+    response["usage"]["completion_tokens"] = token_counter(
+        model=model,
+        text=combined_content,
+        count_response_tokens=True,
+    )
+    response["usage"]["total_tokens"] = (
+        response["usage"]["prompt_tokens"] + response["usage"]["completion_tokens"]
+    )
+    return TextCompletionResponse(**response)
+
+
+def stream_chunk_builder(
+    chunks: list,
+    messages: Optional[list] = None,
+    start_time=None,
+    end_time=None,
+    logging_obj: Optional[Any] = None,
+) -> Optional[Union[ModelResponse, TextCompletionResponse]]:
+    """
+    [Adapter] 여러 곳에서 수집된 chunks 리스트를 하나의 완성된 ModelResponse로 조립합니다.
+    내부적으로 단일 패스(Single-pass) 프로세서인 StreamChunkProcessor에 위임하여 처리합니다.
+    """
+    try:
+        if chunks is None:
+            raise APIError(
+                status_code=500,
+                message="Error building chunks for logging/streaming usage calculation",
+                llm_provider="",
+                model="",
+            )
+        if not chunks:
+            return None
+
+        # 1. 레거시 텍스트 컴플리션 처리 (Chat Completion이 아닌 경우)
+        first_chunk = chunks[0]
+        first_chunk_choices = getattr(first_chunk, "choices", None) or (first_chunk.get("choices") if isinstance(first_chunk, dict) else [])
+        
+        if first_chunk_choices and isinstance(first_chunk_choices[0], TextChoices):
+            return stream_chunk_builder_text_completion(chunks=chunks, messages=messages)
+
+        # 2. 프로세서 초기화를 위한 모델 및 프로바이더 추출
+        model = getattr(first_chunk, "model", None) or (first_chunk.get("model") if isinstance(first_chunk, dict) else "")
+        provider = None
+        if logging_obj and hasattr(logging_obj, "model_call_details"):
+            provider = logging_obj.model_call_details.get("custom_llm_provider")
+
+        # 3. StreamChunkProcessor 초기화
+        processor = StreamChunkProcessor(
+            model=model,
+            custom_llm_provider=provider,
+            logging_obj=logging_obj,
+        )
+
+        # 4. 청크 리스트를 순차적으로 주입하여 조립 (Single-pass Incremental Build)
+        for chunk in chunks:
+            processor.process_raw_chunk(chunk)
+
+        # 5. 최종 조립된 응답 객체 가져오기 (O(1) 추출)
+        response = processor.get_complete_response()
+
+        # 6. Usage (토큰 수) 폴백 처리
+        # (만약 스트림에서 usage 청크를 보내주지 않는 프로바이더의 경우 직접 계산)
+        if response.usage.prompt_tokens == 0 and response.usage.completion_tokens == 0:
+            completion_output = response.choices[0].message.content or ""
+            
+            # Prompt Tokens 계산
+            try:
+                response.usage.prompt_tokens = token_counter(model=model, messages=messages)
+            except Exception:
+                log.debug("token_counter failed, assuming prompt tokens is 0")
+                response.usage.prompt_tokens = 0
+                
+            # Completion Tokens 계산
+            response.usage.completion_tokens = token_counter(
+                model=model, text=completion_output, count_response_tokens=True
+            )
+            response.usage.total_tokens = response.usage.prompt_tokens + response.usage.completion_tokens
+
+        # 7. 비용(Cost) 계산 주입
+        if config.include_cost_in_streaming_usage and logging_obj is not None and hasattr(logging_obj, "_response_cost_calculator"):
+            setattr(response.usage, "cost", logging_obj._response_cost_calculator(result=response))
+
+        return response
+
+    except Exception as e:
+        log.exception("stream_chunk_builder() - Exception occurred - {}".format(str(e)))
+        raise APIError(
+            status_code=500,
+            message="Error building chunks for logging/streaming usage calculation",
+            llm_provider="",
+            model="",
+        )
