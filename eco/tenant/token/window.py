@@ -16,7 +16,7 @@ import tiktoken
 from eco.tenant.token.counter import token_counter
 from eco.tenant.token.convert import get_default_encoding
 from bound.resolver.model.cost import model_cost
-from eco.legacy.openai.types import AllMessageValues
+from bound.resolver.openai.types import AllMessageValues
 from bound.resolver.model.config.constants import DEFAULT_TRIM_RATIO
 
 from watcher.plane.emitter import get_emitter

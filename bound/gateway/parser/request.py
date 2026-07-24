@@ -3,8 +3,8 @@
 from typing import Any, Dict, Mapping, List, Optional, Type, Union, cast, get_type_hints, overload
 from pydantic import BaseModel
 
-from eco.legacy.action.param.format import type_to_response_format_param
-from eco.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
+from eco.tenant.action.param.format import type_to_response_format_param
+from bound.resolver.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
 
 from bound.gateway.parser.stream.identity import IdentityRouter
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
@@ -93,7 +93,7 @@ class RequestBuilder:
         special_params = params.pop("kwargs", {})
         additional_drop_params = params.pop("additional_drop_params", None)
 
-        from eco.legacy.action.param.optional import PreProcessNonDefaultParams
+        from eco.tenant.action.param.optional import PreProcessNonDefaultParams
 
         non_default = PreProcessNonDefaultParams.base_pre_process_non_default_params(
             passed_params=params, 

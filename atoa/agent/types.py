@@ -15,7 +15,7 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field
 from eco.agent.event.base import Event
 from collections.abc import Callable
-from eco.legacy.switch.params import ModelResponseStream
+from eco.tenant.switch.params import ModelResponseStream
 from arch.contract.event.next import ToposId
 
 LLMStreamChunk = ModelResponseStream

@@ -7,8 +7,8 @@
 import warnings
 from typing import ClassVar
 
-from eco.legacy.switch.params import ResponsesAPIResponse
-from eco.legacy.switch.params import ModelResponse
+from eco.tenant.switch.params import ResponsesAPIResponse
+from eco.tenant.switch.params import ModelResponse
 from pydantic import BaseModel, ConfigDict
 
 from eco.agent.action.message import Message

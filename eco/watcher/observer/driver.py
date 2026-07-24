@@ -1,4 +1,5 @@
-# bound.watcher.observer.driver
+# eco.watcher.observer.driver
+## @lineage: bound.watcher.observer.driver
 ## @lineage: xor.watcher.observer.driver
 ## @lineage: xphi.watcher.observer.driver
 import time
@@ -9,7 +10,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
-from eco.legacy.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
+from eco.tenant.switch.params import ResponseAPIUsage, ResponsesAPIResponse, ModelResponse
 from eco.watcher.snapshot.metrics import Metrics
 from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context

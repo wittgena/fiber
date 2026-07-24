@@ -12,7 +12,7 @@ from pydantic import Field, ConfigDict, computed_field, field_validator, field_s
 from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
-from eco.legacy.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from eco.tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
 from eco.agent.disc.tool import Tool
 from eco.agent.disc.action import Action, Observation, Schema

@@ -33,9 +33,9 @@ from bound.resolver.model.config.resolver import config
 
 from eco.tenant.token.splitter import create_pretrained_tokenizer
 from eco.tenant.token.counter import token_counter
-from eco.legacy.switch.params import ModelResponse
+from eco.tenant.switch.params import ModelResponse
 from bound.gateway.stream.wrapper import StreamWrapper
-from eco.legacy.action.completion import completion as brane_completion
+from eco.tenant.action.completion import completion as brane_completion
 from bound.gateway.stream.wrapper import stream_chunk_builder
 from eco.watcher.snapshot.metrics import Metrics
 from eco.watcher.delegator import DriverObserver

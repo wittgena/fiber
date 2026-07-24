@@ -11,7 +11,7 @@
 @desc: Dynamically binds Brane contexts to LlamaIndex embedding topologies for spatial vector translation.
 """
 from typing import List, Union
-from eco.legacy.action.process.pre import EmbeddingContext
+from eco.tenant.action.process.pre import EmbeddingContext
 from eco.llama.anchor.bound.adapter.base import BaseProviderAdapter
 from eco.llama.router.embedding import EmbeddingRouter
 

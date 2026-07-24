@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
-from eco.legacy.switch.params import ChatCompletionToolParam
+from eco.tenant.switch.params import ChatCompletionToolParam
 from watcher.plane.observer.span import observe
 
 from eco.agent.disc.action import Action, Observation

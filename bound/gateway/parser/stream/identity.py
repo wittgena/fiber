@@ -4,7 +4,7 @@ import re
 import os
 from typing import Any, Dict, Iterable, Optional, Type
 from starlette.datastructures import Headers
-from eco.legacy.param.response import DecodedResponseId
+from eco.tenant.switch.params import DecodedResponseId
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.identity")

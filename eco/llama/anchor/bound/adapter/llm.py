@@ -22,7 +22,7 @@ from eco.llama.anchor.bound.base.llms.types import ChatMessage, MessageRole
 from eco.llama.anchor.bound.adapter.base import BaseProviderAdapter
 from bound.mapper.state import StateMapper
 
-from eco.legacy.action.process.pre import CompletionContext
+from eco.tenant.action.process.pre import CompletionContext
 from eco.llama.router.llm import LLMRouter, TopologyMissingError
 from bound.gateway.stream.wrapper import StreamWrapper
 

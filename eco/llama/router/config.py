@@ -11,8 +11,8 @@ from enum import Enum
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 
-from eco.legacy.info import ProviderTypes, ProviderTypesSet, ProviderSpecificModelInfo
-from eco.legacy.action.param.format import BaseLLMModelInfo
+from bound.resolver.model.protype import ProviderTypes, ProviderTypesSet, ProviderSpecificModelInfo
+from eco.tenant.action.param.format import BaseLLMModelInfo
 
 class ProviderConfigManager:
     _PROVIDER_CONFIG_MAP: Optional[dict[ProviderTypes, tuple[Callable, bool]]] = None

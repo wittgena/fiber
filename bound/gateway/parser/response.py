@@ -14,12 +14,12 @@ from typing_extensions import Required, TypedDict
 
 from bound.resolver.model.config.constants import RESPONSE_FORMAT_TOOL_NAME
 from bound.gateway.parser.header import get_response_headers
-from eco.legacy.openai.types import (
+from bound.resolver.openai.types import (
     ChatCompletionThinkingBlock,
     ImageURLListItem,
     OpenAIModerationResponse,
 )
-from eco.legacy.switch.params import (
+from eco.tenant.switch.params import (
     ChatCompletionDeltaToolCall,
     ChatCompletionRedactedThinkingBlock,
     CompletionTokensDetailsWrapper,
@@ -31,7 +31,7 @@ from eco.legacy.switch.params import (
     TranscriptionUsageDurationObject,
     TranscriptionUsageTokensObject,
 )
-from eco.legacy.switch.params import (
+from eco.tenant.switch.params import (
     TextChoices,
     TextCompletionResponse,
     TranscriptionResponse,
@@ -46,7 +46,7 @@ from eco.legacy.switch.params import (
     Delta
 )
 from eco.exception import APIError
-from eco.legacy.types import Logprobs as TextCompletionLogprobs
+from bound.legacy.types import Logprobs as TextCompletionLogprobs
 from watcher.plane.emitter import get_emitter 
 
 log = get_emitter("response.converter")

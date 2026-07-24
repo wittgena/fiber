@@ -11,7 +11,7 @@ from bound.resolver.model.cost import get_provider_for_model
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 
-from eco.legacy.param.legacy import LiteLLM_Params
+from bound.mapper.param.legacy import LiteLLM_Params
 
 from bound.xor.secure.secret.manager import get_secret_str, get_secret 
 

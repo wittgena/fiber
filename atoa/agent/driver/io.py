@@ -11,8 +11,8 @@ from eco.exception import (
     ServiceUnavailableError,
     Timeout as LiteLLMTimeout,
 )
-from eco.legacy.action.completion import completion as litellm_completion
-from eco.legacy.switch.params import (
+from eco.tenant.action.completion import completion as litellm_completion
+from eco.tenant.switch.params import (
     Delta, 
     ModelResponseStream, 
     StreamingChoices,

@@ -2,9 +2,9 @@
 from typing import Any, Dict, Mapping, List, Optional, Type, Union, cast, get_type_hints, overload
 from pydantic import BaseModel
 
-from eco.legacy.param.legacy import LiteLLM_Params
+from bound.mapper.param.legacy import LiteLLM_Params
 from eco.llama.router.locator import get_llm_provider
-from eco.legacy.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
+from bound.resolver.openai.types import ResponsesAPIOptionalRequestParams, ResponsesAPIResponse, ResponseText
 
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from bound.resolver.model.config.resolver import config

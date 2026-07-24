@@ -1,4 +1,5 @@
-# bound.watcher.snapshot.adapter
+# eco.watcher.snapshot.adapter
+## @lineage: bound.watcher.snapshot.adapter
 ## @lineage: xor.watcher.snapshot.adapter
 ## @lineage: xphi.watcher.snapshot.adapter
 ## @lineage: bound.watcher.sphere.interface

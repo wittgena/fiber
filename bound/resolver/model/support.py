@@ -9,7 +9,7 @@ from bound.resolver.model.cost import model_cost, lookup_base_model_info
 from eco.llama.router.locator import get_llm_provider
 from eco.llama.router.config import get_provider_info, ProviderConfigManager
 
-from eco.legacy.info import ProviderTypes, ProviderTypesSet
+from bound.resolver.model.protype import ProviderTypes, ProviderTypesSet
 from eco.exception import BadRequestError
 from bound.resolver.model.config.resolver import config
 

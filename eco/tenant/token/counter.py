@@ -1,14 +1,4 @@
 # eco.tenant.token.counter
-## @lineage: bound.gateway.token.counter
-## @lineage: gateway.token.counter
-## @lineage: bound.eco.token.counter
-## @lineage: bound.token.counter
-## @lineage: bound.surface.token.counter
-## @lineage: bound.adapter.surface.token.counter
-## @lineage: anchor.provider.token.counter
-## @lineage: anchor.registry.provider.token.counter
-## @lineage: anchor.provider.model.token.counter
-## @lineage: anchor.model.token.counter
 import json
 from typing import (
     Any,
@@ -22,20 +12,18 @@ from typing import (
     cast,
 )
 
-from eco.legacy.anthropic import (
-    AnthropicMessagesToolResultParam,
-    AnthropicMessagesToolUseParam,
-)
-from eco.legacy.openai.types import (
+from bound.legacy.anthropic import AnthropicMessagesToolResultParam, AnthropicMessagesToolUseParam
+from bound.resolver.openai.types import (
     AllMessageValues,
     ChatCompletionNamedToolChoiceParam,
     ChatCompletionToolParam,
     OpenAIMessageContent,
 )
-from eco.legacy.types import SelectTokenizerResponse
-from eco.legacy.switch.params import Message
+from bound.legacy.types import SelectTokenizerResponse
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
+
+from eco.tenant.switch.params import Message
 
 from watcher.plane.emitter import get_emitter
 

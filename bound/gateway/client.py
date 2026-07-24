@@ -22,7 +22,7 @@ from bound.resolver.model.config.constants import (
 )
 
 from eco.exception import Timeout
-from eco.legacy.info import ProviderTypes
+from bound.resolver.model.protype import ProviderTypes
 from bound.gateway.base import (
     VerifyTypes,
     _DEFAULT_TIMEOUT,

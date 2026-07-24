@@ -9,7 +9,7 @@ from base64 import b64encode
 from cryptography.fernet import Fernet
 
 from bound.resolver.model.config.resolver import config
-from eco.legacy.types import CredentialItem
+from bound.legacy.types import CredentialItem
 
 class Cipher:
     def __init__(self, secret_key: str):

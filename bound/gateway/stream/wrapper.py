@@ -12,12 +12,12 @@ import json
 
 from atoa.executor.legacy import executor
 
-from eco.legacy.types import TextChoices, TextCompletionResponse
+from bound.legacy.types import TextChoices, TextCompletionResponse
 from eco.exception import APIError
 from eco.tenant.token.counter import token_counter
 from eco.exception import OpenAIError
-from eco.legacy.types import CallTypes
-from eco.legacy.switch.params import ModelResponse, ModelResponseStream
+from bound.legacy.types import CallTypes
+from eco.tenant.switch.params import ModelResponse, ModelResponseStream
 
 from bound.resolver.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from bound.resolver.model.config.resolver import config

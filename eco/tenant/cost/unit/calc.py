@@ -4,7 +4,7 @@
 ## @lineage: bound.eco.cost.unit.calc
 ## @lineage: bound.proxy.eco.cost.unit.calc
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, TypedDict, cast
-from eco.legacy.types import (
+from bound.legacy.types import (
     CacheCreationTokenDetails,
     CompletionTokensDetailsWrapper,
     ImageResponse,

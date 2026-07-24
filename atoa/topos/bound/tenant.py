@@ -11,7 +11,7 @@ from arch.xor.opt.runtime import RuntimeContext, runtime
 from bound.resolver.model.cost import ModelCostRegistry 
 from eco.tenant.cost.policy import CostPolicy
 from eco.tenant.cost.unit.calc import UnitCostCalculator
-from eco.legacy.types import Usage, ModelInfo
+from bound.legacy.types import Usage, ModelInfo
 
 logger = logging.getLogger("serv.eco")
 

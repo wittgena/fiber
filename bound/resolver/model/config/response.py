@@ -1,21 +1,17 @@
 # bound.resolver.model.config.response
-## @lineage: resolver.model.config.response
-## @lineage: bound.registry.model.config.response
-## @lineage: anchor.registry.model.config.response
-## @lineage: bound.surface.legacy.config.response
 import types
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast, Literal
 import httpx
-from eco.legacy.openai.types import (
+from bound.resolver.openai.types import (
     ResponseInputParam,
     ResponsesAPIOptionalRequestParams,
     ResponsesAPIResponse,
     ResponsesAPIStreamingResponse,
 )
-from eco.legacy.param.response import DeleteResponseResult
-from eco.legacy.param.legacy import GenericLiteLLMParams
-from eco.legacy.info import ProviderTypes
+from eco.tenant.switch.params import DeleteResponseResult
+from bound.mapper.param.legacy import GenericLiteLLMParams
+from bound.resolver.model.protype import ProviderTypes
 from eco.exception import BaseLLMException
 
 LiteLLMLoggingObj = Any

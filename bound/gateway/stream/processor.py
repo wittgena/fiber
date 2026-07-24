@@ -10,12 +10,12 @@ from pydantic import BaseModel
 from bound.resolver.model.api.base import get_api_base
 from bound.resolver.model.config.resolver import config
 
-from eco.legacy.openai.types import OpenAIChatCompletionChunk
-from eco.legacy.info import ProviderTypes
-from eco.legacy.param.legacy import GenericLiteLLMParams
-from eco.legacy.types import Delta, GenericStreamingChunk as GChunk, ChatCompletionMessageToolCall, Function, FunctionCall
+from bound.resolver.openai.types import OpenAIChatCompletionChunk
+from bound.resolver.model.protype import ProviderTypes
+from bound.mapper.param.legacy import GenericLiteLLMParams
+from bound.legacy.types import Delta, GenericStreamingChunk as GChunk, ChatCompletionMessageToolCall, Function, FunctionCall
 
-from eco.legacy.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
+from eco.tenant.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 from bound.mapper.reason import map_finish_reason
 from bound.gateway.parser.header import process_response_headers
 from bound.gateway.parser.stream.chunk import StreamChunkParser

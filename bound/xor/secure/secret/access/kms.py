@@ -1,10 +1,7 @@
 # bound.xor.secure.secret.access.kms
-## @lineage: xor.secure.secret.access.kms
-## @lineage: xphi.xor.secure.secret.access.kms
-## @lineage: xphi.xor.secret.kms
 import enum
 from typing import Dict, List, Literal, Optional
-from eco.legacy.base import PydanticObjectBase
+from arch.topos.bound.surge.model import SurgeBaseModel
 
 class KeyManagementSystem(enum.Enum):
     GOOGLE_KMS = "google_kms"
@@ -17,7 +14,7 @@ class KeyManagementSystem(enum.Enum):
     AWS_KMS = "aws_kms"
     CUSTOM = "custom"
 
-class KeyManagementSettings(PydanticObjectBase):
+class KeyManagementSettings(SurgeBaseModel):
     hosted_keys: Optional[List] = None
     store_virtual_keys: Optional[bool] = False
     prefix_for_stored_virtual_keys: str = "litellm/"

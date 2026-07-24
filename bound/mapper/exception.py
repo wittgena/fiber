@@ -17,7 +17,7 @@ from typing import Any, Optional, Dict
 import httpx
 
 from bound.resolver.model.config.resolver import config
-from eco.legacy.info import ProviderTypes
+from bound.resolver.model.protype import ProviderTypes
 from eco.exception import (
     APIConnectionError,
     APIError,
