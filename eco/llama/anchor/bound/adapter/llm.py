@@ -1,9 +1,4 @@
 # eco.llama.anchor.bound.adapter.llm
-## @lineage: adapter.llama.anchor.bound.adapter.llm
-## @lineage: llama.anchor.bound.adapter.llm
-## @lineage: anchor.inter.bound.adapter.llm
-## @lineage: bound.adapter.inter.llm
-## @lineage: bound.adapter.provider.inter
 """
 @manifold: Universal Bridge Adapter
 @flow: CompletionContext (Brane) -> LLMRouter (Projection) -> LlamaIndex (Execution) -> ModelResponse (Resolution)
@@ -25,6 +20,9 @@ from bound.mapper.state import StateMapper
 from eco.tenant.action.process.pre import CompletionContext
 from eco.llama.router.llm import LLMRouter, TopologyMissingError
 from bound.gateway.stream.wrapper import StreamWrapper
+
+# [수정] 표준화된 예외 처리를 위해 exception_type 임포트 추가
+from bound.mapper.exception import exception_type
 
 from arch.gov.gate import uuid4 
 from phase.bind.resolver import find_current_self, get_invoker
@@ -92,8 +90,16 @@ class InterLLMAdapter(BaseProviderAdapter):
             log.error(f"[InterLLM-{req_id}] 🚨 TopologyMissingError: {te}")
             raise te
         except Exception as e:
-            log.error(f"[InterLLM-{req_id}] 🚨 [LlamaBridge] 모델 인스턴스 생성 실패: {e}", exc_info=True)
-            raise RuntimeError(f"[LlamaBridge] 모델 인스턴스 생성 실패: {e}")
+            # [수정] exc_info=True를 제거하여 불필요한 스택 트레이스 노출 방지
+            log.error(f"[InterLLM-{req_id}] 🚨 [LlamaBridge] 모델 인스턴스 생성 실패: {e}")
+            
+            # [수정] 통합 예외 매퍼를 호출하여 원본 예외를 적절한 시스템 표준 예외(RateLimitError, ServiceUnavailableError 등)로 변환하여 raise
+            exception_type(
+                model=ctx.model,
+                original_exception=e,
+                custom_llm_provider=ctx.custom_llm_provider,
+                completion_kwargs=llama_kwargs
+            )
 
         ## @phase: State Mapping (Context Dict -> ChatMessage) 
         llama_messages = self.mapper.to_llama_messages(ctx.messages)

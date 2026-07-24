@@ -46,7 +46,7 @@ from eco.tenant.switch.params import (
     Delta
 )
 from eco.exception import APIError
-from bound.legacy.types import Logprobs as TextCompletionLogprobs
+from bound.resolver.legacy.types import Logprobs as TextCompletionLogprobs
 from watcher.plane.emitter import get_emitter 
 
 log = get_emitter("response.converter")

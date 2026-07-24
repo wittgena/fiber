@@ -1,5 +1,4 @@
 # eco.tenant.switch.params
-## @lineage: eco.legacy.switch.params
 """
 @desc: Acts as the primary switch to dynamically decouple Brane from external LiteLLM dependencies.
 @flow: System Ignition -> brane Resolution (LITELLM_CONVERT_SWITCH) -> Unified Adapter Binding
@@ -91,7 +90,7 @@ if not LITELLM_CONVERT_SWITCH:
             ChatCompletionMessageToolCallParam,
             ChatCompletionContentPartParam
         )
-        from bound.legacy.types import (
+        from bound.resolver.legacy.types import (
             ChatCompletionDeltaToolCall,
             ChatCompletionRedactedThinkingBlock,
             CompletionTokensDetailsWrapper,
@@ -103,10 +102,10 @@ if not LITELLM_CONVERT_SWITCH:
             TranscriptionUsageDurationObject,
             TranscriptionUsageTokensObject,
         )
-        from bound.legacy.types import Usage
+        from bound.resolver.legacy.types import Usage
         from eco.tenant.call.type import CallTypes
-        from bound.legacy.types import TextChoices, TextCompletionResponse, TranscriptionResponse
-        from bound.legacy.types import ModelResponse, ModelResponseStream, Delta, StreamingChoices, Choices, Message
-        from bound.legacy.types import ChatCompletionMessageToolCall
+        from bound.resolver.legacy.types import TextChoices, TextCompletionResponse, TranscriptionResponse
+        from bound.resolver.legacy.types import ModelResponse, ModelResponseStream, Delta, StreamingChoices, Choices, Message
+        from bound.resolver.legacy.types import ChatCompletionMessageToolCall
     except ImportError as e:
         raise ImportError(f"Failed to load fallback types from internal modules. Error: {e}")

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from eco.tenant.switch.params import Message, ModelResponse, Usage
 from bound.resolver.openai.types import FileSearchTool, ResponsesAPIResponse, WebSearchOptions
-from bound.legacy.types import ModelInfo, SearchContextCostPerQuery, StandardBuiltInToolsParams, PromptTokensDetailsWrapper
+from bound.resolver.legacy.types import ModelInfo, SearchContextCostPerQuery, StandardBuiltInToolsParams, PromptTokensDetailsWrapper
 
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import OPENAI_FILE_SEARCH_COST_PER_1K_CALLS

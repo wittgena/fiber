@@ -12,14 +12,9 @@ from typing import (
     cast,
 )
 
-from bound.legacy.anthropic import AnthropicMessagesToolResultParam, AnthropicMessagesToolUseParam
-from bound.resolver.openai.types import (
-    AllMessageValues,
-    ChatCompletionNamedToolChoiceParam,
-    ChatCompletionToolParam,
-    OpenAIMessageContent,
-)
-from bound.legacy.types import SelectTokenizerResponse
+from bound.resolver.legacy.anthropic import AnthropicMessagesToolResultParam, AnthropicMessagesToolUseParam
+from bound.resolver.openai.types import AllMessageValues, ChatCompletionNamedToolChoiceParam, ChatCompletionToolParam, OpenAIMessageContent
+from bound.resolver.legacy.types import SelectTokenizerResponse
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
 

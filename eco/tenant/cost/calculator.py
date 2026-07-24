@@ -23,7 +23,7 @@ from eco.tenant.cost.parser import (
     _IMAGE_RESPONSE_CALL_TYPES
 )
 
-from bound.legacy.types import StandardBuiltInToolsParams, Usage, CostPerToken
+from bound.resolver.legacy.types import StandardBuiltInToolsParams, Usage, CostPerToken
 from eco.tenant.call.type import CallTypesLiteral
 from bound.mapper.param.rerank import RerankBilledUnits
 from eco.tenant.cost.provider.resolver import CostProvider

@@ -1,865 +1,192 @@
 # eco.exception
-## @lineage: bound.exception
-## @lineage: bound.surface.exception
-## @lineage: bound.adapter.surface.exception
-## @lineage: anchor.surface.exception
 from typing import Any, Dict, Optional, Union
 from enum import Enum
 import httpx
 import openai
 
-_MINIMAL_ERROR_RESPONSE: Optional[httpx.Response] = None
-
 class BraneCommonStrings(Enum):
-    redacted_by_litellm = "redacted by brane. 'brane.turn_off_message_logging=True'"
+    redacted_by_brane = "redacted by brane. 'brane.turn_off_message_logging=True'"
     llm_provider_not_provided = "Unmapped LLM provider for this endpoint. You passed model={model}, custom_llm_provider={custom_llm_provider}."
 
-def _get_minimal_error_response() -> httpx.Response:
-    """Get a cached minimal httpx.Response object for error cases."""
-    global _MINIMAL_ERROR_RESPONSE
-    if _MINIMAL_ERROR_RESPONSE is None:
-        _MINIMAL_ERROR_RESPONSE = httpx.Response(
-            status_code=400,
-            request=httpx.Request(method="GET", url="https://localhost"),
-        )
-    return _MINIMAL_ERROR_RESPONSE
+def _ensure_mock_response(response: Optional[httpx.Response], status_code: int) -> httpx.Response:
+    if response is not None and isinstance(response, httpx.Response) and hasattr(response, "_request"):
+        return response
+    return httpx.Response(
+        status_code=status_code,
+        request=httpx.Request(method="POST", url="https://api.brane.local/v1"),
+    )
 
-class BaseLLMException(Exception):
+def _ensure_mock_request(request: Optional[httpx.Request]) -> httpx.Request:
+    if request is not None and isinstance(request, httpx.Request):
+        return request
+    return httpx.Request(method="POST", url="https://api.brane.local/v1")
+
+class BraneExceptionMixin:
+    def init_brane_attrs(
+        self, message: str, llm_provider: Optional[str], model: Optional[str], 
+        debug_info: Optional[str] = None, max_retries: Optional[int] = None, num_retries: Optional[int] = None
+    ):
+        self.message = f"{self.__class__.__name__}: {message}"
+        self.llm_provider = llm_provider
+        self.model = model
+        self.debug_info = debug_info
+        self.max_retries = max_retries
+        self.num_retries = num_retries
+
+    def __str__(self) -> str:
+        _msg = self.message
+        if getattr(self, "num_retries", None):
+            _msg += f" | Brane Retried: {self.num_retries} times"
+        if getattr(self, "max_retries", None):
+            _msg += f", Max Retries: {self.max_retries}"
+        return _msg
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+class BaseLLMException(Exception, BraneExceptionMixin):
     def __init__(
-        self,
-        status_code: int,
-        message: str,
-        headers: Optional[Union[dict, httpx.Headers]] = None,
-        request: Optional[httpx.Request] = None,
-        response: Optional[httpx.Response] = None,
-        body: Optional[dict] = None,
+        self, status_code: int, message: str, headers: Optional[Union[dict, httpx.Headers]] = None,
+        request: Optional[httpx.Request] = None, response: Optional[httpx.Response] = None, body: Optional[dict] = None,
     ):
         self.status_code = status_code
-        self.message: str = message
         self.headers = headers
-        if request:
-            self.request = request
-        else:
-            self.request = httpx.Request(method="POST", url="https://localhost/docs/exceptions")
-        if response:
-            self.response = response
-        else:
-            self.response = httpx.Response(
-                status_code=status_code, request=self.request
-            )
+        self.request = _ensure_mock_request(request)
+        self.response = response or httpx.Response(status_code=status_code, request=self.request)
         self.body = body
-        super().__init__(
-            self.message
-        )
+        self.init_brane_attrs(message, None, None)
+        Exception.__init__(self, self.message)
 
-class AuthenticationError(openai.AuthenticationError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class AuthenticationError(openai.AuthenticationError, BraneExceptionMixin):
+    def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 401
-        self.message = "brane.AuthenticationError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        self.response = response or httpx.Response(
-            status_code=self.status_code,
-            request=httpx.Request(method="GET", url="https://litellm.ai"),
-        )
-        super().__init__(
-            self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        openai.AuthenticationError.__init__(self, self.message, response=self.response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-# raise when invalid models passed, example gpt-8
-class NotFoundError(openai.NotFoundError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class NotFoundError(openai.NotFoundError, BraneExceptionMixin):
+    def __init__(self, message, model, llm_provider, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 404
-        self.message = "litellm.NotFoundError: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        self.response = response or httpx.Response(
-            status_code=self.status_code,
-            request=httpx.Request(
-                method="GET", url="https://litellm.ai"
-            ),  # mock request object
-        )
-        super().__init__(
-            self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        openai.NotFoundError.__init__(self, self.message, response=self.response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class BadRequestError(openai.BadRequestError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-        body: Optional[dict] = None,
-    ):
+class BadRequestError(openai.BadRequestError, BraneExceptionMixin):
+    def __init__(self, message, model, llm_provider, response=None, debug_info=None, max_retries=None, num_retries=None, body=None):
         self.status_code = 400
-        self.message = "litellm.BadRequestError: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        # Use response if it's a valid httpx.Response with a request, otherwise use minimal error response
-        # Note: We check _request (not .request property) to avoid RuntimeError when _request is None
-        if (
-            response is not None
-            and isinstance(response, httpx.Response)
-            and hasattr(response, "_request")
-            and getattr(response, "_request", None) is not None
-        ):
-            self.response = response
-        else:
-            self.response = _get_minimal_error_response()
-        super().__init__(
-            self.message, response=self.response, body=body
-        )  # Call the base class constructor with the parameters it needs
-
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        openai.BadRequestError.__init__(self, self.message, response=self.response, body=body)
 
 class ImageFetchError(BadRequestError):
-    def __init__(
-        self,
-        message,
-        model=None,
-        llm_provider=None,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-        body: Optional[dict] = None,
-    ):
-        super().__init__(
-            message=message,
-            model=model,
-            llm_provider=llm_provider,
-            response=response,
-            debug_info=debug_info,
-            max_retries=max_retries,
-            num_retries=num_retries,
-            body=body,
-        )
+    pass
 
-
-class UnprocessableEntityError(openai.UnprocessableEntityError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        response: httpx.Response,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class UnprocessableEntityError(openai.UnprocessableEntityError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, model, llm_provider, response, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 422
-        self.message = "litellm.UnprocessableEntityError: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        super().__init__(
-            self.message, response=response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        openai.UnprocessableEntityError.__init__(self, self.message, response=response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class Timeout(openai.APITimeoutError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-        headers: Optional[dict] = None,
-        exception_status_code: Optional[int] = None,
-    ):
-        request = httpx.Request(
-            method="POST",
-            url="https://api.openai.com/v1",
-        )
-        super().__init__(
-            request=request
-        )  # Call the base class constructor with the parameters it needs
-        self.status_code = exception_status_code or 408
-        self.message = "litellm.Timeout: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
+class Timeout(openai.APITimeoutError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, model, llm_provider, debug_info=None, max_retries=None, num_retries=None, headers=None, exception_status_code=408):
+        self.status_code = exception_status_code
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         self.headers = headers
+        request = _ensure_mock_request(None)
+        openai.APITimeoutError.__init__(self, request=request)
 
-    # custom function to convert to str
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class PermissionDeniedError(openai.PermissionDeniedError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        response: httpx.Response,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class PermissionDeniedError(openai.PermissionDeniedError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, response, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 403
-        self.message = "litellm.PermissionDeniedError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        super().__init__(
-            self.message, response=response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        openai.PermissionDeniedError.__init__(self, self.message, response=response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class RateLimitError(openai.RateLimitError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class RateLimitError(openai.RateLimitError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 429
-        self.message = "litellm.RateLimitError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        _response_headers = (
-            getattr(response, "headers", None) if response is not None else None
-        )
-        self.response = httpx.Response(
-            status_code=429,
-            headers=_response_headers,
-            request=httpx.Request(
-                method="POST",
-                url=" https://cloud.google.com/vertex-ai/",
-            ),
-        )
-        super().__init__(
-            self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
-        self.code = "429"
-        self.type = "throttling_error"
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        self.code, self.type = "429", "throttling_error"
+        openai.RateLimitError.__init__(self, self.message, response=self.response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
+class ContextWindowExceededError(BadRequestError): 
+    pass
 
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-# sub class of rate limit error - meant to give more granularity for error handling context window exceeded errors
-class ContextWindowExceededError(BadRequestError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-    ):
-        self.status_code = 400
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
-        super().__init__(
-            message=message,
-            model=self.model,  # type: ignore
-            llm_provider=self.llm_provider,  # type: ignore
-            response=response,
-            debug_info=self.debug_info,
-        )  # Call the base class constructor with the parameters it needs
-
-        # set after, to make it clear the raised error is a context window exceeded error
-        self.message = "litellm.ContextWindowExceededError: {}".format(self.message)
-
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-# sub class of bad request error - meant to help us catch guardrails-related errors on proxy.
-class RejectedRequestError(BadRequestError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        request_data: dict,
-        debug_info: Optional[str] = None,
-    ):
-        self.status_code = 400
-        self.message = "litellm.RejectedRequestError: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
+class RejectedRequestError(BadRequestError):
+    def __init__(self, message, model, llm_provider, request_data, debug_info=None):
+        super().__init__(message=message, model=model, llm_provider=llm_provider, debug_info=debug_info)
         self.request_data = request_data
-        request = httpx.Request(method="POST", url="https://api.openai.com/v1")
-        response = httpx.Response(status_code=400, request=request)
-        super().__init__(
-            message=self.message,
-            model=self.model,  # type: ignore
-            llm_provider=self.llm_provider,  # type: ignore
-            response=response,
-            debug_info=self.debug_info,
-        )  # Call the base class constructor with the parameters it needs
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class ContentPolicyViolationError(BadRequestError):  # type: ignore
-    #  Error code: 400 - {'error': {'code': 'content_policy_violation', 'message': 'Your request was rejected as a result of our safety system. Image descriptions generated from your prompt may contain text that is not allowed by our safety system. If you believe this was done in error, your request may succeed if retried, or by adjusting your prompt.', 'param': None, 'type': 'invalid_request_error'}}
-    def __init__(
-        self,
-        message,
-        model,
-        llm_provider,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        provider_specific_fields: Optional[dict] = None,
-        body: Optional[dict] = None,
-    ):
-        self.status_code = 400
-        self.message = "litellm.ContentPolicyViolationError: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
+class ContentPolicyViolationError(BadRequestError):
+    def __init__(self, message, model, llm_provider, response=None, debug_info=None, provider_specific_fields=None, body=None):
+        super().__init__(message=message, model=model, llm_provider=llm_provider, response=response, debug_info=debug_info, body=body)
         self.provider_specific_fields = provider_specific_fields
-        super().__init__(
-            message=self.message,
-            model=self.model,  # type: ignore
-            llm_provider=self.llm_provider,  # type: ignore
-            response=response,
-            debug_info=self.debug_info,
-            body=body,
-        )  # Call the base class constructor with the parameters it needs
 
-    def __str__(self):
-        return self._transform_error_to_string()
-
-    def __repr__(self):
-        return self._transform_error_to_string()
-
-    def _transform_error_to_string(self) -> str:
-        """
-        Transform the error to a string
-        """
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class ServiceUnavailableError(openai.APIStatusError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class ServiceUnavailableError(openai.APIStatusError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 503
-        self.message = "litellm.ServiceUnavailableError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        _response_headers = (
-            getattr(response, "headers", None) if response is not None else None
-        )
-        self.response = httpx.Response(
-            status_code=self.status_code,
-            headers=_response_headers,
-            request=httpx.Request(
-                method="POST",
-                url=" https://cloud.google.com/vertex-ai/",
-            ),
-        )
-        super().__init__(
-            self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        openai.APIStatusError.__init__(self, self.message, response=self.response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class BadGatewayError(openai.APIStatusError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class BadGatewayError(openai.APIStatusError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 502
-        self.message = "litellm.BadGatewayError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        _response_headers = (
-            getattr(response, "headers", None) if response is not None else None
-        )
-        self.response = httpx.Response(
-            status_code=self.status_code,
-            headers=_response_headers,
-            request=httpx.Request(
-                method="POST",
-                url=" https://cloud.google.com/vertex-ai/",
-            ),
-        )
-        super().__init__(
-            self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        openai.APIStatusError.__init__(self, self.message, response=self.response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-class InternalServerError(openai.InternalServerError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class InternalServerError(openai.InternalServerError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 500
-        self.message = "litellm.InternalServerError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        _response_headers = (
-            getattr(response, "headers", None) if response is not None else None
-        )
-        self.response = httpx.Response(
-            status_code=self.status_code,
-            headers=_response_headers,
-            request=httpx.Request(
-                method="POST",
-                url=" https://cloud.google.com/vertex-ai/",
-            ),
-        )
-        super().__init__(
-            self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.response = _ensure_mock_response(response, self.status_code)
+        openai.InternalServerError.__init__(self, self.message, response=self.response, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-# raise this when the API returns an invalid response object - https://github.com/openai/openai-python/blob/1be14ee34a0f8e42d3f9aa5451aa4cb161f1781f/openai/api_requestor.py#L401
-class APIError(openai.APIError):  # type: ignore
-    def __init__(
-        self,
-        status_code: int,
-        message,
-        llm_provider,
-        model,
-        request: Optional[httpx.Request] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
+class APIError(openai.APIError, BraneExceptionMixin): # type: ignore
+    def __init__(self, status_code: int, message, llm_provider, model, request=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = status_code
-        self.message = "litellm.APIError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        if request is None:
-            request = httpx.Request(method="POST", url="https://api.openai.com/v1")
-        super().__init__(self.message, request=request, body=None)  # type: ignore
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        request = _ensure_mock_request(request)
+        openai.APIError.__init__(self, self.message, request=request, body=None)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-# raised if an invalid request (not get, delete, put, post) is made
-class APIConnectionError(openai.APIConnectionError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        request: Optional[httpx.Request] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
-        self.message = "litellm.APIConnectionError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
+class APIConnectionError(openai.APIConnectionError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, request=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 500
-        self.debug_info = debug_info
-        self.request = httpx.Request(method="POST", url="https://api.openai.com/v1")
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        super().__init__(message=self.message, request=self.request)
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        self.request = _ensure_mock_request(request)
+        openai.APIConnectionError.__init__(self, message=self.message, request=self.request)
 
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-
-# raised if an invalid request (not get, delete, put, post) is made
-class APIResponseValidationError(openai.APIResponseValidationError):  # type: ignore
-    def __init__(
-        self,
-        message,
-        llm_provider,
-        model,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
-        self.message = "litellm.APIResponseValidationError: {}".format(message)
-        self.llm_provider = llm_provider
-        self.model = model
-        request = httpx.Request(method="POST", url="https://api.openai.com/v1")
-        response = httpx.Response(status_code=500, request=request)
-        self.debug_info = debug_info
-        self.max_retries = max_retries
-        self.num_retries = num_retries
-        super().__init__(response=response, body=None, message=message)
-
-    def __str__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
-    def __repr__(self):
-        _message = self.message
-        if self.num_retries:
-            _message += f" Brane Retried: {self.num_retries} times"
-        if self.max_retries:
-            _message += f", Brane Max Retries: {self.max_retries}"
-        return _message
-
+class APIResponseValidationError(openai.APIResponseValidationError, BraneExceptionMixin): # type: ignore
+    def __init__(self, message, llm_provider, model, debug_info=None, max_retries=None, num_retries=None):
+        self.init_brane_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
+        response = _ensure_mock_response(None, 500)
+        openai.APIResponseValidationError.__init__(self, response=response, body=None, message=self.message)
 
 class JSONSchemaValidationError(APIResponseValidationError):
-    def __init__(
-        self, model: str, llm_provider: str, raw_response: str, schema: str
-    ) -> None:
+    def __init__(self, model: str, llm_provider: str, raw_response: str, schema: str) -> None:
         self.raw_response = raw_response
         self.schema = schema
-        self.model = model
-        message = "litellm.JSONSchemaValidationError: model={}, returned an invalid response={}, for schema={}.\nAccess raw response with `e.raw_response`".format(
-            model, raw_response, schema
-        )
-        self.message = message
-        super().__init__(model=model, message=message, llm_provider=llm_provider)
+        message = f"model={model}, returned an invalid response={raw_response}, for schema={schema}."
+        super().__init__(message=message, llm_provider=llm_provider, model=model)
 
-
-class OpenAIError(openai.OpenAIError):  # type: ignore
+class OpenAIError(openai.OpenAIError):
     def __init__(self, original_exception=None):
         super().__init__()
         self.llm_provider = "openai"
 
-
 class UnsupportedParamsError(BadRequestError):
-    def __init__(
-        self,
-        message,
-        llm_provider: Optional[str] = None,
-        model: Optional[str] = None,
-        status_code: int = 400,
-        response: Optional[httpx.Response] = None,
-        debug_info: Optional[str] = None,
-        max_retries: Optional[int] = None,
-        num_retries: Optional[int] = None,
-    ):
-        self.status_code = 400
-        self.message = "litellm.UnsupportedParamsError: {}".format(message)
-        self.model = model
-        self.llm_provider = llm_provider
-        self.debug_info = debug_info
-        response = response or httpx.Response(
-            status_code=self.status_code,
-            request=httpx.Request(
-                method="GET", url="https://litellm.ai"
-            ),  # mock request object
-        )
-        self.max_retries = max_retries
-        self.num_retries = num_retries
+    def __init__(self, message, llm_provider=None, model=None, status_code=400, response=None, debug_info=None, max_retries=None, num_retries=None):
+        super().__init__(message=message, model=model, llm_provider=llm_provider, response=response, debug_info=debug_info, max_retries=max_retries, num_retries=num_retries)
+        self.status_code = status_code
 
-
-LITELLM_EXCEPTION_TYPES = [
-    AuthenticationError,
-    NotFoundError,
-    BadRequestError,
-    UnprocessableEntityError,
-    UnsupportedParamsError,
-    Timeout,
-    PermissionDeniedError,
-    RateLimitError,
-    ContextWindowExceededError,
-    RejectedRequestError,
-    ContentPolicyViolationError,
-    InternalServerError,
-    ServiceUnavailableError,
-    BadGatewayError,
-    APIError,
-    APIConnectionError,
-    APIResponseValidationError,
-    OpenAIError,
-    InternalServerError,
-    JSONSchemaValidationError,
+EXCEPTION_TYPES = [
+    AuthenticationError, NotFoundError, BadRequestError, UnprocessableEntityError,
+    UnsupportedParamsError, Timeout, PermissionDeniedError, RateLimitError,
+    ContextWindowExceededError, RejectedRequestError, ContentPolicyViolationError,
+    InternalServerError, ServiceUnavailableError, BadGatewayError, APIError,
+    APIConnectionError, APIResponseValidationError, OpenAIError, JSONSchemaValidationError,
 ]
-
 
 class BudgetExceededError(Exception):
     def __init__(
@@ -875,27 +202,7 @@ class BudgetExceededError(Exception):
         self.message = message
         super().__init__(message)
 
-
-## DEPRECATED ##
-class InvalidRequestError(openai.BadRequestError):  # type: ignore
-    def __init__(self, message, model, llm_provider):
-        self.status_code = 400
-        self.message = message
-        self.model = model
-        self.llm_provider = llm_provider
-        self.response = httpx.Response(
-            status_code=400,
-            request=httpx.Request(
-                method="GET", url="https://litellm.ai"
-            ),  # mock request object
-        )
-        super().__init__(
-            message=self.message, response=self.response, body=None
-        )  # Call the base class constructor with the parameters it needs
-
-
 class MockException(openai.APIError):
-    # used for testing
     def __init__(
         self,
         status_code: int,
@@ -908,7 +215,7 @@ class MockException(openai.APIError):
         num_retries: Optional[int] = None,
     ):
         self.status_code = status_code
-        self.message = "litellm.MockException: {}".format(message)
+        self.message = "brane.MockException: {}".format(message)
         self.llm_provider = llm_provider
         self.model = model
         self.debug_info = debug_info
@@ -980,7 +287,7 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
     ):
         original_status = getattr(original_exception, "status_code", None)
         self.status_code = int(original_status) if original_status is not None else 503
-        self.message = f"litellm.MidStreamFallbackError: {message}"
+        self.message = f"brane.MidStreamFallbackError: {message}"
         self.model = model
         self.llm_provider = llm_provider
         self.original_exception = original_exception
@@ -1042,18 +349,6 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
 
 
 class ModifyResponseException(Exception):
-    """
-    Exception raised when a guardrail wants to modify the response.
-
-    This exception carries the synthetic response that should be returned
-    to the user instead of calling the LLM or instead of the LLM's response.
-    It should be caught by the proxy and returned with a 200 status code.
-
-    This is a base exception that all guardrails can use to replace responses,
-    allowing violation messages to be returned as successful responses
-    rather than errors.
-    """
-
     def __init__(
         self,
         message: str,
@@ -1069,10 +364,7 @@ class ModifyResponseException(Exception):
         self.detection_info = detection_info or {}
         super().__init__(message)
 
-
-class GuardrailInterventionNormalStringError(
-    Exception
-):  # custom exception to raise when a guardrail intervenes, but we want to return a normal string to the user
+class GuardrailInterventionNormalStringError(Exception):
     def __init__(self, message: str):
         self.message = message
         super().__init__(self.message)
@@ -1085,18 +377,6 @@ class GuardrailInterventionNormalStringError(
 
 
 class SensitiveDataRouteException(Exception):
-    """
-    Exception raised when a guardrail detects sensitive data and wants to reroute the request.
-
-    Instead of blocking the request, this exception signals that the request should be
-    routed to a different model (typically an on-premise model for data privacy).
-
-    The proxy catches this exception and:
-    1. Reroutes the current request to the specified model
-    2. When sticky_session_routing is True, stores the routing decision in session
-       cache so all subsequent requests in the same session are routed to the same model
-    """
-
     def __init__(
         self,
         route_to_model: str,

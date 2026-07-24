@@ -10,25 +10,25 @@ import anyio
 import httpx
 import json
 
-from atoa.executor.legacy import executor
+from agent.executor.legacy import executor
 
-from bound.legacy.types import TextChoices, TextCompletionResponse
+from bound.resolver.legacy.types import TextChoices, TextCompletionResponse
 from eco.exception import APIError
 from eco.tenant.token.counter import token_counter
 from eco.exception import OpenAIError
-from bound.legacy.types import CallTypes
+from bound.resolver.legacy.types import CallTypes
 from eco.tenant.switch.params import ModelResponse, ModelResponseStream
 
 from bound.resolver.model.config.constants import LITELLM_MAX_STREAMING_DURATION_SECONDS
 from bound.resolver.model.config.resolver import config
 from bound.mapper.exception import exception_type
-from bound.gateway.io.rule import Rules
+from bound.gateway.rule import Rules
 from bound.gateway.stream.processor import StreamChunkProcessor
 
 from eco.watcher.delegator import LogDelegator
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("streaming.wrapper")
+log = get_emitter("stream.wrapper")
 
 _SYNC_ITER_EXHAUSTED = object()
 def _next_sync_or_exhausted(it: Any) -> Any:

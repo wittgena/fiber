@@ -1,10 +1,4 @@
 # bound.resolver.adapter
-## @lineage: resolver.adapter
-## @lineage: bound.registry.adapter
-## @lineage: anchor.registry.adapter
-## @lineage: anchor.provider.adapter
-## @lineage: anchor.surface.registry.adapter
-## @lineage: bound.adapter.provider.registry
 """
 @manifold: Multi-dimensional Adapter Registry (Microkernel Core)
 @flow: (Task Type, Provider Vector) -> Lazy Instantiation -> Adapter Binding

@@ -13,7 +13,7 @@ from bound.resolver.model.config.resolver import config
 from bound.resolver.openai.types import OpenAIChatCompletionChunk
 from bound.resolver.model.protype import ProviderTypes
 from bound.mapper.param.legacy import GenericLiteLLMParams
-from bound.legacy.types import Delta, GenericStreamingChunk as GChunk, ChatCompletionMessageToolCall, Function, FunctionCall
+from bound.resolver.legacy.types import Delta, GenericStreamingChunk as GChunk, ChatCompletionMessageToolCall, Function, FunctionCall
 
 from eco.tenant.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 from bound.mapper.reason import map_finish_reason

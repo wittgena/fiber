@@ -24,9 +24,9 @@ from typing import Any, Dict, List, Literal, Callable, Optional, Tuple, Type, Un
 from dataclasses import dataclass, field
 
 from bound.resolver.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
-from bound.legacy.types import EmbeddingResponse
+from bound.resolver.legacy.types import EmbeddingResponse
 from eco.tenant.switch.params import ModelResponse
-from bound.legacy.types import all_litellm_params
+from bound.resolver.legacy.types import all_litellm_params
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.support import supports_httpx_timeout
 from eco.llama.router.config import ProviderConfigManager

@@ -12,16 +12,15 @@ from dataclasses import dataclass
 from functools import wraps
 from weakref import WeakKeyDictionary
 
-from atoa.executor.legacy import executor
+from agent.executor.legacy import executor
 from bound.resolver.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from bound.resolver.model.config.resolver import config
-
-from bound.gateway.io.rule import Rules
+from bound.gateway.rule import Rules
 from bound.gateway.stream.wrapper import stream_chunk_builder
-from bound.legacy.types import CallTypes
+from bound.resolver.legacy.types import CallTypes
 from eco.watcher.delegator import LogDelegator
 
-from bound.xor.secure.secret.validator import CredentialAccessor
+from agent.eco.secure.secret.validator import CredentialAccessor
 
 from watcher.plane.emitter import get_emitter
 

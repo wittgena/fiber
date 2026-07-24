@@ -38,9 +38,9 @@ from bound.resolver.model.config.base import BaseConfig
 from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_CHAT_COMPLETION_PARAM_VALUES
 
-from bound.legacy.anthropic import AnthropicThinkingParam
+from bound.resolver.legacy.anthropic import AnthropicThinkingParam
 from bound.resolver.openai.types import AllMessageValues, OpenAIWebSearchOptions
-from bound.legacy.types import Embedding, Function, ProviderTypes
+from bound.resolver.legacy.types import Embedding, Function, ProviderTypes
 from eco.llama.router.config import ProviderConfigManager
 from bound.resolver.model.support import get_supported_openai_params
 

@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 
 from bound.resolver.model.cost import lookup_base_model_info
 from eco.llama.router.config import get_provider_info
-from bound.legacy.types import ModelInfo
+from bound.resolver.legacy.types import ModelInfo
 from eco.tenant.action.param.format import BaseLLMModelInfo, type_to_response_format_param
 from bound.resolver.model.config.resolver import config
 

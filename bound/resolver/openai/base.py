@@ -1,13 +1,12 @@
 # bound.resolver.openai.base
-## @lineage: eco.legacy.openai.base
-## @lineage: adapter.legacy.openai.base
-## @lineage: bound.surface.legacy.openai.base
-## @lineage: bound.adapter.surface.legacy.openai.base
 import hashlib
 import inspect
 import json
 import os
 import ssl
+import time
+import uuid
+import httpx
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -20,7 +19,6 @@ from typing import (
     Union,
 )
 
-import httpx
 import openai
 from openai import AsyncAzureOpenAI, AsyncOpenAI, AzureOpenAI, OpenAI
 
@@ -30,10 +28,7 @@ if TYPE_CHECKING:
 from bound.resolver.model.config.resolver import config
 from eco.exception import BaseLLMException
 from bound.resolver.model.config.constants import _DEFAULT_TTL_FOR_HTTPX_CLIENTS
-from bound.gateway.client import AsyncHTTPClient
-from bound.gateway.stream.secure import get_ssl_configuration
-from bound.resolver.openai.mock import MockOpenAITransport
-
+from bound.gateway.client import AsyncHTTPClient, get_ssl_configuration
 
 def _get_client_init_params(cls: type) -> Tuple[str, ...]:
     """Extract __init__ parameter names (excluding 'self') from a class."""
@@ -278,3 +273,72 @@ def get_openai_credentials(
         api_key=resolved_api_key,
         organization=resolved_organization,
     )
+
+def _mock_id() -> str:
+    return f"chatcmpl-mock-{uuid.uuid4().hex[:8]}"
+
+
+def _chat_completion_json(model: str) -> dict:
+    """Return a minimal valid ChatCompletion object."""
+    return {
+        "id": _mock_id(),
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Mock response",
+                },
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 1,
+            "completion_tokens": 1,
+            "total_tokens": 2,
+        },
+    }
+
+
+_JSON_HEADERS = {
+    "content-type": "application/json",
+}
+
+class MockOpenAITransport(httpx.AsyncBaseTransport, httpx.BaseTransport):
+    """
+    httpx transport that returns canned OpenAI ChatCompletion responses.
+
+    Supports both async (AsyncOpenAI) and sync (OpenAI) SDK paths.
+    """
+
+    @staticmethod
+    def _parse_request(request: httpx.Request) -> Tuple[str, bool]:
+        """Extract model from the request body."""
+        try:
+            body = json.loads(request.content)
+        except (json.JSONDecodeError, ValueError):
+            return ("mock-model", False)
+        model = body.get("model", "mock-model")
+        return (model, False)
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        model, _ = self._parse_request(request)
+        body = json.dumps(_chat_completion_json(model)).encode()
+        return httpx.Response(
+            status_code=200,
+            headers=_JSON_HEADERS,
+            content=body,
+        )
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        model, _ = self._parse_request(request)
+        body = json.dumps(_chat_completion_json(model)).encode()
+        return httpx.Response(
+            status_code=200,
+            headers=_JSON_HEADERS,
+            content=body,
+        )
+

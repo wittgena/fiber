@@ -9,7 +9,7 @@
 from typing import Any
 from pydantic import BaseModel, Field, PrivateAttr, model_serializer
 
-from atoa.registry import RegistryEvent
+from agent.registry import RegistryEvent
 from eco.watcher.snapshot.metrics import Metrics
 from watcher.plane.emitter import get_logger
 

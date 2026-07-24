@@ -1,9 +1,4 @@
 # bound.mapper.exception
-## @lineage: bound.gateway.adapter.mapper.exception
-## @lineage: gateway.adapter.mapper.exception
-## @lineage: eco.mapper.exception
-## @lineage: adapter.mapper.exception
-## @lineage: bound.adapter.mapper.exception
 """
 @desc: 
 - Standardized LLM Provider exception mapping module
@@ -33,9 +28,9 @@ from eco.exception import (
     ServiceUnavailableError,
     Timeout,
     UnprocessableEntityError,
+    EXCEPTION_TYPES
 )
-from bound.xor.secure.secret.redact import redact_string
-
+from agent.eco.secure.secret.redact import redact_string
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("mapping.exception")
@@ -68,24 +63,23 @@ SEMANTIC_ERROR_REGEX = [
     (re.compile(r"timeout|timed out", re.IGNORECASE), Timeout),
 ]
 
-
 def exception_type(
     model: Optional[str],
     original_exception: Exception,
     custom_llm_provider: Optional[str],
-    completion_kwargs: Optional[Dict[str, Any]] = None, # [FIX 2] 가변 기본 인자 방지
-    extra_kwargs: Optional[Dict[str, Any]] = None,      # [FIX 2] 가변 기본 인자 방지
+    completion_kwargs: Optional[Dict[str, Any]] = None, 
+    extra_kwargs: Optional[Dict[str, Any]] = None,      
 ):
     completion_kwargs = completion_kwargs or {}
     extra_kwargs = extra_kwargs or {}
 
     ## @phase: validation, @desc: Return immediately if already mapped
-    if any(isinstance(original_exception, exc_type) for exc_type in config.LITELLM_EXCEPTION_TYPES):
+    if any(isinstance(original_exception, exc_type) for exc_type in EXCEPTION_TYPES):
         return original_exception
 
     ## @phase: extraction, @desc: Extract headers
-    litellm_response_headers = getattr(original_exception, "headers", None) or \
-                               getattr(getattr(original_exception, "response", None), "headers", None)
+    response_headers = getattr(original_exception, "headers", None) or \
+                       getattr(getattr(original_exception, "response", None), "headers", None)
 
     try:
         ## @phase: extraction, @desc: Safely extract error string and status code
@@ -94,12 +88,10 @@ def exception_type(
         response_obj = getattr(original_exception, "response", None)
 
         provider_name = (custom_llm_provider.capitalize() if custom_llm_provider else "Unknown")
-        exception_provider_prefix = f"{provider_name}Exception"
-
+        
         ## @phase: context_building, @desc: Assemble extra debug information
         extra_information = f"\nModel: {model}"
         try:
-            # [FIX 1] 지연 임포트(Lazy Import) 적용하여 순환 참조(Circular Dependency) 고리 완벽 차단
             from bound.resolver.model.api.base import get_api_base
             _api_base = get_api_base(model=model or "", optional_params=extra_kwargs)
             if _api_base: 
@@ -108,7 +100,7 @@ def exception_type(
             pass
 
         common_kwargs = {
-            "message": f"{exception_provider_prefix} - {error_str}",
+            "message": f"[{provider_name}] {error_str}",
             "llm_provider": custom_llm_provider,
             "model": model,
             "response": response_obj,
@@ -119,14 +111,14 @@ def exception_type(
         for pattern, exception_class in SEMANTIC_ERROR_REGEX:
             if pattern.search(error_str):
                 raised_exc = exception_class(**common_kwargs)
-                setattr(raised_exc, "litellm_response_headers", litellm_response_headers)
+                setattr(raised_exc, "response_headers", response_headers)
                 raise raised_exc
 
         ## @phase: status_code_mapping - Standard mapping based on HTTP status codes
         if status_code in STATUS_CODE_MAPPING:
             exception_class = STATUS_CODE_MAPPING[status_code]
             raised_exc = exception_class(**common_kwargs)
-            setattr(raised_exc, "litellm_response_headers", litellm_response_headers)
+            setattr(raised_exc, "response_headers", response_headers)
             raise raised_exc
 
         ## @phase: fallback - Handle unknown errors or generic 500+ server errors
@@ -134,24 +126,25 @@ def exception_type(
             raised_exc = APIError(status_code=status_code, **common_kwargs)
         else:
             raised_exc = APIConnectionError(
-                message=f"{exception_provider_prefix} APIConnectionError - {error_str}\n{redact_string(traceback.format_exc())}",
+                message=f"[{provider_name}] {error_str}\n{redact_string(traceback.format_exc())}",
                 llm_provider=custom_llm_provider,
                 model=model,
                 request=getattr(original_exception, "request", None),
                 debug_info=extra_information
             )
-        setattr(raised_exc, "litellm_response_headers", litellm_response_headers)
+        setattr(raised_exc, "response_headers", response_headers)
         raise raised_exc
 
     except Exception as e:
         ## @phase: catch_all - Final safety net for pipeline failures
-        if hasattr(e, "litellm_response_headers"):
+        if hasattr(e, "response_headers"):
             raise e
             
+        _safe_provider = custom_llm_provider.capitalize() if custom_llm_provider else "Unknown"
         fallback_exc = APIConnectionError(
-            message=f"{original_exception}\n{redact_string(traceback.format_exc())}",
+            message=f"[{_safe_provider}] {original_exception}\n{redact_string(traceback.format_exc())}",
             llm_provider=custom_llm_provider or "",
             model=model or "",
         )
-        setattr(fallback_exc, "litellm_response_headers", litellm_response_headers)
+        setattr(fallback_exc, "response_headers", response_headers)
         raise fallback_exc

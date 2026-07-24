@@ -17,7 +17,7 @@ from bound.resolver.openai.types import (
     ResponseAPIUsage,
     ResponsesAPIResponse,
 )
-from bound.legacy.types import (
+from bound.resolver.legacy.types import (
     LiteLLMRealtimeStreamLoggingObject, Usage,
     EmbeddingResponse, ImageResponse, TextCompletionResponse, TranscriptionResponse,
     TranscriptionUsageDurationObject, TranscriptionUsageTokensObject,
@@ -26,7 +26,7 @@ from bound.legacy.types import (
 from eco.tenant.call.type import CallTypes, CallTypesLiteral
 
 try:
-    from bound.legacy.types import LiteLLMSendMessageResponse
+    from bound.resolver.legacy.types import LiteLLMSendMessageResponse
 except ImportError:
     LiteLLMSendMessageResponse = Any
 
@@ -205,7 +205,7 @@ class UsageTelemetryParser:
 
     @staticmethod
     def combine_usage_objects(usage_objects: List[Usage]) -> Usage:
-        from bound.legacy.types import CompletionTokensDetailsWrapper, PromptTokensDetailsWrapper
+        from bound.resolver.legacy.types import CompletionTokensDetailsWrapper, PromptTokensDetailsWrapper
         combined = Usage()
 
         for usage in usage_objects:

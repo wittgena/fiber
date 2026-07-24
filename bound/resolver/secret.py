@@ -1,7 +1,4 @@
 # bound.resolver.secret
-## @lineage: resolver.secret
-## @lineage: bound.registry.secret
-## @lineage: anchor.registry.secret
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from pydantic import Field, PrivateAttr, SecretStr

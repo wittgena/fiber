@@ -20,7 +20,7 @@ from bound.resolver.model.config.resolver import config
 from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
 from bound.resolver.model.protype import ProviderTypes
 
-from bound.legacy.types import EmbeddingResponse
+from bound.resolver.legacy.types import EmbeddingResponse
 from bound.gateway.parser.response import convert_to_model_response_object
 from bound.gateway.stream.wrapper import StreamWrapper
 from bound.resolver.openai.base import (
@@ -29,7 +29,6 @@ from bound.resolver.openai.base import (
     drop_params_from_unprocessable_entity_error,
 )
 from bound.resolver.openai.config import OpenAIConfig
-
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("openai.completion")
@@ -58,8 +57,6 @@ class OpenAIContext:
     request_data: dict = field(default_factory=dict)
     stream_options: Optional[dict] = None
 
-
-# [CHANGED] BaseLLM 상속 제거, BaseOpenAILLM 단일 상속으로 변경
 class OpenAIChatCompletion(BaseOpenAILLM):
     def __init__(self) -> None:
         super().__init__()

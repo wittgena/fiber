@@ -1,13 +1,8 @@
 # bound.resolver.openai.response
-## @lineage: eco.legacy.openai.response
-## @lineage: adapter.legacy.openai.response
-## @lineage: bound.surface.legacy.openai.response
-## @lineage: bound.adapter.surface.legacy.openai.response
-## @lineage: bound.surface.response.iterator
 import json
 from abc import abstractmethod
 from typing import List, Optional, Union, cast
-from bound.legacy.types import GenericStreamingChunk
+from bound.resolver.legacy.types import GenericStreamingChunk
 from bound.gateway.stream.wrapper import StreamWrapper
 from eco.tenant.switch.params import Choices, Delta, ModelResponse, ModelResponseStream, StreamingChoices
 
