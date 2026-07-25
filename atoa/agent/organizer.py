@@ -9,8 +9,8 @@ from typing import Dict, Any, Set
 
 from eco.fiber.action.message import Message, TextContent
 
-from atoa.gov.disc.event.llm.message import MessageEvent
-from atoa.gov.disc.conv import ProtoConv
+from atoa.disc.event.llm.message import MessageEvent
+from atoa.disc.conv import ProtoConv
 
 from atoa.agent.handler.loop import (
     LLMInvocationHandler, 

@@ -16,7 +16,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from atoa.gov.exception.types import LLMNoResponseError
+from eco.gov.atoa.exception.types import LLMNoResponseError
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

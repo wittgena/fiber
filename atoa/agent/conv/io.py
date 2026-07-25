@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Optional
 
 from eco.fiber.secure.secret.validator import Cipher
-from atoa.gov.store.log import LogStore, BASE_STATE, EVENTS_DIR
+from eco.gov.store.log import LogStore, BASE_STATE, EVENTS_DIR
 
 from arch.xor.store.file import LocalFileStore
 from arch.xor.store.memfile import InMemoryFileStore

@@ -8,8 +8,8 @@ from bound.resolver.openai.types import ResponsesAPIOptionalRequestParams, Respo
 
 from bound.resolver.model.config.response import BaseResponsesAPIConfig
 from bound.resolver.model.config.resolver import config
-from bound.gateway.parser.stream.identity import IdentityRouter
-from bound.gateway.parser.request import RequestBuilder, IdentityMutator, _get_val
+from bound.parser.stream.identity import IdentityRouter
+from bound.parser.request import RequestBuilder, IdentityMutator, _get_val
 
 from watcher.plane.emitter import get_emitter
 

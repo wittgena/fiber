@@ -21,7 +21,7 @@ from bound.resolver.model.config.constants import DEFAULT_MAX_RETRIES
 from bound.resolver.model.protype import ProviderTypes
 
 from bound.resolver.legacy.types import EmbeddingResponse
-from bound.gateway.parser.response import convert_to_model_response_object
+from bound.parser.response import convert_to_model_response_object
 from bound.gateway.stream.wrapper import StreamWrapper
 from bound.resolver.openai.base import (
     BaseOpenAILLM,

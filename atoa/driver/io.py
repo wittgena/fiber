@@ -21,10 +21,10 @@ from eco.tenant.switch.params import (
     ModelResponse,
     ChatCompletionToolParam,
 )
-from atoa.conv.chat import select_chat_options
+from atoa.agent.conv.chat.chat import select_chat_options
 from eco.watcher.snapshot.metrics import MetricsSnapshot
 
-from atoa.gov.exception.types import LLMNoResponseError
+from eco.gov.atoa.exception.types import LLMNoResponseError
 from atoa.response import LLMResponse
 from eco.fiber.action.message import Message
 from watcher.plane.emitter import get_emitter
@@ -32,7 +32,7 @@ from watcher.plane.emitter import get_emitter
 if TYPE_CHECKING:
     from atoa.driver.tensor import Driver
     from atoa.types import TokenCallbackType
-    from atoa.gov.disc.action.definition import ActionDefinition
+    from atoa.disc.action.definition import ActionDefinition
 
 log = get_emitter(__name__)
 

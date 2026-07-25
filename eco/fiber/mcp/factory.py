@@ -8,7 +8,7 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from atoa.gov.disc.action.tool.mcp import MCPActionDefinition
+from atoa.disc.action.tool.mcp import MCPActionDefinition
 
 from eco.fiber.mcp.config import MCPConfig
 from eco.fiber.mcp.exception import MCPTimeoutError

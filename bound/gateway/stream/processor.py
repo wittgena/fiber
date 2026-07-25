@@ -17,8 +17,8 @@ from bound.resolver.legacy.types import Delta, GenericStreamingChunk as GChunk, 
 
 from eco.tenant.switch.params import ModelResponse, ModelResponseStream, StreamingChoices, Usage
 from bound.mapper.reason import map_finish_reason
-from bound.gateway.parser.header import process_response_headers
-from bound.gateway.parser.stream.chunk import StreamChunkParser
+from bound.parser.header import process_response_headers
+from bound.parser.stream.chunk import StreamChunkParser
 
 from arch.gov.gate import uuid
 from eco.watcher.delegator import LogDelegator 

@@ -14,7 +14,7 @@ import re
 from collections.abc import Iterable
 from typing import Any, Literal, NotRequired, TypedDict, cast
 from eco.tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
-from atoa.gov.exception.types import (
+from eco.gov.atoa.exception.types import (
     FunctionCallConversionError,
     FunctionCallValidationError,
 )

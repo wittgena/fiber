@@ -17,8 +17,8 @@ from eco.exception import (
     Timeout as LiteLLMTimeout,
 )
 from pydantic import BaseModel, Field, PrivateAttr
-from atoa.gov.exception.types import LLMNoResponseError
-from atoa.gov.disc.memory.profile import LLMProfileStore
+from eco.gov.atoa.exception.types import LLMNoResponseError
+from atoa.disc.memory.profile import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

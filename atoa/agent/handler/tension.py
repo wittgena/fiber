@@ -1,11 +1,11 @@
 # atoa.agent.handler.tension
 ## @lineage: agent.topos.handler.tension
 ## @lineage: atoa.topos.handler.tension
-from atoa.gov.disc.status import ConverStatus
-from atoa.gov.disc.event.llm.action import ActionEvent
-from atoa.gov.disc.event.llm.observation import AgentErrorEvent
+from atoa.disc.status import ConverStatus
+from atoa.disc.event.llm.action import ActionEvent
+from atoa.disc.event.llm.observation import AgentErrorEvent
 from atoa.agent.handler.step import StepHandler
-from atoa.agent.conv.context.command import TransitionStatus
+from eco.gov.atoa.conv.command import TransitionStatus
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

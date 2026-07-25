@@ -12,23 +12,23 @@ from atoa.types import (
     ConversationID,
     ConversationTokenCallbackType,
 )
-from atoa.gov.disc.conv import ProtoConv
+from atoa.disc.conv import ProtoConv
 from atoa.driver.tensor import Driver
 from atoa.agent.conv.visualizer import ConversationVisualizer
 from atoa.agent.conv.state import ConversationState
-from atoa.gov.security.analyzer import SecurityAnalyzerBase
-from atoa.gov.security.confirm import ConfirmationPolicyBase
+from eco.gov.atoa.security.analyzer import SecurityAnalyzerBase
+from eco.gov.atoa.security.confirm import ConfirmationPolicyBase
 
 from bound.resolver.secret import SecretValue
 
 from eco.fiber.action.message import Message
-from atoa.gov.disc.schema.action import Action, Observation
+from atoa.disc.schema.action import Action, Observation
 
-from atoa.gov.workspace import SandboxWorkspace
+from eco.gov.atoa.workspace import SandboxWorkspace
 from eco.fiber.secure.secret.validator import Cipher
 
 from arch.contract.event.next import next_id
-from atoa.agent.conv.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
+from eco.gov.atoa.conv.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
 
 
 class ConvContext(ProtoConv):

@@ -9,31 +9,31 @@ from collections.abc import Sequence
 from typing import Any, Self, TYPE_CHECKING
 from pydantic import Field
 
-from atoa.gov.disc.event.llm.action import ActionEvent
-from atoa.gov.disc.event.llm.observation import (
+from atoa.disc.event.llm.action import ActionEvent
+from atoa.disc.event.llm.observation import (
     AgentErrorEvent,
     ObservationEvent,
     UserRejectObservation,
 )
 from eco.fiber.event.base import Event
 from eco.fiber.event.types import EventID
-from atoa.gov.disc.workspace import BaseWorkspace
-from atoa.gov.disc.status import ConverStatus
+from atoa.disc.workspace import BaseWorkspace
+from atoa.disc.status import ConverStatus
 from atoa.types import ConversationCallbackType, ConversationID, ConversationTags
 
-from atoa.gov.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from eco.gov.atoa.security.confirm import ConfirmationPolicyBase, NeverConfirm
 from eco.watcher.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from atoa.gov.security.analyzer import SecurityAnalyzerBase
+    from eco.gov.atoa.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
 
 from bound.resolver.secret import SecretRegistry
 from atoa.agent.conv.io import IOManager
-from atoa.gov.store.log import LogStore, VirtualEventLogProxy
-from atoa.agent.conv.context.command import (
+from eco.gov.store.log import LogStore, VirtualEventLogProxy
+from eco.gov.atoa.conv.command import (
     StateCommand, 
     TransitionStatus, 
     BlockAction, 
@@ -287,7 +287,7 @@ class ConversationState(SurgeBaseModel):
             callback = getattr(self, "on_state_change", None)
             if callback is not None and old is not _sentinel:
                 try:
-                    from atoa.gov.disc.event.conv.state import ConversationStateUpdateEvent
+                    from atoa.disc.event.conv.state import ConversationStateUpdateEvent
                     callback(ConversationStateUpdateEvent(key=name, value=value))
                 except Exception:
                     log.exception(f"State change callback failed for field {name}", exc_info=True)

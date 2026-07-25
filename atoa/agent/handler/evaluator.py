@@ -4,13 +4,13 @@
 ## @lineage: atoa.agent.action.evaluator
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from atoa.gov.disc.schema.reflect import ReflectorResult, ReflectorBase
+from atoa.disc.schema.reflect import ReflectorResult, ReflectorBase
 from eco.fiber.event.base import LLMConvertibleEvent
 from eco.fiber.action.message import Message, TextContent
-from atoa.gov.disc.event.llm.action import ActionEvent
-from atoa.gov.disc.event.llm.message import MessageEvent
+from atoa.disc.event.llm.action import ActionEvent
+from atoa.disc.event.llm.message import MessageEvent
 from watcher.plane.emitter import get_emitter
-from atoa.gov.disc.action.factory import CoreAction
+from atoa.disc.action.factory import CoreAction
 
 if TYPE_CHECKING:
     from atoa.agent.activator import AgentStateSnapshot

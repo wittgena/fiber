@@ -30,7 +30,7 @@ from eco.exception import (
     UnprocessableEntityError,
     EXCEPTION_TYPES
 )
-from eco.fiber.secure.secret.redact import redact_string
+from arch.xor.secret.redact import redact_string
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("mapping.exception")

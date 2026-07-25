@@ -3,12 +3,12 @@
 ## @lineage: atoa.topos.handler.loop
 ## @lineage: atoa.agent.action.loop
 import json
-from atoa.gov.disc.event.llm.action import ActionEvent
-from atoa.gov.disc.event.llm.message import MessageEvent
-from atoa.gov.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
+from atoa.disc.event.llm.action import ActionEvent
+from atoa.disc.event.llm.message import MessageEvent
+from eco.gov.atoa.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 from atoa.agent.handler.step import StepHandler
-from atoa.agent.conv.parser.builder import MessageBuilder, LLMFacade
+from bound.parser.atoa.conv.builder import MessageBuilder, LLMFacade
 from eco.fiber.action.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter

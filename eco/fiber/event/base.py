@@ -94,7 +94,7 @@ class LLMConvertibleEvent(Event, ABC):
     def events_to_messages(events: list["LLMConvertibleEvent"]) -> list[Message]:
         """Convert event stream to LLM message stream, handling multi-action batches"""
         # TODO: We should add extensive tests for this
-        from atoa.gov.disc.event.llm.action import ActionEvent
+        from atoa.disc.event.llm.action import ActionEvent
 
         messages = []
         i = 0

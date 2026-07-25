@@ -4,7 +4,7 @@ import httpx
 from bound.resolver.model.config.base import BaseConfig
 from bound.resolver.openai.response import BaseModelResponseIterator
 from bound.resolver.openai.types import AllMessageValues
-from bound.gateway.parser.response import convert_to_model_response_object
+from bound.parser.response import convert_to_model_response_object
 from bound.resolver.openai.base import OpenAIError
 from eco.exception import BaseLLMException
 from eco.tenant.switch.params import ModelResponse, ModelResponseStream

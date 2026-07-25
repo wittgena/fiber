@@ -14,7 +14,7 @@ from typing import Protocol, TypeGuard
 from eco.tenant.switch.params import ChatCompletionToolParam
 from eco.tenant.switch.params import Message as LiteLLMMessage
 from eco.tenant.switch.params import Choices, ModelResponse, StreamingChoices
-from atoa.gov.exception.types import LLMNoResponseError
+from eco.gov.atoa.exception.types import LLMNoResponseError
 from atoa.mock.converter import (
     STOP_WORDS,
     convert_fnto_non,

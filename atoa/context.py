@@ -1,13 +1,11 @@
 # atoa.context
-## @lineage: agent.atoa.context
-## @lineage: atoa.agent.context
 from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, Field
 
-from atoa.parser import render_template
+from bound.parser.atoa.action import render_template
 
 from bound.resolver.model.info import get_model_prompt_spec
 from bound.resolver.secret import SecretSource, SecretValue

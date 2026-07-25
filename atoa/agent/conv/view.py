@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 
 from eco.fiber.event.base import Event, LLMConvertibleEvent
 from eco.fiber.event.types import EventID, ToolCallID
-from atoa.gov.disc.event.llm.action import ActionEvent
-from atoa.gov.disc.event.llm.observation import ObservationBaseEvent
+from atoa.disc.event.llm.action import ActionEvent
+from atoa.disc.event.llm.observation import ObservationBaseEvent
 
 from watcher.plane.emitter import get_logger
 

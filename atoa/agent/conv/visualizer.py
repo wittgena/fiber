@@ -13,15 +13,15 @@ from rich.rule import Rule
 from rich.text import Text
 
 from eco.fiber.event.base import Event
-from atoa.gov.disc.event.acp import ACPToolCallEvent
-from atoa.gov.disc.event.conv.pause import PauseEvent
-from atoa.gov.disc.event.conv.state import ConversationStateUpdateEvent
-from atoa.gov.disc.event.conv.error import ConversationErrorEvent
-from atoa.gov.disc.event.llm.action import ActionEvent
-from atoa.gov.disc.event.llm.message import MessageEvent
-from atoa.gov.disc.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from atoa.gov.disc.event.llm.system import SystemPromptEvent
-from atoa.agent.conv.context.protocol import ConvStateProtocol
+from atoa.disc.event.acp import ACPToolCallEvent
+from atoa.disc.event.conv.pause import PauseEvent
+from atoa.disc.event.conv.state import ConversationStateUpdateEvent
+from atoa.disc.event.conv.error import ConversationErrorEvent
+from atoa.disc.event.llm.action import ActionEvent
+from atoa.disc.event.llm.message import MessageEvent
+from atoa.disc.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from atoa.disc.event.llm.system import SystemPromptEvent
+from eco.gov.atoa.conv.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:
     from eco.watcher.stats import ConversationStats

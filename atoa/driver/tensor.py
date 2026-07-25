@@ -46,21 +46,21 @@ from eco.exception import (
 )
 from eco.fiber.secure.secret.validator import serialize_secret, validate_secret
 
-from atoa.gov.exception.types import LLMNoResponseError
-from atoa.gov.disc.memory.profile import LLMProfileStore
+from eco.gov.atoa.exception.types import LLMNoResponseError
+from atoa.disc.memory.profile import LLMProfileStore
 from atoa.retry import RetryMixin
 from atoa.mock.mixin import MockToolCallMixin
-from atoa.gov.exception.types import LLMContextWindowTooSmallError
-from atoa.gov.exception.mapping import map_provider_exception
+from eco.gov.atoa.exception.types import LLMContextWindowTooSmallError
+from eco.gov.atoa.exception.mapping import map_provider_exception
 from atoa.response import LLMResponse
 from atoa.types import TokenCallbackType
 from atoa.fallback import FallbackStrategy
 from atoa.driver.io import DriverIO
-from atoa.driver.factory import DriverFactory
+from atoa.factory.driver import DriverFactory
 
-from atoa.gov.disc.action.definition import ActionDefinition
+from atoa.disc.action.definition import ActionDefinition
 from eco.fiber.action.message import Message
-from atoa.config.vendor import VendorSubstrateMixin
+from atoa.agent.config.vendor import VendorSubstrateMixin
 from eco.fiber.residue.convset import SettingProminence, field_meta
 from eco.fiber.residue.depre import warn_deprecated
 

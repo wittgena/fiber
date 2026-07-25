@@ -8,14 +8,14 @@ from collections.abc import Callable, Sequence, Generator
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Final, Protocol, runtime_checkable
-from atoa.gov.disc.event.llm.observation import AgentErrorEvent
+from atoa.disc.event.llm.observation import AgentErrorEvent
 import threading
-from atoa.gov.store.fifo import FIFOLock
+from eco.gov.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
     from eco.fiber.event.base import Event
-    from atoa.gov.disc.event.llm_convertible import ActionEvent
-    from atoa.gov.disc.action.definition import DeclaredResources, ActionDefinition
+    from atoa.disc.event.llm_convertible import ActionEvent
+    from atoa.disc.action.definition import DeclaredResources, ActionDefinition
 
 from watcher.plane.emitter import get_logger
 
