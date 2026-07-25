@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from functools import wraps
 from weakref import WeakKeyDictionary
 
-from agent.executor.legacy import executor
+from atoa.agent.executor.legacy import executor
 from bound.resolver.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from bound.resolver.model.config.resolver import config
 from bound.gateway.rule import Rules
@@ -20,7 +20,7 @@ from bound.gateway.stream.wrapper import stream_chunk_builder
 from bound.resolver.legacy.types import CallTypes
 from eco.watcher.delegator import LogDelegator
 
-from agent.eco.secure.secret.validator import CredentialAccessor
+from eco.fiber.secure.secret.validator import CredentialAccessor
 
 from watcher.plane.emitter import get_emitter
 

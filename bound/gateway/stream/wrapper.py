@@ -10,7 +10,7 @@ import anyio
 import httpx
 import json
 
-from agent.executor.legacy import executor
+from atoa.agent.executor.legacy import executor
 
 from bound.resolver.legacy.types import TextChoices, TextCompletionResponse
 from eco.exception import APIError

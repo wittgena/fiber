@@ -6,7 +6,7 @@ from eco.tenant.action.process.pre import CompletionContext
 from eco.tenant.action.handler import CompletionHandler
 
 from bound.gateway.stream.wrapper import StreamWrapper
-from agent.eco.secure.secret.manager import get_secret_bool
+from eco.fiber.secure.secret.manager import get_secret_bool
 from bound.resolver.openai.completion import OpenAIChatCompletion
 
 from watcher.plane.emitter import get_emitter

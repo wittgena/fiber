@@ -13,7 +13,7 @@ from bound.resolver.model.config.constants import REPLICATE_MODEL_NAME_WITH_ID_L
 
 from bound.mapper.param.legacy import LiteLLM_Params
 
-from agent.eco.secure.secret.manager import get_secret_str, get_secret 
+from eco.fiber.secure.secret.manager import get_secret_str, get_secret 
 
 from watcher.plane.emitter import get_emitter
 
