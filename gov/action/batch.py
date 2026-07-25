@@ -7,17 +7,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from atoa.types import ConversationCallbackType
-from atoa.mesh.event.base import Event
+from eco.tenant.conv.types import ConversationCallbackType
+from eco.tenant.conv.event import Event
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.observation import UserRejectObservation
-from gov.conv.protocol import ConvStateProtocol
+from mesh.engine.conv.protocol import ConvStateProtocol
 
-from agent.executor.parallel import ParallelExecutor
-from atoa.mesh.action.message import Message, TextContent
+from mesh.engine.executor.parallel import ParallelExecutor
+from eco.tenant.conv.message import Message, TextContent
 from gov.action.definition import ActionDefinition
-from gov.action.factory import CoreAction
+from gov.factory.action import CoreAction
 
 from watcher.plane.emitter import get_emitter
 

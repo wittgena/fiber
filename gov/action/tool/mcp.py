@@ -12,7 +12,7 @@ import mcp_types
 from eco.tenant.switch.params import ChatCompletionToolParam
 from watcher.plane.observer.span import observe
 
-from atoa.mesh.schema.action import Action, Observation, Schema
+from atoa.schema.action import Action, Observation, Schema
 
 from mesh.mcp.client import MCPClient
 from gov.action.definition import ActionAnnotations, ActionDefinition

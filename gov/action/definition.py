@@ -12,12 +12,12 @@ from pydantic import Field, ConfigDict, computed_field, field_validator, field_s
 from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
-from atoa.mesh.schema.action import Action, Observation, Schema
-from atoa.mesh.secure.security.eval import SecurityRisk
+from atoa.schema.action import Action, Observation, Schema
+from atoa.secure.security.eval import SecurityRisk
 
 from eco.tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
-from gov.disc.tool import Tool
+from agent.disc.tool import Tool
 from gov.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
 from arch.topos.bound.surge.model import SurgeBaseModel

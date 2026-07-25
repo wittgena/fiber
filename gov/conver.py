@@ -1,21 +1,17 @@
 # gov.conver
-## @lineage: gov.atoa.conver
-## @lineage: eco.gov.atoa.conver
-## @lineage: atoa.gov.conver
-## @lineage: agent.gov.conver
 import json
 import asyncio
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from atoa.mesh.action.message import Message, TextContent
-from atoa.mesh.schema.action import Action, Observation
+from eco.tenant.conv.message import Message, TextContent
+from atoa.schema.action import Action, Observation
 
 from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_emitter
 
-from gov.atoa.parser.action import render_template
+from bound.parser.conv.render import render_template
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
@@ -23,16 +19,16 @@ from atoa.event.llm.system import SystemPromptEvent
 
 from atoa.event.conv.error import ConversationErrorEvent
 from atoa.event.conv.pause import PauseEvent
-from gov.disc.status import ConverStatus
+from agent.disc.status import ConverStatus
 from atoa.exception.conv.connection import ConversationRunError
 
 from agent.driver.tensor import Driver
-from gov.action.factory import CoreAction
+from gov.factory.action import CoreAction
 
-from gov.conv.command import TransitionStatus
-from agent.conv.state import ConversationState
-from gov.atoa.parser.conv.title import generate_conversation_title
-from gov.atoa.parser.conv.builder import MessageBuilder, LLMFacade
+from mesh.engine.conv.command import TransitionStatus
+from gov.conv.state import ConversationState
+from mesh.engine.conv.parser.title import generate_conversation_title
+from mesh.engine.conv.parser.builder import MessageBuilder, LLMFacade
 
 from arch.xor.store.file import LocalFileStore
 from mesh.store.log import LogStore
@@ -40,7 +36,7 @@ from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import TunnelFactory, UniversalFacade
 
 if TYPE_CHECKING:
-    from agent.conv.wrapper import ConvContext
+    from gov.conv.wrapper import ConvContext
     convType = ConvContext | Any
 else:
     convType = Any

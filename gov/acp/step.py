@@ -24,9 +24,9 @@ from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import ObservationEvent
 from atoa.event.conv.error import ConversationErrorEvent
 
-from gov.disc.status import ConverStatus
-from atoa.mesh.action.message import Message, MessageToolCall, TextContent
-from gov.action.factory import CoreAction
+from agent.disc.status import ConverStatus
+from eco.tenant.conv.message import Message, MessageToolCall, TextContent
+from gov.factory.action import CoreAction
 
 from gov.acp.support import (
     _USAGE_UPDATE_TIMEOUT,
@@ -37,8 +37,8 @@ from gov.acp.support import (
 )
 
 if TYPE_CHECKING:
-    from atoa.types import ConversationCallbackType, ConversationTokenCallbackType
-    from gov.disc.conv import EngineContextProtocol
+    from eco.tenant.conv.types import ConversationCallbackType, ConversationTokenCallbackType
+    from agent.disc.conv import EngineContextProtocol
 
 log = get_emitter(name="acp.step", phase="agent_execution")
 
@@ -210,7 +210,7 @@ class ACPTrajectory:
         
         if not finish_tool:
             log.warning(f"Tool '{CoreAction.FINISH}' not found in tools_map. Falling back to generic schema.")
-            from atoa.mesh.schema.action import Action, Observation
+            from atoa.schema.action import Action, Observation
             class DynamicFinishAction(Action): summary: str
             class DynamicFinishObservation(Observation): pass
         else:

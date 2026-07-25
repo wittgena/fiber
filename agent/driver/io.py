@@ -7,7 +7,7 @@ import warnings
 from typing import TYPE_CHECKING, Any, Sequence, cast, Final
 from types import SimpleNamespace
 
-from eco.exception import (
+from atoa.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -22,17 +22,17 @@ from eco.tenant.switch.params import (
     ModelResponse,
     ChatCompletionToolParam,
 )
-from agent.conv.chat.chat import select_chat_options
+from gov.conv.chat.chat import select_chat_options
 from eco.watcher.snapshot.metrics import MetricsSnapshot
 
 from atoa.exception.types import LLMNoResponseError
-from atoa.response import LLMResponse
-from atoa.mesh.action.message import Message
+from agent.driver.llm.response import LLMResponse
+from eco.tenant.conv.message import Message
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from agent.driver.tensor import Driver
-    from atoa.types import TokenCallbackType
+    from eco.tenant.conv.types import TokenCallbackType
     from gov.action.definition import ActionDefinition
 
 log = get_emitter(__name__)

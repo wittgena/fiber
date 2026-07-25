@@ -27,8 +27,8 @@ import os
 import subprocess
 import time
 
-from agent.executor.command import sanitized_env
-from atoa.mesh.residue.truncate import maybe_truncate
+from mesh.engine.executor.command import sanitized_env
+from watcher.xe.residue.truncate import maybe_truncate
 from mesh.tool.fedit.utils.constants import (
     CONTENT_TRUNCATED_NOTICE,
     MAX_RESPONSE_LEN_CHAR,

@@ -11,15 +11,15 @@ from typing import TYPE_CHECKING, Literal
 
 from gov.action.executor import ActionExecutor
 from gov.action.tool.terminal import TerminalAction, TerminalObservation
-from gov.disc.conv import ToolExecutionContextProtocol
+from agent.disc.conv import ToolExecutionContextProtocol
 from gov.factory.agent.chain.builder import ChainBuilder
 from gov.factory.agent.session import _is_tmux_available, create_terminal_session
 from mesh.engine.session import TerminalSession
-from mesh.engine.execution.context import ExecutionContext, ExecutionEngine
+from mesh.engine.executor.context import ExecutionContext, ExecutionEngine
 from mesh.engine.polling import PollingExecutionEngine
 from mesh.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from atoa.mesh.action.message import TextContent
+from eco.tenant.conv.message import TextContent
 
 from arch.gov.tool.command.terminal import TerminalCommandStatus
 from arch.gov.tool.terminal import CMD_OUTPUT_PS1_END

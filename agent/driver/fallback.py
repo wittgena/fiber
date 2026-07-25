@@ -10,7 +10,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-from eco.exception import (
+from atoa.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -19,11 +19,11 @@ from eco.exception import (
 )
 from pydantic import BaseModel, Field, PrivateAttr
 from atoa.exception.types import LLMNoResponseError
-from gov.disc.memory.profile import LLMProfileStore
+from agent.disc.memory.profile import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from atoa.response import LLMResponse
+    from agent.driver.llm.response import LLMResponse
     from eco.watcher.snapshot.metrics import Metrics
 
 logger = get_logger(__name__)

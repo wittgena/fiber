@@ -9,8 +9,8 @@ import mcp_types
 from pydantic import Field
 from rich.text import Text
 
-from atoa.mesh.action.message import ImageContent, TextContent
-from atoa.mesh.schema.action import Action, Observation
+from eco.tenant.conv.message import ImageContent, TextContent
+from atoa.schema.action import Action, Observation
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

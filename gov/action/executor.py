@@ -7,10 +7,10 @@ from typing import (
     Protocol,
     TypeVar,
 )
-from atoa.mesh.schema.action import Action, Observation
+from atoa.schema.action import Action, Observation
 
 if TYPE_CHECKING:
-    from gov.disc.conv import ToolExecutionContextProtocol
+    from agent.disc.conv import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)
 ObservationT = TypeVar("ObservationT", bound=Observation)

@@ -8,12 +8,12 @@ import json
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from atoa.mesh.event.base import LLMConvertibleEvent
+from eco.tenant.conv.event import LLMConvertibleEvent
 from atoa.event.llm.system import SystemPromptEvent
-from atoa.mesh.schema.reflect import ReflectorBase, ReflectorResult
+from atoa.schema.reflect import ReflectorBase, ReflectorResult
 
-from agent.conv.chat.client import ReflectorClient
-from agent.conv.chat.feature import categorize_features
+from gov.conv.chat.client import ReflectorClient
+from gov.conv.chat.feature import categorize_features
 
 def _format_feature_list(features: list[dict[str, Any]]) -> str:
     ## @desc: Serialize topological features and their emergence probabilities
@@ -32,8 +32,8 @@ class Reflector(ReflectorBase, ReflectorClient):
     """@desc: Structural API-Based Evaluator Manifold"""
     
     def evaluate(self, events: Sequence[LLMConvertibleEvent], git_patch: str | None = None) -> ReflectorResult:
-        from agent.conv.view import View
-        from atoa.mesh.event.base import LLMConvertibleEvent
+        from gov.conv.view import View
+        from eco.tenant.conv.event import LLMConvertibleEvent
         from atoa.event.llm.system import SystemPromptEvent
 
         ## @phase.extraction: Isolate system baseline and tool manifolds

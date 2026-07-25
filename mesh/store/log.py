@@ -14,8 +14,8 @@ import operator
 from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
-from atoa.mesh.event.base import Event
-from atoa.mesh.event.types import EventID
+from eco.tenant.conv.event import Event
+from eco.tenant.conv.event import EventID
 from mesh.store.base import EventsListBase
 
 from arch.xor.store.file import FileStore

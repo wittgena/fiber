@@ -20,7 +20,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 from mesh.mcp.exception import MCPError
 from mesh.mcp.config import MCPConfig
 
-from agent.executor.base import AsyncExecutor
+from mesh.engine.executor.base import AsyncExecutor
 
 class MCPClient(AnchorClient):
     """@desc: Unified MCP Client that bridges AnchorClient with stdio execution via MCPConfig"""

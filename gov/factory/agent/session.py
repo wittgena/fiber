@@ -6,7 +6,7 @@ import subprocess
 import warnings
 from typing import Literal
 
-from agent.executor.command import sanitized_env
+from mesh.engine.executor.command import sanitized_env
 from mesh.engine.session import TerminalSession
 
 from watcher.plane.emitter import get_emitter

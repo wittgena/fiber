@@ -1,22 +1,18 @@
 # gov.action.resolver
-## @lineage: atoa.disc.action.resolver
-## @lineage: atoa.gov.disc.action.resolver
-## @lineage: agent.atoa.action.resolver
-## @lineage: atoa.agent.action.resolver
-## @lineage: atoa.call.action.resolver
 import json
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from gov.disc.tool import Tool
-from atoa.mesh.schema.action import Action, Observation
-from gov.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
+from atoa.schema.action import Action, Observation
+
+from agent.disc.tool import Tool
+from gov.factory.action import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:
-    from gov.disc.conv import ProtoConv
-    from gov.conv.protocol import ConvStateProtocol
+    from agent.disc.conv import ProtoConv
+    from mesh.engine.conv.protocol import ConvStateProtocol
     from gov.action.definition import ActionDefinition
 
 from arch.xor.parser.lang.action import ActionSchemaCompiler, DEFAULT
@@ -138,8 +134,8 @@ def _bootstrap_core_actions():
 _bootstrap_core_actions()
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from gov.disc.status import ConverStatus
-    from gov.conv.command import TransitionStatus
+    from agent.disc.status import ConverStatus
+    from mesh.engine.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = f"Task marked as finished: {action.summary}" if getattr(action, "summary", None) else "Task marked as finished."
@@ -155,8 +151,8 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
 
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from gov.disc.status import ConverStatus
-    from gov.conv.command import TransitionStatus
+    from agent.disc.status import ConverStatus
+    from mesh.engine.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = "Message successfully delivered to the user."
@@ -173,10 +169,10 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
 
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from gov.disc.status import ConverStatus
+    from agent.disc.status import ConverStatus
     from atoa.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
-    from gov.conv.command import TransitionStatus, UpdateAgentState
+    from mesh.engine.conv.command import TransitionStatus, UpdateAgentState
 
     state = getattr(conv, "state", None) if conv else None
     msg = "Bridge initiated."
@@ -219,8 +215,8 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
 
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from gov.disc.status import ConverStatus
-    from gov.conv.command import TransitionStatus
+    from agent.disc.status import ConverStatus
+    from mesh.engine.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = (

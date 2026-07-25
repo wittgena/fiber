@@ -8,7 +8,7 @@
 ## @lineage: ops.xor.store.base
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from atoa.mesh.event.base import Event
+from eco.tenant.conv.event import Event
 
 class EventsListBase(Sequence[Event], ABC):
     @abstractmethod

@@ -1,17 +1,13 @@
 # gov.action.tool.fedit
-## @lineage: atoa.disc.action.tool.fedit
-## @lineage: atoa.gov.disc.action.tool.fedit
-## @lineage: agent.atoa.action.tool.fedit
-## @lineage: atoa.agent.action.tool.fedit
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from pydantic import Field, PrivateAttr
-from gov.conv.protocol import ConvStateProtocol
+from mesh.engine.conv.protocol import ConvStateProtocol
 from arch.gov.tool.diff import visualize_diff
 from rich.text import Text
 
-from atoa.mesh.schema.action import Action, Observation
+from atoa.schema.action import Action, Observation
 from gov.action.definition import DeclaredResources, ActionAnnotations, ActionDefinition
 
 CommandLiteral = Literal["view", "create", "str_replace", "insert", "undo_edit"]

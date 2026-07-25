@@ -30,7 +30,7 @@ import fcntl
 import pty
 import select
 
-from agent.executor.command import sanitized_env
+from mesh.engine.executor.command import sanitized_env
 from arch.gov.tool.terminal import (
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,

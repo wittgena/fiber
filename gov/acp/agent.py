@@ -12,13 +12,13 @@ from pydantic import Field
 
 from watcher.plane.observer.span import unified_flow_span
 
-from gov.disc.ator import Ator
+from agent.disc.ator import Ator
 from atoa.event.llm.system import SystemPromptEvent
 from atoa.event.llm.message import MessageEvent
-from gov.disc.tool import Tool
+from agent.disc.tool import Tool
 
 from agent.driver.tensor import Driver
-from atoa.mesh.action.message import Message, TextContent
+from eco.tenant.conv.message import Message, TextContent
 from gov.acp.client import ACPClient
 from gov.acp.step import ACPTrajectory
 from gov.acp.connection import ACPConnectionManifold
@@ -82,7 +82,7 @@ class ACPAgent(ACPTrajectory, Ator):
             if self.tools or self.mcp_config or self.agent_context:
                 log.warning("Structural boundaries prevent native tools or contexts inside ACP Agents.")
 
-            from agent.executor.base import AsyncExecutor
+            from mesh.engine.executor.base import AsyncExecutor
             self.executor = AsyncExecutor()
             self.client = ACPClient()
 

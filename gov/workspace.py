@@ -17,8 +17,8 @@ import websockets
 import json
 from typing import Optional
 
-from gov.disc.workspace import BaseWorkspace
-from agent.executor.command import execute_command
+from agent.disc.workspace import BaseWorkspace
+from mesh.engine.executor.command import execute_command
 from mesh.tool.git.changes import get_git_changes
 from mesh.tool.git.diff import get_git_diff
 

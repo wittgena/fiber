@@ -24,13 +24,13 @@ from gov.action.tool.schema.browser import (
     BrowserNavigateAction,
     BrowserObservation,
 )
-from agent.executor.command import sanitized_env
-from agent.executor.base import AsyncExecutor
+from mesh.engine.executor.command import sanitized_env
+from mesh.engine.executor.base import AsyncExecutor
 from watcher.plane.emitter import get_logger
 from mesh.tool.browser.server import BrowserServer 
 
 if TYPE_CHECKING:
-    from gov.disc.conv import ToolExecutionContextProtocol
+    from agent.disc.conv import ToolExecutionContextProtocol
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0

@@ -1,9 +1,4 @@
 # gov.action.tool.browser
-## @lineage: atoa.disc.action.tool.browser
-## @lineage: atoa.gov.disc.action.tool.browser
-## @lineage: agent.atoa.action.tool.browser
-## @lineage: atoa.agent.action.tool.browser
-## @lineage: atoa.call.action.tool.browser
 
 from collections.abc import Sequence
 from typing import Self

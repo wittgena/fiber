@@ -34,7 +34,7 @@ from eco.tenant.switch.params import ModelResponse
 from eco.tenant.action.completion import completion as brane_completion
 from eco.watcher.snapshot.metrics import Metrics
 from eco.watcher.delegator import DriverObserver
-from eco.exception import (
+from atoa.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -42,25 +42,25 @@ from eco.exception import (
     Timeout as LiteLLMTimeout,
 )
 
-from atoa.mesh.secure.secret.validator import serialize_secret, validate_secret
+from atoa.secure.secret.validator import serialize_secret, validate_secret
 from atoa.exception.types import LLMNoResponseError
 
-from atoa.retry import RetryMixin
-from atoa.mock.mixin import MockToolCallMixin
+from arch.xor.driver.retry import RetryMixin
+from bound.gateway.mock.mixin import MockToolCallMixin
 from atoa.exception.types import LLMContextWindowTooSmallError
 from atoa.exception.mapping import map_provider_exception
-from atoa.response import LLMResponse
-from atoa.types import TokenCallbackType
-from atoa.mesh.action.message import Message
-from atoa.mesh.residue.convset import SettingProminence, field_meta
-from atoa.mesh.residue.depre import warn_deprecated
+from agent.driver.llm.response import LLMResponse
+from eco.tenant.conv.types import TokenCallbackType
+from eco.tenant.conv.message import Message
+from watcher.xe.residue.convset import SettingProminence, field_meta
+from watcher.xe.residue.depre import warn_deprecated
 
 from agent.driver.fallback import FallbackStrategy
 from agent.driver.io import DriverIO
 from agent.config.vendor import VendorSubstrateMixin
 
 from gov.factory.driver import DriverFactory
-from gov.disc.memory.profile import LLMProfileStore
+from agent.disc.memory.profile import LLMProfileStore
 from gov.action.definition import ActionDefinition
 
 from phase.bind.resolver import find_current_self

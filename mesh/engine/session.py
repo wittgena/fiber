@@ -10,13 +10,13 @@
 ## @lineage: gov.sandbox.executor.terminal.session
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from gov.disc.conv import ToolExecutionContextProtocol
+    from agent.disc.conv import ToolExecutionContextProtocol
 
 from gov.action.tool.terminal import TerminalAction, TerminalObservation
 from mesh.tool.terminal.interface import TerminalInterface, TerminalSessionBase
 from arch.gov.tool.command.terminal import TerminalCommandStatus
 from mesh.engine.utils import TerminalQueryFilter
-from mesh.engine.execution.context import ExecutionEngine, ExecutionContext
+from mesh.engine.executor.context import ExecutionEngine, ExecutionContext
 from mesh.engine.polling import PollingExecutionEngine
 
 from watcher.plane.emitter import get_emitter

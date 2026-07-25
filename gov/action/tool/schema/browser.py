@@ -1,9 +1,4 @@
 # gov.action.tool.schema.browser
-## @lineage: atoa.disc.action.tool.schema.browser
-## @lineage: atoa.gov.disc.action.tool.schema.browser
-## @lineage: agent.atoa.action.tool.schema.browser
-## @lineage: atoa.agent.action.tool.schema.browser
-## @lineage: atoa.call.action.tool.schema.browser
 import base64
 import hashlib
 import os
@@ -12,9 +7,9 @@ from pathlib import Path
 
 from pydantic import Field
 
-from atoa.mesh.action.message import ImageContent, TextContent
-from atoa.mesh.schema.action import Action, Observation
-from atoa.mesh.residue.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from eco.tenant.conv.message import ImageContent, TextContent
+from atoa.schema.action import Action, Observation
+from watcher.xe.residue.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 
 BROWSER_RECORDING_OUTPUT_DIR = os.path.join(".agent_tmp", "browser_observations")
 

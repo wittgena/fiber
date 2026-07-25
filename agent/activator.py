@@ -12,27 +12,27 @@ from typing import TYPE_CHECKING, Dict, Any, Optional
 from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
-from atoa.mesh.event.base import Event
-from atoa.mesh.schema.action import Action, Observation
-from atoa.mesh.action.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
+from atoa.schema.action import Action, Observation
+from eco.tenant.conv.event import Event
+from eco.tenant.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
-from gov.atoa.parser.action import format_context_exceeded_message, ActionParser
+from bound.parser.conv.action import format_context_exceeded_message, ActionParser
 
-from gov.disc.ator import Ator
+from agent.disc.ator import Ator
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.system import SystemPromptEvent, TokenEvent
 from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from gov.disc.status import ConverStatus
-from atoa.response import LLMResponse
+from agent.disc.status import ConverStatus
+from agent.driver.llm.response import LLMResponse
 
 from agent.handler.step import StepHandler, StepContext
-from agent.handler.loop import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from agent.handler.graph.loop import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
 from agent.handler.tension import TensionHandler
-from agent.handler.eval import EvalReflector
-from agent.handler.evaluator import ActionEvaluator 
+from agent.handler.graph.eval import EvalReflector
+from agent.disc.reflect.evaluator import ActionEvaluator 
 
-from agent.organizer import DagOrganizer
+from agent.handler.graph.organizer import DagOrganizer
 from arch.gov.state.compiler import StateCompiler
 from arch.gov.state.projector import StateProjector
 from arch.gov.state.schema import FragmentSig

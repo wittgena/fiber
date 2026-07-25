@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Awaitable
 from dataclasses import dataclass
-from atoa.response import LLMResponse
+from agent.driver.llm.response import LLMResponse
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
