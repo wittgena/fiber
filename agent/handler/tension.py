@@ -1,10 +1,7 @@
 # agent.handler.tension
-## @lineage: atoa.agent.handler.tension
-## @lineage: agent.topos.handler.tension
-## @lineage: atoa.topos.handler.tension
-from agent.disc.status import ConverStatus
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import AgentErrorEvent
+from agent.disc.status import ConverStatus
 from agent.handler.step import StepHandler
 from mesh.engine.conv.command import TransitionStatus
 from watcher.plane.emitter import get_emitter
@@ -13,7 +10,7 @@ logger = get_emitter(__name__)
 
 class TensionHandler(StepHandler):
     async def handle_async(self, agent, snapshot, on_event, context) -> bool:
-        logger.debug(f"[CognitiveTensionHandler]")
+        logger.debug("[TensionHandler]")
         events = snapshot.events
         is_stuck = getattr(snapshot, "is_stuck", False)
         
@@ -45,11 +42,12 @@ class TensionHandler(StepHandler):
                     
                     if curr_dump == prev_dump:
                         duplicate_detected = True
-                        logger.warning(f"🔄 동일한 행동 반복 감지")
+                        logger.warning("🔄 Duplicate action detected")
 
         if is_stuck or duplicate_detected or (isinstance(tension, int) and tension >= 4) or intent == "replan":
-            reason = "무한 루프(Stuck) 감지" if (is_stuck or duplicate_detected) else f"텐션 임계점 도달 (Tension: {tension}/5)"
-            logger.error(f"🚨 {reason}. 제어권을 반납하고 Gov 노드에 상태 재조정을 요청합니다.")
+            reason = "Infinite loop (stuck) detected" if (is_stuck or duplicate_detected) else f"Tension threshold reached (Tension: {tension}/5)"
+            logger.error(f"🚨 {reason}. Yielding control and requesting state replan from Gov node.")
+            
             error_event = AgentErrorEvent(
                 source="agent", 
                 error=reason,
@@ -57,11 +55,11 @@ class TensionHandler(StepHandler):
                 tool_call_id="tension_halt"
             )
             
-            ## Activator가 이 이벤트를 catch하여 Gov로 "finish" 시그널을 보내도록 유도
-            setattr(error_event, "is_finish_signal", True)
+            # Induce Activator to catch this event and send a "finish" signal to the Gov node
+            error_event = error_event.model_copy(update={"is_finish_signal": True})
             await on_event(error_event)
             
-            ## 기존의 로컬 상태 전이 커맨드 유지
+            # Maintain existing local state transition commands
             is_graph_mode = getattr(agent, "is_graph_mode", False)
             new_status = ConverStatus.NEEDS_REPLAN if is_graph_mode else ConverStatus.FINISHED
             await on_event(TransitionStatus(new_status=new_status, reason=reason))
