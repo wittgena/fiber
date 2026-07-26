@@ -6,10 +6,6 @@ import time
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 
-from phase.wasm.broker import WasmBroker
-from watcher.dphi.cgroup import Tier
-from watcher.dphi.adapter.state import StateAdapter
-
 from topos.bound.space import SpaceNode
 
 from ops.scope.execution.graph import PolicyNode
@@ -22,9 +18,11 @@ from arch.topos.bound.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.bound.sealer import EpochSealer
 
+from phase.wasm.broker import WasmBroker
 from watcher.xe.scope.event import AgentConfigured
 from watcher.dphi.adapter.exchange import D3fiExchangeAdapter, TransactionReceipt
-
+from watcher.dphi.cgroup import Tier
+from watcher.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("topos.root")

@@ -1,15 +1,8 @@
 # ops.scope.flow.graph.node
-## @lineage: meta.scope.flow.graph.node
-## @lineage: topos.scope.flow.graph.node
-## @lineage: gov.sandbox.topos.graph.engine
-"""
-@desc: Dynamic Hybrid Engine Node resolving local drivers or remote proxy DTOs.
-@flow: use_proxy assessment -> Payload Synthesis -> AgentSettings assetization.
-"""
 import os
 from pydantic import SecretStr
 
-from void.extime.logst.topos.config import AgentConfig
+from topos.bound.scope.config import AgentConfig
 from agent.driver.tensor import Driver
 from agent.disc.tool import Tool
 

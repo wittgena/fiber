@@ -1,18 +1,10 @@
 # ops.scope.manager
-## @lineage: meta.scope.manager
-## @lineage: topos.scope.manager
 import asyncio
 from contextlib import asynccontextmanager, AsyncExitStack
-from typing import Any, AsyncGenerator, Optional, Callable
-from unittest.mock import patch
-
-from ops.opt.runtime import runtime
-from ops.opt.dsp.instance import DSPInstance
-from ops.opt.thch import ThCh
+from typing import Optional, Any
 
 from ops.scope.surface.config import SurfaceConfig
 from ops.scope.surface.registry import get_surface_class
-from ops.scope.local import LocalLM
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 from watcher.plane.emitter import get_emitter
 
@@ -59,45 +51,19 @@ def _instantiate_lm(model_name: str) -> Optional[Any]:
         log.debug(f"[managed_scope] ⚙️ Binding Standard Engine: {model_name}")
         return DSPInstance(model=model_name)
 
-
 @asynccontextmanager
-async def managed_scope(**kwargs):
-    use_thch = kwargs.pop("use_thch", False)
-    
-    ## Separate arguments for Surface and DSP configs
-    surface_fields = {f for f in SurfaceConfig.__dataclass_fields__}
-    surface_kwargs = {}
-    dsp_kwargs = {}
-    
-    for k, v in kwargs.items():
-        if k in surface_fields:
-            surface_kwargs[k] = v
-        else:
-            dsp_kwargs[k] = v
-
-    target_model = dsp_kwargs.pop("model", None)
-    if target_model:
-        lm_instance = _instantiate_lm(target_model)
-        if lm_instance:
-            dsp_kwargs["lm"] = lm_instance
-
+async def managed_scope(**surface_kwargs):
+    """
+    순수하게 인프라/Surface의 라이프사이클(up/down)과 
+    기본 Trace 컨텍스트만 관리하는 Base 매니저입니다.
+    """
     config = SurfaceConfig(**surface_kwargs)
     manager = SurfaceManager(config)
     
     facet_type = "logical" if config.surface_type == "local" else "infra"
     surface_name = manager.impl.__class__.__name__.replace("Surface", "").lower()
     
-    ## Flatten and safely manage nested context managers using AsyncExitStack
     async with AsyncExitStack() as stack:
-        ## Bind DSPy runtime context
-        stack.enter_context(runtime.bind(**dsp_kwargs))
-        
-        ## Safely inject ThCh adapter (Thread-safe mock patch confined to this scope)
-        if use_thch:
-            stack.enter_context(patch("xphi.xor.opt.manifold.model.cot.ChainOfThought", new=ThCh))
-            log.info("[managed_scope] 🌉 ThCh Meta-Compilation Bridge Activated.")
-
-        ## Enter asynchronous trace scope
         await stack.enter_async_context(scope_trace(name=surface_name, facet=facet_type))
         log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
         

@@ -1,22 +1,20 @@
 # ops.scope.execution.strategy
-## @lineage: meta.scope.execution.strategy
-## @lineage: topos.scope.execution.strategy
-## @lineage: gov.sandbox.topos.execution.strategy
 import asyncio
 from typing import Optional, Dict, Any, List, Callable
 
 from eco.tenant.conv.event import LLMConvertibleEvent
-from gov.conv.state import ConversationState
 from mesh.engine.conv.adapter import AgentCommunicator, ExecutionController, EngineContextAdapter
-from gov.conv.visualizer import ConversationVisualizer
 
 from agent.activator import Activator
-from void.extime.logst.topos.proxy import ProxyEngine
+from agent.disc.tool import Tool
+
+from gov.conv.state import ConversationState
+from gov.conv.visualizer import ConversationVisualizer
 from gov.factory.action import CoreAction
 from gov.action.resolver import ActionResolver
 from gov.action.tool.terminal import TerminalTool
 
-from agent.disc.tool import Tool
+from ops.xelog.topos.proxy import ProxyEngine
 
 from arch.topos.bound.tunnel import TunnelFactory
 from arch.contract.event.next import next_id
