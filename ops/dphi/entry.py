@@ -1,6 +1,4 @@
 # ops.dphi.entry
-## @lineage: meta.dphi.entry
-## @lineage: meta.flow.wasm.entry
 import sys
 import argparse
 import asyncio

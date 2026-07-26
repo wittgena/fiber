@@ -10,8 +10,11 @@ from ops.xelog.edge.audit import audit_edge
 from ops.xelog.edge.otlp import otlp_edge
 from ops.xelog.edge.anchor import anchor_edge
 from ops.xelog.edge.a2a import a2a_edge
+from ops.xelog.edge.ledger import ledger_edge
+from ops.xelog.edge.d3fi import d3fi_edge
+
 from ops.xelog.middleware import WasTelemetry, LocalMiddleware
-from ops.xelog.store import get_logstream_store
+from ops.xelog.topos.log.store import LogStreamStore
 
 from arch.topos.bound.interface.subs import DistributedPubSub
 from arch.topos.bound.tunnel import UniversalFacade
@@ -36,7 +39,8 @@ async def xelog_lifespan(app: FastAPI):
     log.info("[XeLog] Starting XeLog Hub REST API...")
     config: Config = app.state.config
     
-    app.state.store = get_logstream_store()
+    # HTTP 클라이언트를 포함한 Store를 앱 생명주기에 바인딩
+    app.state.store = LogStreamStore()
     
     tunnel = UniversalFacade() 
     pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
@@ -62,20 +66,24 @@ def _get_root_path(config: Config) -> str:
     return ""
 
 def add_api_routes(app: FastAPI, config: Config) -> None:
+    # 글로벌 브로드캐스트 라우트
     app.include_router(otlp_edge)
+    app.include_router(ledger_edge)  # Immutable Ledger Append 라우트 마운트
+    app.include_router(d3fi_edge)    # D3Fi 인텐트/정산 라우트 마운트
+    app.include_router(anchor_edge)  # 글로벌 앵커 합의 라우트
+    app.include_router(a2a_edge)     # WASM Trustless 연산 라우트
     
+    # 특정 Prefix(/hub)로 격리되는 라우트
     hub = APIRouter(prefix="/hub")
     hub.include_router(audit_edge)
     app.include_router(hub)
-    app.include_router(anchor_edge)
-    app.include_router(a2a_edge)
 
 def create_app(config: Optional[Config] = None) -> FastAPI:
     config = config or get_default_config()
 
     app = FastAPI(
-        title="XeLog Hub",
-        description="XeLog Hub - Dedicated REST Interface",
+        title="XeLog Hub & Edge Router",
+        description="Agentic Web & Immutable Ledger Interface",
         lifespan=xelog_lifespan,
         root_path=_get_root_path(config),
     )

@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ops.xelog.depend import get_nexus_anchor
-from ops.xelog.state.edge import (
+from ops.xelog.topos.state.edge import (
     EdgeState,
     ParityTripletSchema,
     AnchorProposalRequest,

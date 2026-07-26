@@ -3,12 +3,13 @@ from fastapi import Request
 
 from ops.xelog.topos.tenant import TenantEco
 from ops.xelog.audit.ledger import AuditLedger
-from ops.xelog.ingress.policy import (
+from ops.xelog.topos.ingress.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
     FuelAllocator, 
     HealthMonitor
 )
+from ops.xelog.topos.log.store import LogStreamStore
 
 from arch.topos.bound.interface.subs import DistributedPubSub
 from phase.wasm.broker import WasmBroker
@@ -16,15 +17,20 @@ from watcher.dphi.adapter.anchor import NexusAnchor
 from watcher.dphi.adapter.exchange import D3fiExchangeAdapter
 from watcher.dphi.adapter.sign import NodeSigner
 
+
 ## WASM & Core Compute
 async def get_wasm_broker(request: Request) -> WasmBroker:
     return request.app.state.broker
+
+## Ledger & State Persistence (신규 추가)
+async def get_logstream_store(request: Request) -> LogStreamStore:
+    """앱 구동 시 초기화된 Immutable Ledger Store 싱글톤 주입"""
+    return request.app.state.store
 
 ## Consensus & Anchor
 async def get_nexus_anchor(request: Request) -> NexusAnchor:
     """WASM 패리티 검증 및 Epoch Sealing을 전담하는 Anchor 주입"""
     broker = await get_wasm_broker(request)
-    # Config에서 시스템의 위원회(Committee) 명단과 Threshold를 로드하여 주입
     allowed_committee = getattr(request.app.state.config, "committee_pubs", [])
     return NexusAnchor(broker=broker, consensus_threshold=1, allowed_committee=allowed_committee)
 
@@ -45,7 +51,7 @@ async def get_ingress_policy(request: Request) -> IngressPolicyEngine:
 
 ## Event Driven & Streaming (OTLP / Audit)
 async def get_pubsub(request: Request) -> DistributedPubSub:
-    """글로벌 브로드캐스트 및 이벤트 파이프라인(TunnelSurface) 주입"""
+    """글로벌 브로드캐스트 및 이벤트 파이프라인 주입"""
     return request.app.state.pubsub
 
 ## Ecosystem & Audit (OTLP / Audit)

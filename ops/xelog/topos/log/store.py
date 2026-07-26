@@ -1,22 +1,17 @@
-# ops.xelog.store
-"""
-@desc: 
-- Internal log processor that bridges external edges to the WASM Kernel.
-- Extracts physical telemetry pressure and delegates all sealing authority to ToposGateway.
-"""
+# ops.xelog.topos.log.store
 import asyncio
 import uuid
 import httpx
 from typing import List, Dict, Any
 
-from xe.log.gate.keeper import GatekeeperSimulationEngine
+from ops.xelog.topos.log.keeper import GatekeeperEngine
 from arch.contract.audit.model import LogstEvent
 
 from watcher.kernel.audit.warden import AuditWarden
 from watcher.kernel.bridge.gateway import ToposGateway
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("xelog.store", phase="INGRESS")
+log = get_emitter("log.store", phase="INGRESS")
 
 _gateway_instance = ToposGateway()
 
@@ -35,7 +30,7 @@ class LogStreamStore:
         
         # Calculate raw physical telemetry pressure (Data extraction only)
         telemetry_pressure = await asyncio.to_thread(self._extract_telemetry_pressure, events)
-        tension_score = GatekeeperSimulationEngine.calculate_resonance_intensity(telemetry_pressure)
+        tension_score = GatekeeperEngine.calculate_resonance_intensity(telemetry_pressure)
         
         # Inject tension score as metadata for WASM Kernel to judge
         if metadata is None:

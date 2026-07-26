@@ -3,8 +3,8 @@ import json
 import time
 from fastapi import APIRouter, Depends, HTTPException, status
 from ops.xelog.depend import get_wasm_broker, get_exchange_adapter
-from ops.xelog.ingress.policy import IngressPolicyEngine, get_ingress_policy
-from ops.xelog.state.edge import (
+from ops.xelog.topos.ingress.policy import IngressPolicyEngine, get_ingress_policy
+from ops.xelog.topos.state.edge import (
     EdgeState,
     TradeIngressRequest,
     TradeIngressResponse,
@@ -29,17 +29,17 @@ async def submit_trade_intent(
     broker: WasmBroker = Depends(get_wasm_broker),
     policy_engine: IngressPolicyEngine = Depends(get_ingress_policy)
 ):
-    # 1. 통합 정책 엔진을 통한 동적 컨텍스트 도출 (Hash/Random 기반 Mock 연산)
+    ## 통합 정책 엔진을 통한 동적 컨텍스트 도출 (Hash/Random 기반 Mock 연산)
     context = await policy_engine.resolve_context(agent_id=req.agent_id, action=req.action)
 
-    # 2. Rupture 감지 시 즉시 차단 (HealthMonitor 결과)
+    ## Rupture 감지 시 즉시 차단 (HealthMonitor 결과)
     if context.is_ruptured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Topology Ruptured: {context.reason}"
         )
 
-    # 3. 명시적 Pydantic 모델을 통한 Payload 구성
+    ## 명시적 Pydantic 모델을 통한 Payload 구성
     payload_obj = EpochInitPayload(
         ts=int(time.time() * 1000),
         topo=context.topo_id,
@@ -48,7 +48,7 @@ async def submit_trade_intent(
         injected_intent=req
     )
     
-    # 4. Pydantic 덤프 후 Canonical JSON으로 변환
+    ## Pydantic 덤프 후 Canonical JSON으로 변환
     canonical_payload = StateAdapter.to_canonical_bytes(payload_obj.model_dump()).decode('utf-8')
     res = await broker.invoke("init_epoch", canonical_payload)
     
