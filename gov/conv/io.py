@@ -10,9 +10,9 @@ from typing import Dict, Optional
 from atoa.secure.secret.validator import Cipher
 from mesh.store.log import LogStore, BASE_STATE, EVENTS_DIR
 
-from arch.xor.store.file import LocalFileStore
-from arch.xor.store.memfile import InMemoryFileStore
-from arch.xor.store.file import FileStore
+from arch.gov.bridge.store.file import LocalFileStore
+from arch.gov.bridge.store.memfile import InMemoryFileStore
+from arch.gov.bridge.store.file import FileStore
 
 log = logging.getLogger(__name__)
 

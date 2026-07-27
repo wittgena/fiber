@@ -15,8 +15,8 @@ from pydantic.fields import FieldInfo
 from topos.bound.scope.metadata import SettingsSchema, SettingsValueType, SettingsChoiceValue, SettingsChoice
 
 from arch.topos.bound.surge.disc import SurgeBaseModel
-from watcher.xe.residue.depre import warn_deprecated
-from watcher.xe.residue.convset import (
+from arch.xor.xe.depre import warn_deprecated
+from arch.xor.xe.convset import (
     SETTINGS_METADATA_KEY,
     SETTINGS_SECTION_METADATA_KEY,
     SettingProminence,

@@ -4,7 +4,7 @@ import json
 import time
 
 from ops.xelog.depend import get_wasm_broker
-from phase.wasm.broker import WasmBroker
+from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.state import StateAdapter
 from ops.xelog.topos.state.edge import (
     EdgeState,

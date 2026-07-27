@@ -1,6 +1,4 @@
 # ops.scope.surface.registry
-## @lineage: meta.scope.surface.registry
-## @lineage: topos.scope.surface.registry
 import importlib
 from typing import Type
 from ops.scope.surface.config import BaseSurface

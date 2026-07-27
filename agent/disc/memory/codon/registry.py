@@ -18,7 +18,7 @@ import frontmatter
 from pydantic import BaseModel, Field
 
 from agent.disc.memory.profile import LLMProfileStore
-from watcher.xe.residue.depre import warn_deprecated
+from arch.xor.xe.depre import warn_deprecated
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

@@ -17,7 +17,7 @@ from mesh.engine.utils import escape_bash_special_chars, split_bash_commands
 from arch.gov.tool.command.terminal import TerminalCommandStatus
 from mesh.engine.executor.context import ExecutionEngine, ExecutionContext
 
-from watcher.xe.residue.truncate import maybe_truncate
+from arch.xor.xe.truncate import maybe_truncate
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:

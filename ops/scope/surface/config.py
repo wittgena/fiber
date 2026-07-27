@@ -1,6 +1,4 @@
 # ops.scope.surface.config
-## @lineage: meta.scope.surface.config
-## @lineage: topos.scope.surface.config
 import socket
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

@@ -1,6 +1,4 @@
 # ops.scope.surface.local
-## @lineage: meta.scope.surface.local
-## @lineage: topos.scope.surface.local
 import time
 from ops.scope.surface.config import BaseSurface, SurfaceConfig
 from phase.bind.client.engine.local import LLMEngine

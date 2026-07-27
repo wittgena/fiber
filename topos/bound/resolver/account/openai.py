@@ -19,11 +19,7 @@ from authlib.jose.errors import JoseError
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 from httpx import AsyncClient, Client
 
-from topos.gateway.credentials import (
-    CredentialStore,
-    OAuthCredentials,
-    get_credentials_dir,
-)
+from topos.warden.cred import CredentialStore, OAuthCredentials, get_credentials_dir
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

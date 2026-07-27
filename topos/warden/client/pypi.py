@@ -1,12 +1,5 @@
-# topos.gateway.ingress.pypi.client
-## @lineage: void.topos.gateway.ingress.pypi.client
-## @lineage: topos.edge.gateway.ingress.pypi.client
-## @lineage: edge.gateway.ingress.pypi.client
-## @lineage: fiber.gateway.ingress.pypi.client
-## @lineage: bound.proxy.ingress.pypi.client
-## @lineage: anchor.phase.ingress.pypi.client
-## @lineage: anchor.phase.reflect.proxy.pypi.client
-"""@desc: MCP Client encapsulating protocol handshakes and domain-specific tool executions"""
+# topos.warden.client.pypi
+## @lineage: topos.ingress.pypi.client
 import subprocess
 import atexit
 import json

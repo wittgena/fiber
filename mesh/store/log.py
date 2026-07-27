@@ -18,7 +18,7 @@ from eco.tenant.conv.event import Event
 from eco.tenant.conv.event import EventID
 from mesh.store.base import EventsListBase
 
-from arch.xor.store.file import FileStore
+from arch.gov.bridge.store.file import FileStore
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

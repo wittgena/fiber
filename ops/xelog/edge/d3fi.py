@@ -13,7 +13,7 @@ from ops.xelog.topos.state.edge import (
     ClearingReceiptResponse
 )
 
-from phase.wasm.broker import WasmBroker
+from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.dphi.adapter.exchange import D3fiExchangeAdapter
 

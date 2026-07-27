@@ -1,4 +1,6 @@
-# topos.gateway.ingress.token.introspect
+# topos.warden.token.introspect
+## @lineage: topos.ingress.token.introspect
+## @lineage: topos.gateway.ingress.token.introspect
 ## @lineage: void.topos.gateway.ingress.token.introspect
 ## @lineage: bound.xor.secure.auth.token.introspect
 ## @lineage: xor.secure.auth.token.introspect

@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, List
 
 from ops.scope.execution.compiler import BlueprintCompiler
 from ops.scope.execution.strategy import LocalExecutionStrategy, ProxyExecutionStrategy
-from watcher.xe.scope.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
+from arch.topos.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
 
 from arch.contract.schema.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode

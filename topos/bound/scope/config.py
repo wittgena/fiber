@@ -23,7 +23,7 @@ from topos.bound.scope.metadata import SettingsSchema
 from topos.bound.scope.setting import VerificationSettings, export_settings_schema
 
 from arch.topos.bound.surge.disc import SurgeBaseModel
-from watcher.xe.residue.convset import (
+from arch.xor.xe.convset import (
     SETTINGS_METADATA_KEY,
     SETTINGS_SECTION_METADATA_KEY,
     SettingProminence,

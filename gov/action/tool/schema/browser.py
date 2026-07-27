@@ -9,7 +9,7 @@ from pydantic import Field
 
 from eco.tenant.conv.message import ImageContent, TextContent
 from atoa.schema.action import Action, Observation
-from watcher.xe.residue.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from arch.xor.xe.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 
 BROWSER_RECORDING_OUTPUT_DIR = os.path.join(".agent_tmp", "browser_observations")
 

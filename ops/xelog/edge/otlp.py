@@ -10,7 +10,7 @@ from ops.xelog.topos.state.edge import EdgeState, EdgeHeader
 
 from arch.topos.bound.interface.subs import DistributedPubSub
 from arch.contract.audit.otlp import ExportLogsServiceRequest
-from phase.wasm.broker import WasmBroker
+from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter, flow_scope
 

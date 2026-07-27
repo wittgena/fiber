@@ -1,5 +1,4 @@
 # topos.bound.space
-## @lineage: void.topos.bound.space
 import os
 import asyncio
 import platform
@@ -9,12 +8,11 @@ from typing import Optional
 import httpx 
 import docker
 
-from watcher.xe.scope.event import WorkspaceReady
-
+from arch.topos.flow.event import WorkspaceReady
 from arch.topos.node.gan import Message, GanNode
 from phase.bind.resolver import resolve_path
 
-from watcher.tracer.infra.header import InfraRouter
+from watcher.tracer.infra.router import InfraRouter
 from watcher.plane.emitter import get_emitter
 
 RES_ROOT = resolve_path("res")
@@ -30,8 +28,8 @@ log = get_emitter("node.space")
 SCRIPT_CONTENT = """
 #!/bin/bash
 IMAGE_NAME=$1
-echo \"Building Docker image: $IMAGE_NAME\"
-cat <<EOF | docker build -t \"$IMAGE_NAME\" -
+echo "Building Docker image: $IMAGE_NAME"
+cat <<EOF | docker build -t "$IMAGE_NAME" -
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y git python3-pip
 EOF
@@ -130,22 +128,32 @@ class SpaceNode(GanNode):
             self.post_message(WorkspaceReady(workspace_ref=self.workspace_ref))
         except Exception as e:
             log.error(f"[{self.name}] ❌ Complete breakdown of workspace initialization layers: {e}")
-            self.post_message(Message("shutdown", bubble=True))
+            err_msg = Message("node_error", bubble=True)
+            err_msg.source_node = self.name
+            err_msg.error = str(e)
+            self.post_message(err_msg)
 
     async def on_shutdown(self, message: Message):
         """@phase: Infra Collapse & Resource Reclaim"""
         log.info(f"[{self.name}] 💤 Deconstructing execution environment allocations...")
         
-        if self.use_proxy and self.remote_http_client and self.workspace_ref:
+        ## 원격 프록시 자원 및 클라이언트 정리 (소켓 누수 방지)
+        if self.remote_http_client:
+            if self.use_proxy and self.workspace_ref:
+                try:
+                    teardown_url = self.router.get_http_endpoint("teardown", workspace_ref=self.workspace_ref)
+                    log.info(f"[{self.name}] [Proxy] Requesting remote sandbox deletion (Ref: {self.workspace_ref})")
+                    await self.remote_http_client.delete(teardown_url)
+                except Exception as e:
+                    log.error(f"[{self.name}] [Proxy] Reclaim exception: {e}")
+            
             try:
-                teardown_url = self.router.get_http_endpoint("teardown", workspace_ref=self.workspace_ref)
-                log.info(f"[{self.name}] [Proxy] Requesting remote sandbox deletion (Ref: {self.workspace_ref})")
-                
-                await self.remote_http_client.delete(teardown_url)
                 await self.remote_http_client.aclose()
-            except Exception as e:
-                log.error(f"[{self.name}] [Proxy] Reclaim exception: {e}")
-        elif not self.use_proxy and self.container:
+            except Exception:
+                pass
+
+        ## 로컬 도커 컨테이너 및 클라이언트 정리
+        if not self.use_proxy and self.container:
             try:
                 log.info(f"[{self.name}] [Local] Terminating standalone sandbox container ({self.container.short_id})")
                 await asyncio.to_thread(self.container.remove, force=True)
@@ -153,8 +161,11 @@ class SpaceNode(GanNode):
             except Exception as e:
                 log.error(f"[{self.name}] [Local] Reclaim exception: {e}")
 
-            if self.client:
+        if self.client:
+            try:
                 await asyncio.to_thread(self.client.close)
+            except Exception:
+                pass
 
         self._running = False
         self._queue.put_nowait(None)

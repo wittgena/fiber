@@ -30,7 +30,7 @@ from gov.conv.state import ConversationState
 from mesh.engine.conv.parser.title import generate_conversation_title
 from mesh.engine.conv.parser.builder import MessageBuilder, LLMFacade
 
-from arch.xor.store.file import LocalFileStore
+from arch.gov.bridge.store.file import LocalFileStore
 from mesh.store.log import LogStore
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import TunnelFactory, UniversalFacade

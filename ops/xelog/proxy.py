@@ -1,12 +1,12 @@
-# topos.gateway.ingress.proxy
-## @lineage: void.topos.gateway.ingress.proxy
+# ops.xelog.proxy
+## @lineage: topos.ingress.proxy
 import httpx
 import uvicorn
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse, Response
 
-from topos.gateway.ingress.token.introspect import IntrospectionTokenVerifier
-from topos.gateway.setting import gateway_settings, pypi_settings
+from topos.warden.token.introspect import IntrospectionTokenVerifier
+from atoa.secure.server.setting import gateway_settings, pypi_settings
 
 from watcher.plane.emitter import get_emitter
 

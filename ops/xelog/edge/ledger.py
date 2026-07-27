@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from ops.xelog.depend import get_wasm_broker, get_logstream_store
 from ops.xelog.topos.log.store import LogStreamStore
-from phase.wasm.broker import WasmBroker, WasmMethod
+from watcher.dphi.broker import WasmBroker, WasmMethod
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter, flow_scope
 

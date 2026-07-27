@@ -1,8 +1,5 @@
-# topos.gateway.credentials
-## @lineage: void.topos.gateway.credentials
-## @lineage: atoa.secure.auth.credentials
-## @lineage: atoa.mesh.secure.auth.credentials
-## @lineage: mesh.secure.auth.credentials
+# topos.warden.cred
+## @lineage: topos.credentials
 """Credential storage, retrieval, and providers for OAuth-based authentication."""
 from __future__ import annotations
 

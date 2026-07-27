@@ -18,7 +18,7 @@ from ops.xelog.topos.log.store import LogStreamStore
 
 from arch.topos.bound.interface.subs import DistributedPubSub
 from arch.topos.bound.tunnel import UniversalFacade
-from phase.wasm.broker import WasmBroker
+from watcher.dphi.broker import WasmBroker
 
 from watcher.plane.emitter import get_emitter
 

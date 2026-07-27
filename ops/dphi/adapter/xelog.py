@@ -5,7 +5,7 @@ from typing import Tuple
 
 from ops.dphi.entry import WasmPipelineCLI
 from ops.xelog.edge.scheme.runner import E2EScenarioOrchestrator 
-from watcher.dphi.wasm.tracer import WasmTracer
+from phase.wasm.tracer import WasmTracer
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.xelog")

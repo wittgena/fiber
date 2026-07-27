@@ -6,8 +6,8 @@ import asyncio
 from phase.bind.resolver import resolve_path
 from phase.wasm.tester.dphi import WasmTester
 
-from watcher.dphi.wasm.builder import WasmBuilder
-from watcher.dphi.wasm.tracer import WasmTracer
+from phase.wasm.builder import WasmBuilder
+from phase.wasm.tracer import WasmTracer
 from watcher.plane.emitter import get_emitter
 
 class WasmPipelineCLI:

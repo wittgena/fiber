@@ -16,7 +16,7 @@ from eco.tenant.conv.message import ImageContent, TextContent
 from gov.action.executor import ActionExecutor
 from atoa.schema.action import Action, Observation
 from gov.action.definition import DeclaredResources, ActionAnnotations, ActionDefinition
-from watcher.xe.residue.truncate import maybe_truncate
+from arch.xor.xe.truncate import maybe_truncate
 from arch.gov.tool.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
 from arch.gov.tool.terminal import CmdOutputMetadata
 

@@ -52,8 +52,8 @@ from atoa.exception.mapping import map_provider_exception
 from agent.driver.llm.response import LLMResponse
 from eco.tenant.conv.types import TokenCallbackType
 from eco.tenant.conv.message import Message
-from watcher.xe.residue.convset import SettingProminence, field_meta
-from watcher.xe.residue.depre import warn_deprecated
+from arch.xor.xe.convset import SettingProminence, field_meta
+from arch.xor.xe.depre import warn_deprecated
 
 from agent.driver.fallback import FallbackStrategy
 from agent.driver.io import DriverIO

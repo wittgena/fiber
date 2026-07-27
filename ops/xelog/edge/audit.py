@@ -16,7 +16,7 @@ from arch.contract.audit.model import (
     LogstEvent, LogstEventPayload, 
     AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope
 )
-from phase.wasm.broker import WasmBroker
+from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 

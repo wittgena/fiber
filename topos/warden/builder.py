@@ -1,8 +1,5 @@
-# topos.gateway.warden
-## @lineage: void.topos.gateway.warden
-## @lineage: topos.edge.gateway.warden
-## @lineage: edge.gateway.warden
-## @lineage: fiber.gateway.warden
+# topos.warden.builder
+## @lineage: topos.warden
 import argparse
 import subprocess
 import os
@@ -15,7 +12,9 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 
-from topos.gateway.ingress.pypi.client import PypiMCPClient
+from topos.warden.client.pypi import PypiMCPClient
+from topos.warden.cred import CredentialStore, ClientCredentialsOAuthProvider
+
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 
@@ -102,7 +101,6 @@ class SecurityWarden:
                Caches the token in CredentialStore to avoid redundant network calls.
         """
         try:
-            from topos.gateway.credentials import CredentialStore, ClientCredentialsOAuthProvider
             store = CredentialStore()
             mcp_storage = store.as_mcp_storage("brane-builder")
             

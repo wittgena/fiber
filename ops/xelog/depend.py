@@ -12,7 +12,7 @@ from ops.xelog.topos.ingress.policy import (
 from ops.xelog.topos.log.store import LogStreamStore
 
 from arch.topos.bound.interface.subs import DistributedPubSub
-from phase.wasm.broker import WasmBroker
+from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.anchor import NexusAnchor
 from watcher.dphi.adapter.exchange import D3fiExchangeAdapter
 from watcher.dphi.adapter.sign import NodeSigner

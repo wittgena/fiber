@@ -6,7 +6,7 @@ from topos.bound.scope.config import AgentConfig
 from agent.driver.tensor import Driver
 from agent.disc.tool import Tool
 
-from watcher.xe.scope.event import AgentConfigured
+from arch.topos.flow.event import AgentConfigured
 
 from arch.topos.node.gan import Message, GanNode
 from watcher.plane.emitter import get_emitter

@@ -1,5 +1,4 @@
 # ops.xelog.topos.proxy
-## @lineage: xe.extime.logst.topos.proxy
 import asyncio
 import json
 from dataclasses import dataclass
@@ -16,7 +15,7 @@ from arch.contract.event.network import EventTransductor
 from arch.contract.event.next import next_id, next_phase_id
 
 from phase.bind.client.engine.base import BaseEngine
-from watcher.tracer.infra.header import InfraRouter
+from watcher.tracer.infra.router import InfraRouter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bound.proxy")

@@ -1,5 +1,4 @@
 # ops.scope.flow.graph.root
-## @lineage: meta.scope.flow.graph.root
 import asyncio
 import json
 import time
@@ -17,9 +16,9 @@ from arch.contract.schema.graph import EntryNode
 from arch.topos.bound.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.bound.sealer import EpochSealer
+from arch.topos.flow.event import AgentConfigured
 
-from phase.wasm.broker import WasmBroker
-from watcher.xe.scope.event import AgentConfigured
+from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.exchange import D3fiExchangeAdapter, TransactionReceipt
 from watcher.dphi.cgroup import Tier
 from watcher.dphi.adapter.state import StateAdapter
@@ -51,6 +50,7 @@ class TopologyResidue:
     edge_state: str
     trajectory_trace: str
     receipt: Optional[TransactionReceipt]
+
 
 class AgentTopos(GanNode):
     """
@@ -100,6 +100,8 @@ class AgentTopos(GanNode):
         self.post_message(Message("boot"))
         
         log.info(f"[{self.name}] Awaiting fluid topology convergence...")
+        
+        # Deadlock is prevented here by ensuring the Tracker always resolves (even on fracture)
         trajectory_result = await self.tracker.await_convergence(timeout=600.0)
         
         log.info(f"[{self.name}] Initiating teardown sequence. Current Edge State: {self.tracker.transition.edge.value}")
@@ -141,7 +143,7 @@ class AgentTopos(GanNode):
             log.info(f"  Fuel Burned  (Compute): {residue.receipt.fuel_consumed}")
             log.info(f"  Status       : {residue.receipt.settlement_status}")
         else:
-            log.warning("  ⚠️ No receipt generated (Epoch sealing fractured).")
+            log.warning("  ⚠️ No receipt generated (Epoch sealing fractured or bypassed).")
         log.info("="*60 + "\n")
 
     async def run_task(self, instruction: str) -> TopologyResidue:
@@ -206,7 +208,6 @@ class AgentTopos(GanNode):
         """
         @desc: Intercepts the convergent state, retrieves the true WASM parity, 
                cryptographically seals the epoch, and delegates to ExchangeAdapter.
-               It seals the state regardless of whether the agent succeeded or ruptured.
         """
         cost = getattr(message, 'cost', 0.0)
         fuel_consumed = getattr(message, 'fuel_consumed', 0)
@@ -219,7 +220,6 @@ class AgentTopos(GanNode):
         actual_entangled_state = await self._fetch_final_parity_state()
         
         # 2. Cryptographically Seal the Epoch via dphi.wasm
-        # [개선] 복잡한 WASM 페이로드 생성 및 서명 로직을 EpochSealer로 위임
         canonical_payload = EpochSealer.generate_seal_payload(
             entangled_state=actual_entangled_state,
             parent_commit_id="genesis"
@@ -250,14 +250,31 @@ class AgentTopos(GanNode):
         self.tracker.reach_dominium(resource_address=f"urn:surgent:resource:resolved_task_{self.tracker.transition.id}")
 
     async def on_node_error(self, message: Message):
+        """@desc: Catches propagated errors from child nodes and fractures the topology safely."""
         source = getattr(message, 'source_node', 'Unknown')
         error = getattr(message, 'error', 'Unknown Error')
-        log.critical(f"[{self.name}] 🚨 Caught fatal error from child node [{source}]: {error}")
+        
+        log.critical(f"[{self.name}] 🚨 Fatal topological rupture originating from [{source}].")
+        log.critical(f"[{self.name}] ❌ Error Details: {error}")
+        
+        # 💡 [개선] 사용자를 위한 명확한 힌트 제공 (UX 향상)
+        if "Connection refused" in str(error) and "DockerWorkspaceNode" in source:
+            log.info(f"[{self.name}] 💡 HINT: Docker daemon is unreachable. Please ensure Docker Desktop/OrbStack is running, or use '--proxy' for remote execution.")
+            
         self.tracker.record(f"System Error: {source} failed -> {error}")
-        self.tracker.fracture_topology(lmbda=0.2, tau=1.0)
+        
+        # 💡 [개선] 데드락 방지: 즉시 강제 붕괴 처리하여 메인 Future를 Resolve시킴
+        self.tracker.fracture_topology(lmbda=0.2, tau=1.0, force_collapse=True)
 
     async def on_shutdown(self, message: Message):
+        """@desc: Handles graceful or forced teardown of the execution environment."""
         log.info(f"[{self.name}] 💤 Purging system manifolds and reclaiming resources.")
+        
+        # 💡 [개선] 데드락 방지: 자식 노드가 냅다 shutdown을 던져버린 경우 Future 고립 방지
+        if self.tracker.future and not self.tracker.future.done():
+            log.warning(f"[{self.name}] ⚠️ Premature shutdown detected before state convergence. Fracturing topology.")
+            self.tracker.fracture_topology(lmbda=0.0, tau=1.0, force_collapse=True)
+            
         for child in list(self.children):
             await self.unmount(child)
         self.stop()
@@ -329,20 +346,25 @@ class ConvergenceTracker:
         if force_collapse:
             self.transition.bind(EdgeFlow.COLLAPSED)
         if self.future and not self.future.done():
-            self.future.set_result(False)
+            self.future.set_result(False) # Resolve as False to break the await lock
 
     async def await_convergence(self, timeout: float = 600.0) -> str:
+        """@desc: Awaits the resolution of the topology, aggregating memory logs into a trace."""
         try:
-            await asyncio.wait_for(self.future, timeout=timeout)
+            success = await asyncio.wait_for(self.future, timeout=timeout)
             trace_output = "\n".join([f"[{m.get('new_state', m.get('previous_state', '0'))}] {m['event']}" for m in self.transition.memory])
+            if not success:
+                trace_output += "\n[⚠️ SYSTEM COLLAPSED] Execution fractured before reaching dominium. Trace aborted."
+                
             return trace_output
+            
         except asyncio.TimeoutError:
             self.fracture_topology(lmbda=0.0, tau=1.0, force_collapse=True)
             log.error(f"[{self.owner_name}] Phase state resolution timed out. Topology Collapsed.")
-            return "Execution failed: Timeout"
+            return "Execution failed: Timeout reached without convergence."
         except Exception as e:
             self.fracture_topology(lmbda=0.0, tau=1.0, force_collapse=True)
-            log.error(f"[{self.owner_name}] Fatal anomaly detected: {e}")
+            log.error(f"[{self.owner_name}] Fatal anomaly detected in convergence wait: {e}")
             return f"Execution failed: {e}"
 
 
@@ -351,7 +373,6 @@ class DeploymentDispatcher:
     @staticmethod
     def dispatch_to_policy(policy_node: PolicyNode, blueprint: Optional[SurgeBlueprint], instruction: str, settings: dict):
         if blueprint:
-            # Establish Context Boundary
             context_msg = Message("set_context")
             context_msg.entry_node = EntryNode(
                 entry=blueprint.topology_name,
@@ -361,14 +382,12 @@ class DeploymentDispatcher:
             )
             policy_node.post_message(context_msg)
             
-            # Dispatch Execution Directives
             run_msg = Message("execute_events")
             run_msg.events = blueprint.nodes
             run_msg.settings = settings
             run_msg.system_instructions = getattr(blueprint, 'system_instructions', None)
             policy_node.post_message(run_msg)
         else:
-            # Standard Interactive Mode
             run_msg = Message("run_conversation")
             run_msg.instruction = instruction
             run_msg.settings = settings
