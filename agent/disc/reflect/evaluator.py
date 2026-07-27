@@ -8,7 +8,7 @@ from eco.tenant.conv.message import Message, TextContent
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from watcher.plane.emitter import get_emitter
-from gov.factory.action import CoreAction
+from agent.driver.factory.action import CoreAction
 
 if TYPE_CHECKING:
     from agent.activator import AgentStateSnapshot

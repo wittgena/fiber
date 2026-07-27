@@ -1,9 +1,10 @@
 # topos.bound.scope.config
+## @lineage: topos.gov.scope.config
 ## @lineage: ops.scope.topos.config
 ## @lineage: void.extime.logst.topos.config
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin
-from mesh.mcp.config import MCPConfig
+from swarm.mesh.mcp.config import MCPConfig
 from pydantic import (
     BaseModel,
     Field,
@@ -131,7 +132,7 @@ class AgentConfig(SurgeBaseModel):
             return None
 
         from atoa.schema.reflect import IterativeRefinementConfig
-        from agent.config.reflect import Reflector
+        from agent.driver.config.reflect import Reflector
 
         iterative_refinement = None
         if self.verification.enable_iterative_refinement:

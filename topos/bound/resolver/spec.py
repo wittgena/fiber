@@ -1,4 +1,5 @@
 # topos.bound.resolver.spec
+## @lineage: topos.gov.resolver.spec
 ## @lineage: void.topos.bound.resolver.spec
 ## @lineage: gov.resolver.spec
 ## @lineage: ops.resolver.spec

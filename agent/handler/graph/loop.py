@@ -10,7 +10,7 @@ from atoa.event.llm.message import MessageEvent
 from atoa.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 from agent.handler.step import StepHandler
-from mesh.engine.conv.parser.builder import MessageBuilder, LLMFacade
+from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
 from eco.tenant.conv.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter

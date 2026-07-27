@@ -3,7 +3,7 @@ from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import AgentErrorEvent
 from agent.disc.status import ConverStatus
 from agent.handler.step import StepHandler
-from mesh.engine.conv.command import TransitionStatus
+from swarm.mesh.conv.command import TransitionStatus
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

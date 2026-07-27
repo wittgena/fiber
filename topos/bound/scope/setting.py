@@ -1,4 +1,5 @@
 # topos.bound.scope.setting
+## @lineage: topos.gov.scope.setting
 ## @lineage: ops.scope.topos.setting
 ## @lineage: void.extime.web.setting
 from enum import Enum

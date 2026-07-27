@@ -1,4 +1,5 @@
 # topos.bound.scope.metadata
+## @lineage: topos.gov.scope.metadata
 ## @lineage: ops.scope.topos.metadata
 ## @lineage: void.extime.web.metadata
 from typing import TYPE_CHECKING, Any, Literal

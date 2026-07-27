@@ -1,8 +1,9 @@
 # topos.bound.resolver.task
+## @lineage: topos.gov.resolver.task
 from enum import Enum
 from typing import Dict, Any, Optional, Union
 
-from gov.factory.action import CoreAction
+from agent.driver.factory.action import CoreAction
 
 from topos.bound.resolver.spec import (
     SchemeCategory, 

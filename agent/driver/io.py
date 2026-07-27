@@ -22,7 +22,7 @@ from eco.tenant.switch.params import (
     ModelResponse,
     ChatCompletionToolParam,
 )
-from gov.conv.chat.chat import select_chat_options
+from topos.conv.chat.chat import select_chat_options
 from eco.watcher.snapshot.metrics import MetricsSnapshot
 
 from atoa.exception.types import LLMNoResponseError
@@ -33,7 +33,7 @@ from watcher.plane.emitter import get_emitter
 if TYPE_CHECKING:
     from agent.driver.tensor import Driver
     from eco.tenant.conv.types import TokenCallbackType
-    from gov.action.definition import ActionDefinition
+    from agent.action.definition import ActionDefinition
 
 log = get_emitter(__name__)
 

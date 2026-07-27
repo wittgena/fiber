@@ -57,11 +57,11 @@ from arch.xor.xe.depre import warn_deprecated
 
 from agent.driver.fallback import FallbackStrategy
 from agent.driver.io import DriverIO
-from agent.config.vendor import VendorSubstrateMixin
+from agent.driver.config.vendor import VendorSubstrateMixin
 
-from gov.factory.driver import DriverFactory
+from agent.driver.factory.driver import DriverFactory
 from agent.disc.memory.profile import LLMProfileStore
-from gov.action.definition import ActionDefinition
+from agent.action.definition import ActionDefinition
 
 from phase.bind.resolver import find_current_self
 from watcher.plane.emitter import get_emitter

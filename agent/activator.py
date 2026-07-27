@@ -1,7 +1,4 @@
 # agent.activator
-## @lineage: atoa.agent.activator
-## @lineage: agent.topos.activator
-## @lineage: atoa.topos.activator
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json

@@ -11,12 +11,12 @@ from watcher.plane.observer.span import end_active_span, should_enable_observabi
 
 from atoa.secure.security.confirm import ConfirmationPolicyBase
 from atoa.schema.action import Action, Observation
-from mesh.watcher.stats import ConversationStats
+from topos.conv.stats import ConversationStats
 from eco.tenant.conv.types import ConversationID
 from agent.driver.tensor import Driver
 from eco.tenant.conv.message import Message
 from bound.resolver.secret import SecretValue
-from mesh.engine.conv.protocol import ConvStateProtocol
+from swarm.mesh.conv.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:
     from atoa.secure.security.analyzer import SecurityAnalyzerBase

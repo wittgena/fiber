@@ -16,13 +16,13 @@ from agent.disc.tool import Tool
 from atoa.schema.reflect import ReflectorBase
 from agent.driver.tensor import Driver
 
-from mesh.mcp.client import MCPClient
-from mesh.mcp.factory import create_mcp_tools
-from gov.action.tool.mcp import MCPExecutor
-from gov.action.definition import ActionDefinition
+from swarm.mesh.mcp.client import MCPClient
+from swarm.mesh.mcp.factory import create_mcp_tools
+from agent.action.tool.mcp import MCPExecutor
+from agent.action.definition import ActionDefinition
 
-from gov.factory.action import CoreAction
-from gov.action.resolver import ActionResolver
+from agent.driver.factory.action import CoreAction
+from agent.action.resolver import ActionResolver
 
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import UniversalFacade
