@@ -6,14 +6,14 @@ from typing import Optional, Dict, Any, List, Callable
 from eco.tenant.conv.event import LLMConvertibleEvent
 from swarm.mesh.conv.adapter import AgentCommunicator, ExecutionController, EngineContextAdapter
 
-from agent.activator import Activator
-from agent.disc.tool import Tool
+from phi.agent.activator import Activator
+from phi.agent.disc.tool import Tool
 
-from topos.conv.state import ConversationState
-from topos.conv.visualizer import ConversationVisualizer
-from agent.driver.factory.action import CoreAction
-from agent.action.resolver import ActionResolver
-from agent.action.tool.terminal import TerminalTool
+from swarm.conver.conv.state import ConversationState
+from swarm.conver.conv.visualizer import ConversationVisualizer
+from swarm.engine.driver.factory.action import CoreAction
+from phi.agent.action.resolver import ActionResolver
+from phi.agent.action.tool.terminal import TerminalTool
 
 from topos.ops.xelog.topos.proxy import ProxyEngine
 

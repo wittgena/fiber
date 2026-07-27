@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import Dict, Any, Optional, Union
 
-from agent.driver.factory.action import CoreAction
+from swarm.engine.driver.factory.action import CoreAction
 
 from topos.bound.resolver.spec import (
     SchemeCategory, 

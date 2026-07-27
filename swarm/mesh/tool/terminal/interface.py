@@ -16,7 +16,7 @@ import os
 from abc import ABC, abstractmethod
 
 from arch.gov.tool.terminal import NO_CHANGE_TIMEOUT_SECONDS
-from agent.action.tool.terminal import TerminalAction, TerminalObservation
+from phi.agent.action.tool.terminal import TerminalAction, TerminalObservation
 
 class TerminalInterface(ABC):
     work_dir: str

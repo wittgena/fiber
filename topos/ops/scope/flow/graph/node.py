@@ -4,8 +4,8 @@ import os
 from pydantic import SecretStr
 
 from topos.bound.scope.config import AgentConfig
-from agent.driver.tensor import Driver
-from agent.disc.tool import Tool
+from swarm.engine.driver.tensor import Driver
+from phi.agent.disc.tool import Tool
 
 from arch.topos.flow.event import AgentConfigured
 

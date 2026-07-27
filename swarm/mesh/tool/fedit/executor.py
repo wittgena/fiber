@@ -1,23 +1,12 @@
 # swarm.mesh.tool.fedit.executor
-## @lineage: mesh.tool.fedit.executor
-## @lineage: gov.tool.fedit.executor
-## @lineage: eco.gov.tool.fedit.executor
-## @lineage: atoa.gov.tool.fedit.executor
-## @lineage: agent.gov.tool.fedit.executor
-## @lineage: gov.sandbox.engine.tool.fedit.executor
-## @lineage: agent.engine.tool.fedit.executor
-## @lineage: sandbox.tool.fedit.executor
-## @lineage: ops.xor.tool.fedit.executor
-## @lineage: meta.xor.tool.fedit.executor
-## @lineage: gov.engine.tool.fedit.executor
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agent.disc.conv import ToolExecutionContextProtocol
+    from swarm.conver.protocol import ToolExecutionContextProtocol
 
-from agent.action.executor import ActionExecutor
-from agent.action.tool.fedit import (
+from phi.agent.action.executor import ActionExecutor
+from phi.agent.action.tool.fedit import (
     CommandLiteral,
     FileEditorAction,
     FileEditorObservation,

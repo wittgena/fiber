@@ -1,17 +1,11 @@
 # swarm.mesh.conv.adapter
-## @lineage: swarm.mesh.engine.conv.adapter
-## @lineage: mesh.engine.conv.adapter
-## @lineage: gov.conv.adapter
-## @lineage: gov.atoa.conv.adapter
-## @lineage: eco.gov.atoa.conv.adapter
-## @lineage: atoa.agent.conv.context.adapter
 import json
 from pathlib import Path
 from collections.abc import Mapping
 from typing import Any
 
 from atoa.schema.action import Action, Observation
-from agent.disc.conv import (
+from swarm.conver.protocol import (
     AgentCommunicationProtocol, 
     ExecutionControlProtocol, 
     SecurityControlProtocol, 
@@ -21,11 +15,11 @@ from agent.disc.conv import (
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.observation import UserRejectObservation
 from eco.tenant.conv.types import ConversationID
-from agent.driver.tensor import Driver
+from swarm.engine.driver.tensor import Driver
 
 from eco.tenant.conv.message import Message, TextContent
-from topos.conv.stats import ConversationStats
-from agent.disc.status import ConverStatus
+from swarm.conver.conv.stats import ConversationStats
+from swarm.conver.status import ConverStatus
 from swarm.mesh.conv.protocol import ConvStateProtocol
 
 from swarm.mesh.conv.command import TransitionStatus, UpdateSecurityPolicy
@@ -33,7 +27,7 @@ from atoa.secure.security.analyzer import SecurityAnalyzerBase
 from atoa.secure.security.confirm import ConfirmationPolicyBase
 from atoa.secure.security.confirm import NeverConfirm
 
-from topos.conver import Conver, AgentSessionManager, AgentSidecar
+from swarm.conver.executor import Conver, AgentSessionManager, AgentSidecar
 from bound.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
 
@@ -164,7 +158,7 @@ class SecurityManager:
         log.info("Security analyzer updated.")
 
     def reject_pending_actions(self, reason: str = "User rejected the action") -> None:
-        from topos.conv.state import ConversationState
+        from swarm.conver.conv.state import ConversationState
         state = self._context.state
         pending_actions = ConversationState.get_unmatched_actions(state.events)
         if state.execution_status == ConverStatus.WAITING_FOR_USER:

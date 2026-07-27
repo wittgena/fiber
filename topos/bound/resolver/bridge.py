@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from arch.contract.schema.graph import EntryNode
 from arch.contract.schema.resonance import BridgeEvent
 from arch.topos.bound.surge.blueprint import SurgeBlueprint, SurgeNode
-from agent.driver.factory.action import CoreAction
+from swarm.engine.driver.factory.action import CoreAction
 
 log = logging.getLogger(__name__)
 

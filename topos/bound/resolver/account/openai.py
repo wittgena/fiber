@@ -24,7 +24,7 @@ from swarm.warden.cred import CredentialStore, OAuthCredentials, get_credentials
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from agent.driver.tensor import Driver
+    from swarm.engine.driver.tensor import Driver
 
 SupportedVendor = Literal["openai"]
 logger = get_logger(__name__)

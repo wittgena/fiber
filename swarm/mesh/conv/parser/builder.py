@@ -8,13 +8,13 @@ from collections.abc import Sequence
 
 from eco.tenant.conv.event import Event, LLMConvertibleEvent
 from eco.tenant.conv.types import ConversationTokenCallbackType
-from agent.driver.llm.response import LLMResponse
+from swarm.engine.llm.response import LLMResponse
 from eco.tenant.conv.message import Message
 
 from swarm.mesh.conv.parser.view import View
 
-from agent.driver.tensor import Driver
-from agent.action.definition import ActionDefinition
+from swarm.engine.driver.tensor import Driver
+from phi.agent.action.definition import ActionDefinition
 
 from watcher.plane.emitter import get_emitter
 

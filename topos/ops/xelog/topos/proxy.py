@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Callable, Dict, Any, Optional
 
 from atoa.event.llm.action import ActionEvent
-from agent.disc.status import ConverStatus
+from swarm.conver.status import ConverStatus
 
 from arch.contract.schema.resonance import BridgeEvent
 from arch.contract.event.bus import AsyncEventBus

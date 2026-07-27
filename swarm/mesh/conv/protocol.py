@@ -13,19 +13,19 @@ from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
 from eco.tenant.conv.types import ConversationID, ConversationTags, ConversationCallbackType
-from agent.disc.workspace import BaseWorkspace
+from phi.agent.disc.workspace import BaseWorkspace
 from eco.tenant.conv.event import Event
 from eco.tenant.conv.event import EventID
 
 from atoa.secure.security.confirm import ConfirmationPolicyBase
-from topos.conv.stats import ConversationStats
+from swarm.conver.conv.stats import ConversationStats
 from swarm.mesh.store.log import LogStore
 
 from swarm.mesh.conv.command import StateCommand
 
 if TYPE_CHECKING:
-    from agent.disc.status import ConverStatus
-    from agent.disc.ator import Ator
+    from swarm.conver.status import ConverStatus
+    from phi.agent.disc.ator import Ator
     from bound.resolver.secret import SecretRegistry
     from atoa.secure.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any

@@ -9,8 +9,8 @@ import websockets
 import json
 from typing import Optional
 
-from agent.disc.workspace import BaseWorkspace
-from swarm.mesh.engine.executor.command import execute_command
+from phi.agent.disc.workspace import BaseWorkspace
+from swarm.engine.executor.command import execute_command
 from swarm.mesh.tool.git.changes import get_git_changes
 from swarm.mesh.tool.git.diff import get_git_diff
 

@@ -1,23 +1,17 @@
 # swarm.mesh.tool.terminal.executor
-## @lineage: mesh.tool.terminal.executor
-## @lineage: gov.tool.terminal.executor
-## @lineage: eco.gov.tool.terminal.executor
-## @lineage: atoa.gov.tool.terminal.executor
-## @lineage: agent.gov.tool.terminal.executor
-## @lineage: gov.sandbox.engine.tool.terminal.executor
 import json
 import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from agent.action.executor import ActionExecutor
-from agent.action.tool.terminal import TerminalAction, TerminalObservation
-from agent.disc.conv import ToolExecutionContextProtocol
-from swarm.mesh.engine.builder.chain import ChainBuilder
-from swarm.mesh.engine.builder.session import _is_tmux_available, create_terminal_session
-from swarm.mesh.engine.terminal.session import TerminalSession
-from swarm.mesh.engine.executor.context import ExecutionContext, ExecutionEngine
-from swarm.mesh.engine.polling import PollingExecutionEngine
+from phi.agent.action.executor import ActionExecutor
+from phi.agent.action.tool.terminal import TerminalAction, TerminalObservation
+from swarm.conver.protocol import ToolExecutionContextProtocol
+from swarm.engine.builder.chain import ChainBuilder
+from swarm.engine.builder.session import _is_tmux_available, create_terminal_session
+from swarm.engine.terminal.session import TerminalSession
+from swarm.engine.executor.context import ExecutionContext, ExecutionEngine
+from swarm.engine.polling import PollingExecutionEngine
 from swarm.mesh.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
 from eco.tenant.conv.message import TextContent

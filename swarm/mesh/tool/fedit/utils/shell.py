@@ -28,7 +28,7 @@ import os
 import subprocess
 import time
 
-from swarm.mesh.engine.executor.command import sanitized_env
+from swarm.engine.executor.command import sanitized_env
 from arch.xor.xe.truncate import maybe_truncate
 from swarm.mesh.tool.fedit.utils.constants import (
     CONTENT_TRUNCATED_NOTICE,

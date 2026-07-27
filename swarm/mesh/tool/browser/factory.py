@@ -10,8 +10,8 @@ import sys
 import threading
 from typing import Any
 
-from agent.action.executor import ActionExecutor
-from agent.action.tool.schema.browser import BrowserAction, BrowserObservation
+from phi.agent.action.executor import ActionExecutor
+from phi.agent.action.tool.schema.browser import BrowserAction, BrowserObservation
 
 if sys.platform == "win32":
     from swarm.mesh.tool.browser.window import WindowsBrowserExecutor

@@ -1,11 +1,4 @@
 # swarm.mesh.tool.browser.executor
-## @lineage: mesh.tool.browser.executor
-## @lineage: gov.tool.browser.executor
-## @lineage: eco.gov.tool.browser.executor
-## @lineage: atoa.gov.tool.browser.executor
-## @lineage: agent.gov.tool.browser.executor
-## @lineage: gov.sandbox.engine.tool.browser.executor
-## @lineage: agent.engine.tool.browser.executor
 from __future__ import annotations
 
 import builtins
@@ -18,20 +11,20 @@ from typing import TYPE_CHECKING, Any
 
 from func_timeout import func_timeout, FunctionTimedOut
 
-from agent.action.executor import ActionExecutor
-from agent.action.tool.schema.browser import (
+from phi.agent.action.executor import ActionExecutor
+from phi.agent.action.tool.schema.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,
     BrowserObservation,
 )
-from swarm.mesh.engine.executor.command import sanitized_env
-from swarm.mesh.engine.executor.base import AsyncExecutor
+from swarm.engine.executor.command import sanitized_env
+from swarm.engine.executor.base import AsyncExecutor
 from watcher.plane.emitter import get_logger
 from swarm.mesh.tool.browser.server import BrowserServer 
 
 if TYPE_CHECKING:
-    from agent.disc.conv import ToolExecutionContextProtocol
+    from swarm.conver.protocol import ToolExecutionContextProtocol
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0

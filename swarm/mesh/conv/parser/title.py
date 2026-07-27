@@ -19,7 +19,7 @@ from collections.abc import Sequence
 
 from atoa.event.llm.message import MessageEvent
 from eco.tenant.conv.event import Event
-from agent.driver.tensor import Driver
+from swarm.engine.driver.tensor import Driver
 
 from eco.tenant.conv.message import Message, TextContent
 from watcher.plane.emitter import get_logger

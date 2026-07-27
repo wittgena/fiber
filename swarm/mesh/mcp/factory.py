@@ -10,7 +10,7 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from agent.action.tool.mcp import MCPActionDefinition
+from phi.agent.action.tool.mcp import MCPActionDefinition
 
 from swarm.mesh.mcp.config import MCPConfig
 from swarm.mesh.mcp.exception import MCPTimeoutError

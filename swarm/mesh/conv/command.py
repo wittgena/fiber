@@ -12,7 +12,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from agent.disc.status import ConverStatus
+from swarm.conver.status import ConverStatus
 from atoa.secure.security.confirm import ConfirmationPolicyBase
 
 @dataclass(kw_only=True)

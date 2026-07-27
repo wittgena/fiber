@@ -8,7 +8,7 @@ from typing import Dict, Any
 from topos.bound.adapter.sandbox import MetabolicProfile
 from topos.bound.adapter.profile import ProfileAdapter
 
-from swarm.phi.wasm.executor import WasmExecutor, TaskContext
+from phi.executor.dphi import WasmExecutor, TaskContext
 from arch.xor.parser.block.contract import CoherenceState
 from watcher.dphi.cgroup import Tier
 
