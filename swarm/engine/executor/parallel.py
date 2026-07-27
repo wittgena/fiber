@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Final, Protocol, runtime_checkable
 import threading
 
 from atoa.event.llm.observation import AgentErrorEvent
-from swarm.mesh.store.fifo import FIFOLock
+from swarm.mesh.conv.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
     from eco.tenant.conv.event import Event

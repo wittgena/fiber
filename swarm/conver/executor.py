@@ -33,7 +33,7 @@ from swarm.mesh.conv.parser.title import generate_conversation_title
 from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
 
 from arch.gov.bridge.store.file import LocalFileStore
-from swarm.mesh.store.log import LogStore
+from swarm.mesh.conv.store.log import LogStore
 from arch.topos.bound.payload import StreamPayloadAdapter
 from arch.topos.bound.tunnel import TunnelFactory, UniversalFacade
 

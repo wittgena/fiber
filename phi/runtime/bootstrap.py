@@ -1,5 +1,4 @@
 # phi.runtime.bootstrap
-## @lineage: agent.bootstrap
 import asyncio
 import argparse
 import socket
@@ -8,8 +7,8 @@ from typing import Any, Tuple, Dict, Optional
 from bound.resolver.model.tier import model_tier_registry
 from topos.bound.resolver.spec import SchemeCategory, TransactionDomain
 from topos.bound.resolver.task import TaskResolver, BlueprintType
-from topos.ops.scope.manager import managed_scope
-from topos.ops.scope.flow.graph.root import AgentTopos
+from topos.bound.scope.manager import managed_scope
+from topos.flow.graph.root import AgentTopos
 
 from watcher.plane.emitter import get_emitter
 

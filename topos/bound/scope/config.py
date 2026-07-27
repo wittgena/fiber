@@ -1,10 +1,7 @@
 # topos.bound.scope.config
-## @lineage: topos.gov.scope.config
-## @lineage: ops.scope.topos.config
-## @lineage: void.extime.logst.topos.config
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin
-from swarm.mesh.mcp.config import MCPConfig
+from phi.runtime.mcp.config import MCPConfig
 from pydantic import (
     BaseModel,
     Field,

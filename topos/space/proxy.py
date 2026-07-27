@@ -11,8 +11,8 @@ from typing import Optional
 
 from phi.agent.disc.workspace import BaseWorkspace
 from swarm.engine.executor.command import execute_command
-from swarm.mesh.tool.git.changes import get_git_changes
-from swarm.mesh.tool.git.diff import get_git_diff
+from phi.runtime.tool.git.changes import get_git_changes
+from phi.runtime.tool.git.diff import get_git_diff
 
 from arch.gov.tool.command.workspace import CommandResult, FileOperationResult
 from arch.gov.tool.git import GitChange, GitDiff

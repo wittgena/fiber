@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import Dict, Any
 
 from atoa.secure.secret.manager import get_secret_str
-from topos.ops.xelog.audit.billing import execute_billing_verification, FrameCollapseError
+from topos.xelog.audit.billing import execute_billing_verification, FrameCollapseError
 from topos.bound.adapter.sandbox import RegulatedSandbox, MetabolicProfile
 
 from watcher.plane.emitter import get_logger

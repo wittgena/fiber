@@ -13,7 +13,7 @@ from arch.gov.tool.terminal import (
     CMD_OUTPUT_PS1_END
 )
 from arch.gov.tool.terminal import CmdOutputMetadata
-from swarm.mesh.tool.terminal.interface import TerminalInterface
+from phi.runtime.tool.terminal.interface import TerminalInterface
 from watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)

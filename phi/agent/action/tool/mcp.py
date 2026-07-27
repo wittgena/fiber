@@ -17,7 +17,7 @@ from watcher.plane.observer.span import observe
 
 from atoa.schema.action import Action, Observation, Schema
 
-from swarm.mesh.mcp.client import MCPClient
+from phi.runtime.mcp.client import MCPClient
 from phi.agent.action.definition import ActionAnnotations, ActionDefinition
 from phi.agent.action.executor import ActionExecutor
 from phi.agent.action.mcp import MCPAction, MCPObservation

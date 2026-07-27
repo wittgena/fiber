@@ -154,7 +154,7 @@ class FileEditorTool(ActionDefinition[FileEditorAction, FileEditorObservation]):
 
     @classmethod
     def create(cls, conv_state: "ConversationState") -> Sequence["FileEditorTool"]:
-        from swarm.mesh.tool.fedit.executor import FileEditorExecutor
+        from phi.runtime.tool.fedit.executor import FileEditorExecutor
         executor = FileEditorExecutor(workspace_root=conv_state.workspace.working_dir)
 
         description_lines = TOOL_DESCRIPTION.split("\n")

@@ -198,7 +198,7 @@ class TerminalTool(ActionDefinition[TerminalAction, TerminalObservation]):
             return [tool_instance]
 
         # conv_state가 주어지면 실제 환경 바인딩 (Gov 런타임용)
-        from swarm.mesh.tool.terminal.executor import TerminalExecutor
+        from phi.runtime.tool.terminal.executor import TerminalExecutor
 
         working_dir = conv_state.workspace.working_dir
         if not os.path.isdir(working_dir):

@@ -29,7 +29,7 @@ from arch.gov.tool.terminal import (
     HISTORY_LIMIT,
 )
 from arch.gov.tool.terminal import CmdOutputMetadata
-from swarm.mesh.tool.terminal.interface import TerminalInterface
+from phi.runtime.tool.terminal.interface import TerminalInterface
 
 from watcher.plane.emitter import get_logger
 

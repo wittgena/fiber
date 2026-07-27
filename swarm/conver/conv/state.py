@@ -35,7 +35,7 @@ else:
 
 from bound.resolver.secret import SecretRegistry
 from swarm.conver.conv.io import IOManager
-from swarm.mesh.store.log import LogStore, VirtualEventLogProxy
+from swarm.mesh.conv.store.log import LogStore, VirtualEventLogProxy
 from swarm.mesh.conv.command import (
     StateCommand, 
     TransitionStatus, 

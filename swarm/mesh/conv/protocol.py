@@ -1,14 +1,4 @@
 # swarm.mesh.conv.protocol
-## @lineage: swarm.mesh.engine.conv.protocol
-## @lineage: mesh.engine.conv.protocol
-## @lineage: gov.conv.protocol
-## @lineage: gov.atoa.conv.protocol
-## @lineage: eco.gov.atoa.conv.protocol
-## @lineage: atoa.agent.conv.context.protocol
-## @lineage: agent.conv.context.protocol
-## @lineage: atoa.conv.context.protocol
-## @lineage: atoa.gov.context.protocol
-## @lineage: atoa.context.gov.protocol
 from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
@@ -19,7 +9,7 @@ from eco.tenant.conv.event import EventID
 
 from atoa.secure.security.confirm import ConfirmationPolicyBase
 from swarm.conver.conv.stats import ConversationStats
-from swarm.mesh.store.log import LogStore
+from swarm.mesh.conv.store.log import LogStore
 
 from swarm.mesh.conv.command import StateCommand
 

@@ -8,7 +8,7 @@ from bashlex.errors import ParsingError
 from phi.agent.action.tool.terminal import TerminalAction, TerminalObservation
 from swarm.conver.protocol import ToolExecutionContextProtocol
 
-from swarm.mesh.tool.terminal.interface import TerminalInterface, TerminalSessionBase
+from phi.runtime.tool.terminal.interface import TerminalInterface, TerminalSessionBase
 from swarm.engine.executor.context import ExecutionEngine, ExecutionContext
 from swarm.engine.polling import PollingExecutionEngine
 

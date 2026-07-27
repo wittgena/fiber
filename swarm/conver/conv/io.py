@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Optional
 
 from atoa.secure.secret.validator import Cipher
-from swarm.mesh.store.log import LogStore, BASE_STATE, EVENTS_DIR
+from swarm.mesh.conv.store.log import LogStore, BASE_STATE, EVENTS_DIR
 
 from arch.gov.bridge.store.file import LocalFileStore
 from arch.gov.bridge.store.memfile import InMemoryFileStore
