@@ -1,4 +1,5 @@
-# phi.executor.graph.organizer
+# phi.agent.loop.graph.organizer
+## @lineage: phi.executor.graph.organizer
 ## @lineage: swarm.phi.handler.graph.organizer
 import time
 import json
@@ -10,14 +11,14 @@ from eco.tenant.conv.message import Message, TextContent
 from atoa.event.llm.message import MessageEvent
 from swarm.conver.protocol import ProtoConv
 
-from phi.executor.graph.loop import (
+from phi.agent.llm.handler import (
     LLMInvocationHandler, 
     ToolCallHandler, 
     TextResponseHandler, 
 )
-from phi.executor.loop.step import StepHandler, StepContext
-from phi.executor.loop.tension import TensionHandler
-from phi.executor.graph.eval import EvalReflector
+from phi.agent.loop.step import StepHandler, StepContext
+from phi.agent.loop.tension import TensionHandler
+from phi.agent.loop.graph.eval import EvalReflector
 
 from arch.gov.state.vocab import SigType, SpecKey
 from watcher.plane.observer.span import unified_flow_span

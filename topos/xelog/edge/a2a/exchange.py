@@ -14,6 +14,10 @@ from topos.xelog.topos.state.edge import (
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.dphi.adapter.exchange import ExchangeAdapter
+from watcher.dphi.cgroup import Tier
+
+# 중앙 설정 객체 임포트 (초기 한도 설정을 위해)
+from arch.topos.bound.exchange.config import tier_config
 
 exchange_edge = APIRouter()
 
@@ -28,8 +32,11 @@ async def submit_trade_intent(
     if context.is_ruptured:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Topology Ruptured: {context.reason}")
 
+    # context.press_limit가 없거나 유효하지 않은 경우, config의 Fallback Fuel로 대체하여 일관성 유지
+    press_limit = context.press_limit if hasattr(context, 'press_limit') and context.press_limit > 0 else tier_config.fallback_fuel
+
     payload_obj = EpochInitPayload(
-        ts=int(time.time() * 1000), topo=context.topo_id, press=context.press_limit,
+        ts=int(time.time() * 1000), topo=context.topo_id, press=press_limit,
         rupture=context.is_ruptured, injected_intent=req
     )
     
@@ -47,8 +54,10 @@ async def generate_external_receipt(
     exchange: ExchangeAdapter = Depends(get_exchange_adapter)
 ):
     receipt = exchange.finalize_settlement(
-        entangled_state=req.entangled_state, signatures=req.signatures,
-        cost_metrics=req.cost_metrics, tier="SYSTEM"
+        entangled_state=req.entangled_state, 
+        signatures=req.signatures,
+        cost_metrics=req.cost_metrics, 
+        tier=Tier.SYSTEM  
     )
     
     external_payload = exchange.generate_settlement_payload(receipt)

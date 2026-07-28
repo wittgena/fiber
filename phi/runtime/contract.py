@@ -5,7 +5,8 @@ import traceback
 import orjson
 from typing import List, Optional, AsyncGenerator
 
-from phi.executor.phix import FlowExecutor, TaskContext
+from phi.runtime.executor.phix import FlowExecutor, TaskContext
+
 from arch.xor.parser.block.contract import Contract, CoherenceState
 from arch.xor.parser.ruleset import CompiledEngine
 from watcher.plane.emitter import get_emitter

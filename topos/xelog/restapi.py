@@ -16,8 +16,8 @@ from topos.xelog.edge.ledger import ledger_edge
 from topos.xelog.middleware import WasTelemetry, LocalMiddleware
 from topos.xelog.topos.log.store import LogStreamStore
 
-from arch.topos.bound.interface.subs import DistributedPubSub
-from arch.topos.bound.tunnel import UniversalFacade
+from arch.topos.tunnel.subs import DistributedPubSub
+from arch.topos.tunnel.factory import UniversalFacade
 from watcher.dphi.broker import WasmBroker
 
 from watcher.plane.emitter import get_emitter

@@ -1,4 +1,5 @@
-# phi.executor.topos.graph
+# topos.flow.executor.graph
+## @lineage: phi.executor.topos.graph
 ## @lineage: topos.ops.scope.execution.graph
 ## @lineage: ops.scope.execution.graph
 ## @lineage: meta.scope.execution.graph
@@ -11,8 +12,8 @@
 import asyncio
 from typing import Optional, Dict, Any, List
 
-from phi.executor.topos.compiler import BlueprintCompiler
-from phi.executor.topos.strategy import LocalExecutionStrategy, ProxyExecutionStrategy
+from topos.flow.executor.compiler import BlueprintCompiler
+from topos.flow.executor.strategy import LocalExecutionStrategy, ProxyExecutionStrategy
 from arch.topos.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
 
 from arch.contract.schema.graph import EntryNode

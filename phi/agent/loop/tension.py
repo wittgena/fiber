@@ -1,10 +1,11 @@
-# phi.executor.loop.tension
+# phi.agent.loop.tension
+## @lineage: phi.executor.loop.tension
 ## @lineage: swarm.phi.handler.tension
 ## @lineage: agent.handler.tension
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import AgentErrorEvent
 from swarm.conver.status import ConverStatus
-from phi.executor.loop.step import StepHandler
+from phi.agent.loop.step import StepHandler
 from swarm.mesh.conv.command import TransitionStatus
 from watcher.plane.emitter import get_emitter
 

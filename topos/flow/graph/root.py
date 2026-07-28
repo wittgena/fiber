@@ -9,7 +9,7 @@ from typing import List, Optional, Dict, Any
 
 from topos.space.organizer import SpaceNode
 
-from phi.executor.topos.graph import PolicyNode
+from topos.flow.executor.graph import PolicyNode
 from topos.flow.graph.node import EngineNode
 from topos.flow.folding import ManifoldFolder
 from topos.flow.transition import FlowTransition, EdgeFlow

@@ -1,7 +1,4 @@
 # topos.xelog.topos.state.edge
-## @lineage: topos.ops.xelog.topos.state.edge
-## @lineage: ops.xelog.topos.state.edge
-## @lineage: ops.xelog.state.edge
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List

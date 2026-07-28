@@ -1,4 +1,5 @@
-# phi.executor.topos.strategy
+# topos.flow.executor.strategy
+## @lineage: phi.executor.topos.strategy
 ## @lineage: topos.ops.scope.execution.strategy
 ## @lineage: ops.scope.execution.strategy
 import asyncio
@@ -18,7 +19,7 @@ from phi.agent.action.tool.terminal import TerminalTool
 
 from topos.xelog.topos.proxy import ProxyEngine
 
-from arch.topos.bound.tunnel import TunnelFactory
+from arch.topos.tunnel.factory import TunnelFactory
 from arch.contract.event.next import next_id
 from phase.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter

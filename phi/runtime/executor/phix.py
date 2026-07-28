@@ -1,4 +1,5 @@
-# phi.executor.phix
+# phi.runtime.executor.phix
+## @lineage: phi.executor.phix
 ## @lineage: swarm.phi.flow.executor
 ## @lineage: topos.phi.flow.executor
 ## @lineage: topos.phi.flow
@@ -10,7 +11,7 @@ from typing import Optional, Dict, Any, AsyncGenerator, Union
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from arch.topos.bound.surface import SurfaceMQ, SurfaceClient
+from arch.topos.tunnel.surface import SurfaceMQ, SurfaceClient
 from phase.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 from arch.xor.parser.ruleset import AuditRulesetParser, CompiledEngine

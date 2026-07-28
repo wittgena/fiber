@@ -1,6 +1,4 @@
 # topos.xelog.depend
-## @lineage: topos.ops.xelog.depend
-## @lineage: ops.xelog.depend
 from fastapi import Request
 
 from topos.xelog.topos.tenant import TenantEco
@@ -12,19 +10,19 @@ from topos.xelog.topos.ingress.policy import (
     HealthMonitor
 )
 from topos.xelog.topos.log.store import LogStreamStore
+from topos.xelog.bench.profile import BenchProfile
 
-from arch.topos.bound.interface.subs import DistributedPubSub
+from arch.topos.tunnel.subs import DistributedPubSub
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.anchor import NexusAnchor
 from watcher.dphi.adapter.exchange import ExchangeAdapter
 from watcher.dphi.adapter.sign import NodeSigner
 
-
 ## WASM & Core Compute
 async def get_wasm_broker(request: Request) -> WasmBroker:
     return request.app.state.broker
 
-## Ledger & State Persistence (신규 추가)
+## Ledger & State Persistence
 async def get_logstream_store(request: Request) -> LogStreamStore:
     """앱 구동 시 초기화된 Immutable Ledger Store 싱글톤 주입"""
     return request.app.state.store
@@ -41,6 +39,11 @@ async def get_exchange_adapter(request: Request) -> ExchangeAdapter:
     """환전소/정산 영수증 발급 어댑터 주입"""
     node_pubkey = NodeSigner.get_instance().pubkey_hex
     return ExchangeAdapter(clearing_house_pub_key=node_pubkey)
+
+## Profiling & Billing (신규 추가)
+async def get_bench_profile() -> BenchProfile:
+    """A2A 연산에 대한 과금 검증 및 Cgroup 티어 산출/실행기 주입"""
+    return BenchProfile()
 
 ## Ingress Policy (D3Fi & Gateway)
 async def get_ingress_policy(request: Request) -> IngressPolicyEngine:

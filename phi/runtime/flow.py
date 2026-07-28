@@ -1,7 +1,4 @@
 # phi.runtime.flow
-## @lineage: swarm.phi.flow.runtime
-## @lineage: topos.phi.flow.runtime
-## @lineage: topos.phi.flow
 import os
 import time
 import uuid
@@ -12,7 +9,7 @@ from typing import Optional, Dict, Any, AsyncGenerator
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from arch.topos.bound.surface import SurfaceMQ
+from arch.topos.tunnel.surface import SurfaceMQ
 from arch.xor.parser.ruleset import LifecycleRegexParser
 from phase.bind.resolver import resolve_path
 from watcher.tracer.bound import SystemBound, log_streamer

@@ -8,7 +8,7 @@ from topos.xelog.depend import get_wasm_broker, get_pubsub
 from topos.xelog.topos.tenant import TenantEco, get_tenant_eco
 from topos.xelog.topos.state.edge import EdgeState, EdgeHeader
 
-from arch.topos.bound.interface.subs import DistributedPubSub
+from arch.topos.tunnel.subs import DistributedPubSub
 from arch.contract.audit.otlp import ExportLogsServiceRequest
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.state import StateAdapter

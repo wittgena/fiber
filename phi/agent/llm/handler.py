@@ -1,17 +1,11 @@
-# phi.executor.graph.loop
-## @lineage: swarm.phi.handler.graph.loop
-## @lineage: agent.handler.graph.loop
-## @lineage: agent.handler.loop
-## @lineage: atoa.agent.handler.loop
-## @lineage: agent.topos.handler.loop
-## @lineage: atoa.topos.handler.loop
-## @lineage: atoa.agent.action.loop
+# phi.agent.llm.handler
+## @lineage: phi.executor.graph.loop
 import json
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from atoa.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
-from phi.executor.loop.step import StepHandler
+from phi.agent.loop.step import StepHandler
 from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
 from eco.tenant.conv.message import Message, TextContent
 

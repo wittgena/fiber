@@ -1,7 +1,5 @@
-# phi.reflect.evaluator
-## @lineage: agent.reflect.evaluator
-## @lineage: agent.disc.reflect.evaluator
-## @lineage: agent.handler.evaluator
+# phi.agent.action.evaluator
+## @lineage: phi.reflect.evaluator
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from atoa.schema.reflect import ReflectorResult, ReflectorBase

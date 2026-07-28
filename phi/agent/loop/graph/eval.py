@@ -1,11 +1,9 @@
-# phi.executor.graph.eval
-## @lineage: swarm.phi.handler.graph.eval
-## @lineage: agent.handler.graph.eval
-## @lineage: agent.handler.eval
+# phi.agent.loop.graph.eval
+## @lineage: phi.executor.graph.eval
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from phi.executor.loop.step import StepHandler
+from phi.agent.loop.step import StepHandler
 from eco.tenant.conv.message import Message, TextContent
 from watcher.plane.emitter import get_emitter
 

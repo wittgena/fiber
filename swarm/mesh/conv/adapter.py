@@ -31,7 +31,7 @@ from swarm.conver.executor import Conver, AgentSessionManager, AgentSidecar
 from bound.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
 
-from arch.topos.bound.tunnel import TunnelFactory
+from arch.topos.tunnel.factory import TunnelFactory
 
 log = get_emitter(__name__)
 

@@ -1,6 +1,4 @@
 # phi.agent.activator
-## @lineage: swarm.phi.activator
-## @lineage: agent.activator
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
@@ -25,18 +23,18 @@ from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, 
 from swarm.conver.status import ConverStatus
 from swarm.engine.llm.response import LLMResponse
 
-from phi.executor.loop.step import StepHandler, StepContext
-from phi.executor.graph.loop import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
-from phi.executor.loop.tension import TensionHandler
-from phi.executor.graph.eval import EvalReflector
-from phi.reflect.evaluator import ActionEvaluator 
+from phi.agent.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from phi.agent.loop.step import StepHandler, StepContext
+from phi.agent.loop.tension import TensionHandler
+from phi.agent.loop.graph.eval import EvalReflector
+from phi.agent.action.evaluator import ActionEvaluator 
 
-from phi.executor.graph.organizer import DagOrganizer
+from phi.agent.loop.graph.organizer import DagOrganizer
 from arch.gov.state.compiler import StateCompiler
 from arch.gov.state.projector import StateProjector
 from arch.gov.state.schema import FragmentSig
 
-from arch.topos.bound.tunnel import UniversalFacade
+from arch.topos.tunnel.factory import UniversalFacade
 from watcher.plane.observer.span import observe, should_enable_observability
 from watcher.plane.emitter import get_emitter
 
