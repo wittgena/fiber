@@ -1,6 +1,4 @@
 # topos.xelog.edge.otlp
-## @lineage: topos.ops.xelog.edge.otlp
-## @lineage: ops.xelog.edge.otlp
 import json
 import hashlib
 from typing import Annotated

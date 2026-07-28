@@ -1,6 +1,4 @@
 # phi.runtime.contract
-## @lineage: swarm.phi.contract.emitter
-## @lineage: topos.phi.contract.emitter
 import time
 import asyncio
 import traceback
@@ -29,10 +27,8 @@ class WasmTensionEmitter(EmitTool):
     async def stream_emit(self, target_topic: str) -> AsyncGenerator[Contract, None]:
         log.info(f"[{self.name}] Subscribing to WASM tension stream on topic: {target_topic}")
         try:
-            # 비동기 제너레이터 시뮬레이션
             for _ in range(3):
                 await asyncio.sleep(0.1)
-                # @alignment: 레거시 필드(name, features, refs, location) 제거 및 payload로 적재
                 yield Contract(
                     kind="state_transition",
                     source=self.name,
@@ -59,7 +55,6 @@ class WasmTensionEmitter(EmitTool):
                     "location": "unknown"
                 }
             )
-
 
 class LedgerPulseEmitter(EmitTool):
     """@pulse: 노드 간 분산 합의(Multi-sig)나 앵커링이 필요한 메타데이터(System Pulse) 방출"""
@@ -122,15 +117,10 @@ class EmissionProxyRunner:
                     task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
 
-
 class BlockEmitter:
-    """
-    @trajectory: 모아진 Block(Contract)들을 WebFlux 백엔드로 고속 앵커링.
-    @audit: 앵커링 직전 Ruleset Engine을 통과시켜 민감정보(Secrets)를 마스킹.
-    """
     def __init__(
         self, 
-        flow_client: Optional[FlowExecutor] = None, # [수정됨] PhiFlow -> JvmExecutor
+        flow_client: Optional[FlowExecutor] = None,
         audit_engine: Optional[CompiledEngine[bytes, bytes]] = None
     ):
         self.flow = flow_client or FlowExecutor()
@@ -142,13 +132,8 @@ class BlockEmitter:
         anchor_count = 0
         try:
             async for block in contract_stream:
-                # 1. 고속 직렬화 (레거시 json.dumps 대체)
                 raw_bytes: bytes = orjson.dumps(block.model_dump(exclude_none=True))
-                
-                # 2. 보안 검열 파이프라인
                 safe_bytes: bytes = self.audit_engine.execute(raw_bytes) if self.audit_engine else raw_bytes
-                
-                # 3. [수정됨] Ledger 전송 로직: TaskContext와 execute_stream 활용
                 context = TaskContext(
                     task_type="ledger_push", 
                     payload={
@@ -158,7 +143,6 @@ class BlockEmitter:
                 )
                 
                 success = False
-                # 비동기 제너레이터를 순회하며 상태 모니터링
                 async for res in self.flow.execute_stream(context):
                     if res.get("status") in ("success", "completed"):
                         success = True
@@ -166,7 +150,6 @@ class BlockEmitter:
 
                 if success:
                     anchor_count += 1
-                    # @alignment: 더 이상 존재하지 않는 block.name 대신 block.id와 명시적 상태 출력
                     log.debug(f"[stream anchored] {block.kind} :: {block.id} -> {block.state.name}")
                 else:
                     log.warning(f"[stream dropped] Block rejected by ledger: {block.id}")

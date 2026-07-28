@@ -16,7 +16,7 @@ from topos.xelog.topos.log.store import LogStreamStore
 from arch.topos.bound.interface.subs import DistributedPubSub
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.anchor import NexusAnchor
-from watcher.dphi.adapter.exchange import D3fiExchangeAdapter
+from watcher.dphi.adapter.exchange import ExchangeAdapter
 from watcher.dphi.adapter.sign import NodeSigner
 
 
@@ -37,10 +37,10 @@ async def get_nexus_anchor(request: Request) -> NexusAnchor:
     return NexusAnchor(broker=broker, consensus_threshold=1, allowed_committee=allowed_committee)
 
 ## DeFi & Financial Adapters
-async def get_exchange_adapter(request: Request) -> D3fiExchangeAdapter:
+async def get_exchange_adapter(request: Request) -> ExchangeAdapter:
     """환전소/정산 영수증 발급 어댑터 주입"""
     node_pubkey = NodeSigner.get_instance().pubkey_hex
-    return D3fiExchangeAdapter(clearing_house_pub_key=node_pubkey)
+    return ExchangeAdapter(clearing_house_pub_key=node_pubkey)
 
 ## Ingress Policy (D3Fi & Gateway)
 async def get_ingress_policy(request: Request) -> IngressPolicyEngine:

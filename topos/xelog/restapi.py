@@ -1,6 +1,4 @@
 # topos.xelog.restapi
-## @lineage: topos.ops.xelog.restapi
-## @lineage: ops.xelog.restapi
 from contextlib import asynccontextmanager
 from typing import Optional
 from urllib.parse import urlparse
@@ -8,12 +6,12 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, FastAPI
 from pydantic import BaseModel
 
+from topos.xelog.edge.a2a.router import a2a_router
+
 from topos.xelog.edge.audit import audit_edge 
 from topos.xelog.edge.otlp import otlp_edge
 from topos.xelog.edge.anchor import anchor_edge
-from topos.xelog.edge.a2a.compute import compute_edge
 from topos.xelog.edge.ledger import ledger_edge
-from topos.xelog.edge.d3fi import d3fi_edge
 
 from topos.xelog.middleware import WasTelemetry, LocalMiddleware
 from topos.xelog.topos.log.store import LogStreamStore
@@ -68,14 +66,12 @@ def _get_root_path(config: Config) -> str:
     return ""
 
 def add_api_routes(app: FastAPI, config: Config) -> None:
-    # 글로벌 브로드캐스트 라우트
+    app.include_router(a2a_router)
+
     app.include_router(otlp_edge)
-    app.include_router(ledger_edge)  # Immutable Ledger Append 라우트 마운트
-    app.include_router(d3fi_edge)    # D3Fi 인텐트/정산 라우트 마운트
-    app.include_router(anchor_edge)  # 글로벌 앵커 합의 라우트
-    app.include_router(compute_edge)     # WASM Trustless 연산 라우트
-    
-    # 특정 Prefix(/hub)로 격리되는 라우트
+    app.include_router(ledger_edge)
+    app.include_router(anchor_edge)
+
     hub = APIRouter(prefix="/hub")
     hub.include_router(audit_edge)
     app.include_router(hub)

@@ -1,6 +1,4 @@
 # topos.xelog.edge.ledger
-## @lineage: topos.ops.xelog.edge.ledger
-## @lineage: ops.xelog.edge.ledger
 import json
 import time
 import uuid

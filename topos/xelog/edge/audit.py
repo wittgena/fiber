@@ -1,6 +1,4 @@
 # topos.xelog.edge.audit
-## @lineage: topos.ops.xelog.edge.audit
-## @lineage: ops.xelog.edge.audit
 import json
 import time
 import uuid

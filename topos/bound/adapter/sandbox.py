@@ -1,5 +1,4 @@
 # topos.bound.adapter.sandbox
-## @lineage: topos.gov.adapter.sandbox
 import json
 import time
 import asyncio
@@ -12,17 +11,17 @@ from typing import Dict, Any, Optional, List, Tuple
 from arch.gov.state.vocab import SigType, SpecKey
 from arch.gov.state.schema import FragmentSig
 from arch.contract.schema.resonance import ResonanceGraph, ResonanceNode, NodeRelation
-
 from arch.gov.state.compiler import StateCompiler
 from arch.gov.state.projector import StateProjector
 from arch.gov.trans.logic.analyzer import LogicAnalyzer
-
 from arch.contract.schema.graph import EntryNode, GraphSchema
+
+from phase.wasm.executor import EffectResolver
 from phase.bind.resolver import resolve_path
 from watcher.plane.emitter import get_logger
 
 CODE_ROOT = resolve_path("code")
-log = get_logger("dag.sandbox")
+log = get_logger("adapter.sandbox")
 
 @dataclass
 class DagTestReport:
@@ -203,3 +202,17 @@ class RegulatedSandbox:
             report.simulation_errors.extend(sim_errors)
 
         return report
+
+class SandboxResolver(EffectResolver):
+    def __init__(self, profile: MetabolicProfile):
+        self.sandbox = RegulatedSandbox(profile=profile)
+
+    async def resolve(self, payload: Dict[str, Any], instruction: str) -> Dict[str, Any]:
+        # WASM이 요청한 검증 작업(schema, depth 등)을 파이썬 샌드박스에서 실행
+        schema = payload.get("schema", {})
+        entry = EntryNode(entry=payload.get("entry", "main"), depth=payload.get("depth", 2))
+        
+        report = await self.sandbox.evaluate_safely(schema, entry)
+        
+        # 결과를 payload에 병합하여 WASM으로 반환
+        return {**payload, "sandbox_report": report.to_dict()}

@@ -21,7 +21,7 @@ from arch.topos.bound.sealer import EpochSealer
 from arch.topos.flow.event import AgentConfigured
 
 from watcher.dphi.broker import WasmBroker
-from watcher.dphi.adapter.exchange import D3fiExchangeAdapter, TransactionReceipt
+from watcher.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from watcher.dphi.cgroup import Tier
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
@@ -67,7 +67,7 @@ class AgentTopos(GanNode):
         self.broker = WasmBroker()
         
         # [Exchange Membrane] Initializes the adapter that translates internal state to external value (Receipts)
-        self.exchange_adapter = D3fiExchangeAdapter(clearing_house_pub_key="local_clearing_pub_key")
+        self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key="local_clearing_pub_key")
         self.last_receipt: Optional[TransactionReceipt] = None
         
         # State Management

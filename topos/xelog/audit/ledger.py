@@ -14,7 +14,7 @@ from pydantic import SecretStr
 from atoa.secure.secret.validator import Cipher
 
 from arch.contract.audit.model import AuditLogResponse
-from phase.runtime.bridge.gateway import ToposGateway
+from phase.runtime.mesh.gateway import ToposGateway
 from watcher.kernel.audit.warden import AuditWarden
 
 logger = logging.getLogger("audit.ledger")

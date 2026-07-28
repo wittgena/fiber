@@ -10,7 +10,7 @@ from topos.xelog.topos.log.keeper import GatekeeperEngine
 from arch.contract.audit.model import LogstEvent
 
 from watcher.kernel.audit.warden import AuditWarden
-from phase.runtime.bridge.gateway import ToposGateway
+from phase.runtime.mesh.gateway import ToposGateway
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("log.store", phase="INGRESS")

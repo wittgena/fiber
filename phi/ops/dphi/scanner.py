@@ -1,4 +1,5 @@
-# topos.dphi.scanner
+# phi.ops.dphi.scanner
+## @lineage: topos.dphi.scanner
 """
 @desc: AST-based scanner to identify Python code that duplicates existing Rust/WASM logic.
        Generates a prompt to refactor Python compute logic into `WasmBroker` RPC calls.
