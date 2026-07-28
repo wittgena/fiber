@@ -1,4 +1,5 @@
 # topos.bound.resolver.account.openai
+## @lineage: topos.gov.resolver.account.openai
 ## @lineage: void.topos.bound.resolver.account.openai
 ## @lineage: atoa.agent.config.account.openai
 from __future__ import annotations
@@ -19,15 +20,11 @@ from authlib.jose.errors import JoseError
 from authlib.oauth2.rfc7636 import create_s256_code_challenge
 from httpx import AsyncClient, Client
 
-from topos.gateway.credentials import (
-    CredentialStore,
-    OAuthCredentials,
-    get_credentials_dir,
-)
+from swarm.warden.cred import CredentialStore, OAuthCredentials, get_credentials_dir
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from agent.driver.tensor import Driver
+    from swarm.engine.driver.tensor import Driver
 
 SupportedVendor = Literal["openai"]
 logger = get_logger(__name__)
