@@ -154,10 +154,6 @@ class GlobalAnchorPhase(ScenePhase):
         if not res or res.status_code != 200:
             raise RuntimeError("Global Anchor Failed")
 
-
-# =====================================================================
-# 3. SceneRunner: 파이프라인(네트워크) 오케스트레이터
-# =====================================================================
 class SceneRunner:
     """Xelog Immutable Network E2E 통합 오케스트레이터"""
     def __init__(self, config: E2EConfig):

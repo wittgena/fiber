@@ -251,7 +251,7 @@ def _ensure_proxy_active(registry_url: str) -> PypiMCPClient:
 
     log.info(f"🚀 [Proxy] Auto-booting internal MCP Proxy on port {port}...")
     try:
-        import atoa.secure.server.pypi as proxy_server
+        import arch.topos.server.pypi as proxy_server
         client = PypiMCPClient(sys.executable, proxy_server.__name__)
     except Exception as e:
         log.error(f"Failed to instantiate proxy client: {e}")

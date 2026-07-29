@@ -25,7 +25,7 @@ from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
     from swarm.engine.llm.response import LLMResponse
-    from bound.watcher.snapshot.metrics import Metrics
+    from phi.tenant.cost.tracker.metric import Metrics
 
 logger = get_logger(__name__)
 

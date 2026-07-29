@@ -1,15 +1,7 @@
 # phi.tenant.registry.adapter
-## @lineage: bound.resolver.adapter
-"""
-@manifold: Multi-dimensional Adapter Registry (Microkernel Core)
-@flow: (Task Type, Provider Vector) -> Lazy Instantiation -> Adapter Binding
-@desc: 
-- Anchors provider identities to their corresponding structural execution adapters across multiple task topologies (llm, embedding).
-- Ensures singleton lazy-loading to prevent premature memory collapse.
-"""
 from typing import Dict, Optional
 
-from phi.tenant.adapter.base import BaseProviderAdapter, OpenAICompatibleAdapter, GenericHTTPAdapter
+from phi.tenant.adapter.base import BaseProviderAdapter, GenericHTTPAdapter
 from phi.tenant.adapter.llm import InterLLMAdapter
 from phi.tenant.adapter.embedding import InterEmbeddingAdapter
 from watcher.plane.emitter import get_emitter
@@ -18,8 +10,6 @@ log = get_emitter("registry.adapter")
 
 class AdapterRegistry:
     """@state: Multi-dimensional topological boundaries"""
-    
-    # 1차원: Task (llm, embedding), 2차원: Provider
     _adapters: Dict[str, Dict[str, BaseProviderAdapter]] = {
         "llm": {},
         "embedding": {}
@@ -34,19 +24,9 @@ class AdapterRegistry:
             return
 
         log.debug("[Registry] 시스템 코어 다중 위상(Multi-topology) 레지스트리 초기화 시작")
-
-        # ---------------------------------------------------------
-        # [Topology 1] LLM Generation (텍스트 생성)
-        # ---------------------------------------------------------
-        llm_openai = OpenAICompatibleAdapter()
         llm_generic = GenericHTTPAdapter()
         llm_inter = InterLLMAdapter()
-
         cls._fallback_adapters["llm"] = llm_generic
-
-        for provider in ["openai", "custom_openai", "azure", "groq", "mistral", "anyscale", "deepinfra"]:
-            cls._adapters["llm"][provider] = llm_openai
-
         for provider in ["ollama", "huggingface"]:
             cls._adapters["llm"][provider] = llm_generic
 
@@ -54,17 +34,10 @@ class AdapterRegistry:
             cls._adapters["llm"][provider] = llm_inter
 
 
-        # ---------------------------------------------------------
-        # [Topology 2] Embedding (벡터 변환)
-        # ---------------------------------------------------------
         embed_inter = InterEmbeddingAdapter()
-        
-        # 임베딩은 기본적으로 모두 LlamaIndex(InterAdapter)를 태우도록 폴백 설정
         cls._fallback_adapters["embedding"] = embed_inter 
-
         for provider in ["openai", "azure", "cohere", "inter"]:
             cls._adapters["embedding"][provider] = embed_inter
-
 
         ## @seal: Lock initialization state
         cls._is_initialized = True

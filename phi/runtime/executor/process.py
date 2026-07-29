@@ -8,7 +8,7 @@ from phi.tenant.router.llm import TopologyMissingError
 from bound.stream.wrapper import StreamWrapper
 
 from tenant.switch.params import ModelResponse, ModelResponseStream
-from tenant.action.process.pre import CompletionPreprocessor
+from phi.runtime.executor.pre import CompletionPreprocessor
 
 from phi.tenant.registry.adapter import AdapterRegistry
 

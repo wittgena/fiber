@@ -11,7 +11,7 @@ from tenant.legacy.llama.bound.base.llms.types import ChatMessage, MessageRole
 from phi.tenant.adapter.base import BaseProviderAdapter
 from phi.tenant.adapter.mapper.state import StateMapper
 
-from tenant.action.process.pre import CompletionContext
+from phi.runtime.executor.pre import CompletionContext
 from phi.tenant.router.llm import LLMRouter, TopologyMissingError
 from bound.stream.wrapper import StreamWrapper
 

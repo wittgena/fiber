@@ -1,5 +1,4 @@
 # swarm.engine.driver.tensor
-## @lineage: agent.driver.tensor
 from __future__ import annotations
 import copy
 import json
@@ -33,8 +32,8 @@ from tenant.token.splitter import create_pretrained_tokenizer
 from tenant.token.counter import token_counter
 from tenant.switch.params import ModelResponse
 from phi.tenant.completion import completion as brane_completion
-from bound.watcher.snapshot.metrics import Metrics
-from bound.watcher.delegator import DriverObserver
+from phi.tenant.cost.tracker.metric import Metrics
+from swarm.engine.driver.observer import DriverObserver
 from atoa.exception.eco import (
     APIConnectionError,
     InternalServerError,

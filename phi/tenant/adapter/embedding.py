@@ -1,6 +1,6 @@
 # phi.tenant.adapter.embedding
 from typing import List, Union
-from tenant.action.process.pre import EmbeddingContext
+from phi.runtime.executor.pre import EmbeddingContext
 from phi.tenant.adapter.base import BaseProviderAdapter
 from phi.tenant.router.embedding import EmbeddingRouter
 

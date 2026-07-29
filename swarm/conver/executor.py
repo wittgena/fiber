@@ -21,7 +21,7 @@ from atoa.event.llm.system import SystemPromptEvent
 
 from atoa.event.conv import ConversationErrorEvent, PauseEvent
 from swarm.conver.status import ConverStatus
-from atoa.exception.conv.connection import ConversationRunError
+from atoa.exception.types import ConversationRunError
 
 from swarm.engine.driver.tensor import Driver
 from swarm.engine.driver.factory.action import CoreAction

@@ -20,7 +20,7 @@ from atoa.exception.eco import Timeout
 from bound.mapper.exception import exception_type
 
 from tenant.switch.params import ModelResponse
-from tenant.action.client.wrapper import client
+from phi.tenant.client.wrapper import client
 
 from bound.stream.wrapper import StreamWrapper
 from bound.watcher.delegator import LogDelegator

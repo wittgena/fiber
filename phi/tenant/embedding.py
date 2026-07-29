@@ -1,16 +1,12 @@
 # phi.tenant.embedding
-## @lineage: tenant.action.embedding
-"""
-@manifold: Core Embedding Execution Boundary
-@desc: Translates raw embedding requests into normalized contexts and delegates to the Multi-dimensional Adapter Registry.
-"""
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
+
 from tenant.legacy.types import EmbeddingResponse
 from bound.mapper.exception import exception_type
-from tenant.action.client.wrapper import client
-from tenant.action.process.pre import EmbeddingPreprocessor
 
+from phi.tenant.client.wrapper import client
+from phi.runtime.executor.pre import EmbeddingPreprocessor
 from phi.tenant.registry.adapter import AdapterRegistry
 
 from watcher.plane.emitter import get_emitter
