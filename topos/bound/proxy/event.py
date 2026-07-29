@@ -1,6 +1,6 @@
-# topos.xelog.topos.proxy
-## @lineage: topos.ops.xelog.topos.proxy
-## @lineage: ops.xelog.topos.proxy
+# topos.bound.proxy.event
+## @lineage: topos.bound.proxy
+## @lineage: topos.xelog.topos.proxy
 import asyncio
 import json
 from dataclasses import dataclass
