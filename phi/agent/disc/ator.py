@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from atoa.context import AtorContext
+from swarm.conver.context import AtorContext
 from phi.agent.disc.tool import Tool
 from atoa.schema.reflect import ReflectorBase
 from swarm.engine.driver.tensor import Driver

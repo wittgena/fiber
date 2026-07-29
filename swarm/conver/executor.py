@@ -13,7 +13,7 @@ from atoa.schema.action import Action, Observation
 from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_emitter
 
-from bound.parser.conv.render import render_template
+from phi.agent.parser.render import render_template
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent

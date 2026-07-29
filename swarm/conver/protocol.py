@@ -9,7 +9,7 @@ from atoa.secure.security.confirm import ConfirmationPolicyBase
 from atoa.schema.action import Action, Observation
 from atoa.secure.security.analyzer import SecurityAnalyzerBase
 
-from bound.resolver.secret import SecretValue
+from topos.resolver.secret import SecretValue
 
 from atoa.conv.types import ConversationID
 from atoa.conv.message import Message

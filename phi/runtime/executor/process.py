@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 from bound.mapper.exception import exception_type
 from phi.tenant.router.llm import TopologyMissingError
 
-from eco.gateway.stream.wrapper import StreamWrapper
+from bound.stream.wrapper import StreamWrapper
 
 from tenant.switch.params import ModelResponse, ModelResponseStream
 from tenant.action.process.pre import CompletionPreprocessor

@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field, PrivateAttr, model_serializer
 
 from swarm.engine.llm.registry import RegistryEvent
-from eco.watcher.snapshot.metrics import Metrics
+from bound.watcher.snapshot.metrics import Metrics
 from watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)

@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 else:
     SecurityType = Any
 
-from bound.resolver.secret import SecretRegistry
+from topos.resolver.secret import SecretRegistry
 from swarm.conver.conv.io import IOManager
 from swarm.mesh.conv.store.log import LogStore, VirtualEventLogProxy
 from swarm.mesh.conv.command import (

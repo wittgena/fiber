@@ -28,7 +28,7 @@ from atoa.secure.security.confirm import ConfirmationPolicyBase
 from atoa.secure.security.confirm import NeverConfirm
 
 from swarm.conver.executor import Conver, AgentSessionManager, AgentSidecar
-from bound.resolver.secret import SecretValue
+from topos.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
 
 from arch.topos.tunnel.factory import TunnelFactory

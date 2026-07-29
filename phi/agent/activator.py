@@ -13,7 +13,7 @@ from atoa.schema.action import Action, Observation
 from atoa.conv.event import Event
 from atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
-from bound.parser.conv.action import format_context_exceeded_message, ActionParser
+from phi.agent.parser.action import format_context_exceeded_message, ActionParser
 
 from phi.agent.disc.ator import Ator
 from atoa.event.llm.action import ActionEvent

@@ -6,14 +6,14 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from bound.resolver.locator import get_llm_provider
-from eco.llama.bound.base.llms.types import ChatMessage, MessageRole
+from bound.locator import get_llm_provider
+from tenant.legacy.llama.bound.base.llms.types import ChatMessage, MessageRole
 from phi.tenant.adapter.base import BaseProviderAdapter
-from bound.mapper.state import StateMapper
+from phi.tenant.adapter.mapper.state import StateMapper
 
 from tenant.action.process.pre import CompletionContext
 from phi.tenant.router.llm import LLMRouter, TopologyMissingError
-from eco.gateway.stream.wrapper import StreamWrapper
+from bound.stream.wrapper import StreamWrapper
 
 from bound.mapper.exception import exception_type
 from arch.gov.gate import uuid4 

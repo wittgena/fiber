@@ -16,7 +16,7 @@ from swarm.mesh.conv.command import StateCommand
 if TYPE_CHECKING:
     from swarm.conver.status import ConverStatus
     from phi.agent.disc.ator import Ator
-    from bound.resolver.secret import SecretRegistry
+    from topos.resolver.secret import SecretRegistry
     from atoa.secure.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:

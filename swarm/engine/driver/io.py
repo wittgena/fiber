@@ -24,7 +24,7 @@ from tenant.switch.params import (
     ChatCompletionToolParam,
 )
 from swarm.conver.chat.chat import select_chat_options
-from eco.watcher.snapshot.metrics import MetricsSnapshot
+from bound.watcher.snapshot.metrics import MetricsSnapshot
 
 from atoa.exception.types import LLMNoResponseError
 from swarm.engine.llm.response import LLMResponse

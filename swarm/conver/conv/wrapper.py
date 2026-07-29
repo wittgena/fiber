@@ -18,7 +18,7 @@ from swarm.conver.conv.state import ConversationState
 from atoa.secure.security.analyzer import SecurityAnalyzerBase
 from atoa.secure.security.confirm import ConfirmationPolicyBase
 
-from bound.resolver.secret import SecretValue
+from topos.resolver.secret import SecretValue
 
 from atoa.conv.message import Message
 from atoa.schema.action import Action, Observation

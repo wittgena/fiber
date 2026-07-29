@@ -10,7 +10,7 @@
 ## @lineage: agent.context.conv.chat
 from __future__ import annotations
 from typing import Any
-from bound.resolver.model.info import get_features
+from phi.tenant.model.info import get_features
 
 def apply_defaults_if_absent(
     user_kwargs: dict[str, Any], defaults: dict[str, Any]

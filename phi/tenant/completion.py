@@ -22,8 +22,8 @@ from bound.mapper.exception import exception_type
 from tenant.switch.params import ModelResponse
 from tenant.action.client.wrapper import client
 
-from eco.gateway.stream.wrapper import StreamWrapper
-from eco.watcher.delegator import LogDelegator
+from bound.stream.wrapper import StreamWrapper
+from bound.watcher.delegator import LogDelegator
 
 from phi.runtime.executor.process import async_core_completion
 

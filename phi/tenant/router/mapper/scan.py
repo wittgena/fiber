@@ -6,9 +6,9 @@ import inspect
 import pkgutil
 from typing import Dict, Any
 from dataclasses import asdict
-from eco.llama.bound.base.llms.base import BaseLLM
+from tenant.legacy.llama.bound.base.llms.base import BaseLLM
 from phi.tenant.router.mapper.llm import LLMCapabilities, LLMInfo
-from bound.resolver.ext.inter import ExtResolver
+from topos.resolver.ext import ExtResolver
 
 from watcher.plane.emitter import get_emitter
 

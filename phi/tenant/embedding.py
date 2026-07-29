@@ -6,7 +6,7 @@
 """
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
-from bound.resolver.legacy.types import EmbeddingResponse
+from tenant.legacy.types import EmbeddingResponse
 from bound.mapper.exception import exception_type
 from tenant.action.client.wrapper import client
 from tenant.action.process.pre import EmbeddingPreprocessor

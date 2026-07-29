@@ -23,18 +23,18 @@ from pydantic.json_schema import SkipJsonSchema
 from functools import cached_property
 from pathlib import Path
 
-from bound.resolver.model.info import get_features
-from bound.resolver.model.support import supports_vision
-from bound.resolver.model.config.resolver import config
-from eco.gateway.stream.wrapper import StreamWrapper
-from eco.gateway.stream.wrapper import stream_chunk_builder
+from phi.tenant.model.info import get_features
+from tenant.model.support import supports_vision
+from tenant.model.config.resolver import config
+from bound.stream.wrapper import StreamWrapper
+from bound.stream.wrapper import stream_chunk_builder
 
 from tenant.token.splitter import create_pretrained_tokenizer
 from tenant.token.counter import token_counter
 from tenant.switch.params import ModelResponse
 from phi.tenant.completion import completion as brane_completion
-from eco.watcher.snapshot.metrics import Metrics
-from eco.watcher.delegator import DriverObserver
+from bound.watcher.snapshot.metrics import Metrics
+from bound.watcher.delegator import DriverObserver
 from atoa.exception.eco import (
     APIConnectionError,
     InternalServerError,
@@ -47,7 +47,7 @@ from atoa.secure.secret.validator import serialize_secret, validate_secret
 from atoa.exception.types import LLMNoResponseError
 
 from arch.xor.driver.retry import RetryMixin
-from eco.gateway.mock.mixin import MockToolCallMixin
+from swarm.engine.mock.mixin import MockToolCallMixin
 from atoa.exception.types import LLMContextWindowTooSmallError
 from atoa.exception.mapping import map_provider_exception
 from swarm.engine.llm.response import LLMResponse

@@ -7,9 +7,9 @@ from tenant.switch.params import ModelResponse
 from tenant.action.process.pre import CompletionContext
 from tenant.action.handler import CompletionHandler
 
-from eco.gateway.stream.wrapper import StreamWrapper
+from bound.stream.wrapper import StreamWrapper
 from atoa.secure.secret.manager import get_secret_bool
-from bound.resolver.openai.completion import OpenAIChatCompletion
+from tenant.legacy.openai.completion import OpenAIChatCompletion
 
 from watcher.plane.emitter import get_emitter
 

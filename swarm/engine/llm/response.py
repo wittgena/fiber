@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict
 from tenant.switch.params import ResponsesAPIResponse
 from tenant.switch.params import ModelResponse
 from atoa.conv.message import Message
-from eco.watcher.snapshot.metrics import MetricsSnapshot
+from bound.watcher.snapshot.metrics import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 

@@ -11,7 +11,7 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 
 from atoa.schema.reflect import ReflectorBase
-from atoa.context import AtorContext
+from swarm.conver.context import AtorContext
 
 from phi.agent.disc.tool import Tool
 from swarm.engine.driver.tensor import Driver

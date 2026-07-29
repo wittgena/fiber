@@ -4,10 +4,10 @@ import importlib
 import inspect
 from typing import Dict, Any, Optional, Set
 
-from bound.resolver.model.cost import get_provider_for_model
+from tenant.model.cost import get_provider_for_model
 from phi.tenant.router.mapper.scan import LLMInstalledScanner
 
-import eco.llms as llm_pkg 
+import bound.eco.llms as llm_pkg 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.router")
