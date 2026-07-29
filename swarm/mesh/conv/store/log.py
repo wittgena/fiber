@@ -16,8 +16,8 @@ import operator
 from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
-from eco.tenant.conv.event import Event
-from eco.tenant.conv.event import EventID
+from atoa.conv.event import Event
+from atoa.conv.event import EventID
 from swarm.mesh.conv.store.base import EventsListBase
 
 from arch.gov.bridge.store.file import FileStore

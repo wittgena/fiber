@@ -10,7 +10,7 @@ from pathlib import Path
 
 from pydantic import Field
 
-from eco.tenant.conv.message import ImageContent, TextContent
+from atoa.conv.message import ImageContent, TextContent
 from atoa.schema.action import Action, Observation
 from arch.xor.xe.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 

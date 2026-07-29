@@ -15,8 +15,8 @@ from atoa.exception.eco import (
     ServiceUnavailableError,
     Timeout as LiteLLMTimeout,
 )
-from eco.tenant.action.completion import completion as litellm_completion
-from eco.tenant.switch.params import (
+from tenant.action.completion import completion as litellm_completion
+from tenant.switch.params import (
     Delta, 
     ModelResponseStream, 
     StreamingChoices,
@@ -28,12 +28,12 @@ from eco.watcher.snapshot.metrics import MetricsSnapshot
 
 from atoa.exception.types import LLMNoResponseError
 from swarm.engine.llm.response import LLMResponse
-from eco.tenant.conv.message import Message
+from atoa.conv.message import Message
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from swarm.engine.driver.tensor import Driver
-    from eco.tenant.conv.types import TokenCallbackType
+    from atoa.conv.types import TokenCallbackType
     from phi.agent.action.definition import ActionDefinition
 
 log = get_emitter(__name__)

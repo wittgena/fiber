@@ -5,9 +5,9 @@ import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from eco.tenant.switch.params import ResponsesAPIResponse
-from eco.tenant.switch.params import ModelResponse
-from eco.tenant.conv.message import Message
+from tenant.switch.params import ResponsesAPIResponse
+from tenant.switch.params import ModelResponse
+from atoa.conv.message import Message
 from eco.watcher.snapshot.metrics import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")

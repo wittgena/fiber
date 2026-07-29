@@ -12,7 +12,7 @@ import mcp_types
 from pydantic import Field
 from rich.text import Text
 
-from eco.tenant.conv.message import ImageContent, TextContent
+from atoa.conv.message import ImageContent, TextContent
 from atoa.schema.action import Action, Observation
 from watcher.plane.emitter import get_emitter
 

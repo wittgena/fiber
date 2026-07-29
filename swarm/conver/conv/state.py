@@ -1,10 +1,4 @@
 # swarm.conver.conv.state
-## @lineage: topos.conv.state
-## @lineage: gov.conv.state
-## @lineage: agent.conv.state
-## @lineage: atoa.agent.conv.state
-## @lineage: atoa.conv.state
-## @lineage: atoa.gov.context.state
 import os
 import json
 import inspect
@@ -18,11 +12,11 @@ from atoa.event.llm.observation import (
     ObservationEvent,
     UserRejectObservation,
 )
-from eco.tenant.conv.event import Event
-from eco.tenant.conv.event import EventID
+from atoa.conv.event import Event
+from atoa.conv.event import EventID
 from phi.agent.disc.workspace import BaseWorkspace
 from swarm.conver.status import ConverStatus
-from eco.tenant.conv.types import ConversationCallbackType, ConversationID, ConversationTags
+from atoa.conv.types import ConversationCallbackType, ConversationID, ConversationTags
 
 from atoa.secure.security.confirm import ConfirmationPolicyBase, NeverConfirm
 from swarm.conver.conv.stats import ConversationStats
@@ -288,7 +282,7 @@ class ConversationState(SurgeBaseModel):
             callback = getattr(self, "on_state_change", None)
             if callback is not None and old is not _sentinel:
                 try:
-                    from atoa.event.conv.state import ConversationStateUpdateEvent
+                    from atoa.event.conv import ConversationStateUpdateEvent
                     callback(ConversationStateUpdateEvent(key=name, value=value))
                 except Exception:
                     log.exception(f"State change callback failed for field {name}", exc_info=True)

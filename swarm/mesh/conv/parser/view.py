@@ -16,8 +16,8 @@ from collections.abc import Sequence
 from typing import overload
 from pydantic import BaseModel, Field
 
-from eco.tenant.conv.event import Event, LLMConvertibleEvent
-from eco.tenant.conv.event import EventID, ToolCallID
+from atoa.conv.event import Event, LLMConvertibleEvent
+from atoa.conv.event import EventID, ToolCallID
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import ObservationBaseEvent
 

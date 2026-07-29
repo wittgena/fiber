@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from eco.tenant.conv.message import Message, TextContent
+from atoa.conv.message import Message, TextContent
 from atoa.schema.action import Action, Observation
 
 from watcher.plane.observer.span import observe
@@ -19,8 +19,7 @@ from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from atoa.event.llm.system import SystemPromptEvent
 
-from atoa.event.conv.error import ConversationErrorEvent
-from atoa.event.conv.pause import PauseEvent
+from atoa.event.conv import ConversationErrorEvent, PauseEvent
 from swarm.conver.status import ConverStatus
 from atoa.exception.conv.connection import ConversationRunError
 

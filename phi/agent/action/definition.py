@@ -18,7 +18,7 @@ from openai.types.responses import FunctionToolParam
 from atoa.schema.action import Action, Observation, Schema
 from atoa.secure.security.eval import SecurityRisk
 
-from eco.tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
 from phi.agent.disc.tool import Tool
 from phi.agent.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT

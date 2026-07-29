@@ -2,7 +2,7 @@
 import asyncio
 from typing import Optional, Dict, Any, List, Callable
 
-from eco.tenant.conv.event import LLMConvertibleEvent
+from atoa.conv.event import LLMConvertibleEvent
 from swarm.mesh.conv.adapter import AgentCommunicator, ExecutionController, EngineContextAdapter
 
 from phi.agent.action.resolver import ActionResolver

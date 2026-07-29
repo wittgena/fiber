@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Set
 
-from eco.tenant.conv.message import Message, TextContent
+from atoa.conv.message import Message, TextContent
 
 from atoa.event.llm.message import MessageEvent
 from swarm.conver.protocol import ProtoConv

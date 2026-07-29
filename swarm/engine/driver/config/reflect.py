@@ -10,7 +10,7 @@ import json
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from eco.tenant.conv.event import LLMConvertibleEvent
+from atoa.conv.event import LLMConvertibleEvent
 from atoa.event.llm.system import SystemPromptEvent
 from atoa.schema.reflect import ReflectorBase, ReflectorResult
 
@@ -35,7 +35,7 @@ class Reflector(ReflectorBase, ReflectorClient):
     
     def evaluate(self, events: Sequence[LLMConvertibleEvent], git_patch: str | None = None) -> ReflectorResult:
         from swarm.conver.conv.view import View
-        from eco.tenant.conv.event import LLMConvertibleEvent
+        from atoa.conv.event import LLMConvertibleEvent
         from atoa.event.llm.system import SystemPromptEvent
 
         ## @phase.extraction: Isolate system baseline and tool manifolds

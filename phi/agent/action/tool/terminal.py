@@ -15,7 +15,7 @@ from pydantic import Field
 if TYPE_CHECKING:
     from swarm.mesh.conv.protocol import ConvStateProtocol
 from rich.text import Text
-from eco.tenant.conv.message import ImageContent, TextContent
+from atoa.conv.message import ImageContent, TextContent
 from phi.agent.action.executor import ActionExecutor
 from atoa.schema.action import Action, Observation
 from phi.agent.action.definition import DeclaredResources, ActionAnnotations, ActionDefinition

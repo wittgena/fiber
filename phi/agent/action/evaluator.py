@@ -3,8 +3,8 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from atoa.schema.reflect import ReflectorResult, ReflectorBase
-from eco.tenant.conv.event import LLMConvertibleEvent
-from eco.tenant.conv.message import Message, TextContent
+from atoa.conv.event import LLMConvertibleEvent
+from atoa.conv.message import Message, TextContent
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from watcher.plane.emitter import get_emitter

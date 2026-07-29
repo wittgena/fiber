@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm.engine.llm.registry import LLMRegistry
-from eco.tenant.conv.types import (
+from atoa.conv.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
@@ -20,7 +20,7 @@ from atoa.secure.security.confirm import ConfirmationPolicyBase
 
 from bound.resolver.secret import SecretValue
 
-from eco.tenant.conv.message import Message
+from atoa.conv.message import Message
 from atoa.schema.action import Action, Observation
 
 from topos.space.proxy import SandboxWorkspace

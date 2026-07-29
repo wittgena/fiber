@@ -2,10 +2,10 @@
 from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
-from eco.tenant.conv.types import ConversationID, ConversationTags, ConversationCallbackType
+from atoa.conv.types import ConversationID, ConversationTags, ConversationCallbackType
 from phi.agent.disc.workspace import BaseWorkspace
-from eco.tenant.conv.event import Event
-from eco.tenant.conv.event import EventID
+from atoa.conv.event import Event
+from atoa.conv.event import EventID
 
 from atoa.secure.security.confirm import ConfirmationPolicyBase
 from swarm.conver.conv.stats import ConversationStats

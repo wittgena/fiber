@@ -13,7 +13,7 @@ from atoa.event.llm.observation import AgentErrorEvent
 from swarm.mesh.conv.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
-    from eco.tenant.conv.event import Event
+    from atoa.conv.event import Event
     from atoa.event.llm_convertible import ActionEvent
     from phi.agent.action.definition import DeclaredResources, ActionDefinition
 

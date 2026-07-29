@@ -14,10 +14,10 @@ from swarm.conver.protocol import (
 )
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.observation import UserRejectObservation
-from eco.tenant.conv.types import ConversationID
+from atoa.conv.types import ConversationID
 from swarm.engine.driver.tensor import Driver
 
-from eco.tenant.conv.message import Message, TextContent
+from atoa.conv.message import Message, TextContent
 from swarm.conver.conv.stats import ConversationStats
 from swarm.conver.status import ConverStatus
 from swarm.mesh.conv.protocol import ConvStateProtocol

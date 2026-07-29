@@ -15,7 +15,7 @@ from swarm.engine.executor.context import ExecutionContext, ExecutionEngine
 from swarm.engine.polling import PollingExecutionEngine
 from phi.runtime.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from eco.tenant.conv.message import TextContent
+from atoa.conv.message import TextContent
 
 from arch.gov.tool.command.terminal import TerminalCommandStatus
 from arch.gov.tool.terminal import CMD_OUTPUT_PS1_END

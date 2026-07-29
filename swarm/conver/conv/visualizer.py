@@ -1,10 +1,4 @@
 # swarm.conver.conv.visualizer
-## @lineage: topos.conv.visualizer
-## @lineage: gov.conv.visualizer
-## @lineage: agent.conv.visualizer
-## @lineage: atoa.agent.conv.visualizer
-## @lineage: atoa.conv.visualizer
-## @lineage: atoa.gov.context.message.visualizer
 import logging
 import re
 from collections.abc import Callable
@@ -15,11 +9,9 @@ from rich.console import Console, Group
 from rich.rule import Rule
 from rich.text import Text
 
-from eco.tenant.conv.event import Event
+from atoa.conv.event import Event
 from atoa.event.acp import ACPToolCallEvent
-from atoa.event.conv.pause import PauseEvent
-from atoa.event.conv.state import ConversationStateUpdateEvent
-from atoa.event.conv.error import ConversationErrorEvent
+from atoa.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
 from atoa.event.llm.action import ActionEvent
 from atoa.event.llm.message import MessageEvent
 from atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation

@@ -10,8 +10,8 @@ from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
 from atoa.schema.action import Action, Observation
-from eco.tenant.conv.event import Event
-from eco.tenant.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
+from atoa.conv.event import Event
+from atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
 from bound.parser.conv.action import format_context_exceeded_message, ActionParser
 

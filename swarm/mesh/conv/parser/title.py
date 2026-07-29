@@ -18,10 +18,10 @@
 from collections.abc import Sequence
 
 from atoa.event.llm.message import MessageEvent
-from eco.tenant.conv.event import Event
+from atoa.conv.event import Event
 from swarm.engine.driver.tensor import Driver
 
-from eco.tenant.conv.message import Message, TextContent
+from atoa.conv.message import Message, TextContent
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

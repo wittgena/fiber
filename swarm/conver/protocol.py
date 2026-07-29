@@ -11,8 +11,8 @@ from atoa.secure.security.analyzer import SecurityAnalyzerBase
 
 from bound.resolver.secret import SecretValue
 
-from eco.tenant.conv.types import ConversationID
-from eco.tenant.conv.message import Message
+from atoa.conv.types import ConversationID
+from atoa.conv.message import Message
 
 from swarm.engine.driver.tensor import Driver
 from swarm.mesh.conv.protocol import ConvStateProtocol

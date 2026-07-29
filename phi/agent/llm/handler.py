@@ -7,7 +7,7 @@ from atoa.exception.types import FunctionCallValidationError, LLMContextWindowEx
 
 from phi.agent.loop.step import StepHandler
 from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
-from eco.tenant.conv.message import Message, TextContent
+from atoa.conv.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter
 logger = get_emitter(__name__)
