@@ -32,7 +32,7 @@ from eco.gateway.stream.wrapper import stream_chunk_builder
 from tenant.token.splitter import create_pretrained_tokenizer
 from tenant.token.counter import token_counter
 from tenant.switch.params import ModelResponse
-from tenant.action.completion import completion as brane_completion
+from phi.tenant.completion import completion as brane_completion
 from eco.watcher.snapshot.metrics import Metrics
 from eco.watcher.delegator import DriverObserver
 from atoa.exception.eco import (

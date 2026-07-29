@@ -15,7 +15,7 @@ from atoa.exception.eco import (
     ServiceUnavailableError,
     Timeout as LiteLLMTimeout,
 )
-from tenant.action.completion import completion as litellm_completion
+from phi.tenant.completion import completion as litellm_completion
 from tenant.switch.params import (
     Delta, 
     ModelResponseStream, 

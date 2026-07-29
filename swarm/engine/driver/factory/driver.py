@@ -1,16 +1,11 @@
 # swarm.engine.driver.factory.driver
-## @lineage: agent.driver.factory.driver
-## @lineage: agent.factory.gov.driver
-## @lineage: gov.factory.driver
-## @lineage: atoa.factory.driver
-## @lineage: atoa.driver.factory
 import json
 import os
 import warnings
 from typing import Any, get_args, get_origin, TYPE_CHECKING
 from pydantic import BaseModel, SecretStr
 
-from eco.llama.router.locator import get_llm_provider
+from bound.resolver.locator import get_llm_provider
 if TYPE_CHECKING:
     from swarm.engine.driver.tensor import Driver
     DriverType = Driver | Any
