@@ -1,12 +1,4 @@
 # phi.tenant.router.mapper.llm
-## @lineage: bound.router.mapper.llm
-## @lineage: eco.llama.router.mapper.llm
-## @lineage: bound.mapper.inter.llm
-## @lineage: bound.gateway.adapter.mapper.inter.llm
-## @lineage: gateway.adapter.mapper.inter.llm
-## @lineage: eco.mapper.inter.llm
-## @lineage: adapter.mapper.inter.llm
-## @lineage: bound.adapter.mapper.inter.llm
 from typing import Dict, Any, Set, List, Optional
 from dataclasses import dataclass, field
 from phi.tenant.router.mapper.project import ProjectLayout

@@ -1,5 +1,4 @@
 # phi.tenant.adapter.mapper.traverser
-## @lineage: bound.mapper.traverser
 import os
 import json
 import asyncio
@@ -7,7 +6,7 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from tenant.legacy.llama.bound.base.llms.types import ChatMessage, MessageRole
+from tenant.llama.bound.base.llms.types import ChatMessage, MessageRole
 from arch.gov.gate import uuid4 
 from phase.bind.resolver import get_invoker
 from watcher.plane.emitter import get_emitter

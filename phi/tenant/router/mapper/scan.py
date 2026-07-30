@@ -6,7 +6,7 @@ import inspect
 import pkgutil
 from typing import Dict, Any
 from dataclasses import asdict
-from tenant.legacy.llama.bound.base.llms.base import BaseLLM
+from tenant.llama.bound.base.llms.base import BaseLLM
 from phi.tenant.router.mapper.llm import LLMCapabilities, LLMInfo
 from topos.resolver.ext import ExtResolver
 

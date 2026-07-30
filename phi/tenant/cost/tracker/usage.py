@@ -8,7 +8,8 @@ from contextlib import contextmanager
 
 from arch.contract.event.next import LogEvent
 
-from tenant.legacy.types import Usage, ModelInfo
+from tenant.model.types.general import ModelInfo
+from tenant.model.types.core import Usage
 from tenant.model.cost import ModelCostRegistry 
 
 from phi.tenant.cost.unit import UnitCostCalculator

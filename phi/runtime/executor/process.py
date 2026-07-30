@@ -1,20 +1,18 @@
 # phi.runtime.executor.process
-## @lineage: tenant.action.process.core
 from typing import Any, Dict, List, Optional, Union
 
 from bound.mapper.exception import exception_type
-from phi.tenant.router.llm import TopologyMissingError
-
 from bound.stream.wrapper import StreamWrapper
 
 from tenant.switch.params import ModelResponse, ModelResponseStream
-from phi.runtime.executor.pre import CompletionPreprocessor
 
+from phi.tenant.router.llm import ModuleMissingError
 from phi.tenant.registry.adapter import AdapterRegistry
+from phi.runtime.executor.pre import CompletionPreprocessor
 
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("action.core")
+log = get_emitter("executor.process")
 
 async def async_core_completion(
     model: str,
@@ -47,19 +45,16 @@ async def async_core_completion(
                 logging_obj=ctx.logging_obj,
             )
         return response
-        
-    except TopologyMissingError as te:
+    except ModuleMissingError as te:
         ## @fast_fail: 치명적 토폴로지 누락 오류는 절대 래핑(감싸기)하거나 재시도하지 않고 즉시 상위로 투과
         log.error(f"[bound.completion] 치명적 구조 결함 감지. 실행 즉각 중단: {te}")
         raise te
-        
     except Exception as e:
         log.error(f"[bound.completion] 코어 엔진 예외 발생: {str(e)}")
         if ctx.logging_obj:
             ctx.logging_obj.post_call(
                 input=ctx.messages, api_key=ctx.api_key, original_response=str(e), additional_args={"headers": getattr(ctx, 'headers', {})}
             )
-        
         error_completion_kwargs = {"model": model, "messages": messages, **ctx.original_kwargs}
         raise exception_type(
             model=ctx.model, custom_llm_provider=ctx.custom_llm_provider, original_exception=e,

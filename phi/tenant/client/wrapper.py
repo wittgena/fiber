@@ -15,12 +15,12 @@ from weakref import WeakKeyDictionary
 from atoa.secure.secret.validator import CredentialAccessor
 
 from bound.watcher.delegator import LogDelegator
+from bound.rule import Rules
+from bound.stream.wrapper import stream_chunk_builder
 
 from tenant.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from tenant.model.config.resolver import config
-from bound.rule import Rules
-from bound.stream.wrapper import stream_chunk_builder
-from tenant.legacy.types import CallTypes
+from tenant.model.calltype import CallTypes
 
 from concurrent.futures import ThreadPoolExecutor
 from watcher.plane.emitter import get_emitter

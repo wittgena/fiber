@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict
 
 from tenant.model.cost import lookup_base_model_info
 from bound.config import get_provider_info
-from tenant.legacy.types import ModelInfo
+from tenant.model.types.general import ModelInfo
 from bound.parser.param.format import BaseLLMModelInfo, type_to_response_format_param
 from tenant.model.config.resolver import config
 

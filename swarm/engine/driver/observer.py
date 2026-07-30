@@ -7,7 +7,7 @@ from enum import IntEnum
 from collections import defaultdict
 
 from phi.tenant.cost.tracker.metric import Metrics
-from tenant.switch.params import ResponsesAPIResponse, ModelResponse
+from tenant.switch.params import ModelResponse
 
 from arch.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context
@@ -87,7 +87,7 @@ class DriverObserver:
 
     def track_success(
         self,
-        resp: ModelResponse | ResponsesAPIResponse,
+        resp: ModelResponse,
         start_time: float,
         telemetry_ctx: dict | None = None,
     ) -> Metrics:

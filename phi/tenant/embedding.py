@@ -2,7 +2,7 @@
 from typing import Any, Coroutine, List, Literal, Optional, Union
 from typing_extensions import overload
 
-from tenant.legacy.types import EmbeddingResponse
+from tenant.model.types.general import EmbeddingResponse
 from bound.mapper.exception import exception_type
 
 from phi.tenant.client.wrapper import client

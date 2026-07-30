@@ -1,5 +1,4 @@
 # phi.tenant.router.llm
-## @lineage: bound.router.llm
 import importlib
 import inspect
 from typing import Dict, Any, Optional, Set
@@ -15,8 +14,8 @@ log = get_emitter("llm.router")
 _LLM_PKG_NAME = llm_pkg.__name__
 _LLM_PKG = _LLM_PKG_NAME.replace(".", "/")
 
-class TopologyMissingError(Exception):
-    """해당 모듈(Topology)이 시스템에 존재하지 않을 때 발생하는 치명적 오류"""
+class ModuleMissingError(Exception):
+    """해당 모듈이 시스템에 존재하지 않을 때 발생하는 치명적 오류"""
     pass
 
 ## @state: Core topological boundaries (Batteries-included)
@@ -121,11 +120,11 @@ class LLMRouter:
             provider = self._fallback_provider_match(model_name)
             
         if not provider:
-            raise TopologyMissingError(f"[Error] 모델 '{model_name}'에 대한 Provider를 식별할 수 없습니다.")
+            raise ModuleMissingError(f"[Error] 모델 '{model_name}'에 대한 Provider를 식별할 수 없습니다.")
 
         ## @circuit_breaker: 이미 누락이 판명된 모듈이라면 긴 스택 트레이스 없이 즉시 차단
         if provider in self._blacklisted_providers:
-            raise TopologyMissingError(
+            raise ModuleMissingError(
                 f"[Fast-Fail] Provider '{provider}' 누락이 확인된 상태입니다. 무의미한 재시도를 차단합니다."
             )
 
@@ -133,7 +132,7 @@ class LLMRouter:
         if not meta:
             ## @rupture: 최초 실패 시 블랙리스트에 등록하고 상세 안내를 출력
             self._blacklisted_providers.add(provider)
-            raise TopologyMissingError(
+            raise ModuleMissingError(
                 f"\n[Brane Integration Error] Module '{provider}' is missing from the manifold.\n"
                 f"This topology is not natively embedded.\n"
                 f"Dynamically transduce via CLI: `python -m trans.llama --category llms --name {provider}`\n"

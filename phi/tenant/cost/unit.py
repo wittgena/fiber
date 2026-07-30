@@ -1,16 +1,7 @@
 # phi.tenant.cost.unit
-## @lineage: tenant.cost.unit.calc
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, TypedDict, cast
-from tenant.legacy.types import (
-    CacheCreationTokenDetails,
-    CompletionTokensDetailsWrapper,
-    ImageResponse,
-    ModelInfo,
-    PromptTokensDetailsWrapper,
-    ServiceTier,
-    Usage,
-    DataResidency
-)
+from tenant.model.types.general import CacheCreationTokenDetails, CompletionTokensDetailsWrapper, ImageResponse, ModelInfo, PromptTokensDetailsWrapper, ServiceTier, DataResidency
+from tenant.model.types.core import Usage
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("cost.unit")

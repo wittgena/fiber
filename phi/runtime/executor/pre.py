@@ -1,13 +1,4 @@
 # phi.runtime.executor.pre
-## @lineage: tenant.action.process.pre
-## @lineage: eco.tenant.action.process.pre
-## @lineage: eco.legacy.action.process.pre
-## @lineage: adapter.legacy.action.process.pre
-## @lineage: bound.surface.legacy.action.process.pre
-## @lineage: bound.adapter.surface.legacy.action.process.pre
-## @lineage: bound.surface.client.action.process.pre
-## @lineage: bound.surface.action.process.pre
-## @lineage: bound.adapter.action.preprocessor
 from __future__ import annotations
 import asyncio
 import contextvars
@@ -25,16 +16,8 @@ from functools import partial
 from typing import Any, Dict, List, Literal, Callable, Optional, Tuple, Type, Union, cast
 from dataclasses import dataclass, field
 
-from tenant.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
-from tenant.legacy.types import EmbeddingResponse
-from tenant.switch.params import ModelResponse
-from tenant.legacy.types import all_litellm_params
-from tenant.model.config.resolver import config
-from tenant.model.support import supports_httpx_timeout
 from bound.config import ProviderConfigManager
 from bound.locator import get_llm_provider
-from tenant.model.protype import ProviderTypes
-from tenant.legacy.openai.types import AllMessageValues
 from bound.parser.param.optional import get_optional_params
 from bound.parser.param.litellm import get_litellm_params
 from bound.parser.param.validator import (
@@ -45,9 +28,19 @@ from bound.parser.param.validator import (
     validate_openai_optional_params
 )
 from bound.watcher.delegator import LogDelegator
+
+from tenant.model.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS
+from tenant.model.types.general import EmbeddingResponse
+from tenant.switch.params import ModelResponse
+from tenant.model.types.general import all_litellm_params
+from tenant.model.config.resolver import config
+from tenant.model.support import supports_httpx_timeout
+from tenant.model.protype import ProviderTypes
+from tenant.model.types.openai import AllMessageValues
+
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("action.preprocessor")
+log = get_emitter("executor.preprocessor")
 
 def get_non_default_completion_params(kwargs: dict) -> dict:
     openai_params = config.OPENAI_CHAT_COMPLETION_PARAMS

@@ -1,6 +1,4 @@
 # phi.tenant.client.handler
-## @lineage: tenant.action.handler
-## @lineage: bound.legacy.completor
 import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Tuple, Union
@@ -38,7 +36,6 @@ class RequestContext:
     client: Optional[Union[HTTPClient, AsyncHTTPClient]]
     shared_session: Optional[Any]
     
-    # 셋업 과정에서 채워지는 내부 상태
     provider_config: Optional[BaseConfig] = None
     json_mode: bool = False
     request_data: dict = field(default_factory=dict)

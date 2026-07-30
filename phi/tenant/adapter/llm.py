@@ -7,12 +7,12 @@ from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
 from bound.locator import get_llm_provider
-from tenant.legacy.llama.bound.base.llms.types import ChatMessage, MessageRole
+from tenant.llama.bound.base.llms.types import ChatMessage, MessageRole
 from phi.tenant.adapter.base import BaseProviderAdapter
 from phi.tenant.adapter.mapper.state import StateMapper
 
 from phi.runtime.executor.pre import CompletionContext
-from phi.tenant.router.llm import LLMRouter, TopologyMissingError
+from phi.tenant.router.llm import LLMRouter, ModuleMissingError
 from bound.stream.wrapper import StreamWrapper
 
 from bound.mapper.exception import exception_type
@@ -78,7 +78,7 @@ class InterLLMAdapter(BaseProviderAdapter):
                 **llama_kwargs
             )
             log.debug(f"[InterLLM-{req_id}] ✅ LLM Topology Loaded: {type(llm).__name__}")
-        except TopologyMissingError as te:
+        except ModuleMissingError as te:
             log.error(f"[InterLLM-{req_id}] 🚨 TopologyMissingError: {te}")
             raise te
         except Exception as e:
