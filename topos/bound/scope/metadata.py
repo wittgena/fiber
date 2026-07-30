@@ -5,7 +5,7 @@
 from typing import TYPE_CHECKING, Any, Literal
 from pydantic import Field
 
-from arch.topos.bound.surge.disc import SurgeBaseModel
+from arch.bound.surge.disc import SurgeBaseModel
 from arch.xor.xe.convset import SettingProminence
 
 SettingsValueType = Literal[

@@ -7,7 +7,7 @@ from typing import (
     Protocol,
     TypeVar,
 )
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 
 if TYPE_CHECKING:
     from swarm.conver.protocol import ToolExecutionContextProtocol

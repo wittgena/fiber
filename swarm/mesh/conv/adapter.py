@@ -4,7 +4,7 @@ from pathlib import Path
 from collections.abc import Mapping
 from typing import Any
 
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 from swarm.conver.protocol import (
     AgentCommunicationProtocol, 
     ExecutionControlProtocol, 
@@ -12,23 +12,23 @@ from swarm.conver.protocol import (
     EngineContextProtocol,
     ProtoConv
 )
-from atoa.event.llm.message import MessageEvent
-from atoa.event.llm.observation import UserRejectObservation
-from atoa.conv.types import ConversationID
+from swarm.atoa.event.llm.message import MessageEvent
+from swarm.atoa.event.llm.observation import UserRejectObservation
+from swarm.atoa.conv.types import ConversationID
 from swarm.engine.driver.tensor import Driver
 
-from atoa.conv.message import Message, TextContent
+from swarm.atoa.conv.message import Message, TextContent
 from swarm.conver.conv.stats import ConversationStats
 from swarm.conver.status import ConverStatus
 from swarm.mesh.conv.protocol import ConvStateProtocol
 
 from swarm.mesh.conv.command import TransitionStatus, UpdateSecurityPolicy
-from atoa.secure.security.analyzer import SecurityAnalyzerBase
-from atoa.secure.security.confirm import ConfirmationPolicyBase
-from atoa.secure.security.confirm import NeverConfirm
+from swarm.atoa.event.security.analyzer import SecurityAnalyzerBase
+from swarm.atoa.event.security.confirm import ConfirmationPolicyBase
+from swarm.atoa.event.security.confirm import NeverConfirm
 
 from swarm.conver.executor import Conver, AgentSessionManager, AgentSidecar
-from topos.resolver.secret import SecretValue
+from arch.topos.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
 
 from arch.topos.tunnel.factory import TunnelFactory

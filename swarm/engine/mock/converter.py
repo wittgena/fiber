@@ -8,7 +8,7 @@ import re
 from collections.abc import Iterable
 from typing import Any, Literal, NotRequired, TypedDict, cast
 from tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
-from atoa.exception.types import (
+from bound.exception.types import (
     FunctionCallConversionError,
     FunctionCallValidationError,
 )

@@ -10,10 +10,10 @@ from typing import Dict, Any, List
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from arch.network.bridge import FlowPropagator, RpcBridge
-from arch.network.channel.pipeline import DuplexChannel, ChannelContext
-from arch.network.channel.codec import JsonMessageCodec, XelogUniversalTracer
-from arch.network.factory import ProtocolFactory
+from arch.topos.network.bridge import FlowPropagator, RpcBridge
+from arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
+from arch.topos.network.channel.codec import JsonMessageCodec, XelogUniversalTracer
+from arch.topos.network.factory import ProtocolFactory
 
 from watcher.dphi.adapter.exchange import ExchangeAdapter
 from watcher.dphi.adapter.state import StateAdapter

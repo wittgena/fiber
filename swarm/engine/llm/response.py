@@ -4,8 +4,8 @@ from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from tenant.switch.params import ModelResponse
-from atoa.conv.message import Message
-from phi.tenant.cost.tracker.metric import MetricsSnapshot
+from swarm.atoa.conv.message import Message
+from tenant.phi.cost.tracker.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 

@@ -2,12 +2,12 @@
 from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
-from atoa.conv.types import ConversationID, ConversationTags, ConversationCallbackType
+from swarm.atoa.conv.types import ConversationID, ConversationTags, ConversationCallbackType
 from phi.agent.disc.workspace import BaseWorkspace
-from atoa.conv.event import Event
-from atoa.conv.event import EventID
+from swarm.atoa.conv.event import Event
+from swarm.atoa.conv.event import EventID
 
-from atoa.secure.security.confirm import ConfirmationPolicyBase
+from swarm.atoa.event.security.confirm import ConfirmationPolicyBase
 from swarm.conver.conv.stats import ConversationStats
 from swarm.mesh.conv.store.log import LogStore
 
@@ -16,8 +16,8 @@ from swarm.mesh.conv.command import StateCommand
 if TYPE_CHECKING:
     from swarm.conver.status import ConverStatus
     from phi.agent.disc.ator import Ator
-    from topos.resolver.secret import SecretRegistry
-    from atoa.secure.security.analyzer import SecurityAnalyzerBase
+    from arch.topos.resolver.secret import SecretRegistry
+    from swarm.atoa.event.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any

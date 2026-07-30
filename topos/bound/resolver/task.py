@@ -15,7 +15,7 @@ from topos.bound.resolver.spec import (
 )
 from topos.bound.resolver.bridge import SchemeBlueprint, TransactionBlueprint, TraceBlueprint
 
-from arch.topos.bound.surge.blueprint import SurgeBlueprint
+from arch.bound.surge.blueprint import SurgeBlueprint
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.task")

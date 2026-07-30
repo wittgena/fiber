@@ -18,9 +18,9 @@ from dataclasses import dataclass, field
 
 from bound.config import ProviderConfigManager
 from bound.locator import get_llm_provider
-from bound.parser.param.optional import get_optional_params
-from bound.parser.param.litellm import get_litellm_params
-from bound.parser.param.validator import (
+from tenant.model.param.optional import get_optional_params
+from tenant.model.param.litellm import get_litellm_params
+from tenant.model.param.validator import (
     validate_and_fix_openai_messages,
     validate_and_fix_openai_tools,
     validate_and_fix_thinking_param,
@@ -320,7 +320,7 @@ class EmbeddingPreprocessor:
         )
 
         ## 파라미터 분리 (LiteLLM legacy params vs Model params)
-        from bound.parser.param.embedding import get_optional_params_embeddings
+        from tenant.model.param.embedding import get_optional_params_embeddings
         optional_params = get_optional_params_embeddings(
             model=self.model,
             custom_llm_provider=resolved_provider,

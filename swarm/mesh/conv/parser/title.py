@@ -17,11 +17,11 @@
 """
 from collections.abc import Sequence
 
-from atoa.event.llm.message import MessageEvent
-from atoa.conv.event import Event
+from swarm.atoa.event.llm.message import MessageEvent
+from swarm.atoa.conv.event import Event
 from swarm.engine.driver.tensor import Driver
 
-from atoa.conv.message import Message, TextContent
+from swarm.atoa.conv.message import Message, TextContent
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

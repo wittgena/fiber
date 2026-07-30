@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Callable, Dict, Any, Optional
 
-from atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.action import ActionEvent
 from swarm.conver.status import ConverStatus
 
 from arch.contract.schema.resonance import BridgeEvent

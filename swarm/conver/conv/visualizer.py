@@ -9,13 +9,13 @@ from rich.console import Console, Group
 from rich.rule import Rule
 from rich.text import Text
 
-from atoa.conv.event import Event
-from atoa.event.acp import ACPToolCallEvent
-from atoa.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.message import MessageEvent
-from atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from atoa.event.llm.system import SystemPromptEvent
+from swarm.atoa.conv.event import Event
+from swarm.atoa.event.acp import ACPToolCallEvent
+from swarm.atoa.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.message import MessageEvent
+from swarm.atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from swarm.atoa.event.llm.system import SystemPromptEvent
 from swarm.mesh.conv.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:

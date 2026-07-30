@@ -10,7 +10,7 @@ import types
 from collections.abc import Collection
 from typing import Annotated, Any, Union, get_args, get_origin
 
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 
 logger = logging.getLogger(__name__)
 

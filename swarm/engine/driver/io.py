@@ -4,26 +4,26 @@ import warnings
 from typing import TYPE_CHECKING, Any, Sequence, cast, Final
 from types import SimpleNamespace
 
-from atoa.exception.eco import (
+from bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout as LiteLLMTimeout,
 )
-from phi.tenant.completion import completion as litellm_completion
+from tenant.phi.completion import completion as litellm_completion
 from tenant.switch.params import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
 from swarm.conver.chat.chat import select_chat_options
-from phi.tenant.cost.tracker.metric import MetricsSnapshot
+from tenant.phi.cost.tracker.metric import MetricsSnapshot
 
-from atoa.exception.types import LLMNoResponseError
+from bound.exception.types import LLMNoResponseError
 from swarm.engine.llm.response import LLMResponse
-from atoa.conv.message import Message
+from swarm.atoa.conv.message import Message
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from swarm.engine.driver.tensor import Driver
-    from atoa.conv.types import TokenCallbackType
+    from swarm.atoa.conv.types import TokenCallbackType
     from phi.agent.action.definition import ActionDefinition
 
 log = get_emitter(__name__)

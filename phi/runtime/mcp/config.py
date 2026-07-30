@@ -9,7 +9,7 @@
 ## @lineage: bound.adapter.call.mcp.config
 ## @lineage: gov.policy.mcp.config
 from typing import Dict, List, Optional
-from arch.topos.bound.surge.disc import SurgeBaseModel
+from arch.bound.surge.disc import SurgeBaseModel
 
 class MCPServerConfig(SurgeBaseModel):
     command: str

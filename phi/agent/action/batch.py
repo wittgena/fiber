@@ -10,15 +10,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from atoa.conv.types import ConversationCallbackType
-from atoa.conv.event import Event
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.message import MessageEvent
-from atoa.event.llm.observation import UserRejectObservation
+from swarm.atoa.conv.types import ConversationCallbackType
+from swarm.atoa.conv.event import Event
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.message import MessageEvent
+from swarm.atoa.event.llm.observation import UserRejectObservation
 from swarm.mesh.conv.protocol import ConvStateProtocol
 
 from swarm.engine.executor.parallel import ParallelExecutor
-from atoa.conv.message import Message, TextContent
+from swarm.atoa.conv.message import Message, TextContent
 from phi.agent.action.definition import ActionDefinition
 from swarm.engine.driver.factory.action import CoreAction
 

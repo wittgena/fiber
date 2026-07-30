@@ -6,13 +6,13 @@ from typing import Protocol, TypeGuard
 from tenant.switch.params import ChatCompletionToolParam
 from tenant.switch.params import Message
 from tenant.switch.params import Choices, ModelResponse, StreamingChoices
-from atoa.exception.types import LLMNoResponseError
+from bound.exception.types import LLMNoResponseError
 from swarm.engine.mock.converter import (
     STOP_WORDS,
     convert_fnto_non,
     convert_to_fncall,
 )
-from phi.tenant.model.info import get_features
+from tenant.phi.model.info import get_features
 
 class _HostSupports(Protocol):
     model: str

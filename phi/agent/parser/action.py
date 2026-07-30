@@ -9,14 +9,14 @@ import re
 from typing import Any
 from pydantic import ValidationError
 from functools import lru_cache
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.observation import AgentErrorEvent
-import atoa.secure.security.eval as risk
-from atoa.secure.security.analyzer import SecurityAnalyzerBase
-from atoa.schema.action import Action, Observation
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.observation import AgentErrorEvent
+import swarm.atoa.event.security.eval as risk
+from swarm.atoa.event.security.analyzer import SecurityAnalyzerBase
+from swarm.atoa.schema.action import Action, Observation
 
 from phi.agent.parser.toolcall import ToolCallParser
-from atoa.conv.message import (
+from swarm.atoa.conv.message import (
     MessageToolCall,
     ReasoningItemModel,
     RedactedThinkingBlock,

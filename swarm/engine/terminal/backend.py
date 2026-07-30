@@ -23,12 +23,12 @@ import pty
 import select
 
 from swarm.engine.executor.command import sanitized_env
-from arch.gov.tool.terminal import (
+from arch.xor.bridge.tool.terminal import (
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,
     HISTORY_LIMIT,
 )
-from arch.gov.tool.terminal import CmdOutputMetadata
+from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 from phi.runtime.tool.terminal.interface import TerminalInterface
 
 from watcher.plane.emitter import get_logger

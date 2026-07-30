@@ -14,8 +14,8 @@ from swarm.engine.executor.command import execute_command
 from phi.runtime.tool.git.changes import get_git_changes
 from phi.runtime.tool.git.diff import get_git_diff
 
-from arch.gov.tool.command.workspace import CommandResult, FileOperationResult
-from arch.gov.tool.git import GitChange, GitDiff
+from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
+from arch.xor.bridge.tool.git import GitChange, GitDiff
 
 from watcher.tracer.scope import get_current_trace_path
 from watcher.plane.emitter import get_emitter

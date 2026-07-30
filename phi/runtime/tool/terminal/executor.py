@@ -15,10 +15,10 @@ from swarm.engine.executor.context import ExecutionContext, ExecutionEngine
 from swarm.engine.polling import PollingExecutionEngine
 from phi.runtime.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from atoa.conv.message import TextContent
+from swarm.atoa.conv.message import TextContent
 
-from arch.gov.tool.command.terminal import TerminalCommandStatus
-from arch.gov.tool.terminal import CMD_OUTPUT_PS1_END
+from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
+from arch.xor.bridge.tool.terminal import CMD_OUTPUT_PS1_END
 
 from watcher.plane.emitter import get_emitter
 

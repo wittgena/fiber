@@ -1,13 +1,13 @@
 # phi.agent.llm.handler
 ## @lineage: phi.executor.graph.loop
 import json
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.message import MessageEvent
-from atoa.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.message import MessageEvent
+from bound.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 from phi.agent.loop.step import StepHandler
 from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
-from atoa.conv.message import Message, TextContent
+from swarm.atoa.conv.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter
 logger = get_emitter(__name__)

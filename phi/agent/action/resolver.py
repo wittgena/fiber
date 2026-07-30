@@ -6,7 +6,7 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 
 from phi.agent.disc.tool import Tool
 from swarm.engine.driver.factory.action import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
@@ -171,7 +171,7 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
     from swarm.conver.status import ConverStatus
-    from atoa.event.llm.observation import ObservationEvent
+    from swarm.atoa.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
     from swarm.mesh.conv.command import TransitionStatus, UpdateAgentState
 

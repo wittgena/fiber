@@ -15,10 +15,10 @@ from topos.flow.folding import ManifoldFolder
 from topos.flow.transition import FlowTransition, EdgeFlow
 
 from arch.contract.schema.graph import EntryNode
-from arch.topos.bound.surge.blueprint import SurgeBlueprint
+from arch.bound.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message, GanNode
-from arch.topos.bound.sealer import EpochSealer
-from arch.topos.flow.event import AgentConfigured
+from arch.bound.sealer import EpochSealer
+from phase.executor.flow.event import AgentConfigured
 
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt

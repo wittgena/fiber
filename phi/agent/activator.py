@@ -9,17 +9,17 @@ from typing import TYPE_CHECKING, Dict, Any, Optional
 from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
-from atoa.schema.action import Action, Observation
-from atoa.conv.event import Event
-from atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
+from swarm.atoa.schema.action import Action, Observation
+from swarm.atoa.conv.event import Event
+from swarm.atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
 from phi.agent.parser.action import format_context_exceeded_message, ActionParser
 
 from phi.agent.disc.ator import Ator
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.message import MessageEvent
-from atoa.event.llm.system import SystemPromptEvent, TokenEvent
-from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.message import MessageEvent
+from swarm.atoa.event.llm.system import SystemPromptEvent, TokenEvent
+from swarm.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from swarm.conver.status import ConverStatus
 from swarm.engine.llm.response import LLMResponse
 
@@ -30,9 +30,9 @@ from phi.agent.loop.graph.eval import EvalReflector
 from phi.agent.action.evaluator import ActionEvaluator 
 
 from phi.agent.loop.graph.organizer import DagOrganizer
-from arch.gov.state.compiler import StateCompiler
-from arch.gov.state.projector import StateProjector
-from arch.gov.state.schema import FragmentSig
+from arch.topos.node.state.compiler import StateCompiler
+from arch.topos.node.state.projector import StateProjector
+from arch.topos.node.state.schema import FragmentSig
 
 from arch.topos.tunnel.factory import UniversalFacade
 from watcher.plane.observer.span import observe, should_enable_observability
@@ -200,7 +200,7 @@ class Activator(Ator):
                 break
 
     async def _emit_event_to_gov(self, event: Any, tunnel: UniversalFacade, response_topic: str, snapshot: Optional[AgentStateSnapshot] = None) -> None:
-        from arch.topos.bound.payload import StreamPayloadAdapter 
+        from arch.bound.payload import StreamPayloadAdapter 
         
         payload_raw = None
         current_topo = len(snapshot.events) if snapshot else 0

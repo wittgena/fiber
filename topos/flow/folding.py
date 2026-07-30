@@ -6,7 +6,7 @@ import json
 from typing import Dict, Any, Optional, List, Tuple
 
 from arch.topos.node.gan import Message, GanNode
-from arch.gov.flow import PhaseFlow, FlowState
+from arch.contract.gov.flow import PhaseFlow, FlowState
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bound.folding")

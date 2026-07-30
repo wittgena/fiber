@@ -15,16 +15,16 @@ from pydantic import Field, ConfigDict, computed_field, field_validator, field_s
 from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
-from atoa.schema.action import Action, Observation, Schema
-from atoa.secure.security.eval import SecurityRisk
+from swarm.atoa.schema.action import Action, Observation, Schema
+from swarm.atoa.event.security.eval import SecurityRisk
 
 from tenant.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
 from phi.agent.disc.tool import Tool
 from phi.agent.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
-from arch.topos.bound.surge.model import SurgeBaseModel
-from arch.topos.bound.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
+from arch.bound.surge.model import SurgeBaseModel
+from arch.bound.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
 from watcher.plane.emitter import get_logger
 
 def camel_to_snake(name: str) -> str:

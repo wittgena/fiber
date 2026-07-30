@@ -9,12 +9,12 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Final, Protocol, runtime_checkable
 import threading
 
-from atoa.event.llm.observation import AgentErrorEvent
+from swarm.atoa.event.llm.observation import AgentErrorEvent
 from swarm.mesh.conv.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
-    from atoa.conv.event import Event
-    from atoa.event.llm_convertible import ActionEvent
+    from swarm.atoa.conv.event import Event
+    from swarm.atoa.event.llm_convertible import ActionEvent
     from phi.agent.action.definition import DeclaredResources, ActionDefinition
 
 from watcher.plane.emitter import get_logger

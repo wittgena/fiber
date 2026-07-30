@@ -6,10 +6,10 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from collections import defaultdict
 
-from phi.tenant.cost.tracker.metric import Metrics
+from tenant.phi.cost.tracker.metric import Metrics
 from tenant.switch.params import ModelResponse
 
-from arch.gov.gate import uuid4
+from arch.contract.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context
 
 log = get_emitter("driver.observer")

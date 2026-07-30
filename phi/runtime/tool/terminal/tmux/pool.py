@@ -19,7 +19,7 @@ import libtmux
 
 from watcher.plane.emitter import get_logger
 from swarm.engine.executor.command import sanitized_env
-from arch.gov.tool.terminal import (
+from arch.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,

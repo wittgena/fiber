@@ -16,10 +16,10 @@ from collections.abc import Sequence
 from typing import overload
 from pydantic import BaseModel, Field
 
-from atoa.conv.event import Event, LLMConvertibleEvent
-from atoa.conv.event import EventID, ToolCallID
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.observation import ObservationBaseEvent
+from swarm.atoa.conv.event import Event, LLMConvertibleEvent
+from swarm.atoa.conv.event import EventID, ToolCallID
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.observation import ObservationBaseEvent
 
 from watcher.plane.emitter import get_logger
 

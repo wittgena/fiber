@@ -7,21 +7,21 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from atoa.conv.message import Message, TextContent
-from atoa.schema.action import Action, Observation
+from swarm.atoa.conv.message import Message, TextContent
+from swarm.atoa.schema.action import Action, Observation
 
 from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_emitter
 
 from phi.agent.parser.render import render_template
-from atoa.event.llm.message import MessageEvent
-from atoa.event.llm.action import ActionEvent
-from atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from atoa.event.llm.system import SystemPromptEvent
+from swarm.atoa.event.llm.message import MessageEvent
+from swarm.atoa.event.llm.action import ActionEvent
+from swarm.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from swarm.atoa.event.llm.system import SystemPromptEvent
 
-from atoa.event.conv import ConversationErrorEvent, PauseEvent
+from swarm.atoa.event.conv import ConversationErrorEvent, PauseEvent
 from swarm.conver.status import ConverStatus
-from atoa.exception.types import ConversationRunError
+from bound.exception.types import ConversationRunError
 
 from swarm.engine.driver.tensor import Driver
 from swarm.engine.driver.factory.action import CoreAction
@@ -31,9 +31,9 @@ from swarm.conver.conv.state import ConversationState
 from swarm.mesh.conv.parser.title import generate_conversation_title
 from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
 
-from arch.gov.bridge.store.file import LocalFileStore
+from arch.xor.bridge.store.file import LocalFileStore
 from swarm.mesh.conv.store.log import LogStore
-from arch.topos.bound.payload import StreamPayloadAdapter
+from arch.bound.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import TunnelFactory, UniversalFacade
 
 if TYPE_CHECKING:

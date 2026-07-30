@@ -22,7 +22,7 @@ from pydantic.json_schema import SkipJsonSchema
 from functools import cached_property
 from pathlib import Path
 
-from phi.tenant.model.info import get_features
+from tenant.phi.model.info import get_features
 from tenant.model.support import supports_vision
 from tenant.model.config.resolver import config
 
@@ -31,10 +31,10 @@ from tenant.model.types.core import ModelResponse  # [개선] 레거시 스위�
 from tenant.token.splitter import create_pretrained_tokenizer
 from tenant.token.counter import token_counter
 
-from phi.tenant.completion import completion as brane_completion
-from phi.tenant.cost.tracker.metric import Metrics
+from tenant.phi.completion import completion as brane_completion
+from tenant.phi.cost.tracker.metric import Metrics
 from swarm.engine.driver.observer import DriverObserver
-from atoa.exception.eco import (
+from bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -42,16 +42,16 @@ from atoa.exception.eco import (
     Timeout as LiteLLMTimeout,
 )
 
-from atoa.secure.secret.validator import serialize_secret, validate_secret
-from atoa.exception.types import LLMNoResponseError
+from bound.secure.secret.validator import serialize_secret, validate_secret
+from bound.exception.types import LLMNoResponseError
 
-from arch.xor.driver.retry import RetryMixin
+from swarm.engine.driver.retry import RetryMixin
 from swarm.engine.mock.mixin import MockToolCallMixin
-from atoa.exception.types import LLMContextWindowTooSmallError
-from atoa.exception.mapping import map_provider_exception
+from bound.exception.types import LLMContextWindowTooSmallError
+from bound.exception.mapping import map_provider_exception
 from swarm.engine.llm.response import LLMResponse
-from atoa.conv.types import TokenCallbackType
-from atoa.conv.message import Message
+from swarm.atoa.conv.types import TokenCallbackType
+from swarm.atoa.conv.message import Message
 from arch.xor.xe.convset import SettingProminence, field_meta
 from arch.xor.xe.depre import warn_deprecated
 
