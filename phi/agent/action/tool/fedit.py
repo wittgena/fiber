@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from pydantic import Field, PrivateAttr
 from swarm.mesh.conv.protocol import ConvStateProtocol
-from arch.gov.tool.diff import visualize_diff
+from arch.xor.bridge.tool.diff import visualize_diff
 from rich.text import Text
 
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 from phi.agent.action.definition import DeclaredResources, ActionAnnotations, ActionDefinition
 
 CommandLiteral = Literal["view", "create", "str_replace", "insert", "undo_edit"]

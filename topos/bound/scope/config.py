@@ -10,8 +10,8 @@ from pydantic import (
 )
 from pydantic.fields import FieldInfo
 
-from atoa.schema.reflect import ReflectorBase
-from atoa.context import AtorContext
+from swarm.atoa.schema.reflect import ReflectorBase
+from swarm.conver.context import AtorContext
 
 from phi.agent.disc.tool import Tool
 from swarm.engine.driver.tensor import Driver
@@ -20,7 +20,7 @@ from phi.agent.activator import Activator
 from topos.bound.scope.metadata import SettingsSchema
 from topos.bound.scope.setting import VerificationSettings, export_settings_schema
 
-from arch.topos.bound.surge.disc import SurgeBaseModel
+from arch.bound.surge.disc import SurgeBaseModel
 from arch.xor.xe.convset import (
     SETTINGS_METADATA_KEY,
     SETTINGS_SECTION_METADATA_KEY,
@@ -128,7 +128,7 @@ class AgentConfig(SurgeBaseModel):
         if api_key is None:
             return None
 
-        from atoa.schema.reflect import IterativeRefinementConfig
+        from swarm.atoa.schema.reflect import IterativeRefinementConfig
         from swarm.engine.driver.config.reflect import Reflector
 
         iterative_refinement = None

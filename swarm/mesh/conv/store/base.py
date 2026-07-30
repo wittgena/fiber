@@ -10,7 +10,7 @@
 ## @lineage: ops.xor.store.base
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from eco.tenant.conv.event import Event
+from swarm.atoa.conv.event import Event
 
 class EventsListBase(Sequence[Event], ABC):
     @abstractmethod

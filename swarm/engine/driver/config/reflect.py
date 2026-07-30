@@ -10,9 +10,9 @@ import json
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from eco.tenant.conv.event import LLMConvertibleEvent
-from atoa.event.llm.system import SystemPromptEvent
-from atoa.schema.reflect import ReflectorBase, ReflectorResult
+from swarm.atoa.conv.event import LLMConvertibleEvent
+from swarm.atoa.event.llm.system import SystemPromptEvent
+from swarm.atoa.schema.reflect import ReflectorBase, ReflectorResult
 
 from swarm.conver.chat.client import ReflectorClient
 from swarm.conver.chat.feature import categorize_features
@@ -35,8 +35,8 @@ class Reflector(ReflectorBase, ReflectorClient):
     
     def evaluate(self, events: Sequence[LLMConvertibleEvent], git_patch: str | None = None) -> ReflectorResult:
         from swarm.conver.conv.view import View
-        from eco.tenant.conv.event import LLMConvertibleEvent
-        from atoa.event.llm.system import SystemPromptEvent
+        from swarm.atoa.conv.event import LLMConvertibleEvent
+        from swarm.atoa.event.llm.system import SystemPromptEvent
 
         ## @phase.extraction: Isolate system baseline and tool manifolds
         system_prompt_event: SystemPromptEvent | None = None

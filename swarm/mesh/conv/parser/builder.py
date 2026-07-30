@@ -6,10 +6,10 @@
 ## @lineage: bound.parser.atoa.conv.builder
 from collections.abc import Sequence
 
-from eco.tenant.conv.event import Event, LLMConvertibleEvent
-from eco.tenant.conv.types import ConversationTokenCallbackType
+from swarm.atoa.conv.event import Event, LLMConvertibleEvent
+from swarm.atoa.conv.types import ConversationTokenCallbackType
 from swarm.engine.llm.response import LLMResponse
-from eco.tenant.conv.message import Message
+from swarm.atoa.conv.message import Message
 
 from swarm.mesh.conv.parser.view import View
 

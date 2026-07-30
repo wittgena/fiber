@@ -2,203 +2,166 @@
 import sys
 import argparse
 import asyncio
-import time
-from typing import Tuple, Dict
-from dataclasses import dataclass
+import uuid
+from typing import Tuple
 
 import httpx
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from cryptography.hazmat.primitives import serialization
-from fastapi.routing import APIRoute
 
-from topos.xelog.restapi import api as rest_app  
+from phi.ops.xelog.router import E2EConfig
+from phi.ops.xelog.scene import SceneRunner
 
 from phase.wasm.builder import WasmBuilder
 from phase.wasm.tracer import WasmTracer
-from watcher.dphi.scheme.runner import TrustlessWebRunner
-from watcher.plane.emitter import get_emitter
+from watcher.xelog.rest import api as rest_app  
+from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("xelog.tester")
 
-@dataclass
-class E2EConfig:
-    host: str = "localhost"
-    port: int = 8000
-    protocol: str = "http"
-
-    @property
-    def base_url(self) -> str:
-        return f"{self.protocol}://{self.host}:{self.port}"
-
-class RouteRegistry:
-    def __init__(self, app):
-        """
-        FastAPI app 객체를 주입받아, 내부 라우팅 테이블을 함수명(name) 기준으로 매핑합니다.
-        """
-        self.app = app
-        self._route_map = {
-            route.name: route.path 
-            for route in app.routes if isinstance(route, APIRoute)
-        }
-
-    def get_path(self, target_name: str, fallback: str) -> str:
-        """라우터의 핸들러(함수) 이름으로 실제 Path를 찾아 반환합니다."""
-        path = self._route_map.get(target_name)
-        if not path:
-            log.warning(f"[RouteRegistry] '{target_name}' handler not found in REST API. Using fallback: {fallback}")
-            return fallback
-        return path
-
-    # 백엔드(edge)에 선언된 실제 함수명(예: def ingest_otlp(...))을 타겟팅합니다.
-    # 만약 함수명을 정확히 모를 경우를 대비해 기존의 Path를 fallback으로 둡니다.
-    @property
-    def otlp_ingress(self): 
-        return self.get_path("ingest_otlp_logs", "/v1/logs")
+class HttpFlowTracer:
+    """HTTP(S) 파이프라인의 Inbound/Outbound 트래픽을 관측하고 Flow ID로 묶어내는 Tracer"""
+    
+    async def trace_request(self, request: httpx.Request):
+        ## 고유 Flow ID 생성 및 헤더 주입 (Correlation)
+        flow_id = f"http_{uuid.uuid4().hex[:8]}"
+        request.headers["x-flow-id"] = flow_id
         
-    @property
-    def ledger_stream(self): 
-        return self.get_path("append_ledger_stream", "/v1/ledger/stream/append")
-        
-    @property
-    def anchor_seal(self): 
-        return self.get_path("seal_epoch_anchor", "/anchor/v1/seal")
-        
-    @property
-    def d3fi_ingress(self): 
-        return self.get_path("ingress_d3fi_order", "/d3fi/v1/order/ingress")
-        
-    @property
-    def d3fi_clearing(self): 
-        return self.get_path("generate_d3fi_receipt", "/d3fi/v1/clearing/receipt/generate")
+        ## flow_scope를 통해 TX 로깅 컨텍스트 통일
+        with flow_scope(flow_id=flow_id, phase="HTTP_TX", bound="tester"):
+            log.info(f"[Trace:TX] {request.method} {request.url}")
+            log.debug(f"  └─ Headers: {dict(request.headers)}")
 
-
-class ScenarioTester(TrustlessWebRunner):
-    """구체적인 E2E 테스트 케이스 모음"""
-    def __init__(self, config: E2EConfig):
-        super().__init__(config.base_url)
-        # restapi.py에서 가져온 FastAPI 애플리케이션(rest_app)을 주입
-        self.routes = RouteRegistry(rest_app)
-
-    async def run_genai_otlp(self) -> str:
-        payload = {
-            "resourceLogs": [{"resource": {"attributes": [{"key": "tenant_id", "value": {"stringValue": "tenant-01"}}]}}],
-            "genai_metrics": {"tenant_id": "tenant-01", "model": "gpt-4", "usage": {"tokens": 2048}}
-        }
-        res = await self._run_api_case("OTLP Billing Ingress", "POST", self.routes.otlp_ingress, payload, 200)
-        return res.headers.get("x-edge-content-hash", "failed") if res else "failed"
-
-    async def run_d3fi_trade(self) -> str:
-        ingress_req = {"agent_id": "agent-x", "action": "SWAP", "amount": "5000", "slippage": "0.005"}
-        await self._run_api_case("D3Fi Trade Ingress", "POST", self.routes.d3fi_ingress, ingress_req, 200)
+    async def trace_response(self, response: httpx.Response):
+        ## 원래 요청 객체에서 주입했던 Flow ID 추출
+        flow_id = response.request.headers.get("x-flow-id", "unknown_flow")
         
-        entangled_state = "d3fi_state_hash_0x88"
-        dummy_agent_key = ed25519.Ed25519PrivateKey.generate()
-        signatures = self._sign_payload([dummy_agent_key], {"state": entangled_state})
-        
-        clearing_req = {"entangled_state": entangled_state, "signatures": signatures, "cost_metrics": {"gas": 21000}}
-        res = await self._run_api_case("D3Fi Receipt Generation", "POST", self.routes.d3fi_clearing, clearing_req, 200)
-        return entangled_state if res and res.status_code == 200 else "failed"
-
-    async def run_ledger_stream_append(self) -> str:
-        payload = {
-            "stream_name": "stream_core_infrastructure",
-            "events": [
-                {"action": "SYSTEM_WARNING", "user_id": "autonomous_agent_1", "details": "node_lock_timeout"},
-                {"action": "MEMORY_MONITOR", "user_id": "autonomous_agent_1", "details": "token_leak detected"}
-            ],
-            "verbose": True
-        }
-        res = await self._run_api_case("Ledger Stream Append", "POST", self.routes.ledger_stream, payload, 200)
-        return res.json().get("result", {}).get("hash", "failed") if res and res.status_code == 200 else "failed"
-
-    async def run_global_anchor(self, state_roots: Dict[str, str]):
-        proposed_parity = {"state_roots": state_roots}
-        signatures = self._sign_payload(self.committee_keys, proposed_parity)
-        
-        anchor_payload = {
-            "receptor_id": "e2e-validator-node",
-            "proposed_parity": proposed_parity,
-            "parent_nexus_id": 1000, 
-            "repos": {},
-            "signers": self.committee_pubs,
-            "signatures": signatures,
-            "timestamp": int(time.time() * 1000)
-        }
-        await self._run_api_case("Anchor Epoch Seal", "POST", self.routes.anchor_seal, anchor_payload, 200)
+        ## flow_scope를 통해 RX 로깅 컨텍스트 통일 (TX와 연결됨)
+        with flow_scope(flow_id=flow_id, phase="HTTP_RX", bound="tester"):
+            await response.aread()  # 본문을 메모리에 로드
+            elapsed = getattr(response, "elapsed", None)
+            elapsed_str = f" in {elapsed.total_seconds():.3f}s" if elapsed else ""
+            status_log = f"[Trace:RX] {response.status_code} {response.reason_phrase}{elapsed_str}"
+            if response.status_code >= 400:
+                log.warning(f"{status_log}\n  └─ Body: {response.text[:200]}")
+            else:
+                log.info(status_log)
 
 class XelogTester:
+    """HTTP Client(ASGITransport) 설정 및 SceneRunner 주입을 담당하는 Adapter"""
     def __init__(self, config: E2EConfig):
-        self.orchestrator = ScenarioTester(config)
+        self.config = config
+        self.runner = SceneRunner(config)
+        self.tracer = HttpFlowTracer() # Tracer 핸들러 인스턴스화
 
     async def execute(self) -> Tuple[bool, str]:
         try:
-            log.info(f"\n[WebTesterAdapter] Starting E2E HTTP Workflows on {self.orchestrator.base_url}...")
+            log.info(f"\n[WebTesterAdapter] Starting In-Memory ASGI Workflows...")
+            transport = httpx.ASGITransport(app=rest_app)
+            target_url = self.config.base_url 
             
-            state_roots = {
-                "otlp_root": await self.orchestrator.run_genai_otlp(),
-                "d3fi_root": await self.orchestrator.run_d3fi_trade(),
-                "ledger_root": await self.orchestrator.run_ledger_stream_append()
-            }
-            
-            if "failed" in state_roots.values():
-                self.orchestrator.report()
-                return False, "E2E Validation Failed: Roots failed to generate."
-
-            await self.orchestrator.run_global_anchor(state_roots)
-            self.orchestrator.report()
-            
-            if self.orchestrator.fail_count > 0:
-                return False, "E2E Errors occurred during Global Anchor Execution."
+            ## Event Hook에 Tracer 클래스의 메서드 매핑
+            async with httpx.AsyncClient(
+                transport=transport, 
+                base_url=target_url,
+                event_hooks={
+                    'request': [self.tracer.trace_request],
+                    'response': [self.tracer.trace_response]
+                }
+            ) as client:
+                ## Transport와 Tracer가 결합된 Client를 시나리오 러너에 주입
+                self.runner.client = client
                 
-            return True, ""
-            
+                ## 캡슐화된 전체 E2E 파이프라인 관통! 
+                success = await self.runner.execute()
+                if not success:
+                    return False, "E2E Validation Failed. See logs for detailed phase ruptures."
+                return True, "All scenarios passed successfully."
         except Exception as e:
             return False, f"Critical Exception: {str(e)}"
-        finally:
-            await self.orchestrator.client.aclose()
 
-class XelogPipelineCLI:
+class SentinelSecurityTester:
+    """Sentinel 카오스 페이로드를 REST/MCP 엔드포인트에 투척하여 방어망(Membrane)을 검증"""
+    def __init__(self, config: E2EConfig, tracer: HttpFlowTracer):
+        self.config = config
+        self.tracer = tracer
+        self.attack_vectors = [
+            ("OOM_Exhaustion", ChaosPayloadLibrary.OOM),
+            ("Protocol_Smuggling", ChaosPayloadLibrary.SMUGGLING),
+            ("Path_Traversal", ChaosPayloadLibrary.MCP_PATH_TRAVERSAL)
+        ]
+
+    async def execute(self) -> Tuple[bool, str]:
+        log.info(f"\n[SecurityTester] Initiating Sentinel Chaos Attacks against XeLog Membrane...")
+        transport = httpx.ASGITransport(app=rest_app)
+        
+        async with httpx.AsyncClient(
+            transport=transport, 
+            base_url=self.config.base_url,
+            event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
+        ) as client:
+            for vector_name, rule_list in self.attack_vectors:
+                payload = random.choice(rule_list)()
+                with flow_scope(execution_mode="CHAOS_TEST", security_probe=vector_name):
+                    try:
+                        ## 방어막이 잘 작동하는지 타격 (인증 헤더 없이 찌르거나 악성 바디 주입)
+                        response = await client.post("/hub/v1/logs", content=payload)
+                        
+                        ## [검증 로직] 500(크래시)이나 2xx(통과)가 나오면 방어 실패!
+                        if response.status_code >= 500 or response.status_code < 400:
+                            return False, f"Membrane Breach! {vector_name} bypassed defenses. Status: {response.status_code}"
+                    except Exception as e:
+                        return False, f"Server crashed during {vector_name} attack: {str(e)}"
+        return True, "All Chaos probes successfully deflected by Sentinel Membrane."
+
+class XelogPipeline:
+    """빌드 -> 기능 테스트 -> 보안 테스트(Sentinel) -> 추적(Trace)"""
     def __init__(self, config: E2EConfig):
         self.config = config
-        self.log = get_emitter("xelog.cli")
+        self.log = get_emitter("xelog.pipeline")
 
-    async def run_pipeline(self):
-        self.log.info("[CLI] Starting Xelog Full E2E Pipeline (Build ➔ HTTP E2E ➔ Trace/Seal)...")
+    async def run(self) -> bool:
+        self.log.info("[Pipeline] Starting Xelog Full E2E Pipeline...")
         
-        self.log.info("[CLI] [Step 1] Running WasmBuilder...")
+        self.log.info("[Pipeline] [Step 1] Running WasmBuilder...")
         builder = WasmBuilder()
         await builder.trace()
         if builder.rupture_confirmed:
-            self.log.error("[CLI] Builder encountered a fatal rupture.")
-            sys.exit(1)
+            return False
 
-        self.log.info("[CLI] [Step 2] Running HTTP E2E Tester via WasmTracer...")
+        self.log.info("[Pipeline] [Step 2] Running HTTP Functional E2E Tester...")
         web_tester = XelogTester(self.config)
         tracer = WasmTracer(tester=web_tester)
-        
         await tracer.trace() 
-
         if getattr(tracer, 'rupture_confirmed', False):
-            self.log.error("[CLI] E2E Pipeline ended in a Rupture/Collapse state.")
-            sys.exit(1)
+            return False
             
-        self.log.info("[CLI] E2E Pipeline executed & Lineage Sealed successfully.")
+        self.log.info("[Pipeline] [Step 3] Running Sentinel Chaos Security Tester...")
+        security_tester = SentinelSecurityTester(self.config, web_tester.tracer)
+        sec_success, sec_msg = await security_tester.execute()
+        if not sec_success:
+            self.log.error(f"[Pipeline] Security Validation Failed: {sec_msg}")
+            return False
+        self.log.info(f"[Pipeline] Security Validation Passed: {sec_msg}")
+            
+        self.log.info("[Pipeline] E2E Pipeline executed & Lineage Sealed successfully.")
+        return True
 
-    @classmethod
-    def run_cli(cls):
-        parser = argparse.ArgumentParser(description="Xelog E2E HTTP Pipeline Tester")
-        parser.add_argument("--host", type=str, default="localhost", help="Target API Host")
-        parser.add_argument("--port", type=int, default=8000, help="Target API Port")
-        
-        args = parser.parse_args()
-        config = E2EConfig(host=args.host, port=args.port)
-        
-        app = cls(config)
-        try:
-            asyncio.run(app.run_pipeline())
-        except KeyboardInterrupt:
-            app.log.warning("\n[CLI] Process interrupted by user. Shutting down gracefully...")
-            sys.exit(0)
+def main():
+    """순수하게 CLI Arguments를 파싱하고 파이프라인을 구동하는 진입점"""
+    parser = argparse.ArgumentParser(description="Xelog E2E HTTP Pipeline Tester")
+    parser.add_argument("--host", type=str, default="localhost", help="Target API Host")
+    parser.add_argument("--port", type=int, default=8000, help="Target API Port")
+    
+    args = parser.parse_args()
+    config = E2EConfig(host=args.host, port=args.port)
+    pipeline = XelogPipeline(config)
+    
+    try:
+        success = asyncio.run(pipeline.run())
+        if not success:
+            sys.exit(1)
+    except KeyboardInterrupt:
+        get_emitter("xelog.cli").warning("\n[CLI] Process interrupted by user. Shutting down gracefully...")
+        sys.exit(0)
 
 if __name__ == "__main__":
-    XelogPipelineCLI.run_cli()
+    main()

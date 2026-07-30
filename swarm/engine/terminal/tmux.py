@@ -5,14 +5,14 @@ import time
 import uuid
 import libtmux
 from swarm.engine.executor.command import sanitized_env
-from arch.gov.tool.terminal import (
+from arch.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
     CMD_OUTPUT_PS1_END
 )
-from arch.gov.tool.terminal import CmdOutputMetadata
+from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 from phi.runtime.tool.terminal.interface import TerminalInterface
 from watcher.plane.emitter import get_logger
 

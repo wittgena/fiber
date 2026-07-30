@@ -6,7 +6,7 @@ from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from rich.text import Text
 
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 if TYPE_CHECKING:
     from swarm.conver.protocol import ProtoConv
 
@@ -38,7 +38,7 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
     from swarm.conver.status import ConverStatus
-    from atoa.event.llm.observation import ObservationEvent
+    from swarm.atoa.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
 
     state = getattr(conv, "state", None) if conv else None

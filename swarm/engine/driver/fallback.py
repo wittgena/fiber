@@ -11,7 +11,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-from atoa.exception.eco import (
+from bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -19,13 +19,13 @@ from atoa.exception.eco import (
     Timeout as LiteLLMTimeout,
 )
 from pydantic import BaseModel, Field, PrivateAttr
-from atoa.exception.types import LLMNoResponseError
+from bound.exception.types import LLMNoResponseError
 from swarm.engine.driver.registry import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
     from swarm.engine.llm.response import LLMResponse
-    from eco.watcher.snapshot.metrics import Metrics
+    from tenant.phi.cost.tracker.metric import Metrics
 
 logger = get_logger(__name__)
 

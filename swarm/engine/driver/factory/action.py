@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from pydantic import Field, create_model
 from rich.text import Text
 
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 from phi.agent.action.definition import ActionAnnotations, ActionDefinition
 from phi.agent.action.executor import ActionExecutor
 

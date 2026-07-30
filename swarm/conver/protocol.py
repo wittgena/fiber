@@ -5,14 +5,14 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, Any
 
-from atoa.secure.security.confirm import ConfirmationPolicyBase
-from atoa.schema.action import Action, Observation
-from atoa.secure.security.analyzer import SecurityAnalyzerBase
+from swarm.atoa.event.security.confirm import ConfirmationPolicyBase
+from swarm.atoa.schema.action import Action, Observation
+from swarm.atoa.event.security.analyzer import SecurityAnalyzerBase
 
-from bound.resolver.secret import SecretValue
+from arch.topos.resolver.secret import SecretValue
 
-from eco.tenant.conv.types import ConversationID
-from eco.tenant.conv.message import Message
+from swarm.atoa.conv.types import ConversationID
+from swarm.atoa.conv.message import Message
 
 from swarm.engine.driver.tensor import Driver
 from swarm.mesh.conv.protocol import ConvStateProtocol

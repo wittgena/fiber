@@ -3,7 +3,7 @@
 import re
 import time
 from typing import TYPE_CHECKING, Any
-from arch.gov.tool.terminal import (
+from arch.xor.bridge.tool.terminal import (
     CMD_OUTPUT_PS1_END,
     MAX_CMD_OUTPUT_SIZE,
     POLL_INTERVAL,
@@ -14,8 +14,8 @@ import bashlex
 from bashlex.errors import ParsingError
 
 from phi.agent.action.tool.terminal import TerminalAction, TerminalObservation
-from arch.gov.tool.terminal import CmdOutputMetadata
-from arch.gov.tool.command.terminal import TerminalCommandStatus
+from arch.xor.bridge.tool.terminal import CmdOutputMetadata
+from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from swarm.engine.executor.context import ExecutionEngine, ExecutionContext
 
 from arch.xor.xe.truncate import maybe_truncate

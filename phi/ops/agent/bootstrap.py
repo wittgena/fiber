@@ -5,7 +5,7 @@ import argparse
 import socket
 from typing import Any, Tuple, Dict, Optional
 
-from bound.resolver.model.tier import model_tier_registry
+from tenant.phi.model.tier import model_tier_registry
 from topos.bound.resolver.spec import SchemeCategory, TransactionDomain
 from topos.bound.resolver.task import TaskResolver, BlueprintType
 from topos.bound.scope.manager import managed_scope

@@ -13,9 +13,9 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from atoa.context import AtorContext
+from swarm.conver.context import AtorContext
 from phi.agent.disc.tool import Tool
-from atoa.schema.reflect import ReflectorBase
+from swarm.atoa.schema.reflect import ReflectorBase
 from swarm.engine.driver.tensor import Driver
 
 from phi.runtime.mcp.client import MCPClient
@@ -26,9 +26,9 @@ from phi.agent.action.definition import ActionDefinition
 from swarm.engine.driver.factory.action import CoreAction
 from phi.agent.action.resolver import ActionResolver
 
-from arch.topos.bound.payload import StreamPayloadAdapter
+from arch.bound.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import UniversalFacade
-from arch.topos.bound.surge.disc import DiscMixin
+from arch.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

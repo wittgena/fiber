@@ -12,17 +12,17 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
-from eco.tenant.switch.params import ChatCompletionToolParam
+from tenant.switch.params import ChatCompletionToolParam
 from watcher.plane.observer.span import observe
 
-from atoa.schema.action import Action, Observation, Schema
+from swarm.atoa.schema.action import Action, Observation, Schema
 
 from phi.runtime.mcp.client import MCPClient
 from phi.agent.action.definition import ActionAnnotations, ActionDefinition
 from phi.agent.action.executor import ActionExecutor
 from phi.agent.action.mcp import MCPAction, MCPObservation
 
-from arch.topos.bound.surge.disc import DiscMixin
+from arch.bound.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

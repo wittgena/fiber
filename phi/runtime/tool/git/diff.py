@@ -25,7 +25,7 @@ from phi.runtime.tool.git.exceptions import (
     GitPathError,
     GitRepositoryError,
 )
-from arch.gov.tool.git import GitDiff
+from arch.xor.bridge.tool.git import GitDiff
 from phi.runtime.tool.git.utils import (
     get_valid_ref,
     run_git_command,

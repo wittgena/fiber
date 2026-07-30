@@ -1,14 +1,11 @@
 # swarm.engine.llm.response
-## @lineage: agent.driver.llm.response
-## @lineage: atoa.response
 import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from eco.tenant.switch.params import ResponsesAPIResponse
-from eco.tenant.switch.params import ModelResponse
-from eco.tenant.conv.message import Message
-from eco.watcher.snapshot.metrics import MetricsSnapshot
+from tenant.switch.params import ModelResponse
+from swarm.atoa.conv.message import Message
+from tenant.phi.cost.tracker.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 
@@ -16,7 +13,7 @@ class LLMResponse(BaseModel):
     """Result of an LLM completion request"""
     message: Message
     metrics: MetricsSnapshot
-    raw_response: ModelResponse | ResponsesAPIResponse
+    raw_response: ModelResponse
     model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
 
     @property

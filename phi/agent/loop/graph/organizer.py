@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Set
 
-from eco.tenant.conv.message import Message, TextContent
+from swarm.atoa.conv.message import Message, TextContent
 
-from atoa.event.llm.message import MessageEvent
+from swarm.atoa.event.llm.message import MessageEvent
 from swarm.conver.protocol import ProtoConv
 
 from phi.agent.llm.handler import (
@@ -20,7 +20,7 @@ from phi.agent.loop.step import StepHandler, StepContext
 from phi.agent.loop.tension import TensionHandler
 from phi.agent.loop.graph.eval import EvalReflector
 
-from arch.gov.state.vocab import SigType, SpecKey
+from arch.topos.node.state.vocab import SigType, SpecKey
 from watcher.plane.observer.span import unified_flow_span
 from watcher.plane.emitter import get_emitter
 

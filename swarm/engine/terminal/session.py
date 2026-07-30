@@ -12,7 +12,7 @@ from phi.runtime.tool.terminal.interface import TerminalInterface, TerminalSessi
 from swarm.engine.executor.context import ExecutionEngine, ExecutionContext
 from swarm.engine.polling import PollingExecutionEngine
 
-from arch.gov.tool.command.terminal import TerminalCommandStatus
+from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

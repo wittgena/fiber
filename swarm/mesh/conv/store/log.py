@@ -16,11 +16,11 @@ import operator
 from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
-from eco.tenant.conv.event import Event
-from eco.tenant.conv.event import EventID
+from swarm.atoa.conv.event import Event
+from swarm.atoa.conv.event import EventID
 from swarm.mesh.conv.store.base import EventsListBase
 
-from arch.gov.bridge.store.file import FileStore
+from arch.xor.bridge.store.file import FileStore
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

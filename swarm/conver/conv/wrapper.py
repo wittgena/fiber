@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from swarm.engine.llm.registry import LLMRegistry
-from eco.tenant.conv.types import (
+from swarm.atoa.conv.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
@@ -15,16 +15,16 @@ from swarm.conver.protocol import ProtoConv
 from swarm.engine.driver.tensor import Driver
 from swarm.conver.conv.visualizer import ConversationVisualizer
 from swarm.conver.conv.state import ConversationState
-from atoa.secure.security.analyzer import SecurityAnalyzerBase
-from atoa.secure.security.confirm import ConfirmationPolicyBase
+from swarm.atoa.event.security.analyzer import SecurityAnalyzerBase
+from swarm.atoa.event.security.confirm import ConfirmationPolicyBase
 
-from bound.resolver.secret import SecretValue
+from arch.topos.resolver.secret import SecretValue
 
-from eco.tenant.conv.message import Message
-from atoa.schema.action import Action, Observation
+from swarm.atoa.conv.message import Message
+from swarm.atoa.schema.action import Action, Observation
 
 from topos.space.proxy import SandboxWorkspace
-from atoa.secure.secret.validator import Cipher
+from bound.secure.secret.validator import Cipher
 
 from arch.contract.event.next import next_id
 from swarm.mesh.conv.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter

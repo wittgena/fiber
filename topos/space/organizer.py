@@ -9,7 +9,7 @@ from typing import Optional
 import httpx 
 import docker
 
-from arch.topos.flow.event import WorkspaceReady
+from phase.executor.flow.event import WorkspaceReady
 from arch.topos.node.gan import Message, GanNode
 from phase.bind.resolver import resolve_path
 

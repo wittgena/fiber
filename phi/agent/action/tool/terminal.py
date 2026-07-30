@@ -15,13 +15,13 @@ from pydantic import Field
 if TYPE_CHECKING:
     from swarm.mesh.conv.protocol import ConvStateProtocol
 from rich.text import Text
-from eco.tenant.conv.message import ImageContent, TextContent
+from swarm.atoa.conv.message import ImageContent, TextContent
 from phi.agent.action.executor import ActionExecutor
-from atoa.schema.action import Action, Observation
+from swarm.atoa.schema.action import Action, Observation
 from phi.agent.action.definition import DeclaredResources, ActionAnnotations, ActionDefinition
 from arch.xor.xe.truncate import maybe_truncate
-from arch.gov.tool.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
-from arch.gov.tool.terminal import CmdOutputMetadata
+from arch.xor.bridge.tool.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
+from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 
 class TerminalAction(Action):
     """Schema for bash command execution."""

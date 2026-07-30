@@ -14,7 +14,7 @@ from typing import Optional, Dict, Any, List
 
 from topos.flow.executor.compiler import BlueprintCompiler
 from topos.flow.executor.strategy import LocalExecutionStrategy, ProxyExecutionStrategy
-from arch.topos.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
+from phase.executor.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
 
 from arch.contract.schema.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode

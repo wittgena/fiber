@@ -1,39 +1,29 @@
 # swarm.engine.driver.io
-## @lineage: agent.driver.io
-## @lineage: atoa.driver.io
-## @lineage: agent.atoa.driver.io
-## @lineage: atoa.agent.driver.io
 import copy
 import warnings
 from typing import TYPE_CHECKING, Any, Sequence, cast, Final
 from types import SimpleNamespace
 
-from atoa.exception.eco import (
+from bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout as LiteLLMTimeout,
 )
-from eco.tenant.action.completion import completion as litellm_completion
-from eco.tenant.switch.params import (
-    Delta, 
-    ModelResponseStream, 
-    StreamingChoices,
-    ModelResponse,
-    ChatCompletionToolParam,
-)
+from tenant.phi.completion import completion as litellm_completion
+from tenant.switch.params import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
 from swarm.conver.chat.chat import select_chat_options
-from eco.watcher.snapshot.metrics import MetricsSnapshot
+from tenant.phi.cost.tracker.metric import MetricsSnapshot
 
-from atoa.exception.types import LLMNoResponseError
+from bound.exception.types import LLMNoResponseError
 from swarm.engine.llm.response import LLMResponse
-from eco.tenant.conv.message import Message
+from swarm.atoa.conv.message import Message
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from swarm.engine.driver.tensor import Driver
-    from eco.tenant.conv.types import TokenCallbackType
+    from swarm.atoa.conv.types import TokenCallbackType
     from phi.agent.action.definition import ActionDefinition
 
 log = get_emitter(__name__)

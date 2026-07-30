@@ -20,7 +20,7 @@ import logging
 import os
 from pathlib import Path
 from phi.runtime.tool.git.exceptions import GitCommandError
-from arch.gov.tool.git import GitChange, GitChangeStatus
+from arch.xor.bridge.tool.git import GitChange, GitChangeStatus
 from phi.runtime.tool.git.utils import get_valid_ref, run_git_command, validate_git_repository
 from watcher.plane.emitter import get_emitter
 
