@@ -15,7 +15,7 @@ from swarm.atoa.conv.event import Event
 from swarm.atoa.event.llm.action import ActionEvent
 from swarm.atoa.event.llm.message import MessageEvent
 from swarm.atoa.event.llm.observation import UserRejectObservation
-from swarm.mesh.conv.protocol import ConvStateProtocol
+from swarm.mesh.protocol import ConvStateProtocol
 
 from swarm.engine.executor.parallel import ParallelExecutor
 from swarm.atoa.conv.message import Message, TextContent

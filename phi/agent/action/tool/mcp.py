@@ -12,12 +12,12 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
-from tenant.switch.params import ChatCompletionToolParam
+from tenant.client.switch.params import ChatCompletionToolParam
 from watcher.plane.observer.span import observe
 
 from swarm.atoa.schema.action import Action, Observation, Schema
 
-from phi.runtime.mcp.client import MCPClient
+from phi.mcp.client import MCPClient
 from phi.agent.action.definition import ActionAnnotations, ActionDefinition
 from phi.agent.action.executor import ActionExecutor
 from phi.agent.action.mcp import MCPAction, MCPObservation

@@ -3,10 +3,10 @@
 import json
 from swarm.atoa.event.llm.action import ActionEvent
 from swarm.atoa.event.llm.message import MessageEvent
-from bound.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
+from mesh.bound.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 from phi.agent.loop.step import StepHandler
-from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
+from swarm.mesh.parser.builder import MessageBuilder, LLMFacade
 from swarm.atoa.conv.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter

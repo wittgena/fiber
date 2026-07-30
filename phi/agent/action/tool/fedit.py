@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from pydantic import Field, PrivateAttr
-from swarm.mesh.conv.protocol import ConvStateProtocol
+from swarm.mesh.protocol import ConvStateProtocol
 from arch.xor.bridge.tool.diff import visualize_diff
 from rich.text import Text
 
@@ -154,7 +154,7 @@ class FileEditorTool(ActionDefinition[FileEditorAction, FileEditorObservation]):
 
     @classmethod
     def create(cls, conv_state: "ConversationState") -> Sequence["FileEditorTool"]:
-        from phi.runtime.tool.fedit.executor import FileEditorExecutor
+        from phi.tool.fedit.executor import FileEditorExecutor
         executor = FileEditorExecutor(workspace_root=conv_state.workspace.working_dir)
 
         description_lines = TOOL_DESCRIPTION.split("\n")

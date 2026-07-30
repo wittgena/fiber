@@ -1,4 +1,5 @@
-# atoa.secure.security.analyzer
+# swarm.atoa.event.security.analyzer
+## @lineage: atoa.secure.security.analyzer
 from abc import ABC, abstractmethod
 from typing import ClassVar, Any
 

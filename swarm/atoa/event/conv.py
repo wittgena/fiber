@@ -1,4 +1,5 @@
-# atoa.event.conv
+# swarm.atoa.event.conv
+## @lineage: atoa.event.conv
 import uuid
 from typing import Any
 from pydantic import Field

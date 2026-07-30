@@ -21,18 +21,18 @@ from swarm.atoa.event.llm.system import SystemPromptEvent
 
 from swarm.atoa.event.conv import ConversationErrorEvent, PauseEvent
 from swarm.conver.status import ConverStatus
-from bound.exception.types import ConversationRunError
+from mesh.bound.exception.types import ConversationRunError
 
 from swarm.engine.driver.tensor import Driver
 from swarm.engine.driver.factory.action import CoreAction
 
-from swarm.mesh.conv.command import TransitionStatus
+from swarm.mesh.command import TransitionStatus
 from swarm.conver.conv.state import ConversationState
-from swarm.mesh.conv.parser.title import generate_conversation_title
-from swarm.mesh.conv.parser.builder import MessageBuilder, LLMFacade
+from swarm.mesh.parser.title import generate_conversation_title
+from swarm.mesh.parser.builder import MessageBuilder, LLMFacade
 
 from arch.xor.bridge.store.file import LocalFileStore
-from swarm.mesh.conv.store.log import LogStore
+from swarm.mesh.store.log import LogStore
 from arch.bound.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import TunnelFactory, UniversalFacade
 

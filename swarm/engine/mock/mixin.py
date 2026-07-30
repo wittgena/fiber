@@ -3,16 +3,16 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, TypeGuard
-from tenant.switch.params import ChatCompletionToolParam
-from tenant.switch.params import Message
-from tenant.switch.params import Choices, ModelResponse, StreamingChoices
-from bound.exception.types import LLMNoResponseError
+from tenant.client.switch.params import ChatCompletionToolParam
+from tenant.client.switch.params import Message
+from tenant.client.switch.params import Choices, ModelResponse, StreamingChoices
+from mesh.bound.exception.types import LLMNoResponseError
 from swarm.engine.mock.converter import (
     STOP_WORDS,
     convert_fnto_non,
     convert_to_fncall,
 )
-from tenant.phi.model.info import get_features
+from mesh.model.info import get_features
 
 class _HostSupports(Protocol):
     model: str

@@ -4,19 +4,19 @@ import warnings
 from typing import TYPE_CHECKING, Any, Sequence, cast, Final
 from types import SimpleNamespace
 
-from bound.exception.eco import (
+from mesh.bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout as LiteLLMTimeout,
 )
-from tenant.phi.completion import completion as litellm_completion
-from tenant.switch.params import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
+from tenant.client.completion import completion as litellm_completion
+from tenant.client.switch.params import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
 from swarm.conver.chat.chat import select_chat_options
-from tenant.phi.cost.tracker.metric import MetricsSnapshot
+from tenant.cost.tracker.metric import MetricsSnapshot
 
-from bound.exception.types import LLMNoResponseError
+from mesh.bound.exception.types import LLMNoResponseError
 from swarm.engine.llm.response import LLMResponse
 from swarm.atoa.conv.message import Message
 from watcher.plane.emitter import get_emitter

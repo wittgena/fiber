@@ -9,8 +9,8 @@ import asyncio
 import logging
 from typing import Dict, Optional
 
-from bound.secure.secret.validator import Cipher
-from swarm.mesh.conv.store.log import LogStore, BASE_STATE, EVENTS_DIR
+from mesh.bound.secure.secret.validator import Cipher
+from swarm.mesh.store.log import LogStore, BASE_STATE, EVENTS_DIR
 
 from arch.xor.bridge.store.file import LocalFileStore
 from arch.xor.bridge.store.memfile import InMemoryFileStore

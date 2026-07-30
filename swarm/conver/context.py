@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from phi.agent.parser.render import render_template
-from tenant.phi.model.info import get_model_prompt_spec
+from mesh.model.info import get_model_prompt_spec
 from arch.topos.resolver.secret import SecretSource, SecretValue
 
 from swarm.atoa.conv.message import Message, TextContent

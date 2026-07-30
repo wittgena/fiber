@@ -1,23 +1,21 @@
 # topos.flow.graph.root
-## @lineage: topos.ops.scope.flow.graph.root
-## @lineage: ops.scope.flow.graph.root
 import asyncio
 import json
 import time
 from dataclasses import dataclass
 from typing import List, Optional, Dict, Any
 
-from topos.space.organizer import SpaceNode
-
 from topos.flow.executor.graph import PolicyNode
 from topos.flow.graph.node import EngineNode
 from topos.flow.folding import ManifoldFolder
 from topos.flow.transition import FlowTransition, EdgeFlow
 
+from arch.topos.space.organizer import SpaceNode
 from arch.contract.schema.graph import EntryNode
 from arch.bound.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message, GanNode
 from arch.bound.sealer import EpochSealer
+
 from phase.executor.flow.event import AgentConfigured
 
 from watcher.dphi.broker import WasmBroker

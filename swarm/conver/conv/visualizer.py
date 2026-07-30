@@ -16,7 +16,7 @@ from swarm.atoa.event.llm.action import ActionEvent
 from swarm.atoa.event.llm.message import MessageEvent
 from swarm.atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
 from swarm.atoa.event.llm.system import SystemPromptEvent
-from swarm.mesh.conv.protocol import ConvStateProtocol
+from swarm.mesh.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:
     from swarm.conver.conv.stats import ConversationStats

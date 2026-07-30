@@ -15,7 +15,7 @@ from swarm.atoa.conv.types import ConversationID
 from swarm.atoa.conv.message import Message
 
 from swarm.engine.driver.tensor import Driver
-from swarm.mesh.conv.protocol import ConvStateProtocol
+from swarm.mesh.protocol import ConvStateProtocol
 from swarm.conver.conv.stats import ConversationStats
 
 if TYPE_CHECKING:

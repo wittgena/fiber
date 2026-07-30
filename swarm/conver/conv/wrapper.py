@@ -23,11 +23,11 @@ from arch.topos.resolver.secret import SecretValue
 from swarm.atoa.conv.message import Message
 from swarm.atoa.schema.action import Action, Observation
 
-from topos.space.proxy import SandboxWorkspace
-from bound.secure.secret.validator import Cipher
+from topos.proxy.space import SandboxWorkspace
+from mesh.bound.secure.secret.validator import Cipher
 
 from arch.contract.event.next import next_id
-from swarm.mesh.conv.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
+from swarm.mesh.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
 
 
 class ConvContext(ProtoConv):

@@ -1,4 +1,5 @@
-# arch.xor.driver.retry
+# swarm.engine.driver.retry
+## @lineage: arch.xor.driver.retry
 from collections.abc import Callable, Iterable
 from typing import Any, cast
 from tenacity import (
@@ -9,7 +10,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from bound.exception.types import LLMNoResponseError
+from mesh.bound.exception.types import LLMNoResponseError
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

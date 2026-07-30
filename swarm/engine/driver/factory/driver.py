@@ -5,7 +5,7 @@ import warnings
 from typing import Any, get_args, get_origin, TYPE_CHECKING
 from pydantic import BaseModel, SecretStr
 
-from bound.locator import get_llm_provider
+from mesh.model.registry import get_llm_provider
 if TYPE_CHECKING:
     from swarm.engine.driver.tensor import Driver
     DriverType = Driver | Any

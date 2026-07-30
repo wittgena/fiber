@@ -22,19 +22,19 @@ from pydantic.json_schema import SkipJsonSchema
 from functools import cached_property
 from pathlib import Path
 
-from tenant.phi.model.info import get_features
-from tenant.model.support import supports_vision
-from tenant.model.config.resolver import config
+from mesh.model.info import get_features
+from mesh.model.support import supports_vision
+from mesh.model.config.resolver import config
 
-from bound.stream.wrapper import StreamWrapper
-from tenant.model.types.core import ModelResponse  # [개선] 레거시 스위치가 아닌 core 타입 사용
+from mesh.stream.wrapper import StreamWrapper
+from mesh.model.types.core import ModelResponse  # [개선] 레거시 스위치가 아닌 core 타입 사용
 from tenant.token.splitter import create_pretrained_tokenizer
 from tenant.token.counter import token_counter
 
-from tenant.phi.completion import completion as brane_completion
-from tenant.phi.cost.tracker.metric import Metrics
+from tenant.client.completion import completion as brane_completion
+from tenant.cost.tracker.metric import Metrics
 from swarm.engine.driver.observer import DriverObserver
-from bound.exception.eco import (
+from mesh.bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -42,13 +42,13 @@ from bound.exception.eco import (
     Timeout as LiteLLMTimeout,
 )
 
-from bound.secure.secret.validator import serialize_secret, validate_secret
-from bound.exception.types import LLMNoResponseError
+from mesh.bound.secure.secret.validator import serialize_secret, validate_secret
+from mesh.bound.exception.types import LLMNoResponseError
 
 from swarm.engine.driver.retry import RetryMixin
 from swarm.engine.mock.mixin import MockToolCallMixin
-from bound.exception.types import LLMContextWindowTooSmallError
-from bound.exception.mapping import map_provider_exception
+from mesh.bound.exception.types import LLMContextWindowTooSmallError
+from mesh.bound.exception.mapping import map_provider_exception
 from swarm.engine.llm.response import LLMResponse
 from swarm.atoa.conv.types import TokenCallbackType
 from swarm.atoa.conv.message import Message

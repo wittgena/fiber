@@ -18,8 +18,8 @@ from phi.agent.disc.tool import Tool
 from swarm.atoa.schema.reflect import ReflectorBase
 from swarm.engine.driver.tensor import Driver
 
-from phi.runtime.mcp.client import MCPClient
-from phi.runtime.mcp.factory import create_mcp_tools
+from phi.mcp.client import MCPClient
+from phi.mcp.factory import create_mcp_tools
 from phi.agent.action.tool.mcp import MCPExecutor
 from phi.agent.action.definition import ActionDefinition
 

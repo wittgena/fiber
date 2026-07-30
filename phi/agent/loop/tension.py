@@ -6,7 +6,7 @@ from swarm.atoa.event.llm.action import ActionEvent
 from swarm.atoa.event.llm.observation import AgentErrorEvent
 from swarm.conver.status import ConverStatus
 from phi.agent.loop.step import StepHandler
-from swarm.mesh.conv.command import TransitionStatus
+from swarm.mesh.command import TransitionStatus
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

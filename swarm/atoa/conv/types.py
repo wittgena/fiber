@@ -1,4 +1,5 @@
-# atoa.conv.types
+# swarm.atoa.conv.types
+## @lineage: atoa.conv.types
 ## @lineage: eco.tenant.conv.types
 ## @lineage: atoa.types
 import re
@@ -9,7 +10,7 @@ from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
 from swarm.atoa.conv.event import Event
-from tenant.switch.params import ModelResponseStream
+from tenant.client.switch.params import ModelResponseStream
 from arch.contract.event.next import ToposId
 
 LLMStreamChunk = ModelResponseStream

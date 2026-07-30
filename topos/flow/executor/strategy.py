@@ -3,7 +3,7 @@ import asyncio
 from typing import Optional, Dict, Any, List, Callable
 
 from swarm.atoa.conv.event import LLMConvertibleEvent
-from swarm.mesh.conv.adapter import AgentCommunicator, ExecutionController, EngineContextAdapter
+from swarm.mesh.adapter import AgentCommunicator, ExecutionController, EngineContextAdapter
 
 from phi.agent.action.resolver import ActionResolver
 from phi.agent.action.tool.terminal import TerminalTool
@@ -14,7 +14,7 @@ from swarm.conver.conv.state import ConversationState
 from swarm.conver.conv.visualizer import ConversationVisualizer
 from swarm.engine.driver.factory.action import CoreAction
 
-from topos.bound.proxy.event import ProxyEngine
+from topos.proxy.event import ProxyEngine
 
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.contract.event.next import next_id
@@ -82,7 +82,7 @@ class LocalExecutionStrategy:
         await activator.initialize()
 
         # 3. Gov 측의 물리 환경(Workspace) 준비
-        from topos.space.proxy import SandboxWorkspace
+        from topos.proxy.space import SandboxWorkspace
         workspace = SandboxWorkspace(working_dir=str(WORKSPACE_ROOT))
         
         conv_state = ConversationState.create(
