@@ -1,19 +1,15 @@
 # phi.tenant.adapter.llm
-import os
-import json
 import asyncio
 import functools
 from pathlib import Path
-from typing import AsyncGenerator, Generator, Any, List
+from typing import AsyncGenerator, Generator, Any
 
 from bound.locator import get_llm_provider
-from tenant.llama.bound.base.llms.types import ChatMessage, MessageRole
 from phi.tenant.adapter.base import BaseProviderAdapter
 from phi.tenant.adapter.mapper.state import StateMapper
 
 from phi.runtime.executor.pre import CompletionContext
 from phi.tenant.router.llm import LLMRouter, ModuleMissingError
-from bound.stream.wrapper import StreamWrapper
 
 from bound.mapper.exception import exception_type
 from arch.gov.gate import uuid4 
@@ -28,7 +24,7 @@ class InterLLMAdapter(BaseProviderAdapter):
         self.router = LLMRouter()
         self.mapper = StateMapper()
 
-    async def execute(self, ctx: CompletionContext):
+    async def execute(self, ctx: CompletionContext) -> Any:
         req_id = str(uuid4())[:8]
         log.debug(f"[InterLLM-{req_id}] 🚀 execute START | model={ctx.model}, provider={ctx.custom_llm_provider}, stream={ctx.stream}, async={ctx.acompletion}")
 
@@ -78,15 +74,15 @@ class InterLLMAdapter(BaseProviderAdapter):
                 **llama_kwargs
             )
             log.debug(f"[InterLLM-{req_id}] ✅ LLM Topology Loaded: {type(llm).__name__}")
+            
         except ModuleMissingError as te:
             log.error(f"[InterLLM-{req_id}] 🚨 TopologyMissingError: {te}")
             raise te
-        except Exception as e:
-            # [수정] exc_info=True를 제거하여 불필요한 스택 트레이스 노출 방지
-            log.error(f"[InterLLM-{req_id}] 🚨 [LlamaBridge] 모델 인스턴스 생성 실패: {e}")
             
-            # [수정] 통합 예외 매퍼를 호출하여 원본 예외를 적절한 시스템 표준 예외(RateLimitError, ServiceUnavailableError 등)로 변환하여 raise
-            exception_type(
+        except Exception as e:
+            log.error(f"[InterLLM-{req_id}] 🚨 [LlamaBridge] 모델 인스턴스 생성 실패: {e}")
+            # [수정] 누락되었던 raise 추가 (예외를 래핑하여 명시적으로 던짐)
+            raise exception_type(
                 model=ctx.model,
                 original_exception=e,
                 custom_llm_provider=ctx.custom_llm_provider,
@@ -100,11 +96,13 @@ class InterLLMAdapter(BaseProviderAdapter):
         ## @phase: Execution & Boundary Resolution
         if ctx.stream:
             log.debug(f"[InterLLM-{req_id}] 🌊 Initiating STREAM Execution")
+            
             if ctx.acompletion:
                 response_stream = await llm.astream_chat(llama_messages, **execution_kwargs)
             else:
                 response_stream = llm.stream_chat(llama_messages, **execution_kwargs)
             
+            # 🚀 [개선] StreamWrapper를 여기서 씌우지 않고, 순수 Raw Chunk 제너레이터만 반환합니다.
             async def stream_generator():
                 if ctx.acompletion:
                     async for chunk in response_stream:
@@ -113,20 +111,15 @@ class InterLLMAdapter(BaseProviderAdapter):
                     for chunk in response_stream:
                         yield chunk.raw
 
-            log.debug(f"[InterLLM-{req_id}] 🔄 Returning CustomStreamWrapper")
-            return StreamWrapper(
-                completion_stream=stream_generator(), 
-                model=ctx.model, 
-                custom_llm_provider=ctx.custom_llm_provider, 
-                logging_obj=ctx.logging_obj
-            )
+            log.debug(f"[InterLLM-{req_id}] 🔄 Returning Pure Stream Generator")
+            return stream_generator()
+            
         else:
             log.debug(f"[InterLLM-{req_id}] ⚡ Initiating SINGULAR Execution")
+            
             if ctx.acompletion:
                 response = await llm.achat(llama_messages, **execution_kwargs)
             else:
-                import asyncio
-                import functools
                 chat_func = functools.partial(llm.chat, llama_messages, **execution_kwargs)
                 response = await asyncio.to_thread(chat_func)
             
@@ -142,4 +135,5 @@ class InterLLMAdapter(BaseProviderAdapter):
             msg_len = len(choice_data["message"].get("content") or "")
             tool_len = len(choice_data["message"].get("tool_calls") or [])
             log.debug(f"[InterLLM-{req_id}] 🏁 execute END. Returning ctx.model_response (Content Length: {msg_len}, Tools: {tool_len})")
+            
             return ctx.model_response

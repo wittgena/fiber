@@ -1,5 +1,4 @@
 # phi.tenant.completion
-## @lineage: tenant.action.completion
 import uuid
 import httpx
 import asyncio
@@ -29,8 +28,10 @@ from phi.runtime.executor.process import async_core_completion
 
 from arch.gov.bridge.tosync import run_async_function
 from watcher.plane.emitter import get_emitter
+from tenant.model.config.resolver import config
 
 log = get_emitter("action.completion")
+
 
 def filter_internal_params(data: dict, additional_internal_params: Optional[set] = None) -> dict:
     if not isinstance(data, dict):
@@ -51,7 +52,6 @@ def safe_deep_copy(data):
         return data
 
     litellm_parent_otel_span: Optional[Any] = None
-    litellm_parent_otel_span = None
     if isinstance(data, dict):
         if "metadata" in data and "litellm_parent_otel_span" in data["metadata"]:
             litellm_parent_otel_span = data["metadata"].pop("litellm_parent_otel_span")
@@ -79,6 +79,7 @@ def safe_deep_copy(data):
             data["metadata"]["litellm_parent_otel_span"] = litellm_parent_otel_span
         if ("litellm_metadata" in data and "litellm_parent_otel_span" in data["litellm_metadata"]):
             data["litellm_metadata"]["litellm_parent_otel_span"] = litellm_parent_otel_span
+            
     return new_data
 
 class Completions:
@@ -94,12 +95,26 @@ class Completions:
             return self.router_obj.completion(model=model, messages=messages, **self.params)
         return completion(model=model, messages=messages, **self.params)
 
+class AsyncCompletions:
+    def __init__(self, params, router_obj: Optional[Any]):
+        self.params = params
+        self.router_obj = router_obj
+
+    async def create(self, messages, model=None, **kwargs):
+        for k, v in kwargs.items():
+            self.params[k] = v
+        model = model or self.params.get("model")
+        if self.router_obj is not None:
+            return await self.router_obj.acompletion(model=model, messages=messages, **self.params)
+        return await acompletion(model=model, messages=messages, **self.params)
+
+
 @client
 def completion(
     model: str,
     messages: List = [],
     **kwargs,
-) -> Union[ModelResponse, StreamWrapper]:
+) -> Union[ModelResponse, StreamWrapper, Any]:
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -115,27 +130,20 @@ def completion(
     else:
         return asyncio.run(async_core_completion(model=model, messages=messages, **kwargs))
 
-class AsyncCompletions:
-    def __init__(self, params, router_obj: Optional[Any]):
-        self.params = params
-        self.router_obj = router_obj
-
-    async def create(self, messages, model=None, **kwargs):
-        for k, v in kwargs.items():
-            self.params[k] = v
-        model = model or self.params.get("model")
-        if self.router_obj is not None:
-            return await self.router_obj.acompletion(model=model, messages=messages, **self.params)
-        return await acompletion(model=model, messages=messages, **self.params)
 
 @client
 async def acompletion(
     model: str,
     messages: List = [],
     **kwargs,
-) -> Union[ModelResponse, StreamWrapper]:
-    """모든 인자는 **kwargs로 위임하고, Fallback 및 Mock 처리 후 비동기 코어 엔진을 호출"""
-    log.info("## acompletion")
+) -> Union[ModelResponse, StreamWrapper, Any]:
+    """
+    모든 인자는 **kwargs로 위임하고, Fallback 및 Mock 처리 후 비동기 코어 엔진을 호출합니다.
+    (스트림 래핑은 상위 데코레이터 @client 에 전적으로 위임됩니다.)
+    """
+    log.info("## acompletion routing triggered")
+    
+    # 1. Fallback 처리
     fallbacks = kwargs.get("fallbacks")
     if fallbacks is not None:
         response = await async_completion_with_fallbacks(model=model, messages=messages, **kwargs)
@@ -143,11 +151,13 @@ async def acompletion(
             raise Exception("No response from fallbacks. Got none.")
         return response
 
+    # 2. Timeout / Mock 처리
     mock_timeout = kwargs.get("mock_timeout")
     timeout = kwargs.get("timeout")
     if mock_timeout is True:
         await _handle_mock_timeout_async(mock_timeout, timeout, model)
 
+    # 3. Prompt Management Hooks
     log_delegator = kwargs.get("log_delegator")
     tools = kwargs.get("tools")
     if isinstance(log_delegator, LogDelegator) and log_delegator.should_run_prompt_management_hooks(
@@ -159,25 +169,20 @@ async def acompletion(
             tools=tools, prompt_label=kwargs.get("prompt_label"), prompt_version=kwargs.get("prompt_version"),
         )
         if tools is not None and len(tools) == 0:
-            kwargs["tools"] = None  # 빈 리스트 처리
+            kwargs["tools"] = None  # 빈 리스트 정규화
 
+    # 4. Mock Delay
     mock_delay = kwargs.get("mock_delay")
     if mock_delay and (kwargs.get("mock_response") or kwargs.get("mock_tool_calls")): 
         await asyncio.sleep(mock_delay)
 
     kwargs["acompletion"] = True
+    
+    # 5. Core 엔진 실행
     try:
+        # [변경] 지저분한 디버깅 코드와 StreamWrapper 침범 코드를 모두 제거.
+        # 순수 엔진 결과(원시 스트림 또는 ModelResponse)를 있는 그대로 반환.
         response = await async_core_completion(model=model, messages=messages, **kwargs)
-        log.error("========== [DEBUG: RAW API RESPONSE] ==========")
-        try:
-            log.error(f"Response Dump: {response.model_dump()}")
-        except AttributeError:
-            log.error(f"Response Dir: {dir(response)}")
-        log.error("===============================================")
-        
-        if isinstance(response, StreamWrapper):
-            response.set_logging_event_loop(loop=asyncio.get_running_loop())
-            
         return response
         
     except Exception as e:
@@ -186,6 +191,7 @@ async def acompletion(
             model=model, custom_llm_provider=provider, original_exception=e,
             completion_kwargs={"model": model, "messages": messages, **kwargs}, extra_kwargs=kwargs,
         )
+
 
 async def async_completion_with_fallbacks(**kwargs):
     """Fallback 리스트를 순회하며 acompletion을 재귀적으로 호출합니다."""
@@ -212,7 +218,7 @@ async def async_completion_with_fallbacks(**kwargs):
 
             current_kwargs = filter_internal_params(current_kwargs)
 
-            ## 재귀 호출
+            # 재귀 호출
             response = await acompletion(
                 model=current_model, messages=messages, 
                 log_delegator=log_delegator, **current_kwargs
@@ -226,6 +232,7 @@ async def async_completion_with_fallbacks(**kwargs):
             continue
 
     raise Exception(f"{most_recent_exception_str}. All fallback attempts failed.")
+
 
 async def _handle_mock_timeout_async(mock_timeout: Optional[bool], timeout: Union[float, str, httpx.Timeout, None], model: str):
     if mock_timeout is True and timeout is not None:

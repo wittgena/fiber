@@ -1,5 +1,4 @@
 # phi.tenant.client.wrapper
-## @lineage: tenant.action.client.wrapper
 import asyncio
 import contextvars
 import datetime
@@ -16,7 +15,8 @@ from atoa.secure.secret.validator import CredentialAccessor
 
 from bound.watcher.delegator import LogDelegator
 from bound.rule import Rules
-from bound.stream.wrapper import stream_chunk_builder
+from bound.stream.wrapper import StreamWrapper
+from tenant.token.counter import token_counter
 
 from tenant.model.config.constants import COROUTINE_CHECKER_MAX_SIZE_IN_MEMORY
 from tenant.model.config.resolver import config
@@ -25,7 +25,7 @@ from tenant.model.calltype import CallTypes
 from concurrent.futures import ThreadPoolExecutor
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("legacy.client")
+log = get_emitter("client.wrapper")
 
 MAX_THREADS = 100
 executor = ThreadPoolExecutor(max_workers=MAX_THREADS)
@@ -73,7 +73,6 @@ class SimpleLoggingWorker:
         while True:
             coroutine, ctx = await self._queue.get()
             try:
-                # Task 생성 및 참조 유지 (가비지 컬렉션 방지)
                 task = ctx.run(asyncio.create_task, coroutine)
                 self._running_tasks.add(task)
                 task.add_done_callback(self._running_tasks.discard)
@@ -311,6 +310,51 @@ class ClientCallExecutor:
                 except Exception:
                     pass
 
+    # =========================================================================
+    # 🚀 신규 추가: Usage / Cost 계산 폴백 헬퍼
+    # =========================================================================
+    def _fallback_usage_calculation(self, response: Any) -> Any:
+        """스트림 응답에서 usage가 누락되었을 경우 안전하게 토큰 수와 비용을 보충합니다."""
+        if response is None:
+            return None
+            
+        if getattr(response, "usage", None) is not None:
+            if getattr(response.usage, "prompt_tokens", 0) == 0 and getattr(response.usage, "completion_tokens", 0) == 0:
+                content = ""
+                if getattr(response, "choices", None) and len(response.choices) > 0:
+                    content = getattr(response.choices[0].message, "content", "") or ""
+                messages = self.kwargs.get("messages", None)
+                
+                try:
+                    response.usage.prompt_tokens = token_counter(model=self.model, messages=messages)
+                except Exception:
+                    log.debug("token_counter failed, assuming prompt tokens is 0")
+                    response.usage.prompt_tokens = 0
+                
+                response.usage.completion_tokens = token_counter(model=self.model, text=content, count_response_tokens=True)
+                response.usage.total_tokens = response.usage.prompt_tokens + response.usage.completion_tokens
+
+            if config.include_cost_in_streaming_usage and hasattr(self.log_delegator, "_response_cost_calculator"):
+                setattr(response.usage, "cost", self.log_delegator._response_cost_calculator(result=response))
+                
+        return response
+
+    def _get_or_create_stream_wrapper(self, raw_stream: Any) -> StreamWrapper:
+        """원시 스트림 객체를 파이프라인이 매시업된 StreamWrapper로 바인딩합니다."""
+        if isinstance(raw_stream, StreamWrapper):
+            return raw_stream
+            
+        return StreamWrapper(
+            completion_stream=raw_stream,
+            model=self.model,
+            logging_obj=self.log_delegator,
+            custom_llm_provider=self.kwargs.get("custom_llm_provider"),
+            stream_options=self.kwargs.get("stream_options"),
+        )
+
+    # =========================================================================
+    # 동기 / 비동기 실행 제어
+    # =========================================================================
     def run_sync(self):
         """Synchronous execution flow control."""
         self._prepare_context()
@@ -320,10 +364,18 @@ class ClientCallExecutor:
             self.end_time = datetime.datetime.now()
             self.deps.logger.info("🟢 [CLIENT_WRAPPER: SYNC] API call succeeded")
 
+            # 🚀 스트리밍 요청 처리
             if _is_streaming_request(kwargs=self.kwargs, call_type=self.call_type):
+                stream_wrapper = self._get_or_create_stream_wrapper(result)
+
+                # complete_response=True 인 경우 스트림을 즉시 소진시켜 완결된 ModelResponse 생성
                 if self.kwargs.get("complete_response") is True:
-                    return stream_chunk_builder(list(result), messages=self.kwargs.get("messages", None))
-                return result
+                    for _ in stream_wrapper:
+                        pass
+                    complete_res = stream_wrapper.ctx.accumulator.get_complete_response()
+                    return self._fallback_usage_calculation(complete_res)
+
+                return stream_wrapper
 
             if self.kwargs.get("acompletion") or self.kwargs.get("aembedding") or asyncio.iscoroutine(result):
                 return result
@@ -358,11 +410,18 @@ class ClientCallExecutor:
             self.end_time = datetime.datetime.now()
             self.deps.logger.info("🟢 [CLIENT_WRAPPER: ASYNC] API call succeeded")
 
+            # 🚀 비동기 스트리밍 요청 처리
             if _is_streaming_request(kwargs=self.kwargs, call_type=self.call_type):
+                stream_wrapper = self._get_or_create_stream_wrapper(result)
+
+                # complete_response=True 인 경우 스트림을 비동기로 즉시 소진시켜 완결된 ModelResponse 생성
                 if self.kwargs.get("complete_response") is True:
-                    chunks = [chunk async for chunk in result] if hasattr(result, '__aiter__') else list(result)
-                    return stream_chunk_builder(chunks, messages=self.kwargs.get("messages", None))
-                return result
+                    async for _ in stream_wrapper:
+                        pass
+                    complete_res = stream_wrapper.ctx.accumulator.get_complete_response()
+                    return self._fallback_usage_calculation(complete_res)
+
+                return stream_wrapper
 
             if self.call_type == CallTypes.arealtime.value:
                 return result
@@ -397,4 +456,3 @@ def client(original_function):
         return await call_executor.run_async()
 
     return wrapper_async if is_coroutine else wrapper
-

@@ -25,12 +25,12 @@ from pathlib import Path
 from phi.tenant.model.info import get_features
 from tenant.model.support import supports_vision
 from tenant.model.config.resolver import config
-from bound.stream.wrapper import StreamWrapper
-from bound.stream.wrapper import stream_chunk_builder
 
+from bound.stream.wrapper import StreamWrapper
+from tenant.model.types.core import ModelResponse  # [개선] 레거시 스위치가 아닌 core 타입 사용
 from tenant.token.splitter import create_pretrained_tokenizer
 from tenant.token.counter import token_counter
-from tenant.switch.params import ModelResponse
+
 from phi.tenant.completion import completion as brane_completion
 from phi.tenant.cost.tracker.metric import Metrics
 from swarm.engine.driver.observer import DriverObserver
@@ -274,7 +274,6 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
     @model_validator(mode="after")
     def _init_driver_subsystems(self):
         ## @desc: Bind isolated infrastructure parameters into the global execution space
-        
         self.inject_vendor_environment()
 
         observer_config = {
@@ -309,8 +308,6 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
         assert self._observer is not None, "DriverObserver not initialized"
         return self._observer.metrics
 
-    # [개선 2] @property def telemetry 삭제 완료. (더 이상 Driver는 외부로 telemetry 인터페이스를 노출하지 않음)
-
     def restore_metrics(self, metrics: Metrics) -> None:
         if self._observer is not None:
             self._observer.restore_metrics(metrics)
@@ -325,8 +322,6 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
 
     def _handle_error(self, error: Exception, fallback_call_fn: Callable[[Driver], LLMResponse]) -> LLMResponse:
         ## @desc: Process execution ruptures and route through established fallback manifolds
-        
-        # [개선 3] Stateless track_rupture 호출 (start_time과 ctx는 생략되어 기본 fallback 처리됨)
         if self._observer is not None:
             self._observer.track_rupture(error)
         
@@ -415,6 +410,11 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
         on_token: TokenCallbackType | None = None,
         **kwargs,
     ) -> ModelResponse:
+        """
+        @desc: Core execution boundary for sending parameters to the LLM Gateway.
+        [리팩토링] 스트리밍 시 청크를 리스트에 무겁게 축적하지 않고,
+        파이프라인 Accumulator를 통해 단일 패스(Single-pass)로 완성된 응답을 추출합니다.
+        """
         with self._brane_modify_params_ctx(self.modify_params):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=DeprecationWarning, module="httpx.*")
@@ -428,6 +428,10 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
                 vendor_kwargs = self.get_vendor_transport_kwargs()
                 merged_kwargs = {**vendor_kwargs, **kwargs}
                 merged_kwargs.pop("base_model", None)
+
+                # 스트리밍 활성화 시 명시적 파라미터 전달
+                if enable_streaming:
+                    merged_kwargs["stream"] = True
 
                 call_kwargs = {
                     "model": self.model,
@@ -448,13 +452,29 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
 
                 ret = brane_completion(**call_kwargs)
 
+                # 🚀 파이프라인 기반의 스트림 처리 혁신 (stream_chunk_builder 폐기)
                 if enable_streaming and on_token is not None:
-                    assert isinstance(ret, StreamWrapper)
-                    chunks = []
+                    assert isinstance(ret, StreamWrapper), "Streaming response must be handled by StreamWrapper Bridge."
+                    
+                    # 1. 스트림을 순회하며 콜백(UI/CLI 렌더링)만 호출 (메모리 축적 X)
                     for chunk in ret:
                         on_token(chunk)
-                        chunks.append(chunk)
-                    ret = stream_chunk_builder(chunks, messages=messages)
+                    
+                    # 2. 스트림이 고갈되면, 파이프라인 Accumulator에서 완벽히 조립된 객체 즉시 추출
+                    final_response = ret.ctx.accumulator.get_complete_response()
+
+                    # 3. Usage(토큰/비용) 누락 방어 폴백 (Provider가 usage를 안 보내주는 경우)
+                    if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
+                        content = final_response.choices[0].message.content or ""
+                        try:
+                            final_response.usage.prompt_tokens = token_counter(model=self.model, messages=messages)
+                        except Exception:
+                            final_response.usage.prompt_tokens = 0
+                        
+                        final_response.usage.completion_tokens = token_counter(model=self.model, text=content, count_response_tokens=True)
+                        final_response.usage.total_tokens = final_response.usage.prompt_tokens + final_response.usage.completion_tokens
+
+                    ret = final_response
 
                 assert isinstance(ret, ModelResponse), f"Expected ModelResponse, got {type(ret)}"
                 return ret
