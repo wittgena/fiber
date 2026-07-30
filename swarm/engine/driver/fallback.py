@@ -16,7 +16,7 @@ from mesh.bound.exception.eco import (
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
-    Timeout as LiteLLMTimeout,
+    Timeout as Timeout,
 )
 from pydantic import BaseModel, Field, PrivateAttr
 from mesh.bound.exception.types import LLMNoResponseError
@@ -25,7 +25,7 @@ from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
     from swarm.engine.llm.response import LLMResponse
-    from tenant.cost.tracker.metric import Metrics
+    from mesh.cost.tracker.metric import Metrics
 
 logger = get_logger(__name__)
 
@@ -33,7 +33,7 @@ _LLM_FALLBACK_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (
     APIConnectionError,
     RateLimitError,
     ServiceUnavailableError,
-    LiteLLMTimeout,
+    Timeout,
     InternalServerError,
     LLMNoResponseError,
 )

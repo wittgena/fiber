@@ -7,7 +7,7 @@ import json
 import re
 from collections.abc import Iterable
 from typing import Any, Literal, NotRequired, TypedDict, cast
-from tenant.client.switch.params import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from runtime.client.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 from mesh.bound.exception.types import (
     FunctionCallConversionError,
     FunctionCallValidationError,

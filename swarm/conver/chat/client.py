@@ -21,7 +21,7 @@ from pydantic import (
     field_validator,
 )
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
-from tenant.client.switch.params import ChatCompletionToolParam
+from runtime.client.param import ChatCompletionToolParam
 from swarm.conver.chat.template import ChatTemplateRenderer
 
 class UsageTokens(BaseModel):

@@ -3,9 +3,9 @@ import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from tenant.client.switch.params import ModelResponse
+from runtime.client.param import ModelResponse
 from swarm.atoa.conv.message import Message
-from tenant.cost.tracker.metric import MetricsSnapshot
+from mesh.cost.tracker.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 

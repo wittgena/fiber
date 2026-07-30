@@ -3,7 +3,7 @@
 import sys
 import runpy
 from typing import Final
-from tenant.client.switch.params import ChatCompletionToolParam
+from runtime.client.param import ChatCompletionToolParam
 from phase.bind.resolver import resolve_path 
 
 RES_ROOT = resolve_path("res")

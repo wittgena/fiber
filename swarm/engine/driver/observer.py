@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from collections import defaultdict
 
-from tenant.cost.tracker.metric import Metrics
-from tenant.client.switch.params import ModelResponse
+from mesh.cost.tracker.metric import Metrics
+from runtime.client.param import ModelResponse
 
 from arch.contract.gov.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context

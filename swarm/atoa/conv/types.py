@@ -10,7 +10,7 @@ from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
 from swarm.atoa.conv.event import Event
-from tenant.client.switch.params import ModelResponseStream
+from runtime.client.param import ModelResponseStream
 from arch.contract.event.next import ToposId
 
 LLMStreamChunk = ModelResponseStream

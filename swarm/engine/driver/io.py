@@ -9,12 +9,12 @@ from mesh.bound.exception.eco import (
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
-    Timeout as LiteLLMTimeout,
+    Timeout as Timeout,
 )
-from tenant.client.completion import completion as litellm_completion
-from tenant.client.switch.params import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
+from runtime.client.completion import completion as litellm_completion
+from runtime.client.param import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
 from swarm.conver.chat.chat import select_chat_options
-from tenant.cost.tracker.metric import MetricsSnapshot
+from mesh.cost.tracker.metric import MetricsSnapshot
 
 from mesh.bound.exception.types import LLMNoResponseError
 from swarm.engine.llm.response import LLMResponse
@@ -32,7 +32,7 @@ LLM_RETRY_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (
     APIConnectionError,
     RateLimitError,
     ServiceUnavailableError,
-    LiteLLMTimeout,
+    Timeout,
     InternalServerError,
     LLMNoResponseError,
 )

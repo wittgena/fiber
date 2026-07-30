@@ -12,8 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from arch.xor.xe.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 from arch.xor.xe.depre import handle_deprecated_model_fields
 
-from tenant.client.switch.params import ChatCompletionMessageToolCall, ResponseFunctionToolCall, OutputFunctionToolCall
-from tenant.client.switch.params import GenericResponseOutputItem
+from runtime.client.param import ChatCompletionMessageToolCall, ResponseFunctionToolCall, OutputFunctionToolCall
+from runtime.client.param import GenericResponseOutputItem
 
 from watcher.plane.emitter import get_emitter
 

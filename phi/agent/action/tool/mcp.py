@@ -12,7 +12,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
-from tenant.client.switch.params import ChatCompletionToolParam
+from runtime.client.param import ChatCompletionToolParam
 from watcher.plane.observer.span import observe
 
 from swarm.atoa.schema.action import Action, Observation, Schema

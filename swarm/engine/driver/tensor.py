@@ -26,20 +26,20 @@ from mesh.model.info import get_features
 from mesh.model.support import supports_vision
 from mesh.model.config.resolver import config
 
-from mesh.stream.wrapper import StreamWrapper
+from runtime.stream.wrapper import StreamWrapper
 from mesh.model.types.core import ModelResponse  # [개선] 레거시 스위치가 아닌 core 타입 사용
-from tenant.token.splitter import create_pretrained_tokenizer
-from tenant.token.counter import token_counter
+from mesh.token.splitter import create_pretrained_tokenizer
+from mesh.token.counter import token_counter
 
-from tenant.client.completion import completion as brane_completion
-from tenant.cost.tracker.metric import Metrics
+from runtime.client.completion import completion as brane_completion
+from mesh.cost.tracker.metric import Metrics
 from swarm.engine.driver.observer import DriverObserver
 from mesh.bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
-    Timeout as LiteLLMTimeout,
+    Timeout as Timeout,
 )
 
 from mesh.bound.secure.secret.validator import serialize_secret, validate_secret
@@ -77,7 +77,7 @@ _LLM_FALLBACK_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (
     APIConnectionError,
     RateLimitError,
     ServiceUnavailableError,
-    LiteLLMTimeout,
+    Timeout,
     InternalServerError,
     LLMNoResponseError,
 )

@@ -3,9 +3,9 @@
 from __future__ import annotations
 from collections.abc import Sequence
 from typing import Protocol, TypeGuard
-from tenant.client.switch.params import ChatCompletionToolParam
-from tenant.client.switch.params import Message
-from tenant.client.switch.params import Choices, ModelResponse, StreamingChoices
+from runtime.client.param import ChatCompletionToolParam
+from runtime.client.param import Message
+from runtime.client.param import Choices, ModelResponse, StreamingChoices
 from mesh.bound.exception.types import LLMNoResponseError
 from swarm.engine.mock.converter import (
     STOP_WORDS,
