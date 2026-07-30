@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import asyncio
 import warnings
 from collections.abc import Callable, Sequence, generator
 from contextlib import contextmanager
@@ -27,7 +28,7 @@ from mesh.model.support import supports_vision
 from mesh.model.config.resolver import config
 
 from runtime.stream.wrapper import StreamWrapper
-from mesh.model.types.core import ModelResponse  # [개선] 레거시 스위치가 아닌 core 타입 사용
+from mesh.model.types.core import ModelResponse  
 from mesh.token.splitter import create_pretrained_tokenizer
 from mesh.token.counter import token_counter
 
@@ -412,8 +413,7 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
     ) -> ModelResponse:
         """
         @desc: Core execution boundary for sending parameters to the LLM Gateway.
-        [리팩토링] 스트리밍 시 청크를 리스트에 무겁게 축적하지 않고,
-        파이프라인 Accumulator를 통해 단일 패스(Single-pass)로 완성된 응답을 추출합니다.
+        [리팩토링] 동기식(DriverIO) 호출부와 비동기 StreamWrapper의 완벽한 브릿지 통합.
         """
         with self._brane_modify_params_ctx(self.modify_params):
             with warnings.catch_warnings():
@@ -429,7 +429,6 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
                 merged_kwargs = {**vendor_kwargs, **kwargs}
                 merged_kwargs.pop("base_model", None)
 
-                # 스트리밍 활성화 시 명시적 파라미터 전달
                 if enable_streaming:
                     merged_kwargs["stream"] = True
 
@@ -450,20 +449,31 @@ class Driver(VendorSubstrateMixin, RetryMixin, MockToolCallMixin):
                     if v is not None or k not in ["api_key", "api_base", "api_version"]
                 }
 
+                # 동기 환경에서 client.wrapper를 호출하여 API 전송
                 ret = brane_completion(**call_kwargs)
 
-                # 🚀 파이프라인 기반의 스트림 처리 혁신 (stream_chunk_builder 폐기)
+                # 🚀 파이프라인 기반의 비동기 스트림 소비 및 조립
                 if enable_streaming and on_token is not None:
                     assert isinstance(ret, StreamWrapper), "Streaming response must be handled by StreamWrapper Bridge."
                     
-                    # 1. 스트림을 순회하며 콜백(UI/CLI 렌더링)만 호출 (메모리 축적 X)
-                    for chunk in ret:
-                        on_token(chunk)
+                    # [개선] 완전 비동기인 StreamWrapper를 동기 Driver 컨텍스트에서 안전하게 순회
+                    async def _consume_stream(stream: StreamWrapper):
+                        async for chunk in stream:
+                            on_token(chunk)
+                            
+                    try:
+                        loop = asyncio.get_running_loop()
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        loop.run_until_complete(_consume_stream(ret))
+                    except RuntimeError:
+                        asyncio.run(_consume_stream(ret))
                     
-                    # 2. 스트림이 고갈되면, 파이프라인 Accumulator에서 완벽히 조립된 객체 즉시 추출
-                    final_response = ret.ctx.accumulator.get_complete_response()
+                    # [개선] 새로운 파이프라인 아키텍처에 맞게 Accumulator에서 완성된 응답 추출
+                    accumulator = ret.pipeline.attributes["accumulator"]
+                    final_response = accumulator.get_complete_response()
 
-                    # 3. Usage(토큰/비용) 누락 방어 폴백 (Provider가 usage를 안 보내주는 경우)
+                    # Usage(토큰/비용) 누락 방어 폴백
                     if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
                         content = final_response.choices[0].message.content or ""
                         try:
