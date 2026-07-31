@@ -1,7 +1,4 @@
 # topos.scope.manager
-## @lineage: topos.bound.scope.manager
-## @lineage: topos.ops.scope.manager
-## @lineage: ops.scope.manager
 import asyncio
 from contextlib import asynccontextmanager, AsyncExitStack
 from typing import Optional, Any
@@ -56,10 +53,6 @@ def _instantiate_lm(model_name: str) -> Optional[Any]:
 
 @asynccontextmanager
 async def managed_scope(**surface_kwargs):
-    """
-    순수하게 인프라/Surface의 라이프사이클(up/down)과 
-    기본 Trace 컨텍스트만 관리하는 Base 매니저입니다.
-    """
     config = SurfaceConfig(**surface_kwargs)
     manager = SurfaceManager(config)
     
@@ -78,5 +71,6 @@ async def managed_scope(**surface_kwargs):
             raise
         finally:
             log.info("[managed_scope] Triggering safe teardown sequence for infrastructure resources.")
+            await asyncio.sleep(0.1)
             await manager.down()
             log.info("[+] Context Manager closed safely.")
