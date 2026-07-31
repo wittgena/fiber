@@ -9,17 +9,17 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.conver.context import AtorContext
+from agent.atoa.schema.ator.context import AtorContext
 from agent.atoa.schema.disc.tool import Tool
 from agent.atoa.schema.reflect import ReflectorBase
-from phi.engine.driver.tensor import Driver
+from agent.llm.driver.tensor import Driver
 
 from agent.atoa.mcp.client import MCPClient
 from agent.atoa.mcp.factory import create_mcp_tools
 from agent.atoa.schema.tool.mcp import MCPExecutor
 from agent.action.builder import ActionDefinition
 
-from phi.engine.driver.factory.action import CoreAction
+from agent.action.factory import CoreAction
 from agent.action.resolver import ActionResolver
 
 from arch.bound.payload import StreamPayloadAdapter

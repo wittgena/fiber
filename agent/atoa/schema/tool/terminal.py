@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING, Literal, Optional
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from agent.conver.state.protocol import ConvStateProtocol
+    from topos.state.protocol import ConvStateProtocol
 from rich.text import Text
 from agent.atoa.conv.message import ImageContent, TextContent
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.disc.action import Action, Observation
 from agent.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
 from arch.xor.xe.truncate import maybe_truncate

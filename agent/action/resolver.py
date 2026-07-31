@@ -11,11 +11,11 @@ from rich.text import Text
 from agent.atoa.schema.disc.action import Action, Observation
 
 from agent.atoa.schema.disc.tool import Tool
-from phi.engine.driver.factory.action import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
+from agent.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:
     from agent.conver.protocol import ProtoConv
-    from agent.conver.state.protocol import ConvStateProtocol
+    from topos.state.protocol import ConvStateProtocol
     from agent.action.builder import ActionDefinition
 
 from arch.xor.parser.lang.action import ActionSchemaCompiler, DEFAULT
@@ -138,7 +138,7 @@ _bootstrap_core_actions()
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
     from agent.conver.status import ConverStatus
-    from agent.conver.state.command import TransitionStatus
+    from topos.state.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = f"Task marked as finished: {action.summary}" if getattr(action, "summary", None) else "Task marked as finished."
@@ -155,7 +155,7 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
     from agent.conver.status import ConverStatus
-    from agent.conver.state.command import TransitionStatus
+    from topos.state.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = "Message successfully delivered to the user."
@@ -175,7 +175,7 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
     from agent.conver.status import ConverStatus
     from agent.atoa.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
-    from agent.conver.state.command import TransitionStatus, UpdateAgentState
+    from topos.state.command import TransitionStatus, UpdateAgentState
 
     state = getattr(conv, "state", None) if conv else None
     msg = "Bridge initiated."
@@ -219,7 +219,7 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
     from agent.conver.status import ConverStatus
-    from agent.conver.state.command import TransitionStatus
+    from topos.state.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = (

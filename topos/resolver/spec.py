@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from arch.bound.surge.blueprint import SurgeBlueprint, SurgeNode
 from arch.contract.schema.graph import EntryNode
 from arch.contract.schema.resonance import BridgeEvent
-from phi.engine.driver.factory.action import CoreAction
+from agent.action.factory import CoreAction
 
 log = logging.getLogger(__name__)
 

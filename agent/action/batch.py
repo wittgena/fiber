@@ -9,12 +9,12 @@ from agent.atoa.conv.event import Event
 from agent.atoa.event.llm.action import ActionEvent
 from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.event.llm.observation import UserRejectObservation
-from agent.conver.state.protocol import ConvStateProtocol
+from topos.state.protocol import ConvStateProtocol
 
-from phi.engine.executor.parallel import ParallelExecutor
+from phi.executor.parallel import ParallelExecutor
 from agent.atoa.conv.message import Message, TextContent
 from agent.action.builder import ActionDefinition
-from phi.engine.driver.factory.action import CoreAction
+from agent.action.factory import CoreAction
 
 from watcher.plane.emitter import get_emitter
 

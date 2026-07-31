@@ -6,14 +6,14 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
 from agent.conver.protocol import ToolExecutionContextProtocol
-from phi.engine.builder.chain import ChainBuilder
-from phi.engine.builder.session import _is_tmux_available, create_terminal_session
-from phi.engine.terminal.session import TerminalSession
-from phi.engine.executor.context import ExecutionContext, ExecutionEngine
-from phi.engine.polling import PollingExecutionEngine
+from phi.executor.engine.builder.chain import ChainBuilder
+from phi.executor.engine.builder.session import _is_tmux_available, create_terminal_session
+from phi.executor.terminal.session import TerminalSession
+from phi.executor.context import ExecutionContext, ExecutionEngine
+from phi.executor.engine.polling import PollingExecutionEngine
 from phi.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
 from agent.atoa.conv.message import TextContent

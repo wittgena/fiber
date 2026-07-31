@@ -12,7 +12,7 @@ from agent.atoa.schema.disc.workspace import BaseWorkspace
 from phi.tool.git.changes import get_git_changes
 from phi.tool.git.diff import get_git_diff
 
-from phi.engine.executor.command import execute_command
+from phi.executor.command import execute_command
 
 from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
 from arch.xor.bridge.tool.git import GitChange, GitDiff

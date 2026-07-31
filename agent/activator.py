@@ -1,6 +1,4 @@
 # agent.activator
-## @lineage: atoa.agent.activator
-## @lineage: phi.agent.activator
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
@@ -23,15 +21,15 @@ from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.event.llm.system import SystemPromptEvent, TokenEvent
 from agent.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from agent.conver.status import ConverStatus
-from agent.conver.llm.response import LLMResponse
+from agent.atoa.schema.llm.response import LLMResponse
 
-from agent.loop.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
-from agent.loop.step import StepHandler, StepContext
-from agent.loop.tension import TensionHandler
-from agent.loop.graph.eval import EvalReflector
+from phi.loop.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from phi.loop.step import StepHandler, StepContext
+from phi.loop.tension import TensionHandler
+from phi.loop.graph.eval import EvalReflector
 from agent.action.evaluator import ActionEvaluator 
 
-from agent.loop.graph.organizer import DagOrganizer
+from phi.loop.graph.organizer import DagOrganizer
 from arch.topos.node.state.compiler import StateCompiler
 from arch.topos.node.state.projector import StateProjector
 from arch.topos.node.state.schema import FragmentSig

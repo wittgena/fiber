@@ -13,7 +13,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 from agent.atoa.mcp.exception import MCPError
 from agent.atoa.mcp.config import MCPConfig
 
-from phi.engine.executor.base import AsyncExecutor
+from phi.executor.base import AsyncExecutor
 
 class MCPClient(AnchorClient):
     """@desc: Unified MCP Client that bridges AnchorClient with stdio execution via MCPConfig"""

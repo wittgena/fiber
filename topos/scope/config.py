@@ -1,5 +1,4 @@
 # topos.scope.config
-## @lineage: topos.bound.scope.config
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, get_args, get_origin
 from agent.atoa.mcp.config import MCPConfig
@@ -12,10 +11,10 @@ from pydantic import (
 from pydantic.fields import FieldInfo
 
 from agent.atoa.schema.reflect import ReflectorBase
-from agent.conver.context import AtorContext
+from agent.atoa.schema.ator.context import AtorContext
 
 from agent.atoa.schema.disc.tool import Tool
-from phi.engine.driver.tensor import Driver
+from agent.llm.driver.tensor import Driver
 from agent.activator import Activator
 
 from topos.scope.metadata import SettingsSchema
@@ -130,7 +129,7 @@ class AgentConfig(SurgeBaseModel):
             return None
 
         from agent.atoa.schema.reflect import IterativeRefinementConfig
-        from phi.engine.driver.config.reflect import Reflector
+        from agent.llm.config.reflect import Reflector
 
         iterative_refinement = None
         if self.verification.enable_iterative_refinement:

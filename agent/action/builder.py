@@ -18,7 +18,7 @@ from phi.security.eval import SecurityRisk
 from runtime.client.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
 from agent.atoa.schema.disc.tool import Tool
-from agent.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
+from agent.atoa.schema.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
 from arch.bound.surge.model import SurgeBaseModel
 from arch.bound.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses

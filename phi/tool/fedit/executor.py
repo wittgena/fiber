@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agent.conver.protocol import ToolExecutionContextProtocol
 
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.tool.fedit import (
     CommandLiteral,
     FileEditorAction,

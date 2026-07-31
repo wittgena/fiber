@@ -12,7 +12,7 @@ from agent.atoa.schema.disc.action import Action, Observation, Schema
 
 from agent.atoa.mcp.client import MCPClient
 from agent.action.builder import ActionAnnotations, ActionDefinition
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.disc.mcp import MCPAction, MCPObservation
 
 from arch.bound.surge.disc import DiscMixin

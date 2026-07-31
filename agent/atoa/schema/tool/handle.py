@@ -12,7 +12,7 @@ from agent.atoa.schema.disc.action import Action, Observation
 if TYPE_CHECKING:
     from agent.conver.protocol import ProtoConv
 
-from phi.engine.driver.factory.action import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
+from agent.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 from arch.xor.parser.lang.action import ActionSchemaCompiler
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:

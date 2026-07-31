@@ -12,7 +12,7 @@ import sys
 import threading
 from typing import Any
 
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.tool.schema.browser import BrowserAction, BrowserObservation
 
 if sys.platform == "win32":

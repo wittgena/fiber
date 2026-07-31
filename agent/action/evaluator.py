@@ -10,7 +10,7 @@ from agent.atoa.conv.message import Message, TextContent
 from agent.atoa.event.llm.action import ActionEvent
 from agent.atoa.event.llm.message import MessageEvent
 from watcher.plane.emitter import get_emitter
-from phi.engine.driver.factory.action import CoreAction
+from agent.action.factory import CoreAction
 
 if TYPE_CHECKING:
     from agent.activator import AgentStateSnapshot

@@ -2,7 +2,7 @@
 from enum import Enum
 from typing import Dict, Any, Optional, Union
 
-from phi.engine.driver.factory.action import CoreAction
+from agent.action.factory import CoreAction
 
 from topos.resolver.spec import (
     SchemeCategory, 

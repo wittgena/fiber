@@ -13,15 +13,15 @@ from typing import TYPE_CHECKING, Any
 
 from func_timeout import func_timeout, FunctionTimedOut
 
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.tool.schema.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,
     BrowserObservation,
 )
-from phi.engine.executor.command import sanitized_env
-from phi.engine.executor.base import AsyncExecutor
+from phi.executor.command import sanitized_env
+from phi.executor.base import AsyncExecutor
 from watcher.plane.emitter import get_logger
 from phi.tool.browser.server import BrowserServer 
 

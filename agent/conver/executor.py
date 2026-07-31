@@ -1,8 +1,4 @@
 # agent.conver.executor
-## @lineage: phi.conver.executor
-## @lineage: swarm.conver.executor
-## @lineage: topos.conver
-## @lineage: gov.conver
 import json
 import asyncio
 from collections.abc import Mapping
@@ -25,21 +21,21 @@ from agent.atoa.event.conv import ConversationErrorEvent, PauseEvent
 from agent.conver.status import ConverStatus
 from mesh.bound.exception.types import ConversationRunError
 
-from phi.engine.driver.tensor import Driver
-from phi.engine.driver.factory.action import CoreAction
+from agent.llm.driver.tensor import Driver
+from agent.action.factory import CoreAction
 
-from agent.conver.state.command import TransitionStatus
-from agent.conver.conv.state import ConversationState
-from agent.conver.state.parser.title import generate_conversation_title
-from agent.conver.state.parser.builder import MessageBuilder, LLMFacade
+from topos.state.command import TransitionStatus
+from agent.atoa.context.state import ConversationState
+from topos.state.parser.title import generate_conversation_title
+from topos.state.parser.builder import MessageBuilder, LLMFacade
 
 from arch.xor.bridge.store.file import LocalFileStore
-from agent.conver.state.store.log import LogStore
+from topos.state.store.log import LogStore
 from arch.bound.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import TunnelFactory, UniversalFacade
 
 if TYPE_CHECKING:
-    from agent.conver.conv.wrapper import ConvContext
+    from agent.conver.context import ConvContext
     convType = ConvContext | Any
 else:
     convType = Any

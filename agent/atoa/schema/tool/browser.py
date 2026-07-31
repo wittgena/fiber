@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from typing import Self
 
 from agent.action.builder import ActionAnnotations, ActionDefinition
-from agent.action.executor import ActionExecutor
+from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.tool.schema.browser import (
     BrowserAction,
     BrowserObservation,

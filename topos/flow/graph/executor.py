@@ -6,10 +6,10 @@ from typing import Optional, Dict, Any, List, Callable
 from topos.flow.graph.space import SandboxWorkspace, SandboxProxy 
 
 from agent.atoa.conv.event import LLMConvertibleEvent
-from agent.conver.state.adapter import AgentCommunicator, ExecutionController
-from agent.conver.conv.state import ConversationState
-from agent.conver.conv.visualizer import ConversationVisualizer
-from phi.engine.driver.factory.action import CoreAction
+from topos.state.adapter import AgentCommunicator, ExecutionController
+from agent.atoa.context.state import ConversationState
+from agent.atoa.context.visualizer import ConversationVisualizer
+from agent.action.factory import CoreAction
 
 from agent.action.resolver import ActionResolver
 from agent.atoa.schema.tool.terminal import TerminalTool
