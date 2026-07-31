@@ -4,7 +4,7 @@ from pydantic import SecretStr
 
 from topos.scope.config import AgentConfig
 from phi.engine.driver.tensor import Driver
-from atoa.agent.disc.tool import Tool
+from agent.atoa.schema.disc.tool import Tool
 
 from phase.executor.flow.event import AgentConfigured
 

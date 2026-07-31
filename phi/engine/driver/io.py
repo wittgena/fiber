@@ -13,18 +13,18 @@ from mesh.bound.exception.eco import (
 )
 from runtime.client.completion import completion as litellm_completion
 from runtime.client.param import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
-from phi.conver.chat.chat import select_chat_options
+from agent.conver.chat.chat import select_chat_options
 from mesh.cost.tracker.metric import MetricsSnapshot
 
 from mesh.bound.exception.types import LLMNoResponseError
-from phi.conver.llm.response import LLMResponse
-from atoa.conv.message import Message
+from agent.conver.llm.response import LLMResponse
+from agent.atoa.conv.message import Message
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from phi.engine.driver.tensor import Driver
-    from atoa.conv.types import TokenCallbackType
-    from atoa.agent.action.definition import ActionDefinition
+    from agent.atoa.conv.types import TokenCallbackType
+    from agent.action.builder import ActionDefinition
 
 log = get_emitter(__name__)
 

@@ -14,7 +14,7 @@ import traceback
 import bashlex
 from bashlex.errors import ParsingError
 
-from atoa.agent.action.tool.terminal import TerminalAction, TerminalObservation
+from agent.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
 from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from phi.engine.executor.context import ExecutionEngine, ExecutionContext

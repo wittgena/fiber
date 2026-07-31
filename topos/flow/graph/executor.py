@@ -5,16 +5,16 @@ from typing import Optional, Dict, Any, List, Callable
 
 from topos.flow.graph.space import SandboxWorkspace, SandboxProxy 
 
-from atoa.conv.event import LLMConvertibleEvent
-from phi.conver.state.adapter import AgentCommunicator, ExecutionController
-from phi.conver.conv.state import ConversationState
-from phi.conver.conv.visualizer import ConversationVisualizer
+from agent.atoa.conv.event import LLMConvertibleEvent
+from agent.conver.state.adapter import AgentCommunicator, ExecutionController
+from agent.conver.conv.state import ConversationState
+from agent.conver.conv.visualizer import ConversationVisualizer
 from phi.engine.driver.factory.action import CoreAction
 
-from atoa.agent.action.resolver import ActionResolver
-from atoa.agent.action.tool.terminal import TerminalTool
-from atoa.agent.activator import Activator
-from atoa.agent.disc.tool import Tool
+from agent.action.resolver import ActionResolver
+from agent.atoa.schema.tool.terminal import TerminalTool
+from agent.activator import Activator
+from agent.atoa.schema.disc.tool import Tool
 
 from arch.contract.schema.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode

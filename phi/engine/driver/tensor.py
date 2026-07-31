@@ -50,9 +50,9 @@ from mesh.bound.exception.types import LLMNoResponseError
 from phi.engine.driver.retry import RetryMixin
 from mesh.bound.exception.types import LLMContextWindowTooSmallError
 from mesh.bound.exception.mapping import map_provider_exception
-from phi.conver.llm.response import LLMResponse
-from atoa.conv.types import TokenCallbackType
-from atoa.conv.message import Message
+from agent.conver.llm.response import LLMResponse
+from agent.atoa.conv.types import TokenCallbackType
+from agent.atoa.conv.message import Message
 from arch.xor.xe.convset import SettingProminence, field_meta
 from arch.xor.xe.depre import warn_deprecated
 
@@ -62,7 +62,7 @@ from phi.engine.driver.config.vendor import VendorSubstrateMixin
 
 from phi.engine.driver.factory.driver import DriverFactory
 from phi.engine.driver.registry import LLMProfileStore
-from atoa.agent.action.definition import ActionDefinition
+from agent.action.builder import ActionDefinition
 
 from phase.bind.resolver import find_current_self
 from watcher.plane.emitter import get_emitter

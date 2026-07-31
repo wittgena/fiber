@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from pydantic import Field, create_model
 from rich.text import Text
 
-from atoa.schema.action import Action, Observation
-from atoa.agent.action.definition import ActionAnnotations, ActionDefinition
-from atoa.agent.action.executor import ActionExecutor
+from agent.atoa.schema.disc.action import Action, Observation
+from agent.action.builder import ActionAnnotations, ActionDefinition
+from agent.action.executor import ActionExecutor
 
 if TYPE_CHECKING:
-    from phi.conver.protocol import ProtoConv
+    from agent.conver.protocol import ProtoConv
 
 class MessageIntent(str, Enum):
     REPORT = "report"

@@ -11,12 +11,12 @@ import json
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
-from atoa.conv.event import LLMConvertibleEvent
-from atoa.event.llm.system import SystemPromptEvent
-from atoa.schema.reflect import ReflectorBase, ReflectorResult
+from agent.atoa.conv.event import LLMConvertibleEvent
+from agent.atoa.event.llm.system import SystemPromptEvent
+from agent.atoa.schema.reflect import ReflectorBase, ReflectorResult
 
-from phi.conver.chat.client import ReflectorClient
-from phi.conver.chat.feature import categorize_features
+from agent.conver.chat.client import ReflectorClient
+from agent.conver.chat.feature import categorize_features
 
 def _format_feature_list(features: list[dict[str, Any]]) -> str:
     ## @desc: Serialize topological features and their emergence probabilities
@@ -35,9 +35,9 @@ class Reflector(ReflectorBase, ReflectorClient):
     """@desc: Structural API-Based Evaluator Manifold"""
     
     def evaluate(self, events: Sequence[LLMConvertibleEvent], git_patch: str | None = None) -> ReflectorResult:
-        from phi.conver.conv.view import View
-        from atoa.conv.event import LLMConvertibleEvent
-        from atoa.event.llm.system import SystemPromptEvent
+        from agent.conver.conv.view import View
+        from agent.atoa.conv.event import LLMConvertibleEvent
+        from agent.atoa.event.llm.system import SystemPromptEvent
 
         ## @phase.extraction: Isolate system baseline and tool manifolds
         system_prompt_event: SystemPromptEvent | None = None

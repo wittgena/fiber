@@ -6,8 +6,8 @@ from typing import Any, TYPE_CHECKING
 import bashlex
 from bashlex.errors import ParsingError
 
-from atoa.agent.action.tool.terminal import TerminalAction, TerminalObservation
-from phi.conver.protocol import ToolExecutionContextProtocol
+from agent.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
+from agent.conver.protocol import ToolExecutionContextProtocol
 
 from phi.tool.terminal.interface import TerminalInterface, TerminalSessionBase
 from phi.engine.executor.context import ExecutionEngine, ExecutionContext

@@ -8,7 +8,7 @@ import websockets
 import json
 from typing import Optional
 
-from atoa.agent.disc.workspace import BaseWorkspace
+from agent.atoa.schema.disc.workspace import BaseWorkspace
 from phi.tool.git.changes import get_git_changes
 from phi.tool.git.diff import get_git_diff
 

@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from phi.conver.protocol import ToolExecutionContextProtocol
-    from atoa.agent.action.tool.terminal import TerminalAction, TerminalObservation
+    from agent.conver.protocol import ToolExecutionContextProtocol
+    from agent.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
     from phi.engine.terminal.session import TerminalSessionBase
 
 

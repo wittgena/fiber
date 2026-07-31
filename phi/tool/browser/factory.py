@@ -12,8 +12,8 @@ import sys
 import threading
 from typing import Any
 
-from atoa.agent.action.executor import ActionExecutor
-from atoa.agent.action.tool.schema.browser import BrowserAction, BrowserObservation
+from agent.action.executor import ActionExecutor
+from agent.atoa.schema.tool.schema.browser import BrowserAction, BrowserObservation
 
 if sys.platform == "win32":
     from phi.tool.browser.window import WindowsBrowserExecutor

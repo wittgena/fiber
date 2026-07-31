@@ -11,7 +11,7 @@
 ## @lineage: sandbox.factory.chain.builder
 ## @lineage: gov.engine.chain.builder
 from typing import Callable
-from atoa.agent.action.tool.terminal import TerminalObservation
+from agent.atoa.schema.tool.terminal import TerminalObservation
 from phi.engine.executor.context import (
     ExecutionContext,
     ExecutionEngine,

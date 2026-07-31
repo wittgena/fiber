@@ -18,7 +18,7 @@ import os
 from abc import ABC, abstractmethod
 
 from arch.xor.bridge.tool.terminal import NO_CHANGE_TIMEOUT_SECONDS
-from atoa.agent.action.tool.terminal import TerminalAction, TerminalObservation
+from agent.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
 
 class TerminalInterface(ABC):
     work_dir: str

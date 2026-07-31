@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from phi.conver.protocol import ToolExecutionContextProtocol
+    from agent.conver.protocol import ToolExecutionContextProtocol
 
-from atoa.agent.action.executor import ActionExecutor
-from atoa.agent.action.tool.fedit import (
+from agent.action.executor import ActionExecutor
+from agent.atoa.schema.tool.fedit import (
     CommandLiteral,
     FileEditorAction,
     FileEditorObservation,

@@ -25,7 +25,7 @@ from phi.engine.driver.registry import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from phi.conver.llm.response import LLMResponse
+    from agent.conver.llm.response import LLMResponse
     from mesh.cost.tracker.metric import Metrics
 
 logger = get_logger(__name__)
