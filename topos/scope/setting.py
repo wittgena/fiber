@@ -1,8 +1,4 @@
 # topos.scope.setting
-## @lineage: topos.bound.scope.setting
-## @lineage: topos.gov.scope.setting
-## @lineage: ops.scope.topos.setting
-## @lineage: void.extime.web.setting
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, TypeVar, get_args, get_origin
@@ -26,7 +22,6 @@ from arch.xor.xe.convset import (
     SettingsSectionMetadata,
 )
 
-ReflectorMode = Literal["finish_and_message", "all_actions"]
 SecurityAnalyzerType = Literal["llm", "none"]
 
 class VerificationSettings(SurgeBaseModel):
@@ -36,17 +31,6 @@ class VerificationSettings(SurgeBaseModel):
         description="Enable evaluation for the agent.",
         json_schema_extra={
             SETTINGS_METADATA_KEY: SettingsFieldMetadata(label="Enable reflector", prominence=SettingProminence.CRITICAL,).model_dump()
-        },
-    )
-    reflector_mode: ReflectorMode = Field(
-        default="finish_and_message",
-        description="When reflector evaluation should run.",
-        json_schema_extra={
-            SETTINGS_METADATA_KEY: SettingsFieldMetadata(
-                label="Reflector mode",
-                prominence=SettingProminence.MINOR,
-                depends_on=("reflector_enabled",),
-            ).model_dump()
         },
     )
     enable_iterative_refinement: bool = Field(

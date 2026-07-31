@@ -1,11 +1,8 @@
 # agent.atoa.event.llm.action
-## @lineage: atoa.event.llm.action
-## @lineage: swarm.atoa.event.llm.action
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 from pydantic import Field
 from rich.text import Text
-from agent.atoa.schema.reflect import ReflectorResult
 from agent.atoa.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
 from agent.atoa.conv.event import SourceType, ToolCallID
 from agent.atoa.conv.message import (
@@ -61,17 +58,10 @@ class ActionEvent(LLMConvertibleEvent):
             "from the same LLM response."
         ),
     )
-
     security_risk: SecurityRisk = Field(
         default=SecurityRisk.UNKNOWN,
         description="The LLM's assessment of the safety risk of this action.",
     )
-
-    reflector_result: ReflectorResult | None = Field(
-        default=None,
-        description="Optional evaluation of this action and preceding history.",
-    )
-
     summary: str | None = Field(
         default=None,
         description=(
@@ -129,9 +119,6 @@ class ActionEvent(LLMConvertibleEvent):
         else:
             content.append("Function call:\n", style="bold")
             content.append(f"- {self.tool_call.name} ({self.tool_call.id})\n")
-
-        if self.reflector_result is not None:
-            content.append(self.reflector_result.visualize)
 
         return content
 

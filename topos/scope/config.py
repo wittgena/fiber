@@ -10,7 +10,6 @@ from pydantic import (
 )
 from pydantic.fields import FieldInfo
 
-from agent.atoa.schema.reflect import ReflectorBase
 from agent.atoa.schema.ator.context import AtorContext
 
 from agent.atoa.schema.disc.tool import Tool
@@ -116,37 +115,5 @@ class AgentConfig(SurgeBaseModel):
             llm=self.llm,
             tools=self.tools,
             mcp_config=self._serialize_mcp_config(self.mcp_config),
-            agent_context=self.ator_context,
-            reflector=self.build_reflector(),
-        )
-
-    def build_reflector(self) -> ReflectorBase | None:
-        if not self.verification.reflector_enabled:
-            return None
-
-        api_key = self.llm.api_key
-        if api_key is None:
-            return None
-
-        from agent.atoa.schema.reflect import IterativeRefinementConfig
-        from agent.llm.config.reflect import Reflector
-
-        iterative_refinement = None
-        if self.verification.enable_iterative_refinement:
-            iterative_refinement = IterativeRefinementConfig(
-                success_threshold=self.verification.reflector_threshold,
-                max_iterations=self.verification.max_refinement_iterations,
-            )
-
-        overrides: dict[str, Any] = {}
-        if self.verification.reflector_server_url is not None:
-            overrides["server_url"] = self.verification.reflector_server_url
-        if self.verification.reflector_model_name is not None:
-            overrides["model_name"] = self.verification.reflector_model_name
-
-        return Reflector(
-            api_key=api_key,
-            mode=self.verification.reflector_mode,
-            iterative_refinement=iterative_refinement,
-            **overrides,
+            agent_context=self.ator_context
         )

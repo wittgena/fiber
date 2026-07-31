@@ -1,11 +1,4 @@
 # agent.atoa.event.llm.message
-## @lineage: atoa.event.llm.message
-## @lineage: swarm.atoa.event.llm.message
-## @lineage: atoa.disc.event.llm.message
-## @lineage: atoa.gov.disc.event.llm.message
-## @lineage: agent.atoa.disc.event.llm.message
-## @lineage: atoa.agent.disc.event.llm.message
-## @lineage: agent.disc.event.llm.message
 import copy
 from collections.abc import Sequence
 from typing import ClassVar
@@ -13,7 +6,6 @@ from typing import ClassVar
 from pydantic import ConfigDict, Field
 from rich.text import Text
 
-from agent.atoa.schema.reflect import ReflectorResult
 from agent.atoa.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
 from agent.atoa.conv.event import SourceType
 from agent.atoa.conv.message import (
@@ -33,7 +25,6 @@ class MessageEvent(LLMConvertibleEvent):
     activated_skills: list[str] = Field(default_factory=list, description="List of activated skill name")
     extended_content: list[TextContent] = Field(default_factory=list, description="List of content added by agent context")
     sender: str | None = Field(default=None, description="Optional identifier of the sender")
-    reflector_result: ReflectorResult | None = Field(default=None, description="Optional evaluation of this message and preceding history.")
 
     @property
     def reasoning_content(self) -> str:
@@ -80,9 +71,6 @@ class MessageEvent(LLMConvertibleEvent):
             text_parts = content_to_str(self.extended_content)
             content.append("\n\nPrompt Extension based on Agent Context:\n", style="bold")
             content.append(" ".join(text_parts))
-
-        if self.reflector_result is not None:
-            content.append(self.reflector_result.visualize)
 
         return content
 

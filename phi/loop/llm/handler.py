@@ -106,13 +106,7 @@ class TextResponseHandler(StepHandler):
             llm_response_id=llm_response.id,
         )
 
-        if activator.evaluator is not None and getattr(activator, "reflector", None) and activator.reflector.mode == "finish_and_message":
-            reflector_result = activator.evaluator.evaluate(snapshot, msg_event)
-            if reflector_result is not None:
-                msg_event = msg_event.model_copy(update={"reflector_result": reflector_result})
-                
         await on_event(msg_event)
-        
         token_event = activator._maybe_emit_vllm_tokens(llm_response)
         if token_event:
             await on_event(token_event)

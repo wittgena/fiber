@@ -27,7 +27,6 @@ from phi.loop.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResp
 from phi.loop.step import StepHandler, StepContext
 from phi.loop.tension import TensionHandler
 from phi.loop.graph.eval import EvalReflector
-from agent.action.evaluator import ActionEvaluator 
 
 from phi.loop.graph.organizer import DagOrganizer
 from arch.topos.node.state.compiler import StateCompiler
@@ -79,13 +78,10 @@ class Activator(Ator):
     step_handlers: list[StepHandler] = Field(default_factory=list, exclude=True)
     is_graph_mode: bool = Field(default=False, exclude=True)
     dag_materials: Dict[str, Any] = Field(default_factory=dict, exclude=True)
-    evaluator: ActionEvaluator | None = Field(default=None, exclude=True)
 
     def model_post_init(self, __context: object) -> None:
         super().model_post_init(__context)
         self.step_handlers = self._build_default_handlers()
-        if self.reflector:
-            self.evaluator = ActionEvaluator(self.reflector)
 
     def _build_default_handlers(self) -> list[StepHandler]:
         return [
@@ -278,15 +274,8 @@ class Activator(Ator):
             thinking_blocks=thinking_blocks,
             responses_reasoning_item=responses_reasoning_item,
         )
-
         if error_event:
             return None, error_event
-
-        if self.evaluator and self.evaluator.should_evaluate(action_event.tool_name):
-            reflector_result = self.evaluator.evaluate(snapshot, action_event) 
-            if reflector_result:
-                action_event = action_event.model_copy(update={"reflector_result": reflector_result})
-
         return action_event, None
 
     def _maybe_emit_vllm_tokens(self, llm_response: LLMResponse) -> TokenEvent | None:

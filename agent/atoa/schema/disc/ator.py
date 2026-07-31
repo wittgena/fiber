@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agent.atoa.schema.ator.context import AtorContext
 from agent.atoa.schema.disc.tool import Tool
-from agent.atoa.schema.reflect import ReflectorBase
 from agent.llm.driver.tensor import Driver
 
 from agent.atoa.mcp.client import MCPClient
@@ -31,7 +30,6 @@ log = get_emitter(__name__)
 
 class Ator(DiscMixin, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
     llm: Driver = Field(..., description="LLM configuration for the agent.")
     actions: list[Tool] = Field(
         default_factory=lambda: [Tool(name=action.value, params={}) for action in CoreAction],
@@ -53,17 +51,11 @@ class Ator(DiscMixin, ABC):
         default_factory=AtorContext,
         description="AgentContext to manage prompts, secrets, and environment.",
     )
-    reflector: ReflectorBase | None = Field(
-        default=None,
-        description="Optional reflector to evaluate agent actions and messages in real-time.",
-    )
     tool_concurrency_limit: int = Field(
         default=1,
         ge=1,
         description="Maximum number of tool calls to execute concurrently within a single agent step.",
     )
-    
-    # [수정] 런타임 툴은 실행기(executor)가 아닌 스키마(Definition) 집합으로서의 역할을 명확히 합니다.
     runtime_tools: dict[str, ActionDefinition] = Field(default_factory=dict, exclude=True)
     is_initialized: bool = Field(default=False, exclude=True)
 
@@ -71,12 +63,7 @@ class Ator(DiscMixin, ABC):
     def name(self) -> str:
         return self.__class__.__name__
 
-    # [수정] state(ConvStateProtocol) 의존성 제거 및 비동기 초기화 도입
     async def initialize(self) -> None:
-        """
-        @desc: 에이전트 구동에 필요한 LLM 도구 스키마(Schema) 및 MCP 클라이언트를 초기화합니다.
-               실제 툴의 실행 환경(Gov)과는 무관하게 LLM에 주입할 인터페이스만 준비합니다.
-        """
         if self.is_initialized:
             log.warning(f"[{self.name}] Agent already initialized; skipping re-initialization.")
             return
