@@ -22,10 +22,10 @@ import tempfile
 from pathlib import Path
 from typing import get_args
 from binaryornot.check import is_binary
-from swarm.atoa.conv.message import ImageContent, TextContent
+from atoa.conv.message import ImageContent, TextContent
 from watcher.plane.emitter import get_logger
 from arch.xor.xe.truncate import maybe_truncate
-from phi.agent.action.tool.fedit import (
+from atoa.agent.action.tool.fedit import (
     CommandLiteral,
     FileEditorObservation,
 )

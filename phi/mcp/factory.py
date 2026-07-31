@@ -12,7 +12,7 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from phi.agent.action.tool.mcp import MCPActionDefinition
+from atoa.agent.action.tool.mcp import MCPActionDefinition
 
 from phi.mcp.config import MCPConfig
 from phi.mcp.exception import MCPTimeoutError

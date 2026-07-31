@@ -19,14 +19,14 @@ from typing import Final
 import libtmux
 
 from watcher.plane.emitter import get_logger
-from swarm.engine.executor.command import sanitized_env
+from phi.engine.executor.command import sanitized_env
 from arch.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
 )
-from swarm.engine.terminal.tmux import TmuxTerminal
+from phi.engine.terminal.tmux import TmuxTerminal
 from phase.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 

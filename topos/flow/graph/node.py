@@ -1,12 +1,10 @@
 # topos.flow.graph.node
-## @lineage: topos.ops.scope.flow.graph.node
-## @lineage: ops.scope.flow.graph.node
 import os
 from pydantic import SecretStr
 
 from topos.scope.config import AgentConfig
-from swarm.engine.driver.tensor import Driver
-from phi.agent.disc.tool import Tool
+from phi.engine.driver.tensor import Driver
+from atoa.agent.disc.tool import Tool
 
 from phase.executor.flow.event import AgentConfigured
 

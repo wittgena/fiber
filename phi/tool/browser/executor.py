@@ -13,20 +13,20 @@ from typing import TYPE_CHECKING, Any
 
 from func_timeout import func_timeout, FunctionTimedOut
 
-from phi.agent.action.executor import ActionExecutor
-from phi.agent.action.tool.schema.browser import (
+from atoa.agent.action.executor import ActionExecutor
+from atoa.agent.action.tool.schema.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,
     BrowserObservation,
 )
-from swarm.engine.executor.command import sanitized_env
-from swarm.engine.executor.base import AsyncExecutor
+from phi.engine.executor.command import sanitized_env
+from phi.engine.executor.base import AsyncExecutor
 from watcher.plane.emitter import get_logger
 from phi.tool.browser.server import BrowserServer 
 
 if TYPE_CHECKING:
-    from swarm.conver.protocol import ToolExecutionContextProtocol
+    from phi.conver.protocol import ToolExecutionContextProtocol
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0

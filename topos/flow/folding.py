@@ -1,21 +1,31 @@
 # topos.flow.folding
-## @lineage: topos.ops.scope.flow.folding
-## @lineage: ops.scope.flow.folding
 import asyncio
 import json
 from typing import Dict, Any, Optional, List, Tuple
 
-from arch.topos.node.gan import Message, GanNode
+from topos.flow.graph.executor import GraphExecutor
+from topos.flow.graph.node import EngineNode
+
+from arch.bound.surge.blueprint import SurgeBlueprint
 from arch.contract.gov.flow import PhaseFlow, FlowState
+from arch.contract.schema.graph import EntryNode
+
+from arch.topos.node.gan import Message, GanNode
+from arch.topos.space.organizer import SpaceNode
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bound.folding")
+
+# ==========================================
+# 1. Spatial Boundaries (경계 및 라우팅)
+# ==========================================
 
 class Bound:
     def __init__(self, broker: Any):
         self.broker = broker  # WasmBroker instance for FFI routing
 
     async def _execute_atomic_transition(self, target_id: str, flow: PhaseFlow, ctx: FlowState) -> bool:
+        """@desc: WASM Kernel을 통해 상태 전이의 유효성을 검증하고 승인받습니다."""
         payload = {
             "intent_action": f"trans_{flow.id[:8]}",
             "intent_payload": {"target": target_id, "manifold_keys": list(flow.payload.keys())},
@@ -28,7 +38,7 @@ class Bound:
             res_raw = await self.broker.execute("execute_transition", payload)
             res = json.loads(res_raw)
             if not res.get("is_authorized"):
-                log.warning(f"[Bound] Sealing blocked. WASM Kernel denied transition to '{target_id}'. Reason: {res.get('error_msg')}")
+                log.warning(f"[Bound] Kernel denied transition to '{target_id}'. Reason: {res.get('error_msg')}")
                 return False
                 
             if res.get("final_root"):
@@ -38,32 +48,45 @@ class Bound:
                 
             return True
         except Exception as e:
-            log.error(f"[Bound] FFI Transition Collapse failed: {e}")
+            log.error(f"[Bound] FFI Transition failed: {e}")
             return False
 
     async def emit(self, target_id: str, flow: PhaseFlow, ctx: FlowState) -> bool:
-        """@trigger: Physically routes the flow to the target if the WASM kernel authorizes it."""
         raise NotImplementedError
 
+
 class LocalBound(Bound):
-    def __init__(self, local_registry: Dict[str, 'ToposNode'], broker: Any):
+    def __init__(self, local_registry: Dict[str, Any], broker: Any):
         super().__init__(broker)
+        # ToposNode 래퍼 없이 GanNode 원본 인스턴스들을 직접 참조합니다.
         self.registry = local_registry
 
     async def emit(self, target_id: str, flow: PhaseFlow, ctx: FlowState) -> bool:
-        # 1. Kernel Validation & State Mutation (Atomic)
         is_authorized = await self._execute_atomic_transition(target_id, flow, ctx)
         if not is_authorized:
             return False
 
-        # 2. Physical Transport
-        if target_id in self.registry:
-            target_node = self.registry[target_id]
-            asyncio.create_task(target_node.receive(flow, ctx))
-            return True
+        target_node = self.registry.get(target_id)
+        if not target_node:
+            log.error(f"[LocalBound] Target vertex '{target_id}' not found in the local manifold.")
+            return False
+
+        # 기존 ToposNode.receive()에 있던 로직을 Bound가 직접 수행하여 불필요한 계층 제거
+        if isinstance(target_node, GanNode):
+            msg = Message("flow_ingress", flow_id=flow.id, payload={"flow": flow, "ctx": ctx})
+            target_node.post_message(msg)
+        elif hasattr(target_node, "run"):
+            # Legacy generic operator 지원
+            asyncio.create_task(self._legacy_run(target_node, flow, ctx))
             
-        log.error(f"[LocalBound] Target vertex '{target_id}' not found in the local manifold.")
-        return False
+        return True
+
+    async def _legacy_run(self, target_node: Any, flow: PhaseFlow, ctx: FlowState):
+        operator = ctx.state.get("operator")
+        next_routes: List[Tuple[str, FlowState]] = await target_node.run(flow, operator, ctx)
+        for next_node_id, next_ctx in next_routes:
+            if next_node_id != "END":
+                await self.emit(next_node_id, flow, next_ctx)
 
 
 class RemoteBound(Bound):
@@ -82,72 +105,109 @@ class RemoteBound(Bound):
             "payload": flow.payload,
             "state_snapshot": ctx.state
         }
-        # Inject into the Redis/Tunnel topology
         await self.pool.base_node.psi_queue.put((target_id, packet))
         return True
 
 
-class ToposNode:
-    def __init__(self, node_id: str, instance: Any):
-        self.node_id = node_id
-        self.instance = instance  
-        self.boundaries: Dict[str, Bound] = {} 
-
-    def attach_bound(self, target_id: str, bound: Bound):
-        self.boundaries[target_id] = bound
-
-    async def receive(self, flow: PhaseFlow, ctx: FlowState):
-        if isinstance(self.instance, GanNode):
-            # Map PhaseFlow to GanNode's internal Agentic Message schema
-            msg = Message(f"flow_ingress", flow_id=flow.id, payload={"flow": flow, "ctx": ctx})
-            self.instance.post_message(msg)
-            
-        elif hasattr(self.instance, "run"):
-            # Duck typing for generic asynchronous runner nodes (legacy support)
-            operator = ctx.state.get("operator")
-            next_routes: List[Tuple[str, FlowState]] = await self.instance.run(flow, operator, ctx)
-            
-            for next_node_id, next_ctx in next_routes:
-                if next_node_id != "END":
-                    await self.route(next_node_id, flow, next_ctx)
-
-    async def route(self, target_id: str, flow: PhaseFlow, ctx: FlowState):
-        bound = self.boundaries.get(target_id)
-        if bound:
-            await bound.emit(target_id, flow, ctx)
-        else:
-            log.error(f"[ToposNode] No spatial boundary attached for route '{target_id}'.")
-
+# ==========================================
+# 2. Topology Management (위상 접기 및 라우팅 주입)
+# ==========================================
 
 class ManifoldFolder:
+    """@desc: 노드 간의 공간적 경계(Bound)를 설정하고 라우팅 경로를 주입합니다."""
+    
     def __init__(self, broker: Any, redis_pool: Optional[Any] = None):
-        self.local_registry: Dict[str, ToposNode] = {}
+        self.local_registry: Dict[str, Any] = {}
         self.redis_pool = redis_pool
-        self.broker = broker  # Injected WasmBroker
+        self.broker = broker
         self.local_bound = LocalBound(self.local_registry, broker=self.broker)
         self.remote_bound = RemoteBound(self.redis_pool, broker=self.broker) if self.redis_pool else None
 
-    def fold_manifold(self, active_nodes: Dict[str, Any], topology_spec: Dict[str, Any]) -> Dict[str, ToposNode]:
-        for node_id, instance in active_nodes.items():
-            self.local_registry[node_id] = ToposNode(node_id, instance)
+    def fold_manifold(self, active_nodes: Dict[str, Any], topology_spec: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        @desc: ToposNode 래퍼 클래스를 삭제하고, GanNode에 직접 boundaries 속성을 주입하여 
+               객체 생성 비용과 호출 Depth를 줄입니다.
+        """
+        self.local_registry.update(active_nodes)
 
         for node_id, spec in topology_spec.items():
             source_node = self.local_registry.get(node_id)
             if not source_node:
                 continue
 
-            # Attach spatial fences for each allowed outbound edge
+            # 라우팅 경계 속성 동적 주입
+            if not hasattr(source_node, "boundaries"):
+                source_node.boundaries = {}
+
             for target_id in spec.get("edges", []):
                 target_spec = topology_spec.get(target_id, {})
-                
-                # Default to local boundary if unspecified
                 is_local = target_spec.get("location", "local") == "local"
                 
                 if is_local:
-                    source_node.attach_bound(target_id, self.local_bound)
+                    source_node.boundaries[target_id] = self.local_bound
                 elif self.remote_bound:
-                    source_node.attach_bound(target_id, self.remote_bound)
+                    source_node.boundaries[target_id] = self.remote_bound
                 else:
                     log.error(f"[ManifoldFolder] Remote routing to '{target_id}' requested, but no Redis pool provided.")
 
         return self.local_registry
+
+
+# ==========================================
+# 3. Topology Controller (root.py에서 위임된 조립/배포 로직)
+# ==========================================
+
+class TopologyController:
+    """
+    @desc: 기존 root.py에 파편화되어 있던 TopologyAssembler와 DeploymentDispatcher를 
+           하나의 컨트롤러로 통합하여 네트워크 위상 관리 책임을 일원화합니다.
+    """
+
+    @staticmethod
+    def assemble_and_mount(topos: GanNode, run_context: dict, broker: Any, topology_spec: dict) -> None:
+        """@desc: 노드 인스턴스를 생성하고, 위상을 접은 뒤(fold), Root 토폴로지에 마운트합니다."""
+        use_proxy = run_context.get("use_proxy", False)
+        target_model = run_context.get("target_model")
+        
+        log.info(f"[TopologyController] Wiring hybrid nodes (Proxy Mode: {use_proxy}, Model: {target_model})")
+        
+        # 1. 노드 생성
+        active_nodes = {
+            "ConfigPolicyNode": GraphExecutor("ConfigPolicyNode"),
+            "ConfigSettingsNode": EngineNode("ConfigSettingsNode", use_proxy=use_proxy, target_model=target_model),
+            "DockerWorkspaceNode": SpaceNode("DockerWorkspaceNode", use_proxy=use_proxy)
+        }
+        
+        # 2. 위상 접기 (라우팅 룰 주입)
+        folder = ManifoldFolder(broker=broker)
+        folder.fold_manifold(active_nodes=active_nodes, topology_spec=topology_spec)
+        
+        # 3. 마운트
+        for node in active_nodes.values():
+            topos.mount(node)
+            
+        log.info(f"[TopologyController] Topology spatial folding complete.")
+
+    @staticmethod
+    def dispatch_payload(policy_node: Any, blueprint: Optional[SurgeBlueprint], instruction: str, settings: dict) -> None:
+        """@desc: 준비된 위상의 진입점(PolicyNode)에 초기 컨텍스트와 실행 지시를 배포합니다."""
+        if blueprint:
+            context_msg = Message("set_context")
+            context_msg.entry_node = EntryNode(
+                entry=blueprint.topology_name,
+                focus=blueprint.focus,
+                depth=blueprint.depth_limit,
+                relations=blueprint.relations_constraint.split(',') if blueprint.relations_constraint else []
+            )
+            policy_node.post_message(context_msg)
+            
+            run_msg = Message("execute_events")
+            run_msg.events = blueprint.nodes
+            run_msg.settings = settings
+            run_msg.system_instructions = getattr(blueprint, 'system_instructions', None)
+            policy_node.post_message(run_msg)
+        else:
+            run_msg = Message("run_conversation")
+            run_msg.instruction = instruction
+            run_msg.settings = settings
+            policy_node.post_message(run_msg)

@@ -6,17 +6,17 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from phi.agent.action.executor import ActionExecutor
-from phi.agent.action.tool.terminal import TerminalAction, TerminalObservation
-from swarm.conver.protocol import ToolExecutionContextProtocol
-from swarm.engine.builder.chain import ChainBuilder
-from swarm.engine.builder.session import _is_tmux_available, create_terminal_session
-from swarm.engine.terminal.session import TerminalSession
-from swarm.engine.executor.context import ExecutionContext, ExecutionEngine
-from swarm.engine.polling import PollingExecutionEngine
+from atoa.agent.action.executor import ActionExecutor
+from atoa.agent.action.tool.terminal import TerminalAction, TerminalObservation
+from phi.conver.protocol import ToolExecutionContextProtocol
+from phi.engine.builder.chain import ChainBuilder
+from phi.engine.builder.session import _is_tmux_available, create_terminal_session
+from phi.engine.terminal.session import TerminalSession
+from phi.engine.executor.context import ExecutionContext, ExecutionEngine
+from phi.engine.polling import PollingExecutionEngine
 from phi.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from swarm.atoa.conv.message import TextContent
+from atoa.conv.message import TextContent
 
 from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from arch.xor.bridge.tool.terminal import CMD_OUTPUT_PS1_END

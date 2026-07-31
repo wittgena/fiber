@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from swarm.conver.protocol import ToolExecutionContextProtocol
+    from phi.conver.protocol import ToolExecutionContextProtocol
 
-from phi.agent.action.executor import ActionExecutor
-from phi.agent.action.tool.fedit import (
+from atoa.agent.action.executor import ActionExecutor
+from atoa.agent.action.tool.fedit import (
     CommandLiteral,
     FileEditorAction,
     FileEditorObservation,

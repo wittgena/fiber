@@ -1,10 +1,8 @@
 # topos.resolver.task
-## @lineage: topos.bound.resolver.task
-## @lineage: topos.gov.resolver.task
 from enum import Enum
 from typing import Dict, Any, Optional, Union
 
-from swarm.engine.driver.factory.action import CoreAction
+from phi.engine.driver.factory.action import CoreAction
 
 from topos.resolver.spec import (
     SchemeCategory, 
@@ -12,9 +10,11 @@ from topos.resolver.spec import (
     TraceDomain, 
     BRIDGE_SPEC, 
     TRANSACTION_SPEC, 
-    TRACER_SPEC
+    TRACER_SPEC, 
+    SchemeBlueprint,
+    TransactionBlueprint, 
+    TraceBlueprint
 )
-from topos.resolver.bridge import SchemeBlueprint, TransactionBlueprint, TraceBlueprint
 
 from arch.bound.surge.blueprint import SurgeBlueprint
 from watcher.plane.emitter import get_emitter
@@ -84,16 +84,7 @@ class BlueprintType(Enum):
     TRACER = "tracer"
     RESOLUTION = "resolution"
 
-# -------------------------------------------------------------------------
-# Pure Task Resolver
-# -------------------------------------------------------------------------
-
 class TaskResolver:
-    """
-    @desc: 순수 Task(Blueprint) 제공자.
-    요청받은 카테고리의 실행 가능한 DAG(SurgeBlueprint)만 조립하여 반환하며, 
-    실행(Execution)이나 환경(Environment) 설정에는 전혀 관여하지 않습니다.
-    """
     def __init__(self):
         # 정적 스펙 정의들을 메모리에 적재
         self._schemes: Dict[SchemeCategory, SchemeBlueprint] = BRIDGE_SPEC.copy()

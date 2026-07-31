@@ -14,7 +14,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 from phi.mcp.exception import MCPError
 from phi.mcp.config import MCPConfig
 
-from swarm.engine.executor.base import AsyncExecutor
+from phi.engine.executor.base import AsyncExecutor
 
 class MCPClient(AnchorClient):
     """@desc: Unified MCP Client that bridges AnchorClient with stdio execution via MCPConfig"""
