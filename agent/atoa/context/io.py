@@ -4,12 +4,12 @@ import asyncio
 import logging
 from typing import Dict, Optional
 
-from mesh.bound.secure.secret.validator import Cipher
+from arch.xor.secret.validator import Cipher
 from topos.state.store.log import LogStore, BASE_STATE, EVENTS_DIR
 
-from arch.xor.bridge.store.file import LocalFileStore
-from arch.xor.bridge.store.memfile import InMemoryFileStore
-from arch.xor.bridge.store.file import FileStore
+from arch.xor.store.file import LocalFileStore
+from arch.xor.store.memfile import InMemoryFileStore
+from arch.xor.store.file import FileStore
 
 log = logging.getLogger(__name__)
 

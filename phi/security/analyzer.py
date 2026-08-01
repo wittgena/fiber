@@ -10,7 +10,7 @@ from agent.atoa.conv.event import Event
 from agent.atoa.event.llm.action import ActionEvent
 from phi.security.eval import SecurityRisk
 
-from arch.bound.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

@@ -6,9 +6,9 @@ from typing import Dict, Any, Optional, List, Tuple
 from topos.flow.graph.executor import GraphExecutor
 from topos.flow.graph.node import EngineNode
 
-from arch.bound.surge.blueprint import SurgeBlueprint
+from arch.model.surge.blueprint import SurgeBlueprint
 from arch.contract.gov.flow import PhaseFlow, FlowState
-from arch.contract.schema.graph import EntryNode
+from arch.model.contract.graph import EntryNode
 
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.space.organizer import SpaceNode

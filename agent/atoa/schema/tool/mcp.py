@@ -15,7 +15,7 @@ from agent.action.builder import ActionAnnotations, ActionDefinition
 from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.disc.mcp import MCPAction, MCPObservation
 
-from arch.bound.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_logger
 

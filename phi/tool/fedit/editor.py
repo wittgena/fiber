@@ -24,7 +24,7 @@ from typing import get_args
 from binaryornot.check import is_binary
 from agent.atoa.conv.message import ImageContent, TextContent
 from watcher.plane.emitter import get_logger
-from arch.xor.xe.truncate import maybe_truncate
+from arch.xor.bridge.mark.truncate import maybe_truncate
 from agent.atoa.schema.tool.fedit import (
     CommandLiteral,
     FileEditorObservation,

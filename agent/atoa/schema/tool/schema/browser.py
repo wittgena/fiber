@@ -14,7 +14,7 @@ from pydantic import Field
 
 from agent.atoa.conv.message import ImageContent, TextContent
 from agent.atoa.schema.disc.action import Action, Observation
-from arch.xor.xe.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from arch.xor.bridge.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 
 BROWSER_RECORDING_OUTPUT_DIR = os.path.join(".agent_tmp", "browser_observations")
 

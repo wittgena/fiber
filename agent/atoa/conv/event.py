@@ -13,7 +13,7 @@ from pydantic import ConfigDict, Field
 from rich.text import Text
 
 from agent.atoa.conv.message import ImageContent, Message, TextContent
-from arch.bound.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 from arch.contract.event.next import ToposId, next_id
 
 N_CHAR_PREVIEW = 500

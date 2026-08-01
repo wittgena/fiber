@@ -1,10 +1,4 @@
 # phi.loop.tension
-## @lineage: agent.loop.tension
-## @lineage: atoa.agent.loop.tension
-## @lineage: phi.agent.loop.tension
-## @lineage: phi.executor.loop.tension
-## @lineage: swarm.phi.handler.tension
-## @lineage: agent.handler.tension
 from agent.atoa.event.llm.action import ActionEvent
 from agent.atoa.event.llm.observation import AgentErrorEvent
 from agent.conver.status import ConverStatus
@@ -61,11 +55,9 @@ class TensionHandler(StepHandler):
                 tool_call_id="tension_halt"
             )
             
-            # Induce Activator to catch this event and send a "finish" signal to the Gov node
             error_event = error_event.model_copy(update={"is_finish_signal": True})
             await on_event(error_event)
-            
-            # Maintain existing local state transition commands
+
             is_graph_mode = getattr(agent, "is_graph_mode", False)
             new_status = ConverStatus.NEEDS_REPLAN if is_graph_mode else ConverStatus.FINISHED
             await on_event(TransitionStatus(new_status=new_status, reason=reason))

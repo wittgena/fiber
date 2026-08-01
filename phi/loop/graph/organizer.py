@@ -1,9 +1,4 @@
 # phi.loop.graph.organizer
-## @lineage: agent.loop.graph.organizer
-## @lineage: atoa.agent.loop.graph.organizer
-## @lineage: phi.agent.loop.graph.organizer
-## @lineage: phi.executor.graph.organizer
-## @lineage: swarm.phi.handler.graph.organizer
 import time
 import json
 from pathlib import Path

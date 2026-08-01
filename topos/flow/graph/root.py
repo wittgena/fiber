@@ -10,9 +10,9 @@ from topos.flow.folding import TopologyController
 from topos.flow.graph.executor import GraphExecutor
 from topos.flow.graph.node import EngineNode
 from arch.topos.space.organizer import SpaceNode
-from arch.bound.surge.blueprint import SurgeBlueprint
+from arch.model.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message, GanNode
-from arch.bound.sealer import EpochSealer
+from arch.model.sealer import EpochSealer
 
 from phase.executor.flow.event import AgentConfigured
 from watcher.dphi.broker import WasmBroker

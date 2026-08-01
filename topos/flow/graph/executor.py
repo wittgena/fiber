@@ -16,7 +16,7 @@ from agent.atoa.schema.tool.terminal import TerminalTool
 from agent.activator import Activator
 from agent.atoa.schema.disc.tool import Tool
 
-from arch.contract.schema.graph import EntryNode
+from arch.model.contract.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
 from arch.topos.tunnel.factory import TunnelFactory

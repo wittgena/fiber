@@ -19,8 +19,8 @@ from agent.activator import Activator
 from topos.scope.metadata import SettingsSchema
 from topos.scope.setting import VerificationSettings, export_settings_schema
 
-from arch.bound.surge.disc import SurgeBaseModel
-from arch.xor.xe.convset import (
+from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.bridge.mark.convset import (
     SETTINGS_METADATA_KEY,
     SETTINGS_SECTION_METADATA_KEY,
     SettingProminence,

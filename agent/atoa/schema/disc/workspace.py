@@ -9,7 +9,7 @@ from pydantic import BeforeValidator, Field
 
 from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
 from arch.xor.bridge.tool.git import GitChange, GitDiff
-from arch.bound.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 
 from watcher.plane.emitter import get_emitter
 

@@ -1,6 +1,5 @@
 # agent.llm.driver.io
 import warnings
-import asyncio
 from typing import TYPE_CHECKING, Any, Sequence, cast, Final
 from types import SimpleNamespace
 
@@ -11,8 +10,7 @@ from mesh.bound.exception.eco import (
     ServiceUnavailableError,
     Timeout as Timeout,
 )
-from runtime.client.completion import acompletion as brane_acompletion
-from runtime.stream.wrapper import StreamWrapper
+from runtime.client.completion import completion as litellm_completion
 from runtime.client.param import Delta, ModelResponseStream, StreamingChoices, ModelResponse, ChatCompletionToolParam
 from mesh.cost.tracker.metric import MetricsSnapshot
 from mesh.model.info import get_features
@@ -38,6 +36,10 @@ LLM_RETRY_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (
     LLMNoResponseError,
 )
 
+# ============================================================================
+# Chat Options Management (Absorbed from agent.llm.option.chat)
+# ============================================================================
+
 def apply_defaults_if_absent(user_kwargs: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
     out = dict(user_kwargs)
     for key, value in defaults.items():
@@ -45,71 +47,6 @@ def apply_defaults_if_absent(user_kwargs: dict[str, Any], defaults: dict[str, An
             out[key] = value
     return out
 
-# def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) -> dict[str, Any]:
-#     defaults: dict[str, Any] = {
-#         "top_k": llm.top_k,
-#         "top_p": llm.top_p,
-#         "temperature": llm.temperature,
-#         "max_completion_tokens": llm.max_output_tokens,
-#     }
-#     out = apply_defaults_if_absent(user_kwargs, defaults)
-
-#     # Azure -> uses max_tokens instead
-#     if llm.model.startswith("azure"):
-#         if "max_completion_tokens" in out:
-#             out["max_tokens"] = out.pop("max_completion_tokens")
-
-#     # If user didn't set extra_headers, propagate from llm config
-#     if llm.extra_headers is not None and "extra_headers" not in out:
-#         out["extra_headers"] = dict(llm.extra_headers)
-
-#     # Reasoning-model quirks
-#     supports_reasoning_effort = get_features(llm.model).supports_reasoning_effort
-#     if supports_reasoning_effort:
-#         if llm.reasoning_effort is not None:
-#             out["reasoning_effort"] = llm.reasoning_effort
-
-#         # All reasoning models ignore temp/top_p, except Gemini
-#         if "gemini" not in llm.model.lower():
-#             out.pop("temperature", None)
-#             out.pop("top_p", None)
-
-#     # Extended thinking models
-#     if get_features(llm.model).supports_extended_thinking:
-#         if llm.extended_thinking_budget:
-#             budget_tokens = min(llm.extended_thinking_budget, llm.max_output_tokens - 1)
-#             out["thinking"] = {
-#                 "type": "enabled",
-#                 "budget_tokens": budget_tokens,
-#             }
-#             # Enable interleaved thinking
-#             # Merge default header with any user-provided headers; user wins on conflict
-#             existing = out.get("extra_headers") or {}
-#             out["extra_headers"] = {
-#                 "anthropic-beta": "interleaved-thinking-2025-05-14",
-#                 **existing,
-#             }
-#             out["max_tokens"] = llm.max_output_tokens
-#         # Anthropic models ignore temp/top_p
-#         out.pop("temperature", None)
-#         out.pop("top_p", None)
-
-#     # Tools: if not using native, strip tool_choice so we don't confuse providers
-#     if not has_tools:
-#         out.pop("tools", None)
-#         out.pop("tool_choice", None)
-
-#     # Send prompt_cache_retention only if model supports it
-#     if get_features(llm.model).supports_prompt_cache_retention and llm.prompt_cache_retention:
-#         out["prompt_cache_retention"] = llm.prompt_cache_retention
-
-#     # Pass through user-provided extra_body unchanged
-#     if llm.brane_extra_body:
-#         out["extra_body"] = llm.brane_extra_body
-
-#     return out
-
-# agent.llm.driver.io (수정 롤백 반영본)
 def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) -> dict[str, Any]:
     defaults: dict[str, Any] = {
         "top_k": llm.top_k,
@@ -119,22 +56,27 @@ def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) 
     }
     out = apply_defaults_if_absent(user_kwargs, defaults)
 
+    # Azure -> uses max_tokens instead
     if llm.model.startswith("azure"):
         if "max_completion_tokens" in out:
             out["max_tokens"] = out.pop("max_completion_tokens")
 
+    # If user didn't set extra_headers, propagate from llm config
     if llm.extra_headers is not None and "extra_headers" not in out:
         out["extra_headers"] = dict(llm.extra_headers)
 
+    # Reasoning-model quirks
     supports_reasoning_effort = get_features(llm.model).supports_reasoning_effort
     if supports_reasoning_effort:
         if llm.reasoning_effort is not None:
             out["reasoning_effort"] = llm.reasoning_effort
 
+        # All reasoning models ignore temp/top_p, except Gemini
         if "gemini" not in llm.model.lower():
             out.pop("temperature", None)
             out.pop("top_p", None)
 
+    # Extended thinking models
     if get_features(llm.model).supports_extended_thinking:
         if llm.extended_thinking_budget:
             budget_tokens = min(llm.extended_thinking_budget, llm.max_output_tokens - 1)
@@ -142,29 +84,37 @@ def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) 
                 "type": "enabled",
                 "budget_tokens": budget_tokens,
             }
+            # Enable interleaved thinking
+            # Merge default header with any user-provided headers; user wins on conflict
             existing = out.get("extra_headers") or {}
             out["extra_headers"] = {
                 "anthropic-beta": "interleaved-thinking-2025-05-14",
                 **existing,
             }
             out["max_tokens"] = llm.max_output_tokens
+        # Anthropic models ignore temp/top_p
         out.pop("temperature", None)
         out.pop("top_p", None)
 
+    # Tools: if not using native, strip tool_choice so we don't confuse providers
     if not has_tools:
         out.pop("tools", None)
         out.pop("tool_choice", None)
 
+    # Send prompt_cache_retention only if model supports it
     if get_features(llm.model).supports_prompt_cache_retention and llm.prompt_cache_retention:
         out["prompt_cache_retention"] = llm.prompt_cache_retention
 
+    # Pass through user-provided extra_body unchanged
     if llm.brane_extra_body:
         out["extra_body"] = llm.brane_extra_body
 
-    # [수정됨] 문제가 되었던 임의의 None 삭제 로직을 걷어내고 원본처럼 원형 반환
     return out
 
 def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: list[str] | None = None, store: bool | None = None) -> dict[str, Any]:
+    """
+    @desc: Responses API 호출을 위해 Driver 설정과 런타임 kwargs를 병합/정규화합니다.
+    """
     defaults: dict[str, Any] = {
         "top_k": llm.top_k,
         "top_p": llm.top_p,
@@ -173,6 +123,7 @@ def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: lis
         "seed": llm.seed,
     }
     
+    # Responses API 전용 파라미터 우선 적용
     if include is not None:
         defaults["include"] = include
     if store is not None:
@@ -180,13 +131,16 @@ def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: lis
         
     out = apply_defaults_if_absent(user_kwargs, defaults)
 
+    # Azure -> uses max_tokens instead
     if llm.model.startswith("azure"):
         if "max_completion_tokens" in out:
             out["max_tokens"] = out.pop("max_completion_tokens")
 
+    # If user didn't set extra_headers, propagate from llm config
     if llm.extra_headers is not None and "extra_headers" not in out:
         out["extra_headers"] = dict(llm.extra_headers)
 
+    # Reasoning-model quirks
     if get_features(llm.model).supports_reasoning_effort:
         if llm.reasoning_effort is not None:
             out.setdefault("reasoning_effort", llm.reasoning_effort)
@@ -195,6 +149,7 @@ def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: lis
             out.pop("temperature", None)
             out.pop("top_p", None)
 
+    # Extended thinking models
     if get_features(llm.model).supports_extended_thinking:
         if llm.extended_thinking_budget:
             budget_tokens = min(llm.extended_thinking_budget, llm.max_output_tokens - 1)
@@ -212,79 +167,24 @@ def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: lis
         out.pop("temperature", None)
         out.pop("top_p", None)
 
+    # 안전한 extra_body 병합 (런타임 extra_body와 Driver extra_body 충돌 방지)
     if llm.brane_extra_body:
         existing_extra_body = out.get("extra_body", {})
         out["extra_body"] = {**existing_extra_body, **llm.brane_extra_body}
 
-    # [수정됨] 문제가 되었던 임의의 None 삭제 로직을 걷어내고 원본처럼 원형 반환
-    return out
+    # 최종적으로 값이 None인 파라미터는 API Validation 에러를 유발하므로 제거
+    return {k: v for k, v in out.items() if v is not None}
 
-# def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: list[str] | None = None, store: bool | None = None) -> dict[str, Any]:
-#     defaults: dict[str, Any] = {
-#         "top_k": llm.top_k,
-#         "top_p": llm.top_p,
-#         "temperature": llm.temperature,
-#         "max_completion_tokens": llm.max_output_tokens,
-#         "seed": llm.seed,
-#     }
-    
-#     # Responses API 전용 파라미터 우선 적용
-#     if include is not None:
-#         defaults["include"] = include
-#     if store is not None:
-#         defaults["store"] = store
-        
-#     out = apply_defaults_if_absent(user_kwargs, defaults)
 
-#     # Azure -> uses max_tokens instead
-#     if llm.model.startswith("azure"):
-#         if "max_completion_tokens" in out:
-#             out["max_tokens"] = out.pop("max_completion_tokens")
-
-#     # If user didn't set extra_headers, propagate from llm config
-#     if llm.extra_headers is not None and "extra_headers" not in out:
-#         out["extra_headers"] = dict(llm.extra_headers)
-
-#     # Reasoning-model quirks
-#     if get_features(llm.model).supports_reasoning_effort:
-#         if llm.reasoning_effort is not None:
-#             out.setdefault("reasoning_effort", llm.reasoning_effort)
-            
-#         if "gemini" not in llm.model.lower():
-#             out.pop("temperature", None)
-#             out.pop("top_p", None)
-
-#     # Extended thinking models
-#     if get_features(llm.model).supports_extended_thinking:
-#         if llm.extended_thinking_budget:
-#             budget_tokens = min(llm.extended_thinking_budget, llm.max_output_tokens - 1)
-#             out["thinking"] = {
-#                 "type": "enabled",
-#                 "budget_tokens": budget_tokens,
-#             }
-#             existing = out.get("extra_headers") or {}
-#             out["extra_headers"] = {
-#                 "anthropic-beta": "interleaved-thinking-2025-05-14",
-#                 **existing,
-#             }
-#             out["max_tokens"] = llm.max_output_tokens
-            
-#         out.pop("temperature", None)
-#         out.pop("top_p", None)
-
-#     # 안전한 extra_body 병합 (런타임 extra_body와 Driver extra_body 충돌 방지)
-#     if llm.brane_extra_body:
-#         existing_extra_body = out.get("extra_body", {})
-#         out["extra_body"] = {**existing_extra_body, **llm.brane_extra_body}
-
-#     # 최종적으로 값이 None인 파라미터는 API Validation 에러를 유발하므로 제거
-#     return {k: v for k, v in out.items() if v is not None}
+# ============================================================================
+# DriverIO Class Implementation
+# ============================================================================
 
 class DriverIO:
     def __init__(self, driver: "Driver"):
         self.driver = driver
 
-    async def completion(
+    def completion(
         self,
         messages: list[Message],
         tools: Sequence["ActionDefinition"] | None = None,
@@ -341,83 +241,19 @@ class DriverIO:
             retry_multiplier=self.driver.retry_multiplier,
             retry_listener=self.driver._retry_listener_fn,
         )
-        async def _one_attempt(**retry_kwargs) -> ModelResponse:
+        def _one_attempt(**retry_kwargs) -> ModelResponse:
             assert self.driver._observer is not None
             
             # [Stateless Tracking] Capture exact start time dynamically
             req_start = self.driver._observer.on_request(telemetry_ctx=telemetry_ctx)
             
-            # 5-1. 파라미터 병합 및 페이로드 구성
             final_kwargs = {**call_kwargs, **retry_kwargs}
-            vendor_kwargs = self.driver.get_vendor_transport_kwargs()
-            merged_kwargs = {**vendor_kwargs, **final_kwargs}
-            merged_kwargs.pop("base_model", None)
-
-            if enable_streaming:
-                merged_kwargs["stream"] = True
-
-            api_key_value = self.driver._get_api_key_value()
-            
-            completion_payload = {
-                "model": self.driver.model,
-                "api_key": api_key_value,
-                "api_base": self.driver.base_url,
-                "api_version": self.driver.api_version,
-                "timeout": self.driver.timeout,
-                "drop_params": self.driver.drop_params,
-                "seed": self.driver.seed,
-                "messages": formatted_messages,
-                **merged_kwargs,
-            }
-            
-            completion_payload = {
-                k: v for k, v in completion_payload.items() 
-                if v is not None or k not in ["api_key", "api_base", "api_version"]
-            }
-            
-            # 5-2. 실제 네트워크 I/O 실행
-            with self.driver._brane_modify_params_ctx(self.driver.modify_params):
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=DeprecationWarning, module="httpx.*")
-                    warnings.filterwarnings("ignore", message=r".*content=.*upload.*", category=DeprecationWarning)
-                    warnings.filterwarnings("ignore", message=r"There is no current event loop", category=DeprecationWarning)
-                    warnings.filterwarnings("ignore", category=UserWarning)
-                    warnings.filterwarnings("ignore", category=DeprecationWarning, message="Accessing the 'model_fields' attribute.*")
-
-                    resp = await brane_acompletion(**completion_payload)
-
-                    # 5-3. 스트리밍 청크 제어 (순수 비동기)
-                    if enable_streaming and on_token is not None:
-                        assert isinstance(resp, StreamWrapper), "Streaming response must be handled by StreamWrapper Bridge."
-                        
-                        async for chunk in resp:
-                            if asyncio.iscoroutinefunction(on_token):
-                                await on_token(chunk)
-                            else:
-                                on_token(chunk)
-                        
-                        accumulator = resp.pipeline.attributes["accumulator"]
-                        final_response = accumulator.get_complete_response()
-
-                        # [위임] Usage 누락 방어 폴백 로직
-                        if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
-                            from mesh.token.counter import calculate_fallback_usage
-                            
-                            content = final_response.choices[0].message.content or ""
-                            fallback_usage = calculate_fallback_usage(
-                                model=self.driver.model,
-                                messages=formatted_messages,
-                                completion_text=content,
-                                custom_tokenizer=getattr(self.driver, "_tokenizer", None)
-                            )
-                            
-                            final_response.usage.prompt_tokens = fallback_usage["prompt_tokens"]
-                            final_response.usage.completion_tokens = fallback_usage["completion_tokens"]
-                            final_response.usage.total_tokens = fallback_usage["total_tokens"]
-
-                        resp = final_response
-
-            assert isinstance(resp, ModelResponse), f"Expected ModelResponse, got {type(resp)}"
+            resp = self.driver._transport_call(
+                messages=formatted_messages,
+                **final_kwargs,
+                enable_streaming=enable_streaming,
+                on_token=on_token,
+            )
             
             # [Stateless Tracking] Delegate event tracking securely
             self.driver._observer.track_success(resp, start_time=req_start, telemetry_ctx=telemetry_ctx)
@@ -428,7 +264,7 @@ class DriverIO:
             return resp
 
         try:
-            resp = await _one_attempt()
+            resp = _one_attempt()
             if isinstance(resp, dict):
                 resp = ModelResponse(**resp)
 
@@ -456,7 +292,7 @@ class DriverIO:
             ## Create and return LLMResponse
             return LLMResponse(message=message, metrics=metrics_snapshot, raw_response=resp)
         except Exception as e:
-            return await self.driver._handle_error(
+            return self.driver._handle_error(
                 e,
                 lambda fb: fb.completion(
                     messages,
@@ -467,7 +303,7 @@ class DriverIO:
                 ),
             )
 
-    async def responses(
+    def responses(
         self,
         messages: list[Message],
         tools: Sequence["ActionDefinition"] | None = None,
@@ -483,7 +319,7 @@ class DriverIO:
                 "DriverIO.responses adapter: 'include' and 'store' parameters are legacy Responses API "
                 "specific and will be ignored by the completion backend."
             )
-        return await self.completion(
+        return self.completion(
             messages=messages,
             tools=tools,
             _return_metrics=_return_metrics,

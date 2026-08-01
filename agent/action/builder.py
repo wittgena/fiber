@@ -20,8 +20,8 @@ from runtime.client.param import ChatCompletionToolParam, ChatCompletionToolPara
 from agent.atoa.schema.disc.tool import Tool
 from agent.atoa.schema.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
-from arch.bound.surge.model import SurgeBaseModel
-from arch.bound.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
+from arch.model.surge.model import SurgeBaseModel
+from arch.model.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
 from watcher.plane.emitter import get_logger
 
 def camel_to_snake(name: str) -> str:

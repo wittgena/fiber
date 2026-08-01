@@ -21,9 +21,9 @@ from agent.action.builder import ActionDefinition
 from agent.action.factory import CoreAction
 from agent.action.resolver import ActionResolver
 
-from arch.bound.payload import StreamPayloadAdapter
+from arch.model.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import UniversalFacade
-from arch.bound.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

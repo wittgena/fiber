@@ -1,8 +1,8 @@
-# agent.activator
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
 import re
+import asyncio  # 비동기 정렬을 위한 임포트 추가
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, Any, Optional
@@ -181,7 +181,6 @@ class Activator(Ator):
             await self._emit_event_to_gov(sys_event, tunnel, response_topic, snapshot)
 
         async def async_on_event(event: Any):
-            # [개선 1] Event 모델을 상속받은 객체만 events 리스트에 추가 (TransitionStatus 방어)
             if isinstance(event, Event):
                 snapshot.events.append(event)
             await self._emit_event_to_gov(event, tunnel, response_topic, snapshot)
@@ -190,13 +189,24 @@ class Activator(Ator):
             if hasattr(handler, "handle_async"):
                 handled = await handler.handle_async(self, snapshot, async_on_event, context)
             else:
-                handled = handler.handle(self, snapshot, lambda e: asyncio.create_task(async_on_event(e)), None, context)
+                # [비동기 정렬] 동기 핸들러 내부에서 파생된 비동기 태스크들을 모아서 대기
+                pending_tasks = []
+                
+                def _sync_on_event_wrapper(e):
+                    task = asyncio.create_task(async_on_event(e))
+                    pending_tasks.append(task)
+                    return task
+                
+                handled = handler.handle(self, snapshot, _sync_on_event_wrapper, None, context)
+                
+                if pending_tasks:
+                    await asyncio.gather(*pending_tasks)
                 
             if handled:
                 break
 
     async def _emit_event_to_gov(self, event: Any, tunnel: UniversalFacade, response_topic: str, snapshot: Optional[AgentStateSnapshot] = None) -> None:
-        from arch.bound.payload import StreamPayloadAdapter 
+        from arch.model.payload import StreamPayloadAdapter 
         
         payload_raw = None
         current_topo = len(snapshot.events) if snapshot else 0

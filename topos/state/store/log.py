@@ -23,7 +23,7 @@ from agent.atoa.conv.event import Event
 from agent.atoa.conv.event import EventID
 from topos.state.store.base import EventsListBase
 
-from arch.xor.bridge.store.file import FileStore
+from arch.xor.store.file import FileStore
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

@@ -43,7 +43,7 @@ from topos.state.command import (
     UpdateTags
 )
 
-from arch.bound.surge.disc import SurgeBaseModel
+from arch.model.surge.disc import SurgeBaseModel
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

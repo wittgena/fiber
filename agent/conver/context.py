@@ -24,7 +24,7 @@ from agent.atoa.conv.message import Message
 from agent.atoa.schema.disc.action import Action, Observation
 
 from topos.flow.graph.space import SandboxWorkspace
-from mesh.bound.secure.secret.validator import Cipher
+from arch.xor.secret.validator import Cipher
 
 from arch.contract.event.next import next_id
 from topos.state.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter

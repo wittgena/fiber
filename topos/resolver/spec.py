@@ -8,9 +8,9 @@ from typing import List, Dict, Any, Optional, Annotated
 from dataclasses import dataclass, asdict
 from pydantic import BaseModel, Field
 
-from arch.bound.surge.blueprint import SurgeBlueprint, SurgeNode
-from arch.contract.schema.graph import EntryNode
-from arch.contract.schema.resonance import BridgeEvent
+from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
+from arch.model.contract.graph import EntryNode
+from arch.model.contract.resonance import BridgeEvent
 from agent.action.factory import CoreAction
 
 log = logging.getLogger(__name__)

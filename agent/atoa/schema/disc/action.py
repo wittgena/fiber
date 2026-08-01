@@ -9,7 +9,7 @@ from rich.text import Text
 from agent.atoa.conv.message import ImageContent, TextContent
 from agent.atoa.conv.message import content_to_str
 
-from arch.bound.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

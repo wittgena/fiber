@@ -20,7 +20,7 @@ from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from phi.executor.context import ExecutionEngine, ExecutionContext
 
-from arch.xor.xe.truncate import maybe_truncate
+from arch.xor.bridge.mark.truncate import maybe_truncate
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:

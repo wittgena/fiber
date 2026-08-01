@@ -29,9 +29,9 @@ from agent.atoa.context.state import ConversationState
 from topos.state.parser.title import generate_conversation_title
 from topos.state.parser.builder import MessageBuilder, LLMFacade
 
-from arch.xor.bridge.store.file import LocalFileStore
+from arch.xor.store.file import LocalFileStore
 from topos.state.store.log import LogStore
-from arch.bound.payload import StreamPayloadAdapter
+from arch.model.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import TunnelFactory, UniversalFacade
 
 if TYPE_CHECKING:

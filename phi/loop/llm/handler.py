@@ -1,8 +1,4 @@
 # phi.loop.llm.handler
-## @lineage: agent.loop.llm.handler
-## @lineage: atoa.agent.llm.handler
-## @lineage: phi.agent.llm.handler
-## @lineage: phi.executor.graph.loop
 import json
 from agent.atoa.event.llm.action import ActionEvent
 from agent.atoa.event.llm.message import MessageEvent
@@ -26,7 +22,7 @@ class LLMInvocationHandler(StepHandler):
         logger.debug(f"[LLMInvocationHandler] Sending {len(_messages)} messages to LLM")
 
         try:
-            llm_response = LLMFacade.make_completion(
+            llm_response = await LLMFacade.make_completion(
                 llm=activator.llm,
                 messages=_messages,
                 tools=list(activator.tools_map.values()),

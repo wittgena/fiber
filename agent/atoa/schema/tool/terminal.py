@@ -20,7 +20,7 @@ from agent.atoa.conv.message import ImageContent, TextContent
 from agent.atoa.schema.executor import ActionExecutor
 from agent.atoa.schema.disc.action import Action, Observation
 from agent.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
-from arch.xor.xe.truncate import maybe_truncate
+from arch.xor.bridge.mark.truncate import maybe_truncate
 from arch.xor.bridge.tool.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
 from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 

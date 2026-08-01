@@ -1,12 +1,16 @@
 # agent.llm.driver.tensor
+## @lineage: phi.engine.driver.tensor
+## @lineage: swarm.engine.driver.tensor
 from __future__ import annotations
 import copy
+import json
 import os
+import asyncio
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Sequence, generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Final, cast
-
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, get_args, get_origin, Final, cast
+import httpx
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -18,15 +22,19 @@ from pydantic import (
     model_validator,
 )
 from pydantic.json_schema import SkipJsonSchema
+from functools import cached_property
 from pathlib import Path
 
 from mesh.model.info import get_features
 from mesh.model.support import supports_vision
 from mesh.model.config.resolver import config
 
+from runtime.stream.wrapper import StreamWrapper
+from mesh.model.types.core import ModelResponse  
 from mesh.token.splitter import create_pretrained_tokenizer
 from mesh.token.counter import token_counter
 
+from runtime.client.completion import completion as brane_completion
 from mesh.cost.tracker.metric import Metrics
 from agent.llm.driver.observer import DriverObserver
 from mesh.bound.exception.eco import (
@@ -312,7 +320,7 @@ class Driver(VendorSubstrateMixin, RetryMixin):
     def is_subscription(self) -> bool:
         return self._is_subscription
 
-    async def _handle_error(self, error: Exception, fallback_call_fn: Callable[[Driver], LLMResponse]) -> LLMResponse:
+    def _handle_error(self, error: Exception, fallback_call_fn: Callable[[Driver], LLMResponse]) -> LLMResponse:
         ## @desc: Process execution ruptures and route through established fallback manifolds
         if self._observer is not None:
             self._observer.track_rupture(error)
@@ -332,7 +340,7 @@ class Driver(VendorSubstrateMixin, RetryMixin):
             raise mapped from error
         raise
 
-    async def completion(
+    def completion(
         self,
         messages: list[Message],
         tools: Sequence[ActionDefinition] | None = None,
@@ -342,7 +350,7 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         **kwargs,
     ) -> LLMResponse:
         assert self._io is not None
-        return await self._io.completion(
+        return self._io.completion(
             messages=messages,
             tools=tools,
             _return_metrics=_return_metrics,
@@ -351,7 +359,7 @@ class Driver(VendorSubstrateMixin, RetryMixin):
             **kwargs
         )
 
-    async def responses(
+    def responses(
         self,
         messages: list[Message],
         tools: Sequence[ActionDefinition] | None = None,
@@ -363,7 +371,7 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         **kwargs,
     ) -> LLMResponse:
         assert self._io is not None
-        return await self._io.responses(
+        return self._io.responses(
             messages=messages,
             tools=tools,
             include=include,
@@ -394,10 +402,89 @@ class Driver(VendorSubstrateMixin, RetryMixin):
 
         return api_key_value
 
+    def _transport_call(
+        self,
+        *,
+        messages: list[dict[str, Any]],
+        enable_streaming: bool = False,
+        on_token: TokenCallbackType | None = None,
+        **kwargs,
+    ) -> ModelResponse:
+        """
+        @desc: Core execution boundary for sending parameters to the LLM Gateway.
+        [리팩토링] 동기식(DriverIO) 호출부와 비동기 StreamWrapper의 완벽한 브릿지 통합.
+        """
+        with self._brane_modify_params_ctx(self.modify_params):
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=DeprecationWarning, module="httpx.*")
+                warnings.filterwarnings("ignore", message=r".*content=.*upload.*", category=DeprecationWarning)
+                warnings.filterwarnings("ignore", message=r"There is no current event loop", category=DeprecationWarning)
+                warnings.filterwarnings("ignore", category=UserWarning)
+                warnings.filterwarnings("ignore", category=DeprecationWarning, message="Accessing the 'model_fields' attribute.*")
+                
+                api_key_value = self._get_api_key_value()
+                
+                vendor_kwargs = self.get_vendor_transport_kwargs()
+                merged_kwargs = {**vendor_kwargs, **kwargs}
+                merged_kwargs.pop("base_model", None)
+
+                if enable_streaming:
+                    merged_kwargs["stream"] = True
+
+                call_kwargs = {
+                    "model": self.model,
+                    "api_key": api_key_value,
+                    "api_base": self.base_url,
+                    "api_version": self.api_version,
+                    "timeout": self.timeout,
+                    "drop_params": self.drop_params,
+                    "seed": self.seed,
+                    "messages": messages,
+                    **merged_kwargs,
+                }
+                
+                call_kwargs = {
+                    k: v for k, v in call_kwargs.items() 
+                    if v is not None or k not in ["api_key", "api_base", "api_version"]
+                }
+
+                ret = brane_completion(**call_kwargs)
+                if enable_streaming and on_token is not None:
+                    assert isinstance(ret, StreamWrapper), "Streaming response must be handled by StreamWrapper Bridge."
+                    async def _consume_stream(stream: StreamWrapper):
+                        async for chunk in stream:
+                            on_token(chunk)
+                            
+                    try:
+                        loop = asyncio.get_running_loop()
+                        import nest_asyncio
+                        nest_asyncio.apply()
+                        loop.run_until_complete(_consume_stream(ret))
+                    except RuntimeError:
+                        asyncio.run(_consume_stream(ret))
+                    
+                    accumulator = ret.pipeline.attributes["accumulator"]
+                    final_response = accumulator.get_complete_response()
+
+                    ## Usage(토큰/비용) 누락 방어 폴백
+                    if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
+                        content = final_response.choices[0].message.content or ""
+                        try:
+                            final_response.usage.prompt_tokens = token_counter(model=self.model, messages=messages)
+                        except Exception:
+                            final_response.usage.prompt_tokens = 0
+                        
+                        final_response.usage.completion_tokens = token_counter(model=self.model, text=content, count_response_tokens=True)
+                        final_response.usage.total_tokens = final_response.usage.prompt_tokens + final_response.usage.completion_tokens
+
+                    ret = final_response
+
+                assert isinstance(ret, ModelResponse), f"Expected ModelResponse, got {type(ret)}"
+                return ret
+
     @contextmanager
     def _brane_modify_params_ctx(self, flag: bool):
-        # ConfigResolver 속성 미존재로 인한 AttributeError 방어
-        old = getattr(config, "modify_params", True)
+        old = config.modify_params
         try:
             config.modify_params = flag
             yield

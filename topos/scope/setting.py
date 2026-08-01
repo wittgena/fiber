@@ -12,9 +12,9 @@ from pydantic.fields import FieldInfo
 
 from topos.scope.metadata import SettingsSchema, SettingsValueType, SettingsChoiceValue, SettingsChoice
 
-from arch.bound.surge.disc import SurgeBaseModel
-from arch.xor.xe.depre import warn_deprecated
-from arch.xor.xe.convset import (
+from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.bridge.mark.depre import warn_deprecated
+from arch.xor.bridge.mark.convset import (
     SETTINGS_METADATA_KEY,
     SETTINGS_SECTION_METADATA_KEY,
     SettingProminence,

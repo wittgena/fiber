@@ -6,8 +6,8 @@
 from typing import TYPE_CHECKING, Any, Literal
 from pydantic import Field
 
-from arch.bound.surge.disc import SurgeBaseModel
-from arch.xor.xe.convset import SettingProminence
+from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.bridge.mark.convset import SettingProminence
 
 SettingsValueType = Literal[
     "string",

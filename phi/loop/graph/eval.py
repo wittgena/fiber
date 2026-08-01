@@ -1,8 +1,4 @@
 # phi.loop.graph.eval
-## @lineage: agent.loop.graph.eval
-## @lineage: atoa.agent.loop.graph.eval
-## @lineage: phi.agent.loop.graph.eval
-## @lineage: phi.executor.graph.eval
 from agent.atoa.event.llm.action import ActionEvent
 from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
@@ -39,7 +35,6 @@ class EvalReflector(StepHandler):
         return False
 
     def _should_trigger_reflection(self, events: list) -> bool:
-        # 기존 로직과 동일 (이벤트 검사는 상태 비의존적이므로 그대로 유지)
         if not events:
             return False
             
