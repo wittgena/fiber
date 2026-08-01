@@ -1,6 +1,7 @@
 # agent.llm.driver.io
 import warnings
 import asyncio
+import copy
 from typing import TYPE_CHECKING, Any, Sequence, cast, Final
 from types import SimpleNamespace
 
@@ -45,71 +46,7 @@ def apply_defaults_if_absent(user_kwargs: dict[str, Any], defaults: dict[str, An
             out[key] = value
     return out
 
-# def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) -> dict[str, Any]:
-#     defaults: dict[str, Any] = {
-#         "top_k": llm.top_k,
-#         "top_p": llm.top_p,
-#         "temperature": llm.temperature,
-#         "max_completion_tokens": llm.max_output_tokens,
-#     }
-#     out = apply_defaults_if_absent(user_kwargs, defaults)
 
-#     # Azure -> uses max_tokens instead
-#     if llm.model.startswith("azure"):
-#         if "max_completion_tokens" in out:
-#             out["max_tokens"] = out.pop("max_completion_tokens")
-
-#     # If user didn't set extra_headers, propagate from llm config
-#     if llm.extra_headers is not None and "extra_headers" not in out:
-#         out["extra_headers"] = dict(llm.extra_headers)
-
-#     # Reasoning-model quirks
-#     supports_reasoning_effort = get_features(llm.model).supports_reasoning_effort
-#     if supports_reasoning_effort:
-#         if llm.reasoning_effort is not None:
-#             out["reasoning_effort"] = llm.reasoning_effort
-
-#         # All reasoning models ignore temp/top_p, except Gemini
-#         if "gemini" not in llm.model.lower():
-#             out.pop("temperature", None)
-#             out.pop("top_p", None)
-
-#     # Extended thinking models
-#     if get_features(llm.model).supports_extended_thinking:
-#         if llm.extended_thinking_budget:
-#             budget_tokens = min(llm.extended_thinking_budget, llm.max_output_tokens - 1)
-#             out["thinking"] = {
-#                 "type": "enabled",
-#                 "budget_tokens": budget_tokens,
-#             }
-#             # Enable interleaved thinking
-#             # Merge default header with any user-provided headers; user wins on conflict
-#             existing = out.get("extra_headers") or {}
-#             out["extra_headers"] = {
-#                 "anthropic-beta": "interleaved-thinking-2025-05-14",
-#                 **existing,
-#             }
-#             out["max_tokens"] = llm.max_output_tokens
-#         # Anthropic models ignore temp/top_p
-#         out.pop("temperature", None)
-#         out.pop("top_p", None)
-
-#     # Tools: if not using native, strip tool_choice so we don't confuse providers
-#     if not has_tools:
-#         out.pop("tools", None)
-#         out.pop("tool_choice", None)
-
-#     # Send prompt_cache_retention only if model supports it
-#     if get_features(llm.model).supports_prompt_cache_retention and llm.prompt_cache_retention:
-#         out["prompt_cache_retention"] = llm.prompt_cache_retention
-
-#     # Pass through user-provided extra_body unchanged
-#     if llm.brane_extra_body:
-#         out["extra_body"] = llm.brane_extra_body
-
-#     return out
-
-# agent.llm.driver.io (수정 롤백 반영본)
 def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) -> dict[str, Any]:
     defaults: dict[str, Any] = {
         "top_k": llm.top_k,
@@ -161,8 +98,9 @@ def select_chat_options(llm: Any, user_kwargs: dict[str, Any], has_tools: bool) 
     if llm.brane_extra_body:
         out["extra_body"] = llm.brane_extra_body
 
-    # [수정됨] 문제가 되었던 임의의 None 삭제 로직을 걷어내고 원본처럼 원형 반환
+    # 어댑터가 None 값을 기반으로 분기할 수 있도록 원형 반환 보장
     return out
+
 
 def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: list[str] | None = None, store: bool | None = None) -> dict[str, Any]:
     defaults: dict[str, Any] = {
@@ -216,73 +154,59 @@ def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: lis
         existing_extra_body = out.get("extra_body", {})
         out["extra_body"] = {**existing_extra_body, **llm.brane_extra_body}
 
-    # [수정됨] 문제가 되었던 임의의 None 삭제 로직을 걷어내고 원본처럼 원형 반환
+    # 어댑터가 None 값을 기반으로 분기할 수 있도록 원형 반환 보장
     return out
 
-# def select_responses_options(llm: Any, user_kwargs: dict[str, Any], include: list[str] | None = None, store: bool | None = None) -> dict[str, Any]:
-#     defaults: dict[str, Any] = {
-#         "top_k": llm.top_k,
-#         "top_p": llm.top_p,
-#         "temperature": llm.temperature,
-#         "max_completion_tokens": llm.max_output_tokens,
-#         "seed": llm.seed,
-#     }
-    
-#     # Responses API 전용 파라미터 우선 적용
-#     if include is not None:
-#         defaults["include"] = include
-#     if store is not None:
-#         defaults["store"] = store
-        
-#     out = apply_defaults_if_absent(user_kwargs, defaults)
 
-#     # Azure -> uses max_tokens instead
-#     if llm.model.startswith("azure"):
-#         if "max_completion_tokens" in out:
-#             out["max_tokens"] = out.pop("max_completion_tokens")
-
-#     # If user didn't set extra_headers, propagate from llm config
-#     if llm.extra_headers is not None and "extra_headers" not in out:
-#         out["extra_headers"] = dict(llm.extra_headers)
-
-#     # Reasoning-model quirks
-#     if get_features(llm.model).supports_reasoning_effort:
-#         if llm.reasoning_effort is not None:
-#             out.setdefault("reasoning_effort", llm.reasoning_effort)
-            
-#         if "gemini" not in llm.model.lower():
-#             out.pop("temperature", None)
-#             out.pop("top_p", None)
-
-#     # Extended thinking models
-#     if get_features(llm.model).supports_extended_thinking:
-#         if llm.extended_thinking_budget:
-#             budget_tokens = min(llm.extended_thinking_budget, llm.max_output_tokens - 1)
-#             out["thinking"] = {
-#                 "type": "enabled",
-#                 "budget_tokens": budget_tokens,
-#             }
-#             existing = out.get("extra_headers") or {}
-#             out["extra_headers"] = {
-#                 "anthropic-beta": "interleaved-thinking-2025-05-14",
-#                 **existing,
-#             }
-#             out["max_tokens"] = llm.max_output_tokens
-            
-#         out.pop("temperature", None)
-#         out.pop("top_p", None)
-
-#     # 안전한 extra_body 병합 (런타임 extra_body와 Driver extra_body 충돌 방지)
-#     if llm.brane_extra_body:
-#         existing_extra_body = out.get("extra_body", {})
-#         out["extra_body"] = {**existing_extra_body, **llm.brane_extra_body}
-
-#     # 최종적으로 값이 None인 파라미터는 API Validation 에러를 유발하므로 제거
-#     return {k: v for k, v in out.items() if v is not None}
+# ============================================================================
+# DriverIO Class Implementation
+# ============================================================================
 
 class DriverIO:
     def __init__(self, driver: "Driver"):
         self.driver = driver
+
+    def _apply_prompt_caching(self, messages: list[Message]) -> None:
+        if len(messages) > 0 and messages[0].role == "system":
+            sys_content = messages[0].content
+            if len(sys_content) >= 2:
+                sys_content[0].cache_prompt = True
+                sys_content[1].cache_prompt = False
+            elif len(sys_content) == 1:
+                sys_content[0].cache_prompt = True
+
+        for message in reversed(messages):
+            if message.role in ("user", "tool"):
+                message.content[-1].cache_prompt = True
+                break
+
+    def format_messages_for_llm(self, messages: list[Message]) -> list[dict]:
+        messages = copy.deepcopy(messages)
+        if self.driver.is_caching_prompt_active():
+            self._apply_prompt_caching(messages)
+
+        model_features = get_features(self.driver._model_name_for_capabilities())
+        cache_enabled = self.driver.is_caching_prompt_active()
+        vision_enabled = self.driver.vision_is_active()
+        function_calling_enabled = self.driver.native_tool_calling
+        
+        force_string_serializer = (
+            self.driver.force_string_serializer
+            if self.driver.force_string_serializer is not None
+            else model_features.force_string_serializer
+        )
+        send_reasoning_content = model_features.send_reasoning_content
+        
+        return [
+            message.to_chat_dict(
+                cache_enabled=cache_enabled,
+                vision_enabled=vision_enabled,
+                function_calling_enabled=function_calling_enabled,
+                force_string_serializer=force_string_serializer,
+                send_reasoning_content=send_reasoning_content,
+            )
+            for message in messages
+        ]
 
     async def completion(
         self,
@@ -300,7 +224,7 @@ class DriverIO:
             kwargs["stream"] = True
 
         ## 1. Serialize messages
-        formatted_messages = self.driver.format_messages_for_llm(messages)
+        formatted_messages = self.format_messages_for_llm(messages)
 
         ## 2. Convert Tool objects to ChatCompletionToolParam
         cc_tools: list[ChatCompletionToolParam] = []
@@ -370,6 +294,7 @@ class DriverIO:
                 **merged_kwargs,
             }
             
+            # 통신에 방해가 되는 명백한 식별용 None 파라미터만 안전하게 제거
             completion_payload = {
                 k: v for k, v in completion_payload.items() 
                 if v is not None or k not in ["api_key", "api_base", "api_version"]

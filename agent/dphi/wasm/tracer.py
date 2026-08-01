@@ -9,12 +9,12 @@ from typing import Tuple, Optional
 from dataclasses import asdict
 
 from phase.bind.resolver import resolve_path
-from phase.runtime.inter.wasm import WasmInterpreter
+from phase.wasm.inter.wasm import WasmInterpreter
 from phase.wasm.builder import WasmBuilder
 
 from watcher.dphi.adapter.sign import LedgerAuthAdapter
 from watcher.dphi.cgroup import CgroupPolicy
-from watcher.kernel.ledger import KernelLedger, KernelCommit, LedgerRole
+from kernel.ledger.consensus import KernelLedger, KernelCommit, LedgerRole
 from watcher.tracer.bound import BaseTracer
 from watcher.plane.emitter import get_emitter
 

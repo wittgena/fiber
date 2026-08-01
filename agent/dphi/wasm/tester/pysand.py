@@ -9,8 +9,8 @@ from contextlib import suppress
 from arch.topos.tunnel.factory import TunnelFactory
 
 from phase.bind.resolver import resolve_path
-from phase.runtime.daemon.task.supervisor import TaskSupervisor
-from phase.runtime.daemon.task.wasm import WasmTaskerDaemon
+from kernel.daemon.task.supervisor import TaskSupervisor
+from kernel.daemon.task.wasm import WasmTaskerDaemon
 from watcher.dphi.broker import WasmBroker
 
 from watcher.plane.emitter import get_emitter

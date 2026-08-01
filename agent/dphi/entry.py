@@ -7,7 +7,7 @@ import importlib
 from agent.dphi.wasm.tester.dphi import WasmTester
 from agent.dphi.wasm.tracer import WasmTracer
 
-from arch.kernel.reactor import KernelReactor
+from kernel.phase.reactor import KernelReactor
 from phase.wasm.builder import WasmBuilder
 from phase.bind.resolver import resolve_path
 

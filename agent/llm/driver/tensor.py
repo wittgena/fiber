@@ -1,6 +1,5 @@
 # agent.llm.driver.tensor
 from __future__ import annotations
-import copy
 import os
 import warnings
 from collections.abc import Callable, Sequence
@@ -443,76 +442,3 @@ class Driver(VendorSubstrateMixin, RetryMixin):
     @property
     def model_info(self) -> dict | None:
         return self._model_info
-
-    def _apply_prompt_caching(self, messages: list[Message]) -> None:
-        if len(messages) > 0 and messages[0].role == "system":
-            sys_content = messages[0].content
-            if len(sys_content) >= 2:
-                sys_content[0].cache_prompt = True
-                sys_content[1].cache_prompt = False
-            elif len(sys_content) == 1:
-                sys_content[0].cache_prompt = True
-
-        for message in reversed(messages):
-            if message.role in ("user", "tool"):
-                message.content[-1].cache_prompt = True
-                break
-
-    def format_messages_for_llm(self, messages: list[Message]) -> list[dict]:
-        messages = copy.deepcopy(messages)
-        if self.is_caching_prompt_active():
-            self._apply_prompt_caching(messages)
-
-        model_features = get_features(self._model_name_for_capabilities())
-        cache_enabled = self.is_caching_prompt_active()
-        vision_enabled = self.vision_is_active()
-        function_calling_enabled = self.native_tool_calling
-        force_string_serializer = (
-            self.force_string_serializer
-            if self.force_string_serializer is not None
-            else model_features.force_string_serializer
-        )
-        send_reasoning_content = model_features.send_reasoning_content
-        
-        return [
-            message.to_chat_dict(
-                cache_enabled=cache_enabled,
-                vision_enabled=vision_enabled,
-                function_calling_enabled=function_calling_enabled,
-                force_string_serializer=force_string_serializer,
-                send_reasoning_content=send_reasoning_content,
-            )
-            for message in messages
-        ]
-
-    def format_messages_for_responses(
-        self, messages: list[Message]
-    ) -> tuple[str | None, list[dict[str, Any]]]:
-        msgs = copy.deepcopy(messages)
-        vision_active = self.vision_is_active()
-        instructions: str | None = None
-        input_items: list[dict[str, Any]] = []
-        system_chunks: list[str] = []
-
-        for m in msgs:
-            val = m.to_responses_value(vision_enabled=vision_active)
-            if isinstance(val, str):
-                s = val.strip()
-                if s:
-                    if self.is_subscription:
-                        system_chunks.append(s)
-                    else:
-                        instructions = s if instructions is None else f"{instructions}\n\n---\n\n{s}"
-            elif val:
-                input_items.extend(val)
-
-        return instructions, input_items
-
-    def get_token_count(self, messages: list[Message]) -> int:
-        log.debug("[METRIC] Projecting spatial volume (token count) including serialized tool vectors.")
-        formatted_messages = self.format_messages_for_llm(messages)
-        try:
-            return int(token_counter(model=self.model, messages=formatted_messages, custom_tokenizer=self._tokenizer))
-        except Exception as e:
-            log.error(f"[RUPTURE] Failed to calculate spatial volume for model {self.model}: {e}", exc_info=True)
-            return 0
