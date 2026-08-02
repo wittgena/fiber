@@ -43,17 +43,7 @@ class TopologyResidue:
     trajectory_trace: str
     receipt: Optional[TransactionReceipt]
 
-
-# ==========================================
-# 2. Root Orchestrator (AgentTopos)
-# ==========================================
-
 class AgentTopos(GanNode):
-    """
-    @desc: 시스템의 최상위 오케스트레이터.
-           하위 모듈(folding, transition)에 위상과 상태 관리를 위임하고, 
-           부팅/종료 라이프사이클과 WASM 정산(Settlement) 프로세스만 총괄합니다.
-    """
     def __init__(self, name: str, run_context: dict):
         super().__init__(name)
         self.run_context = run_context
