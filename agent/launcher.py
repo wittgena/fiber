@@ -7,23 +7,19 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
 from agent.resolver.model.tier import model_tier_registry
-from agent.resolver.task import TaskResolver, BlueprintType, SchemeCategory, TransactionDomain
+from agent.resolver.context import TaskResolver, BlueprintType, SchemeCategory, TransactionDomain
 from agent.runtime.executor.loop import LoopExecutor
 from agent.runtime.node import RuntimeNode
 from agent.runtime.scope.manager import managed_scope
-
-from arch.model.sealer import EpochSealer
-from arch.model.surge.blueprint import SurgeBlueprint
-from arch.topos.node.gan import Message, GanNode
-from arch.topos.space.organizer import SpaceNode
 
 from dphi.topos.flow.folding import TopologyController
 from dphi.topos.flow.transition import FlowTransition
 
 from arch.model.sealer import EpochSealer
 from arch.model.surge.blueprint import SurgeBlueprint
+
 from arch.topos.node.gan import Message, GanNode
-from arch.topos.space.organizer import SpaceNode
+from agent.runtime.space.manager import SpaceNode
 
 from phase.executor.flow.event import AgentConfigured
 
@@ -334,15 +330,11 @@ class SystemBootstrapper:
         elif self.args.scenario:
             b_type, category = BlueprintType.SCHEME, SchemeCategory(self.args.scenario)
         
-        # [방어 3] Tuple 언패킹을 통해 Pydantic의 setattr 크래시 원천 회피
         surge_dag, score = self.resolver.resolve(category, b_type)
         return surge_dag, score
 
     async def launch(self):
-        # 1. Blueprint 컴파일 및 난이도 도출
         surge_dag, required_score = self._determine_blueprint()
-
-        # 2. 난이도 기반 타겟 모델 파악 (provider/model 규격)
         scope_kwargs, target_model = EnvironConfigurator.resolve(
             requested_model=self.args.model, 
             requested_proxy=self.args.proxy,

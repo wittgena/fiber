@@ -1,5 +1,4 @@
 # agent.runtime.executor.loop
-## @lineage: agent.runtime.blueprint.compiler
 import asyncio
 import json
 from typing import Optional, Dict, Any, List, Callable
@@ -210,7 +209,6 @@ class ProxyExecutionEngine:
         host_url = self.proxy_config.get("server_url")
         conv_id = self.proxy_config.get("workspace_ref")
         session_api_key = self.proxy_config.get("session_api_key")
-
         router = InfraRouter(host_url, session_api_key)
         workspace = SandboxProxy(
             host_url=host_url, 
@@ -219,9 +217,7 @@ class ProxyExecutionEngine:
         )
 
         ws_path = router.get_ws_endpoint("events", conversation_id=conv_id)
-        
         log.info(f"[ProxyExecutionEngine] Connecting to remote proxy: {ws_path}")
-        
         try:
             async with workspace.connect_ws(ws_path) as ws:
                 # 1. 원격 프록시에 프롬프트 전송
@@ -245,12 +241,10 @@ class ProxyExecutionEngine:
                         risk = event_data.get("security_risk", "High")
                         log.warning(f"⚠️ [Proxy Guard] Action required/blocked -> Tool: {tool_name}, Risk: {risk}")
 
-                    # 컨텐츠 스트리밍
                     content = event_data.get("content", "")
                     if content:
                         self.on_stream(content)
                         
-                    # 종료 조건 (서버에서 대화 종료 시그널 전송 시)
                     if event_data.get("event_type") == "conversation_ended":
                         break
                         
@@ -298,7 +292,6 @@ class LoopExecutor(GanNode):
     async def on_run_conversation(self, message: Message):
         instruction = getattr(message, 'instruction', "")
         settings = getattr(message, 'settings', None)
-        
         if not settings or not settings.llm:
             log.error(f"[{self.name}] Execution failed: Missing configured primitives.")
             return
@@ -309,7 +302,6 @@ class LoopExecutor(GanNode):
     async def _route_execution(self, instruction: str, settings: Any):
         """@desc: Routes the compiled instruction to the appropriate execution strategy engine."""
         is_proxy = isinstance(settings.llm, dict) and settings.llm.get("is_proxy") is True
-        
         def emit_stream(chunk: str):
             self.main_loop.call_soon_threadsafe(self.post_message, LLMEventMessage(chunk))
             
@@ -320,9 +312,7 @@ class LoopExecutor(GanNode):
             else:
                 log.info(f"[{self.name}] 💻 [Local Mode] Deploying isolated async engine loop.")
                 engine = LocalExecutionEngine(instruction, settings, emit_stream)
-                
             cost = await engine.execute()
-            
             log.info(f"[{self.name}] Execution converged (Cost: {cost}).")
             self.post_message(TaskCompletedMessage(cost))
             

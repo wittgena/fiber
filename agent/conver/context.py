@@ -1,6 +1,4 @@
 # agent.conver.context
-## @lineage: actor.conver.context
-## @lineage: topos.agent.conver.context
 import warnings
 from collections.abc import Mapping
 from pathlib import Path
@@ -109,8 +107,6 @@ class ConvContext(ProtoConv):
     @property
     def workspace(self) -> SandboxWorkspace: return self._workspace
     
-    # [수정] @property def ator(self) 완전 삭제 (Decoupling 완성)
-    
     @property
     def conversation_stats(self): return self._state.stats
 
@@ -122,9 +118,6 @@ class ConvContext(ProtoConv):
             stacklevel=3
         )
 
-    # ---------------------------------------------------
-    # [A] 비동기 전환된 제어 메서드들 (Async Wrappers)
-    # ---------------------------------------------------
     async def run(self) -> None:
         self._warn_deprecation("run", "ExecutionController")
         await self._controller.run()
@@ -138,9 +131,6 @@ class ConvContext(ProtoConv):
         self._warn_deprecation("switch_profile", "EngineContextAdapter")
         await self._engine.switch_profile(profile_name)
 
-    # ---------------------------------------------------
-    # [B] 동기 유지 제어 메서드들 (Sync Wrappers)
-    # ---------------------------------------------------
     def send_message(self, message: str | Message, sender: str | None = None) -> None:
         self._warn_deprecation("send_message", "AgentCommunicator")
         self._communicator.send_message(message, sender)

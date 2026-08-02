@@ -10,7 +10,7 @@ from pydantic import (
 )
 from pydantic.fields import FieldInfo
 
-from agent.runtime.prompt import PromptContext
+from agent.resolver.context import PromptContext
 
 from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel

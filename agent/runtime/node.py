@@ -1,7 +1,4 @@
 # agent.runtime.node
-## @lineage: actor.runtime.node
-## @lineage: topos.agent.runtime.node
-## @lineage: topos.flow.graph.node
 import os
 from pydantic import SecretStr
 
@@ -9,12 +6,11 @@ from agent.runtime.scope.config import AgentConfig
 from engine.driver.llm.model import LLMModel
 from engine.driver.disc.tool import Tool
 
-from phase.executor.flow.event import AgentConfigured
-
 from arch.topos.node.gan import Message, GanNode
+from phase.executor.flow.event import AgentConfigured
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("node.engine")
+log = get_emitter("runtime.node")
 
 LOCAL_MODEL = os.getenv("LLAMA_MODEL_NAME", "openai/gemma-3-1b-it-Q4_K_M.gguf")
 LOCAL_PORT = os.getenv("LLAMA_PORT", "8080")

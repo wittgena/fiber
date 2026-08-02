@@ -1,5 +1,4 @@
 # agent.runtime.space.base
-## @lineage: engine.protocol.atoa.schema.disc.workspace
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Annotated, Any

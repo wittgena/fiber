@@ -1,5 +1,4 @@
 # engine.driver.disc.ator
-## @lineage: engine.protocol.atoa.schema.disc.ator
 from __future__ import annotations
 import re
 import json
@@ -10,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.runtime.prompt import PromptContext
+from agent.resolver.context import PromptContext
 from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 

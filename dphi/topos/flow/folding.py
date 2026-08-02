@@ -1,25 +1,20 @@
 # dphi.topos.flow.folding
-## @lineage: topos.flow.folding
 import asyncio
 import json
 from typing import Dict, Any, Optional, List, Tuple
 
 from agent.runtime.executor.loop import LoopExecutor
 from agent.runtime.node import RuntimeNode
+from agent.runtime.space.manager import SpaceNode
 
 from arch.model.surge.blueprint import SurgeBlueprint
 from arch.contract.gov.flow import PhaseFlow, FlowState
 from arch.model.contract.graph import EntryNode
 
 from arch.topos.node.gan import Message, GanNode
-from arch.topos.space.organizer import SpaceNode
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("bound.folding")
-
-# ==========================================
-# 1. Spatial Boundaries (경계 및 라우팅)
-# ==========================================
 
 class Bound:
     def __init__(self, broker: Any):
@@ -54,7 +49,6 @@ class Bound:
 
     async def emit(self, target_id: str, flow: PhaseFlow, ctx: FlowState) -> bool:
         raise NotImplementedError
-
 
 class LocalBound(Bound):
     def __init__(self, local_registry: Dict[str, Any], broker: Any):
