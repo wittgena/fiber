@@ -9,12 +9,11 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 from mesh.model.info import get_features
-from mesh.bound.param.optional import DriverParamNormalizer
 from mesh.bound.exception.mapping import map_provider_exception
 from mesh.bound.exception.types import LLMNoResponseError
 from mesh.cost.tracker.metric import MetricsSnapshot
 
-from runtime.client.completion import acompletion as brane_acompletion
+from runtime.client.entry import acompletion as brane_acompletion
 from runtime.stream.wrapper import StreamWrapper
 from runtime.client.param import (
     ModelResponseStream, 
@@ -158,12 +157,7 @@ class DriverIO:
             if v is not None:
                 raw_intent[k] = v
 
-        call_kwargs = DriverParamNormalizer.normalize(
-            model=driver.model,
-            raw_params=raw_intent,
-            has_tools=has_tools_flag
-        )
-
+        call_kwargs = {k: v for k, v in raw_intent.items() if v is not None}
         assert driver._observer is not None, "DriverObserver is not initialized."
         telemetry_ctx: dict[str, Any] = {"context_window": driver.max_input_tokens or 0}
         
