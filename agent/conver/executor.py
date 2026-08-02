@@ -1,37 +1,29 @@
 # agent.conver.executor
 import json
 import asyncio
-from collections.abc import Mapping
 from pathlib import Path
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from agent.atoa.conv.message import Message, TextContent
+from agent.atoa.context.state import ConversationState
 from agent.atoa.schema.disc.action import Action, Observation
-
-from watcher.plane.observer.span import observe
-from watcher.plane.emitter import get_emitter
-
-from agent.atoa.conv.parser.render import render_template
 from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.event.llm.action import ActionEvent
 from agent.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from agent.atoa.event.llm.system import SystemPromptEvent
-
 from agent.atoa.event.conv import ConversationErrorEvent, PauseEvent
 from agent.conver.status import ConverStatus
-from mesh.bound.exception.types import ConversationRunError
-
-from phi.driver.llm.model import LLMModel
 from agent.action.factory import CoreAction
 
+from mesh.bound.exception.types import ConversationRunError
 from topos.state.command import TransitionStatus
-from agent.atoa.context.state import ConversationState
-from phi.driver.llm.facade import MessageBuilder, LLMFacade
+from topos.state.store.log import LogStore
 
 from arch.xor.store.file import LocalFileStore
-from topos.state.store.log import LogStore
 from arch.model.payload import StreamPayloadAdapter
-from arch.topos.tunnel.factory import TunnelFactory, UniversalFacade
+from arch.topos.tunnel.factory import TunnelFactory
+from watcher.plane.observer.span import observe
+from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from agent.conver.context import ConvContext
@@ -44,74 +36,9 @@ MAX_ABSOLUTE_ITERATIONS = 7
 MAX_CONSECUTIVE_TIMEOUTS = 3  # 연속 타임아웃 허용치
 
 
-class AgentSessionManager:
-    """
-    @desc: Manages metadata associated with the conversation state.
-           Broadcasts control commands via Tunnel (Redis) instead of directly controlling the Agent.
-    """
-    def __init__(self, conv: convType):
-        self.conv = conv
-
-    async def switch_profile(self, profile_name: str) -> None:
-        tunnel = await TunnelFactory.get_default()
-        conv_id_str = str(self.conv.id)
-        control_channel = f"agent_control:{conv_id_str}"
-        command_payload = {
-            "command": "switch_profile",
-            "profile_name": profile_name,
-            "conversation_id": conv_id_str
-        }
-        
-        await tunnel.publish(control_channel, json.dumps(command_payload))
-        log.info(f"[SessionManager] Requested Agent profile switch to: {profile_name} via {control_channel}")
-
-
-class AgentSidecar:
-    def __init__(self, conv: convType, session_manager: AgentSessionManager):
-        self.conv = conv
-        self.session = session_manager
-
-    def _get_fallback_llm(self) -> LLMModel:
-        registry = getattr(self.conv, "llm_registry", None)
-        if registry:
-            return registry.get_default()
-        
-        config_llm = self.conv.state.agent_config.get("llm") if hasattr(self.conv.state, "agent_config") else None
-        if config_llm and isinstance(config_llm, dict):
-            return LLMModel(**config_llm)
-        return LLMModel(model="gpt-4o") 
-
-    def ask(self, question: str) -> str:
-        template_dir = Path(__file__).parent.parent.parent / "context" / "prompts" / "templates"
-        question_text = render_template(str(template_dir), "ask_agent_template.j2", question=question)
-
-        user_message = Message(role="user", content=[TextContent(text=question_text)])
-        messages = MessageBuilder.prepare_llm_messages(
-            self.conv.state.events, additional_messages=[user_message]
-        )
-
-        llm_to_use = self._get_fallback_llm().model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
-        available_tools = list(getattr(self.conv, "tools", {}).values())
-
-        response = LLMFacade.make_completion(
-            llm=llm_to_use, 
-            messages=messages, 
-            tools=available_tools
-        )
-        
-        message = response.message
-        if message.content and len(message.content) > 0:
-            for content in message.content:
-                if isinstance(content, TextContent):
-                    return content.text
-
-        raise Exception("Failed to generate answer via Sidecar")
-
 class Conver:
     def __init__(self, conversation: convType):
         self.conv = conversation
-        self.session = AgentSessionManager(self.conv)
-        self.sidecar = AgentSidecar(self.conv, self.session)
 
     @observe(name="conver.run")
     async def run(self) -> None:
@@ -171,7 +98,7 @@ class Conver:
                     )
                     consecutive_timeouts = 0  # 성공 시 카운터 초기화
                 except (TimeoutError, ConnectionError) as te:
-                    # [개선 1] 소켓 레벨의 타임아웃/연결 예외를 삼켜 크래시 방지
+                    # 소켓 레벨의 타임아웃/연결 예외를 삼켜 크래시 방지
                     log.warning(f"[ConvRunner] Redis stream consume timed out (Socket Level): {te}")
                     consecutive_timeouts += 1
                 except Exception as e:
@@ -216,7 +143,7 @@ class Conver:
     async def _process_agent_decision(self, data: dict) -> None:
         """Parses the Agent's intent, updates the state, and executes tools."""
         decision_type = data.get("type")
-        telemetry = data.get("_telemetry", {})  # [개선 3] 텔레메트리 획득
+        telemetry = data.get("_telemetry", {})
         
         if decision_type == "action":
             action_event = ActionEvent.model_validate(data.get("event_payload"))
@@ -253,7 +180,6 @@ class Conver:
             sys_event = SystemPromptEvent.model_validate(data.get("event_payload"))
             self.conv._on_event(sys_event)
             
-        # [개선 2] 명시적 error 이벤트 처리 추가
         elif decision_type == "error":
             try:
                 error_event = AgentErrorEvent.model_validate(data.get("event_payload", {}))
@@ -265,7 +191,6 @@ class Conver:
             self.conv.state.apply(TransitionStatus(new_status=new_status, reason="Agent reported an error."))
             
         elif decision_type == "finish":
-            # [개선 3] Rupture(비정상 강제 종료)와 일반 종료 구분
             if telemetry.get("rupture"):
                 payload = data.get("event_payload", {})
                 reason = payload.get("error", "Agent execution forcibly ruptured (e.g., Livelock/Tension).") if isinstance(payload, dict) else str(payload)

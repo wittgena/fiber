@@ -24,7 +24,7 @@ from agent.atoa.event.llm.observation import ObservationEvent, UserRejectObserva
 from agent.conver.status import ConverStatus
 from agent.atoa.schema.llm.response import LLMResponse
 
-from phi.loop.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from phi.driver.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
 from phi.loop.step import StepHandler, StepContext
 from phi.loop.tension import TensionHandler
 from phi.loop.graph.eval import EvalReflector

@@ -54,7 +54,10 @@ class ToolCallHandler(StepHandler):
         if not message.tool_calls or len(message.tool_calls) == 0:
             return False
 
-        thought_content = [c for c in message.content if isinstance(c, TextContent)]
+        # [안전 보강] message.content가 None일 경우 빈 리스트로 처리하여 순회 에러(TypeError) 방지
+        safe_content = message.content if isinstance(message.content, list) else []
+        thought_content = [c for c in safe_content if isinstance(c, TextContent)]
+        
         action_events: list[ActionEvent] = []
         
         for i, tool_call in enumerate(message.tool_calls):
@@ -77,6 +80,7 @@ class ToolCallHandler(StepHandler):
         for action in action_events:
             await on_event(action)
 
+        # 레거시 이벤트 순서 보장을 위해 기존 위치 유지
         token_event = activator._maybe_emit_vllm_tokens(llm_response)
         if token_event:
             await on_event(token_event)
@@ -94,8 +98,12 @@ class TextResponseHandler(StepHandler):
             or message.reasoning_content is not None
             or (message.thinking_blocks and len(message.thinking_blocks) > 0)
         )
-        has_content = any(isinstance(c, TextContent) and c.text.strip() for c in message.content)
+        
+        # [안전 보강] Iterable 보장
+        safe_content = message.content if isinstance(message.content, list) else []
+        has_content = any(isinstance(c, TextContent) and c.text.strip() for c in safe_content)
 
+        # 레거시 위상(Topology) 보장을 위해 빈 메시지도 무조건 emit
         msg_event = MessageEvent(
             source="activator",
             llm_message=message,
@@ -103,6 +111,8 @@ class TextResponseHandler(StepHandler):
         )
 
         await on_event(msg_event)
+        
+        # 레거시 이벤트 순서 보장
         token_event = activator._maybe_emit_vllm_tokens(llm_response)
         if token_event:
             await on_event(token_event)
@@ -120,4 +130,5 @@ class TextResponseHandler(StepHandler):
                 ),
             )
             await on_event(nudge)
+            
         return True

@@ -1,5 +1,4 @@
 # topos.state.adapter
-## @lineage: agent.conver.state.adapter
 import json
 from pathlib import Path
 from collections.abc import Mapping
@@ -28,11 +27,14 @@ from phi.security.analyzer import SecurityAnalyzerBase
 from phi.security.confirm import ConfirmationPolicyBase
 from phi.security.confirm import NeverConfirm
 
-from agent.conver.executor import Conver, AgentSessionManager, AgentSidecar
+from agent.conver.executor import Conver
 from arch.topos.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
-
 from arch.topos.tunnel.factory import TunnelFactory
+
+# LLM Facade for async ask (내재화된 Sidecar 의존성)
+from phi.driver.llm.facade import MessageBuilder, LLMFacade
+from agent.atoa.conv.parser.render import render_template
 
 log = get_emitter(__name__)
 
@@ -40,11 +42,10 @@ class AgentCommunicator:
     """
     @implements: AgentCommunicationProtocol
     @desc: 외부 API(웹 소켓, REST)나 UI 컴포넌트가 에이전트와 대화하기 위한 입출력 전용 어댑터.
-           기존 Conv의 send_message 및 ask 로직을 완전히 흡수하여 독자적으로 수행합니다.
+           불필요한 Sidecar 래퍼를 제거하고 자체적으로 메시징 및 비동기 질의(ask)를 처리합니다.
     """
     def __init__(self, context: ProtoConv):
         self._context = context
-        self._sidecar = AgentSidecar(context, AgentSessionManager(context))
 
     @property
     def id(self) -> ConversationID:
@@ -78,16 +79,45 @@ class AgentCommunicator:
         )
         self._dispatch(user_msg_event)
 
-    def ask(self, question: str) -> str:
-        """Sidecar는 Gov 로컬에서 독립 실행되므로 동기 호출을 유지합니다."""
-        return self._sidecar.ask(question)
+    async def ask(self, question: str) -> str:
+        """
+        @desc: 메인 루프를 방해하지 않고 현재 상태를 기반으로 LLM에 비동기 질문을 던집니다.
+               (기존 Sidecar의 역할을 내부로 흡수하고 await 누락 버그를 수정함)
+        """
+        registry = getattr(self._context, "llm_registry", None)
+        base_llm = registry.get_default() if registry else LLMModel(model="gpt-4o")
+        
+        llm_to_use = base_llm.model_copy(update={"usage_id": "ask-agent-llm"}, deep=True)
+        available_tools = list(getattr(self._context, "tools", {}).values())
+
+        template_dir = Path(__file__).parent.parent.parent / "context" / "prompts" / "templates"
+        question_text = render_template(str(template_dir), "ask_agent_template.j2", question=question)
+
+        user_message = Message(role="user", content=[TextContent(text=question_text)])
+        messages = MessageBuilder.prepare_llm_messages(
+            self._context.state.events, additional_messages=[user_message]
+        )
+
+        response = await LLMFacade.make_completion(
+            llm=llm_to_use, 
+            messages=messages, 
+            tools=available_tools
+        )
+        
+        message = response.message
+        if message.content and len(message.content) > 0:
+            for content in message.content:
+                if isinstance(content, TextContent):
+                    return content.text
+
+        raise Exception("Failed to generate answer via AgentCommunicator.ask")
 
 
 class ExecutionController:
     """
     @implements: ExecutionControlProtocol
     @desc: 스케줄러, 백그라운드 워커, 메인 루프 제어기가 대화를 실행하고 중지하기 위한 어댑터.
-           실제 루프 실행은 이전에 분리했던 Conver 클래스에 위임합니다.
+           실제 루프 실행은 순수 실행기로 정제된 Conver 클래스에 위임합니다.
     """
     def __init__(self, context: ProtoConv):
         self._context = context
@@ -104,13 +134,12 @@ class ExecutionController:
             return
         self._context._cleanup_initiated = True
         
-        # Obsevability span 종료 시도
+        # Observability span 종료 시도
         try:
             self._context._end_observability_span()
         except AttributeError:
             pass
             
-        # [핵심 변경] self._context.id.hex -> str(self._context.id) 로 안전하게 변환
         conv_id_str = str(self._context.id)
         
         try:
@@ -162,6 +191,7 @@ class SecurityManager:
         from agent.atoa.context.state import ConversationState
         state = self._context.state
         pending_actions = ConversationState.get_unmatched_actions(state.events)
+        
         if state.execution_status == ConverStatus.WAITING_FOR_USER:
             state.apply(TransitionStatus(new_status=ConverStatus.IDLE, reason="User rejected pending action"))
 
@@ -192,11 +222,10 @@ class EngineContextAdapter:
     """
     @implements: EngineContextProtocol
     @desc: Activator 등 내부 엔진 코어 레이어가 상태를 깊게 조작하기 위한 브릿지.
+           SessionManager를 제거하고 프로필 전환 등의 제어 로직을 직접 구현합니다.
     """
     def __init__(self, context: ProtoConv):
         self._context = context
-        self._session_manager = AgentSessionManager(context)
-        self._sidecar = AgentSidecar(context, self._session_manager)
 
     @property
     def state(self) -> ConvStateProtocol:
@@ -207,10 +236,18 @@ class EngineContextAdapter:
         return self._context.conversation_stats
 
     async def switch_profile(self, profile_name: str) -> None:
-        await self._session_manager.switch_profile(profile_name)
+        """기존 SessionManager의 역할을 직접 흡수하여 Tunnel 발행 수행"""
+        tunnel = await TunnelFactory.get_default()
+        conv_id_str = str(self._context.id)
+        control_channel = f"agent_control:{conv_id_str}"
+        command_payload = {
+            "command": "switch_profile",
+            "profile_name": profile_name,
+            "conversation_id": conv_id_str
+        }
+        
+        await tunnel.publish(control_channel, json.dumps(command_payload))
+        log.info(f"[EngineContextAdapter] Requested Agent profile switch to: {profile_name} via {control_channel}")
 
-    def generate_title(self, llm: LLMModel | None = None, max_length: int = 50) -> str:
-        return self._sidecar.generate_title(llm, max_length)
-    
     def ensure_agent_ready(self) -> None:
         pass
