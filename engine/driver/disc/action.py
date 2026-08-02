@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from pydantic import ConfigDict, Field, create_model
 from rich.text import Text
 
-from engine.protocol.atoa.conv.message import ImageContent, TextContent
-from engine.protocol.atoa.conv.message import content_to_str
+from engine.atoa.conv.message import ImageContent, TextContent
+from engine.atoa.conv.message import content_to_str
 
 from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from agent.conver.status import ConverStatus
+from agent.state.context.status import ConverStatus
 from engine.driver.security.confirm import ConfirmationPolicyBase
 
 @dataclass(kw_only=True)

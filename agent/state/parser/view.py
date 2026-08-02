@@ -1,21 +1,4 @@
 # agent.state.parser.view
-## @lineage: agent.topos.parser.view
-## @lineage: agent.topos.state.parser.view
-## @lineage: actor.topos.state.parser.view
-## @lineage: topos.state.parser.view
-## @lineage: agent.conver.state.parser.view
-## @lineage: phi.conver.state.parser.view
-## @lineage: swarm.mesh.parser.view
-## @lineage: swarm.mesh.conv.parser.view
-## @lineage: swarm.mesh.engine.conv.parser.view
-## @lineage: mesh.engine.conv.parser.view
-## @lineage: gov.conv.parser.view
-## @lineage: gov.atoa.parser.conv.view
-## @lineage: bound.parser.atoa.conv.view
-## @lineage: agent.conv.view
-## @lineage: atoa.agent.conv.view
-## @lineage: atoa.conv.view
-## @lineage: atoa.gov.context.message.view
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import pairwise
@@ -24,10 +7,10 @@ from collections.abc import Sequence
 from typing import overload
 from pydantic import BaseModel, Field
 
-from engine.protocol.atoa.conv.event import Event, LLMConvertibleEvent
-from engine.protocol.atoa.conv.event import EventID, ToolCallID
-from engine.protocol.atoa.event.llm.action import ActionEvent
-from engine.protocol.atoa.event.llm.observation import ObservationBaseEvent
+from engine.atoa.conv.event import Event, LLMConvertibleEvent
+from engine.atoa.conv.event import EventID, ToolCallID
+from engine.atoa.event.llm.action import ActionEvent
+from engine.atoa.event.llm.observation import ObservationBaseEvent
 
 from watcher.plane.emitter import get_logger
 

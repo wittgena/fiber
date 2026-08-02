@@ -3,7 +3,7 @@
 ## @lineage: phi.executor.engine.builder.chain
 ## @lineage: phi.engine.builder.chain
 from typing import Callable
-from engine.protocol.tool.terminal import TerminalObservation
+from agent.protocol.tool.terminal import TerminalObservation
 from engine.terminal.context import (
     ExecutionContext,
     ExecutionEngine,

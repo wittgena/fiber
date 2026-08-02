@@ -22,11 +22,11 @@ from runtime.client.param import (
     ChatCompletionToolParam
 )
 
-from engine.protocol.llm.response import LLMResponse
-from engine.protocol.atoa.conv.message import Message
-from engine.protocol.atoa.conv.types import TokenCallbackType, ConversationTokenCallbackType
-from engine.protocol.atoa.conv.event import Event, LLMConvertibleEvent
-from engine.protocol.action.builder import ActionDefinition
+from agent.protocol.llm.response import LLMResponse
+from engine.atoa.conv.message import Message
+from engine.atoa.conv.types import TokenCallbackType, ConversationTokenCallbackType
+from engine.atoa.conv.event import Event, LLMConvertibleEvent
+from engine.atoa.action.builder import ActionDefinition
 
 from agent.state.parser.view import View
 from engine.driver.llm.model import LLMModel

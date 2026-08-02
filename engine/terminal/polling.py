@@ -13,7 +13,7 @@ import traceback
 import bashlex
 from bashlex.errors import ParsingError
 
-from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
+from agent.protocol.tool.terminal import TerminalAction, TerminalObservation
 from arch.xor.bridge.tool.terminal import CmdOutputMetadata
 from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from engine.terminal.context import ExecutionEngine, ExecutionContext

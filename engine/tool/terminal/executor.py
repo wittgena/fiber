@@ -7,9 +7,9 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from engine.protocol.executor import ActionExecutor
-from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
-from agent.conver.protocol import ToolExecutionContextProtocol
+from agent.protocol.executor import ActionExecutor
+from agent.protocol.tool.terminal import TerminalAction, TerminalObservation
+from agent.state.context.protocol import ToolExecutionContextProtocol
 from agent.runtime.builder.chain import ChainBuilder
 from agent.runtime.builder.session import _is_tmux_available, create_terminal_session
 from engine.terminal.session import TerminalSession
@@ -17,7 +17,7 @@ from engine.terminal.context import ExecutionContext, ExecutionEngine
 from engine.terminal.polling import PollingExecutionEngine
 from engine.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from engine.protocol.atoa.conv.message import TextContent
+from engine.atoa.conv.message import TextContent
 
 from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from arch.xor.bridge.tool.terminal import CMD_OUTPUT_PS1_END

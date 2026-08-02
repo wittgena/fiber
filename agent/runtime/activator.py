@@ -14,22 +14,22 @@ from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
 from engine.driver.disc.action import Action, Observation
-from engine.protocol.atoa.conv.event import Event
-from engine.protocol.atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
+from engine.atoa.conv.event import Event
+from engine.atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
-from engine.protocol.atoa.conv.parser.action import format_context_exceeded_message, ActionParser
+from engine.atoa.conv.parser.action import format_context_exceeded_message, ActionParser
 
 from engine.driver.disc.ator import Ator
-from engine.protocol.atoa.event.llm.action import ActionEvent
-from engine.protocol.atoa.event.llm.message import MessageEvent
-from engine.protocol.atoa.event.llm.system import SystemPromptEvent, TokenEvent
-from engine.protocol.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from agent.conver.status import ConverStatus
-from engine.protocol.llm.response import LLMResponse
+from engine.atoa.event.llm.action import ActionEvent
+from engine.atoa.event.llm.message import MessageEvent
+from engine.atoa.event.llm.system import SystemPromptEvent, TokenEvent
+from engine.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from agent.state.context.status import ConverStatus
+from agent.protocol.llm.response import LLMResponse
 
 from engine.driver.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
-from engine.protocol.step import StepHandler, StepContext
-from engine.protocol.tension import TensionHandler
+from agent.protocol.step import StepHandler, StepContext
+from agent.protocol.tension import TensionHandler
 from agent.runtime.executor.graph.eval import EvalReflector
 
 from agent.runtime.executor.graph.organizer import DagOrganizer

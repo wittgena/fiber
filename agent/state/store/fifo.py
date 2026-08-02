@@ -1,22 +1,4 @@
 # agent.state.store.fifo
-## @lineage: agent.topos.store.fifo
-## @lineage: agent.topos.state.store.fifo
-## @lineage: actor.topos.state.store.fifo
-## @lineage: topos.state.store.fifo
-## @lineage: agent.conver.state.store.fifo
-## @lineage: phi.conver.state.store.fifo
-## @lineage: swarm.mesh.store.fifo
-## @lineage: swarm.mesh.conv.store.fifo
-## @lineage: mesh.store.fifo
-## @lineage: gov.store.fifo
-## @lineage: eco.gov.store.fifo
-## @lineage: atoa.gov.store.fifo
-## @lineage: agent.gov.store.fifo
-## @lineage: bound.xor.store.fifo
-## @lineage: xor.store.fifo
-## @lineage: ops.xor.store.fifo
-## @lineage: meta.xor.store.fifo
-## @lineage: gov.conv.store.fifo
 import threading
 import time
 from collections import deque

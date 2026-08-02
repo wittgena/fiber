@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 from func_timeout import func_timeout, FunctionTimedOut
 
-from engine.protocol.executor import ActionExecutor
-from engine.protocol.tool.schema.browser import (
+from agent.protocol.executor import ActionExecutor
+from agent.protocol.tool.schema.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,
@@ -27,7 +27,7 @@ from watcher.plane.emitter import get_logger
 from engine.tool.browser.server import BrowserServer 
 
 if TYPE_CHECKING:
-    from agent.conver.protocol import ToolExecutionContextProtocol
+    from agent.state.context.protocol import ToolExecutionContextProtocol
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0

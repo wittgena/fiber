@@ -7,13 +7,13 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Final, Protocol, runtime_checkable
 import threading
 
-from engine.protocol.atoa.event.llm.observation import AgentErrorEvent
+from engine.atoa.event.llm.observation import AgentErrorEvent
 from agent.state.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
-    from engine.protocol.atoa.conv.event import Event
-    from engine.protocol.atoa.event.llm_convertible import ActionEvent
-    from engine.protocol.action.builder import DeclaredResources, ActionDefinition
+    from engine.atoa.conv.event import Event
+    from engine.atoa.event.llm_convertible import ActionEvent
+    from engine.atoa.action.builder import DeclaredResources, ActionDefinition
 
 from watcher.plane.emitter import get_logger
 

@@ -10,19 +10,19 @@
 from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
-from engine.protocol.atoa.conv.types import ConversationID, ConversationTags, ConversationCallbackType
+from engine.atoa.conv.types import ConversationID, ConversationTags, ConversationCallbackType
 from agent.runtime.space.base import BaseWorkspace
-from engine.protocol.atoa.conv.event import Event
-from engine.protocol.atoa.conv.event import EventID
+from engine.atoa.conv.event import Event
+from engine.atoa.conv.event import EventID
 
 from engine.driver.security.confirm import ConfirmationPolicyBase
-from engine.protocol.atoa.context.stats import ConversationStats
+from engine.atoa.context.stats import ConversationStats
 from agent.state.store.log import LogStore
 
 from agent.state.command import StateCommand
 
 if TYPE_CHECKING:
-    from agent.conver.status import ConverStatus
+    from agent.state.context.status import ConverStatus
     from engine.driver.disc.ator import Ator
     from arch.topos.resolver.secret import SecretRegistry
     from engine.driver.security.analyzer import SecurityAnalyzerBase

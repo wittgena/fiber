@@ -9,8 +9,8 @@ from typing import Dict, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
-from engine.protocol.action.factory import CoreAction
-from engine.protocol.atoa.conv.message import Message, TextContent
+from engine.atoa.action.factory import CoreAction
+from engine.atoa.conv.message import Message, TextContent
 
 from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
 from arch.topos.resolver.secret import SecretSource, SecretValue

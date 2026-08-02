@@ -34,7 +34,7 @@ from arch.xor.bridge.mark.depre import warn_deprecated
 from engine.driver.config.vendor import VendorConfig
 from engine.driver.strategy.fallback import FallbackStrategy
 from engine.driver.llm.factory import DriverFactory
-from engine.driver.observer.flow import DriverObserver
+from engine.driver.observer import DriverObserver
 from phase.bind.resolver import find_current_self
 
 SELF_ROOT = find_current_self()

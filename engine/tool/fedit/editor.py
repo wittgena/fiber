@@ -23,10 +23,10 @@ import tempfile
 from pathlib import Path
 from typing import get_args
 from binaryornot.check import is_binary
-from engine.protocol.atoa.conv.message import ImageContent, TextContent
+from engine.atoa.conv.message import ImageContent, TextContent
 from watcher.plane.emitter import get_logger
 from arch.xor.bridge.mark.truncate import maybe_truncate
-from engine.protocol.tool.fedit import (
+from agent.protocol.tool.fedit import (
     CommandLiteral,
     FileEditorObservation,
 )

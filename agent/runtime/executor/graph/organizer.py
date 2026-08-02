@@ -7,18 +7,18 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Set
 
-from engine.protocol.atoa.conv.message import Message, TextContent
+from engine.atoa.conv.message import Message, TextContent
 
-from engine.protocol.atoa.event.llm.message import MessageEvent
-from agent.conver.protocol import ProtoConv
+from engine.atoa.event.llm.message import MessageEvent
+from agent.state.context.protocol import ProtoConv
 
 from engine.driver.llm.handler import (
     LLMInvocationHandler, 
     ToolCallHandler, 
     TextResponseHandler, 
 )
-from engine.protocol.step import StepHandler, StepContext
-from engine.protocol.tension import TensionHandler
+from agent.protocol.step import StepHandler, StepContext
+from agent.protocol.tension import TensionHandler
 from agent.runtime.executor.graph.eval import EvalReflector
 
 from arch.topos.node.state.vocab import SigType, SpecKey

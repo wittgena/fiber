@@ -1,30 +1,12 @@
 # agent.state.store.log
-## @lineage: agent.topos.store.log
-## @lineage: agent.topos.state.store.log
-## @lineage: actor.topos.state.store.log
-## @lineage: topos.state.store.log
-## @lineage: agent.conver.state.store.log
-## @lineage: phi.conver.state.store.log
-## @lineage: swarm.mesh.store.log
-## @lineage: swarm.mesh.conv.store.log
-## @lineage: mesh.store.log
-## @lineage: gov.store.log
-## @lineage: eco.gov.store.log
-## @lineage: atoa.gov.store.log
-## @lineage: agent.gov.store.log
-## @lineage: bound.xor.store.log
-## @lineage: xor.store.log
-## @lineage: ops.xor.store.log
-## @lineage: meta.xor.store.log
-## @lineage: gov.conv.store.log
 import re
 from abc import ABC, abstractmethod
 import operator
 from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
-from engine.protocol.atoa.conv.event import Event
-from engine.protocol.atoa.conv.event import EventID
+from engine.atoa.conv.event import Event
+from engine.atoa.conv.event import EventID
 from agent.state.store.base import EventsListBase
 
 from arch.xor.store.file import FileStore
@@ -220,11 +202,7 @@ class LogStore(EventsListBase):
         return self._length
 
     def _path(self, idx: int, *, event_id: EventID | None = None) -> str:
-        return f"{self._dir}/{
-            EVENT_FILE_PATTERN.format(
-                idx=idx, event_id=event_id or self._idx_to_id[idx]
-            )
-        }"
+        return f"{self._dir}/{EVENT_FILE_PATTERN.format(idx=idx, event_id=event_id or self._idx_to_id[idx])}"
 
     def _scan_and_build_index(self) -> int:
         try:

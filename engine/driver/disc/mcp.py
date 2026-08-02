@@ -9,7 +9,7 @@ import mcp_types
 from pydantic import Field
 from rich.text import Text
 
-from engine.protocol.atoa.conv.message import ImageContent, TextContent
+from engine.atoa.conv.message import ImageContent, TextContent
 from engine.driver.disc.action import Action, Observation
 from watcher.plane.emitter import get_emitter
 

@@ -2,11 +2,11 @@
 ## @lineage: engine.protocol.graph.eval
 ## @lineage: phi.agent.graph.eval
 ## @lineage: phi.loop.graph.eval
-from engine.protocol.atoa.event.llm.action import ActionEvent
-from engine.protocol.atoa.event.llm.message import MessageEvent
-from engine.protocol.atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from engine.protocol.step import StepHandler
-from engine.protocol.atoa.conv.message import Message, TextContent
+from engine.atoa.event.llm.action import ActionEvent
+from engine.atoa.event.llm.message import MessageEvent
+from engine.atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from agent.protocol.step import StepHandler
+from engine.atoa.conv.message import Message, TextContent
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

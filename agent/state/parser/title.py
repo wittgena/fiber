@@ -1,19 +1,11 @@
 # agent.state.parser.title
-## @lineage: agent.topos.parser.title
-## @lineage: agent.topos.state.parser.title
-## @lineage: actor.topos.state.parser.title
-## @lineage: topos.state.parser.title
-"""
-@desc: Module for generating concise, emoji-prefixed conversation titles using an LLM.
-@flow: Extract initial user message -> Build contextual prompt -> Generate title via LLM -> Fallback to text truncation.
-"""
 from collections.abc import Sequence
 
-from engine.protocol.atoa.event.llm.message import MessageEvent
-from engine.protocol.atoa.conv.event import Event
+from engine.atoa.event.llm.message import MessageEvent
+from engine.atoa.conv.event import Event
 from engine.driver.llm.model import LLMModel
 
-from engine.protocol.atoa.conv.message import Message, TextContent
+from engine.atoa.conv.message import Message, TextContent
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

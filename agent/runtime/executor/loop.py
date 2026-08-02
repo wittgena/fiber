@@ -5,14 +5,14 @@ from typing import Optional, Dict, Any, List, Callable
 
 from agent.runtime.space.manager import SandboxWorkspace, SandboxProxy 
 
-from engine.protocol.atoa.conv.event import LLMConvertibleEvent
-from engine.adapter.context import AgentCommunicator, ExecutionController
-from engine.protocol.atoa.context.state import ConversationState
-from engine.protocol.atoa.context.visualizer import ConversationVisualizer
-from engine.protocol.action.factory import CoreAction
+from engine.atoa.conv.event import LLMConvertibleEvent
+from engine.atoa.context.adapter import AgentCommunicator, ExecutionController
+from engine.atoa.context.state import ConversationState
+from engine.atoa.context.visualizer import ConversationVisualizer
+from engine.atoa.action.factory import CoreAction
 
-from engine.protocol.action.resolver import ActionResolver
-from engine.protocol.tool.terminal import TerminalTool
+from engine.atoa.action.resolver import ActionResolver
+from agent.protocol.tool.terminal import TerminalTool
 from agent.runtime.activator import Activator
 from engine.driver.disc.tool import Tool
 

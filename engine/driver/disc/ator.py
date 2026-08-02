@@ -13,13 +13,13 @@ from agent.resolver.context import PromptContext
 from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 
-from engine.protocol.atoa.mcp.client import MCPClient
-from engine.protocol.atoa.mcp.factory import create_mcp_tools
-from engine.protocol.tool.mcp import MCPExecutor
-from engine.protocol.action.builder import ActionDefinition
+from engine.atoa.mcp.client import MCPClient
+from engine.atoa.mcp.factory import create_mcp_tools
+from agent.protocol.tool.mcp import MCPExecutor
+from engine.atoa.action.builder import ActionDefinition
 
-from engine.protocol.action.factory import CoreAction
-from engine.protocol.action.resolver import ActionResolver
+from engine.atoa.action.factory import CoreAction
+from engine.atoa.action.resolver import ActionResolver
 
 from arch.model.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import UniversalFacade
