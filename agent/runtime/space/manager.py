@@ -2,17 +2,15 @@
 import os
 import shutil
 import asyncio
-import platform
-import subprocess
+import io
 import urllib.parse
-import json
 from pathlib import Path
 from typing import Any, Optional
 
 import httpx
 import websockets
 import docker
-from docker.errors import NotFound
+from docker.errors import NotFound, BuildError
 
 from agent.runtime.space.base import BaseWorkspace
 from engine.tool.git.changes import get_git_changes
@@ -33,12 +31,8 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
-# ============================================================================
-# [Constants & Configurations]
-# ============================================================================
 RES_ROOT = resolve_path("res")
 SPACE_DIR = RES_ROOT / "space"
-BUILD_SCRIPT_PATH = SPACE_DIR / "build_custom_image.sh"
 
 CUSTOM_BASE_IMAGE_TAG = "custom-base-image:latest"
 LOCAL_WORKSPACE_NAME = "hands_workspace_local"  # 컨테이너 재사용을 위한 고정 이름
@@ -46,13 +40,10 @@ LOCAL_WORKSPACE_NAME = "hands_workspace_local"  # 컨테이너 재사용을 위�
 PROXY_URL = os.getenv("SANDBOX_SERVER_URL", "http://localhost:8000")
 PROXY_API_KEY = os.getenv("SANDBOX_API_KEY", "dummy-token")
 
-SCRIPT_CONTENT = """#!/bin/bash
-IMAGE_NAME=$1
-echo "Building Docker image: $IMAGE_NAME"
-cat <<EOF | docker build -t "$IMAGE_NAME" -
+# 쉘 스크립트 파일 쓰기를 대체하는 In-memory Dockerfile
+DOCKERFILE_CONTENT = """
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y git python3-pip
-EOF
 """
 
 # ============================================================================
@@ -175,27 +166,42 @@ class SpaceNode(GanNode):
         self.workspace_ref: Optional[str] = None
         self.remote_http_client: Optional[httpx.AsyncClient] = None
 
-    async def _ensure_build_script(self):
-        """@step: Self-healing compilation layer layout mapping"""
-        if not SPACE_DIR.exists():
-            SPACE_DIR.mkdir(parents=True, exist_ok=True)
-        if not BUILD_SCRIPT_PATH.exists():
-            await asyncio.to_thread(BUILD_SCRIPT_PATH.write_text, SCRIPT_CONTENT)
-            BUILD_SCRIPT_PATH.chmod(0o755)
+    def _build_image_sync(self):
+        log.info(f"[{self.name}] [Local] Target footprint missing. Compiling image via Docker SDK... (This may take 1~3 minutes)")
+        f = io.BytesIO(DOCKERFILE_CONTENT.encode('utf-8'))
+        
+        try:
+            # decode=True로 스트림을 받되, 화면에 출력하지 않고 메모리에 캐싱하여 에러 감지에만 사용합니다.
+            build_logs = self.client.api.build(
+                fileobj=f, 
+                rm=True, 
+                tag=CUSTOM_BASE_IMAGE_TAG, 
+                decode=True
+            )
+            
+            for chunk in build_logs:
+                # 에러가 발생한 경우에만 캡처하여 예외를 발생시킵니다.
+                if 'error' in chunk:
+                    raise BuildError(chunk['error'], build_logs)
+                    
+            log.info(f"[{self.name}] [Local] ✅ Image compilation completed successfully.")
+            
+        except BuildError as e:
+            log.error(f"[{self.name}] ❌ Docker build failed: {e}")
+            raise
 
     async def _ensure_docker_image(self):
         """@step: Image signature alignment verification"""
-        await self._ensure_build_script()
+        # Event Loop 블로킹을 막기 위해 디렉토리 생성을 별도 스레드에서 처리
+        await asyncio.to_thread(SPACE_DIR.mkdir, parents=True, exist_ok=True)
+        
         self.client = docker.from_env()
         try:
             await asyncio.to_thread(self.client.images.get, CUSTOM_BASE_IMAGE_TAG)
             log.info(f"[{self.name}] [Local] Baseline image target aligned: {CUSTOM_BASE_IMAGE_TAG}")
         except docker.errors.ImageNotFound:
-            log.warning(f"[{self.name}] [Local] Target footprint missing. Initiating compilation.")
-            await asyncio.to_thread(
-                subprocess.run, [str(BUILD_SCRIPT_PATH), CUSTOM_BASE_IMAGE_TAG],
-                cwd=str(SPACE_DIR), check=True
-            )
+            # Subprocess 쉘 스크립트 호출을 SDK 기반 인메모리 빌드로 교체
+            await asyncio.to_thread(self._build_image_sync)
 
     async def _start_local_workspace(self):
         """## @flow: Image verification -> Check existing -> container run or attach"""
@@ -293,7 +299,6 @@ class SpaceNode(GanNode):
             except Exception:
                 pass
 
-        # [Local Docker Cleanup] - 컨테이너 삭제 안함 (재사용)
         if not self.use_proxy and self.container:
             try:
                 log.info(f"[{self.name}] [Local] Preserving sandbox container ({self.container.short_id}) for future reuse.")

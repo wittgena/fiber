@@ -19,7 +19,6 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")
 
-# [수정됨] Lite 모델의 무한 루프 방지 및 방어적 실행을 위한 System Prompts 정렬
 SYSTEM_PROMPTS = {
     "role": "You are a precise, autonomous execution agent. Your primary purpose is to perfectly execute structural blueprints and complex operational tasks.",
     "execution": "Execution Protocol: Process the Blueprint sequentially. Use the 'terminal' tool to execute the exact commands provided. If a 'file not found' error occurs, use `find $(pwd) -name <filename>` to locate it. NEVER repeat the exact same failed command.",
@@ -95,11 +94,6 @@ class PromptContext(BaseModel):
             return TextContent(text=self.user_message_suffix.strip()), []
         return None
 
-
-# =========================================================================
-# 2. Task Models & Enums
-# =========================================================================
-
 class BlueprintType(Enum):
     SCHEME = "scheme"
     TRANSACTION = "transaction"
@@ -121,11 +115,6 @@ class TraceDomain(Enum):
     DIVERGENCE = "divergence"
     OOM = "oom"
     REPRO = "repro"
-
-
-# =========================================================================
-# 3. Action-Oriented Blueprint Specifications
-# =========================================================================
 
 def build_blueprint(
     topology_name: str, 
@@ -172,8 +161,6 @@ def build_blueprint(
     )
     return blueprint, min_cognitive_score
 
-
-# [수정됨] 위치 독립성(Location-independence) 및 쉘 강건성 추가
 RESOLUTION_SPEC = {
     "resolution_hacking": build_blueprint(
         topology_name="Semantic Resolution Funnel", focus="Resolution Hacking & Architectural Signaling", depth=4, min_cognitive_score=4,
@@ -186,7 +173,6 @@ RESOLUTION_SPEC = {
     )
 }
 
-# [수정됨] Lite 모델이 경로를 찾지 못하고 루프에 빠지는 현상을 차단하기 위해 명령어를 구체화
 SCHEME_SPEC: Dict[SchemeCategory, Tuple[SurgeBlueprint, int]] = {
     SchemeCategory.AGENT: build_blueprint(
         topology_name="agent.cognitive", focus="Cognitive State Validation", depth=2, min_cognitive_score=3,
@@ -226,7 +212,6 @@ SCHEME_SPEC: Dict[SchemeCategory, Tuple[SurgeBlueprint, int]] = {
     )
 }
 
-# [수정됨] 경로 오류 방지 및 파이프라인 안전성 향상
 TRANSACTION_SPEC: Dict[TransactionDomain, Tuple[SurgeBlueprint, int]] = {
     TransactionDomain.CODE_AUDITOR: build_blueprint(
         topology_name="nexus.fiber.scan", focus="Dependency Graph Generation", depth=3, relations="scanned,isolated", min_cognitive_score=3,
@@ -257,7 +242,6 @@ TRANSACTION_SPEC: Dict[TransactionDomain, Tuple[SurgeBlueprint, int]] = {
     )
 }
 
-# [수정됨] 쿠버네티스/도커 명령어가 디렉토리 위치에 영향받지 않도록 조정
 TRACER_SPEC: Dict[TraceDomain, Tuple[SurgeBlueprint, int]] = {
     TraceDomain.DIVERGENCE: build_blueprint(
         topology_name="tracer.kube.divergence", focus="Control Plane Oscillation Audit", depth=4, relations="observed,collapsed", min_cognitive_score=4,
@@ -290,20 +274,12 @@ TRACER_SPEC: Dict[TraceDomain, Tuple[SurgeBlueprint, int]] = {
     )
 }
 
-# =========================================================================
-# 4. Universal Task Resolver
-# =========================================================================
-
 class TaskResolver:
-    """
-    @desc: 요청된 Category와 Type을 기반으로 (SurgeBlueprint, min_cognitive_score) 튜플을 반환합니다.
-    """
     def __init__(self):
         self._schemes: Dict[SchemeCategory, Tuple[SurgeBlueprint, int]] = SCHEME_SPEC
         self._transactions: Dict[TransactionDomain, Tuple[SurgeBlueprint, int]] = TRANSACTION_SPEC
         self._tracers: Dict[TraceDomain, Tuple[SurgeBlueprint, int]] = TRACER_SPEC
         self._resolutions: Dict[str, Tuple[SurgeBlueprint, int]] = RESOLUTION_SPEC
-        
         log.debug("[TaskResolver] Universal Executable Blueprints loaded into memory.")
 
     def resolve(self, category: Union[Enum, str], b_type: BlueprintType) -> Tuple[Optional[SurgeBlueprint], int]:
@@ -316,7 +292,7 @@ class TaskResolver:
             item = self._tracers.get(category)
         elif b_type == BlueprintType.RESOLUTION:
             item = self._resolutions.get(category)
-            
+
         if item:
             return item[0], item[1]
         return None, 1
