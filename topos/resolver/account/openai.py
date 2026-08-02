@@ -1,8 +1,4 @@
 # topos.resolver.account.openai
-## @lineage: topos.bound.resolver.account.openai
-## @lineage: topos.gov.resolver.account.openai
-## @lineage: void.topos.bound.resolver.account.openai
-## @lineage: atoa.agent.config.account.openai
 from __future__ import annotations
 import asyncio
 import platform
@@ -25,7 +21,7 @@ from mesh.bound.secure.cred import CredentialStore, OAuthCredentials, get_creden
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from phi.driver.llm.tensor import Driver
+    from phi.driver.llm.model import LLMModel
 
 SupportedVendor = Literal["openai"]
 logger = get_logger(__name__)
@@ -510,22 +506,7 @@ class OpenAISubscriptionAuth:
         credentials: OAuthCredentials | None = None,
         instructions: str | None = None,
         **llm_kwargs: Any,
-    ) -> Driver:
-        """Create an LLM instance configured for Codex subscription access.
-
-        Args:
-            model: The model to use (must be in OPENAI_CODEX_MODELS).
-            credentials: OAuth credentials to use. If None, uses stored credentials.
-            instructions: Optional instructions for the Codex model.
-            **llm_kwargs: Additional arguments to pass to LLM constructor.
-
-        Returns:
-            An LLM instance configured for Codex access.
-
-        Raises:
-            ValueError: If the model is not supported or no credentials available.
-        """
-
+    ) -> LLMModel:
         if model not in OPENAI_CODEX_MODELS:
             raise ValueError(
                 f"Model '{model}' is not supported for subscription access. "
@@ -562,7 +543,7 @@ class OpenAISubscriptionAuth:
             extra_headers["chatgpt-account-id"] = account_id
 
         # Codex API requires streaming and doesn't support temperature/max_output_tokens
-        llm = Driver(
+        llm = LLMModel(
             model=f"openai/{model}",
             base_url=CODEX_API_ENDPOINT.rsplit("/", 1)[0],
             api_key=creds.access_token,
@@ -579,7 +560,6 @@ class OpenAISubscriptionAuth:
         llm.temperature = None
         return llm
 
-
 async def subscription_login_async(
     vendor: SupportedVendor = "openai",
     model: str = "gpt-5.2-codex",
@@ -587,7 +567,7 @@ async def subscription_login_async(
     open_browser: bool = True,
     skip_consent: bool = False,
     **llm_kwargs: Any,
-) -> Driver:
+) -> LLMModel:
     if vendor != "openai":
         raise ValueError(
             f"Vendor '{vendor}' is not supported. Only 'openai' is supported."
@@ -619,7 +599,7 @@ def subscription_login(
     open_browser: bool = True,
     skip_consent: bool = False,
     **llm_kwargs: Any,
-) -> Driver:
+) -> LLMModel:
     """Synchronous wrapper for subscription_login_async.
 
     See subscription_login_async for full documentation.

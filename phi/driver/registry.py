@@ -6,13 +6,13 @@ from types import MappingProxyType
 from typing import ClassVar, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, ConfigDict
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)
 
 class RegistryEvent(BaseModel):
-    llm: Driver
+    llm: LLMModel
     model_config: ClassVar[ConfigDict] = ConfigDict(
         arbitrary_types_allowed=True,
     )
@@ -28,7 +28,7 @@ class LLMRegistry:
     ):
         self.registry_id = str(uuid4())
         self.retry_listener = retry_listener
-        self._usage_to_llm: dict[str, Driver] = {}
+        self._usage_to_llm: dict[str, LLMModel] = {}
         self._metrics_ids: set[int] = set()
         self.subscriber: Callable[[RegistryEvent], None] | None = None
 
@@ -43,12 +43,12 @@ class LLMRegistry:
                 logger.warning(f"Failed to emit event: {e}")
 
     @property
-    def usage_to_llm(self) -> MappingProxyType[str, Driver]:
+    def usage_to_llm(self) -> MappingProxyType[str, LLMModel]:
         """Access the internal usage-ID-to-LLM mapping (read-only view)."""
 
         return MappingProxyType(self._usage_to_llm)
 
-    def _ensure_independent_metrics(self, llm: Driver) -> None:
+    def _ensure_independent_metrics(self, llm: LLMModel) -> None:
         metrics = llm.metrics
         metrics_id = id(metrics)
         if metrics_id in self._metrics_ids:
@@ -61,7 +61,7 @@ class LLMRegistry:
 
         self._metrics_ids.add(metrics_id)
 
-    def add(self, llm: Driver) -> None:
+    def add(self, llm: LLMModel) -> None:
         usage_id = llm.usage_id
         if usage_id in self._usage_to_llm:
             message = (
@@ -78,7 +78,7 @@ class LLMRegistry:
             f"[LLM registry {self.registry_id}]: Added LLM for usage {usage_id}"
         )
 
-    def get(self, usage_id: str) -> Driver:
+    def get(self, usage_id: str) -> LLMModel:
         if usage_id not in self._usage_to_llm:
             raise KeyError(
                 f"Usage ID '{usage_id}' not found in registry. "

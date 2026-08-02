@@ -1,7 +1,4 @@
 # phi.driver.llm.factory
-## @lineage: agent.llm.driver.factory
-## @lineage: phi.engine.driver.factory.driver
-## @lineage: swarm.engine.driver.factory.driver
 import json
 import os
 import warnings
@@ -10,8 +7,8 @@ from pydantic import BaseModel, SecretStr
 
 from mesh.model.registry import get_llm_provider
 if TYPE_CHECKING:
-    from phi.driver.llm.tensor import Driver
-    DriverType = Driver | Any
+    from phi.driver.llm.model import LLMModel
+    DriverType = LLMModel | Any
 else:
     DriverType = Any
 
@@ -29,7 +26,7 @@ class DriverFactory:
         data: dict[str, Any] = {}
         fields: dict[str, Any] = {
             name: f.annotation
-            for name, f in Driver.model_fields.items()
+            for name, f in LLMModel.model_fields.items()
             if not getattr(f, "exclude", False)
         }
 

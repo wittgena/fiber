@@ -1,23 +1,15 @@
-# topos.state.parser.builder
-## @lineage: agent.conver.state.parser.builder
-## @lineage: phi.conver.state.parser.builder
-## @lineage: swarm.mesh.parser.builder
-## @lineage: swarm.mesh.conv.parser.builder
-## @lineage: swarm.mesh.engine.conv.parser.builder
-## @lineage: mesh.engine.conv.parser.builder
-## @lineage: gov.conv.parser.builder
-## @lineage: gov.atoa.parser.conv.builder
-## @lineage: bound.parser.atoa.conv.builder
+# phi.driver.llm.facade
 from collections.abc import Sequence
 
 from agent.atoa.conv.event import Event, LLMConvertibleEvent
 from agent.atoa.conv.types import ConversationTokenCallbackType
 from agent.atoa.schema.llm.response import LLMResponse
 from agent.atoa.conv.message import Message
+from mesh.model.info import get_features
 
 from topos.state.parser.view import View
-
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
+from phi.driver.io import DriverIO
 from agent.action.builder import ActionDefinition
 
 from watcher.plane.emitter import get_emitter
@@ -29,7 +21,7 @@ class MessageBuilder:
     def prepare_llm_messages(
         events: Sequence[Event],
         additional_messages: list[Message] | None = None,
-        llm: Driver | None = None,
+        llm: LLMModel | None = None,
     ) -> list[Message]:
         log.debug("[message.builder] prepare_llm_messages")
         view = View.from_events(events)
@@ -68,19 +60,21 @@ class LLMFacade:
     """@desc: LLM 호출 시 파라미터 컨벤션을 통합하는 래퍼 클래스"""
     @staticmethod
     def make_completion(
-        llm: Driver,
+        llm: LLMModel,
         messages: list[Message],
         tools: list[ActionDefinition] | None = None,
         on_token: ConversationTokenCallbackType | None = None,
     ) -> LLMResponse:
         common_kwargs = {
+            "driver": llm,
             "messages": messages,
             "tools": tools or [],
             "add_security_risk_prediction": True,
             "on_token": on_token,
         }
-        
-        if llm.uses_responses_api():
-            return llm.responses(include=None, store=False, **common_kwargs)
+
+        use_response = get_features(llm._model_name_for_capabilities()).supports_responses_api
+        if use_response:
+            return DriverIO.responses(include=None, store=False, **common_kwargs)
         else:
-            return llm.completion(**common_kwargs)
+            return DriverIO.completion(**common_kwargs)

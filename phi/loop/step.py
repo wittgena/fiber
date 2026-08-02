@@ -1,14 +1,4 @@
 # phi.loop.step
-## @lineage: agent.loop.step
-## @lineage: atoa.agent.loop.step
-## @lineage: phi.agent.loop.step
-## @lineage: phi.executor.loop.step
-## @lineage: swarm.phi.handler.step
-## @lineage: agent.handler.step
-## @lineage: atoa.agent.handler.step
-## @lineage: agent.topos.handler.step
-## @lineage: atoa.topos.handler.step
-## @lineage: atoa.agent.action.step
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Awaitable
 from dataclasses import dataclass

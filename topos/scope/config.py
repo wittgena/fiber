@@ -13,7 +13,7 @@ from pydantic.fields import FieldInfo
 from agent.atoa.schema.ator.context import AtorContext
 
 from agent.atoa.schema.disc.tool import Tool
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 from agent.activator import Activator
 
 from topos.scope.metadata import SettingsSchema
@@ -30,10 +30,10 @@ from arch.xor.bridge.mark.convset import (
 
 AGENT_SETTINGS_SCHEMA_VERSION = 1
 
-def _default_llm_settings() -> Driver:
-    model = Driver.model_fields["model"].get_default()
+def _default_llm_settings() -> LLMModel:
+    model = LLMModel.model_fields["model"].get_default()
     assert isinstance(model, str)
-    return Driver(model=model)
+    return LLMModel(model=model)
 
 class AgentConfig(SurgeBaseModel):
     schema_version: int = Field(default=AGENT_SETTINGS_SCHEMA_VERSION, ge=1)
@@ -47,7 +47,7 @@ class AgentConfig(SurgeBaseModel):
             ).model_dump()
         },
     )
-    llm: Driver = Field(
+    llm: LLMModel = Field(
         default_factory=_default_llm_settings,
         description="LLM settings for the agent.",
         json_schema_extra={

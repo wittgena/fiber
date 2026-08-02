@@ -1,7 +1,4 @@
 # agent.conver.protocol
-## @lineage: phi.conver.protocol
-## @lineage: swarm.conver.protocol
-## @lineage: agent.conv
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from pathlib import Path
@@ -16,7 +13,7 @@ from arch.topos.resolver.secret import SecretValue
 from agent.atoa.conv.types import ConversationID
 from agent.atoa.conv.message import Message
 
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 from topos.state.protocol import ConvStateProtocol
 from agent.atoa.context.stats import ConversationStats
 
@@ -111,4 +108,4 @@ class EngineContextProtocol(Protocol):
     def conversation_stats(self) -> ConversationStats: ...
     def switch_profile(self, profile_name: str) -> None: ...
     def condense(self) -> None: ...
-    def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str: ...
+    def generate_title(self, llm: LLMModel | None = None, max_length: int = 50) -> str: ...

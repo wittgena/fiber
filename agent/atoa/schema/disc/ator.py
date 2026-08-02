@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agent.atoa.schema.ator.context import AtorContext
 from agent.atoa.schema.disc.tool import Tool
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 
 from agent.atoa.mcp.client import MCPClient
 from agent.atoa.mcp.factory import create_mcp_tools
@@ -30,7 +30,7 @@ log = get_emitter(__name__)
 
 class Ator(DiscMixin, ABC):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    llm: Driver = Field(..., description="LLM configuration for the agent.")
+    llm: LLMModel = Field(..., description="LLM configuration for the agent.")
     actions: list[Tool] = Field(
         default_factory=lambda: [Tool(name=action.value, params={}) for action in CoreAction],
         description="List of core cognitive and system control actions (e.g., finish, bridge, think).",
@@ -82,7 +82,6 @@ class Ator(DiscMixin, ABC):
             with ThreadPoolExecutor(max_workers=4) as executor:
                 futures = []
                 for spec in combined_specs:
-                    # state 없이 스키마만 Resolve하도록 수정 가정
                     futures.append(executor.submit(ActionResolver.resolve, spec, None))
 
                 if self.mcp_config:
@@ -116,10 +115,6 @@ class Ator(DiscMixin, ABC):
         log.info(f"[{self.name}] Successfully initialized with capabilities: {list(self.runtime_tools.keys())}")
 
     async def run_worker(self, tunnel: UniversalFacade, conversation_id: str) -> None:
-        """
-        @desc: 독립 컨테이너나 스레드에서 실행되는 메인 워커 루프입니다.
-               Tunnel(Redis Streams)을 구독하여 Gov(Conver)의 명령을 대기합니다.
-        """
         if not self.is_initialized:
             await self.initialize()
 
@@ -148,7 +143,6 @@ class Ator(DiscMixin, ABC):
                     for message_id, message_data in messages:
                         log.debug(f"[{self.name}] Received task message: {message_id}")
                         try:
-                            # 어댑터로 파싱 후 비즈니스 로직(process_task)에 순수 딕셔너리 전달
                             parsed_task = StreamPayloadAdapter.decode(message_data)
                             await self.process_task(parsed_task, tunnel, response_topic)
                         finally:
@@ -208,19 +202,19 @@ class Ator(DiscMixin, ABC):
             dumped["actions"] = list(dumped["actions"].keys())
         return dumped
 
-    def get_all_llms(self) -> Generator[Driver]:
+    def get_all_llms(self) -> Generator[LLMModel]:
         yielded_ids: set[int] = set()
         visited: set[int] = set()
 
-        def _walk(obj: object) -> Iterable[Driver]:
+        def _walk(obj: object) -> Iterable[LLMModel]:
             oid = id(obj)
             if oid in visited:
                 return ()
             visited.add(oid)
 
-            if isinstance(obj, Driver):
-                llm_out: list[Driver] = []
-                if type(obj) is Driver and oid not in yielded_ids:
+            if isinstance(obj, LLMModel):
+                llm_out: list[LLMModel] = []
+                if type(obj) is LLMModel and oid not in yielded_ids:
                     yielded_ids.add(oid)
                     llm_out.append(obj)
 
@@ -233,7 +227,7 @@ class Ator(DiscMixin, ABC):
                 return llm_out
 
             if isinstance(obj, BaseModel):
-                model_out: list[Driver] = []
+                model_out: list[LLMModel] = []
                 for name in type(obj).model_fields:
                     try:
                         val = getattr(obj, name)
@@ -243,14 +237,14 @@ class Ator(DiscMixin, ABC):
                 return model_out
 
             if isinstance(obj, dict):
-                dict_out: list[Driver] = []
+                dict_out: list[LLMModel] = []
                 for k, v in obj.items():
                     dict_out.extend(_walk(k))
                     dict_out.extend(_walk(v))
                 return dict_out
 
             if isinstance(obj, (list, tuple, set, frozenset)):
-                container_out: list[Driver] = []
+                container_out: list[LLMModel] = []
                 for item in obj:
                     container_out.extend(_walk(item))
                 return container_out

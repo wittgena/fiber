@@ -21,13 +21,12 @@ from agent.atoa.event.conv import ConversationErrorEvent, PauseEvent
 from agent.conver.status import ConverStatus
 from mesh.bound.exception.types import ConversationRunError
 
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 from agent.action.factory import CoreAction
 
 from topos.state.command import TransitionStatus
 from agent.atoa.context.state import ConversationState
-from topos.state.parser.title import generate_conversation_title
-from topos.state.parser.builder import MessageBuilder, LLMFacade
+from phi.driver.llm.facade import MessageBuilder, LLMFacade
 
 from arch.xor.store.file import LocalFileStore
 from topos.state.store.log import LogStore
@@ -68,23 +67,19 @@ class AgentSessionManager:
 
 
 class AgentSidecar:
-    """
-    @desc: Handles auxiliary functions (e.g., title generation, meta-questions) outside the main Conver loop.
-           Runs dynamically using the registered LLMFacade without waking up the stateless Agent (Activator).
-    """
     def __init__(self, conv: convType, session_manager: AgentSessionManager):
         self.conv = conv
         self.session = session_manager
 
-    def _get_fallback_llm(self) -> Driver:
+    def _get_fallback_llm(self) -> LLMModel:
         registry = getattr(self.conv, "llm_registry", None)
         if registry:
             return registry.get_default()
         
         config_llm = self.conv.state.agent_config.get("llm") if hasattr(self.conv.state, "agent_config") else None
         if config_llm and isinstance(config_llm, dict):
-            return Driver(**config_llm)
-        return Driver(model="gpt-4o") 
+            return LLMModel(**config_llm)
+        return LLMModel(model="gpt-4o") 
 
     def ask(self, question: str) -> str:
         template_dir = Path(__file__).parent.parent.parent / "context" / "prompts" / "templates"
@@ -112,21 +107,7 @@ class AgentSidecar:
 
         raise Exception("Failed to generate answer via Sidecar")
 
-    @observe(name="sidecar.generate_title", ignore_inputs=["llm"])
-    def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str:
-        llm_to_use = llm or self._get_fallback_llm()
-        if llm_to_use.model == "acp-managed":
-            llm_to_use = None
-        return generate_conversation_title(events=self.conv.state.events, llm=llm_to_use, max_length=max_length)
-
-
 class Conver:
-    """
-    @desc: Core orchestrator acting as the physical environment for the Agent.
-           - Produces state payloads for the stateless Agent (Brain).
-           - Consumes Agent decisions and executes physical tools.
-           - Appends all results to the Context.
-    """
     def __init__(self, conversation: convType):
         self.conv = conversation
         self.session = AgentSessionManager(self.conv)

@@ -12,7 +12,7 @@ from agent.atoa.conv.types import (
     ConversationTokenCallbackType,
 )
 from agent.conver.protocol import ProtoConv
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 from agent.atoa.context.visualizer import ConversationVisualizer
 from agent.atoa.context.state import ConversationState
 from phi.security.analyzer import SecurityAnalyzerBase
@@ -188,6 +188,6 @@ class ConvContext(ProtoConv):
         self._warn_deprecation("condense", "EngineContextAdapter")
         self._engine.condense()
 
-    def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str:
+    def generate_title(self, llm: LLMModel | None = None, max_length: int = 50) -> str:
         self._warn_deprecation("generate_title", "EngineContextAdapter")
         return self._engine.generate_title(llm, max_length)

@@ -1,24 +1,11 @@
 # phi.driver.config.vendor
-## @lineage: agent.llm.config.vendor
-## @lineage: phi.engine.driver.config.vendor
-## @lineage: swarm.engine.driver.config.vendor
-## @lineage: agent.driver.config.vendor
-## @lineage: agent.config.vendor
-## @lineage: atoa.agent.config.vendor
-## @lineage: atoa.config.vendor
-## @lineage: agent.atoa.config.vendor
 from pydantic import BaseModel, Field, SecretStr, field_validator, field_serializer
 from typing import Any
 import os
-
 from arch.xor.secret.validator import serialize_secret, validate_secret
 
-class VendorSubstrateMixin(BaseModel):
-    """
-    @desc: Unified Vendor Parameter Substrate
-    @role: Isolates all external provider configurations (AWS, OpenRouter) into a flat topological mixin.
-           Maintains exact key compatibility with legacy schemas.
-    """
+class VendorConfig(BaseModel):
+    """@desc: 특정 벤더(AWS, OpenRouter 등)에 종속된 환경 변수 및 인증 정보를 격리하는 설정 객체"""
     aws_access_key_id: str | SecretStr | None = Field(default=None)
     aws_secret_access_key: str | SecretStr | None = Field(default=None)
     aws_session_token: str | SecretStr | None = Field(default=None)
@@ -41,7 +28,6 @@ class VendorSubstrateMixin(BaseModel):
         return serialize_secret(v, info)
 
     def inject_vendor_environment(self) -> None:
-        ## @desc: Mutate the global execution environment with isolated vendor dimensions
         if self.openrouter_site_url:
             os.environ["OR_SITE_URL"] = self.openrouter_site_url
         if self.openrouter_app_name:
@@ -60,7 +46,6 @@ class VendorSubstrateMixin(BaseModel):
             os.environ["AWS_REGION_NAME"] = self.aws_region_name
 
     def get_vendor_transport_kwargs(self) -> dict[str, Any]:
-        ## @desc: Extract specific projection variables required for the LiteLLM network layer
         kw: dict[str, Any] = {}
         if self.aws_access_key_id:
             assert isinstance(self.aws_access_key_id, SecretStr)

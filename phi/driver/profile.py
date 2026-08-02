@@ -11,7 +11,7 @@ from watcher.plane.emitter import get_logger
 from phase.bind.resolver import resolve_path
 
 if TYPE_CHECKING:
-    from phi.driver.llm.tensor import Driver
+    from phi.driver.llm.model import LLMModel
     from phi.driver.llm.factory import DriverFactory
 
 _DEFAULT_PROFILE_DIR: Final[Path] = resolve_path("io") / "profiles"
@@ -88,7 +88,7 @@ class LLMProfileStore:
                 )
 
             try:
-                from phi.driver.llm.tensor import Driver
+                from phi.driver.llm.model import LLMModel
                 llm_instance = DriverFactory.load_from_json(str(profile_path))
             except Exception as e:
                 # Re-raise as ValueError for clearer error handling

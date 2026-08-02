@@ -1,11 +1,11 @@
-# phi.driver.llm.tensor
-## @lineage: agent.llm.driver.tensor
+# phi.driver.llm.model
 from __future__ import annotations
+
 import os
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Final, cast
+from typing import Any, Literal, Final
 
 from pydantic import (
     BaseModel,
@@ -18,65 +18,35 @@ from pydantic import (
     model_validator,
 )
 from pydantic.json_schema import SkipJsonSchema
-from pathlib import Path
 
 from mesh.model.info import get_features
 from mesh.model.support import supports_vision
 from mesh.model.config.resolver import config
-
 from mesh.token.splitter import create_pretrained_tokenizer
-from mesh.token.counter import token_counter
-
 from mesh.cost.tracker.metric import Metrics
-from phi.driver.observer.flow import DriverObserver
-from mesh.bound.exception.eco import (
-    APIConnectionError,
-    InternalServerError,
-    RateLimitError,
-    ServiceUnavailableError,
-    Timeout as Timeout,
-)
+from mesh.bound.exception.types import LLMContextWindowTooSmallError
 
 from arch.xor.secret.validator import serialize_secret, validate_secret
-from mesh.bound.exception.types import LLMNoResponseError
-
-from phi.driver.strategy.retry import RetryMixin
-from mesh.bound.exception.types import LLMContextWindowTooSmallError
-from mesh.bound.exception.mapping import map_provider_exception
-from agent.atoa.schema.llm.response import LLMResponse
-from agent.atoa.conv.types import TokenCallbackType
-from agent.atoa.conv.message import Message
 from arch.xor.bridge.mark.convset import SettingProminence, field_meta
 from arch.xor.bridge.mark.depre import warn_deprecated
 
+from phi.driver.config.vendor import VendorConfig
 from phi.driver.strategy.fallback import FallbackStrategy
-from phi.driver.io import DriverIO
-from phi.driver.config.vendor import VendorSubstrateMixin
-
 from phi.driver.llm.factory import DriverFactory
-from phi.driver.profile import LLMProfileStore
-from agent.action.builder import ActionDefinition
-
+from phi.driver.observer.flow import DriverObserver
 from phase.bind.resolver import find_current_self
-from watcher.plane.emitter import get_emitter
 
 SELF_ROOT = find_current_self()
-log = get_emitter(__name__)
 
 MIN_CONTEXT_WINDOW_TOKENS: Final[int] = 16384
 ENV_ALLOW_SHORT_CONTEXT_WINDOWS: Final[str] = "ALLOW_SHORT_CONTEXT_WINDOWS"
-DEFAULT_MAX_OUTPUT_TOKENS_CAP: Final[int] = 16384
 
-_LLM_FALLBACK_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (
-    APIConnectionError,
-    RateLimitError,
-    ServiceUnavailableError,
-    Timeout,
-    InternalServerError,
-    LLMNoResponseError,
-)
 
-class Driver(VendorSubstrateMixin, RetryMixin):
+class LLMModel(BaseModel):
+    """
+    @desc: LLM 연결 상태, 메트릭, 그리고 설정값을 캡슐화하는 순수 Data Object.
+    네트워크 실행 로직(IO)이나 재시도 행위(Behavior)를 포함하지 않습니다.
+    """
     model: str = Field(
         default="claude-sonnet-4-20250514",
         description="Target topological matrix (Model ID).",
@@ -93,17 +63,22 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         json_schema_extra=field_meta(SettingProminence.CRITICAL),
     )
     api_version: str | None = Field(default=None, description="API version constraint (e.g., Azure).")
-    
+    vendor_config: VendorConfig = Field(default_factory=VendorConfig, description="Isolated vendor dimensions.")
+
     num_retries: int = Field(default=5, ge=0)
     retry_multiplier: float = Field(default=8.0, ge=0)
     retry_min_wait: int = Field(default=8, ge=0)
     retry_max_wait: int = Field(default=64, ge=0)
+    retry_listener: SkipJsonSchema[
+        Callable[[int, int, BaseException | None], None] | None
+    ] = Field(default=None, exclude=True)
+
+    # LLM Request Params
     timeout: int | None = Field(
         default=300,
         ge=0,
         description="Maximum temporal resonance before terminating connection.",
     )
-
     max_message_chars: int = Field(
         default=30_000,
         ge=1,
@@ -189,11 +164,6 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         description="Maximum volume allocation for extended latent states.",
     )
     seed: int | None = Field(default=None, description="Anchor for deterministic randomization.")
-    safety_settings: list[dict[str, str]] | None = Field(
-        default=None,
-        deprecated=("Deprecated since v1.15.0 and scheduled for removal in v1.20.0."),
-        description="Legacy constraint nodes. No longer structurally enforced.",
-    )
     usage_id: str = Field(
         default="default",
         serialization_alias="usage_id",
@@ -209,16 +179,13 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         description="Alternative routing path in the event of primary endpoint collapse.",
         exclude=True,
     )
+    safety_settings: list[dict[str, str]] | None = Field(
+        default=None,
+        deprecated=("Deprecated since v1.15.0 and scheduled for removal in v1.20.0."),
+        description="Legacy constraint nodes. No longer structurally enforced.",
+    )
 
-    ## @layer: Sub-System Pointers
-    _io: DriverIO | None = PrivateAttr(default=None)
     _observer: DriverObserver | None = PrivateAttr(default=None)  
-    
-    retry_listener: SkipJsonSchema[
-        Callable[[int, int, BaseException | None], None] | None
-    ] = Field(default=None, exclude=True)
-
-    ## @layer: Execution Context
     _model_info: Any = PrivateAttr(default=None)
     _tokenizer: Any = PrivateAttr(default=None)
     _is_subscription: bool = PrivateAttr(default=False)
@@ -266,8 +233,9 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         return d
 
     @model_validator(mode="after")
-    def _init_driver_subsystems(self):
-        self.inject_vendor_environment()
+    def _init_subsystems(self):
+        self.vendor_config.inject_vendor_environment()
+        
         observer_config = {
             "log_completions": self.log_completions,
             "log_completions_folder": self.log_completions_folder,
@@ -282,19 +250,12 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         if self.custom_tokenizer:
             self._tokenizer = create_pretrained_tokenizer(self.custom_tokenizer)
 
-        if self._io is None:
-            self._io = DriverIO(driver=self)
         return self
-
-    def _retry_listener_fn(self, attempt_number: int, num_retries: int, _err: BaseException | None) -> None:
-        if self.retry_listener is not None:
-            self.retry_listener(attempt_number, num_retries, _err)
 
     @field_serializer("api_key", when_used="always")
     def _serialize_api_key(self, v: SecretStr | None, info):
         return serialize_secret(v, info)
 
-    ## @layer: Observability Delegation
     @property
     def metrics(self) -> Metrics:
         assert self._observer is not None, "DriverObserver not initialized"
@@ -312,69 +273,7 @@ class Driver(VendorSubstrateMixin, RetryMixin):
     def is_subscription(self) -> bool:
         return self._is_subscription
 
-    async def _handle_error(self, error: Exception, fallback_call_fn: Callable[[Driver], LLMResponse]) -> LLMResponse:
-        ## @desc: Process execution ruptures and route through established fallback manifolds
-        if self._observer is not None:
-            self._observer.track_rupture(error)
-        
-        if self.fallback_strategy and self.fallback_strategy.should_fallback(error):
-            result = self.fallback_strategy.try_fallback(
-                primary_model=self.model,
-                primary_error=error,
-                primary_metrics=self.metrics,
-                call_fn=fallback_call_fn,
-            )
-            if result is not None:
-                return result
-                
-        mapped = map_provider_exception(error)
-        if mapped is not error:
-            raise mapped from error
-        raise
-
-    async def completion(
-        self,
-        messages: list[Message],
-        tools: Sequence[ActionDefinition] | None = None,
-        _return_metrics: bool = False,
-        add_security_risk_prediction: bool = False,
-        on_token: TokenCallbackType | None = None,
-        **kwargs,
-    ) -> LLMResponse:
-        assert self._io is not None
-        return await self._io.completion(
-            messages=messages,
-            tools=tools,
-            _return_metrics=_return_metrics,
-            add_security_risk_prediction=add_security_risk_prediction,
-            on_token=on_token,
-            **kwargs
-        )
-
-    async def responses(
-        self,
-        messages: list[Message],
-        tools: Sequence[ActionDefinition] | None = None,
-        include: list[str] | None = None,
-        store: bool | None = None,
-        _return_metrics: bool = False,
-        add_security_risk_prediction: bool = False,
-        on_token: TokenCallbackType | None = None,
-        **kwargs,
-    ) -> LLMResponse:
-        assert self._io is not None
-        return await self._io.responses(
-            messages=messages,
-            tools=tools,
-            include=include,
-            store=store,
-            _return_metrics=_return_metrics,
-            add_security_risk_prediction=add_security_risk_prediction,
-            on_token=on_token,
-            **kwargs
-        )
-
-    ## @layer: Transport & Internal Operations
+    ## @layer: Feature Validation & Processing (순수 유틸리티)
     def _infer_provider(self) -> str | None:
         if self._provider is not None:
             return self._provider
@@ -396,7 +295,6 @@ class Driver(VendorSubstrateMixin, RetryMixin):
 
     @contextmanager
     def _brane_modify_params_ctx(self, flag: bool):
-        # ConfigResolver 속성 미존재로 인한 AttributeError 방어
         old = getattr(config, "modify_params", True)
         try:
             config.modify_params = flag
@@ -404,7 +302,6 @@ class Driver(VendorSubstrateMixin, RetryMixin):
         finally:
             config.modify_params = old
 
-    ## @layer: Feature Validation & Processing
     def _model_name_for_capabilities(self) -> str:
         return self.model_canonical_name or self.model
 

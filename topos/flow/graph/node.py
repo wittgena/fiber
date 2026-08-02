@@ -3,7 +3,7 @@ import os
 from pydantic import SecretStr
 
 from topos.scope.config import AgentConfig
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 from agent.atoa.schema.disc.tool import Tool
 
 from phase.executor.flow.event import AgentConfigured
@@ -39,7 +39,7 @@ class EngineNode(GanNode):
         base_url = None if is_external else LOCAL_URL
         api_key_val = None if is_external else "not-needed"
 
-        llm_obj = Driver(
+        llm_obj = LLMModel(
             model=model_to_use,
             base_url=base_url,
             api_key=SecretStr(api_key_val) if api_key_val else None,

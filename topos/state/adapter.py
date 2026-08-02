@@ -16,7 +16,7 @@ from agent.conver.protocol import (
 from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.event.llm.observation import UserRejectObservation
 from agent.atoa.conv.types import ConversationID
-from phi.driver.llm.tensor import Driver
+from phi.driver.llm.model import LLMModel
 
 from agent.atoa.conv.message import Message, TextContent
 from agent.atoa.context.stats import ConversationStats
@@ -209,7 +209,7 @@ class EngineContextAdapter:
     async def switch_profile(self, profile_name: str) -> None:
         await self._session_manager.switch_profile(profile_name)
 
-    def generate_title(self, llm: Driver | None = None, max_length: int = 50) -> str:
+    def generate_title(self, llm: LLMModel | None = None, max_length: int = 50) -> str:
         return self._sidecar.generate_title(llm, max_length)
     
     def ensure_agent_ready(self) -> None:

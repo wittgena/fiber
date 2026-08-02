@@ -5,7 +5,7 @@ from agent.atoa.event.llm.message import MessageEvent
 from mesh.bound.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 from phi.loop.step import StepHandler
-from topos.state.parser.builder import MessageBuilder, LLMFacade
+from phi.driver.llm.facade import MessageBuilder, LLMFacade
 from agent.atoa.conv.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter
