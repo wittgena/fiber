@@ -5,14 +5,14 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from agent.llm.registry import LLMRegistry
+from phi.driver.registry import LLMRegistry
 from agent.atoa.conv.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
 )
 from agent.conver.protocol import ProtoConv
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 from agent.atoa.context.visualizer import ConversationVisualizer
 from agent.atoa.context.state import ConversationState
 from phi.security.analyzer import SecurityAnalyzerBase

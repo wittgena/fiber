@@ -1,4 +1,5 @@
-# agent.llm.profile
+# phi.driver.profile
+## @lineage: agent.llm.profile
 ## @lineage: phi.engine.driver.registry
 import tempfile
 from collections.abc import Iterator
@@ -10,8 +11,8 @@ from watcher.plane.emitter import get_logger
 from phase.bind.resolver import resolve_path
 
 if TYPE_CHECKING:
-    from agent.llm.driver.tensor import Driver
-    from agent.llm.driver.factory import DriverFactory
+    from phi.driver.llm.tensor import Driver
+    from phi.driver.llm.factory import DriverFactory
 
 _DEFAULT_PROFILE_DIR: Final[Path] = resolve_path("io") / "profiles"
 _LOCK_TIMEOUT_SECONDS: Final[float] = 30.0
@@ -87,7 +88,7 @@ class LLMProfileStore:
                 )
 
             try:
-                from agent.llm.driver.tensor import Driver
+                from phi.driver.llm.tensor import Driver
                 llm_instance = DriverFactory.load_from_json(str(profile_path))
             except Exception as e:
                 # Re-raise as ValueError for clearer error handling

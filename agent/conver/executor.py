@@ -21,7 +21,7 @@ from agent.atoa.event.conv import ConversationErrorEvent, PauseEvent
 from agent.conver.status import ConverStatus
 from mesh.bound.exception.types import ConversationRunError
 
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 from agent.action.factory import CoreAction
 
 from topos.state.command import TransitionStatus

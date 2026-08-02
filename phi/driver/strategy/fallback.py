@@ -1,12 +1,5 @@
-# agent.llm.fallback
-## @lineage: phi.engine.driver.fallback
-## @lineage: swarm.engine.driver.fallback
-## @lineage: agent.driver.fallback
-## @lineage: atoa.fallback
-## @lineage: agent.atoa.fallback
-## @lineage: atoa.agent.fallback
-## @lineage: atoa.call.fallback
-## @lineage: agent.call.fallback
+# phi.driver.strategy.fallback
+## @lineage: agent.llm.fallback
 from __future__ import annotations
 from collections.abc import Callable, Generator
 from functools import cached_property
@@ -22,7 +15,7 @@ from mesh.bound.exception.eco import (
 )
 from pydantic import BaseModel, Field, PrivateAttr
 from mesh.bound.exception.types import LLMNoResponseError
-from agent.llm.profile import LLMProfileStore
+from phi.driver.profile import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

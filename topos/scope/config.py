@@ -13,7 +13,7 @@ from pydantic.fields import FieldInfo
 from agent.atoa.schema.ator.context import AtorContext
 
 from agent.atoa.schema.disc.tool import Tool
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 from agent.activator import Activator
 
 from topos.scope.metadata import SettingsSchema

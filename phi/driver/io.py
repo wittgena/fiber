@@ -1,4 +1,5 @@
-# agent.llm.driver.io
+# phi.driver.io
+## @lineage: agent.llm.driver.io
 import warnings
 import asyncio
 import copy
@@ -24,7 +25,7 @@ from agent.atoa.conv.message import Message
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from agent.llm.driver.tensor import Driver
+    from phi.driver.llm.tensor import Driver
     from agent.atoa.conv.types import TokenCallbackType
     from agent.action.builder import ActionDefinition
 

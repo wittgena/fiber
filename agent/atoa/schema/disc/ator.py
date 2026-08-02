@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from agent.atoa.schema.ator.context import AtorContext
 from agent.atoa.schema.disc.tool import Tool
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 
 from agent.atoa.mcp.client import MCPClient
 from agent.atoa.mcp.factory import create_mcp_tools

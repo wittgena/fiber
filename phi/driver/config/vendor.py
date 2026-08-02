@@ -1,4 +1,5 @@
-# agent.llm.config.vendor
+# phi.driver.config.vendor
+## @lineage: agent.llm.config.vendor
 ## @lineage: phi.engine.driver.config.vendor
 ## @lineage: swarm.engine.driver.config.vendor
 ## @lineage: agent.driver.config.vendor

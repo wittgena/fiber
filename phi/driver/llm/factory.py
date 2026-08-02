@@ -1,4 +1,5 @@
-# agent.llm.driver.factory
+# phi.driver.llm.factory
+## @lineage: agent.llm.driver.factory
 ## @lineage: phi.engine.driver.factory.driver
 ## @lineage: swarm.engine.driver.factory.driver
 import json
@@ -9,7 +10,7 @@ from pydantic import BaseModel, SecretStr
 
 from mesh.model.registry import get_llm_provider
 if TYPE_CHECKING:
-    from agent.llm.driver.tensor import Driver
+    from phi.driver.llm.tensor import Driver
     DriverType = Driver | Any
 else:
     DriverType = Any

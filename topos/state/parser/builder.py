@@ -17,7 +17,7 @@ from agent.atoa.conv.message import Message
 
 from topos.state.parser.view import View
 
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 from agent.action.builder import ActionDefinition
 
 from watcher.plane.emitter import get_emitter

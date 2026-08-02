@@ -25,7 +25,7 @@ from mesh.bound.secure.cred import CredentialStore, OAuthCredentials, get_creden
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from agent.llm.driver.tensor import Driver
+    from phi.driver.llm.tensor import Driver
 
 SupportedVendor = Literal["openai"]
 logger = get_logger(__name__)

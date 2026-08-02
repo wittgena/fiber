@@ -23,7 +23,7 @@ from collections.abc import Sequence
 
 from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.conv.event import Event
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 
 from agent.atoa.conv.message import Message, TextContent
 from watcher.plane.emitter import get_logger

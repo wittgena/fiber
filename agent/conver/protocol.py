@@ -16,7 +16,7 @@ from arch.topos.resolver.secret import SecretValue
 from agent.atoa.conv.types import ConversationID
 from agent.atoa.conv.message import Message
 
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 from topos.state.protocol import ConvStateProtocol
 from agent.atoa.context.stats import ConversationStats
 

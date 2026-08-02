@@ -1,4 +1,5 @@
-# agent.llm.driver.tensor
+# phi.driver.llm.tensor
+## @lineage: agent.llm.driver.tensor
 from __future__ import annotations
 import os
 import warnings
@@ -27,7 +28,7 @@ from mesh.token.splitter import create_pretrained_tokenizer
 from mesh.token.counter import token_counter
 
 from mesh.cost.tracker.metric import Metrics
-from agent.llm.driver.observer import DriverObserver
+from phi.driver.observer.flow import DriverObserver
 from mesh.bound.exception.eco import (
     APIConnectionError,
     InternalServerError,
@@ -39,7 +40,7 @@ from mesh.bound.exception.eco import (
 from arch.xor.secret.validator import serialize_secret, validate_secret
 from mesh.bound.exception.types import LLMNoResponseError
 
-from agent.llm.retry import RetryMixin
+from phi.driver.strategy.retry import RetryMixin
 from mesh.bound.exception.types import LLMContextWindowTooSmallError
 from mesh.bound.exception.mapping import map_provider_exception
 from agent.atoa.schema.llm.response import LLMResponse
@@ -48,12 +49,12 @@ from agent.atoa.conv.message import Message
 from arch.xor.bridge.mark.convset import SettingProminence, field_meta
 from arch.xor.bridge.mark.depre import warn_deprecated
 
-from agent.llm.fallback import FallbackStrategy
-from agent.llm.driver.io import DriverIO
-from agent.llm.config.vendor import VendorSubstrateMixin
+from phi.driver.strategy.fallback import FallbackStrategy
+from phi.driver.io import DriverIO
+from phi.driver.config.vendor import VendorSubstrateMixin
 
-from agent.llm.driver.factory import DriverFactory
-from agent.llm.profile import LLMProfileStore
+from phi.driver.llm.factory import DriverFactory
+from phi.driver.profile import LLMProfileStore
 from agent.action.builder import ActionDefinition
 
 from phase.bind.resolver import find_current_self

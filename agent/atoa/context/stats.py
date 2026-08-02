@@ -3,7 +3,7 @@
 from typing import Any
 from pydantic import BaseModel, Field, PrivateAttr, model_serializer
 
-from agent.llm.registry import RegistryEvent
+from phi.driver.registry import RegistryEvent
 from mesh.cost.tracker.metric import Metrics
 from watcher.plane.emitter import get_logger
 

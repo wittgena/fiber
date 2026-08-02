@@ -1,6 +1,5 @@
-# agent.llm.driver.observer
-## @lineage: phi.engine.driver.observer
-## @lineage: swarm.engine.driver.observer
+# phi.driver.observer.flow
+## @lineage: agent.llm.driver.observer
 import time
 import warnings
 from typing import Any
@@ -229,11 +228,6 @@ class ManifestCostNode(ObserverNode):
 
 
 class CentralEmitterNode(ObserverNode):
-    """
-    [Phase: PROJECTION]
-    최종적으로 결속된 상태를 외부(Log, Telemetry, UI)로 투영(Emit)합니다.
-    오류가 발생한(Rupture) 경우의 로깅도 이곳에서 처리됩니다.
-    """
     def on_flow(self, state: TopologyState) -> None:
         if state.is_internal_call:
             return  # 내부 서브콜은 메인 텔레메트리 로그에서 제외

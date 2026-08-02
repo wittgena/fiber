@@ -1,11 +1,12 @@
-# agent.llm.registry
+# phi.driver.registry
+## @lineage: agent.llm.registry
 ## @lineage: agent.conver.llm.registry
 from collections.abc import Callable
 from types import MappingProxyType
 from typing import ClassVar, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, ConfigDict
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 from watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

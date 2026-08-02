@@ -16,7 +16,7 @@ from agent.conver.protocol import (
 from agent.atoa.event.llm.message import MessageEvent
 from agent.atoa.event.llm.observation import UserRejectObservation
 from agent.atoa.conv.types import ConversationID
-from agent.llm.driver.tensor import Driver
+from phi.driver.llm.tensor import Driver
 
 from agent.atoa.conv.message import Message, TextContent
 from agent.atoa.context.stats import ConversationStats
