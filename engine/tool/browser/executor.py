@@ -21,13 +21,13 @@ from engine.protocol.atoa.schema.tool.schema.browser import (
     BrowserNavigateAction,
     BrowserObservation,
 )
-from engine.executor.command import sanitized_env
-from engine.executor.base import AsyncExecutor
+from agent.runtime.executor.command import sanitized_env
+from agent.runtime.executor.base import AsyncExecutor
 from watcher.plane.emitter import get_logger
 from engine.tool.browser.server import BrowserServer 
 
 if TYPE_CHECKING:
-    from actor.conver.protocol import ToolExecutionContextProtocol
+    from agent.conver.protocol import ToolExecutionContextProtocol
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0

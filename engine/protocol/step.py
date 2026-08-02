@@ -8,7 +8,7 @@ from engine.protocol.atoa.schema.llm.response import LLMResponse
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from actor.runtime.activator import Activator, AgentStateSnapshot
+    from agent.runtime.activator import Activator, AgentStateSnapshot
     ActivatorType = Activator | Any
     SnapshotType = AgentStateSnapshot | Any
 else:

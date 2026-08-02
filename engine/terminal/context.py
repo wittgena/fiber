@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from actor.conver.protocol import ToolExecutionContextProtocol
+    from agent.conver.protocol import ToolExecutionContextProtocol
     from engine.protocol.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
     from engine.terminal.session import TerminalSessionBase
 

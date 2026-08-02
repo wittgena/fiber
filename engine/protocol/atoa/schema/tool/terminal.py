@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Literal, Optional
 from pydantic import Field
 
 if TYPE_CHECKING:
-    from actor.topos.state.protocol import ConvStateProtocol
+    from agent.state.protocol import ConvStateProtocol
 from rich.text import Text
 from engine.protocol.atoa.conv.message import ImageContent, TextContent
 from engine.protocol.atoa.schema.executor import ActionExecutor

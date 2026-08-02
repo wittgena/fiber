@@ -31,7 +31,7 @@ import os
 import subprocess
 import time
 
-from engine.executor.command import sanitized_env
+from agent.runtime.executor.command import sanitized_env
 from arch.xor.bridge.mark.truncate import maybe_truncate
 from engine.tool.fedit.utils.constants import (
     CONTENT_TRUNCATED_NOTICE,

@@ -20,22 +20,22 @@ from engine.protocol.atoa.event.llm.observation import (
 from engine.protocol.atoa.conv.event import Event
 from engine.protocol.atoa.conv.event import EventID
 from engine.protocol.atoa.schema.disc.workspace import BaseWorkspace
-from actor.conver.status import ConverStatus
+from agent.conver.status import ConverStatus
 from engine.protocol.atoa.conv.types import ConversationCallbackType, ConversationID, ConversationTags
 
-from engine.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from engine.driver.security.confirm import ConfirmationPolicyBase, NeverConfirm
 from engine.protocol.atoa.context.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from engine.security.analyzer import SecurityAnalyzerBase
+    from engine.driver.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
 
 from arch.topos.resolver.secret import SecretRegistry
 from engine.protocol.atoa.context.io import IOManager
-from actor.topos.state.store.log import LogStore, VirtualEventLogProxy
-from actor.topos.state.command import (
+from agent.state.store.log import LogStore, VirtualEventLogProxy
+from agent.state.command import (
     StateCommand, 
     TransitionStatus, 
     BlockAction, 

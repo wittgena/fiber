@@ -4,8 +4,8 @@ import asyncio
 import json
 from typing import Dict, Any, Optional, List, Tuple
 
-from actor.runtime.blueprint.compiler import GraphExecutor
-from actor.runtime.node import RuntimeNode
+from agent.runtime.executor.loop import LoopExecutor
+from agent.runtime.node import RuntimeNode
 
 from arch.model.surge.blueprint import SurgeBlueprint
 from arch.contract.gov.flow import PhaseFlow, FlowState
@@ -174,7 +174,7 @@ class TopologyController:
         
         # 1. 노드 생성
         active_nodes = {
-            "ConfigPolicyNode": GraphExecutor("ConfigPolicyNode"),
+            "ConfigPolicyNode": LoopExecutor("ConfigPolicyNode"),
             "ConfigSettingsNode": RuntimeNode("ConfigSettingsNode", use_proxy=use_proxy, target_model=target_model),
             "DockerWorkspaceNode": SpaceNode("DockerWorkspaceNode", use_proxy=use_proxy)
         }

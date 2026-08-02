@@ -14,7 +14,7 @@ from engine.protocol.action.builder import ActionAnnotations, ActionDefinition
 from engine.protocol.atoa.schema.executor import ActionExecutor
 
 if TYPE_CHECKING:
-    from actor.conver.protocol import ProtoConv
+    from agent.conver.protocol import ProtoConv
 
 class MessageIntent(str, Enum):
     REPORT = "report"

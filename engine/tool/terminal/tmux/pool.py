@@ -20,7 +20,7 @@ from typing import Final
 import libtmux
 
 from watcher.plane.emitter import get_logger
-from engine.executor.command import sanitized_env
+from agent.runtime.executor.command import sanitized_env
 from arch.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,

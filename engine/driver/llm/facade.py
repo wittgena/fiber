@@ -28,7 +28,7 @@ from engine.protocol.atoa.conv.types import TokenCallbackType, ConversationToken
 from engine.protocol.atoa.conv.event import Event, LLMConvertibleEvent
 from engine.protocol.action.builder import ActionDefinition
 
-from actor.topos.state.parser.view import View
+from agent.state.parser.view import View
 from engine.driver.llm.model import LLMModel
 from engine.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
 

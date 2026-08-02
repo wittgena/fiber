@@ -9,7 +9,7 @@ from typing import Dict, Any, Set
 from engine.protocol.atoa.conv.message import Message, TextContent
 
 from engine.protocol.atoa.event.llm.message import MessageEvent
-from actor.conver.protocol import ProtoConv
+from agent.conver.protocol import ProtoConv
 
 from engine.driver.llm.handler import (
     LLMInvocationHandler, 

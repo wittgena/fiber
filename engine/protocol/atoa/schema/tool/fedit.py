@@ -10,7 +10,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from pydantic import Field, PrivateAttr
-from actor.topos.state.protocol import ConvStateProtocol
+from agent.state.protocol import ConvStateProtocol
 from arch.xor.bridge.tool.diff import visualize_diff
 from rich.text import Text
 

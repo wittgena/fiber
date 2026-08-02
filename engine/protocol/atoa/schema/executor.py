@@ -12,7 +12,7 @@ from typing import (
 from engine.protocol.atoa.schema.disc.action import Action, Observation
 
 if TYPE_CHECKING:
-    from actor.conver.protocol import ToolExecutionContextProtocol
+    from agent.conver.protocol import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)
 ObservationT = TypeVar("ObservationT", bound=Observation)

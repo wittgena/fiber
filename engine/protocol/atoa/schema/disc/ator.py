@@ -1,6 +1,4 @@
 # engine.protocol.atoa.schema.disc.ator
-## @lineage: phi.agent.atoa.schema.disc.ator
-## @lineage: agent.atoa.schema.disc.ator
 from __future__ import annotations
 import re
 import json
@@ -11,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from engine.protocol.atoa.schema.ator.context import AtorContext
+from agent.runtime.prompt import PromptContext
 from engine.protocol.atoa.schema.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 
@@ -49,9 +47,9 @@ class Ator(DiscMixin, ABC):
         default=None,
         description="Optional regex to filter the external tools available to the agent by name. Core actions are immune.",
     )
-    agent_context: AtorContext = Field(
-        default_factory=AtorContext,
-        description="AgentContext to manage prompts, secrets, and environment.",
+    prompt_context: PromptContext = Field(
+        default_factory=PromptContext,
+        description="PromptContext to manage prompts, secrets, and environment.",
     )
     tool_concurrency_limit: int = Field(
         default=1,

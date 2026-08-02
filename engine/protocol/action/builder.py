@@ -15,7 +15,7 @@ from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
 from engine.protocol.atoa.schema.disc.action import Action, Observation, Schema
-from engine.security.eval import SecurityRisk
+from engine.driver.security.eval import SecurityRisk
 
 from runtime.client.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 

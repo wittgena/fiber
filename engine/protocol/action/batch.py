@@ -11,9 +11,9 @@ from engine.protocol.atoa.conv.event import Event
 from engine.protocol.atoa.event.llm.action import ActionEvent
 from engine.protocol.atoa.event.llm.message import MessageEvent
 from engine.protocol.atoa.event.llm.observation import UserRejectObservation
-from actor.topos.state.protocol import ConvStateProtocol
+from agent.state.protocol import ConvStateProtocol
 
-from engine.executor.parallel import ParallelExecutor
+from agent.runtime.executor.parallel import ParallelExecutor
 from engine.protocol.atoa.conv.message import Message, TextContent
 from engine.protocol.action.builder import ActionDefinition
 from engine.protocol.action.factory import CoreAction

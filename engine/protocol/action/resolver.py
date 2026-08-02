@@ -15,8 +15,8 @@ from engine.protocol.atoa.schema.disc.tool import Tool
 from engine.protocol.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:
-    from actor.conver.protocol import ProtoConv
-    from actor.topos.state.protocol import ConvStateProtocol
+    from agent.conver.protocol import ProtoConv
+    from agent.state.protocol import ConvStateProtocol
     from engine.protocol.action.builder import ActionDefinition
 
 from arch.xor.parser.lang.action import ActionSchemaCompiler, DEFAULT
@@ -138,8 +138,8 @@ def _bootstrap_core_actions():
 _bootstrap_core_actions()
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
-    from actor.topos.state.command import TransitionStatus
+    from agent.conver.status import ConverStatus
+    from agent.state.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = f"Task marked as finished: {action.summary}" if getattr(action, "summary", None) else "Task marked as finished."
@@ -155,8 +155,8 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
 
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
-    from actor.topos.state.command import TransitionStatus
+    from agent.conver.status import ConverStatus
+    from agent.state.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = "Message successfully delivered to the user."
@@ -173,10 +173,10 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
 
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
+    from agent.conver.status import ConverStatus
     from engine.protocol.atoa.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
-    from actor.topos.state.command import TransitionStatus, UpdateAgentState
+    from agent.state.command import TransitionStatus, UpdateAgentState
 
     state = getattr(conv, "state", None) if conv else None
     msg = "Bridge initiated."
@@ -219,8 +219,8 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
 
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
-    from actor.topos.state.command import TransitionStatus
+    from agent.conver.status import ConverStatus
+    from agent.state.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = (

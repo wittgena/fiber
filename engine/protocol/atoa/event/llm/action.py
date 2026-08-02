@@ -15,7 +15,7 @@ from engine.protocol.atoa.conv.message import (
     TextContent,
     ThinkingBlock,
 )
-from engine.security.eval import SecurityRisk
+from engine.driver.security.eval import SecurityRisk
 from engine.protocol.atoa.schema.disc.action import Action
 
 class ActionEvent(LLMConvertibleEvent):

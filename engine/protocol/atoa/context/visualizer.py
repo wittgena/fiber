@@ -21,7 +21,7 @@ from engine.protocol.atoa.event.llm.action import ActionEvent
 from engine.protocol.atoa.event.llm.message import MessageEvent
 from engine.protocol.atoa.event.llm.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
 from engine.protocol.atoa.event.llm.system import SystemPromptEvent
-from actor.topos.state.protocol import ConvStateProtocol
+from agent.state.protocol import ConvStateProtocol
 
 if TYPE_CHECKING:
     from engine.protocol.atoa.context.stats import ConversationStats

@@ -12,13 +12,13 @@ from rich.text import Text
 
 from engine.protocol.atoa.schema.disc.action import Action, Observation
 if TYPE_CHECKING:
-    from actor.conver.protocol import ProtoConv
+    from agent.conver.protocol import ProtoConv
 
 from engine.protocol.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 from arch.xor.parser.lang.action import ActionSchemaCompiler
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
+    from agent.conver.status import ConverStatus
     state = getattr(conv, "state", None) if conv else None
     msg = f"Task marked as finished: {action.summary}" if getattr(action, "summary", None) else "Task marked as finished."
     if state: state.execution_status = ConverStatus.FINISHED
@@ -28,7 +28,7 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
     return ObsClass.from_text(text="Your thought has been logged.")
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
+    from agent.conver.status import ConverStatus
     state = getattr(conv, "state", None) if conv else None
     msg = "Message successfully delivered to the user."
     if state:
@@ -41,7 +41,7 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
     return ObsClass.from_text(text=msg)
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
+    from agent.conver.status import ConverStatus
     from engine.protocol.atoa.event.llm.observation import ObservationEvent
     from arch.contract.event.next import next_id
 
@@ -81,7 +81,7 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
     return ObsClass.from_text(text=msg, **kwargs)
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from actor.conver.status import ConverStatus
+    from agent.conver.status import ConverStatus
     state = getattr(conv, "state", None) if conv else None
     msg = (
         f"[Semantic Telemetry 📡] Broadcasted to '{action.channel}'.\n"

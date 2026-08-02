@@ -3,9 +3,9 @@
 ## @lineage: phi.loop.tension
 from engine.protocol.atoa.event.llm.action import ActionEvent
 from engine.protocol.atoa.event.llm.observation import AgentErrorEvent
-from actor.conver.status import ConverStatus
+from agent.conver.status import ConverStatus
 from engine.protocol.step import StepHandler
-from actor.topos.state.command import TransitionStatus
+from agent.state.command import TransitionStatus
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

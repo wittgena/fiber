@@ -9,11 +9,11 @@ import bashlex
 from bashlex.errors import ParsingError
 
 from engine.protocol.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
-from actor.conver.protocol import ToolExecutionContextProtocol
+from agent.conver.protocol import ToolExecutionContextProtocol
 
 from engine.tool.terminal.interface import TerminalInterface, TerminalSessionBase
 from engine.terminal.context import ExecutionEngine, ExecutionContext
-from actor.runtime.executor.polling import PollingExecutionEngine
+from engine.terminal.polling import PollingExecutionEngine
 
 from arch.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from watcher.plane.emitter import get_emitter

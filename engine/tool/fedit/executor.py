@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from actor.conver.protocol import ToolExecutionContextProtocol
+    from agent.conver.protocol import ToolExecutionContextProtocol
 
 from engine.protocol.atoa.schema.executor import ActionExecutor
 from engine.protocol.atoa.schema.tool.fedit import (

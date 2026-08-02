@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, Literal
 
 from engine.protocol.atoa.schema.executor import ActionExecutor
 from engine.protocol.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
-from actor.conver.protocol import ToolExecutionContextProtocol
-from actor.runtime.builder.chain import ChainBuilder
-from actor.runtime.builder.session import _is_tmux_available, create_terminal_session
+from agent.conver.protocol import ToolExecutionContextProtocol
+from agent.runtime.builder.chain import ChainBuilder
+from agent.runtime.builder.session import _is_tmux_available, create_terminal_session
 from engine.terminal.session import TerminalSession
 from engine.terminal.context import ExecutionContext, ExecutionEngine
-from actor.runtime.executor.polling import PollingExecutionEngine
+from engine.terminal.polling import PollingExecutionEngine
 from engine.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
 from engine.protocol.atoa.conv.message import TextContent
