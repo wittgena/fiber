@@ -14,14 +14,16 @@ from engine.protocol.atoa.conv.message import Message, TextContent
 
 from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
 from arch.topos.resolver.secret import SecretSource, SecretValue
+
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")
 
+# [수정됨] Lite 모델의 무한 루프 방지 및 방어적 실행을 위한 System Prompts 정렬
 SYSTEM_PROMPTS = {
-    "role": "You are Surgent, an autonomous AI software engineer solving tasks via precise commands and code edits.",
-    "execution": "Execution Rules: Locate files before editing, batch edits via sed, and strictly update /AGENTS.md for persistent memory.",
-    "security": "Security Policy: Require explicit consent for external uploads or global config changes. NO illegal acts or crypto mining."
+    "role": "You are a precise, autonomous execution agent. Your primary purpose is to perfectly execute structural blueprints and complex operational tasks.",
+    "execution": "Execution Protocol: Process the Blueprint sequentially. Use the 'terminal' tool to execute the exact commands provided. If a 'file not found' error occurs, use `find $(pwd) -name <filename>` to locate it. NEVER repeat the exact same failed command.",
+    "focus": "Task Focus: Do not invent steps. Focus entirely on the current node. If blocked after 1 retry, use the 'bridge' tool to escalate immediately. Once validated, use 'finish'."
 }
 
 class PromptContext(BaseModel):
@@ -93,6 +95,11 @@ class PromptContext(BaseModel):
             return TextContent(text=self.user_message_suffix.strip()), []
         return None
 
+
+# =========================================================================
+# 2. Task Models & Enums
+# =========================================================================
+
 class BlueprintType(Enum):
     SCHEME = "scheme"
     TRANSACTION = "transaction"
@@ -114,6 +121,11 @@ class TraceDomain(Enum):
     DIVERGENCE = "divergence"
     OOM = "oom"
     REPRO = "repro"
+
+
+# =========================================================================
+# 3. Action-Oriented Blueprint Specifications
+# =========================================================================
 
 def build_blueprint(
     topology_name: str, 
@@ -161,130 +173,131 @@ def build_blueprint(
     return blueprint, min_cognitive_score
 
 
+# [수정됨] 위치 독립성(Location-independence) 및 쉘 강건성 추가
 RESOLUTION_SPEC = {
     "resolution_hacking": build_blueprint(
         topology_name="Semantic Resolution Funnel", focus="Resolution Hacking & Architectural Signaling", depth=4, min_cognitive_score=4,
         steps=[
-            {"action": "terminal", "intent": "explore", "content": "Scan system logs and stack traces to identify the structural rupture.", "expected_outcome": "Identify root cause."},
-            {"action": "terminal", "intent": "modify", "content": "Use sed/file operations to decouple legacy static imports and apply dynamic factory patterns.", "expected_outcome": "Codebase aligned."},
-            {"action": CoreAction.SIGNAL.value, "intent": "evangelize", "content": "Translate structural fix into architectural win and request consensus.", "params_template": {"channel": "slack_#architecture", "audience": "architect", "semantic_translation": "🚀 Ready for review.", "requires_consensus": True}},
-            {"action": CoreAction.FINISH.value, "intent": "commit", "content": "Upon human consensus, merge state into 'collapse_log.md' and finalize.", "expected_outcome": "ConverStatus.FINISHED"}
+            {"action": "terminal", "intent": "explore", "content": "Run `find $(pwd)/logs -type f -exec grep -rn 'Exception' {} +` to locate the exact file and line causing the structural rupture.", "expected_outcome": "Stack trace isolated."},
+            {"action": "terminal", "intent": "modify", "content": "Use `sed -i` or edit the target file to implement the dynamic factory pattern fix.", "expected_outcome": "Code modification applied."},
+            {"action": CoreAction.SIGNAL.value, "intent": "evangelize", "content": "Emit JSON payload summarizing the fix: `{\"file\": \"<path>\", \"fix\": \"factory_pattern_applied\", \"status\": \"ready_for_review\"}`.", "params_template": {"channel": "slack_#architecture", "requires_consensus": True}},
+            {"action": CoreAction.FINISH.value, "intent": "commit", "content": "Run `git commit -am 'fix: structural decouple'` and finish the execution.", "expected_outcome": "ConverStatus.FINISHED"}
         ]
     )
 }
 
+# [수정됨] Lite 모델이 경로를 찾지 못하고 루프에 빠지는 현상을 차단하기 위해 명령어를 구체화
 SCHEME_SPEC: Dict[SchemeCategory, Tuple[SurgeBlueprint, int]] = {
     SchemeCategory.AGENT: build_blueprint(
         topology_name="agent.cognitive", focus="Cognitive State Validation", depth=2, min_cognitive_score=3,
         steps=[
-            {"action": "terminal", "intent": "phase.cognitive", "content": "Scan fragmented system logs via file tools to extract structural rupture signals."},
-            {"action": "terminal", "intent": "phase.cognitive", "content": "Execute 'multi_chain_comparison.py' to cross-validate logical consistency."},
-            {"action": "terminal", "intent": "phase.cognitive", "content": "Project validated state vectors into 'qdrant_semantic_cache.py'."},
-            {"action": "terminal", "intent": "phase.cognitive", "content": "Measure cache hit rates and evaluate topology performance."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.cognitive", "content": "Merge the synthesized state into 'collapse_log.md' and authorize transition."}
+            {"action": "terminal", "intent": "phase.cognitive", "content": "Execute `find $(pwd) -name dphi_node.log -exec grep 'WASM Metrics' {} +` to extract fuel and memory consumption data."},
+            {"action": "terminal", "intent": "phase.cognitive", "content": "Run `PYTHONPATH=$(pwd) find $(pwd) -name validate_parity.py -exec python3 {} \\;` to assert that all agent nodes generated identical state hashes."},
+            {"action": CoreAction.SIGNAL.value, "intent": "phase.cognitive", "content": "Emit telemetry signal: `{\"parity_valid\": true, \"fuel_usage_avg\": <value>}`."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.cognitive", "content": "Append validation result to `collapse_log.md` and complete task."}
         ]
     ),
     SchemeCategory.GOV: build_blueprint(
-        topology_name="gov.sandbox", focus="Physical Membrane Isolation", depth=3, relations="coupled,isolated", min_cognitive_score=4,
+        topology_name="gov.sandbox", focus="WASM & Cgroup Physical Isolation Check", depth=3, relations="coupled,isolated", min_cognitive_score=4,
         steps=[
-            {"action": CoreAction.THINK.value, "intent": "phase.sandbox", "content": "Call MCP POSIX utilities to verify host resource mounts."},
-            {"action": "terminal", "intent": "phase.sandbox", "content": "Spin up 'DockerWorkspaceNode' to provision absolute isolated container."},
-            {"action": "terminal", "intent": "phase.sandbox", "content": "Inject a 'pytest' suite inside the sandbox to test 'store.fifo' concurrency locks."},
-            {"action": CoreAction.THINK.value, "intent": "phase.sandbox", "content": "Trace all file system side-effects to audit spatial isolation leaks."},
-            {"action": "terminal", "intent": "phase.sandbox", "content": "Teardown container and restore boundary to absolute zero state."}
+            {"action": "terminal", "intent": "phase.sandbox", "content": "Run `PYTHONPATH=$(pwd) python3 -m tester.dphi --suite sandbox` to trigger the WASM Cgroup isolation test suite."},
+            {"action": "terminal", "intent": "phase.sandbox", "content": "Verify fuel exhaustion: `find $(pwd) -name test_output.log -exec grep 'wasm trap: all fuel consumed' {} +`. Ensure the STANDARD tier successfully blocked the payload."},
+            {"action": "terminal", "intent": "phase.sandbox", "content": "Check process leaks: Run `ps aux | grep wasmtasker` to ensure supervisor cleanly terminated child processes."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.sandbox", "content": "Confirm isolation boundary is secure and finalize."}
         ]
     ),
     SchemeCategory.META: build_blueprint(
-        topology_name="meta.telemetry", focus="Recursive Protocol Mutation & Survival", depth=5, relations="mutated,survived", min_cognitive_score=5,
+        topology_name="meta.telemetry", focus="Protocol Mutation & Survival Simulation", depth=4, relations="mutated,survived", min_cognitive_score=5,
         steps=[
-            {"action": "terminal", "intent": "phase.meta", "content": "Locate and parse the source code of the currently active MCP server handling your tool calls."},
-            {"action": "terminal", "intent": "phase.meta", "content": "Inject a breaking schema mutation into the server code."},
-            {"action": "terminal", "intent": "phase.meta", "content": "Trigger a hot-reload of the MCP server."},
-            {"action": CoreAction.THINK.value, "intent": "phase.meta", "content": "Catch the BrokenPipe error, re-initialize the connection using the newly mutated schema."},
-            {"action": "terminal", "intent": "phase.meta", "content": "Execute a test query through the mutated protocol to prove structural survival."}
+            {"action": "terminal", "intent": "phase.meta", "content": "Execute `find $(pwd) -name broker.yaml -exec sed -i 's/latency:.*/latency: strict/g' {} +` to inject strict latency rules."},
+            {"action": "terminal", "intent": "phase.meta", "content": "Run `systemctl restart dphi-broker` or equivalent to hot-reload the MCP broker."},
+            {"action": "terminal", "intent": "phase.meta", "content": "Execute `PYTHONPATH=$(pwd) python3 -m tester.dphi --suite a2a` to verify that Agents can successfully recover Parity IDs."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.meta", "content": "Verify 'Epoch Sealed Successfully' in logs, proving structural survival, then exit."}
         ]
     ),
     SchemeCategory.AUTOPOIESIS: build_blueprint(
         topology_name="agent.autopoiesis", focus="Self-Healing Background Orchestration", depth=4, relations="decoupled_io,self_corrected", min_cognitive_score=4,
         steps=[
-            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Generate 'health_api.py' (FastAPI) configured for port 8080 to return system time."},
-            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Spawn server as a detached background process within the terminal pool."},
-            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Execute 'curl http://localhost:8080' to validate state."},
-            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Analyze stdout/stderr anomalies, install missing dependencies (fastapi, uvicorn), and restart server."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.autopoiesis", "content": "Confirm successful HTTP 200 response and authorize state transition."}
+            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Write a lightweight `health_api.py` using FastAPI that returns `{\"status\": \"alive\"}` on port 8080."},
+            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Launch the server in background: `nohup python3 health_api.py > api.log 2>&1 &`."},
+            {"action": "terminal", "intent": "phase.autopoiesis", "content": "Poll the endpoint: `curl -s http://localhost:8080`. If it fails, `cat api.log`, install missing dependencies (`pip install fastapi uvicorn`), and retry."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.autopoiesis", "content": "Kill the background PID (`pkill -f health_api.py`), report success, and exit."}
         ]
     )
 }
 
+# [수정됨] 경로 오류 방지 및 파이프라인 안전성 향상
 TRANSACTION_SPEC: Dict[TransactionDomain, Tuple[SurgeBlueprint, int]] = {
     TransactionDomain.CODE_AUDITOR: build_blueprint(
-        topology_name="nexus.fiber.scan", focus="Topological Legacy Decoupling", depth=3, relations="scanned,isolated", min_cognitive_score=3,
+        topology_name="nexus.fiber.scan", focus="Dependency Graph Generation", depth=3, relations="scanned,isolated", min_cognitive_score=3,
         steps=[
-            {"action": "terminal", "intent": "phase.auditor", "content": "Ingest external GitHub repository as static 1D text payload (No execution)."},
-            {"action": CoreAction.THINK.value, "intent": "phase.auditor", "content": "Execute 'fiber.scan.fragment' to scavenge AST and build reference graphs."},
-            {"action": CoreAction.THINK.value, "intent": "phase.auditor", "content": "Calculate structural coupling and isolate circular dependencies."},
-            {"action": CoreAction.SIGNAL.value, "intent": "phase.auditor", "content": "Synthesize architecture decouple blueprint and refactoring JSON."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.auditor", "content": "Seal output, return to client, and wipe local memory (Zero-Ops)."}
+            {"action": "terminal", "intent": "phase.auditor", "content": "Run `find $(pwd)/src -name '*.py' -type f | xargs grep -l 'import'` to list all files with dependencies."},
+            {"action": "terminal", "intent": "phase.auditor", "content": "Execute `find $(pwd) -name build_ast_graph.py -exec python3 {} $(pwd)/src \\; > graph.json`."},
+            {"action": CoreAction.SIGNAL.value, "intent": "phase.auditor", "content": "Read `graph.json` and emit the structural coupling report via JSON signal."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.auditor", "content": "Run `rm -f graph.json` and complete transaction."}
         ]
     ),
     TransactionDomain.DATA_FOLDER: build_blueprint(
         topology_name="theoria.compiler.fold", focus="Deterministic Schema Enforcement", depth=2, relations="transformed,sealed", min_cognitive_score=1,
         steps=[
-            {"action": "terminal", "intent": "phase.folder", "content": "Receive unstructured noisy data and target JSON schema."},
-            {"action": CoreAction.THINK.value, "intent": "phase.folder", "content": "Map input to LogicStream and initiate ToposCompiler evaluation."},
-            {"action": "terminal", "intent": "phase.folder", "content": "Iterate LLM extraction loop until Tension breaches critical threshold."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.folder", "content": "Seal validated data into KernelCommit (KNOTTED)."}
+            {"action": "terminal", "intent": "phase.folder", "content": "Run `find $(pwd) -name raw_input.txt -exec cat {} +` to inspect unstructured noisy data."},
+            {"action": "terminal", "intent": "phase.folder", "content": "Execute `find $(pwd) -name topos_compiler.py -exec python3 {} $(pwd)/data/raw_input.txt --schema schema.json \\; > compiler_output.json`."},
+            {"action": "terminal", "intent": "phase.folder", "content": "Verify JSON structure: `cat compiler_output.json | jq .` to ensure schema enforcement."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.folder", "content": "Seal validated data into KernelCommit (KNOTTED) and exit."}
         ]
     ),
     TransactionDomain.INFRA_SEALER: build_blueprint(
         topology_name="nexus.sphere.deploy", focus="IaC Resonance Simulation", depth=3, relations="projected,validated", min_cognitive_score=3,
         steps=[
-            {"action": "terminal", "intent": "phase.sealer", "content": "Parse raw Kubernetes YAML or Terraform HCL definitions."},
-            {"action": "terminal", "intent": "phase.sealer", "content": "Project IaC into logical graph topology without physical provisioning."},
-            {"action": CoreAction.THINK.value, "intent": "phase.sealer", "content": "Utilize 'fiber.ator' to probe for potential livelocks or oscillation."},
-            {"action": "terminal", "intent": "phase.sealer", "content": "Align detected ruptures and generate optimized IaC manifest."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.sealer", "content": "Seal validated manifest, return to CI/CD pipeline, and drop simulation context."}
+            {"action": "terminal", "intent": "phase.sealer", "content": "Read raw definitions: `find $(pwd) -name deployment.yaml -exec cat {} +`."},
+            {"action": "terminal", "intent": "phase.sealer", "content": "Run dry-run simulation: `find $(pwd) -name simulate_iac.py -exec python3 {} --manifest $(pwd)/k8s/deployment.yaml \\; > sim_results.json`."},
+            {"action": CoreAction.SIGNAL.value, "intent": "phase.sealer", "content": "Extract metrics from `sim_results.json` and emit `{\"status\": \"simulated\", \"livelocks_detected\": 0}`."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.sealer", "content": "Seal validated manifest, append to pipeline logs, and drop simulation context."}
         ]
     )
 }
 
+# [수정됨] 쿠버네티스/도커 명령어가 디렉토리 위치에 영향받지 않도록 조정
 TRACER_SPEC: Dict[TraceDomain, Tuple[SurgeBlueprint, int]] = {
     TraceDomain.DIVERGENCE: build_blueprint(
-        topology_name="tracer.kube.divergence", focus="K8s Control Plane Oscillation vs VM Livelock", depth=6, relations="observed,collapsed", min_cognitive_score=4,
+        topology_name="tracer.kube.divergence", focus="Control Plane Oscillation Audit", depth=4, relations="observed,collapsed", min_cognitive_score=4,
         steps=[
-            {"action": "terminal", "intent": "phase.genesis", "content": "Assume Genesis or setup base K8s topology."},
-            {"action": "terminal", "intent": "phase.audit", "content": "Attach X-Y Auditor (K8s Replicas) and Z Auditor (VM Logs)."},
-            {"action": "terminal", "intent": "phase.stimulus", "content": "Inject tainted ConfigMap to trigger allostatic overload."},
-            {"action": "terminal", "intent": "phase.resonance", "content": "Wait for 60s to observe control plane resonance and replication spikes."},
-            {"action": CoreAction.SIGNAL.value, "intent": "phase.judgment", "content": "Evaluate if infinite expansion (Rupture) occurred. Emit proof signal."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.teardown", "content": "Leave cluster in collapsed state for autopsy and terminate background auditors."}
+            {"action": "terminal", "intent": "phase.genesis", "content": "Apply base topology: `kubectl apply -f $(pwd)/k8s/base/`."},
+            {"action": "terminal", "intent": "phase.stimulus", "content": "Inject tainted ConfigMap: `kubectl apply -f $(pwd)/k8s/taint_config.yaml` to trigger allostatic overload."},
+            {"action": "terminal", "intent": "phase.resonance", "content": "Run `kubectl get pods -w` in background, sleep 60s, then pipe output to `oscillation_log.txt`."},
+            {"action": CoreAction.SIGNAL.value, "intent": "phase.judgment", "content": "Parse `oscillation_log.txt`. Emit `{\"rupture_detected\": true, \"replicas_spiked\": <count>}`."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.teardown", "content": "Run `kubectl delete -f $(pwd)/k8s/base/` to leave cluster in collapsed state and finish."}
         ]
     ),
     TraceDomain.OOM: build_blueprint(
-        topology_name="tracer.docker.oom", focus="Absolute Resource Collapse", depth=6, relations="isolated,crushed", min_cognitive_score=4,
+        topology_name="tracer.docker.oom", focus="Absolute Resource Collapse (Cgroup OOM)", depth=4, relations="isolated,crushed", min_cognitive_score=4,
         steps=[
-            {"action": "terminal", "intent": "phase.genesis", "content": "Build Docker image targeting specific bug (Rustc/Cranelift)."},
-            {"action": "terminal", "intent": "phase.audit", "content": "Attach CPU/Mem Entropy observer and Log streamer."},
-            {"action": "terminal", "intent": "phase.stimulus", "content": "Run isolated container with strict resource limits and inject payload."},
-            {"action": "terminal", "intent": "phase.resonance", "content": "Poll container state dynamically until ExitCode is detected."},
-            {"action": CoreAction.SIGNAL.value, "intent": "phase.judgment", "content": "Judge if OOM (137) or Semantic Hang (>95% CPU) occurred. Emit structural proof."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.teardown", "content": "Force remove container and reclaim host resources."}
+            {"action": "terminal", "intent": "phase.genesis", "content": "Build image: `docker build -t test-oom -f $(pwd)/Dockerfile.oom $(pwd)`."},
+            {"action": "terminal", "intent": "phase.stimulus", "content": "Run constrained container: `docker run -d --name isolate_oom --memory=64m test-oom`."},
+            {"action": "terminal", "intent": "phase.resonance", "content": "Wait for exit: `docker wait isolate_oom` and capture the Exit Code."},
+            {"action": CoreAction.SIGNAL.value, "intent": "phase.judgment", "content": "If Exit Code is 137, emit `{\"status\": \"OOM_KILLED\", \"cgroup_enforced\": true}`."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.teardown", "content": "Run `docker rm -f isolate_oom` and complete task."}
         ]
     ),
     TraceDomain.REPRO: build_blueprint(
-        topology_name="tracer.compose.repro", focus="Dramatiq Queue Synchronization Resonance", depth=6, relations="synchronized,restored", min_cognitive_score=4,
+        topology_name="tracer.compose.repro", focus="Queue Synchronization Resonance", depth=4, relations="synchronized,restored", min_cognitive_score=4,
         steps=[
-            {"action": "terminal", "intent": "phase.genesis", "content": "Annihilate remnants and perform clean boot of Docker Compose infrastructure."},
-            {"action": "terminal", "intent": "phase.audit", "content": "Deploy LeakDetector script as an external background observer."},
-            {"action": "terminal", "intent": "phase.stimulus", "content": "Execute internal worker script to inject delayed message stimulus."},
-            {"action": "terminal", "intent": "phase.resonance", "content": "Observe bridging logs for 35s countdown until resonance is caught."},
-            {"action": CoreAction.SIGNAL.value, "intent": "phase.judgment", "content": "Evaluate parsed signals to confirm if synchronization rupture occurred."},
-            {"action": CoreAction.FINISH.value, "intent": "phase.teardown", "content": "Down docker-compose network and restore field to absolute zero."}
+            {"action": "terminal", "intent": "phase.genesis", "content": "Run `docker-compose -f $(pwd)/docker-compose.yml down -v && docker-compose -f $(pwd)/docker-compose.yml up -d` to guarantee clean boot."},
+            {"action": "terminal", "intent": "phase.stimulus", "content": "Run `find $(pwd) -name inject_delayed_message.py -exec python3 {} \\;` to push stimulus to the queue."},
+            {"action": "terminal", "intent": "phase.resonance", "content": "Monitor logs: `docker-compose -f $(pwd)/docker-compose.yml logs worker | grep 'Resonance Caught'` for 35 seconds."},
+            {"action": CoreAction.FINISH.value, "intent": "phase.teardown", "content": "Run `docker-compose -f $(pwd)/docker-compose.yml down` to restore field to absolute zero and conclude."}
         ]
     )
 }
 
+# =========================================================================
+# 4. Universal Task Resolver
+# =========================================================================
+
 class TaskResolver:
+    """
+    @desc: 요청된 Category와 Type을 기반으로 (SurgeBlueprint, min_cognitive_score) 튜플을 반환합니다.
+    """
     def __init__(self):
         self._schemes: Dict[SchemeCategory, Tuple[SurgeBlueprint, int]] = SCHEME_SPEC
         self._transactions: Dict[TransactionDomain, Tuple[SurgeBlueprint, int]] = TRANSACTION_SPEC

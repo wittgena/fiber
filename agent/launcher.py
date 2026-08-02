@@ -1,4 +1,6 @@
 # agent.launcher
+from __future__ import annotations
+
 import argparse
 import asyncio
 import json
@@ -6,23 +8,15 @@ import socket
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
+from agent.resolver.context import BlueprintType, SchemeCategory, TaskResolver, TransactionDomain
 from agent.resolver.model.tier import model_tier_registry
-from agent.resolver.context import TaskResolver, BlueprintType, SchemeCategory, TransactionDomain
-from agent.runtime.executor.loop import LoopExecutor
-from agent.runtime.node import RuntimeNode
 from agent.runtime.scope.manager import managed_scope
 
-from dphi.topos.flow.folding import TopologyController
-from dphi.topos.flow.transition import FlowTransition
+from dphi.topos.flow import FlowTransition, ToposController
 
-from arch.model.sealer import EpochSealer
 from arch.model.surge.blueprint import SurgeBlueprint
-
-from arch.topos.node.gan import Message, GanNode
-from agent.runtime.space.manager import SpaceNode
-
+from arch.topos.node.gan import GanNode, Message
 from phase.executor.flow.event import AgentConfigured
-
 from watcher.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.cgroup import Tier
@@ -45,12 +39,12 @@ DEFAULT_TOPOLOGY_SPEC: Dict[str, Dict[str, Any]] = {
     }
 }
 
+
 @dataclass
 class TopologyResidue:
     edge_state: str
     trajectory_trace: str
     receipt: Optional[TransactionReceipt]
-
 
 class Entry(GanNode):
     def __init__(self, name: str, run_context: dict):
@@ -71,7 +65,7 @@ class Entry(GanNode):
         self.transition = FlowTransition(origin=name)
 
     def setup_default_nodes(self):
-        TopologyController.assemble_and_mount(
+        ToposController.assemble_and_mount(
             topos=self, 
             run_context=self.run_context, 
             broker=self.broker, 
@@ -104,7 +98,6 @@ class Entry(GanNode):
             trajectory_trace=trajectory_result,
             receipt=self.last_receipt
         )
-        
         self._print_verification_report(residue)
         return residue
 
@@ -135,34 +128,31 @@ class Entry(GanNode):
         log.info(f"[{self.name}] 🎯 Aligning topology context: {blueprint.topology_name} (Focus: {blueprint.focus})")
         return await self._execute_pipeline(blueprint=blueprint)
 
+    # ---------------------------------------------------------
+    # Node Lifecycle Message Handlers
+    # ---------------------------------------------------------
+
     async def on_boot(self, message: Message):
         log.info(f"[{self.name}] 🚀 Booting hybrid system layers")
         for child in self.children:
-            if isinstance(child, (LoopExecutor, RuntimeNode)):
-                child.post_message(Message("boot"))
+            child.post_message(Message("boot"))
 
     async def on_agent_configured(self, message: Message):
         self.config_count += 1
         if isinstance(message, AgentConfigured) and message.settings:
             self._injected_settings = message.settings
-            runtime_type = "Proxy" if message.is_proxy else "Local"
-            log.info(f"[{self.name}] 📥 Engine asset captured (Resolved Archetype: {runtime_type}).")
+            log.info(f"[{self.name}] 📥 Engine asset captured.")
 
-        log.info(f"[{self.name}] 📥 Configuration quorum updated ({self.config_count}/{self.target_configs})")
         if self.config_count == self.target_configs:
             log.info(f"[{self.name}] 🚦 Quorum reached. Signaling Workspace creation wave.")
             for child in self.children:
-                if isinstance(child, SpaceNode):
-                    child.post_message(Message("start_workspace"))
+                child.post_message(Message("start_workspace"))
 
     async def on_workspace_ready(self, message: Message):
-        space_type = "Remote Proxy" if getattr(message, 'is_proxy', False) else "Local Docker"
-        log.info(f"[{self.name}] 🌐 Execution space aligned via {space_type}.")
-        
+        log.info(f"[{self.name}] 🌐 Execution space aligned.")
         for child in self.children:
-            if isinstance(child, LoopExecutor):
-                log.info(f"[{self.name}] Deploying payload to PolicyNode.")
-                TopologyController.dispatch_payload(
+            if type(child).__name__ == "LoopExecutor":
+                ToposController.dispatch_payload(
                     policy_node=child, 
                     blueprint=self._active_blueprint, 
                     instruction=self._initial_instruction, 
@@ -171,21 +161,10 @@ class Entry(GanNode):
 
     async def on_llm_event(self, message: Message):
         raw_content = getattr(message, 'llm_message', '')
-        llm_text = str(raw_content)
-        log.info(f"[{self.name}] 💬 [LLM Flux Path]: {llm_text[:100]}...")
-        self.transition.record(f"LLM: {llm_text}")
-
-    async def _fetch_final_parity_state(self) -> dict:
-        return {
-            "parity": {
-                "topos_id": f"task_{self.transition.id}",
-                "phase_id": 0, 
-                "nexus_id": 0
-            },
-            "repos": {}
-        }
+        self.transition.record(f"LLM: {str(raw_content)}")
 
     async def on_task_completed(self, message: Message):
+        """@desc: ToposController에 Ledger Sealing 및 Settlement 정산 로직을 위임합니다."""
         cost = getattr(message, 'cost', 0.0)
         fuel_consumed = getattr(message, 'fuel_consumed', 0)
         mode_tag = "Proxy Channel" if getattr(message, 'is_proxy', False) else "Local Resource"
@@ -193,49 +172,27 @@ class Entry(GanNode):
         log.info(f"[{self.name}] ✅ Task converged (Cost: {cost}, Incurred via: {mode_tag})")
         self.transition.record(f"Task Completed. Cost: {cost} ({mode_tag})")
         
-        actual_entangled_state = await self._fetch_final_parity_state()
-        
-        canonical_payload = EpochSealer.generate_seal_payload(
-            entangled_state=actual_entangled_state,
-            parent_commit_id="genesis"
+        self.last_receipt = await ToposController.settle_dominium(
+            origin_name=self.name,
+            transition=self.transition,
+            broker=self.broker,
+            exchange_adapter=self.exchange_adapter,
+            cost=cost,
+            fuel_consumed=fuel_consumed
         )
-        
-        res = await self.broker.invoke("seal_epoch", canonical_payload)
-        signatures = []
-        if res.success:
-            try:
-                seal_data = json.loads(res.output)
-                signatures = seal_data.get("signatures", [])
-            except json.JSONDecodeError:
-                log.warning(f"[{self.name}] Unparseable response from seal_epoch.")
-        else:
-            log.warning(f"[{self.name}] Epoch sealing encountered friction: {res.error}")
-        
-        self.last_receipt = self.exchange_adapter.finalize_settlement(
-            entangled_state=actual_entangled_state,
-            signatures=signatures, 
-            cost_metrics={"fuel_consumed": fuel_consumed, "accumulated_cost": cost},
-            tier=Tier.STANDARD.value
-        )
-        log.info(f"[{self.name}] 🧾 Transaction Receipt Issued: {self.last_receipt.job_id}")
-        self.transition.reach_dominium(resource_address=f"urn:surgent:resource:resolved_task_{self.transition.id}")
 
     async def on_node_error(self, message: Message):
+        """@desc: 에러 발생 시 ToposController의 붕괴 로직으로 위임합니다."""
         source = getattr(message, 'source_node', 'Unknown')
         error = getattr(message, 'error', 'Unknown Error')
-        
-        log.critical(f"[{self.name}] 🚨 Fatal topological rupture originating from [{source}].")
-        log.critical(f"[{self.name}] ❌ Error Details: {error}")
         if "Connection refused" in str(error) and "DockerWorkspaceNode" in source:
-            log.info(f"[{self.name}] 💡 HINT: Docker daemon is unreachable. Please ensure Docker Desktop/OrbStack is running, or use '--proxy' for remote execution.")
+            log.info(f"[{self.name}] 💡 HINT: Docker daemon is unreachable. Use '--proxy' for remote execution.")
             
-        self.transition.record(f"System Error: {source} failed -> {error}")
-        self.transition.fracture_topology(lmbda=0.2, tau=1.0, force_collapse=True)
+        ToposController.handle_rupture(self.name, self.transition, source, error)
 
     async def on_shutdown(self, message: Message):
         log.info(f"[{self.name}] 💤 Purging system manifolds and reclaiming resources.")
         if self.transition.future and not self.transition.future.done():
-            log.warning(f"[{self.name}] ⚠️ Premature shutdown detected before state convergence. Fracturing topology.")
             self.transition.fracture_topology(lmbda=0.0, tau=1.0, force_collapse=True)
             
         for child in list(self.children):
@@ -380,8 +337,10 @@ class SystemBootstrapper:
             try:
                 prompt = await asyncio.to_thread(input, "\n🤖 [Agent Prompt]> ")
                 prompt = prompt.strip()
-                if not prompt: continue
-                if prompt.lower() in ['exit', 'quit']: break
+                if not prompt: 
+                    continue
+                if prompt.lower() in ['exit', 'quit']: 
+                    break
                 
                 trace = await app.run_task(instruction=prompt)
                 self._print_residue("TRACE", prompt[:30], trace)
