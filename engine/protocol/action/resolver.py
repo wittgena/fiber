@@ -9,9 +9,9 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 
-from engine.protocol.atoa.schema.disc.tool import Tool
+from engine.driver.disc.tool import Tool
 from engine.protocol.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:

@@ -1,4 +1,5 @@
-# engine.protocol.graph.organizer
+# agent.runtime.executor.graph.organizer
+## @lineage: engine.protocol.graph.organizer
 ## @lineage: phi.agent.graph.organizer
 ## @lineage: phi.loop.graph.organizer
 import time
@@ -18,7 +19,7 @@ from engine.driver.llm.handler import (
 )
 from engine.protocol.step import StepHandler, StepContext
 from engine.protocol.tension import TensionHandler
-from engine.protocol.graph.eval import EvalReflector
+from agent.runtime.executor.graph.eval import EvalReflector
 
 from arch.topos.node.state.vocab import SigType, SpecKey
 from watcher.plane.observer.span import unified_flow_span

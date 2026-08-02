@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.tool.handle
+# engine.protocol.tool.handle
+## @lineage: engine.protocol.atoa.schema.tool.handle
 ## @lineage: phi.agent.atoa.schema.tool.handle
 ## @lineage: agent.atoa.schema.tool.handle
 ## @lineage: atoa.agent.action.tool.handle
@@ -10,7 +11,7 @@ from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from rich.text import Text
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 if TYPE_CHECKING:
     from agent.conver.protocol import ProtoConv
 

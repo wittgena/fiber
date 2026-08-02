@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from pydantic import Field, create_model
 from rich.text import Text
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from engine.protocol.action.builder import ActionAnnotations, ActionDefinition
-from engine.protocol.atoa.schema.executor import ActionExecutor
+from engine.protocol.executor import ActionExecutor
 
 if TYPE_CHECKING:
     from agent.conver.protocol import ProtoConv

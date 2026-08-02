@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.tool.fedit
+# engine.protocol.tool.fedit
+## @lineage: engine.protocol.atoa.schema.tool.fedit
 ## @lineage: phi.agent.atoa.schema.tool.fedit
 ## @lineage: agent.atoa.schema.tool.fedit
 ## @lineage: atoa.agent.action.tool.fedit
@@ -14,7 +15,7 @@ from agent.state.protocol import ConvStateProtocol
 from arch.xor.bridge.tool.diff import visualize_diff
 from rich.text import Text
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from engine.protocol.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
 
 CommandLiteral = Literal["view", "create", "str_replace", "insert", "undo_edit"]

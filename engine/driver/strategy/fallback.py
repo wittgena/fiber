@@ -20,7 +20,7 @@ from engine.driver.profile import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
-    from engine.protocol.atoa.schema.llm.response import LLMResponse
+    from engine.protocol.llm.response import LLMResponse
     from mesh.cost.tracker.metric import Metrics
 
 logger = get_logger(__name__)

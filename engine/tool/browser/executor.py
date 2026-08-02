@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 from func_timeout import func_timeout, FunctionTimedOut
 
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.tool.schema.browser import (
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.schema.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,

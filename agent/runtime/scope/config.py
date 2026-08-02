@@ -12,7 +12,7 @@ from pydantic.fields import FieldInfo
 
 from agent.runtime.prompt import PromptContext
 
-from engine.protocol.atoa.schema.disc.tool import Tool
+from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 from agent.runtime.activator import Activator
 

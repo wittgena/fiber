@@ -8,7 +8,7 @@ from typing import Any, TYPE_CHECKING
 import bashlex
 from bashlex.errors import ParsingError
 
-from engine.protocol.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
+from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
 from agent.conver.protocol import ToolExecutionContextProtocol
 
 from engine.tool.terminal.interface import TerminalInterface, TerminalSessionBase

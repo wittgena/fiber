@@ -19,7 +19,7 @@ from engine.protocol.atoa.event.llm.observation import (
 )
 from engine.protocol.atoa.conv.event import Event
 from engine.protocol.atoa.conv.event import EventID
-from engine.protocol.atoa.schema.disc.workspace import BaseWorkspace
+from agent.runtime.space.base import BaseWorkspace
 from agent.conver.status import ConverStatus
 from engine.protocol.atoa.conv.types import ConversationCallbackType, ConversationID, ConversationTags
 

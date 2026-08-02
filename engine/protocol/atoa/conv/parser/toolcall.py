@@ -14,7 +14,7 @@ import types
 from collections.abc import Collection
 from typing import Annotated, Any, Union, get_args, get_origin
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 
 logger = logging.getLogger(__name__)
 

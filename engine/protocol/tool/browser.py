@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.tool.browser
+# engine.protocol.tool.browser
+## @lineage: engine.protocol.atoa.schema.tool.browser
 ## @lineage: phi.agent.atoa.schema.tool.browser
 ## @lineage: agent.atoa.schema.tool.browser
 ## @lineage: atoa.agent.action.tool.browser
@@ -11,8 +12,8 @@ from collections.abc import Sequence
 from typing import Self
 
 from engine.protocol.action.builder import ActionAnnotations, ActionDefinition
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.tool.schema.browser import (
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.schema.browser import (
     BrowserAction,
     BrowserObservation,
     BrowserNavigateAction,

@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
 from engine.protocol.atoa.conv.types import ConversationID, ConversationTags, ConversationCallbackType
-from engine.protocol.atoa.schema.disc.workspace import BaseWorkspace
+from agent.runtime.space.base import BaseWorkspace
 from engine.protocol.atoa.conv.event import Event
 from engine.protocol.atoa.conv.event import EventID
 
@@ -23,7 +23,7 @@ from agent.state.command import StateCommand
 
 if TYPE_CHECKING:
     from agent.conver.status import ConverStatus
-    from engine.protocol.atoa.schema.disc.ator import Ator
+    from engine.driver.disc.ator import Ator
     from arch.topos.resolver.secret import SecretRegistry
     from engine.driver.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any

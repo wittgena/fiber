@@ -16,7 +16,7 @@ from engine.protocol.atoa.conv.message import (
     ThinkingBlock,
 )
 from engine.driver.security.eval import SecurityRisk
-from engine.protocol.atoa.schema.disc.action import Action
+from engine.driver.disc.action import Action
 
 class ActionEvent(LLMConvertibleEvent):
     source: SourceType = "agent"

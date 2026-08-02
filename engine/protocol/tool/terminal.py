@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.tool.terminal
+# engine.protocol.tool.terminal
+## @lineage: engine.protocol.atoa.schema.tool.terminal
 ## @lineage: phi.agent.atoa.schema.tool.terminal
 ## @lineage: agent.atoa.schema.tool.terminal
 ## @lineage: atoa.agent.action.tool.terminal
@@ -19,8 +20,8 @@ if TYPE_CHECKING:
     from agent.state.protocol import ConvStateProtocol
 from rich.text import Text
 from engine.protocol.atoa.conv.message import ImageContent, TextContent
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.protocol.executor import ActionExecutor
+from engine.driver.disc.action import Action, Observation
 from engine.protocol.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
 from arch.xor.bridge.mark.truncate import maybe_truncate
 from arch.xor.bridge.tool.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS

@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.tool.mcp
+# engine.protocol.tool.mcp
+## @lineage: engine.protocol.atoa.schema.tool.mcp
 ## @lineage: phi.agent.atoa.schema.tool.mcp
 ## @lineage: agent.atoa.schema.tool.mcp
 ## @lineage: atoa.agent.action.tool.mcp
@@ -10,12 +11,12 @@ import mcp_types
 
 from runtime.client.param import ChatCompletionToolParam
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation, Schema
+from engine.driver.disc.action import Action, Observation, Schema
 
 from engine.protocol.atoa.mcp.client import MCPClient
 from engine.protocol.action.builder import ActionAnnotations, ActionDefinition
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.disc.mcp import MCPAction, MCPObservation
+from engine.protocol.executor import ActionExecutor
+from engine.driver.disc.mcp import MCPAction, MCPObservation
 
 from arch.model.surge.disc import DiscMixin
 from watcher.plane.observer.span import observe

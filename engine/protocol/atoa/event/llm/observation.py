@@ -13,7 +13,7 @@ from rich.text import Text
 from engine.protocol.atoa.conv.event import N_CHAR_PREVIEW, LLMConvertibleEvent
 from engine.protocol.atoa.conv.event import EventID, SourceType, ToolCallID
 from engine.protocol.atoa.conv.message import Message, TextContent, content_to_str
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 
 # Source of action rejection - used to distinguish user rejections from hook blocks
 RejectionSource = Literal["user", "hook"]

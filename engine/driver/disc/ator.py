@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.disc.ator
+# engine.driver.disc.ator
+## @lineage: engine.protocol.atoa.schema.disc.ator
 from __future__ import annotations
 import re
 import json
@@ -10,12 +11,12 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent.runtime.prompt import PromptContext
-from engine.protocol.atoa.schema.disc.tool import Tool
+from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 
 from engine.protocol.atoa.mcp.client import MCPClient
 from engine.protocol.atoa.mcp.factory import create_mcp_tools
-from engine.protocol.atoa.schema.tool.mcp import MCPExecutor
+from engine.protocol.tool.mcp import MCPExecutor
 from engine.protocol.action.builder import ActionDefinition
 
 from engine.protocol.action.factory import CoreAction

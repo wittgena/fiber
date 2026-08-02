@@ -4,7 +4,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable, Awaitable
 from dataclasses import dataclass
-from engine.protocol.atoa.schema.llm.response import LLMResponse
+from engine.protocol.llm.response import LLMResponse
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:

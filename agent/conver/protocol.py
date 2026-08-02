@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, Any
 
 from engine.driver.security.confirm import ConfirmationPolicyBase
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from engine.driver.security.analyzer import SecurityAnalyzerBase
 
 from arch.topos.resolver.secret import SecretValue
@@ -20,8 +20,8 @@ from agent.state.protocol import ConvStateProtocol
 from engine.protocol.atoa.context.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from engine.protocol.atoa.schema.disc.ator import Ator 
-    from engine.protocol.atoa.schema.disc.workspace import BaseWorkspace
+    from engine.driver.disc.ator import Ator 
+    from agent.runtime.space.base import BaseWorkspace
 
 from watcher.plane.observer.span import end_active_span, should_enable_observability, start_active_span
 

@@ -22,9 +22,9 @@ from engine.driver.security.confirm import ConfirmationPolicyBase
 from arch.topos.resolver.secret import SecretValue
 
 from engine.protocol.atoa.conv.message import Message
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 
-from agent.runtime.space import SandboxWorkspace
+from agent.runtime.space.manager import SandboxWorkspace
 from arch.xor.secret.validator import Cipher
 
 from arch.contract.event.next import next_id

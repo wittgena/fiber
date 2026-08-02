@@ -7,7 +7,7 @@ from pydantic import SecretStr
 
 from agent.runtime.scope.config import AgentConfig
 from engine.driver.llm.model import LLMModel
-from engine.protocol.atoa.schema.disc.tool import Tool
+from engine.driver.disc.tool import Tool
 
 from phase.executor.flow.event import AgentConfigured
 

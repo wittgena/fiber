@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.tool.schema.browser
+# engine.protocol.tool.schema.browser
+## @lineage: engine.protocol.atoa.schema.tool.schema.browser
 ## @lineage: phi.agent.atoa.schema.tool.schema.browser
 ## @lineage: agent.atoa.schema.tool.schema.browser
 ## @lineage: atoa.agent.action.tool.schema.browser
@@ -15,7 +16,7 @@ from pathlib import Path
 from pydantic import Field
 
 from engine.protocol.atoa.conv.message import ImageContent, TextContent
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from arch.xor.bridge.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 
 BROWSER_RECORDING_OUTPUT_DIR = os.path.join(".agent_tmp", "browser_observations")

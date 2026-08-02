@@ -1,9 +1,5 @@
-# engine.protocol.atoa.schema.disc.workspace
-## @lineage: phi.agent.atoa.schema.disc.workspace
-## @lineage: agent.atoa.schema.disc.workspace
-## @lineage: atoa.agent.disc.workspace
-## @lineage: phi.agent.disc.workspace
-## @lineage: agent.workspace
+# agent.runtime.space.base
+## @lineage: engine.protocol.atoa.schema.disc.workspace
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Annotated, Any

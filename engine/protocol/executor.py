@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.executor
+# engine.protocol.executor
+## @lineage: engine.protocol.atoa.schema.executor
 ## @lineage: phi.agent.atoa.schema.executor
 ## @lineage: agent.atoa.schema.executor
 ## @lineage: agent.action.executor
@@ -9,7 +10,7 @@ from typing import (
     Protocol,
     TypeVar,
 )
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 
 if TYPE_CHECKING:
     from agent.conver.protocol import ToolExecutionContextProtocol

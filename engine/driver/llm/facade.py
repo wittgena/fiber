@@ -22,7 +22,7 @@ from runtime.client.param import (
     ChatCompletionToolParam
 )
 
-from engine.protocol.atoa.schema.llm.response import LLMResponse
+from engine.protocol.llm.response import LLMResponse
 from engine.protocol.atoa.conv.message import Message
 from engine.protocol.atoa.conv.types import TokenCallbackType, ConversationTokenCallbackType
 from engine.protocol.atoa.conv.event import Event, LLMConvertibleEvent

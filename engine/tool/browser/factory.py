@@ -13,8 +13,8 @@ import sys
 import threading
 from typing import Any
 
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.tool.schema.browser import BrowserAction, BrowserObservation
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.schema.browser import BrowserAction, BrowserObservation
 
 if sys.platform == "win32":
     from engine.tool.browser.window import WindowsBrowserExecutor

@@ -7,8 +7,8 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
 from agent.conver.protocol import ToolExecutionContextProtocol
 from agent.runtime.builder.chain import ChainBuilder
 from agent.runtime.builder.session import _is_tmux_available, create_terminal_session

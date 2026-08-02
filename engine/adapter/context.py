@@ -5,7 +5,7 @@ from pathlib import Path
 from collections.abc import Mapping
 from typing import Any
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from agent.conver.protocol import (
     AgentCommunicationProtocol, 
     ExecutionControlProtocol, 

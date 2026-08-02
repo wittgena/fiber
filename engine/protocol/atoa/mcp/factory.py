@@ -5,7 +5,7 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from engine.protocol.atoa.schema.tool.mcp import MCPActionDefinition
+from engine.protocol.tool.mcp import MCPActionDefinition
 
 from engine.protocol.atoa.mcp.config import MCPConfig
 from engine.protocol.atoa.mcp.exception import MCPTimeoutError

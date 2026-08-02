@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agent.conver.protocol import ToolExecutionContextProtocol
 
-from engine.protocol.atoa.schema.executor import ActionExecutor
-from engine.protocol.atoa.schema.tool.fedit import (
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.fedit import (
     CommandLiteral,
     FileEditorAction,
     FileEditorObservation,

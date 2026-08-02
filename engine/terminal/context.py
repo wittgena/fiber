@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from agent.conver.protocol import ToolExecutionContextProtocol
-    from engine.protocol.atoa.schema.tool.terminal import TerminalAction, TerminalObservation
+    from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
     from engine.terminal.session import TerminalSessionBase
 
 

@@ -13,7 +13,7 @@ from engine.protocol.atoa.event.llm.action import ActionEvent
 from engine.protocol.atoa.event.llm.observation import AgentErrorEvent
 import engine.driver.security.eval as risk
 from engine.driver.security.analyzer import SecurityAnalyzerBase
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 
 from engine.protocol.atoa.conv.parser.toolcall import ToolCallParser
 from engine.protocol.atoa.conv.message import (

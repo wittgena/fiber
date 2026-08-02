@@ -13,26 +13,26 @@ from typing import TYPE_CHECKING, Dict, Any, Optional
 from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from engine.protocol.atoa.conv.event import Event
 from engine.protocol.atoa.conv.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 
 from engine.protocol.atoa.conv.parser.action import format_context_exceeded_message, ActionParser
 
-from engine.protocol.atoa.schema.disc.ator import Ator
+from engine.driver.disc.ator import Ator
 from engine.protocol.atoa.event.llm.action import ActionEvent
 from engine.protocol.atoa.event.llm.message import MessageEvent
 from engine.protocol.atoa.event.llm.system import SystemPromptEvent, TokenEvent
 from engine.protocol.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from agent.conver.status import ConverStatus
-from engine.protocol.atoa.schema.llm.response import LLMResponse
+from engine.protocol.llm.response import LLMResponse
 
 from engine.driver.llm.handler import LLMInvocationHandler, ToolCallHandler, TextResponseHandler
 from engine.protocol.step import StepHandler, StepContext
 from engine.protocol.tension import TensionHandler
-from engine.protocol.graph.eval import EvalReflector
+from agent.runtime.executor.graph.eval import EvalReflector
 
-from engine.protocol.graph.organizer import DagOrganizer
+from agent.runtime.executor.graph.organizer import DagOrganizer
 from arch.topos.node.state.compiler import StateCompiler
 from arch.topos.node.state.projector import StateProjector
 from arch.topos.node.state.schema import FragmentSig

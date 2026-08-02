@@ -1,8 +1,5 @@
-# agent.runtime.space
-## @lineage: agent.space
-## @lineage: actor.space
-## @lineage: topos.agent.space
-## @lineage: topos.flow.graph.space
+# agent.runtime.space.manager
+## @lineage: agent.runtime.space
 import shutil
 from pathlib import Path
 from typing import Any
@@ -12,7 +9,7 @@ import websockets
 import json
 from typing import Optional
 
-from engine.protocol.atoa.schema.disc.workspace import BaseWorkspace
+from agent.runtime.space.base import BaseWorkspace
 from engine.tool.git.changes import get_git_changes
 from engine.tool.git.diff import get_git_diff
 
@@ -139,17 +136,13 @@ class SandboxProxy:
         parsed_url = urllib.parse.urlparse(host_url)
         ws_scheme = "wss" if parsed_url.scheme == "https" else "ws"
         self.ws_url = f"{ws_scheme}://{parsed_url.netloc}"
-        
-        # 재사용 비동기 HTTP 클라이언트 풀 초기화
         self._http_client = httpx.AsyncClient(base_url=self.host_url)
 
     def _build_headers(self, base_headers: Optional[dict] = None) -> dict:
-        """기본 인증 스펙과 인프라 관측용 트레이싱 경로를 결합하는 헤더 빌더"""
         headers = base_headers or {}
         if self.session_api_key:
             headers["x-session-api-key"] = self.session_api_key
             
-        # [핵심 연동 포인트] 현재 로컬 스코프의 트레이싱 경로를 헤더에 주입하여 서버로 전파
         current_trace = get_current_trace_path()
         if current_trace:
             headers["x-trace-path"] = str(current_trace)
@@ -157,21 +150,16 @@ class SandboxProxy:
         return headers
 
     async def execute_action_http(self, endpoint: str, payload: dict) -> dict:
-        """[HTTP] 동적 추적 수신 구조가 보강된 단발성 제어부"""
         headers = self._build_headers()
         response = await self._http_client.post(endpoint, json=payload, headers=headers)
         response.raise_for_status()
         return response.json()
 
     def connect_ws(self, path: str):
-        """[WebSocket] 분산 트레이싱 가시성이 통합된 실시간 채널 프로바이더"""
         target_url = f"{self.ws_url}{path}"
-        
-        # 웹소켓 오프닝 핸드셰이크 헤더에도 동일하게 분산 트레이싱 컨텍스트 주입
         headers = self._build_headers()
         return websockets.connect(target_url, additional_headers=headers)
 
     async def close(self):
-        """[명시적 자원 해제] 소켓 바인딩 및 커넥션 풀 클리어 파괴자"""
         if self._http_client:
             await self._http_client.aclose()

@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from engine.protocol.atoa.context.state import ConversationState
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from engine.protocol.atoa.event.llm.message import MessageEvent
 from engine.protocol.atoa.event.llm.action import ActionEvent
 from engine.protocol.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent

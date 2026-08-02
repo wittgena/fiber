@@ -1,4 +1,5 @@
-# engine.protocol.atoa.schema.disc.mcp
+# engine.driver.disc.mcp
+## @lineage: engine.protocol.atoa.schema.disc.mcp
 ## @lineage: phi.agent.atoa.schema.disc.mcp
 ## @lineage: agent.atoa.schema.disc.mcp
 ## @lineage: atoa.agent.action.mcp
@@ -9,7 +10,7 @@ from pydantic import Field
 from rich.text import Text
 
 from engine.protocol.atoa.conv.message import ImageContent, TextContent
-from engine.protocol.atoa.schema.disc.action import Action, Observation
+from engine.driver.disc.action import Action, Observation
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

@@ -14,13 +14,13 @@ from pydantic import Field, ConfigDict, computed_field, field_validator, field_s
 from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
-from engine.protocol.atoa.schema.disc.action import Action, Observation, Schema
+from engine.driver.disc.action import Action, Observation, Schema
 from engine.driver.security.eval import SecurityRisk
 
 from runtime.client.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
-from engine.protocol.atoa.schema.disc.tool import Tool
-from engine.protocol.atoa.schema.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
+from engine.driver.disc.tool import Tool
+from engine.protocol.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
 from arch.model.surge.model import SurgeBaseModel
 from arch.model.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
