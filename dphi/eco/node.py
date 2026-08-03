@@ -1,10 +1,8 @@
 # dphi.eco.node
-## @lineage: dphi.topos.runtime.node
-## @lineage: agent.runtime.node
 import os
 from pydantic import SecretStr
 
-from engine.scope.config import AgentConfig
+from dphi.eco.surface.config.agent import AgentConfig
 from engine.driver.llm.model import LLMModel
 from engine.driver.disc.tool import Tool
 

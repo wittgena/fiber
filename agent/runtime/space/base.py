@@ -8,6 +8,9 @@ from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationR
 from arch.xor.bridge.tool.git import GitChange, GitDiff
 from arch.model.surge.disc import DiscMixin
 
+# ✅ DynamicSurgeModel 임포트 추가
+from arch.model.surge.model import DynamicSurgeModel
+
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)
@@ -18,7 +21,8 @@ def _convert_path_to_str(v: str | Path) -> str:
         return str(v)
     return v
 
-class BaseWorkspace(DiscMixin, ABC):
+# ✅ BaseWorkspace에 DynamicSurgeModel 상속 적용
+class BaseWorkspace(DynamicSurgeModel, DiscMixin, ABC):
     working_dir: Annotated[
         str,
         BeforeValidator(_convert_path_to_str),

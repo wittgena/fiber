@@ -1,5 +1,4 @@
 # dphi.eco.flow
-## @lineage: dphi.topos.runtime.flow
 import asyncio
 import json
 import uuid
@@ -7,13 +6,15 @@ import time
 import hashlib
 from enum import Enum
 from typing import Dict, Any, Optional, List, Tuple
+from contextlib import asynccontextmanager, AsyncExitStack
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from agent.runtime.loop.executor import LoopExecutor
+from agent.runtime.space.manager import SpaceNode, space_provider
 from dphi.eco.node import RuntimeNode
-from agent.runtime.space.manager import SpaceNode
+from dphi.eco.surface.registry import get_surface_class, SurfaceConfig
 
 from arch.model.surge.blueprint import SurgeBlueprint
 from arch.contract.gov.flow import PhaseFlow, FlowState
@@ -21,15 +22,20 @@ from arch.model.contract.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
 from arch.model.sealer import EpochSealer
-
 from arch.contract.event.mesh.transport import MeshP2PTransport
+
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.dphi.broker import WasmBroker, WasmMethod
 from watcher.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from watcher.dphi.cgroup import Tier
 from watcher.plane.emitter import get_emitter
+from watcher.tracer.scope import scope_trace, get_current_trace_path
 
 log = get_emitter("topos.flow")
+
+# ==========================================
+# 1. Flow & State Definitions
+# ==========================================
 
 class EdgeFlow(Enum):
     ZERO = "0"           # 구조적 정체성의 공백 (Void)
@@ -112,6 +118,10 @@ class FlowTransition:
             log.error(f"[{self.origin}] Fatal anomaly detected: {e}")
             return f"Execution failed: {e}"
 
+# ==========================================
+# 2. Topology & Mesh Core
+# ==========================================
+
 class FlowMesh:
     def __init__(self, transport: MeshP2PTransport, broker: WasmBroker, topos_group: str = "global_nexus"):
         self.private_key = ed25519.Ed25519PrivateKey.generate()
@@ -180,6 +190,10 @@ class FlowMesh:
     async def shutdown(self):
         await self.transport.close()
 
+# ==========================================
+# 3. Execution Bounds & Manifolds
+# ==========================================
+
 class Bound:
     def __init__(self, broker: Any):
         self.broker = broker
@@ -246,6 +260,9 @@ class ManifoldFolder:
                     source_node.boundaries[target_id] = self.local_bound if topology_spec.get(target_id, {}).get("location", "local") == "local" else self.remote_bound
         return self.local_registry
 
+# ==========================================
+# 4. Orchestrator Controller
+# ==========================================
 
 class ToposController:
     """Topology Orchestration, Event Dispatching, and Cryptographic Sealing"""
@@ -258,7 +275,8 @@ class ToposController:
         active_nodes = {
             "ConfigPolicyNode": LoopExecutor("ConfigPolicyNode"),
             "ConfigSettingsNode": RuntimeNode("ConfigSettingsNode", use_proxy=use_proxy, target_model=target_model),
-            "DockerWorkspaceNode": SpaceNode("DockerWorkspaceNode", use_proxy=use_proxy)
+            # ✅ 이전 답변의 수정사항 적용: provider 주입
+            "DockerWorkspaceNode": SpaceNode("DockerWorkspaceNode", provider=space_provider, use_proxy=use_proxy)
         }
         ManifoldFolder(broker=broker).fold_manifold(active_nodes=active_nodes, topology_spec=topology_spec)
         for node in active_nodes.values():
@@ -328,3 +346,58 @@ class ToposController:
         log.critical(f"[{origin_name}] 🚨 Fatal topological rupture originating from [{source}]. Error: {error}")
         transition.record(f"System Error: {source} failed -> {error}")
         transition.fracture_topology(lmbda=0.2, tau=1.0, force_collapse=True)
+
+# ==========================================
+# 5. Integrated Infrastructure Scope Manager
+# ==========================================
+
+class SurfaceManager:
+    def __init__(self, config: SurfaceConfig):
+        self.config = config
+        surface_type = getattr(config, "surface_type", "local")
+        try:
+            surface_class = get_surface_class(surface_type)
+        except (ImportError, AttributeError, ValueError) as e:
+            log.warning(f"🚨 Failed to load '{surface_type}' Surface: {e}. Fallback to default 'local' environment.")
+            surface_class = get_surface_class("local")
+            
+        self.impl = surface_class(config)
+
+    async def up(self):
+        if asyncio.iscoroutinefunction(self.impl.up):
+            await self.impl.up()
+        else:
+            self.impl.up()
+
+    async def down(self):
+        if asyncio.iscoroutinefunction(self.impl.down):
+            await self.impl.down()
+        else:
+            self.impl.down()
+    
+    def get_engine(self):
+        return self.impl.get_engine()
+
+@asynccontextmanager
+async def managed_scope(**surface_kwargs):
+    config = SurfaceConfig(**surface_kwargs)
+    manager = SurfaceManager(config)
+    
+    facet_type = "logical" if config.surface_type == "local" else "infra"
+    surface_name = manager.impl.__class__.__name__.replace("Surface", "").lower()
+    
+    async with AsyncExitStack() as stack:
+        await stack.enter_async_context(scope_trace(name=surface_name, facet=facet_type))
+        log.info(f"[*] Entered Trace Path: {get_current_trace_path()}")
+        
+        try:
+            await manager.up()
+            yield manager 
+        except Exception as e:
+            log.error(f"🚨 [managed_scope] pipeline exception: {type(e).__name__} - {e}")
+            raise
+        finally:
+            log.info("[managed_scope] Triggering safe teardown sequence for infrastructure resources.")
+            await asyncio.sleep(0.1)
+            await manager.down()
+            log.info("[+] Context Manager closed safely.")

@@ -9,8 +9,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from agent.resolver.context import BlueprintType, SchemeCategory, TaskResolver, TransactionDomain
 from agent.resolver.model.tier import model_tier_registry
-from engine.scope.manager import managed_scope
-from dphi.eco.flow import FlowTransition, ToposController
+from dphi.eco.flow import FlowTransition, ToposController, managed_scope
 
 from arch.model.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message

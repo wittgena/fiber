@@ -1,32 +1,31 @@
 # agent.runtime.space.manager
 import os
+import signal
 import shutil
 import asyncio
 import io
 import urllib.parse
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import httpx
 import websockets
 import docker
 from docker.errors import NotFound, BuildError
+from docker.models.containers import Container
 
 from agent.runtime.space.base import BaseWorkspace
 from engine.tool.git.changes import get_git_changes
 from engine.tool.git.diff import get_git_diff
-
-# [변경됨] 범용 동기식 execute_command 대신 통합 비동기 실행기와 환경변수 정제기 임포트
-from agent.runtime.builder.executor import executor_factory, sanitized_env
 from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
 from arch.xor.bridge.tool.git import GitChange, GitDiff
 
-# [Topology & Nodes]
+from agent.runtime.builder.executor import executor_factory, sanitized_env
+
 from arch.topos.node.gan import Message, GanNode
 from phase.executor.flow.event import WorkspaceReady
 from phase.bind.resolver import resolve_path
 
-# [Infra & Tracing]
 from watcher.tracer.scope import get_current_trace_path
 from watcher.tracer.infra.router import InfraRouter
 from watcher.plane.emitter import get_emitter
@@ -37,72 +36,154 @@ RES_ROOT = resolve_path("res")
 SPACE_DIR = RES_ROOT / "space"
 
 CUSTOM_BASE_IMAGE_TAG = "custom-base-image:latest"
-LOCAL_WORKSPACE_NAME = "hands_workspace_local"  # 컨테이너 재사용을 위한 고정 이름
-
 PROXY_URL = os.getenv("SANDBOX_SERVER_URL", "http://localhost:8000")
 PROXY_API_KEY = os.getenv("SANDBOX_API_KEY", "dummy-token")
 
-# 쉘 스크립트 파일 쓰기를 대체하는 In-memory Dockerfile
 DOCKERFILE_CONTENT = """
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y git python3-pip
 """
 
-class SandboxWorkspace(BaseWorkspace):
-    def __init__(self, *, working_dir: str | Path, **kwargs: Any):
-        super().__init__(working_dir=str(working_dir), **kwargs)
+class HotWarmContainerPool:
+    def __init__(self, pool_size: int = 3):
+        self.pool_size = pool_size
+        # [개선 1] 모듈 Import 시점의 Docker 연결 강제(Anti-pattern) 제거 (지연 초기화)
+        self.client = None
+        self.ready_queue: asyncio.Queue[Container] = asyncio.Queue(maxsize=pool_size)
+        self._initialized = False
 
-    def execute_command(
-        self,
-        command: str,
-        cwd: str | Path | None = None,
-        timeout: float = 30.0,
-    ) -> CommandResult:
-        target_cwd = str(cwd) if cwd is not None else str(self.working_dir)
-        log.debug(f"Executing local bash command: {command} in {target_cwd}")
-
-        # [개선됨] 더미 스레드 생성 없이 OS 차원의 Async IO 통신으로 서브프로세스 관리
-        async def _async_exec():
-            proc = await asyncio.create_subprocess_shell(
-                command,
-                cwd=target_cwd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env=sanitized_env()  # 보안을 위한 환경변수 필터링 적용
-            )
-            stdout, stderr = await proc.communicate()
-            return (
-                proc.returncode,
-                stdout.decode('utf-8', errors='replace'),
-                stderr.decode('utf-8', errors='replace')
-            )
-
-        # 공유 AsyncExecutor 활용하여 동기 컨텍스트에서도 비동기 함수 안전하게 실행 및 타임아웃 통제
-        executor = executor_factory.get_async_executor()
+    async def initialize(self):
+        if self._initialized: return
         
+        # [개선 2] 실제 사용 시점에 연결 시도 및 친절한 에러 핸들링
         try:
-            returncode, stdout_str, stderr_str = executor.run_async(_async_exec, timeout=timeout)
+            # 동기식 from_env 호출 시 blocking이 길어질 수 있으므로 스레드로 감싸는 것도 좋으나 
+            # 일반적으로 환경변수 파싱 및 소켓 생성은 빠르므로 직접 호출 후 ping으로 검증합니다.
+            self.client = docker.from_env()
+            await asyncio.to_thread(self.client.ping)
+        except Exception as e:
+            log.error("=========================================================")
+            log.error(" 🚨 [오류] Docker 데몬(Daemon)에 연결할 수 없습니다!")
+            log.error(" -> 호스트 머신에서 Docker Desktop이 실행 중인지 확인해주세요.")
+            log.error(f" -> 상세 예외 정보: {str(e)}")
+            log.error("=========================================================")
+            # 시스템이 멈추지 않고 적절히 실패 처리를 할 수 있도록 예외를 발생시킵니다.
+            raise RuntimeError("Docker is not running. Please start Docker Desktop and try again.") from e
+
+        await asyncio.to_thread(SPACE_DIR.mkdir, parents=True, exist_ok=True)
+        await self._ensure_image()
+        
+        log.info(f"[ContainerPool] Pre-provisioning {self.pool_size} hot-warm containers...")
+        for _ in range(self.pool_size):
+            await self._spawn_and_enqueue()
+        self._initialized = True
+
+    async def _ensure_image(self):
+        try:
+            await asyncio.to_thread(self.client.images.get, CUSTOM_BASE_IMAGE_TAG)
+        except docker.errors.ImageNotFound:
+            log.info("[ContainerPool] Building custom base image...")
+            f = io.BytesIO(DOCKERFILE_CONTENT.encode('utf-8'))
+            try:
+                build_logs = self.client.api.build(fileobj=f, rm=True, tag=CUSTOM_BASE_IMAGE_TAG, decode=True)
+                for chunk in build_logs:
+                    if 'error' in chunk: raise BuildError(chunk['error'], build_logs)
+            except BuildError as e:
+                log.error(f"[ContainerPool] Image build failed: {e}")
+                raise
+
+    async def _spawn_and_enqueue(self):
+        """새 컨테이너를 구동하여 대기 큐에 삽입"""
+        container = await asyncio.to_thread(
+            self.client.containers.run,
+            image=CUSTOM_BASE_IMAGE_TAG,
+            detach=True,
+            tty=True,
+            working_dir="/source",
+            command="/bin/bash" 
+        )
+        await self.ready_queue.put(container)
+        log.debug(f"[ContainerPool] New container {container.short_id} added to pool.")
+
+    async def acquire(self) -> Container:
+        """대기 중인 컨테이너 즉시 할당 O(1)"""
+        if not self._initialized:
+            await self.initialize()
+        container = await self.ready_queue.get()
+        log.info(f"[ContainerPool] Allocated container {container.short_id}")
+        return container
+
+    async def release_and_replenish(self, container: Container):
+        log.info(f"[ContainerPool] Destroying used container {container.short_id} (Zero State Contamination)")
+        async def _kill_and_remove():
+            try:
+                await asyncio.to_thread(container.remove, force=True)
+            except Exception as e:
+                log.warning(f"[ContainerPool] Failed to remove container: {e}")
+        asyncio.create_task(_kill_and_remove())
+        asyncio.create_task(self._spawn_and_enqueue())
+
+class SandboxWorkspace(BaseWorkspace):
+    def __init__(self, *, working_dir: str | Path, container: Optional[Container] = None, **kwargs: Any):
+        # ✅ Pydantic 제약 충돌 해결:
+        # BaseWorkspace (DynamicSurgeModel 상속)로 위임하여 Pydantic이 안전하게 extra 필드로 수용하게 함.
+        # self.container = container 와 같은 편법 할당 우회 로직을 완벽히 제거.
+        super().__init__(working_dir=working_dir, container=container, **kwargs)
+
+    def execute_command(self, command: str, cwd: str | Path | None = None, timeout: float = 30.0) -> CommandResult:
+        target_cwd = str(cwd) if cwd is not None else str(self.working_dir)
+        executor = executor_factory.get_async_executor()
+        async def _async_exec():
+            # DynamicSurgeModel의 extra 속성에 의해 self.container(또는 self.get('container'))로 안전하게 접근 가능
+            if self.get('container'):
+                exec_instance = await asyncio.to_thread(
+                    self.container.client.api.exec_create,
+                    self.container.id, cmd=["/bin/bash", "-c", command],
+                    workdir=target_cwd, environment=sanitized_env()
+                )
+                output = await asyncio.to_thread(
+                    self.container.client.api.exec_start, exec_instance['Id'], stream=False
+                )
+                inspect = await asyncio.to_thread(self.container.client.api.exec_inspect, exec_instance['Id'])
+                return inspect['ExitCode'], output.decode('utf-8', errors='replace'), ""
+            else:
+                proc = await asyncio.create_subprocess_shell(
+                    command,
+                    cwd=target_cwd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=sanitized_env(),
+                    preexec_fn=os.setsid if os.name == 'posix' else None # Process Group Leader로 지정
+                )
+                
+                try:
+                    async with asyncio.timeout(timeout):
+                        stdout, stderr = await proc.communicate()
+                        return proc.returncode, stdout.decode('utf-8', errors='replace'), stderr.decode('utf-8', errors='replace')
+                except asyncio.TimeoutError:
+                    if proc.returncode is None:
+                        try:
+                            if os.name == 'posix':
+                                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                            else:
+                                proc.kill()
+                        except ProcessLookupError:
+                            pass
+                    raise TimeoutError(f"Command timed out after {timeout} seconds")
+
+        try:
+            returncode, stdout_str, stderr_str = executor.run_async(_async_exec, timeout=timeout + 1.0)
             timeout_occurred = False
         except TimeoutError:
-            # run_async 내부의 anyio.fail_after에 의해 타임아웃 발생 시 안전하게 캡처
-            returncode = -1
-            stdout_str = ""
-            stderr_str = f"Command timed out after {timeout} seconds"
+            returncode, stdout_str, stderr_str = -1, "", f"Command timed out after {timeout} seconds"
             timeout_occurred = True
         except Exception as e:
-            # 기타 시스템 에러 및 실행 실패 예외 처리
-            log.error(f"Execution error in execute_command: {e}", exc_info=True)
-            returncode = -1
-            stdout_str = ""
-            stderr_str = f"Execution error: {str(e)}"
+            returncode, stdout_str, stderr_str = -1, "", f"Execution error: {str(e)}"
             timeout_occurred = False
 
         return CommandResult(
-            command=command,
-            exit_code=returncode,
-            stdout=stdout_str,
-            stderr=stderr_str,
-            timeout_occurred=timeout_occurred,
+            command=command, exit_code=returncode,
+            stdout=stdout_str, stderr=stderr_str, timeout_occurred=timeout_occurred
         )
 
     def file_upload(self, source_path: str | Path, destination_path: str | Path) -> FileOperationResult:
@@ -117,15 +198,7 @@ class SandboxWorkspace(BaseWorkspace):
             return FileOperationResult(success=False, source_path=str(source), destination_path=str(destination), error=str(e))
 
     def file_download(self, source_path: str | Path, destination_path: str | Path) -> FileOperationResult:
-        source, destination = Path(source_path), Path(destination_path)
-        log.debug(f"Local file download: {source} -> {destination}")
-        try:
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, destination)
-            return FileOperationResult(success=True, source_path=str(source), destination_path=str(destination), file_size=destination.stat().st_size)
-        except Exception as e:
-            log.error(f"Local file download failed: {e}")
-            return FileOperationResult(success=False, source_path=str(source), destination_path=str(destination), error=str(e))
+        return self.file_upload(source_path, destination_path) # 로컬의 경우 동일 로직
 
     def git_changes(self, path: str | Path) -> list[GitChange]:
         return get_git_changes(Path(self.working_dir) / path)
@@ -133,210 +206,94 @@ class SandboxWorkspace(BaseWorkspace):
     def git_diff(self, path: str | Path) -> GitDiff:
         return get_git_diff(Path(self.working_dir) / path)
 
-    def pause(self) -> None:
-        log.debug("pause() called on LocalWorkspace - nothing to do")
-
-    def resume(self) -> None:
-        log.debug("resume() called on LocalWorkspace - nothing to do")
+    def pause(self) -> None: pass
+    def resume(self) -> None: pass
 
 class SandboxProxy:
     def __init__(self, host_url: str, workspace_ref: str = None, session_api_key: Optional[str] = None):
-        self.host_url = host_url
-        self.workspace_ref = workspace_ref or "default-workspace"
+        self.host_url, self.workspace_ref = host_url, workspace_ref or "default-workspace"
         self.session_api_key = session_api_key
-        
         parsed_url = urllib.parse.urlparse(host_url)
-        ws_scheme = "wss" if parsed_url.scheme == "https" else "ws"
-        self.ws_url = f"{ws_scheme}://{parsed_url.netloc}"
+        self.ws_url = f"{'wss' if parsed_url.scheme == 'https' else 'ws'}://{parsed_url.netloc}"
         self._http_client = httpx.AsyncClient(base_url=self.host_url)
 
     def _build_headers(self, base_headers: Optional[dict] = None) -> dict:
         headers = base_headers or {}
-        if self.session_api_key:
-            headers["x-session-api-key"] = self.session_api_key
-        if current_trace := get_current_trace_path():
-            headers["x-trace-path"] = str(current_trace)
+        if self.session_api_key: headers["x-session-api-key"] = self.session_api_key
+        if trace := get_current_trace_path(): headers["x-trace-path"] = str(trace)
         return headers
 
     async def execute_action_http(self, endpoint: str, payload: dict) -> dict:
-        headers = self._build_headers()
-        response = await self._http_client.post(endpoint, json=payload, headers=headers)
+        response = await self._http_client.post(endpoint, json=payload, headers=self._build_headers())
         response.raise_for_status()
         return response.json()
 
-    def connect_ws(self, path: str):
-        target_url = f"{self.ws_url}{path}"
-        headers = self._build_headers()
-        return websockets.connect(target_url, additional_headers=headers)
-
     async def close(self):
-        if self._http_client:
-            await self._http_client.aclose()
+        if self._http_client: await self._http_client.aclose()
 
+class SpaceManager:
+    def __init__(self):
+        self._local_pool = HotWarmContainerPool(pool_size=3)
+        self.router = InfraRouter(PROXY_URL, PROXY_API_KEY)
 
-# ============================================================================
-# [Space Node Organizer (Integrated)]
-# ============================================================================
+    async def allocate_workspace(self, working_dir: str | Path, use_proxy: bool = False, session_api_key: Optional[str] = None) -> Any:
+        if use_proxy:
+            async with httpx.AsyncClient(headers=self.router.build_headers()) as client:
+                res = await client.post(self.router.get_http_endpoint("provision"), json={"image": CUSTOM_BASE_IMAGE_TAG})
+                res.raise_for_status()
+                ref = res.json().get("workspace_ref")
+                return SandboxProxy(PROXY_URL, ref, session_api_key)
+        else:
+            container = await self._local_pool.acquire()
+            return SandboxWorkspace(working_dir=working_dir, container=container)
+
+    async def release_workspace(self, workspace: Any):
+        if isinstance(workspace, SandboxWorkspace) and workspace.get('container'):
+            await self._local_pool.release_and_replenish(workspace.container)
+        elif isinstance(workspace, SandboxProxy):
+            async with httpx.AsyncClient(headers=self.router.build_headers()) as client:
+                await client.delete(self.router.get_http_endpoint("teardown", workspace_ref=workspace.workspace_ref))
+            await workspace.close()
+
+    def create_space_node(self, name: str, use_proxy: bool = False) -> 'SpaceNode':
+        return SpaceNode(name=name, provider=self, use_proxy=use_proxy)
+
+space_provider = SpaceManager()
+
 class SpaceNode(GanNode):
-    """
-    @desc: Hybrid workspace isolation environment controller.
-    @flow: Signal matching -> Deployment routing -> Asset resource teardown.
-    """
-    def __init__(self, name: str, use_proxy: bool = False, router: Optional[InfraRouter] = None):
+    def __init__(self, name: str, provider: SpaceManager, use_proxy: bool = False):
         super().__init__(name)
+        self.provider = provider
         self.use_proxy = use_proxy
-        
-        self.router = router or InfraRouter(PROXY_URL, PROXY_API_KEY)
-        self.client: Optional[docker.DockerClient] = None
-        self.container: Optional[docker.models.containers.Container] = None
-        
-        self.workspace_ref: Optional[str] = None
-        self.remote_http_client: Optional[httpx.AsyncClient] = None
-
-    def _build_image_sync(self):
-        log.info(f"[{self.name}] [Local] Target footprint missing. Compiling image via Docker SDK... (This may take 1~3 minutes)")
-        f = io.BytesIO(DOCKERFILE_CONTENT.encode('utf-8'))
-        
-        try:
-            # decode=True로 스트림을 받되, 화면에 출력하지 않고 메모리에 캐싱하여 에러 감지에만 사용합니다.
-            build_logs = self.client.api.build(
-                fileobj=f, 
-                rm=True, 
-                tag=CUSTOM_BASE_IMAGE_TAG, 
-                decode=True
-            )
-            
-            for chunk in build_logs:
-                # 에러가 발생한 경우에만 캡처하여 예외를 발생시킵니다.
-                if 'error' in chunk:
-                    raise BuildError(chunk['error'], build_logs)
-                    
-            log.info(f"[{self.name}] [Local] ✅ Image compilation completed successfully.")
-            
-        except BuildError as e:
-            log.error(f"[{self.name}] ❌ Docker build failed: {e}")
-            raise
-
-    async def _ensure_docker_image(self):
-        """@step: Image signature alignment verification"""
-        # Event Loop 블로킹을 막기 위해 디렉토리 생성을 별도 스레드에서 처리
-        await asyncio.to_thread(SPACE_DIR.mkdir, parents=True, exist_ok=True)
-        
-        self.client = docker.from_env()
-        try:
-            await asyncio.to_thread(self.client.images.get, CUSTOM_BASE_IMAGE_TAG)
-            log.info(f"[{self.name}] [Local] Baseline image target aligned: {CUSTOM_BASE_IMAGE_TAG}")
-        except docker.errors.ImageNotFound:
-            # Subprocess 쉘 스크립트 호출을 SDK 기반 인메모리 빌드로 교체
-            await asyncio.to_thread(self._build_image_sync)
-
-    async def _start_local_workspace(self):
-        """## @flow: Image verification -> Check existing -> container run or attach"""
-        log.info(f"[{self.name}] [Local] Checking for existing isolated local sandbox container...")
-        await self._ensure_docker_image()
-        
-        try:
-            # 1. 기존 컨테이너가 존재하는지 고정된 이름으로 확인
-            self.container = await asyncio.to_thread(self.client.containers.get, LOCAL_WORKSPACE_NAME)
-            
-            # 2. 존재한다면 상태 확인 후 실행
-            if self.container.status != "running":
-                log.info(f"[{self.name}] [Local] Existing container found but stopped. Starting it...")
-                await asyncio.to_thread(self.container.start)
-            else:
-                log.info(f"[{self.name}] [Local] Existing running container found. Reusing it.")
-                
-            self.workspace_ref = self.container.id
-            log.info(f"[{self.name}] [Local] 로컬 컨테이너 재사용 성공 (ID: {self.container.short_id})")
-
-        except NotFound:
-            # 3. 존재하지 않으면 새로 생성
-            log.info(f"[{self.name}] [Local] No existing container found. Provisioning new container...")
-            self.container = await asyncio.to_thread(
-                self.client.containers.run,
-                image=CUSTOM_BASE_IMAGE_TAG,
-                name=LOCAL_WORKSPACE_NAME,
-                ports={'8011/tcp': 8011},
-                detach=True,
-                environment={"SANDBOX_USER_ID": os.getuid() if hasattr(os, 'getuid') else 1000},
-                working_dir="/source"
-            )
-            self.workspace_ref = self.container.id
-            log.info(f"[{self.name}] [Local] 로컬 컨테이너 신규 구동 성공 (ID: {self.container.short_id})")
-
-    async def _start_remote_workspace(self):
-        """## @flow: router absolute uri -> dynamic headers -> httpx payload"""
-        log.info(f"[{self.name}] [Proxy] Emitting provisioning payload via InfraRouter.")
-        
-        provision_url = self.router.get_http_endpoint("provision")
-        headers = self.router.build_headers()
-        
-        self.remote_http_client = httpx.AsyncClient(headers=headers)
-        response = await self.remote_http_client.post(
-            provision_url, 
-            json={
-                "image": CUSTOM_BASE_IMAGE_TAG,
-                "timeout": 3600
-            }
-        )
-        response.raise_for_status()
-        
-        data = response.json()
-        self.workspace_ref = data.get("workspace_ref")
-        if not self.workspace_ref:
-            raise ValueError("Topological fault: Missing workspace_ref token in remote residue.")
-        log.info(f"[{self.name}] [Proxy] Remote sandbox successfully assigned (Ref: {self.workspace_ref})")
+        self.active_workspace = None
 
     async def on_start_workspace(self, message: Message):
-        """@phase: Isolation Infra Allocation"""
         try:
-            if self.use_proxy:
-                try:
-                    await self._start_remote_workspace()
-                except Exception as e:
-                    log.warning(f"[{self.name}] ⚠️ Remote deployment fault. Triggering Local Fallback loop: {e}")
-                    self.use_proxy = False
-            
-            if not self.use_proxy:
-                await self._start_local_workspace()
-
-            self.post_message(WorkspaceReady(workspace_ref=self.workspace_ref))
-        except Exception as e:
-            log.error(f"[{self.name}] ❌ Complete breakdown of workspace initialization layers: {e}")
+            self.active_workspace = await self.provider.allocate_workspace(
+                working_dir="/source", use_proxy=self.use_proxy
+            )
+            # hasattr 및 get 메서드를 통해 컨테이너 참조를 안전하게 획득
+            ref = getattr(self.active_workspace, 'workspace_ref', 
+                          self.active_workspace.container.short_id if (hasattr(self.active_workspace, 'container') and self.active_workspace.container) else 'local')
+            self.post_message(WorkspaceReady(workspace_ref=ref))
+        except RuntimeError as e:
+            # [개선 3] Docker 연결 오류와 같이 런타임에서 잡힌 치명적 에러를 메시지로 전파
+            log.error(f"[{self.name}] ❌ Workspace allocation aborted: {e}")
             err_msg = Message("node_error", bubble=True)
-            err_msg.source_node = self.name
-            err_msg.error = str(e)
+            err_msg.source_node, err_msg.error = self.name, str(e)
+            self.post_message(err_msg)
+        except Exception as e:
+            log.error(f"[{self.name}] ❌ Workspace allocation failed: {e}")
+            err_msg = Message("node_error", bubble=True)
+            err_msg.source_node, err_msg.error = self.name, str(e)
             self.post_message(err_msg)
 
     async def on_shutdown(self, message: Message):
         """@phase: Infra Collapse & Resource Reclaim"""
-        log.info(f"[{self.name}] 💤 Deconstructing execution environment allocations...")
+        log.info(f"[{self.name}] 💤 Deconstructing execution environment...")
+        if self.active_workspace:
+            await self.provider.release_workspace(self.active_workspace)
+            self.active_workspace = None
         
-        # [Proxy Cleanup]
-        if self.remote_http_client:
-            if self.use_proxy and self.workspace_ref:
-                try:
-                    teardown_url = self.router.get_http_endpoint("teardown", workspace_ref=self.workspace_ref)
-                    log.info(f"[{self.name}] [Proxy] Requesting remote sandbox deletion (Ref: {self.workspace_ref})")
-                    await self.remote_http_client.delete(teardown_url)
-                except Exception as e:
-                    log.error(f"[{self.name}] [Proxy] Reclaim exception: {e}")
-            try:
-                await self.remote_http_client.aclose()
-            except Exception:
-                pass
-
-        if not self.use_proxy and self.container:
-            try:
-                log.info(f"[{self.name}] [Local] Preserving sandbox container ({self.container.short_id}) for future reuse.")
-            except Exception as e:
-                log.error(f"[{self.name}] [Local] Shutdown exception: {e}")
-
-        if self.client:
-            try:
-                await asyncio.to_thread(self.client.close)
-            except Exception:
-                pass
-
         self._running = False
         self._queue.put_nowait(None)
