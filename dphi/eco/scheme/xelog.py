@@ -8,7 +8,7 @@ from fastapi.routing import APIRoute
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from watcher.xelog.rest import api as rest_app  
-from watcher.dphi.scheme.runner import WebRunner
+from kernel.dphi.scheme.runner import WebRunner
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("scheme.xelog")

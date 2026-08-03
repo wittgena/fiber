@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 from typing import Dict, List, Any, Set
 
-from phase.bind.resolver import resolve_path, load_bound, find_current_self
+from kernel.phase.bind.resolver import resolve_path, load_bound, find_current_self
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("wasm.scanner")

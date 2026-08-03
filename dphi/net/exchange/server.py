@@ -17,11 +17,11 @@ from arch.topos.network.channel.codec import JsonMessageCodec, XelogUniversalTra
 from arch.topos.network.factory import ProtocolFactory
 
 # 통합 및 엄격한 타입이 적용된 어댑터 및 데이터 클래스 임포트
-from watcher.dphi.adapter.eco import (
+from kernel.dphi.adapter.eco import (
     EcoAdapter, ExchangeAdapter, WalletAdapter,
     X402SettlementReceipt, TransactionReceipt, SettlementPayload
 )
-from watcher.dphi.adapter.state import StateAdapter
+from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("xelog.exchange")

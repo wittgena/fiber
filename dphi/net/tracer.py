@@ -8,13 +8,13 @@ from pathlib import Path
 from typing import Tuple, Optional
 from dataclasses import asdict
 
-from phase.bind.resolver import resolve_path
-from phase.wasm.inter.wasm import WasmInterpreter
-from phase.wasm.builder import WasmBuilder
+from kernel.phase.bind.resolver import resolve_path
+from kernel.dphi.wasm.inter.wasm import WasmInterpreter
+from kernel.dphi.wasm.builder import WasmBuilder
 
-from watcher.dphi.adapter.sign import LedgerAuthAdapter
-from watcher.dphi.cgroup import CgroupPolicy
-from kernel.ledger.consensus import KernelLedger, KernelCommit, LedgerRole
+from kernel.dphi.adapter.sign import LedgerAuthAdapter
+from kernel.dphi.cgroup import CgroupPolicy
+from kernel.dphi.ledger.consensus import KernelLedger, KernelCommit, LedgerRole
 from watcher.tracer.bound import BaseTracer
 from watcher.plane.emitter import get_emitter
 
@@ -127,7 +127,7 @@ class WasmTracer(BaseTracer):
         self.log.info("\n--- [START] Delegating Orchestration to WasmTester ---")
         try:
             if not self.tester:
-                from phase.wasm.tester.dphi import WasmTester
+                from kernel.dphi.wasm.tester.dphi import WasmTester
                 self.log.info("[SYSTEM] Initializing default WasmTester...")
                 self.tester = WasmTester(
                     wasm_module_path=str(DEST_WASM_FILE),

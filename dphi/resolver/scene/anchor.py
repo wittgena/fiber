@@ -4,8 +4,8 @@ import json
 from typing import Any
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
-from watcher.dphi.scheme.runner import SchemeRunner, EpochBase
-from watcher.dphi.adapter.state import StateAdapter
+from kernel.dphi.scheme.runner import SchemeRunner, EpochBase
+from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.anchor")

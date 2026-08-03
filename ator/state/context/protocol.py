@@ -10,7 +10,7 @@ from engine.driver.security.confirm import ConfirmationPolicyBase
 from engine.driver.disc.action import Action, Observation
 from engine.driver.security.analyzer import SecurityAnalyzerBase
 
-from arch.topos.resolver.secret import SecretValue
+from arch.contract.resolver.secret import SecretValue
 
 from engine.parser.conv.types import ConversationID
 from engine.parser.conv.message import Message

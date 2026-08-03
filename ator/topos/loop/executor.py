@@ -21,8 +21,8 @@ from arch.model.contract.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
 from arch.topos.tunnel.factory import TunnelFactory
-from phase.executor.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
-from phase.bind.resolver import resolve_path
+from arch.topos.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
+from kernel.phase.bind.resolver import resolve_path
 from watcher.tracer.infra.router import InfraRouter
 from watcher.plane.emitter import get_emitter
 

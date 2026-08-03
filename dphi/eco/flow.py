@@ -24,10 +24,10 @@ from arch.contract.event.next import next_id
 from arch.model.sealer import EpochSealer
 from arch.contract.event.mesh.transport import MeshP2PTransport
 
-from watcher.dphi.adapter.state import StateAdapter
-from watcher.dphi.broker import WasmBroker, WasmMethod
-from watcher.dphi.adapter.eco import ExchangeAdapter, TransactionReceipt
-from watcher.dphi.cgroup import Tier
+from kernel.dphi.adapter.state import StateAdapter
+from kernel.dphi.broker import WasmBroker, WasmMethod
+from kernel.dphi.adapter.eco import ExchangeAdapter, TransactionReceipt
+from kernel.dphi.cgroup import Tier
 from watcher.plane.emitter import get_emitter
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 

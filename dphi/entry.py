@@ -8,8 +8,8 @@ from dphi.tester.wasm import WasmTester
 from dphi.net.tracer import WasmTracer
 
 from kernel.phase.reactor import KernelReactor
-from phase.wasm.builder import WasmBuilder
-from phase.bind.resolver import resolve_path
+from kernel.dphi.wasm.builder import WasmBuilder
+from kernel.phase.bind.resolver import resolve_path
 
 import dphi.resolver.scene as scene_module
 from watcher.plane.emitter import get_emitter

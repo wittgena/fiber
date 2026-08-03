@@ -13,7 +13,7 @@ from typing import Type, Optional, Callable, Any
 import httpx
 import redis
 
-from phase.bind.client.engine.local import LLMEngine
+from kernel.phase.bind.client.engine.local import LLMEngine
 from watcher.plane.emitter import get_emitter
 
 log_local = get_emitter("surface.local")

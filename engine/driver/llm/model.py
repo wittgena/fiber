@@ -35,7 +35,7 @@ from engine.driver.config.vendor import VendorConfig
 from engine.driver.strategy.fallback import FallbackStrategy
 from engine.driver.llm.factory import DriverFactory
 from engine.driver.observer import DriverObserver
-from phase.bind.resolver import find_current_self
+from kernel.phase.bind.resolver import find_current_self
 
 SELF_ROOT = find_current_self()
 

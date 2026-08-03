@@ -14,8 +14,8 @@ import asyncio
 from typing import Dict, Any
 
 from arch.topos.network.bridge import RpcBridge
-from watcher.dphi.exchange.config import billing_config, treasury_config
-from watcher.dphi.adapter.state import StateAdapter
+from kernel.dphi.exchange.config import billing_config, treasury_config
+from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tracker.billing")

@@ -19,7 +19,7 @@ from dphi.eco.conv.state import ConversationState
 from engine.driver.security.analyzer import SecurityAnalyzerBase
 from engine.driver.security.confirm import ConfirmationPolicyBase
 
-from arch.topos.resolver.secret import SecretValue
+from arch.contract.resolver.secret import SecretValue
 
 from engine.parser.conv.message import Message
 from engine.driver.disc.action import Action, Observation

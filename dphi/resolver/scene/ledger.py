@@ -4,9 +4,9 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from watcher.dphi.scheme.runner import SchemeRunner
+from kernel.dphi.scheme.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
-from watcher.dphi.adapter.state import StateAdapter
+from kernel.dphi.adapter.state import StateAdapter
 
 log = get_emitter("scene.ledger")
 

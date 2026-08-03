@@ -6,9 +6,9 @@ from typing import List
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from watcher.dphi.adapter.eco import ExchangeAdapter
-from watcher.dphi.adapter.state import StateAdapter
-from watcher.dphi.scheme.runner import SchemeRunner
+from kernel.dphi.adapter.eco import ExchangeAdapter
+from kernel.dphi.adapter.state import StateAdapter
+from kernel.dphi.scheme.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.exchange")

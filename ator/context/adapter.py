@@ -30,7 +30,7 @@ from engine.driver.security.confirm import ConfirmationPolicyBase
 from engine.driver.security.confirm import NeverConfirm
 
 from dphi.eco.actor import Actor
-from arch.topos.resolver.secret import SecretValue
+from arch.contract.resolver.secret import SecretValue
 from watcher.plane.emitter import get_emitter
 from arch.topos.tunnel.factory import TunnelFactory
 

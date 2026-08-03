@@ -10,7 +10,7 @@ import httpx
 from dphi.net.tracer import WasmTracer
 from dphi.eco.scheme.xelog import SceneRunner, E2EConfig
 
-from phase.wasm.builder import WasmBuilder
+from kernel.dphi.wasm.builder import WasmBuilder
 from watcher.xelog.rest import api as rest_app  
 from watcher.plane.emitter import get_emitter, flow_scope
 

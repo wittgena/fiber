@@ -9,9 +9,9 @@ from cryptography.hazmat.primitives import serialization
 
 from arch.xor.secret.manager import get_secret_str
 from watcher.plane.emitter import get_emitter
-from watcher.dphi.scheme.runner import SchemeRunner
-from watcher.dphi.adapter.state import StateAdapter
-from watcher.dphi.adapter.eco import EcoAdapter
+from kernel.dphi.scheme.runner import SchemeRunner
+from kernel.dphi.adapter.state import StateAdapter
+from kernel.dphi.adapter.eco import EcoAdapter
 
 log = get_emitter("scheme.anchor")
 

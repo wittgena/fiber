@@ -25,7 +25,7 @@ from ator.state.command import StateCommand
 if TYPE_CHECKING:
     from ator.state.context.status import ConverStatus
     from engine.driver.disc.ator import Ator
-    from arch.topos.resolver.secret import SecretRegistry
+    from arch.contract.resolver.secret import SecretRegistry
     from engine.driver.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:

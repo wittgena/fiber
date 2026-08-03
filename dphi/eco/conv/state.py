@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 else:
     SecurityType = Any
 
-from arch.topos.resolver.secret import SecretRegistry
+from arch.contract.resolver.secret import SecretRegistry
 from ator.topos.space.io import IOManager
 from ator.state.store.log import LogStore, VirtualEventLogProxy
 from ator.state.command import (

@@ -19,9 +19,9 @@ from engine.parser.conv.message import Message, TextContent
 
 from arch.model.contract.graph import EntryNode
 from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
-from arch.topos.resolver.secret import SecretSource, SecretValue
+from arch.contract.resolver.secret import SecretSource, SecretValue
 
-from phase.bind.resolver import resolve_path
+from kernel.phase.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")
