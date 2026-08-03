@@ -15,7 +15,9 @@ from docker.errors import NotFound, BuildError
 from agent.runtime.space.base import BaseWorkspace
 from engine.tool.git.changes import get_git_changes
 from engine.tool.git.diff import get_git_diff
-from agent.runtime.executor.command import execute_command
+
+# [변경됨] 범용 동기식 execute_command 대신 통합 비동기 실행기와 환경변수 정제기 임포트
+from agent.runtime.builder.executor import executor_factory, sanitized_env
 from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
 from arch.xor.bridge.tool.git import GitChange, GitDiff
 
@@ -46,9 +48,6 @@ FROM python:3.11-slim
 RUN apt-get update && apt-get install -y git python3-pip
 """
 
-# ============================================================================
-# [Workspace Operations]
-# ============================================================================
 class SandboxWorkspace(BaseWorkspace):
     def __init__(self, *, working_dir: str | Path, **kwargs: Any):
         super().__init__(working_dir=str(working_dir), **kwargs)
@@ -59,19 +58,51 @@ class SandboxWorkspace(BaseWorkspace):
         cwd: str | Path | None = None,
         timeout: float = 30.0,
     ) -> CommandResult:
-        log.debug(f"Executing local bash command: {command} in {cwd}")
-        result = execute_command(
-            command,
-            cwd=str(cwd) if cwd is not None else str(self.working_dir),
-            timeout=timeout,
-            print_output=True,
-        )
+        target_cwd = str(cwd) if cwd is not None else str(self.working_dir)
+        log.debug(f"Executing local bash command: {command} in {target_cwd}")
+
+        # [개선됨] 더미 스레드 생성 없이 OS 차원의 Async IO 통신으로 서브프로세스 관리
+        async def _async_exec():
+            proc = await asyncio.create_subprocess_shell(
+                command,
+                cwd=target_cwd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=sanitized_env()  # 보안을 위한 환경변수 필터링 적용
+            )
+            stdout, stderr = await proc.communicate()
+            return (
+                proc.returncode,
+                stdout.decode('utf-8', errors='replace'),
+                stderr.decode('utf-8', errors='replace')
+            )
+
+        # 공유 AsyncExecutor 활용하여 동기 컨텍스트에서도 비동기 함수 안전하게 실행 및 타임아웃 통제
+        executor = executor_factory.get_async_executor()
+        
+        try:
+            returncode, stdout_str, stderr_str = executor.run_async(_async_exec, timeout=timeout)
+            timeout_occurred = False
+        except TimeoutError:
+            # run_async 내부의 anyio.fail_after에 의해 타임아웃 발생 시 안전하게 캡처
+            returncode = -1
+            stdout_str = ""
+            stderr_str = f"Command timed out after {timeout} seconds"
+            timeout_occurred = True
+        except Exception as e:
+            # 기타 시스템 에러 및 실행 실패 예외 처리
+            log.error(f"Execution error in execute_command: {e}", exc_info=True)
+            returncode = -1
+            stdout_str = ""
+            stderr_str = f"Execution error: {str(e)}"
+            timeout_occurred = False
+
         return CommandResult(
             command=command,
-            exit_code=result.returncode,
-            stdout=result.stdout,
-            stderr=result.stderr,
-            timeout_occurred=result.returncode == -1,
+            exit_code=returncode,
+            stdout=stdout_str,
+            stderr=stderr_str,
+            timeout_occurred=timeout_occurred,
         )
 
     def file_upload(self, source_path: str | Path, destination_path: str | Path) -> FileOperationResult:
@@ -108,10 +139,6 @@ class SandboxWorkspace(BaseWorkspace):
     def resume(self) -> None:
         log.debug("resume() called on LocalWorkspace - nothing to do")
 
-
-# ============================================================================
-# [Proxy Operations]
-# ============================================================================
 class SandboxProxy:
     def __init__(self, host_url: str, workspace_ref: str = None, session_api_key: Optional[str] = None):
         self.host_url = host_url

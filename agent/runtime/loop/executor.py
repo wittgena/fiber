@@ -1,19 +1,19 @@
-# agent.runtime.executor.loop
+# agent.runtime.loop.executor
 import asyncio
 import json
 from typing import Optional, Dict, Any, List, Callable
 
 from agent.runtime.space.manager import SandboxWorkspace, SandboxProxy 
+from agent.protocol.tool.terminal import TerminalTool
+from agent.runtime.activator import Activator
+from agent.resolver.context import BlueprintCompiler
 
 from engine.atoa.conv.event import LLMConvertibleEvent
 from engine.atoa.context.adapter import AgentCommunicator, ExecutionController
 from engine.atoa.context.state import ConversationState
 from engine.atoa.context.visualizer import ConversationVisualizer
 from engine.atoa.action.factory import CoreAction
-
 from engine.atoa.action.resolver import ActionResolver
-from agent.protocol.tool.terminal import TerminalTool
-from agent.runtime.activator import Activator
 from engine.driver.disc.tool import Tool
 
 from arch.model.contract.graph import EntryNode
@@ -22,12 +22,11 @@ from arch.contract.event.next import next_id
 from arch.topos.tunnel.factory import TunnelFactory
 from phase.executor.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
 from phase.bind.resolver import resolve_path
-from watcher.plane.emitter import get_emitter
 from watcher.tracer.infra.router import InfraRouter
+from watcher.plane.emitter import get_emitter
 
-
+log = get_emitter("loop.executor")
 WORKSPACE_ROOT = resolve_path("workspace")
-log = get_emitter("executor.graph")
 
 CUSTOM_SECURITY_POLICY = (
     "# Security Risk Policy\n"
@@ -37,48 +36,6 @@ CUSTOM_SECURITY_POLICY = (
     "- **HIGH**: Dangerous actions (network access, system changes).\n\n"
     "Always prioritize data integrity and user intent."
 )
-
-BLUEPRINT_TEMPLATE = """\
-{context_block}
-{directives_block}
-## Execution Blueprint (Execute the following strictly in sequence):
-{steps_block}
-
-*Instructions: Process all above nodes step-by-step using the designated tools. Maintain context integrity and report final completion using the 'finish' tool.*
-"""
-
-class BlueprintCompiler:
-    @staticmethod
-    def compile(context_node: Optional[EntryNode], nodes: List[Any], system_instructions: str = "") -> str:
-        context_block = ""
-        if context_node:
-            relations = ", ".join(context_node.relations) if getattr(context_node, 'relations', None) else "None"
-            context_block = (
-                f"## System Context: {context_node.entry}\n"
-                f"- **Focus**: {context_node.focus}\n"
-                f"- **Depth Limit**: {context_node.depth}\n"
-                f"- **Relations Constraint**: {relations}\n---"
-            )
-
-        directives_block = f"## Core Directives:\n{system_instructions.strip()}\n---" if system_instructions else ""
-
-        steps = []
-        for idx, node in enumerate(nodes, 1):
-            action_name = getattr(node, 'action', 'terminal').upper()
-            intent = getattr(node, 'intent', '')
-            desc = getattr(node, 'description', '')
-            
-            step_line = f"{idx}. [{action_name}] {f'({intent.upper()}) ' if intent else ''}{desc}"
-            steps.append(step_line)
-            
-            if params := getattr(node, 'params_template', None):
-                steps.append(f"   > Required Tool Params: {params}")
-
-        return BLUEPRINT_TEMPLATE.format(
-            context_block=context_block,
-            directives_block=directives_block,
-            steps_block="\n".join(steps)
-        ).strip()
 
 class LocalGovContext:
     """Lightweight runtime wrapper connecting ConversationState and Gov Engine."""

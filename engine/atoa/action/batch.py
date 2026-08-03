@@ -1,5 +1,4 @@
 # engine.atoa.action.batch
-## @lineage: engine.protocol.action.batch
 from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -11,14 +10,16 @@ from engine.atoa.event.llm.message import MessageEvent
 from engine.atoa.event.llm.observation import UserRejectObservation
 from agent.state.protocol import ConvStateProtocol
 
-from agent.runtime.executor.parallel import ParallelExecutor
+# [개선 1] 구체적인 ParallelExecutor 대신 추상화된 프로토콜(인터페이스)을 임포트
+from agent.runtime.builder.executor import BatchExecutorProtocol
 from engine.atoa.conv.message import Message, TextContent
 from engine.atoa.action.builder import ActionDefinition
 from engine.atoa.action.factory import CoreAction
 
-from watcher.plane.emitter import get_emitter
+# [개선 3] 다른 시스템 모듈과의 일관성을 위해 get_logger 사용 (필요시 get_emitter 유지 가능)
+from watcher.plane.emitter import get_logger
 
-logger = get_emitter(__name__)
+logger = get_logger(__name__)
 
 @dataclass(frozen=True, slots=True)
 class ActionBatch:
@@ -58,7 +59,8 @@ class ActionBatch:
         cls,
         action_events: list[ActionEvent],
         state: ConvStateProtocol,
-        executor: ParallelExecutor,
+        # [개선 1 적용] 이제 병렬/동기 실행기 상관없이 프로토콜을 따르는 어떤 인스턴스든 주입받을 수 있습니다.
+        executor: BatchExecutorProtocol,
         tool_runner: Callable[[ActionEvent], list[Event]],
         tools: dict[str, ActionDefinition] | None = None,
     ) -> ActionBatch:
@@ -75,9 +77,17 @@ class ActionBatch:
             else:
                 executable.append(ae)
 
-        # 병렬/동기 실행기에 실행 가능한 액션들을 위임
+        # 주입받은 다형성 기반 실행기(Protocol)에 실행 위임
         executed_results = executor.execute_batch(executable, tool_runner, tools)
-        results_by_id = dict(zip([ae.id for ae in executable], executed_results))
+        
+        # [방어 로직] 실행기가 규약을 어기고 다른 개수의 결과를 반환할 경우 에러 트래킹
+        if len(executable) != len(executed_results):
+            logger.error(f"Executor mismatch: {len(executable)} actions but {len(executed_results)} results returned.")
+
+        # [개선 2] 성능 및 가독성이 좋은 딕셔너리 컴프리헨션으로 변경
+        results_by_id = {
+            ae.id: res for ae, res in zip(executable, executed_results)
+        }
 
         return cls(
             action_events=action_events,

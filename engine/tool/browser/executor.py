@@ -1,7 +1,4 @@
 # engine.tool.browser.executor
-## @lineage: phi.tool.browser.executor
-## @lineage: phi.runtime.tool.browser.executor
-## @lineage: swarm.mesh.tool.browser.executor
 from __future__ import annotations
 
 import builtins
@@ -21,8 +18,7 @@ from agent.protocol.tool.schema.browser import (
     BrowserNavigateAction,
     BrowserObservation,
 )
-from agent.runtime.executor.command import sanitized_env
-from agent.runtime.executor.base import AsyncExecutor
+from agent.runtime.builder.executor import sanitized_env, AsyncExecutorProtocol
 from watcher.plane.emitter import get_logger
 from engine.tool.browser.server import BrowserServer 
 
@@ -31,7 +27,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0
-
 
 class ToolTimeoutError(Exception):
     pass
@@ -47,14 +42,14 @@ def run_with_timeout(func, timeout, *args, **kwargs):
 def _format_browser_operation_error(
     error: BaseException, timeout_seconds: float | None = None
 ) -> str:
-    if error_detail := str(error).strip():
-        pass
-    elif isinstance(error, builtins.TimeoutError):
+    if isinstance(error, builtins.TimeoutError) or isinstance(error, ToolTimeoutError):
         error_detail = (
             f"Operation timed out after {int(timeout_seconds)} seconds"
             if timeout_seconds is not None
             else "Operation timed out"
         )
+    elif error_detail := str(error).strip():
+        pass
     else:
         error_detail = error.__class__.__name__
     return f"Browser operation failed: {error_detail}"
@@ -145,25 +140,18 @@ def check_chromium_available() -> str | None:
 
 def _ensure_chromium_available() -> str:
     """Ensure Chromium is available, attempt install if missing, or raise an error."""
-    # 1. 1차 확인
     if path := check_chromium_available():
         logger.info(f"Chromium is available for browser operations at {path}")
         return path
 
-    # 2. 없다면 설치 시도 (Dead Code 살리기)
     logger.info("Chromium not found. Attempting auto-installation...")
     if _install_chromium():
         if path := check_chromium_available():
             logger.info(f"Chromium successfully auto-installed at {path}")
             return path
             
-    # 3. 설치도 실패했거나 uvx가 없으면 에러 발생
     raise Exception(_get_chromium_error_message())
 
-
-# ============================================
-# Executor 클래스
-# ============================================
 
 class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
     """Executor that wraps browser-use MCP server for integration."""
@@ -171,7 +159,8 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
     _server: BrowserServer
     _config: dict[str, Any]
     _initialized: bool
-    _async_executor: AsyncExecutor
+    # [개선] 타입 힌트를 Protocol로 변경하여 구체적인 구현체(AsyncExecutor)에 대한 결합도 완화
+    _async_executor: AsyncExecutorProtocol
     _cleanup_initiated: bool
     _action_timeout_seconds: float
     full_output_save_dir: str | None
@@ -185,6 +174,8 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
         action_timeout_seconds: float = DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS,
         full_output_save_dir: str | None = None,
         inject_scripts: list[str] | None = None,
+        # [개선] 의존성 주입(DI) 파라미터 추가
+        executor: AsyncExecutorProtocol | None = None,
         **config,
     ):
         if action_timeout_seconds <= 0:
@@ -192,7 +183,14 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
 
         self.full_output_save_dir = full_output_save_dir
         self._initialized = False
-        self._async_executor = AsyncExecutor()
+        
+        # [개선] 외부에서 주입되지 않은 경우에만 지연 로딩(Lazy Load)으로 팩토리 참조
+        if executor is None:
+            from agent.runtime.builder.executor import executor_factory
+            self._async_executor = executor_factory.get_async_executor()
+        else:
+            self._async_executor = executor
+            
         self._cleanup_initiated = False
         self._action_timeout_seconds = action_timeout_seconds
 
@@ -224,7 +222,6 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
             }
 
         try:
-            # 타임아웃을 적용하여 초기화 수행
             run_with_timeout(_init_server, init_timeout_seconds)
         except ToolTimeoutError:
             raise Exception(f"Browser tool initialization timed out after {init_timeout_seconds}s")
@@ -250,7 +247,6 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
             )
 
     async def _execute_action(self, action: BrowserAction) -> BrowserObservation:
-        # 중복된 내부 import 제거됨 (상단에서 import 완료)
         try:
             result = ""
             if isinstance(action, BrowserNavigateAction):
@@ -327,8 +323,6 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
             self._async_executor.run_async(self.cleanup, timeout=30.0)
         except Exception as e:
             logger.warning(f"Error during browser cleanup: {e}")
-        finally:
-            self._async_executor.close()
 
     def __del__(self):
         """Cleanup on deletion."""

@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from agent.runtime.executor.loop import LoopExecutor
+from agent.runtime.loop.executor import LoopExecutor
 from dphi.eco.node import RuntimeNode
 from agent.runtime.space.manager import SpaceNode
 

@@ -1,7 +1,5 @@
-# agent.runtime.executor.graph.organizer
-## @lineage: engine.protocol.graph.organizer
-## @lineage: phi.agent.graph.organizer
-## @lineage: phi.loop.graph.organizer
+# agent.runtime.loop.organizer
+## @lineage: agent.runtime.executor.graph.organizer
 import time
 import json
 from pathlib import Path
@@ -19,7 +17,7 @@ from engine.driver.llm.handler import (
 )
 from agent.protocol.step import StepHandler, StepContext
 from agent.protocol.tension import TensionHandler
-from agent.runtime.executor.graph.eval import EvalReflector
+from agent.runtime.loop.eval import EvalReflector
 
 from arch.topos.node.state.vocab import SigType, SpecKey
 from watcher.plane.observer.span import unified_flow_span
@@ -28,10 +26,6 @@ from watcher.plane.emitter import get_emitter
 logger = get_emitter("dag.organizer")
 
 class DagOrganizer(StepHandler):
-    """
-    컴파일러가 생성한 DAG(Runtime Specs)를 해석하고, 
-    Laminar 관측망(unified_flow_span) 하에서 에이전트의 사고를 정렬하는 메타 핸들러.
-    """
     def __init__(self, runtime_specs: dict, entry_point: str, telemetry_path: Path | None = None):
         self.specs = runtime_specs
         self.entry_point = entry_point
@@ -72,16 +66,12 @@ class DagOrganizer(StepHandler):
             node_type = node_spec.get(SpecKey.TYPE)
             logger.info(f"[GraphEngine] Executing Node: {current_node_id} ({node_type})")
 
-            # 1. 라우터(조건 분기) 노드 처리
             if node_type == SigType.ROUTER.value:
                 current_node_id = self._evaluate_router(node_spec, context)
                 continue
 
-            # 2. 컨텍스트 동적 주입 (SpecKey 참조)
             context.node_attributes = node_spec.get(SpecKey.ATTRIBUTES, {})
             self._apply_node_pressure(agent, conversation, on_event, context.node_attributes, current_node_id)
-
-            # 3. Base Handler 위임
             base_handler = self.registry.get(node_type)
             if not base_handler:
                 logger.error(f"Handler for {node_type} is not mapped.")
@@ -90,39 +80,24 @@ class DagOrganizer(StepHandler):
             start_time = time.time()
             
             try:
-                # [PHASE & THEORIA] Laminar 통합 트레이싱 Span 생성
                 with unified_flow_span(name=f"Node:{current_node_id}", phase=node_type) as flow_ctx:
-                    
-                    # 베이스 핸들러 실행 (loop.handler)
                     should_break = base_handler.handle(agent, conversation, on_event, on_token, context)
-                    
-                    # 실행 결과물에서 동적 Aspect 추출 및 성공 지표 누적
                     self._extract_dynamic_aspects(context)
                     self._record_trace(current_node_id, success=True, duration=time.time() - start_time)
                     
-                    # 다음 진행할 노드 계산
                     next_node = node_spec.get(SpecKey.NEXT, SigType.END.value)
-                    
-                    # [통합 포인트 5] 상태 전이(Control Flow) 보정
                     if should_break:
-                        # loop.handler가 제어권 반환을 요청함 (루프 종료 요청)
-                        # 중요: 현재 노드가 아닌 '다음 노드'로 커서를 갱신해 두어야 다음 틱에서 정확히 이어서 실행됨.
                         state.graph_cursor = next_node
                         self._flush_telemetry()
                         return True 
                     else:
-                        # loop.handler가 동기적으로 즉시 다음 스텝 진행을 허용함
                         current_node_id = next_node
                         state.graph_cursor = current_node_id
-
             except Exception as e:
                 duration = time.time() - start_time
                 self._record_trace(current_node_id, success=False, duration=duration)
-                
-                # otel_log_interceptor가 ERROR 로그를 낚아채어 Span 상태를 자동 전환
                 logger.error(f"Node '{current_node_id}' failed with error: {e}")
                 
-                # [통합 포인트 6] SpecKey.FALLBACK을 통한 침묵의 방어선 작동
                 fallback_node = node_spec.get(SpecKey.FALLBACK)
                 if fallback_node and fallback_node in self.specs:
                     logger.warning(f"[GraphEngine] 예외 복구 작동 -> {fallback_node}")
@@ -136,7 +111,6 @@ class DagOrganizer(StepHandler):
                     self._flush_telemetry()
                     raise e
 
-        # 그래프 순회 정상 종료
         state.graph_cursor = SigType.END.value
         self._flush_telemetry()
         return False
@@ -177,7 +151,6 @@ class DagOrganizer(StepHandler):
             injected_nodes.add(node_id)
             setattr(state, "injected_nodes", injected_nodes)
 
-    # ... 이하 (동적 메트릭 처리 및 텔레메트리 메서드)는 Conv 참조가 없으므로 동일 ...
     def _extract_dynamic_aspects(self, context: StepContext):
         if not context.llm_response:
             return

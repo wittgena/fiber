@@ -25,7 +25,7 @@ import fcntl
 import pty
 import select
 
-from agent.runtime.executor.command import sanitized_env
+from agent.runtime.builder.executor import sanitized_env
 from arch.xor.bridge.tool.terminal import (
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,

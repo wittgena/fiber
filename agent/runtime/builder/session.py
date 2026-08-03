@@ -1,16 +1,10 @@
 # agent.runtime.builder.session
-## @lineage: actor.runtime.builder.session
-## @lineage: phi.executor.engine.builder.session
-## @lineage: phi.engine.builder.session
-## @lineage: swarm.engine.builder.session
-## @lineage: swarm.mesh.engine.builder.session
-## @lineage: agent.factory.session
 import platform
 import subprocess
 import warnings
 from typing import Literal
 
-from agent.runtime.executor.command import sanitized_env
+from agent.runtime.builder.executor import sanitized_env
 from engine.terminal.session import TerminalSession
 
 from watcher.plane.emitter import get_emitter
