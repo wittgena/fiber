@@ -14,7 +14,7 @@ from typing import Self
 
 from ator.action.builder import ActionAnnotations, ActionDefinition
 from engine.protocol.executor import ActionExecutor
-from engine.protocol.tool.schema.browser import (
+from engine.protocol.observation.browser import (
     BrowserAction,
     BrowserObservation,
     BrowserNavigateAction,

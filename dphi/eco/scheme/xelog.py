@@ -1,45 +1,62 @@
 # dphi.eco.scheme.xelog
-## @lineage: dphi.wasm.scene
 import abc
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Any, List
-
+from typing import Dict, Any, List, Tuple
+from dataclasses import dataclass
+from fastapi.routing import APIRoute
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from dphi.net.exchange.router import E2EConfig, RouteRegistry
 from watcher.xelog.rest import api as rest_app  
-
-from watcher.dphi.scheme.runner import TrustlessWebRunner
+from watcher.dphi.scheme.runner import WebRunner
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("scheme.xelog")
 
+@dataclass
+class E2EConfig:
+    host: str = "localhost"
+    port: int = 8000
+    protocol: str = "http"
 
-# =====================================================================
-# 1. State Context: 파이프라인을 관통하며 공유되는 상태 객체
-# =====================================================================
+    @property
+    def base_url(self) -> str:
+        return f"{self.protocol}://{self.host}:{self.port}"
+
+class RouteRegistry:
+    def __init__(self, app):
+        self.app = app
+        self._routes = {
+            route.name: route 
+            for route in app.routes if isinstance(route, APIRoute)
+        }
+
+    def url_for(self, target_name: str, fallback: str = None) -> str:
+        route = self._routes.get(target_name)
+        if route:
+            return route.path
+        if fallback:
+            log.warning(f"[RouteRegistry] '{target_name}' not found. Using fallback: {fallback}")
+            return fallback
+            
+        raise ValueError(f"Route '{target_name}' not found in REST API.")
+
+    def get_all_routes(self) -> list:
+        return [(name, r.path, r.methods) for name, r in self._routes.items()]
+
 @dataclass
 class SceneContext:
     config: E2EConfig
     routes: RouteRegistry
-    runner: TrustlessWebRunner
-    
-    # 워크플로우 진행 중 채워질 State Roots
+    runner: WebRunner
     state_roots: Dict[str, str] = field(default_factory=dict)
 
-
-# =====================================================================
-# 2. Phases: 블록체인 트랜잭션 처리 단계처럼 각 시나리오를 캡슐화
-# =====================================================================
 class ScenePhase(abc.ABC):
     @abc.abstractmethod
     async def execute(self, ctx: SceneContext):
         pass
 
-
 class HeadSmokePhase(ScenePhase):
-    """[Step 1] API Head & MCP Connectivity Sweep"""
     async def execute(self, ctx: SceneContext):
         log.info("\n--- [Phase 1] API Head & MCP Connectivity Sweep ---")
         runner = ctx.runner
@@ -156,15 +173,12 @@ class GlobalAnchorPhase(ScenePhase):
             raise RuntimeError("Global Anchor Failed")
 
 class SceneRunner:
-    """Xelog Immutable Network E2E 통합 오케스트레이터"""
     def __init__(self, config: E2EConfig):
         self.config = config
         self.routes = RouteRegistry(rest_app)
         
         # 내부 상태 및 통신을 전담하는 핵심 러너
-        self.web_runner = TrustlessWebRunner(config.base_url)
-        
-        # 블록체인/트랜잭션 라이프사이클과 유사하게 워크플로우 정의
+        self.web_runner = WebRunner(config.base_url)
         self.workflow = [
             HeadSmokePhase(),
             OtlpIngressPhase(),
@@ -173,7 +187,6 @@ class SceneRunner:
             GlobalAnchorPhase()
         ]
 
-    # 외부(tester.py)에서 httpx.AsyncClient(ASGITransport)를 주입할 수 있도록 브릿지 제공
     @property
     def client(self):
         return self.web_runner.client

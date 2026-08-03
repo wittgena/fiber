@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from func_timeout import func_timeout, FunctionTimedOut
 
 from engine.protocol.executor import ActionExecutor
-from engine.protocol.tool.schema.browser import (
+from engine.protocol.observation.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,

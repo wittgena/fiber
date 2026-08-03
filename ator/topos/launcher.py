@@ -16,7 +16,7 @@ from arch.model.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message
 from arch.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
 from kernel.phase.reactor import KernelReactor
-from watcher.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
+from watcher.dphi.adapter.eco import ExchangeAdapter, TransactionReceipt
 from watcher.dphi.broker import WasmBroker
 from watcher.dphi.cgroup import Tier
 from watcher.plane.emitter import get_emitter

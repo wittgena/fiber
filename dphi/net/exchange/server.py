@@ -1,12 +1,12 @@
 # dphi.net.exchange.server
-## @lineage: dphi.wasm.exchange
 import time
 import json
 import hashlib
 import asyncio
 import abc
+import dataclasses
 from dataclasses import dataclass, field
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
@@ -16,16 +16,17 @@ from arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
 from arch.topos.network.channel.codec import JsonMessageCodec, XelogUniversalTracer
 from arch.topos.network.factory import ProtocolFactory
 
-from watcher.dphi.adapter.exchange import ExchangeAdapter
+# 통합 및 엄격한 타입이 적용된 어댑터 및 데이터 클래스 임포트
+from watcher.dphi.adapter.eco import (
+    EcoAdapter, ExchangeAdapter, WalletAdapter,
+    X402SettlementReceipt, TransactionReceipt, SettlementPayload
+)
 from watcher.dphi.adapter.state import StateAdapter
-from watcher.dphi.adapter.eco import EcoAdapter
-from dphi.adapter.wallet import WalletAdapter
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("xelog.exchange")
 
 class NodeIdentity:
-    """참여자의 암호화 키 생성 및 서명 책임을 분리한 클래스"""
     def __init__(self):
         self.key = ed25519.Ed25519PrivateKey.generate()
         self.pub_hex = self.key.public_key().public_bytes(
@@ -44,12 +45,12 @@ class ExchangeContext:
     field_node: NodeIdentity
     wallet_adapter: WalletAdapter
     
-    # 워크플로우 진행 중 채워질 데이터들
+    # 워크플로우 진행 중 채워질 데이터들 (엄격한 타입 힌팅 적용)
     phases: Dict[str, Any] = field(default_factory=dict)
     entangled_state: Dict[str, Any] = field(default_factory=dict)
     signatures: List[str] = field(default_factory=list)
-    x402_receipt: Any = None
-    receipt: Any = None
+    x402_receipt: Optional[X402SettlementReceipt] = None
+    receipt: Optional[TransactionReceipt] = None
 
 class ExchangePhase(abc.ABC):
     @abc.abstractmethod
@@ -108,29 +109,30 @@ class PaymentSettlementPhase(ExchangePhase):
     async def execute(self, ctx: ExchangeContext):
         log.info("\n--- [Micropayment] Processing x402 Settlement via Base Network ---")
         
-        # 1. 서버(Field Node)가 청구서(Invoice) 발행
+        # 1. 서버(Field Node)가 청구서(Invoice) 발행 (객체 반환)
         invoice = EcoAdapter.build_x402_invoice(
             payee_address="0xFieldNodeTreasury", 
             amount_usdc="0.05", 
             resource_id="exchange_matching_fee"
         )
         
-        # 2. Agent A(구매자)가 WalletAdapter를 통해 온체인/시뮬레이션 결제
+        # 2. Agent A(구매자)가 WalletAdapter를 통해 온체인/시뮬레이션 결제 (객체 반환)
         ctx.x402_receipt = EcoAdapter.process_x402_settlement(
             invoice=invoice,
             agent_wallet_address="0xAgentAWallet",
             wallet_adapter=ctx.wallet_adapter
         )
         
-        log.info(f"  └─ [Paid] Amount: {invoice['amount_usdc']} USDC, Tx Hash: {ctx.x402_receipt['tx_hash']}")
+        # Dataclass 속성 접근(.amount_usdc, .tx_hash)으로 변경
+        log.info(f"  └─ [Paid] Amount: {invoice.amount_usdc} USDC, Tx Hash: {ctx.x402_receipt.tx_hash}")
 
 class NexusCollapsePhase(ExchangePhase):
     """[Step 3] Settlement Commit: 3-of-3 다중 서명을 통한 상태 확정 및 서버 제출"""
     async def execute(self, ctx: ExchangeContext):
         log.info("\n--- [Trade Settlement] Finalizing clearing via 3-of-3 Multi-sig Consensus ---")
         
-        # 결제 영수증을 상태 트리에 병합
-        cached_states = {"x402_tx": ctx.x402_receipt} if ctx.x402_receipt else {}
+        # 결제 영수증(Dataclass)을 상태 트리에 병합할 수 있도록 dict로 변환
+        cached_states = {"x402_tx": dataclasses.asdict(ctx.x402_receipt)} if ctx.x402_receipt else {}
         
         parity = ctx.entangled_state["parity"]
         canonical_bytes = StateAdapter.to_canonical_bytes(
@@ -170,6 +172,7 @@ class FinalizeExchangePhase(ExchangePhase):
         self.exchange_adapter = exchange_adapter
 
     async def execute(self, ctx: ExchangeContext):
+        # TransactionReceipt 객체 반환
         ctx.receipt = self.exchange_adapter.finalize_settlement(
             entangled_state=ctx.entangled_state,
             signatures=ctx.signatures,
@@ -177,9 +180,13 @@ class FinalizeExchangePhase(ExchangePhase):
             tier="SYSTEM"
         )
         
+        # SettlementPayload 객체 반환
         external_payload = self.exchange_adapter.generate_settlement_payload(ctx.receipt)
         log.info(f"\n[Exchange Ready] Payload for External Network (Rollup Sequencer):")
-        log.info(json.dumps(external_payload, indent=2))
+        
+        # Dataclass를 JSON으로 직렬화하기 위해 asdict 사용
+        log.info(json.dumps(dataclasses.asdict(external_payload), indent=2))
+
 
 class ExchangeNet:
     def __init__(self, simulate_wallet: bool = True):
@@ -196,7 +203,7 @@ class ExchangeNet:
         self.workflow = [
             GatewayIngressPhase(),
             EntanglementPhase(),
-            PaymentSettlementPhase(),  # x402 결제 단계 추가
+            PaymentSettlementPhase(),
             NexusCollapsePhase(),
             FinalizeExchangePhase(self.exchange_adapter)
         ]
@@ -237,13 +244,15 @@ class ExchangeNet:
                 return True
                 
             except Exception as e:
-                log.exception(f"[FAIL] Exchange Scenario aborted: {e}")
+                # Fail-Fast 철학 반영: "aborted(취소됨/롤백 뉘앙스)" 대신 "terminated/halted" 사용
+                log.exception(f"[HALTED] Exchange Scenario execution terminated at current phase: {e}")
                 return False
                 
             finally:
-                # 4. 리소스 정리
+                # 4. 리소스 정리 (네트워크 연결 종료)
                 if protocol and protocol.pipeline and protocol.pipeline.transport:
                     protocol.pipeline.transport.close()
+
 
 class ExchangeServer(DuplexChannel):
     """A2A, Exchange, Ledger의 모든 요청을 받아주는 통합 백엔드"""
@@ -272,14 +281,11 @@ class ExchangeServer(DuplexChannel):
                 response["data"] = {"validation": "passed"}
             elif action == "generate_proof":
                 response["data"] = {"proof": "zk_snark_dummy_proof"}
-                
             else:
                 response["status"] = 404
                 response["error"] = "Unknown Action"
-                
         except Exception as e:
             response["status"] = 500
             response["error"] = str(e)
-            
-        # 파이프라인을 역류하여(Codec 통과) 클라이언트에게 응답 전송
+
         await ctx.fire_write(response)

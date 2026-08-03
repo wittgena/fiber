@@ -26,7 +26,7 @@ from arch.contract.event.mesh.transport import MeshP2PTransport
 
 from watcher.dphi.adapter.state import StateAdapter
 from watcher.dphi.broker import WasmBroker, WasmMethod
-from watcher.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
+from watcher.dphi.adapter.eco import ExchangeAdapter, TransactionReceipt
 from watcher.dphi.cgroup import Tier
 from watcher.plane.emitter import get_emitter
 from watcher.tracer.scope import scope_trace, get_current_trace_path
@@ -337,7 +337,6 @@ class ToposController:
             tier=Tier.STANDARD.value
         )
         log.info(f"[{origin_name}] 🧾 Transaction Receipt Issued: {receipt.job_id}")
-        
         transition.reach_dominium(resource_address=f"urn:surgent:resource:resolved_task_{transition.id}")
         return receipt
 

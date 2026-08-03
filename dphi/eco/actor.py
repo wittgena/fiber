@@ -1,6 +1,4 @@
 # dphi.eco.actor
-## @lineage: dphi.topos.actor
-## @lineage: agent.topos.conver.actor
 import json
 import asyncio
 from pathlib import Path

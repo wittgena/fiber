@@ -1,5 +1,4 @@
-# dphi.net.entry
-## @lineage: dphi.entry
+# dphi.entry
 import sys
 import argparse
 import asyncio
@@ -12,16 +11,16 @@ from kernel.phase.reactor import KernelReactor
 from phase.wasm.builder import WasmBuilder
 from phase.bind.resolver import resolve_path
 
-import watcher.dphi.scheme.scenario as scene_module
+import dphi.resolver.scene as scene_module
 from watcher.plane.emitter import get_emitter
 
 MODULE_PATH = scene_module.__name__
 DEFAULT_SUITES = {
-    "sandbox": f"{MODULE_PATH}.sandbox:SandboxScenarios",
-    "ledger": f"{MODULE_PATH}.ledger:LedgerScenarios",
-    "a2a": f"{MODULE_PATH}.a2a:A2AScenarios",
-    "ecosystem": f"{MODULE_PATH}.ecosystem:EcosystemScenarios",
-    "anchor": f"{MODULE_PATH}.anchor:AnchorScenarios"
+    "sandbox": f"{MODULE_PATH}.sandbox:SandboxScene",
+    "ledger": f"{MODULE_PATH}.ledger:LedgerScene",
+    "eco": f"{MODULE_PATH}.eco:EcoScene",
+    "exchange": f"{MODULE_PATH}.exchange:ExchangeScene",
+    "anchor": f"{MODULE_PATH}.anchor:AnchorScene"
 }
 
 class WasmPipelineCLI:
@@ -88,8 +87,7 @@ class WasmPipelineCLI:
         self.log.info(f"[CLI] Starting Full Pipeline (Build ➔ Test {self.suites} ➔ Tracer Autonomous Loop)...")
         
         tester = self._create_tester()
-        tracer = WasmTracer(tester=tester) # 여기서 WasmTracer의 import 경로(dphi.wasm.tracer) 확인 필요
-        
+        tracer = WasmTracer(tester=tester)
         await tracer.trace()
         if getattr(tracer, 'rupture_confirmed', False):
             self.log.warning("[CLI] Pipeline ended in a Rupture/Collapse state (Intended for fatal tests).")
@@ -110,7 +108,6 @@ class WasmPipelineCLI:
     def run_cli(cls):
         parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI")
         subparsers = parser.add_subparsers(dest="command", help="Execution modes")
-        
         subparsers.add_parser("build", help="Compile the Rust WASM artifact only.")
         test_parser = subparsers.add_parser("test", help="Run the WasmTester scenarios only.")
         test_parser.add_argument("--suites", nargs="+", default=["all"],
@@ -123,7 +120,6 @@ class WasmPipelineCLI:
         args = parser.parse_args()
         command = args.command or "all"
         suites = getattr(args, "suites", ["all"])
-        
         app = cls(suites=suites)
         KernelReactor.ignite(lambda: app.execute(command))
 

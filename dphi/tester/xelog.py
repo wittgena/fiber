@@ -1,7 +1,4 @@
 # dphi.tester.xelog
-## @lineage: dphi.wasm.tester.xelog
-## @lineage: dphi.xelog.tester
-## @lineage: agent.dphi.xelog.tester
 import sys
 import argparse
 import asyncio
@@ -11,8 +8,7 @@ from typing import Tuple
 import httpx
 
 from dphi.net.tracer import WasmTracer
-from dphi.net.exchange.router import E2EConfig
-from dphi.eco.scheme.xelog import SceneRunner
+from dphi.eco.scheme.xelog import SceneRunner, E2EConfig
 
 from phase.wasm.builder import WasmBuilder
 from watcher.xelog.rest import api as rest_app  

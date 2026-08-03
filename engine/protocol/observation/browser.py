@@ -1,13 +1,5 @@
-# engine.protocol.tool.schema.browser
-## @lineage: agent.protocol.tool.schema.browser
-## @lineage: engine.protocol.atoa.schema.tool.schema.browser
-## @lineage: phi.agent.atoa.schema.tool.schema.browser
-## @lineage: agent.atoa.schema.tool.schema.browser
-## @lineage: atoa.agent.action.tool.schema.browser
-## @lineage: phi.agent.action.tool.schema.browser
-## @lineage: swarm.phi.action.tool.schema.browser
-## @lineage: agent.action.tool.schema.browser
-## @lineage: gov.action.tool.schema.browser
+# engine.protocol.observation.browser
+## @lineage: engine.protocol.tool.schema.browser
 import base64
 import hashlib
 import os
@@ -35,14 +27,7 @@ def detect_image_mime_type(base64_data: str) -> str:
             return mime_type
     return "image/png"
 
-
-# ============================================
-# Observation (Result Schema)
-# ============================================
-
 class BrowserObservation(Observation):
-    """Base observation for browser operations."""
-
     screenshot_data: str | None = Field(
         default=None, 
         description="Base64 screenshot data if available"
