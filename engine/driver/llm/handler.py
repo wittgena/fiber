@@ -2,13 +2,13 @@
 ## @lineage: phi.driver.llm.handler
 ## @lineage: phi.loop.llm.handler
 import json
-from engine.atoa.event.llm.action import ActionEvent
-from engine.atoa.event.llm.message import MessageEvent
+from ator.state.event.llm.action import ActionEvent
+from ator.state.event.llm.message import MessageEvent
 from mesh.bound.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
-from agent.protocol.step import StepHandler
+from engine.protocol.step import StepHandler
 from engine.driver.llm.facade import MessageBuilder, LLMFacade
-from engine.atoa.conv.message import Message, TextContent
+from engine.parser.conv.message import Message, TextContent
 
 from watcher.plane.emitter import get_emitter
 logger = get_emitter(__name__)

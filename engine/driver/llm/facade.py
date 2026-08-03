@@ -22,13 +22,13 @@ from runtime.client.param import (
     ChatCompletionToolParam
 )
 
-from agent.protocol.llm.response import LLMResponse
-from engine.atoa.conv.message import Message
-from engine.atoa.conv.types import TokenCallbackType, ConversationTokenCallbackType
-from engine.atoa.conv.event import Event, LLMConvertibleEvent
-from engine.atoa.action.builder import ActionDefinition
+from engine.protocol.llm.response import LLMResponse
+from engine.parser.conv.message import Message
+from engine.parser.conv.types import TokenCallbackType, ConversationTokenCallbackType
+from engine.parser.conv.event import Event, LLMConvertibleEvent
+from ator.action.builder import ActionDefinition
 
-from agent.state.parser.view import View
+from engine.parser.view import View
 from engine.driver.llm.model import LLMModel
 from engine.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
 

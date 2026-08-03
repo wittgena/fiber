@@ -11,19 +11,19 @@ from typing import TYPE_CHECKING, Any
 
 from func_timeout import func_timeout, FunctionTimedOut
 
-from agent.protocol.executor import ActionExecutor
-from agent.protocol.tool.schema.browser import (
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.schema.browser import (
     BrowserAction,
     BrowserGetContentAction,
     BrowserNavigateAction,
     BrowserObservation,
 )
-from agent.runtime.builder.executor import sanitized_env, AsyncExecutorProtocol
+from ator.topos.builder.executor import sanitized_env, AsyncExecutorProtocol
 from watcher.plane.emitter import get_logger
 from engine.tool.browser.server import BrowserServer 
 
 if TYPE_CHECKING:
-    from agent.state.context.protocol import ToolExecutionContextProtocol
+    from ator.state.context.protocol import ToolExecutionContextProtocol
 
 logger = get_logger(__name__)
 DEFAULT_BROWSER_ACTION_TIMEOUT_SECONDS = 300.0
@@ -186,7 +186,7 @@ class BrowserExecutor(ActionExecutor[BrowserAction, BrowserObservation]):
         
         # [개선] 외부에서 주입되지 않은 경우에만 지연 로딩(Lazy Load)으로 팩토리 참조
         if executor is None:
-            from agent.runtime.builder.executor import executor_factory
+            from ator.topos.builder.executor import executor_factory
             self._async_executor = executor_factory.get_async_executor()
         else:
             self._async_executor = executor

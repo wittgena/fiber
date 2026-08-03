@@ -7,7 +7,7 @@
 import time
 import uuid
 import libtmux
-from agent.runtime.builder.executor import sanitized_env
+from ator.topos.builder.executor import sanitized_env
 from arch.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,

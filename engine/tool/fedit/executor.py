@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agent.state.context.protocol import ToolExecutionContextProtocol
+    from ator.state.context.protocol import ToolExecutionContextProtocol
 
-from agent.protocol.executor import ActionExecutor
-from agent.protocol.tool.fedit import (
+from engine.protocol.executor import ActionExecutor
+from engine.protocol.tool.fedit import (
     CommandLiteral,
     FileEditorAction,
     FileEditorObservation,

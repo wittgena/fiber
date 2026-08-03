@@ -8,8 +8,8 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, Any
 
-from engine.atoa.conv.event import Event
-from engine.atoa.event.llm.action import ActionEvent
+from engine.parser.conv.event import Event
+from ator.state.event.llm.action import ActionEvent
 from engine.driver.security.eval import SecurityRisk
 
 from arch.model.surge.disc import DiscMixin

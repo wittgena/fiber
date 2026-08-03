@@ -9,17 +9,17 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.resolver.context import PromptContext
+from ator.context.prompt import PromptContext
 from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 
-from engine.atoa.mcp.client import MCPClient
-from engine.atoa.mcp.factory import create_mcp_tools
-from agent.protocol.tool.mcp import MCPExecutor
-from engine.atoa.action.builder import ActionDefinition
+from engine.protocol.mcp.client import MCPClient
+from engine.protocol.mcp.factory import create_mcp_tools
+from engine.protocol.tool.mcp import MCPExecutor
+from ator.action.builder import ActionDefinition
 
-from engine.atoa.action.factory import CoreAction
-from engine.atoa.action.resolver import ActionResolver
+from ator.action.factory import CoreAction
+from ator.action.resolver import ActionResolver
 
 from arch.model.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import UniversalFacade

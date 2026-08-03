@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from agent.state.context.protocol import ToolExecutionContextProtocol
-    from agent.protocol.tool.terminal import TerminalAction, TerminalObservation
+    from ator.state.context.protocol import ToolExecutionContextProtocol
+    from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
     from engine.terminal.session import TerminalSessionBase
 
 

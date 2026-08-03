@@ -1,12 +1,13 @@
-# dphi.eco.config.agent
+# dphi.eco.surface.config.agent
+## @lineage: dphi.eco.config.agent
 from typing import Any, Literal
 
 from pydantic import Field, field_serializer, field_validator
 
-from agent.resolver.context import PromptContext
-from agent.runtime.activator import Activator
+from ator.context.prompt import PromptContext
+from ator.topos.activator import Activator
 
-from engine.atoa.mcp.config import MCPConfig
+from engine.protocol.mcp.config import MCPConfig
 from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 

@@ -7,19 +7,19 @@ from pathlib import Path
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from engine.atoa.context.state import ConversationState
+from dphi.eco.conv.state import ConversationState
 from engine.driver.disc.action import Action, Observation
-from engine.atoa.event.llm.message import MessageEvent
-from engine.atoa.event.llm.action import ActionEvent
-from engine.atoa.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from engine.atoa.event.llm.system import SystemPromptEvent
-from engine.atoa.event.conv import ConversationErrorEvent, PauseEvent
-from agent.state.context.status import ConverStatus
-from engine.atoa.action.factory import CoreAction
+from ator.state.event.llm.message import MessageEvent
+from ator.state.event.llm.action import ActionEvent
+from ator.state.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from ator.state.event.llm.system import SystemPromptEvent
+from ator.state.event.conv import ConversationErrorEvent, PauseEvent
+from ator.state.context.status import ConverStatus
+from ator.action.factory import CoreAction
 
 from mesh.bound.exception.types import ConversationRunError
-from agent.state.command import TransitionStatus
-from agent.state.store.log import LogStore
+from ator.state.command import TransitionStatus
+from ator.state.store.log import LogStore
 
 from arch.xor.store.file import LocalFileStore
 from arch.model.payload import StreamPayloadAdapter
@@ -28,7 +28,7 @@ from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from agent.state.context.conv import ConvContext
+    from ator.state.context.conv import ConvContext
     convType = ConvContext | Any
 else:
     convType = Any

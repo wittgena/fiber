@@ -19,7 +19,7 @@ import os
 from abc import ABC, abstractmethod
 
 from arch.xor.bridge.tool.terminal import NO_CHANGE_TIMEOUT_SECONDS
-from agent.protocol.tool.terminal import TerminalAction, TerminalObservation
+from engine.protocol.tool.terminal import TerminalAction, TerminalObservation
 
 class TerminalInterface(ABC):
     work_dir: str

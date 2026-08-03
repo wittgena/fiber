@@ -11,8 +11,8 @@ from contextlib import asynccontextmanager, AsyncExitStack
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from agent.runtime.loop.executor import LoopExecutor
-from agent.runtime.space.manager import SpaceNode, space_provider
+from ator.topos.loop.executor import LoopExecutor
+from ator.topos.space.manager import SpaceNode, space_provider
 from dphi.eco.node import RuntimeNode
 from dphi.eco.surface.registry import get_surface_class, SurfaceConfig
 
