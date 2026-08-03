@@ -1,13 +1,4 @@
 # dphi.net.tracker.billing
-## @lineage: dphi.wasm.tracker.billing
-## @lineage: dphi.tracker.billing
-## @lineage: agent.dphi.tracker.billing
-"""
-@desc:
-- Agentic Economy Billing & Revenue Fusion Tracker.
-- Stores ONLY the Delta (change) in memory. Old receipts are naturally dissipated.
-- Continuity is proven holographically via: New_Nexus = Prev_Nexus ⊕ Delta_Hash ⊕ Phase_ID
-"""
 import json
 import hashlib
 import asyncio
@@ -41,13 +32,7 @@ def int_hash(data: str) -> int:
     """문자열을 256비트 정수형 해시로 변환 (XOR 연산용)"""
     return int(hashlib.sha256(data.encode('utf-8')).hexdigest(), 16)
 
-
-class StructuralXORCache:
-    """
-    @desc: 
-    - 절대값(Total)이 아닌 오직 궤적의 델타(Delta)만을 머금고 있는 상태 공간.
-    - 데이터는 융합된 직후 물리적으로 소산(Dissipation)
-    """
+class XorCache:
     def __init__(self, genesis_nexus_id: int = 0):
         self._lock = asyncio.Lock()
         self.last_nexus_id: int = genesis_nexus_id
@@ -115,7 +100,7 @@ class BillingTracker:
     """@desc: 이벤트 스트림 구독 및 Ledger Inscription 오케스트레이터"""
     def __init__(self, rpc_bridge: RpcBridge):
         # 실제 환경에서는 복구용으로 RocksDB에서 최신 Nexus ID를 읽어와 초기화
-        self.cache = StructuralXORCache(genesis_nexus_id=0) 
+        self.cache = XorCache(genesis_nexus_id=0) 
         self.rpc_bridge = rpc_bridge
 
     def evaluate_wasm_metrics(self, flow_id: str, agent_id: str, metrics: Dict[str, Any]) -> Dict[str, Any]:

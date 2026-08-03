@@ -17,8 +17,8 @@ from pydantic import BaseModel, Field
 from ator.action.factory import CoreAction
 from engine.parser.conv.message import Message, TextContent
 
-from arch.model.contract.graph import EntryNode
-from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
+from arch.contract.model.graph import EntryNode
+from arch.xor.surge.blueprint import SurgeBlueprint, SurgeNode
 from arch.contract.resolver.secret import SecretSource, SecretValue
 
 from kernel.phase.bind.resolver import resolve_path

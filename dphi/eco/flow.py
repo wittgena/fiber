@@ -16,9 +16,9 @@ from ator.topos.space.manager import SpaceNode, space_provider
 from dphi.eco.node import RuntimeNode
 from dphi.eco.surface.registry import get_surface_class, SurfaceConfig
 
-from arch.model.surge.blueprint import SurgeBlueprint
+from arch.xor.surge.blueprint import SurgeBlueprint
 from arch.contract.gov.flow import PhaseFlow, FlowState
-from arch.model.contract.graph import EntryNode
+from arch.contract.model.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
 from arch.model.sealer import EpochSealer

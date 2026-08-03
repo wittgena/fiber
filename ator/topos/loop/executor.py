@@ -17,7 +17,7 @@ from ator.action.factory import CoreAction
 from ator.action.resolver import ActionResolver
 from engine.driver.disc.tool import Tool
 
-from arch.model.contract.graph import EntryNode
+from arch.contract.model.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
 from arch.topos.tunnel.factory import TunnelFactory

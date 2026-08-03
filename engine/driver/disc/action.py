@@ -12,7 +12,7 @@ from rich.text import Text
 from engine.parser.conv.message import ImageContent, TextContent
 from engine.parser.conv.message import content_to_str
 
-from arch.model.surge.disc import DiscMixin
+from arch.xor.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

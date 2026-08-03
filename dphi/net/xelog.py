@@ -1,4 +1,5 @@
-# dphi.eco.scheme.xelog
+# dphi.net.xelog
+## @lineage: dphi.eco.scheme.xelog
 import abc
 import time
 from dataclasses import dataclass, field

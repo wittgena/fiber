@@ -12,7 +12,7 @@ from engine.parser.conv.event import Event
 from ator.state.event.llm.action import ActionEvent
 from engine.driver.security.eval import SecurityRisk
 
-from arch.model.surge.disc import DiscMixin
+from arch.xor.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

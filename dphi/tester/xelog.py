@@ -8,7 +8,7 @@ from typing import Tuple
 import httpx
 
 from dphi.net.tracer import WasmTracer
-from dphi.eco.scheme.xelog import SceneRunner, E2EConfig
+from dphi.net.xelog import SceneRunner, E2EConfig
 
 from kernel.dphi.wasm.builder import WasmBuilder
 from watcher.xelog.rest import api as rest_app  

@@ -17,7 +17,7 @@ from pydantic import ConfigDict, Field
 from rich.text import Text
 
 from engine.parser.conv.message import ImageContent, Message, TextContent
-from arch.model.surge.disc import DiscMixin
+from arch.xor.surge.disc import DiscMixin
 from arch.contract.event.next import ToposId, next_id
 
 N_CHAR_PREVIEW = 500

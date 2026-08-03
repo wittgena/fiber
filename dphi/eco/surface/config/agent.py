@@ -11,7 +11,7 @@ from engine.protocol.mcp.config import MCPConfig
 from engine.driver.disc.tool import Tool
 from engine.driver.llm.model import LLMModel
 
-from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.surge.disc import SurgeBaseModel
 from arch.xor.bridge.mark.depre import warn_deprecated
 
 AGENT_SETTINGS_SCHEMA_VERSION = 1

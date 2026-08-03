@@ -23,7 +23,7 @@ from ator.action.resolver import ActionResolver
 
 from arch.model.payload import StreamPayloadAdapter
 from arch.topos.tunnel.factory import UniversalFacade
-from arch.model.surge.disc import DiscMixin
+from arch.xor.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

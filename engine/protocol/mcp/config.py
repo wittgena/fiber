@@ -5,7 +5,7 @@
 ## @lineage: agent.atoa.mcp.config
 ## @lineage: phi.mcp.config
 from typing import Dict, List, Optional
-from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.surge.disc import SurgeBaseModel
 
 class MCPServerConfig(SurgeBaseModel):
     command: str

@@ -7,10 +7,10 @@ from pydantic import BeforeValidator, Field
 
 from arch.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
 from arch.xor.bridge.tool.git import GitChange, GitDiff
-from arch.model.surge.disc import DiscMixin
+from arch.xor.surge.disc import DiscMixin
 
 # ✅ DynamicSurgeModel 임포트 추가
-from arch.model.surge.model import DynamicSurgeModel
+from arch.xor.surge.model import DynamicSurgeModel
 
 from watcher.plane.emitter import get_emitter
 

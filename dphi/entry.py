@@ -11,7 +11,7 @@ from kernel.phase.reactor import KernelReactor
 from kernel.dphi.wasm.builder import WasmBuilder
 from kernel.phase.bind.resolver import resolve_path
 
-import dphi.resolver.scene as scene_module
+import dphi.scheme as scene_module
 from watcher.plane.emitter import get_emitter
 
 MODULE_PATH = scene_module.__name__

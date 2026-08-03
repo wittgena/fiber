@@ -1,6 +1,4 @@
 # ator.topos.launcher
-## @lineage: agent.topos.launcher
-## @lineage: dphi.topos.launcher
 from __future__ import annotations
 
 import argparse
@@ -9,10 +7,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
 from ator.context.prompt import BlueprintType, SchemeCategory, TaskResolver, TransactionDomain
-from dphi.resolver.model.tier import model_tier_registry
+from dphi.eco.model.tier import model_tier_registry
 from dphi.eco.flow import FlowTransition, ToposController, managed_scope
 
-from arch.model.surge.blueprint import SurgeBlueprint
+from arch.xor.surge.blueprint import SurgeBlueprint
 from arch.topos.node.gan import Message
 from arch.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
 from kernel.phase.reactor import KernelReactor

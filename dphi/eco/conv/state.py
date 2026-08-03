@@ -41,7 +41,7 @@ from ator.state.command import (
     UpdateTags
 )
 
-from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.surge.disc import SurgeBaseModel
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

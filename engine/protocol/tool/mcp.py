@@ -19,7 +19,7 @@ from ator.action.builder import ActionAnnotations, ActionDefinition
 from engine.protocol.executor import ActionExecutor
 from engine.driver.disc.mcp import MCPAction, MCPObservation
 
-from arch.model.surge.disc import DiscMixin
+from arch.xor.surge.disc import DiscMixin
 from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_logger
 
