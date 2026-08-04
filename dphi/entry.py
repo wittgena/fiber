@@ -5,10 +5,10 @@ import asyncio
 import importlib
 
 from dphi.wasm.tester import WasmTester
-from kernel.dphi.wasm.tracer import WasmTracer
+from watcher.wasm.tracer import WasmTracer
 
 from kernel.phase.reactor import KernelReactor
-from kernel.dphi.wasm.builder import WasmBuilder
+from watcher.wasm.builder import WasmBuilder
 from kernel.bind.resolver import resolve_path
 
 import dphi.scheme as scene_module

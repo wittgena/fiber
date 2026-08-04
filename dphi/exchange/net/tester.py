@@ -12,8 +12,8 @@ import httpx
 from dphi.exchange.net.scheme import SceneRunner, E2EConfig
 from eco.xelog.rest import api as rest_app
 
-from kernel.dphi.wasm.tracer import WasmTracer
-from kernel.dphi.wasm.builder import WasmBuilder
+from watcher.wasm.tracer import WasmTracer
+from watcher.wasm.builder import WasmBuilder
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("http.tester")

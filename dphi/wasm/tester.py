@@ -9,7 +9,7 @@ from kernel.bind.resolver import resolve_path
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from kernel.phase.daemon.task.wasm import WasmTaskerDaemon
 from kernel.dphi.broker import WasmBroker
-from kernel.dphi.wasm.auditor import CanonicalProofAuditor
+from watcher.wasm.auditor import CanonicalProofAuditor
 
 from watcher.plane.emitter import get_emitter, flow_scope
 
