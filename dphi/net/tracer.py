@@ -9,7 +9,7 @@ from typing import Tuple, Optional
 from dataclasses import asdict
 
 from kernel.phase.bind.resolver import resolve_path
-from kernel.dphi.wasm.inter.wasm import WasmInterpreter
+from kernel.inter.wasm import WasmInterpreter
 from kernel.dphi.wasm.builder import WasmBuilder
 
 from kernel.dphi.adapter.sign import LedgerAuthAdapter
