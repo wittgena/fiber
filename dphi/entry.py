@@ -9,7 +9,7 @@ from dphi.net.tracer import WasmTracer
 
 from kernel.phase.reactor import KernelReactor
 from kernel.dphi.wasm.builder import WasmBuilder
-from kernel.phase.bind.resolver import resolve_path
+from kernel.bind.resolver import resolve_path
 
 import dphi.scheme as scene_module
 from watcher.plane.emitter import get_emitter

@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Tuple, Optional
 from dataclasses import asdict
 
-from kernel.phase.bind.resolver import resolve_path
-from kernel.inter.wasm import WasmInterpreter
+from kernel.bind.resolver import resolve_path
+from kernel.bind.inter.wasm import WasmInterpreter
 from kernel.dphi.wasm.builder import WasmBuilder
 
 from kernel.dphi.adapter.sign import LedgerAuthAdapter

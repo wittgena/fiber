@@ -25,7 +25,7 @@ from ator.topos.builder.executor import executor_factory, sanitized_env
 
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.flow.event import WorkspaceReady
-from kernel.phase.bind.resolver import resolve_path
+from kernel.bind.resolver import resolve_path
 
 from watcher.tracer.scope import get_current_trace_path
 from watcher.tracer.infra.router import InfraRouter

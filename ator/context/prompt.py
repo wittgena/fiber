@@ -21,7 +21,7 @@ from arch.contract.model.graph import EntryNode
 from arch.xor.surge.blueprint import SurgeBlueprint, SurgeNode
 from arch.contract.resolver.secret import SecretSource, SecretValue
 
-from kernel.phase.bind.resolver import resolve_path
+from kernel.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")

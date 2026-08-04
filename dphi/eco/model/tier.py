@@ -7,7 +7,7 @@ from pathlib import Path
 from collections import deque
 from typing import Dict, List, Optional, Any
 
-from kernel.phase.bind.resolver import resolve_path
+from kernel.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tier.registry", phase="SYSTEM")

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 from filelock import FileLock, Timeout
 from watcher.plane.emitter import get_logger
-from kernel.phase.bind.resolver import resolve_path
+from kernel.bind.resolver import resolve_path
 
 if TYPE_CHECKING:
     from engine.driver.llm.model import LLMModel

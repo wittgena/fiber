@@ -22,7 +22,7 @@ from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.flow.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
-from kernel.phase.bind.resolver import resolve_path
+from kernel.bind.resolver import resolve_path
 from watcher.tracer.infra.router import InfraRouter
 from watcher.plane.emitter import get_emitter
 

@@ -28,7 +28,7 @@ from arch.xor.bridge.tool.terminal import (
     TMUX_SOCKET_NAME,
 )
 from engine.terminal.tmux import TmuxTerminal
-from kernel.phase.bind.resolver import find_current_self, get_invoker
+from kernel.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
