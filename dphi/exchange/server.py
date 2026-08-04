@@ -1,4 +1,5 @@
-# dphi.net.exchange.server
+# dphi.xelog.exchange.server
+## @lineage: dphi.net.exchange.server
 import time
 import json
 import hashlib
@@ -16,7 +17,6 @@ from arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
 from arch.topos.network.channel.codec import JsonMessageCodec, XelogUniversalTracer
 from arch.topos.network.factory import ProtocolFactory
 
-# 통합 및 엄격한 타입이 적용된 어댑터 및 데이터 클래스 임포트
 from kernel.dphi.adapter.eco import (
     EcoAdapter, ExchangeAdapter, WalletAdapter,
     X402SettlementReceipt, TransactionReceipt, SettlementPayload

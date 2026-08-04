@@ -1,7 +1,5 @@
-# dphi.tester.pysand
-## @lineage: dphi.wasm.tester.pysand
-## @lineage: agent.dphi.wasm.tester.pysand
-## @lineage: phase.wasm.tester.pysand
+# dphi.wasm.pysand
+## @lineage: dphi.tester.pysand
 import time
 import asyncio
 import sys
@@ -20,10 +18,6 @@ from watcher.plane.emitter import get_emitter
 log = get_emitter("tester.pysand")
 
 class PysandTester:
-    """
-    @desc: Integration tester that evaluates the entire 'WASM Gateway + Deno Jail'
-           architecture via the WasmBroker and WasmTaskerDaemon.
-    """
     def __init__(self, broker: WasmBroker):
         self.broker = broker
         self.success_count = 0

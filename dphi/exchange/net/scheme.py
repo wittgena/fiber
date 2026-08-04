@@ -1,5 +1,4 @@
-# dphi.net.xelog
-## @lineage: dphi.eco.scheme.xelog
+# dphi.xelog.scheme
 import abc
 import time
 from dataclasses import dataclass, field
@@ -8,7 +7,7 @@ from dataclasses import dataclass
 from fastapi.routing import APIRoute
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from watcher.xelog.rest import api as rest_app  
+from eco.xelog.rest import api as rest_app  
 from kernel.dphi.scheme.runner import WebRunner
 from watcher.plane.emitter import get_emitter, flow_scope
 

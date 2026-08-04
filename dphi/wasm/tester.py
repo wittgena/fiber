@@ -1,5 +1,4 @@
-# dphi.tester.wasm
-## @lineage: dphi.wasm.tester.dphi
+# dphi.wasm.tester
 import sys
 import json
 import asyncio
@@ -10,9 +9,9 @@ from kernel.bind.resolver import resolve_path
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from kernel.phase.daemon.task.wasm import WasmTaskerDaemon
 from kernel.dphi.broker import WasmBroker
+from kernel.dphi.wasm.auditor import CanonicalProofAuditor
 
 from watcher.plane.emitter import get_emitter, flow_scope
-from kernel.dphi.wasm.auditor import CanonicalProofAuditor
 
 log = get_emitter("tester.dphi")
 

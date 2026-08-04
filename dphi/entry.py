@@ -4,8 +4,8 @@ import argparse
 import asyncio
 import importlib
 
-from dphi.tester.wasm import WasmTester
-from dphi.net.tracer import WasmTracer
+from dphi.wasm.tester import WasmTester
+from kernel.dphi.wasm.tracer import WasmTracer
 
 from kernel.phase.reactor import KernelReactor
 from kernel.dphi.wasm.builder import WasmBuilder

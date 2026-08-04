@@ -1,4 +1,5 @@
-# dphi.tester.xelog
+# dphi.xelog.tester
+## @lineage: dphi.tester.xelog
 import sys
 import argparse
 import asyncio
@@ -7,14 +8,14 @@ from typing import Tuple
 
 import httpx
 
-from dphi.net.tracer import WasmTracer
-from dphi.net.xelog import SceneRunner, E2EConfig
+from dphi.exchange.net.scheme import SceneRunner, E2EConfig
+from eco.xelog.rest import api as rest_app
 
+from kernel.dphi.wasm.tracer import WasmTracer
 from kernel.dphi.wasm.builder import WasmBuilder
-from watcher.xelog.rest import api as rest_app  
 from watcher.plane.emitter import get_emitter, flow_scope
 
-log = get_emitter("xelog.tester")
+log = get_emitter("http.tester")
 
 class HttpFlowTracer:
     """HTTP(S) 파이프라인의 Inbound/Outbound 트래픽을 관측하고 Flow ID로 묶어내는 Tracer"""
@@ -44,20 +45,18 @@ class HttpFlowTracer:
             else:
                 log.info(status_log)
 
-class XelogTester:
+class FlowAdapter:
     """HTTP Client(ASGITransport) 설정 및 SceneRunner 주입을 담당하는 Adapter"""
     def __init__(self, config: E2EConfig):
         self.config = config
         self.runner = SceneRunner(config)
-        self.tracer = HttpFlowTracer() # Tracer 핸들러 인스턴스화
+        self.tracer = HttpFlowTracer()
 
     async def execute(self) -> Tuple[bool, str]:
         try:
             log.info(f"\n[WebTesterAdapter] Starting In-Memory ASGI Workflows...")
             transport = httpx.ASGITransport(app=rest_app)
             target_url = self.config.base_url 
-            
-            ## Event Hook에 Tracer 클래스의 메서드 매핑
             async with httpx.AsyncClient(
                 transport=transport, 
                 base_url=target_url,
@@ -66,10 +65,7 @@ class XelogTester:
                     'response': [self.tracer.trace_response]
                 }
             ) as client:
-                ## Transport와 Tracer가 결합된 Client를 시나리오 러너에 주입
                 self.runner.client = client
-                
-                ## 캡슐화된 전체 E2E 파이프라인 관통! 
                 success = await self.runner.execute()
                 if not success:
                     return False, "E2E Validation Failed. See logs for detailed phase ruptures."
@@ -111,11 +107,11 @@ class SentinelSecurityTester:
                         return False, f"Server crashed during {vector_name} attack: {str(e)}"
         return True, "All Chaos probes successfully deflected by Sentinel Membrane."
 
-class XelogPipeline:
+class TracerPipeline:
     """빌드 -> 기능 테스트 -> 보안 테스트(Sentinel) -> 추적(Trace)"""
     def __init__(self, config: E2EConfig):
         self.config = config
-        self.log = get_emitter("xelog.pipeline")
+        self.log = get_emitter("tracer.pipeline")
 
     async def run(self) -> bool:
         self.log.info("[Pipeline] Starting Xelog Full E2E Pipeline...")
@@ -127,7 +123,7 @@ class XelogPipeline:
             return False
 
         self.log.info("[Pipeline] [Step 2] Running HTTP Functional E2E Tester...")
-        web_tester = XelogTester(self.config)
+        web_tester = FlowAdapter(self.config)
         tracer = WasmTracer(tester=web_tester)
         await tracer.trace() 
         if getattr(tracer, 'rupture_confirmed', False):
@@ -143,24 +139,3 @@ class XelogPipeline:
             
         self.log.info("[Pipeline] E2E Pipeline executed & Lineage Sealed successfully.")
         return True
-
-def main():
-    """순수하게 CLI Arguments를 파싱하고 파이프라인을 구동하는 진입점"""
-    parser = argparse.ArgumentParser(description="Xelog E2E HTTP Pipeline Tester")
-    parser.add_argument("--host", type=str, default="localhost", help="Target API Host")
-    parser.add_argument("--port", type=int, default=8000, help="Target API Port")
-    
-    args = parser.parse_args()
-    config = E2EConfig(host=args.host, port=args.port)
-    pipeline = XelogPipeline(config)
-    
-    try:
-        success = asyncio.run(pipeline.run())
-        if not success:
-            sys.exit(1)
-    except KeyboardInterrupt:
-        get_emitter("xelog.cli").warning("\n[CLI] Process interrupted by user. Shutting down gracefully...")
-        sys.exit(0)
-
-if __name__ == "__main__":
-    main()
