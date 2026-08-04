@@ -12,7 +12,7 @@ from collections import defaultdict
 from mesh.cost.tracker.metric import Metrics
 from runtime.client.param import ModelResponse
 
-from arch.contract.gov.gate import uuid4
+from arch.model.phase.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context
 
 log = get_emitter("driver.observer")

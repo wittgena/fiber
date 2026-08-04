@@ -7,7 +7,7 @@ from engine.driver.llm.model import LLMModel
 from engine.driver.disc.tool import Tool
 
 from arch.topos.node.gan import Message, GanNode
-from arch.topos.flow.event import AgentConfigured
+from arch.topos.node.event import AgentConfigured
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("runtime.node")

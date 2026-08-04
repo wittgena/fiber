@@ -17,7 +17,7 @@ from dphi.eco.node import RuntimeNode
 from dphi.eco.surface.registry import get_surface_class, SurfaceConfig
 
 from arch.xor.surge.blueprint import SurgeBlueprint
-from arch.contract.gov.flow import PhaseFlow, FlowState
+from arch.model.phase.flow import PhaseFlow, FlowState
 from arch.contract.model.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.contract.event.next import next_id
