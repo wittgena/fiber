@@ -18,12 +18,7 @@ from kernel.dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from watcher.receptor.edge.core import StreamAppendRequest, LedgerEventSchema
 
-# 🌟 개선: ExternalCommitteeSimulator -> MockNotarySwarm
 class MockNotarySwarm:
-    """
-    WASM 코어가 확정한 증명서(Receipt)를 EVM L2 등에 제출할 때 요구되는 
-    '다중 서명(Multi-sig) 요건'을 충족시키기 위해 기계적으로 도장을 찍어주는 가짜 공증인 집단입니다.
-    """
     def __init__(self, size: int = 3):
         self.notaries = []
         for i in range(size):
@@ -40,7 +35,7 @@ class MockNotarySwarm:
         return [node["pub"] for node in self.notaries]
 
     def attest_payload(self, canonical_hash: bytes) -> List[str]:
-        """주어진 해시에 각 공증인의 프라이빗 키로 병렬 서명(도장)을 수행합니다."""
+        """주어진 해시에 각 공증인의 프라이빗 키로 병렬 서명(도장)을 수행"""
         return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
 
 class MockNetBuilder:

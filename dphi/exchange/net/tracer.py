@@ -224,10 +224,8 @@ class SceneRunner(Workflow):
             cached_states={}
         )
         
-        # 🌟 정렬: 외부 제출용으로 가짜 공증인(Notary)들의 서명을 겉면에 포장(Wrap)합니다.
         commit_hash = hashlib.sha256(StateAdapter.to_canonical_bytes(anchor_commit)).hexdigest().encode('utf-8')
         signatures = self.notary_swarm.attest_payload(commit_hash)
-        
         payload = {
             "receptor_id": receptor_id,  
             "proposed_parity": parity_triplet,

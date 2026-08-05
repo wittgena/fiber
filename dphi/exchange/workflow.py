@@ -62,8 +62,6 @@ class MockRpcBridge(RpcBridge):
             mandate_result = payload.get("mandate", {})
             actual_mandate = mandate_result.get("mandate", {})
             constraints = actual_mandate.get("constraints", {})
-            
-            # Mandate 유효기간 검증
             if constraints.get("expiration_ts", 0) < int(time.time() * 1000):
                 log.warning("[MockRPC] 🛑 REJECTED: AP2 Mandate is expired!")
                 return {"status": 401, "error": "Unauthorized: AP2 Mandate Expired"}
@@ -71,9 +69,7 @@ class MockRpcBridge(RpcBridge):
             topo = payload.get("topo", 0)
             press = payload.get("press", 0)
             return {"status": 200, "data": {"phase_id": next_phase_id(topo=topo, press=press)}}
-            
         elif action == WasmMethod.SEAL_EPOCH.value:
-            # 코어는 결정론적 연산 결과가 무결한지만 확인하고 순수 영수증을 발급합니다. (BFT 서명 확인 안 함)
             return {"status": 200, "data": {"receipt_id": f"nexus_receipt_{uuid4().hex[:8]}"}}
             
         return {"status": 404, "error": f"Unknown action: {action}"}
@@ -86,8 +82,6 @@ class ExchangeWorkflow(Workflow):
         
         self.field_node = NodeIdentity()
         self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field_node.pub_hex)
-        
-        # 외부 접점: 자본주의 네트워크(EVM)와 통신하기 위한 Wallet Plug-in 연결
         self.wallet_adapter = MockNetBuilder.get_testnet_wallet()
         if simulate_wallet:
             self.wallet_adapter.simulate = True
@@ -128,8 +122,6 @@ class ExchangeWorkflow(Workflow):
             "mandate": self.ap2_mandate.model_dump(exclude_none=True)
         }
         res_a = await self.rpc_bridge.request(req_payload)
-        
-        # 여기서 반환된 ErrorMessage가 시스템 멈춤 없이 on_error로 가려면 on_error 구현이 필수입니다.
         if res_a.get("status") != 200:
             return ErrorMessage(f"Ingress Rejected: {res_a.get('error')}")
             
@@ -175,7 +167,7 @@ class ExchangeWorkflow(Workflow):
             parity=parity, parent_nexus_id=0, self_parent_state="genesis",
             repos=self.entangled_state["repos"], cached_states=self.economy_state,
             timestamp=time.time(), 
-            signers=[],    # WASM 코어 자체는 증명인을 필요로 하지 않음
+            signers=[],
             signatures=[],
             threshold=0
         )
@@ -200,14 +192,12 @@ class ExchangeWorkflow(Workflow):
             cost_metrics={"fuel_consumed": 35000}, tier="SYSTEM"
         )
         
-        # 🌟 안정적인 직렬화(Serialization)를 통한 Canonical Bytes 생성
         receipt_dict = self.receipt.model_dump(exclude_none=True) if hasattr(self.receipt, 'model_dump') else self.receipt.__dict__
         canonical_receipt_bytes = StateAdapter.to_canonical_bytes(receipt_dict)
         
         if self.scenario.signature_injector:
             export_signatures = self.scenario.signature_injector([])
         else:
-            # 외부 제출용 겉면 포장 서명(Attestation)
             export_signatures = [
                 self.agent_a.sign(canonical_receipt_bytes),
                 self.agent_b.sign(canonical_receipt_bytes),

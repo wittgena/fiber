@@ -46,19 +46,15 @@ class CDPWalletConfig(BaseModel):
     api_private_key: str = Field(default_factory=lambda: os.getenv("TEST_CDP_API_PRIVATE_KEY", ""))
 
 class ExportAttestationConfig(BaseModel):
-    """
-    WASM 코어가 만든 순수 증명을 외부(EVM 등)로 제출할 때, 
-    외부 스마트 컨트랙트가 형식적으로 요구하는 증인(Notary/Witness)들의 Ed25519 공개키 목록.
-    이들은 코어의 위상 상태 전이(State Transition)에 개입하지 않습니다.
-    """
+    """WASM 코어가 만든 순수 증명을 외부(EVM 등)로 제출할 때, 외부 스마트 컨트랙트가 형식적으로 요구하는 증인(Notary/Witness)들의 Ed25519 공개키 목록"""
     @property
     def witness_pubkeys(self) -> List[str]:
         env_validators = os.getenv("COMMITTEE_VALIDATORS")
         if env_validators:
             return [v.strip() for v in env_validators.split(",")]
         
+        ## 로컬 SSH 키 등에서 추출된 Ed25519 Raw Hex
         return [
-            # 로컬 SSH 키 등에서 추출된 Ed25519 Raw Hex
             "d9b397e16418eaead7782aaef98dc8b64b550b61c3e1f5f393089da77601a142", 
             "e8c460d3d52c2ab7eb79f42b322a30bb9133a8c66eef4ec3a1d9b3a31c618b7a",
             "1c53e020462002cd43e33d4da3d61ea15a9992d9f4c3bece7d2b2c3a5d848721"

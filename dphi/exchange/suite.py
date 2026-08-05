@@ -11,9 +11,9 @@ from dphi.exchange.mock.config import mock_env
 log = get_emitter("exchange.suite")
 
 async def run_scenario_suite():
-    log.info("\n" + "="*80)
+    log.info("\n" + "="*59)
     log.info("🧪 [DPHI E2E MASTER SUITE] Commencing Full System Tests (Network + Workflow)")
-    log.info("="*80)
+    log.info("="*59)
 
     results = []
     log.info("\n▶️ [PART 1] Running Network & Chaos Membrane Pipeline...")
@@ -44,7 +44,6 @@ async def run_scenario_suite():
     else:
         log.info(f"🛡️ [Notice] No Testnet Keys. Workflows will execute in SIMULATION mode.")
 
-    # 🌟 철학적 정렬: 시나리오의 명칭과 기대 결과(Assertion)를 De-blockchain 구조에 맞게 완벽히 재정의합니다.
     scenarios = [
         {
             "config": ScenarioConfig(
@@ -52,7 +51,7 @@ async def run_scenario_suite():
                 mandate_injector=None,
                 signature_injector=None
             ),
-            "expected_workflow_result": True # 코어 연산 및 정상 공증 포장 완료
+            "expected_workflow_result": True
         },
         {
             "config": ScenarioConfig(
@@ -60,18 +59,14 @@ async def run_scenario_suite():
                 mandate_injector=RpcChaosInjector.corrupt_ap2_mandate,
                 signature_injector=None
             ),
-            "expected_workflow_result": False # 💥 코어(Phase 1)가 인텐트를 거부하므로 워크플로우 중단되어야 함
+            "expected_workflow_result": False
         },
         {
             "config": ScenarioConfig(
-                # 기존 "Byzantine Fault" 에서 외부 공증 위조로 명칭 변경
                 name="Export Forgery: Invalid Notary Attestations", 
                 mandate_injector=None,
                 signature_injector=RpcChaosInjector.corrupt_consensus_signatures
             ),
-            # 🌟 핵심 정렬: 도장(Signature)이 위조되었더라도, 코어의 관점에서는 연산과 포장을 
-            # 무사히 마친 것이므로 워크플로우 자체는 성공(True)으로 끝나야 합니다. 
-            # (이 페이로드가 L2 EVM에 던져지면 스마트 컨트랙트가 거절할 것입니다.)
             "expected_workflow_result": True 
         }
     ]
@@ -91,7 +86,7 @@ async def run_scenario_suite():
         })
         await asyncio.sleep(0.5)
 
-    log.info("\n" + "="*80)
+    log.info("\n" + "="*59)
     log.info("📊 [MASTER TEST SUITE REPORT]")
     log.info("="*80)
     
@@ -106,12 +101,12 @@ async def run_scenario_suite():
         target_label = f"[{res['target']}]"
         log.info(f"{status_icon} {idx:02d}. {target_label.ljust(12)} {res['scenario'].ljust(50)} | Result: {status_text}")
         
-    log.info("-" * 80)
+    log.info("-" * 59)
     if all_passed:
         log.info("🎉 ALL TESTS (NETWORK & WORKFLOW) EXECUTED SUCCESSFULLY.")
     else:
         log.critical("💥 SOME TESTS FAILED. Check the execution logs for trace details.")
-    log.info("="*80 + "\n")
+    log.info("="*59 + "\n")
 
 if __name__ == "__main__":
     KernelReactor.ignite(main_coro_func=run_scenario_suite)
