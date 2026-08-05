@@ -12,7 +12,8 @@ import httpx
 from fastapi.routing import APIRoute
 
 from dphi.eco.rest import api as rest_app, lifespan 
-from dphi.exchange.mock.net import MockNetBuilder
+from dphi.exchange.mock.net import MockNetBuilder, ExternalCommitteeSimulator
+from dphi.exchange.mock.config import mock_env
 from dphi.exchange.chaos.injector import HttpChaosLibrary 
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
@@ -91,7 +92,6 @@ class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
 class GlobalAnchorMsg(WorkflowMessage): pass
 
-
 # =====================================================================
 # 3. SceneRunner (E2E Functional Tests)
 # =====================================================================
@@ -104,9 +104,19 @@ class SceneRunner(Workflow):
         self.runner = WebRunner(config.base_url, client=client)
         self.state_roots: Dict[str, str] = {}
         self.log = get_emitter("workflow.scene_runner")
+        
+        # 🌟 정렬: mock.net에서 가져온 결정론적 외부 위원회를 테스트 Runner에 주입
+        self.external_committee = ExternalCommitteeSimulator(size=3)
 
     async def execute(self):
-        self.log.info(f"\n=== [START] {self.name} (Faults Inject: {self.inject_faults}) ===")
+        mode_str = "Negative/Faults" if self.inject_faults else "Golden Path"
+        self.log.info(f"\n=== [START] {self.name} ({mode_str}) ===")
+        
+        if not self.inject_faults:
+            self.log.info(f"  └─ Settlement Sink: Chain {mock_env.settlement_target.chain_id} (Receptor: {mock_env.settlement_target.nexus_contract_address})")
+            self.log.info(f"  └─ Exchange Agents: {mock_env.agents.alpha.did} ⟷ {mock_env.agents.beta.did}")
+            self.log.info(f"  └─ Consensus Nodes: {len(self.external_committee.public_keys)} External Validators Loaded")
+
         self.post_message(StartSceneMsg())
         await self.run()
 
@@ -134,7 +144,6 @@ class SceneRunner(Workflow):
         self.log.info("\n--- [Phase 2] OTLP Telemetry Ingress & WASM Seal ---")
         path = self.routes.url_for(TargetOp.OTLP_INGRESS)
         
-        # 🌟 개선: 테스트 의도 명확화 (Membrane 및 Strict Parser 방어 확인)
         if self.inject_faults:
             payload = {"garbage_field_missing_required_keys": True}
             expected_status = 422
@@ -157,7 +166,6 @@ class SceneRunner(Workflow):
         self.log.info("\n--- [Phase 3] D3Fi P2P Trade & Settlement (ExchangeNet) ---")
         path = self.routes.url_for(TargetOp.TRADE_INGRESS)
         
-        # 🌟 개선: 테스트 의도 명확화 (Membrane 및 Strict Parser 방어 확인)
         if self.inject_faults:
             payload = {"invalid_trade": "missing_all_required_data"}
             expected_status = 422
@@ -178,18 +186,25 @@ class SceneRunner(Workflow):
     @step
     async def phase_ledger_append(self, msg: LedgerAppendMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 4] Immutable Ledger Stream Append ---")
-        if self.inject_faults: 
-            # Negative 테스트는 데이터 오염 방지를 위해 Anchor 직전에 안전하게 종료
-            return GlobalAnchorMsg() 
-            
         path = self.routes.url_for(TargetOp.LEDGER_APPEND)
-        exchange_root = self.state_roots.get("exchange_root", "0x00")
-        payload = MockNetBuilder.ledger_append("A2A_TRADE_SETTLEMENT", exchange_root)
         
-        res = await self.runner._run_api_case("Ledger Append (Golden Path)", "POST", path, payload, 200)
-        if not res or res.status_code != 200:
-            return ErrorMessage("Ledger Append Failed")
+        if self.inject_faults: 
+            payload = {"stream_name": "missing_events_field_test"}
+            expected_status = 422
+            test_desc = "Ledger Append (Membrane Strict Block Test)"
+        else:
+            exchange_root = self.state_roots.get("exchange_root", "0x00")
+            payload = MockNetBuilder.ledger_append("A2A_TRADE_SETTLEMENT", exchange_root)
+            expected_status = 200
+            test_desc = "Ledger Append (Golden Path)"
             
+        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
+        if not res or res.status_code != expected_status:
+            return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
+            
+        if self.inject_faults:
+            return GlobalAnchorMsg()
+
         self.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "0x_default_ledger_hash")
         return GlobalAnchorMsg()
 
@@ -205,14 +220,10 @@ class SceneRunner(Workflow):
         if not all(k in self.state_roots for k in required_keys):
             return ErrorMessage("Cannot anchor: Sub-state roots are missing.")
         
-        parity_triplet = {"topos_id": "test_topos_1", "nexus_id": 1, "phase_id": 1}
-        current_timestamp = int(time.time() * 1000)
+        parity_triplet = {"topos_id": f"epoch_{time.strftime('%Y%m%d')}_batch_01", "nexus_id": 1, "phase_id": 1}
+        receptor_id = mock_env.settlement_target.nexus_contract_address
+        parent_state_hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
         
-        # 아키텍처 정합성: 논리적 부모 트랜잭션을 가리킵니다.
-        receptor_id = "e2e_test_receptor"
-        parent_state_hash = "e2e-test-base" 
-        
-        # 1. 클라이언트가 서명할 원본 데이터 생성
         anchor_commit = StateAdapter.build_anchor_commit(
             parity=parity_triplet, 
             parent_nexus_id=0, 
@@ -221,25 +232,23 @@ class SceneRunner(Workflow):
             cached_states={}
         )
         
-        # 2. 테스트 위원회(Committee) 비밀키로 Ed25519 서명 생성
-        canonical_bytes = StateAdapter.to_canonical_bytes(anchor_commit)
-        commit_hash = hashlib.sha256(canonical_bytes).hexdigest().encode('utf-8')
-        signatures = [k.sign(commit_hash).hex() for k in self.runner.committee_keys]
+        # 🌟 정렬: 외부에서 주입된 Committee 모듈이 해시를 받아 각자의 프라이빗 키로 병렬 서명합니다.
+        commit_hash = hashlib.sha256(StateAdapter.to_canonical_bytes(anchor_commit)).hexdigest().encode('utf-8')
+        signatures = self.external_committee.sign_payload(commit_hash)
         
-        # 3. 서버(FastAPI)가 요구하는 AnchorProposalRequest 스펙에 맞게 Payload 포장
         payload = {
-            "receptor_id": receptor_id,            
+            "receptor_id": receptor_id,  
             "proposed_parity": parity_triplet,
             "parent_nexus_id": 0,
             "self_parent_state": parent_state_hash,
             "repos": self.state_roots,
-            "signers": self.runner.committee_pubs,
+            # 외부 위원회의 공개키 목록을 제출 (WASM은 이 명단과 서명의 수학적 일치성만 검증)
+            "signers": self.external_committee.public_keys, 
             "signatures": signatures,
-            "timestamp": current_timestamp
+            "timestamp": int(time.time() * 1000)
         }
         
         path = self.routes.url_for(TargetOp.ANCHOR_SEAL)
-        
         res = await self.runner._run_api_case("Anchor Epoch Seal (Golden Path)", "POST", path, payload, 200)
         
         if not res or res.status_code != 200:
@@ -311,8 +320,11 @@ class TracerPipeline(PipelineRunner):
                 event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
             ) as client:
                 runner = SceneRunner(self.config, client=client, inject_faults=inject_faults)
+                
+                # 🌟 정렬: WASM BFT 검증기가 테스트를 통과할 수 있도록, 
+                # 외부에서 생성된 위원회의 Public Keys를 커널 스토리지(App State)에 주입합니다.
                 if hasattr(rest_app.state, 'config'):
-                    rest_app.state.config.committee_pubs = runner.runner.committee_pubs
+                    rest_app.state.config.committee_pubs = runner.external_committee.public_keys
                     
                 tracer = WasmTracer(tester=runner)
                 await tracer.trace() 

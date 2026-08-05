@@ -8,6 +8,9 @@ from typing import Any, Callable, Dict, List, Optional
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from dphi.exchange.mock.net import MockNetBuilder
+from dphi.exchange.mock.config import mock_env
+
 from arch.topos.network.bridge import FlowPropagator, RpcBridge
 from arch.topos.network.channel.codec import JsonMessageCodec
 from arch.topos.network.factory import ProtocolFactory
@@ -22,14 +25,12 @@ from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import WasmMethod
 
 from watcher.plane.emitter import get_emitter
-from dphi.exchange.mock.net import MockNetBuilder
 
 log = get_emitter("exchange.workflow")
 
 @dataclass
 class ScenarioConfig:
     name: str
-    # 외부에서 주입되는 동적 카오스 인젝터
     mandate_injector: Optional[Callable] = None
     signature_injector: Optional[Callable] = None
 
@@ -40,6 +41,7 @@ class ExSettlementMsg(WorkflowMessage): pass
 class ExNexusMsg(WorkflowMessage): pass
 
 class NodeIdentity:
+    """프로토콜 코어에 참여하는 순수 합의 주체 (EVM과 무관한 Ed25519 기반)"""
     def __init__(self):
         self.key = ed25519.Ed25519PrivateKey.generate()
         self.pub_hex = self.key.public_key().public_bytes(
@@ -56,7 +58,6 @@ class MockRpcBridge(RpcBridge):
         await asyncio.sleep(0.05)
 
         if action == WasmMethod.INIT_EPOCH.value:
-            # 수신한 AP2 Mandate의 만료 시간 검증
             mandate_result = payload.get("mandate", {})
             actual_mandate = mandate_result.get("mandate", {})
             constraints = actual_mandate.get("constraints", {})
@@ -70,7 +71,6 @@ class MockRpcBridge(RpcBridge):
             return {"status": 200, "data": {"phase_id": next_phase_id(topo=topo, press=press)}}
             
         elif action == WasmMethod.SEAL_EPOCH.value:
-            # 수신한 Parity Triplet 서명의 훼손 여부 감지 (BFT)
             if "BAD_SIGNATURE" in payload.get("payload", ""):
                 log.warning("[MockRPC] 🛑 REJECTED: Invalid Ed25519 Signature detected in Parity Triplet!")
                 return {"status": 403, "error": "Consensus Failed: Invalid Signatures"}
@@ -87,11 +87,13 @@ class ExchangeWorkflow(Workflow):
         
         self.field_node = NodeIdentity()
         self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field_node.pub_hex)
-        self.wallet_adapter = WalletAdapter(network_id="base-sepolia", simulate=simulate_wallet)
+        
+        # 🌟 외부 접점: 자본주의 네트워크(EVM)와 통신하기 위한 Wallet Plug-in 연결
+        self.wallet_adapter = MockNetBuilder.get_testnet_wallet()
+        if simulate_wallet:
+            self.wallet_adapter.simulate = True
         
         self.rpc_bridge: Optional[RpcBridge] = None
-        self.protocol_transport = None
-        
         self.agent_a = NodeIdentity()
         self.agent_b = NodeIdentity()
         
@@ -105,7 +107,8 @@ class ExchangeWorkflow(Workflow):
         self.rollup_payload: Optional[SettlementPayload] = None
 
     async def start(self) -> bool:
-        self.log.info(f"\n{'='*60}\n🚀 [START] Scenario: {self.scenario.name}\n{'='*60}")
+        mode = "Simulated" if self.wallet_adapter.simulate else "Testnet Live"
+        self.log.info(f"\n{'='*60}\n🚀 [START] Scenario: {self.scenario.name} ({mode})\n{'='*60}")
         self.rpc_bridge = MockRpcBridge()
         self.post_message(ExStartMsg())
         await self.run()
@@ -113,7 +116,7 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_ingress(self, msg: ExStartMsg) -> WorkflowMessage:
-        # [제어의 역전] 외부 Injector가 존재하면 파괴된 데이터를 사용하고, 없으면 정상 Mock 데이터를 사용
+        self.log.info("--- [Phase 1] Protocol Core: Verify Intent Mandate ---")
         if self.scenario.mandate_injector:
             mandate_params = self.scenario.mandate_injector(self.agent_a.pub_hex, self.agent_a.key)
         else:
@@ -124,7 +127,7 @@ class ExchangeWorkflow(Workflow):
         req_payload = {
             "action": WasmMethod.INIT_EPOCH.value, 
             "topo": 120, "press": 85,
-            "mandate": self.ap2_mandate.model_dump()
+            "mandate": self.ap2_mandate.model_dump(exclude_none=True)
         }
         res_a = await self.rpc_bridge.request(req_payload)
         
@@ -137,6 +140,7 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_entanglement(self, msg: ExIngressMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 2] Protocol Core: State Entanglement ---")
         parity = generate_parity_triplet(topo=120, press=85)
         self.entangled_state = {
             "repos": {
@@ -149,9 +153,19 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_settlement(self, msg: ExEntanglementMsg) -> WorkflowMessage:
-        invoice = EcoAdapter.build_x402_invoice(payee_address=self.field_node.pub_hex, amount_usdc="0.05", resource_id="compute_fee")
-        self.x402_receipt = EcoAdapter.process_x402_settlement(invoice=invoice, agent_wallet_address=self.agent_a.pub_hex, wallet_adapter=self.wallet_adapter)
+        # 🌟 외부 접점: 순수 연산의 세계를 벗어나, 실제 자본(EVM)을 이동시키는 플러그인 단계
+        self.log.info("--- [Phase 3] External Plug: EVM X402 Settlement ---")
+        payee_address = mock_env.settlement_target.clearing_contract_address
+        payer_address = mock_env.agents.alpha.evm_address
         
+        invoice = EcoAdapter.build_x402_invoice(payee_address, "0.05", "compute_fee")
+        
+        # 지갑 어댑터(Plug)를 통해 실제 트랜잭션 전송 (또는 시뮬레이션)
+        self.x402_receipt = EcoAdapter.process_x402_settlement(
+            invoice, payer_address, self.wallet_adapter
+        )
+        
+        # 외부 결제 결과를 프로토콜 내재 상태(State)로 단순 맵핑(Embed)
         self.economy_state = EcoAdapter.embed_economy_state(
             base_cached_states={}, mandate=self.ap2_mandate, receipt=self.x402_receipt
         )
@@ -159,15 +173,18 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_nexus(self, msg: ExSettlementMsg) -> WorkflowMessage:
+        # 🌟 프로토콜 본질: 외부 결제 성공 여부와 무관하게, 노드들은 고유 신분(Ed25519)으로 서명합니다.
+        self.log.info("--- [Phase 4] Protocol Core: BFT Consensus (Ed25519 Seal) ---")
         parity = self.entangled_state["parity"]
         canonical_bytes = StateAdapter.to_canonical_bytes({"parity": parity})
+        
+        # EVM 지갑이 아닌, 프로토콜 코어 노드의 Ed25519 키로 서명 생성
         self.signatures = [
             self.agent_a.sign(canonical_bytes),
             self.agent_b.sign(canonical_bytes),
             self.field_node.sign(canonical_bytes)
         ]
         
-        # [제어의 역전] 외부 Injector에게 서명 배열의 조작을 위임함
         if self.scenario.signature_injector:
             self.signatures = self.scenario.signature_injector(self.signatures)
             
@@ -190,10 +207,12 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_finalize(self, msg: ExNexusMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 5] Generate Final Proof Payload ---")
         self.receipt = self.exchange_adapter.finalize_settlement(
             entangled_state=self.entangled_state, signatures=self.signatures, 
             cost_metrics={"fuel_consumed": 35000}, tier="SYSTEM"
         )
+        # 이 페이로드는 이제 외부 하수구(L2 EVM, DA, DB 등) 어디로든 던져질 수 있는 순수 증명입니다.
         self.rollup_payload = self.exchange_adapter.generate_settlement_payload(self.receipt)
         return StopMessage(result=True)
 
@@ -201,7 +220,3 @@ class ExchangeWorkflow(Workflow):
     async def on_error(self, msg: ErrorMessage) -> WorkflowMessage:
         self.log.error(f"❌ [HALTED] Scenario aborted: {msg.msg}")
         return StopMessage(result=False)
-
-    async def graceful_teardown(self):
-        if self.protocol_transport:
-            self.protocol_transport.close()

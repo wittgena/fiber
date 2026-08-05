@@ -6,6 +6,7 @@ from watcher.plane.emitter import get_emitter
 from dphi.exchange.workflow import ExchangeWorkflow, ScenarioConfig
 from dphi.exchange.chaos.injector import RpcChaosInjector
 from dphi.exchange.net.tracer import TracerPipeline, E2EConfig
+from dphi.exchange.mock.config import mock_env
 
 log = get_emitter("exchange.suite")
 
@@ -26,7 +27,6 @@ async def run_scenario_suite():
         log.error(f"Network Pipeline Halted: {str(e)}")
         net_success = False
 
-    # 리포트를 위해 결과 저장 (target 구분값 추가)
     results.append({
         "target": "NET_TEST",
         "scenario": "TracerPipeline (Golden, Negative, Chaos)",
@@ -35,6 +35,16 @@ async def run_scenario_suite():
     })
 
     log.info("\n▶️ [PART 2] Running Domain Workflow Scenarios...")
+    
+    # 🌟 개선: CDP API Key 환경변수가 존재하면 실제 블록체인 네트워크에 송금을 발생시킵니다.
+    has_testnet_keys = bool(mock_env.cdp_wallet.api_name and mock_env.cdp_wallet.api_private_key)
+    should_simulate = not has_testnet_keys
+    
+    if not should_simulate:
+        log.info(f"⚡ [Notice] Testnet Keys detected. Workflows will execute LIVE on {mock_env.cdp_wallet.network_id}!")
+    else:
+        log.info(f"🛡️ [Notice] No Testnet Keys. Workflows will execute in SIMULATION mode.")
+
     scenarios = [
         ScenarioConfig(
             name="Golden Path (Success)",
@@ -54,7 +64,7 @@ async def run_scenario_suite():
     ]
 
     for scenario in scenarios:
-        workflow = ExchangeWorkflow(scenario=scenario, simulate_wallet=True)
+        workflow = ExchangeWorkflow(scenario=scenario, simulate_wallet=should_simulate)
         is_success = await workflow.start()
         expected_success = not (scenario.mandate_injector or scenario.signature_injector)
         results.append({

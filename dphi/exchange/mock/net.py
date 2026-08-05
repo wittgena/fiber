@@ -2,17 +2,41 @@
 import time
 import uuid
 import random
+import hashlib
 from typing import Any, Dict, List
 
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from dphi.exchange.mock.config import mock_env
 from arch.contract.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
     ParityTripletSchema
 )
+from kernel.dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from watcher.receptor.edge.core import StreamAppendRequest, LedgerEventSchema
+
+class ExternalCommitteeSimulator:
+    def __init__(self, size: int = 3):
+        self.nodes = []
+        for i in range(size):
+            seed = hashlib.sha256(f"dphi_validator_node_{i}".encode()).digest()
+            private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
+            public_hex = private_key.public_key().public_bytes(
+                encoding=serialization.Encoding.Raw, 
+                format=serialization.PublicFormat.Raw
+            ).hex()
+            self.nodes.append({"priv": private_key, "pub": public_hex})
+
+    @property
+    def public_keys(self) -> List[str]:
+        return [node["pub"] for node in self.nodes]
+
+    def sign_payload(self, canonical_hash: bytes) -> List[str]:
+        """외부 노드들이 각자의 프라이빗 키로 병렬 서명하는 행위를 모사"""
+        return [node["priv"].sign(canonical_hash).hex() for node in self.nodes]
 
 class MockNetBuilder:
     __domain_metadata__ = {
@@ -24,6 +48,16 @@ class MockNetBuilder:
     }
 
     @staticmethod
+    def get_testnet_wallet() -> WalletAdapter:
+        has_keys = bool(mock_env.cdp_wallet.api_name and mock_env.cdp_wallet.api_private_key)
+        return WalletAdapter(
+            network_id=mock_env.cdp_wallet.network_id,
+            simulate=not has_keys,
+            api_name=mock_env.cdp_wallet.api_name,
+            api_pkey=mock_env.cdp_wallet.api_private_key
+        )
+
+    @staticmethod
     def ap2_mandate_params(
         agent_pub_hex: str, 
         agent_key: ed25519.Ed25519PrivateKey,
@@ -31,7 +65,6 @@ class MockNetBuilder:
         max_spend_usdc: str = "0.50",
         is_expired: bool = False  
     ) -> Dict[str, Any]:
-        """@desc: AP2 Mandate 발급 파라미터 동적 생성 (다양한 VC 클레임 추가)"""
         return {
             "requester_id": agent_pub_hex,
             "target_action": target_action,
@@ -51,11 +84,9 @@ class MockNetBuilder:
         latency_ms: int = None,
         is_malformed: bool = False 
     ) -> Dict[str, Any]:
-        """@desc: 다종 LLM 메트릭, 하이퍼파라미터 및 에러 로그 등 풍부한 페이로드 생성"""
         models = ["gemini-1.5-pro", "gpt-4o", "claude-3-5-sonnet", "llama-3.1-70b-instruct"]
         providers = ["gcp", "aws", "azure", "together-ai"]
         
-        ## 동적 랜덤 할당 (값이 명시되지 않은 경우)
         model_name = model_name or random.choice(models)
         prompt_tokens = prompt_tokens or random.randint(100, 150000)
         completion_tokens = completion_tokens or random.randint(10, 4096)
@@ -63,9 +94,8 @@ class MockNetBuilder:
         
         trace_id = uuid.uuid4().hex
         span_id = uuid.uuid4().hex[:16]
-        agent_did = f"did:pkh:eip155:0x{uuid.uuid4().hex[:40]}"
+        agent_did = mock_env.agents.alpha.did 
         
-        ## 단순 과금 외에 엔지니어링 분석을 위한 풍부한 메타데이터 추가
         req = ExportLogsServiceRequest(
             resourceLogs=[{
                 "resource": {
@@ -74,7 +104,7 @@ class MockNetBuilder:
                         {"key": "cloud.provider", "value": {"stringValue": random.choice(providers)}},
                         {"key": "cloud.region", "value": {"stringValue": "us-west-2"}},
                         {"key": "agent.did", "value": {"stringValue": agent_did}},
-                        {"key": "tenant.id", "value": {"stringValue": f"tenant_{uuid.uuid4().hex[:8]}"}}
+                        {"key": "tenant.id", "value": {"stringValue": agent_did}} 
                     ]
                 },
                 "scopeLogs": [{
@@ -124,16 +154,15 @@ class MockNetBuilder:
         slippage: int = 50,
         should_fail_policy: bool = False 
     ) -> Dict[str, Any]:
-        """@desc: 단순 API 호출을 넘어선 물리/가상 자원 임대 형태의 복합 인텐트 생성"""
         if should_fail_policy:
             token = "DOGE"
             slippage = 5000 
             
         req = TradeIngressRequest(
-            agent_id=f"did:pkh:eip155:0x{uuid.uuid4().hex[:40]}",
+            agent_id=mock_env.agents.alpha.did,
             action=action,
             parameters={
-                "target_service": "did:web:compute-provider.akash.network",
+                "target_service": mock_env.agents.beta.did,
                 "payment_token": "USDC" if not should_fail_policy else token,
                 "max_fee_amount": max_fee,          
                 "slippage_tolerance_bps": slippage,      
@@ -149,7 +178,6 @@ class MockNetBuilder:
 
     @staticmethod
     def ledger_append(action_name: str, root_hash: str, event_count: int = 3) -> Dict[str, Any]:
-        """@desc: 다중 이벤트(Batch) 생성 및 PII 데이터 주입을 통한 SecretAuditor 실질 검증"""
         events = []
         for i in range(event_count):
             pii_payload = {
@@ -167,7 +195,7 @@ class MockNetBuilder:
             events.append(event)
             
         req = StreamAppendRequest(
-            stream_name="deai_mainnet_audit_stream",
+            stream_name=mock_env.da_layer.namespace_id,
             verbose=True,
             events=events
         )
@@ -178,8 +206,6 @@ class MockNetBuilder:
         state_roots: Dict[str, str], 
         inject_fault: bool = False 
     ) -> Dict[str, Any]:
-        """@desc: L2 Rollup Sequencer 제출용 데이터. 다중 검증자 서명 등 합의 복잡성 모사"""
-        
         ledger_root = state_roots.get("ledger_root", f"0x{uuid.uuid4().hex}")
         if inject_fault:
             ledger_root = "0xBAD_HASH_CORRUPTED_STATE"
@@ -191,15 +217,10 @@ class MockNetBuilder:
             state_hash=ledger_root
         )
         
-        validators = [
-            "0xValidatorNodeAlpha", 
-            "0xValidatorNodeBeta", 
-            "0xValidatorNodeGamma", 
-            "0xValidatorNodeDelta"
-        ]
-        
+        validators = mock_env.consensus.committee_validators
+        mock_signatures = [f"{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)]
         req = AnchorProposalRequest(
-            receptor_id=f"rollup_node_{uuid.uuid4().hex[:8]}",
+            receptor_id=mock_env.settlement_target.nexus_contract_address,
             proposed_parity=parity,
             parent_nexus_id=14591,
             self_parent_state="genesis",
@@ -207,8 +228,8 @@ class MockNetBuilder:
                 "exchange_merkle_root": state_roots.get("exchange_root", "0x00"),
                 "otlp_telemetry_root": state_roots.get("otlp_root", "0x00")
             },
-            signers=validators[:3], # 4명 중 3명(정족수) 서명 모사
-            signatures=[f"0x{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)],
+            signers=validators[:3], 
+            signatures=mock_signatures,
             timestamp=int(time.time() * 1000)
         )
         return req.model_dump(exclude_none=True)
