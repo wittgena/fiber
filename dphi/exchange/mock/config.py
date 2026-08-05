@@ -45,15 +45,20 @@ class CDPWalletConfig(BaseModel):
     api_name: str = Field(default_factory=lambda: os.getenv("TEST_CDP_API_NAME", ""))
     api_private_key: str = Field(default_factory=lambda: os.getenv("TEST_CDP_API_PRIVATE_KEY", ""))
 
-class ConsensusConfig(BaseModel):
-    """WASM 커널 내부에서 위상(Topology) 상태를 승인하는 주체 - 순수 노드들의 Ed25519 공개키(Raw Hex) 목록"""
+class ExportAttestationConfig(BaseModel):
+    """
+    WASM 코어가 만든 순수 증명을 외부(EVM 등)로 제출할 때, 
+    외부 스마트 컨트랙트가 형식적으로 요구하는 증인(Notary/Witness)들의 Ed25519 공개키 목록.
+    이들은 코어의 위상 상태 전이(State Transition)에 개입하지 않습니다.
+    """
     @property
-    def committee_validators(self) -> List[str]:
+    def witness_pubkeys(self) -> List[str]:
         env_validators = os.getenv("COMMITTEE_VALIDATORS")
         if env_validators:
             return [v.strip() for v in env_validators.split(",")]
         
         return [
+            # 로컬 SSH 키 등에서 추출된 Ed25519 Raw Hex
             "d9b397e16418eaead7782aaef98dc8b64b550b61c3e1f5f393089da77601a142", 
             "e8c460d3d52c2ab7eb79f42b322a30bb9133a8c66eef4ec3a1d9b3a31c618b7a",
             "1c53e020462002cd43e33d4da3d61ea15a9992d9f4c3bece7d2b2c3a5d848721"
@@ -91,13 +96,13 @@ class RealisticMockConfig(BaseModel):
     mode: DphiEnv = CURRENT_ENV
     agents: AgentRegistry = Field(default_factory=AgentRegistry)
     cdp_wallet: CDPWalletConfig = Field(default_factory=CDPWalletConfig)
-    consensus: ConsensusConfig = Field(default_factory=ConsensusConfig)
+    
+    export_attestation: ExportAttestationConfig = Field(default_factory=ExportAttestationConfig)
     settlement_target: SettlementTargetConfig = Field(default_factory=SettlementTargetConfig)
     da_layer: DAConfig = Field(default_factory=DAConfig)
     otlp: OTLPConfig = Field(default_factory=OTLPConfig)
     
     def get_agent_pkey(self, agent_name: str) -> str:
-        """@desc: 환경변수에서 실제 프라이빗 키 로드. 없으면 암호학적 서명이 가능한 유효한 Mock 키 반환."""
         agent = getattr(self.agents, agent_name, None)
         if not agent:
             raise ValueError(f"Unknown agent: {agent_name}")

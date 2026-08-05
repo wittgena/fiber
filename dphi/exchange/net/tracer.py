@@ -12,7 +12,7 @@ import httpx
 from fastapi.routing import APIRoute
 
 from dphi.eco.rest import api as rest_app, lifespan 
-from dphi.exchange.mock.net import MockNetBuilder, ExternalCommitteeSimulator
+from dphi.exchange.mock.net import MockNetBuilder, MockNotarySwarm
 from dphi.exchange.mock.config import mock_env
 from dphi.exchange.chaos.injector import HttpChaosLibrary 
 
@@ -83,18 +83,12 @@ class RouteRegistry:
             return self.fallbacks[target_name]
         raise ValueError(f"Route '{target_name}' not found and no fallback provided.")
 
-# =====================================================================
-# 2. Workflow Messages
-# =====================================================================
 class StartSceneMsg(WorkflowMessage): pass
 class OtlpIngressMsg(WorkflowMessage): pass
 class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
 class GlobalAnchorMsg(WorkflowMessage): pass
 
-# =====================================================================
-# 3. SceneRunner (E2E Functional Tests)
-# =====================================================================
 class SceneRunner(Workflow):
     def __init__(self, config: E2EConfig, client: httpx.AsyncClient, inject_faults: bool = False):
         super().__init__(name="E2E_SCENE_NET")
@@ -104,9 +98,7 @@ class SceneRunner(Workflow):
         self.runner = WebRunner(config.base_url, client=client)
         self.state_roots: Dict[str, str] = {}
         self.log = get_emitter("workflow.scene_runner")
-        
-        # 🌟 정렬: mock.net에서 가져온 결정론적 외부 위원회를 테스트 Runner에 주입
-        self.external_committee = ExternalCommitteeSimulator(size=3)
+        self.notary_swarm = MockNotarySwarm(size=3)
 
     async def execute(self):
         mode_str = "Negative/Faults" if self.inject_faults else "Golden Path"
@@ -115,7 +107,7 @@ class SceneRunner(Workflow):
         if not self.inject_faults:
             self.log.info(f"  └─ Settlement Sink: Chain {mock_env.settlement_target.chain_id} (Receptor: {mock_env.settlement_target.nexus_contract_address})")
             self.log.info(f"  └─ Exchange Agents: {mock_env.agents.alpha.did} ⟷ {mock_env.agents.beta.did}")
-            self.log.info(f"  └─ Consensus Nodes: {len(self.external_committee.public_keys)} External Validators Loaded")
+            self.log.info(f"  └─ Export Notaries: {len(self.notary_swarm.public_keys)} Notary Nodes Loaded")
 
         self.post_message(StartSceneMsg())
         await self.run()
@@ -210,7 +202,7 @@ class SceneRunner(Workflow):
 
     @step
     async def phase_global_anchor(self, msg: GlobalAnchorMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 5] Global Anchor (Epoch Sealing) ---")
+        self.log.info("\n--- [Phase 5] Export Plug: Attest & Submit Anchor ---")
         if self.inject_faults:
             self.log.info(f"\n[SUCCESS] {self.name} Fault-Injection Scenario Completed.")
             self.runner.report()
@@ -232,9 +224,9 @@ class SceneRunner(Workflow):
             cached_states={}
         )
         
-        # 🌟 정렬: 외부에서 주입된 Committee 모듈이 해시를 받아 각자의 프라이빗 키로 병렬 서명합니다.
+        # 🌟 정렬: 외부 제출용으로 가짜 공증인(Notary)들의 서명을 겉면에 포장(Wrap)합니다.
         commit_hash = hashlib.sha256(StateAdapter.to_canonical_bytes(anchor_commit)).hexdigest().encode('utf-8')
-        signatures = self.external_committee.sign_payload(commit_hash)
+        signatures = self.notary_swarm.attest_payload(commit_hash)
         
         payload = {
             "receptor_id": receptor_id,  
@@ -242,17 +234,16 @@ class SceneRunner(Workflow):
             "parent_nexus_id": 0,
             "self_parent_state": parent_state_hash,
             "repos": self.state_roots,
-            # 외부 위원회의 공개키 목록을 제출 (WASM은 이 명단과 서명의 수학적 일치성만 검증)
-            "signers": self.external_committee.public_keys, 
+            "signers": self.notary_swarm.public_keys, 
             "signatures": signatures,
             "timestamp": int(time.time() * 1000)
         }
         
         path = self.routes.url_for(TargetOp.ANCHOR_SEAL)
-        res = await self.runner._run_api_case("Anchor Epoch Seal (Golden Path)", "POST", path, payload, 200)
+        res = await self.runner._run_api_case("Export Attested Anchor", "POST", path, payload, 200)
         
         if not res or res.status_code != 200:
-            return ErrorMessage("Global Anchor Failed")
+            return ErrorMessage("Global Anchor Export Failed")
 
         self.log.info(f"\n[SUCCESS] {self.name} Completed successfully.")
         self.runner.report()
@@ -264,9 +255,6 @@ class SceneRunner(Workflow):
         self.runner.report()
         return StopMessage(result=False)
 
-# =====================================================================
-# 4. Global Tracing & Chaos Test Pipeline
-# =====================================================================
 class HttpFlowTracer:
     async def trace_request(self, request: httpx.Request):
         flow_id = f"http_{uuid.uuid4().hex[:8]}"
@@ -320,11 +308,8 @@ class TracerPipeline(PipelineRunner):
                 event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
             ) as client:
                 runner = SceneRunner(self.config, client=client, inject_faults=inject_faults)
-                
-                # 🌟 정렬: WASM BFT 검증기가 테스트를 통과할 수 있도록, 
-                # 외부에서 생성된 위원회의 Public Keys를 커널 스토리지(App State)에 주입합니다.
                 if hasattr(rest_app.state, 'config'):
-                    rest_app.state.config.committee_pubs = runner.external_committee.public_keys
+                    rest_app.state.config.committee_pubs = runner.notary_swarm.public_keys
                     
                 tracer = WasmTracer(tester=runner)
                 await tracer.trace() 

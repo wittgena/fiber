@@ -18,25 +18,30 @@ from kernel.dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from watcher.receptor.edge.core import StreamAppendRequest, LedgerEventSchema
 
-class ExternalCommitteeSimulator:
+# 🌟 개선: ExternalCommitteeSimulator -> MockNotarySwarm
+class MockNotarySwarm:
+    """
+    WASM 코어가 확정한 증명서(Receipt)를 EVM L2 등에 제출할 때 요구되는 
+    '다중 서명(Multi-sig) 요건'을 충족시키기 위해 기계적으로 도장을 찍어주는 가짜 공증인 집단입니다.
+    """
     def __init__(self, size: int = 3):
-        self.nodes = []
+        self.notaries = []
         for i in range(size):
-            seed = hashlib.sha256(f"dphi_validator_node_{i}".encode()).digest()
+            seed = hashlib.sha256(f"dphi_notary_node_{i}".encode()).digest()
             private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
             public_hex = private_key.public_key().public_bytes(
                 encoding=serialization.Encoding.Raw, 
                 format=serialization.PublicFormat.Raw
             ).hex()
-            self.nodes.append({"priv": private_key, "pub": public_hex})
+            self.notaries.append({"priv": private_key, "pub": public_hex})
 
     @property
     def public_keys(self) -> List[str]:
-        return [node["pub"] for node in self.nodes]
+        return [node["pub"] for node in self.notaries]
 
-    def sign_payload(self, canonical_hash: bytes) -> List[str]:
-        """외부 노드들이 각자의 프라이빗 키로 병렬 서명하는 행위를 모사"""
-        return [node["priv"].sign(canonical_hash).hex() for node in self.nodes]
+    def attest_payload(self, canonical_hash: bytes) -> List[str]:
+        """주어진 해시에 각 공증인의 프라이빗 키로 병렬 서명(도장)을 수행합니다."""
+        return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
 
 class MockNetBuilder:
     __domain_metadata__ = {
@@ -217,7 +222,7 @@ class MockNetBuilder:
             state_hash=ledger_root
         )
         
-        validators = mock_env.consensus.committee_validators
+        witnesses = mock_env.export_attestation.witness_pubkeys
         mock_signatures = [f"{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)]
         req = AnchorProposalRequest(
             receptor_id=mock_env.settlement_target.nexus_contract_address,
@@ -228,7 +233,7 @@ class MockNetBuilder:
                 "exchange_merkle_root": state_roots.get("exchange_root", "0x00"),
                 "otlp_telemetry_root": state_roots.get("otlp_root", "0x00")
             },
-            signers=validators[:3], 
+            signers=witnesses[:3], 
             signatures=mock_signatures,
             timestamp=int(time.time() * 1000)
         )
