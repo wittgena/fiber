@@ -1,222 +1,173 @@
 # dphi.exchange.net.scheme
-## @lineage: dphi.xelog.scheme
-import abc
 import time
-from dataclasses import dataclass, field
-from typing import Dict, Any, List, Tuple
+import json
+import hashlib
+import asyncio
 from dataclasses import dataclass
+from typing import Dict, Any, List, Optional
+
 from fastapi.routing import APIRoute
 from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
 
-from eco.xelog.rest import api as rest_app  
+from dphi.eco.rest import api as rest_app  
+from arch.topos.network.bridge import FlowPropagator, RpcBridge
+from arch.topos.network.channel.codec import JsonMessageCodec
+from arch.topos.network.factory import ProtocolFactory
+
 from kernel.dphi.scheme.runner import WebRunner
+from kernel.dphi.adapter.eco import (
+    EcoAdapter, ExchangeAdapter, WalletAdapter,
+    X402SettlementReceipt, TransactionReceipt
+)
+from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter, flow_scope
+from arch.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
 
-log = get_emitter("scheme.xelog")
+class ExStartMsg(WorkflowMessage): pass
+class ExIngressMsg(WorkflowMessage): pass
+class ExEntanglementMsg(WorkflowMessage): pass
+class ExSettlementMsg(WorkflowMessage): pass
+class ExNexusMsg(WorkflowMessage): pass
 
-@dataclass
-class E2EConfig:
-    host: str = "localhost"
-    port: int = 8000
-    protocol: str = "http"
+class NodeIdentity:
+    def __init__(self):
+        self.key = ed25519.Ed25519PrivateKey.generate()
+        self.pub_hex = self.key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
+        ).hex()
 
-    @property
-    def base_url(self) -> str:
-        return f"{self.protocol}://{self.host}:{self.port}"
+    def sign(self, canonical_bytes: bytes) -> str:
+        return self.key.sign(hashlib.sha256(canonical_bytes).digest()).hex()
 
-class RouteRegistry:
-    def __init__(self, app):
-        self.app = app
-        self._routes = {
-            route.name: route 
-            for route in app.routes if isinstance(route, APIRoute)
-        }
-
-    def url_for(self, target_name: str, fallback: str = None) -> str:
-        route = self._routes.get(target_name)
-        if route:
-            return route.path
-        if fallback:
-            log.warning(f"[RouteRegistry] '{target_name}' not found. Using fallback: {fallback}")
-            return fallback
+class ExchangeWorkflow(Workflow):
+    def __init__(self, simulate_wallet: bool = True):
+        super().__init__(name="EXCHANGE_E2E")
+        self.log = get_emitter("workflow.exchange")
+        
+        self.field_node = NodeIdentity()
+        self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field_node.pub_hex)
+        self.wallet_adapter = WalletAdapter(network_id="base-sepolia", simulate=simulate_wallet)
+        
+        if not self.wallet_adapter.simulate:
+            self.wallet_adapter.fund_wallet()
             
-        raise ValueError(f"Route '{target_name}' not found in REST API.")
-
-    def get_all_routes(self) -> list:
-        return [(name, r.path, r.methods) for name, r in self._routes.items()]
-
-@dataclass
-class SceneContext:
-    config: E2EConfig
-    routes: RouteRegistry
-    runner: WebRunner
-    state_roots: Dict[str, str] = field(default_factory=dict)
-
-class ScenePhase(abc.ABC):
-    @abc.abstractmethod
-    async def execute(self, ctx: SceneContext):
-        pass
-
-class HeadSmokePhase(ScenePhase):
-    async def execute(self, ctx: SceneContext):
-        log.info("\n--- [Phase 1] API Head & MCP Connectivity Sweep ---")
-        runner = ctx.runner
+        self.rpc_bridge: Optional[RpcBridge] = None
+        self.protocol_transport = None
+        self.agent_a = NodeIdentity()
+        self.agent_b = NodeIdentity()
         
-        # 1-1. OpenAPI Schema
-        res = await runner.client.get(f"{runner.base_url}/openapi.json")
-        if res.status_code == 200:
-            runner.success_count += 1
-            route_count = len(ctx.routes.get_all_routes())
-            log.info(f"  [PASS] OpenAPI Schema generated. ({route_count} routes)")
-        else:
-            runner.fail_count += 1
-            log.error("  [FAIL] OpenAPI Schema validation failed.")
-            raise RuntimeError("API Head is unreachable")
+        self.phase_results = {}
+        self.entangled_state = {}
+        self.signatures = []
+        self.x402_receipt: Optional[X402SettlementReceipt] = None
+        self.receipt: Optional[TransactionReceipt] = None
 
-        # 1-2. MCP Server (SSE)
-        mcp_res = await runner.client.post(f"{runner.base_url}/mcp/sse")
-        if mcp_res.status_code in [405, 400]: 
-            runner.success_count += 1
-            log.info(f"  [PASS] SecureMCPServer active at /mcp/sse (Status: {mcp_res.status_code}).")
-        else:
-            runner.fail_count += 1
-            log.error(f"  [FAIL] MCP Server connectivity error (Status: {mcp_res.status_code}).")
-            raise RuntimeError("MCP Server unreachable")
-
-
-class OtlpIngressPhase(ScenePhase):
-    """[Step 2] OTLP Telemetry Ingress & Seal"""
-    async def execute(self, ctx: SceneContext):
-        log.info("\n--- [Phase 2] OTLP Telemetry Ingress & WASM Seal ---")
-        payload = {
-            "resourceLogs": [{"resource": {"attributes": [{"key": "tenant_id", "value": {"stringValue": "tenant-01"}}]}}],
-            "genai_metrics": {"tenant_id": "tenant-01", "model": "gpt-4", "usage": {"tokens": 2048}}
-        }
-        path = ctx.routes.url_for("otlp_logs_export", fallback="/hub/v1/logs")
-        res = await ctx.runner._run_api_case("OTLP Usage Ingress", "POST", path, payload, 200)
+    async def start(self, host: str, port: int) -> bool:
+        self.log.info(f"\n=== [START] {self.name}: P2P Order Ingress & Deterministic Settlement ===")
         
-        if not res or res.status_code != 200:
-            raise RuntimeError("OTLP Ingress Failed")
+        self.rpc_bridge = RpcBridge()
+        bootstrap = ProtocolFactory() \
+            .child_handler(lambda: FlowPropagator("EXCHANGE_AGENT")) \
+            .child_handler(lambda: JsonMessageCodec()) \
+            .child_handler(lambda: self.rpc_bridge)
             
-        ctx.state_roots["otlp_root"] = res.headers.get("x-edge-content-hash", "failed")
+        protocol = await bootstrap.connect(host, port)
+        await asyncio.sleep(0.1) 
+        
+        self.protocol_transport = protocol.pipeline.transport if protocol and protocol.pipeline else None
+        self.post_message(ExStartMsg())
+        await self.run()
+        
+        return self.receipt is not None
 
+    @step
+    async def phase_ingress(self, msg: ExStartMsg) -> WorkflowMessage:
+        self.log.info(" -> Running Phase: Ingress")
+        res_a = await self.rpc_bridge.request({"action": "init_epoch", "topo": 101})
+        res_b = await self.rpc_bridge.request({"action": "init_epoch", "topo": 101})
+        self.phase_results['a'] = res_a.get("data", {"phase_id": "FAILED_A"})
+        self.phase_results['b'] = res_b.get("data", {"phase_id": "FAILED_B"})
+        
+        return ExIngressMsg()
 
-class D3FiExchangePhase(ScenePhase):
-    """[Step 3] D3Fi P2P Trade Intent & Clearing Settlement"""
-    async def execute(self, ctx: SceneContext):
-        log.info("\n--- [Phase 3] D3Fi P2P Trade & Settlement (ExchangeNet) ---")
-        
-        # 3-1. Trade Ingress
-        ingress_req = {"agent_id": "agent-x", "action": "SWAP", "amount": "5000", "slippage": "0.005"}
-        ingress_path = ctx.routes.url_for("submit_trade_intent", fallback="/v1/a2a/exchange/order/ingress")
-        await ctx.runner._run_api_case("D3Fi Trade Ingress", "POST", ingress_path, ingress_req, 200)
-        
-        # 3-2. Receipt Generation
-        entangled_state = "d3fi_state_hash_0x88"
-        dummy_agent_key = ed25519.Ed25519PrivateKey.generate()
-        signatures = ctx.runner._sign_payload([dummy_agent_key], {"state": entangled_state})
-        
-        clearing_req = {"entangled_state": entangled_state, "signatures": signatures, "cost_metrics": {"gas": 21000}}
-        clearing_path = ctx.routes.url_for("generate_external_receipt", fallback="/v1/a2a/exchange/clearing/receipt/generate")
-        res = await ctx.runner._run_api_case("D3Fi Receipt Generation", "POST", clearing_path, clearing_req, 200)
-        
-        if not res or res.status_code != 200:
-            raise RuntimeError("Exchange Settlement Failed")
-            
-        ctx.state_roots["exchange_root"] = entangled_state
-
-
-class LedgerAppendPhase(ScenePhase):
-    """[Step 4] Immutable Ledger Stream Bulk Append"""
-    async def execute(self, ctx: SceneContext):
-        log.info("\n--- [Phase 4] Immutable Ledger Stream Append ---")
-        payload = {
-            "stream_name": "stream_core_infrastructure",
-            "events": [
-                {"action": "SYSTEM_WARNING", "user_id": "agent_1", "details": "node_lock_timeout"},
-                {"action": "MEMORY_MONITOR", "user_id": "agent_1", "details": "token_leak detected"}
-            ],
-            "verbose": True
-        }
-        path = ctx.routes.url_for("append_to_stream", fallback="/v1/ledger/stream/append")
-        res = await ctx.runner._run_api_case("Ledger Stream Append", "POST", path, payload, 200)
-        
-        if not res or res.status_code != 200:
-            raise RuntimeError("Ledger Append Failed")
-            
-        ctx.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "failed")
-
-
-class GlobalAnchorPhase(ScenePhase):
-    """[Step 5] Global Anchor: 모든 상태 루트를 모아 Epoch Sealing"""
-    async def execute(self, ctx: SceneContext):
-        log.info("\n--- [Phase 5] Global Anchor (Epoch Sealing) ---")
-        
-        if "failed" in ctx.state_roots.values():
-            raise RuntimeError("Cannot anchor: Sub-state roots are missing or failed.")
-            
-        proposed_parity = {"state_roots": ctx.state_roots}
-        signatures = ctx.runner._sign_payload(ctx.runner.committee_keys, proposed_parity)
-        
-        anchor_payload = {
-            "receptor_id": "e2e-validator-node",
-            "proposed_parity": proposed_parity,
-            "parent_nexus_id": 1000, 
-            "repos": {},
-            "signers": ctx.runner.committee_pubs,
-            "signatures": signatures,
-            "timestamp": int(time.time() * 1000)
-        }
-        path = ctx.routes.url_for("seal_epoch_anchor", fallback="/v1/anchor/seal")
-        res = await ctx.runner._run_api_case("Anchor Epoch Seal", "POST", path, anchor_payload, 200)
-        
-        if not res or res.status_code != 200:
-            raise RuntimeError("Global Anchor Failed")
-
-class SceneRunner:
-    def __init__(self, config: E2EConfig):
-        self.config = config
-        self.routes = RouteRegistry(rest_app)
-        
-        # 내부 상태 및 통신을 전담하는 핵심 러너
-        self.web_runner = WebRunner(config.base_url)
-        self.workflow = [
-            HeadSmokePhase(),
-            OtlpIngressPhase(),
-            D3FiExchangePhase(),
-            LedgerAppendPhase(),
-            GlobalAnchorPhase()
-        ]
-
-    @property
-    def client(self):
-        return self.web_runner.client
-        
-    @client.setter
-    def client(self, client_instance):
-        self.web_runner.client = client_instance
-
-    async def execute(self) -> bool:
-        """단일 세션 안에서 구성된 E2E 워크플로우(Phase)를 순차적으로 관통합니다."""
-        ctx = SceneContext(
-            config=self.config,
-            routes=self.routes,
-            runner=self.web_runner
+    @step
+    async def phase_entanglement(self, msg: ExIngressMsg) -> WorkflowMessage:
+        self.log.info(" -> Running Phase: Entanglement")
+        parity = StateAdapter.build_parity_triplet(
+            topos_id=f"clearing_batch_{int(time.time())}",
+            phase_id=101,
+            nexus_id=1
         )
         
-        with flow_scope(phase="E2E_SCENE_NET"):
-            log.info("\n=== [START] Xelog Immutable Network E2E Scenarios ===")
-            try:
-                for phase in self.workflow:
-                    await phase.execute(ctx)
-                
-                log.info("\n[SUCCESS] Entire E2E Network Scenario Completed without Ruptures.")
-                return True
-                
-            except Exception as e:
-                log.exception(f"\n[FAIL] E2E Pipeline aborted during execution: {e}")
-                return False
-                
-            finally:
-                # 결과 리포팅
-                self.web_runner.report()
+        self.entangled_state = {
+            "has_contention": True,
+            "repos": {
+                "participant_a": self.phase_results['a'].get("phase_id", "0"),
+                "participant_b": self.phase_results['b'].get("phase_id", "0")
+            },
+            "parity": parity
+        }
+        return ExEntanglementMsg()
+
+    @step
+    async def phase_settlement(self, msg: ExEntanglementMsg) -> WorkflowMessage:
+        self.log.info(" -> Running Phase: Settlement")
+        invoice = EcoAdapter.build_x402_invoice(payee_address="0xFieldNode", amount_usdc="0.05", resource_id="fee")
+        self.x402_receipt = EcoAdapter.process_x402_settlement(
+            invoice=invoice, agent_wallet_address="0xAgentAWallet", wallet_adapter=self.wallet_adapter
+        )
+        return ExSettlementMsg()
+
+    @step
+    async def phase_nexus(self, msg: ExSettlementMsg) -> WorkflowMessage:
+        self.log.info(" -> Running Phase: Nexus (Global Anchoring)")
+        parity = self.entangled_state["parity"]
+        canonical_bytes = StateAdapter.to_canonical_bytes({"parity": parity})
+        self.signatures = [
+            self.agent_a.sign(canonical_bytes),
+            self.agent_b.sign(canonical_bytes),
+            self.field_node.sign(canonical_bytes)
+        ]
+        
+        seal_payload = StateAdapter.build_seal_epoch_payload(
+            parity=parity,
+            parent_nexus_id=0,
+            self_parent_state="genesis",
+            repos=self.entangled_state["repos"],
+            cached_states={},
+            timestamp=time.time(),
+            signers=[self.agent_a.pub_hex, self.agent_b.pub_hex, self.field_node.pub_hex],
+            signatures=self.signatures,
+            threshold=2
+        )
+        canonical_seal = StateAdapter.to_canonical_bytes(seal_payload).decode('utf-8')
+        res = await self.rpc_bridge.request({"action": "seal_epoch", "payload": canonical_seal})
+        if res.get("status") != 200:
+            return ErrorMessage(f"Nexus Settlement Rejected: {res.get('error', 'Unknown')}")
+            
+        return ExNexusMsg()
+
+    @step
+    async def phase_finalize(self, msg: ExNexusMsg) -> WorkflowMessage:
+        self.log.info(" -> Running Phase: Finalize")
+        self.receipt = self.exchange_adapter.finalize_settlement(
+            entangled_state=self.entangled_state, 
+            signatures=self.signatures, 
+            cost_metrics={"fuel_consumed": 35000}, 
+            tier="SYSTEM"
+        )
+        
+        self.log.info(f"\n[SUCCESS] {self.name} Completed successfully.")
+        self._teardown_network()
+        return StopMessage(result=True)
+
+    @step
+    async def on_error(self, msg: ErrorMessage) -> WorkflowMessage:
+        self.log.error(f"\n[HALTED] {self.name} aborted during execution: {msg.msg}")
+        self._teardown_network()
+        return StopMessage(result=False)
+
+    def _teardown_network(self):
+        if self.protocol_transport:
+            self.protocol_transport.close()

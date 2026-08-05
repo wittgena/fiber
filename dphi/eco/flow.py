@@ -31,11 +31,7 @@ from kernel.dphi.cgroup import Tier
 from watcher.plane.emitter import get_emitter
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 
-log = get_emitter("topos.flow")
-
-# ==========================================
-# 1. Flow & State Definitions
-# ==========================================
+log = get_emitter("eco.flow")
 
 class EdgeFlow(Enum):
     ZERO = "0"           # 구조적 정체성의 공백 (Void)
