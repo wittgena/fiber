@@ -134,15 +134,17 @@ class SceneRunner(Workflow):
         self.log.info("\n--- [Phase 2] OTLP Telemetry Ingress & WASM Seal ---")
         path = self.routes.url_for(TargetOp.OTLP_INGRESS)
         
-        # Negative 테스트: Pydantic 스키마 검증 차단(422) 유도
+        # 🌟 개선: 테스트 의도 명확화 (Membrane 및 Strict Parser 방어 확인)
         if self.inject_faults:
             payload = {"garbage_field_missing_required_keys": True}
             expected_status = 422
+            test_desc = "OTLP Ingress (Membrane Strict Block Test)"
         else:
             payload = MockNetBuilder.otlp_payload(is_malformed=False)
             expected_status = 200
+            test_desc = "OTLP Ingress (Golden Path)"
         
-        res = await self.runner._run_api_case("OTLP Usage Ingress", "POST", path, payload, expected_status)
+        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
         if not res or res.status_code != expected_status:
             return ErrorMessage(f"OTLP Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
             
@@ -155,15 +157,17 @@ class SceneRunner(Workflow):
         self.log.info("\n--- [Phase 3] D3Fi P2P Trade & Settlement (ExchangeNet) ---")
         path = self.routes.url_for(TargetOp.TRADE_INGRESS)
         
-        # Negative 테스트: Pydantic 스키마 검증 차단(422) 유도
+        # 🌟 개선: 테스트 의도 명확화 (Membrane 및 Strict Parser 방어 확인)
         if self.inject_faults:
             payload = {"invalid_trade": "missing_all_required_data"}
             expected_status = 422
+            test_desc = "D3Fi Trade Ingress (Membrane Strict Block Test)"
         else:
             payload = MockNetBuilder.trade_intent(should_fail_policy=False)
             expected_status = 200
+            test_desc = "D3Fi Trade Ingress (Golden Path)"
         
-        res = await self.runner._run_api_case("D3Fi Trade Ingress", "POST", path, payload, expected_status)
+        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
         if not res or res.status_code != expected_status:
              return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
              
@@ -182,7 +186,7 @@ class SceneRunner(Workflow):
         exchange_root = self.state_roots.get("exchange_root", "0x00")
         payload = MockNetBuilder.ledger_append("A2A_TRADE_SETTLEMENT", exchange_root)
         
-        res = await self.runner._run_api_case("Ledger Append", "POST", path, payload, 200)
+        res = await self.runner._run_api_case("Ledger Append (Golden Path)", "POST", path, payload, 200)
         if not res or res.status_code != 200:
             return ErrorMessage("Ledger Append Failed")
             
@@ -204,7 +208,7 @@ class SceneRunner(Workflow):
         parity_triplet = {"topos_id": "test_topos_1", "nexus_id": 1, "phase_id": 1}
         current_timestamp = int(time.time() * 1000)
         
-        # 🌟 아키텍처 정합성: 논리적 부모 트랜잭션을 가리킵니다.
+        # 아키텍처 정합성: 논리적 부모 트랜잭션을 가리킵니다.
         receptor_id = "e2e_test_receptor"
         parent_state_hash = "e2e-test-base" 
         
@@ -212,7 +216,7 @@ class SceneRunner(Workflow):
         anchor_commit = StateAdapter.build_anchor_commit(
             parity=parity_triplet, 
             parent_nexus_id=0, 
-            parent_commit_id=parent_state_hash,  # 서명 대상에 부모 명시
+            parent_commit_id=parent_state_hash, 
             repos=self.state_roots, 
             cached_states={}
         )
@@ -223,12 +227,11 @@ class SceneRunner(Workflow):
         signatures = [k.sign(commit_hash).hex() for k in self.runner.committee_keys]
         
         # 3. 서버(FastAPI)가 요구하는 AnchorProposalRequest 스펙에 맞게 Payload 포장
-        # 🌟 주의: 여기서 보내는 self_parent_state가 서명 시 사용한 parent_commit_id와 같아야 합니다.
         payload = {
-            "receptor_id": receptor_id,           
+            "receptor_id": receptor_id,            
             "proposed_parity": parity_triplet,
             "parent_nexus_id": 0,
-            "self_parent_state": parent_state_hash, # 서버 라우터에 명시적 전달
+            "self_parent_state": parent_state_hash,
             "repos": self.state_roots,
             "signers": self.runner.committee_pubs,
             "signatures": signatures,
@@ -237,8 +240,7 @@ class SceneRunner(Workflow):
         
         path = self.routes.url_for(TargetOp.ANCHOR_SEAL)
         
-        # WASM 커널의 암호학 검증(Zero-Trust)을 정정당당하게 통과합니다.
-        res = await self.runner._run_api_case("Anchor Epoch Seal", "POST", path, payload, 200)
+        res = await self.runner._run_api_case("Anchor Epoch Seal (Golden Path)", "POST", path, payload, 200)
         
         if not res or res.status_code != 200:
             return ErrorMessage("Global Anchor Failed")
@@ -280,7 +282,7 @@ class HttpFlowTracer:
 
 class TracerPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig):
-        super().__init__(name="Xelog Full E2E & Security Trace Pipeline", scope_name="GLOBAL_TRACE_PIPELINE")
+        super().__init__(name="Full E2E & Security Trace Pipeline", scope_name="GLOBAL_TRACE_PIPELINE")
         self.config = config
         self.tracer = HttpFlowTracer()
         self.routes = RouteRegistry(rest_app, FALLBACK_ROUTES)
@@ -309,8 +311,6 @@ class TracerPipeline(PipelineRunner):
                 event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
             ) as client:
                 runner = SceneRunner(self.config, client=client, inject_faults=inject_faults)
-                
-                # 🌟 [보안 검증 통과용 의존성 주입] 테스트 클라이언트의 서명키를 서버의 합의 위원회로 등록
                 if hasattr(rest_app.state, 'config'):
                     rest_app.state.config.committee_pubs = runner.runner.committee_pubs
                     

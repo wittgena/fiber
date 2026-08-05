@@ -11,6 +11,8 @@ from arch.gov.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from arch.gov.server.middleware import LocalMiddleware, WasTelemetry
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.tunnel.subs import DistributedPubSub
+from arch.xor.parser.otlp import StrictOtlpRulesetParser
+
 from kernel.dphi.broker import WasmBroker
 from kernel.phase.stream.store import LogStreamStore
 from watcher.plane.emitter import get_emitter
@@ -55,6 +57,22 @@ async def lifespan(app: FastAPI):
         
         app.state.broker = WasmBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
+
+        # 🌟 신규: OTLP 규격 파서 및 결정론적 데이터 추출 엔진 초기화
+        # 실제 운영 환경에서는 데이터베이스나 별도 JSON 설정 파일에서 규칙을 동적으로 불러올 수 있습니다.
+        default_otlp_ruleset = {
+            "global_config": {"required_root_keys": ["resourceLogs"]},
+            "targets": [
+                {"tag": "tenant_id", "path": "resourceLogs.0.resource.attributes.tenant.id"},
+                {"tag": "model", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.llm.model"},
+                {"tag": "prompt_tokens", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.prompt_tokens"},
+                {"tag": "completion_tokens", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.completion_tokens"}
+            ]
+        }
+        otlp_parser = StrictOtlpRulesetParser()
+        app.state.otlp_engine = otlp_parser.parse_ruleset(default_otlp_ruleset)
+        log.info("StrictOtlpExtractionEngine initialized and mounted to app state.")
+
         log.info("REST Edge & Services successfully started.")
         yield
 
