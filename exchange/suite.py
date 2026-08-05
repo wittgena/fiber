@@ -5,9 +5,9 @@ from kernel.phase.reactor import KernelReactor
 from watcher.plane.emitter import get_emitter
 
 from exchange.workflow import ExchangeWorkflow, ScenarioConfig
-from exchange.chaos.injector import RpcChaosInjector
+from surface.tester.chaos.injector import RpcChaosInjector
 from exchange.net.tracer import TracerPipeline, E2EConfig
-from exchange.mock.config import mock_env
+from exchange.net.config import mock_env
 
 log = get_emitter("exchange.suite")
 

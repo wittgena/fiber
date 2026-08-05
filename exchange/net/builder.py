@@ -1,4 +1,5 @@
-# exchange.mock.net
+# exchange.net.builder
+## @lineage: exchange.mock.net
 ## @lineage: dphi.exchange.mock.net
 import time
 import uuid
@@ -9,7 +10,7 @@ from typing import Any, Dict, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from exchange.mock.config import mock_env
+from exchange.net.config import mock_env
 from arch.contract.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
@@ -17,7 +18,7 @@ from arch.contract.model.receptor import (
 )
 from kernel.dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
-from watcher.receptor.edge.core import StreamAppendRequest, LedgerEventSchema
+from surface.receptor.edge.core import StreamAppendRequest, LedgerEventSchema
 
 class MockNotarySwarm:
     def __init__(self, size: int = 3):

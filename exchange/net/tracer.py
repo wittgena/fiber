@@ -1,5 +1,4 @@
 # exchange.net.tracer
-## @lineage: dphi.exchange.net.tracer
 import argparse
 import asyncio
 import random
@@ -13,15 +12,15 @@ import httpx
 from fastapi.routing import APIRoute
 
 from surface.rest import api as rest_app, lifespan 
-from exchange.mock.net import MockNetBuilder, MockNotarySwarm
-from exchange.mock.config import mock_env
-from exchange.chaos.injector import HttpChaosLibrary 
+from exchange.net.builder import MockNetBuilder, MockNotarySwarm
+from exchange.net.config import mock_env
+from surface.tester.chaos.injector import HttpChaosLibrary 
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.dphi.scheme.runner import WebRunner
 from kernel.dphi.adapter.state import StateAdapter
-from watcher.wasm.builder import WasmBuilder
-from watcher.wasm.tracer import WasmTracer
+from dphi.builder import WasmBuilder
+from surface.tracer.dphi import DphiTracer
 from watcher.plane.emitter import flow_scope, get_emitter
 
 log = get_emitter("net.tracer")
@@ -310,7 +309,7 @@ class TracerPipeline(PipelineRunner):
                 if hasattr(rest_app.state, 'config'):
                     rest_app.state.config.committee_pubs = runner.notary_swarm.public_keys
                     
-                tracer = WasmTracer(tester=runner)
+                tracer = DphiTracer(tester=runner)
                 await tracer.trace() 
                 
                 has_rupture = getattr(tracer, 'rupture_confirmed', False)

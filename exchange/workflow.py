@@ -1,5 +1,4 @@
 # exchange.workflow
-## @lineage: dphi.exchange.workflow
 import asyncio
 import hashlib
 import time
@@ -9,8 +8,8 @@ from typing import Any, Callable, Dict, List, Optional
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from exchange.mock.net import MockNetBuilder
-from exchange.mock.config import mock_env
+from exchange.net.builder import MockNetBuilder
+from exchange.net.config import mock_env
 
 from arch.model.phase.gate import uuid4
 from arch.topos.network.bridge import FlowPropagator, RpcBridge

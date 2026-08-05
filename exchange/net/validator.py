@@ -1,4 +1,5 @@
-# exchange.mock.validator
+# exchange.net.validator
+## @lineage: exchange.mock.validator
 ## @lineage: dphi.exchange.mock.validator
 import re
 import asyncio
@@ -6,7 +7,7 @@ import httpx
 from typing import List, Tuple
 
 from watcher.plane.emitter import get_emitter
-from exchange.mock.config import mock_env, DphiEnv
+from exchange.net.config import mock_env, DphiEnv
 
 log = get_emitter("mock.validator")
 

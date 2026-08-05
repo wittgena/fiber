@@ -1,4 +1,5 @@
-# exchange.mock.config
+# exchange.net.config
+## @lineage: exchange.mock.config
 ## @lineage: dphi.exchange.mock.config
 import os
 from enum import Enum

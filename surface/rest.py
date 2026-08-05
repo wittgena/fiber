@@ -18,8 +18,8 @@ from kernel.dphi.broker import WasmBroker
 from kernel.phase.stream.store import LogStreamStore
 from watcher.plane.emitter import get_emitter
 
-from watcher.receptor.edge.eco import eco_router
-from watcher.receptor.edge.core import core_edge
+from surface.receptor.edge.eco import eco_router
+from surface.receptor.edge.core import core_edge
 
 log = get_emitter(__name__)
 

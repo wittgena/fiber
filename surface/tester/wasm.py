@@ -1,4 +1,5 @@
-# dphi.wasm.tester
+# surface.tester.wasm
+## @lineage: dphi.wasm.tester
 import sys
 import json
 import asyncio
@@ -9,11 +10,11 @@ from kernel.bind.resolver import resolve_path
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from kernel.phase.daemon.task.wasm import WasmTaskerDaemon
 from kernel.dphi.broker import WasmBroker
-from watcher.wasm.auditor import CanonicalProofAuditor
+from surface.auditor.wasm import CanonicalProofAuditor
 
 from watcher.plane.emitter import get_emitter, flow_scope
 
-log = get_emitter("tester.dphi")
+log = get_emitter("tester.wasm")
 
 class WasmTester:
     def __init__(self, wasm_module_path: str, sandbox_root: str, suites: Dict[str, Type] = None):
@@ -22,8 +23,6 @@ class WasmTester:
         self.rupture_confirmed = False
         self.last_error_context = ""
         self.auditors = [] 
-        
-        # [수정] 문자열 리스트가 아닌 { "이름": 클래스객체 } 형태의 딕셔너리를 주입받음
         self.suites = suites or {}
         self.test_execution_hash = None
 

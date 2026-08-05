@@ -1,7 +1,8 @@
-# exchange.chaos.injector
+# surface.tester.chaos.injector
+## @lineage: exchange.chaos.injector
 ## @lineage: dphi.exchange.chaos.injector
 from typing import Dict, Any, Callable
-from exchange.mock.net import MockNetBuilder
+from exchange.net.builder import MockNetBuilder
 
 class HttpChaosLibrary:
     """HTTP 방어벽(Membrane) 테스트를 위한 순수 바이트 페이로드 라이브러리"""
