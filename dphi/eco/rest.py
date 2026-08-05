@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from arch.gov.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from arch.gov.server.middleware import LocalMiddleware, WasTelemetry
-from arch.topos.tunnel.factory import UniversalFacade
+from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.tunnel.subs import DistributedPubSub
 from kernel.dphi.broker import WasmBroker
 from kernel.phase.stream.store import LogStreamStore
@@ -27,15 +27,15 @@ class Config(BaseModel):
     web_url: str = ""
     allow_cors_origins: list[str] = ["http://localhost:3000"] 
     session_api_keys: list[str] = []
-    pubsub_channel: str = "xelog_audit_channel"
+    pubsub_channel: str = "audit_channel"
     wasm_timeout: float = 10.0
+    committee_pubs: list[str] = []
 
 def get_default_config() -> Config:
     return Config()
 
 async def verify_api_key(api_key: str = Security(api_key_header), config: Config = Depends(get_default_config)):
     if not config.session_api_keys:
-        log.warning("No session_api_keys configured. Running in insecure mode!")
         return None
     if api_key not in config.session_api_keys:
         raise HTTPException(status_code=403, detail="Invalid or missing API Key.")
@@ -44,26 +44,35 @@ async def verify_api_key(api_key: str = Security(api_key_header), config: Config
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Starting REST Edge & Services...")
-    config: Config = app.state.config
+    config: Config = getattr(app.state, "config", get_default_config())
     
-    app.state.store = LogStreamStore()
-    
-    tunnel = UniversalFacade() 
-    pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
-    await pubsub.start_listening()
-    app.state.pubsub = pubsub
-    
-    app.state.broker = WasmBroker(timeout=config.wasm_timeout)
-    log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
+    try:
+        app.state.store = LogStreamStore()
+        tunnel = await TunnelFactory.get_default() 
+        pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
+        await pubsub.start_listening()
+        app.state.pubsub = pubsub
+        
+        app.state.broker = WasmBroker(timeout=config.wasm_timeout)
+        log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
+        log.info("REST Edge & Services successfully started.")
+        yield
 
-    yield
+    except Exception as e:
+        log.error(f"Failed to initialize REST Edge services: {e}", exc_info=True)
+        raise
 
-    log.info("Shutting down XeLog Hub safely...")
-    if hasattr(app.state, "pubsub"):
-        await pubsub.close()
-    if hasattr(app.state, "store"):
-        await app.state.store.close()
-    log.info("Teardown complete. Goodbye.")
+    finally:
+        log.info("Shutting down XeLog Hub safely...")
+        if hasattr(app.state, "pubsub"):
+            await app.state.pubsub.close()
+            
+        if hasattr(app.state, "store"):
+            if hasattr(app.state.store, "close"):
+                await app.state.store.close()
+                
+        await TunnelFactory.close_all()
+        log.info("Teardown complete. Goodbye.")
 
 def _get_root_path(config: Config) -> str:
     if config.web_url:
