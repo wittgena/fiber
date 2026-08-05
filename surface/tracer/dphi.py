@@ -1,5 +1,4 @@
 # surface.tracer.dphi
-## @lineage: watcher.wasm.tracer
 import sys
 import asyncio
 import base64
@@ -9,7 +8,7 @@ from typing import Tuple, Optional
 from dataclasses import asdict
 
 from dphi.builder import WasmBuilder
-from surface.tester.dphi import DphiTester
+from surface.tester.wasm import WasmTester
 
 from kernel.bind.resolver import resolve_path
 from kernel.bind.inter.wasm import WasmInterpreter
@@ -129,7 +128,7 @@ class DphiTracer(BaseTracer):
         try:
             if not self.tester:
                 self.log.info("[SYSTEM] Initializing default WasmTester...")
-                self.tester = DphiTester(
+                self.tester = WasmTester(
                     wasm_module_path=str(DEST_WASM_FILE),
                     sandbox_root=str(TIME_ROOT)
                 )

@@ -1,17 +1,13 @@
 # exchange.net.anchor
-## @lineage: dphi.exchange.net.anchor
 import os
 import time
 import json
 from typing import Any
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
-from kernel.dphi.scheme.runner import EpochBase, SchemeRunner
-from kernel.dphi.adapter.eco import (
-    EcoAdapter, 
-    Ap2MandateResult, 
-    X402SettlementReceipt
-)
+
+from dphi.epoch.runner import EpochBase, SchemeRunner
+from dphi.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 

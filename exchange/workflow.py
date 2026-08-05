@@ -18,10 +18,8 @@ from arch.topos.network.factory import ProtocolFactory
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import next_phase_id, generate_parity_triplet
 
-from kernel.dphi.adapter.eco import (
-    EcoAdapter, ExchangeAdapter, TransactionReceipt, WalletAdapter, 
-    X402SettlementReceipt, Ap2MandateResult, SettlementPayload
-)
+from dphi.adapter.eco import EcoAdapter, WalletAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
+from kernel.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import WasmMethod
 

@@ -1,8 +1,10 @@
 # surface.receptor.xe.depend
-## @lineage: watcher.receptor.xe.depend
 from typing import Any
 
 from fastapi import Request, HTTPException, status
+
+from dphi.adapter.anchor import NexusAnchor
+from surface.receptor.xe.profile import BenchProfile
 
 from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.secret.auditor import SecretAuditor
@@ -15,11 +17,9 @@ from arch.gov.ingress.policy import (
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from kernel.phase.stream.store import LogStreamStore
 from kernel.dphi.broker import WasmBroker
-from kernel.dphi.adapter.anchor import NexusAnchor
-from kernel.dphi.adapter.eco import ExchangeAdapter
+from kernel.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 from watcher.plane.emitter import get_emitter
-from surface.receptor.xe.profile import BenchProfile
 
 log = get_emitter("xe.depend")
 

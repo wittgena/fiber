@@ -5,7 +5,7 @@ import asyncio
 import importlib
 
 from dphi.builder import WasmBuilder
-import dphi.scheme as scene_module
+import dphi.epoch.scheme as scene_module
 
 from surface.tester.wasm import WasmTester
 from surface.tracer.dphi import DphiTracer

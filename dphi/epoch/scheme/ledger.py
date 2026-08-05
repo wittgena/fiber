@@ -1,11 +1,12 @@
-# dphi.scheme.ledger
+# dphi.epoch.scheme.ledger
+## @lineage: dphi.scheme.ledger
 ## @lineage: dphi.resolver.scene.ledger
 import time
 import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from kernel.dphi.scheme.runner import SchemeRunner
+from dphi.epoch.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
 from kernel.dphi.adapter.state import StateAdapter
 

@@ -17,7 +17,7 @@ from exchange.net.config import mock_env
 from surface.tester.chaos.injector import HttpChaosLibrary 
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from kernel.dphi.scheme.runner import WebRunner
+from dphi.epoch.runner import WebRunner
 from kernel.dphi.adapter.state import StateAdapter
 from dphi.builder import WasmBuilder
 from surface.tracer.dphi import DphiTracer

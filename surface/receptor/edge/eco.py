@@ -20,7 +20,7 @@ from arch.contract.model.receptor import (
 from arch.gov.ingress.policy import IngressPolicyEngine, get_ingress_policy
 
 from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.adapter.eco import ExchangeAdapter
+from kernel.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.broker import WasmBroker
 from kernel.dphi.cgroup import Tier
 from kernel.dphi.exchange.config import tier_config, billing_config

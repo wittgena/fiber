@@ -1,5 +1,5 @@
-# dphi.scheme.exchange
-## @lineage: dphi.resolver.scene.exchange
+# dphi.epoch.scheme.exchange
+## @lineage: dphi.scheme.exchange
 import time
 import json
 import hashlib
@@ -7,9 +7,10 @@ from typing import List
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from kernel.dphi.adapter.eco import ExchangeAdapter
+from dphi.epoch.runner import SchemeRunner
+
+from kernel.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.scheme.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.exchange")

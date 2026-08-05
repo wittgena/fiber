@@ -1,8 +1,9 @@
-# dphi.scheme.sandbox
+# dphi.epoch.scheme.sandbox
+## @lineage: dphi.scheme.sandbox
 ## @lineage: dphi.resolver.scene.sandbox
 import time
 import asyncio
-from kernel.dphi.scheme.runner import SchemeRunner
+from dphi.epoch.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")

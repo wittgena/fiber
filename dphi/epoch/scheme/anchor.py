@@ -1,11 +1,12 @@
-# dphi.scheme.anchor
+# dphi.epoch.scheme.anchor
+## @lineage: dphi.scheme.anchor
 ## @lineage: dphi.resolver.scene.anchor
 ## @lineage: watcher.dphi.resolver.scene.anchor
 import json
 from typing import Any
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
-from kernel.dphi.scheme.runner import SchemeRunner, EpochBase
+from dphi.epoch.runner import SchemeRunner, EpochBase
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 

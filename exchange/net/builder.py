@@ -16,7 +16,7 @@ from arch.contract.model.receptor import (
     AnchorProposalRequest,
     ParityTripletSchema
 )
-from kernel.dphi.adapter.eco import WalletAdapter
+from dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from surface.receptor.edge.core import StreamAppendRequest, LedgerEventSchema
 
