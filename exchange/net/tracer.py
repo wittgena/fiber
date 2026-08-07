@@ -105,7 +105,8 @@ class SceneRunner(Workflow):
         self.log.info(f"\n=== [START] {self.name} ({mode_str}) ===")
         
         if not self.inject_faults:
-            self.log.info(f"  └─ Settlement Sink: Chain {mock_env.settlement_target.chain_id} (Receptor: {mock_env.settlement_target.nexus_contract_address})")
+            # Updated to align with the new UnifiedExchangeConfig structure
+            self.log.info(f"  └─ Settlement Sink: Chain {mock_env.network.chain_id} (Receptor: {mock_env.contracts.nexus_clearing})")
             self.log.info(f"  └─ Exchange Agents: {mock_env.agents.alpha.did} ⟷ {mock_env.agents.beta.did}")
             self.log.info(f"  └─ Export Notaries: {len(self.notary_swarm.public_keys)} Notary Nodes Loaded")
 
@@ -213,7 +214,9 @@ class SceneRunner(Workflow):
             return ErrorMessage("Cannot anchor: Sub-state roots are missing.")
         
         parity_triplet = {"topos_id": f"epoch_{time.strftime('%Y%m%d')}_batch_01", "nexus_id": 1, "phase_id": 1}
-        receptor_id = mock_env.settlement_target.nexus_contract_address
+        
+        # Updated to align with the new UnifiedExchangeConfig structure
+        receptor_id = mock_env.contracts.nexus_clearing
         parent_state_hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
         
         anchor_commit = StateAdapter.build_anchor_commit(
@@ -224,8 +227,10 @@ class SceneRunner(Workflow):
             cached_states={}
         )
         
+        # Dynamically signing the actual generated states, not using static mock from builder
         commit_hash = hashlib.sha256(StateAdapter.to_canonical_bytes(anchor_commit)).hexdigest().encode('utf-8')
         signatures = self.notary_swarm.attest_payload(commit_hash)
+        
         payload = {
             "receptor_id": receptor_id,  
             "proposed_parity": parity_triplet,

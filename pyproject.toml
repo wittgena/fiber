@@ -12,7 +12,7 @@ requires-python = ">=3.10"
 dependencies = [
     "uvloop", "fastapi", "redis", "trio", "networkx", "pyyaml", 
     "watchdog", "rocksdict", "transformers", "libcst", 
-    "datamodel-code-generator", "acp", "mcp==2.0.0a3", "tyro", 
+    "datamodel-code-generator", "acp", "mcp==2.0.0a3", "tyro", "web3",
     "pydantic", "httpx"
 ]
 

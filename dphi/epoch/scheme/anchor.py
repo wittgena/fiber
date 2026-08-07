@@ -1,7 +1,4 @@
 # dphi.epoch.scheme.anchor
-## @lineage: dphi.scheme.anchor
-## @lineage: dphi.resolver.scene.anchor
-## @lineage: watcher.dphi.resolver.scene.anchor
 import json
 from typing import Any
 from cryptography.hazmat.primitives.asymmetric import ed25519

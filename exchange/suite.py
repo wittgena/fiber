@@ -1,5 +1,4 @@
 # exchange.suite
-## @lineage: dphi.exchange.suite
 import asyncio
 from kernel.phase.reactor import KernelReactor
 from watcher.plane.emitter import get_emitter

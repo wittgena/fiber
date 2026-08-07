@@ -3,7 +3,7 @@ import asyncio
 import hashlib
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -40,7 +40,7 @@ class ExSettlementMsg(WorkflowMessage): pass
 class ExNexusMsg(WorkflowMessage): pass
 
 class NodeIdentity:
-    """프로토콜 코어에 참여하는 순수 합의 주체 (EVM과 무관한 Ed25519 기반)"""
+    """Pure consensus participant entity in the protocol core (Ed25519-based, independent of EVM)."""
     def __init__(self):
         self.key = ed25519.Ed25519PrivateKey.generate()
         self.pub_hex = self.key.public_key().public_bytes(
@@ -51,7 +51,7 @@ class NodeIdentity:
         return self.key.sign(hashlib.sha256(canonical_bytes).digest()).hex()
 
 class MockRpcBridge(RpcBridge):
-    """실제 통신을 대신하여 네트워크 검증 노드(WASM 샌드박스) 역할을 수행하는 방어벽"""
+    """Acts as a defensive firewall and simulates the WASM sandbox network validation node."""
     async def request(self, payload: Dict[str, Any], timeout: float = 5.0) -> Dict[str, Any]:
         action = payload.get("action")
         await asyncio.sleep(0.05)
@@ -60,6 +60,7 @@ class MockRpcBridge(RpcBridge):
             mandate_result = payload.get("mandate", {})
             actual_mandate = mandate_result.get("mandate", {})
             constraints = actual_mandate.get("constraints", {})
+            
             if constraints.get("expiration_ts", 0) < int(time.time() * 1000):
                 log.warning("[MockRPC] 🛑 REJECTED: AP2 Mandate is expired!")
                 return {"status": 401, "error": "Unauthorized: AP2 Mandate Expired"}
@@ -67,6 +68,7 @@ class MockRpcBridge(RpcBridge):
             topo = payload.get("topo", 0)
             press = payload.get("press", 0)
             return {"status": 200, "data": {"phase_id": next_phase_id(topo=topo, press=press)}}
+            
         elif action == WasmMethod.SEAL_EPOCH.value:
             return {"status": 200, "data": {"receipt_id": f"nexus_receipt_{uuid4().hex[:8]}"}}
             
@@ -81,6 +83,7 @@ class ExchangeWorkflow(Workflow):
         self.field_node = NodeIdentity()
         self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field_node.pub_hex)
         self.wallet_adapter = MockNetBuilder.get_testnet_wallet()
+        
         if simulate_wallet:
             self.wallet_adapter.simulate = True
         
@@ -120,6 +123,7 @@ class ExchangeWorkflow(Workflow):
             "mandate": self.ap2_mandate.model_dump(exclude_none=True)
         }
         res_a = await self.rpc_bridge.request(req_payload)
+        
         if res_a.get("status") != 200:
             return ErrorMessage(f"Ingress Rejected: {res_a.get('error')}")
             
@@ -143,7 +147,11 @@ class ExchangeWorkflow(Workflow):
     @step
     async def phase_settlement(self, msg: ExEntanglementMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 3] External Plug: EVM X402 Settlement ---")
-        payee_address = mock_env.settlement_target.clearing_contract_address
+        
+        # [ALIGNMENT]: Updated from settlement_target.clearing_contract_address to contracts.nexus_clearing
+        payee_address = mock_env.contracts.nexus_clearing
+        
+        # [ALIGNMENT]: Updated agent path aligned with UnifiedExchangeConfig (mock_env.agents.alpha.evm_address)
         payer_address = mock_env.agents.alpha.evm_address
         
         invoice = EcoAdapter.build_x402_invoice(payee_address, "0.05", "compute_fee")

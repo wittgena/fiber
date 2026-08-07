@@ -1,6 +1,4 @@
 # dphi.epoch.scheme.sandbox
-## @lineage: dphi.scheme.sandbox
-## @lineage: dphi.resolver.scene.sandbox
 import time
 import asyncio
 from dphi.epoch.runner import SchemeRunner

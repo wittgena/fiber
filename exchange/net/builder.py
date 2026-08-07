@@ -1,16 +1,15 @@
 # exchange.net.builder
-## @lineage: exchange.mock.net
-## @lineage: dphi.exchange.mock.net
 import time
 import uuid
 import random
+import json
 import hashlib
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
-
 from exchange.net.config import mock_env
+
 from arch.contract.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
@@ -37,7 +36,6 @@ class MockNotarySwarm:
         return [node["pub"] for node in self.notaries]
 
     def attest_payload(self, canonical_hash: bytes) -> List[str]:
-        """주어진 해시에 각 공증인의 프라이빗 키로 병렬 서명(도장)을 수행"""
         return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
 
 class MockNetBuilder:
@@ -46,7 +44,8 @@ class MockNetBuilder:
         "trade_intent": "W3C DID + UniswapX/Fetch.ai. Intent-centric A2A (Agent-to-Agent) resource swap with slippage.",
         "ledger_append": "Celestia/EigenDA + RISC Zero. Immutable DA (Data Availability) & ZK-verifiable compute logs.",
         "anchor_proposal": "Ethereum L2 (OP Stack) Sequencer. Rollup of state roots (Merkle Parity) for global consensus.",
-        "ap2_mandate": "Agent-to-Agent(A2A) Authorization. Verifiable Credential for delegated spending limits."
+        "evm_user_intent": "Execution intent supporting complex scenarios (ERC4337, Uniswap, Merkle) for WASM EVM.",
+        "evm_state_snapshot": "Mock EVM account state (balance, nonce, storage) bypassing actual RPC calls."
     }
 
     @staticmethod
@@ -222,7 +221,7 @@ class MockNetBuilder:
         witnesses = mock_env.export_attestation.witness_pubkeys
         mock_signatures = [f"{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)]
         req = AnchorProposalRequest(
-            receptor_id=mock_env.settlement_target.nexus_contract_address,
+            receptor_id=mock_env.contracts.nexus_clearing,
             proposed_parity=parity,
             parent_nexus_id=14591,
             self_parent_state="genesis",
@@ -235,3 +234,102 @@ class MockNetBuilder:
             timestamp=int(time.time() * 1000)
         )
         return req.model_dump(exclude_none=True)
+
+    @staticmethod
+    def evm_user_intent(
+        scenario_type: str = "ERC20_TRANSFER",
+        should_revert: bool = False
+    ) -> Dict[str, Any]:
+        caller = mock_env.agents.alpha.evm_address
+        value = 0
+        requires_access_list = False
+        
+        if scenario_type == "ERC20_TRANSFER":
+            target = mock_env.contracts.target_erc20
+            calldata = "0xa9059cbb" + "000000000000000000000000" + mock_env.agents.beta.evm_address[2:] + "0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+            storage_slots = ["0x0", "0x1", "0x2"]
+            requires_access_list = True
+            
+        elif scenario_type == "ERC4337_HANDLE_OPS":
+            target = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
+            # 0x1fad948c + dummy encoded array to trigger deep beneficiary check
+            calldata = "0x1fad948c" + "0000000000000000000000000000000000000000000000000000000000000040" + "0000000000000000000000001111111111111111111111111111111111111111" + ("00" * 32)
+            storage_slots = []
+            requires_access_list = True 
+            
+        elif scenario_type == "UNISWAP_EXACT_INPUT":
+            target = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
+            
+            # [CRITICAL ENRICHMENT] Uniswap V3 exactInputSingle Parameters
+            token_in = mock_env.contracts.target_erc20.replace("0x", "").zfill(64).lower() # WETH
+            token_out = "1c7D4B196Cb0C7B01d743Fbc6116a902379C7238".zfill(64).lower()      # Sepolia USDC
+            fee = hex(3000).replace("0x", "").zfill(64)                                    # 0.3%
+            recipient = mock_env.agents.alpha.evm_address.replace("0x", "").zfill(64).lower()
+            deadline = hex(int(time.time()) + 1800).replace("0x", "").zfill(64)            # +30 mins
+            amount_in = hex(int(0.001 * 1e18)).replace("0x", "").zfill(64)                 # 0.001 WETH
+            amount_out_min = "0000000000000000000000000000000000000000000000000000000000000000"
+            sqrt_price_limit = "0000000000000000000000000000000000000000000000000000000000000000"
+            
+            # Pack ExactInputSingleParams struct
+            params_struct = token_in + token_out + fee + recipient + deadline + amount_in + amount_out_min + sqrt_price_limit
+            
+            # Method Selector + offset to struct (32 bytes = 0x20) + struct payload
+            calldata = "0x414bf389" + "0000000000000000000000000000000000000000000000000000000000000020" + params_struct
+            
+            storage_slots = []
+            requires_access_list = True 
+            
+        elif scenario_type == "MERKLE_VERIFY":
+            target = "0x6EDCE65403992e310A62460808c4b910D972f10f"
+            calldata = "0xdeadbeef" + ("aa" * 32)
+            storage_slots = []
+            requires_access_list = False 
+        else:
+            raise ValueError(f"Unknown EVM scenario_type: {scenario_type}")
+
+        if should_revert:
+            calldata = "0xdeadbeef"
+            
+        return {
+            "target": target,
+            "calldata": calldata,
+            "caller": caller,
+            "value": value,
+            "storage_slots": storage_slots,
+            "requires_access_list": requires_access_list,
+            "scenario_type": scenario_type # Pass down for assertion logic
+        }
+
+    @staticmethod
+    def evm_state_snapshot(
+        address: str, 
+        is_contract: bool = False,
+        balance_wei: int = int(10 * 1e18),
+        should_revert: bool = False
+    ) -> Dict[str, Any]:
+        if is_contract:
+            mock_code = "0xfd" if should_revert else "0x608060405234801561001057600080fd5b506101"
+        else:
+            mock_code = "0x"
+        
+        padded_alpha_address = "0x000000000000000000000000" + mock_env.agents.alpha.evm_address[2:]
+        
+        return {
+            "balance": hex(balance_wei),
+            "nonce": random.randint(1, 100) if not is_contract else 1,
+            "code": mock_code,
+            "storage": {
+                "0x0": padded_alpha_address,
+                "0x1": hex(int(1000 * 1e18)),
+                "0x2": "0x0000000000000000000000000000000000000000000000000000000000000001"
+            }
+        }
+
+    @staticmethod
+    def evm_block_context() -> Dict[str, Any]:
+        return {
+            "timestamp": int(time.time()),
+            "block_number": random.randint(19_000_000, 20_000_000),
+            "coinbase": "0xdafea492d9c6733ae3d56b7ed1adb60692c98bc5",
+            "chain_id": mock_env.network.chain_id
+        }

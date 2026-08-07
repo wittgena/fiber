@@ -1,6 +1,4 @@
 # dphi.epoch.scheme.eco
-## @lineage: dphi.scheme.eco
-## @lineage: dphi.resolver.scene.eco
 import time
 import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
