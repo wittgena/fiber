@@ -4,14 +4,14 @@ import argparse
 import asyncio
 import importlib
 
-from dphi.tester.wasm import WasmTester
-from dphi.net.tracer import WasmTracer
+from dphi.builder import WasmBuilder
+import dphi.epoch.scheme as scene_module
+
+from surface.tester.wasm import WasmTester
+from surface.tracer.dphi import DphiTracer
 
 from kernel.phase.reactor import KernelReactor
-from kernel.dphi.wasm.builder import WasmBuilder
-from kernel.phase.bind.resolver import resolve_path
-
-import dphi.resolver.scene as scene_module
+from kernel.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 
 MODULE_PATH = scene_module.__name__
@@ -87,7 +87,7 @@ class WasmPipelineCLI:
         self.log.info(f"[CLI] Starting Full Pipeline (Build ➔ Test {self.suites} ➔ Tracer Autonomous Loop)...")
         
         tester = self._create_tester()
-        tracer = WasmTracer(tester=tester)
+        tracer = DphiTracer(tester=tester)
         await tracer.trace()
         if getattr(tracer, 'rupture_confirmed', False):
             self.log.warning("[CLI] Pipeline ended in a Rupture/Collapse state (Intended for fatal tests).")
