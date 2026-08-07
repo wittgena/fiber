@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from arch.gov.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
-from arch.gov.server.middleware import LocalMiddleware, WasTelemetry
+from dphi.gov.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
+from dphi.gov.server.middleware import LocalMiddleware, WasTelemetry
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpRulesetParser

@@ -17,7 +17,7 @@ from arch.contract.model.receptor import (
     EdgeState, EdgeHeader,
     ParityTripletSchema, AnchorProposalRequest, AnchorSealResponse
 )
-from arch.xor.secret.auditor import SecretAuditor, get_secret_auditor
+from dphi.gov.audit.secret import SecretAuditor, get_secret_auditor
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine  # 🌟 신규 파서 타입 힌팅
 
 from watcher.receptor.contract.model import AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope, ExportLogsServiceRequest

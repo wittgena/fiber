@@ -7,8 +7,8 @@ from dphi.adapter.anchor import NexusAnchor
 from surface.receptor.xe.profile import BenchProfile
 
 from arch.topos.tunnel.subs import DistributedPubSub
-from arch.xor.secret.auditor import SecretAuditor
-from arch.gov.ingress.policy import (
+from dphi.gov.audit.secret import SecretAuditor
+from dphi.gov.ingress.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
     FuelAllocator, 

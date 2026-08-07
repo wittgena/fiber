@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import Dict, Any, Optional
 
 from arch.contract.resolver.sandbox import MetabolicProfile, SandboxResolver
-from arch.gov.billing import execute_billing_verification, VerificationError
+from surface.receptor.arch.billing import execute_billing_verification, VerificationError
 from arch.xor.parser.block.contract import CoherenceState
-from arch.gov.billing import execute_billing_verification, VerificationError
+from surface.receptor.arch.billing import execute_billing_verification, VerificationError
 
 from kernel.dphi.sandbox.executor import SandboxExecutor, TaskContext, SandboxEnv
 from kernel.dphi.cgroup import CgroupPolicy, Tier

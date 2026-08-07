@@ -17,7 +17,7 @@ from arch.contract.model.receptor import (
     EpochInitPayload,
     ClearingReceiptRequest, ClearingReceiptResponse
 )
-from arch.gov.ingress.policy import IngressPolicyEngine, get_ingress_policy
+from dphi.gov.ingress.policy import IngressPolicyEngine, get_ingress_policy
 
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.exchange import ExchangeAdapter
