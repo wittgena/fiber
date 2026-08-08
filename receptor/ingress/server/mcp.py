@@ -23,7 +23,7 @@ from mcp.server.mcpserver.server import MCPServer
 from watcher.plane.emitter import get_emitter
 
 from receptor.ingress.sentinel import SpecValidator
-from watcher.receptor.mesh.gateway import ToposGateway
+from watcher.receptor.policy.gateway import ToposGateway
 
 log = get_emitter("server.mcp", phase="DEFENSE")
 

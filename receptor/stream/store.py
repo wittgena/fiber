@@ -11,7 +11,7 @@ from dataclasses import dataclass, asdict
 from watcher.receptor.audit.warden import AuditWarden
 from kernel.bind.state.spec import TransRule, NodeType
 from kernel.dphi.ledger.consensus import KernelLedger
-from watcher.receptor.mesh.gateway import ToposGateway
+from watcher.receptor.policy.gateway import ToposGateway
 from kernel.phase.stream.schema import (
     LogicStream, 
     StreamMetadata, 
