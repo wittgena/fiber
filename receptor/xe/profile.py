@@ -1,15 +1,12 @@
 # receptor.xe.profile
-## @lineage: surface.receptor.xe.profile
-## @lineage: watcher.receptor.xe.profile
 import os
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
 
-from arch.contract.resolver.sandbox import MetabolicProfile, SandboxResolver
-from receptor.arch.billing import execute_billing_verification, VerificationError
-from arch.xor.parser.block.contract import CoherenceState
-from receptor.arch.billing import execute_billing_verification, VerificationError
+from receptor.ingress.billing.verification import execute_billing_verification, VerificationError
 
+from arch.contract.resolver.sandbox import MetabolicProfile, SandboxResolver
+from arch.xor.parser.block.contract import CoherenceState
 from kernel.dphi.sandbox.executor import SandboxExecutor, TaskContext, SandboxEnv
 from kernel.dphi.cgroup import CgroupPolicy, Tier
 from kernel.dphi.exchange.config import billing_config, tier_config

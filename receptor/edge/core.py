@@ -30,7 +30,7 @@ from watcher.plane.emitter import get_emitter, flow_scope
 
 from kernel.dphi.broker import WasmBroker, WasmMethod
 from kernel.dphi.adapter.state import StateAdapter
-from receptor.surface.adapter.anchor import NexusAnchor, AnchorProposal
+from dphi.adapter.anchor import NexusAnchor, AnchorProposal
 from kernel.phase.stream.store import LogStreamStore
 
 log = get_emitter("edge.core")

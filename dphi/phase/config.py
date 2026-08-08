@@ -1,6 +1,4 @@
 # dphi.phase.config
-## @lineage: epoch.time.exchange.net.config
-## @lineage: exchange.net.config
 import os
 from enum import Enum
 from typing import Dict, List
@@ -21,7 +19,7 @@ DEFAULT_PKEY_0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2
 DEFAULT_PKEY_1 = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 
 class AgentAccount(BaseModel):
-    """Unified account structure serving both D3Fi Intent workflows and DREVM Shadow executions."""
+    """Unified account structure serving both D3Fi Intent workflows and DVM Shadow executions."""
     name: str
     did: str
     evm_address: str
@@ -47,7 +45,7 @@ class AgentRegistry(BaseModel):
 
 def _get_default_rpc() -> str:
     """Dynamically construct RPC URL prioritizing Alchemy if key is provided."""
-    env_override = os.getenv("L2_RPC_URL") or os.getenv("DREVM_RPC_URL")
+    env_override = os.getenv("L2_RPC_URL") or os.getenv("DVM_RPC_URL")
     if env_override:
         return env_override
 
@@ -78,7 +76,7 @@ class ContractRegistry(BaseModel):
     dex_router: str = Field(default_factory=lambda: os.getenv("TARGET_DEX", "0x2222222222222222222222222222222222222222"))
 
 class WasmBrokerConfig(BaseModel):
-    """Execution parameters for the drevm.wasm engine."""
+    """Execution parameters for the dvm.wasm engine."""
     tier: str = "SYSTEM"
     max_gas_limit: int = 30_000_000
     timeout_ms: int = 5000

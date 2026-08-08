@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from dphi.epoch.runner import EpochBase, SchemeRunner
-from receptor.surface.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from dphi.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 

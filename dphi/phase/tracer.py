@@ -14,15 +14,15 @@ import httpx
 from fastapi.routing import APIRoute
 
 from receptor.rest import api as rest_app, lifespan 
-from dphi.phase.builder import MockNetBuilder, MockNotarySwarm
+from dphi.phase.builder import PhaseBuilder, NotarySwarm
 from dphi.phase.config import mock_env
-from receptor.surface.tracer.tester.chaos.injector import HttpChaosLibrary 
+from entry.tracer.tester.chaos.injector import HttpChaosLibrary 
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from dphi.epoch.runner import WebRunner
 from kernel.dphi.adapter.state import StateAdapter
 from dphi.builder import WasmBuilder
-from receptor.surface.tracer.dphi import DphiTracer
+from entry.tracer.dphi import DphiTracer
 from watcher.plane.emitter import flow_scope, get_emitter
 
 log = get_emitter("net.tracer")
@@ -100,7 +100,7 @@ class SceneRunner(Workflow):
         self.runner = WebRunner(config.base_url, client=client)
         self.state_roots: Dict[str, str] = {}
         self.log = get_emitter("workflow.scene_runner")
-        self.notary_swarm = MockNotarySwarm(size=3)
+        self.notary_swarm = NotarySwarm(size=3)
 
     async def execute(self):
         mode_str = "Negative/Faults" if self.inject_faults else "Golden Path"
@@ -144,7 +144,7 @@ class SceneRunner(Workflow):
             expected_status = 422
             test_desc = "OTLP Ingress (Membrane Strict Block Test)"
         else:
-            payload = MockNetBuilder.otlp_payload(is_malformed=False)
+            payload = PhaseBuilder.otlp_payload(is_malformed=False)
             expected_status = 200
             test_desc = "OTLP Ingress (Golden Path)"
         
@@ -166,7 +166,7 @@ class SceneRunner(Workflow):
             expected_status = 422
             test_desc = "D3Fi Trade Ingress (Membrane Strict Block Test)"
         else:
-            payload = MockNetBuilder.trade_intent(should_fail_policy=False)
+            payload = PhaseBuilder.trade_intent(should_fail_policy=False)
             expected_status = 200
             test_desc = "D3Fi Trade Ingress (Golden Path)"
         
@@ -189,7 +189,7 @@ class SceneRunner(Workflow):
             test_desc = "Ledger Append (Membrane Strict Block Test)"
         else:
             exchange_root = self.state_roots.get("exchange_root", "0x00")
-            payload = MockNetBuilder.ledger_append("A2A_TRADE_SETTLEMENT", exchange_root)
+            payload = PhaseBuilder.ledger_append("A2A_TRADE_SETTLEMENT", exchange_root)
             expected_status = 200
             test_desc = "Ledger Append (Golden Path)"
             

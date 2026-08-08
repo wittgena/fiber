@@ -1,6 +1,4 @@
 # dphi.phase.builder
-## @lineage: epoch.time.exchange.net.builder
-## @lineage: exchange.net.builder
 import time
 import uuid
 import random
@@ -17,11 +15,11 @@ from arch.contract.model.receptor import (
     AnchorProposalRequest,
     ParityTripletSchema
 )
-from receptor.surface.adapter.eco import WalletAdapter
+from dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from receptor.edge.core import StreamAppendRequest, LedgerEventSchema
 
-class MockNotarySwarm:
+class NotarySwarm:
     def __init__(self, size: int = 3):
         self.notaries = []
         for i in range(size):
@@ -40,7 +38,7 @@ class MockNotarySwarm:
     def attest_payload(self, canonical_hash: bytes) -> List[str]:
         return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
 
-class MockNetBuilder:
+class PhaseBuilder:
     __domain_metadata__ = {
         "otlp_payload": "OTel + Datadog/LangSmith. Tracks LLM GenAI metrics (tokens/latency) for billing.",
         "trade_intent": "W3C DID + UniswapX/Fetch.ai. Intent-centric A2A (Agent-to-Agent) resource swap with slippage.",

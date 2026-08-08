@@ -4,12 +4,12 @@ from typing import Any
 
 from fastapi import Request, HTTPException, status
 
-from receptor.surface.adapter.anchor import NexusAnchor
+from dphi.adapter.anchor import NexusAnchor
 from receptor.xe.profile import BenchProfile
 
 from arch.topos.tunnel.subs import DistributedPubSub
 from dphi.epoch.audit.secret import SecretAuditor
-from receptor.ingress.policy import (
+from receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
     FuelAllocator, 

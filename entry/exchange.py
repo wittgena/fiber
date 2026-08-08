@@ -1,12 +1,10 @@
 # entry.exchange
-## @lineage: exchange.suite
-## @lineage: epoch.time.exchange.suite
 import asyncio
 from kernel.phase.reactor import KernelReactor
 from watcher.plane.emitter import get_emitter
 
-from receptor.surface.workflow import ExchangeWorkflow, ScenarioConfig
-from receptor.surface.tracer.tester.chaos.injector import RpcChaosInjector
+from entry.shadow.workflow import ExchangeWorkflow, ScenarioConfig
+from entry.tracer.tester.chaos.injector import RpcChaosInjector
 from dphi.phase.tracer import TracerPipeline, E2EConfig
 from dphi.phase.config import mock_env
 

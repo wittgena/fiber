@@ -18,11 +18,11 @@ WASM_TARGET_DIR = WASM_DIR / "target" / "wasm32-unknown-unknown" / "release"
 WASM_BUILD_FILE = WASM_TARGET_DIR / "dphi.wasm"
 DEST_WASM_FILE = TIME_ROOT / "dphi.wasm"
 
-# --- [2] DREVM WASM 경로 설정 추가 ---
-DREVM_DIR = THEORIA_ROOT / "drevm"
-DREVM_TARGET_DIR = DREVM_DIR / "target" / "wasm32-unknown-unknown" / "release"
-DREVM_BUILD_FILE = DREVM_TARGET_DIR / "drevm.wasm"
-DEST_DREVM_FILE = TIME_ROOT / "drevm.wasm"
+# --- [2] DVM WASM 경로 설정 추가 ---
+DVM_DIR = THEORIA_ROOT / "dvm"
+DVM_TARGET_DIR = DVM_DIR / "target" / "wasm32-unknown-unknown" / "release"
+DVM_BUILD_FILE = DVM_TARGET_DIR / "dvm.wasm"
+DVM_DEST_FILE = TIME_ROOT / "dvm.wasm"
 
 REGISTRY_FILE = TIME_ROOT / "registry.json"
 
@@ -112,7 +112,7 @@ class WasmBuilder(BaseTracer):
             return False
 
         # 3. REVM 프로젝트 컴파일
-        if not await self._compile_wasm_project(DREVM_DIR, "revm"):
+        if not await self._compile_wasm_project(DVM_DIR, "revm"):
             return False
 
         # 4. 아티팩트 복사 및 배포
@@ -122,8 +122,8 @@ class WasmBuilder(BaseTracer):
             shutil.copy2(WASM_BUILD_FILE, DEST_WASM_FILE)
             self.log.info(f"[Builder] Copied artifact -> {DEST_WASM_FILE.name}")
             
-            shutil.copy2(DREVM_BUILD_FILE, DEST_DREVM_FILE)
-            self.log.info(f"[Builder] Copied artifact -> {DEST_DREVM_FILE.name}")
+            shutil.copy2(DVM_BUILD_FILE, DVM_DEST_FILE)
+            self.log.info(f"[Builder] Copied artifact -> {DVM_DEST_FILE.name}")
         except FileNotFoundError as e:
             self.log.error(f"[Builder] Deployment Failed. Artifact not found: {e}")
             return False

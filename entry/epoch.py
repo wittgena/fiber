@@ -10,8 +10,8 @@ import importlib
 from dphi.builder import WasmBuilder
 import dphi.scheme as scene_module
 
-from receptor.surface.tracer.tester.wasm import WasmTester
-from receptor.surface.tracer.dphi import DphiTracer
+from entry.tracer.tester.wasm import WasmTester
+from entry.tracer.dphi import DphiTracer
 
 from kernel.phase.reactor import KernelReactor
 from kernel.bind.resolver import resolve_path
