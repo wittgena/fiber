@@ -1,4 +1,7 @@
-# dphi.adapter.anchor
+# receptor.adapter.anchor
+## @lineage: receptor.surface.adapter.anchor
+## @lineage: surface.adapter.anchor
+## @lineage: dphi.adapter.anchor
 ## @lineage: kernel.dphi.adapter.anchor
 import json
 import time

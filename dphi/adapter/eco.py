@@ -1,4 +1,7 @@
-# dphi.adapter.eco
+# receptor.adapter.eco
+## @lineage: receptor.surface.adapter.eco
+## @lineage: surface.adapter.eco
+## @lineage: dphi.adapter.eco
 ## @lineage: kernel.dphi.adapter.eco
 import os
 import time
