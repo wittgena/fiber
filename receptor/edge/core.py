@@ -16,7 +16,7 @@ from arch.contract.model.receptor import (
     EdgeState, EdgeHeader,
     ParityTripletSchema, AnchorProposalRequest, AnchorSealResponse
 )
-from kernel.phase.audit.secret import SecretAuditor, get_secret_auditor
+from watcher.receptor.audit.secret import SecretAuditor, get_secret_auditor
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
 from watcher.receptor.contract.model import AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope, ExportLogsServiceRequest

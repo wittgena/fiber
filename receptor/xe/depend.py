@@ -8,7 +8,7 @@ from phase.dphi.adapter.anchor import NexusAnchor
 from receptor.xe.profile import BenchProfile
 
 from arch.topos.tunnel.subs import DistributedPubSub
-from kernel.phase.audit.secret import SecretAuditor
+from watcher.receptor.audit.secret import SecretAuditor
 from receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 

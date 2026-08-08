@@ -16,7 +16,7 @@ from kernel.phase.stream.schema import (
     ProtocolSource,
     ActionIntent
 )
-from kernel.phase.mesh.gateway import ToposGateway
+from watcher.receptor.mesh.gateway import ToposGateway
 from watcher.plane.observer.span import span_context
 from watcher.plane.emitter import get_emitter, flow_scope
 
