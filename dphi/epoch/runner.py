@@ -1,6 +1,4 @@
 # dphi.epoch.runner
-## @lineage: epoch.runner
-## @lineage: kernel.dphi.scheme.runner
 import time
 import json
 import hashlib

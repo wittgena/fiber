@@ -1,11 +1,9 @@
 # receptor.edge.core
-## @lineage: surface.receptor.edge.core
-## @lineage: watcher.receptor.edge.core
 import json
 import time
 import uuid
 import hashlib
-import orjson  # 🌟 고속 직렬화 및 파싱을 위한 모듈 추가
+import orjson
 from datetime import datetime, timezone
 from typing import Annotated, List, Dict, Any, Optional
 
@@ -19,12 +17,12 @@ from arch.contract.model.receptor import (
     ParityTripletSchema, AnchorProposalRequest, AnchorSealResponse
 )
 from dphi.epoch.audit.secret import SecretAuditor, get_secret_auditor
-from arch.xor.parser.otlp import StrictOtlpExtractionEngine  # 🌟 신규 파서 타입 힌팅
+from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
 from watcher.receptor.contract.model import AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope, ExportLogsServiceRequest
 from receptor.xe.depend import (
     get_wasm_broker, get_pubsub, get_logstream_store, get_nexus_anchor,
-    get_otlp_engine  # 🌟 신규 DI 추가
+    get_otlp_engine
 )
 from watcher.plane.emitter import get_emitter, flow_scope
 
@@ -47,16 +45,13 @@ async def otlp_logs_export(
     auth_token: Annotated[str | None, Header(alias="Authorization")] = None, 
 ):
     try:
-        # 1. Pydantic 1차 방어를 통과한 데이터를 고속 직렬화 (엔진 입력용)
         payload_dict = payload.model_dump(exclude_none=True)
         raw_json_bytes = orjson.dumps(payload_dict)
         content_hash = hashlib.sha256(raw_json_bytes).hexdigest()
         
-        # 2. 🌟 Strict OTLP Parser 적용: 쓰레기 데이터 검증 및 결정론적 추출
         try:
             extracted_metrics = otlp_engine.execute(raw_json_bytes)
         except ValueError as e:
-            # Membrane 방어: OTLP 규격 위반 시 WASM 진입을 차단하고 422 에러 반환
             log.warning(f"[OTLP Ingress] Blocked malformed payload: {e}")
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 

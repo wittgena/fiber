@@ -1,12 +1,4 @@
 # receptor.ingress.sentinel
-## @lineage: epoch.time.ingress.sentinel
-## @lineage: dphi.gov.ingress.sentinel
-## @lineage: arch.gov.ingress.sentinel
-## @lineage: kernel.topos.gov.ingress.sentinel
-## @lineage: kernel.arch.gov.ingress.sentinel
-## @lineage: arch.kernel.gov.sentinel
-## @lineage: arch.server.gov.sentinel
-## @lineage: arch.topos.server.sentinel
 import asyncio
 import random
 import re
@@ -30,6 +22,10 @@ from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("server.sentinel", phase="DEFENSE")
 
+
+# =========================================================================
+# 🛡️ TRANSDUCER & VALIDATION
+# =========================================================================
 class StreamTransducer:
     MAX_PAYLOAD_SIZE = 5242880  # 5MB
     def __init__(self):
@@ -86,6 +82,7 @@ class StreamTransducer:
         ## @action: Trigger Pydantic schema validation (Raises ValidationError on failure)
         return LogicStream(meta=meta, identity=identity, payload=payload)
 
+
 class SpecValidator:
     """
     @desc: Formal topological validator. 
@@ -111,7 +108,10 @@ class SpecValidator:
                 log.critical(f"Transduction collapse: {str(e)}")
                 raise
 
-## PART 1: SPATIAL FENCE SCHEMAS (Meta Rules)
+
+# =========================================================================
+# 🚧 MEMBRANE SPATIAL FENCE SCHEMAS
+# =========================================================================
 class ActorRule(BaseModel):
     blacklist_ip: Optional[list[str]] = None
     require_auth: Optional[bool] = False
@@ -164,7 +164,6 @@ class MembraneProjector:
 
     def _is_match(self, ctx: SecurityContext, rule: MetaRuleDef, phase: str) -> bool:
         """@desc: Inline logical AND evaluation of Actor, Vector, and Asset rules."""
-        
         if rule.actor:
             actor_match = False
             if rule.actor.blacklist_ip and ctx.origin_ip in rule.actor.blacklist_ip: actor_match = True
@@ -198,18 +197,24 @@ class MembraneProjector:
             raise web.HTTPForbidden(reason="Blocked by Kernel Topological Tension")
         raise web.HTTPForbidden(reason=f"Blocked by Meta Projection (Rule: {rule_id})")
 
+
+# =========================================================================
+# 😈 CHAOS LIBRARY & INJECTORS (Merged from chaos.py)
+# =========================================================================
 class ChaosPayloadLibrary:
+    """HTTP 방어벽 및 애플리케이션 파괴(Membrane Attack)를 위한 바이트/JSON 페이로드"""
     OOM = [
         lambda: b"A" * 6 * 1024 * 1024,
         lambda: b'{"data": "' + b"B" * 5 * 1024 * 1024 + b'"}',
         lambda: b"[" * 50000 + b"]" * 50000,
-        lambda: b'{"a":' * 25000 + b'"b"' + b'}' * 25000  # 깊은 중첩 (Recursion Error 발생 후 안전하게 차단됨)
+        lambda: b'{"a":' * 25000 + b'"b"' + b'}' * 25000  # 깊은 중첩 (Recursion Error 발생)
     ]
 
     SMUGGLING = [
         lambda: b'{"version": "1.0", "smuggled": {"version": "2.0", "bypass": true}}', 
         lambda: b'{"method": "initialize", "params": {"__proto__": {"admin": true}}}', 
-        lambda: b'{"action": "initialize", "protocolVersion": "1.0\\u0000", "bypass": true}'
+        lambda: b'{"action": "initialize", "protocolVersion": "1.0\\u0000", "bypass": true}',
+        lambda: b"GET / HTTP/1.1\r\n\r\nGET /admin HTTP/1.1\r\n"
     ]
 
     INVALID_STATE = [
@@ -254,9 +259,44 @@ class ChaosPayloadLibrary:
             "action": "read_resource",
             "protocolVersion": "2.0",
             "params": {"uri": "file:///var/log/%2e%2e%2f%2e%2e%2fetc/passwd"}
-        }).encode()
+        }).encode(),
+        lambda: b"../../../../etc/passwd"
     ]
 
+    @classmethod
+    def get_all_vectors(cls) -> list[tuple[str, Callable]]:
+        return [
+            ("OOM_Exhaustion", random.choice(cls.OOM)),
+            ("Protocol_Smuggling", random.choice(cls.SMUGGLING)),
+            ("Invalid_State_Transition", random.choice(cls.INVALID_STATE)),
+            ("MCP_Path_Traversal", random.choice(cls.MCP_PATH_TRAVERSAL))
+        ]
+
+
+class RpcChaosInjector:
+    """도메인 레벨 RPC 데이터(Mandate, Signature) 오염(Mutation)을 위한 인젝터"""
+    @staticmethod
+    def corrupt_ap2_mandate(base_mandate: Dict[str, Any]) -> Dict[str, Any]:
+        """권한 위임장(AP2 Mandate)을 고의로 과거(만료) 시점으로 조작하여 반환"""
+        # Ed25519PrivateKey 객체의 pickle 충돌을 피하기 위해 얕은 복사 수행
+        corrupted = base_mandate.copy()
+        corrupted["validity_ms"] = -3600000 
+        return corrupted
+
+    @staticmethod
+    def corrupt_consensus_signatures(signatures: list[str]) -> list[str]:
+        """M-of-N 다중 서명 배열 중 하나를 파괴하여 Byzantine Fault 유발"""
+        if not signatures:
+            return signatures
+        
+        corrupted = list(signatures)
+        corrupted[0] = "0xBAD_SIGNATURE_CORRUPTED_BY_CHAOS_INJECTOR"
+        return corrupted
+
+
+# =========================================================================
+# 🛡️ DEFENSE ROUTER & SENTINEL ACTOR
+# =========================================================================
 class IngressRouter:
     """@desc: Internal router acting as the live target for the Sentinel."""
     def __init__(self, gateway: ToposGateway):
@@ -285,6 +325,7 @@ class IngressRouter:
             except Exception as e:
                 log.error(f"Manifold routing collapsed: {e}")
                 return {"status": "error", "reason": "Internal boundary failure"}
+
 
 class DefenseSentinel:
     """@desc: Chaos simulator that constantly attacks the router to ensure defensive integrity."""
@@ -320,6 +361,7 @@ class DefenseSentinel:
                         )
             
             await asyncio.sleep(300)
+
 
 _projector_instance = None
 

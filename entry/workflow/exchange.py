@@ -1,11 +1,9 @@
 # entry.workflow.exchange
-## @lineage: entry.shadow.workflow
-## @lineage: receptor.surface.workflow
 import asyncio
 import hashlib
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -32,8 +30,8 @@ log = get_emitter("shadow.workflow")
 @dataclass
 class ScenarioConfig:
     name: str
-    mandate_injector: Optional[Callable] = None
-    signature_injector: Optional[Callable] = None
+    mandate_injector: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None
+    signature_injector: Optional[Callable[[List[str]], List[str]]] = None
 
 class ExStartMsg(WorkflowMessage): pass
 class ExIngressMsg(WorkflowMessage): pass
@@ -54,6 +52,10 @@ class NodeIdentity:
 
 class MockRpcBridge(RpcBridge):
     """Acts as a defensive firewall and simulates the WASM sandbox network validation node."""
+    def __init__(self):
+        super().__init__()
+        self.log = get_emitter("rpc.bridge.mock")
+
     async def request(self, payload: Dict[str, Any], timeout: float = 5.0) -> Dict[str, Any]:
         action = payload.get("action")
         await asyncio.sleep(0.05)
@@ -63,8 +65,9 @@ class MockRpcBridge(RpcBridge):
             actual_mandate = mandate_result.get("mandate", {})
             constraints = actual_mandate.get("constraints", {})
             
+            # Mandate 만료 시간 검증 (Chaos Injector에 의해 조작될 수 있음)
             if constraints.get("expiration_ts", 0) < int(time.time() * 1000):
-                log.warning("[MockRPC] 🛑 REJECTED: AP2 Mandate is expired!")
+                self.log.warning("🛑 [REJECTED] AP2 Mandate is expired!")
                 return {"status": 401, "error": "Unauthorized: AP2 Mandate Expired"}
                 
             topo = payload.get("topo", 0)
@@ -93,29 +96,37 @@ class ExchangeWorkflow(Workflow):
         self.agent_a = NodeIdentity()
         self.agent_b = NodeIdentity()
         
-        self.phase_results = {}
-        self.entangled_state = {}
+        self.phase_results: Dict[str, Any] = {}
+        self.entangled_state: Dict[str, Any] = {}
+        self.economy_state: Dict[str, Any] = {}
+        
         self.ap2_mandate: Optional[Ap2MandateResult] = None
         self.x402_receipt: Optional[X402SettlementReceipt] = None
-        self.economy_state: Dict[str, Any] = {}
         self.receipt: Optional[TransactionReceipt] = None
         self.rollup_payload: Optional[SettlementPayload] = None
 
     async def start(self) -> bool:
         mode = "Simulated" if self.wallet_adapter.simulate else "Testnet Live"
         self.log.info(f"\n{'='*60}\n🚀 [START] Scenario: {self.scenario.name} ({mode})\n{'='*60}")
+        
         self.rpc_bridge = MockRpcBridge()
         self.post_message(ExStartMsg())
         await self.run()
+        
         return self.receipt is not None
 
     @step
     async def phase_ingress(self, msg: ExStartMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 1] Protocol Core: Verify Intent Mandate ---")
+        
+        # 1. 정상적인 Base Mandate 생성
+        base_mandate = PhaseBuilder.ap2_mandate_params(self.agent_a.pub_hex, self.agent_a.key)
+        
+        # 2. Injector(Mutator)가 존재한다면 Base 데이터를 조작
         if self.scenario.mandate_injector:
-            mandate_params = self.scenario.mandate_injector(self.agent_a.pub_hex, self.agent_a.key)
+            mandate_params = self.scenario.mandate_injector(base_mandate)
         else:
-            mandate_params = PhaseBuilder.ap2_mandate_params(self.agent_a.pub_hex, self.agent_a.key)
+            mandate_params = base_mandate
             
         self.ap2_mandate = EcoAdapter.build_ap2_mandate(**mandate_params)
 
@@ -137,6 +148,7 @@ class ExchangeWorkflow(Workflow):
     async def phase_entanglement(self, msg: ExIngressMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 2] Protocol Core: State Entanglement ---")
         parity = generate_parity_triplet(topo=120, press=85)
+        
         self.entangled_state = {
             "repos": {
                 "participant_a": self.phase_results['a'].get("phase_id"),
@@ -150,14 +162,10 @@ class ExchangeWorkflow(Workflow):
     async def phase_settlement(self, msg: ExEntanglementMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 3] External Plug: EVM X402 Settlement ---")
         
-        # [ALIGNMENT]: Updated from settlement_target.clearing_contract_address to contracts.nexus_clearing
         payee_address = mock_env.contracts.nexus_clearing
-        
-        # [ALIGNMENT]: Updated agent path aligned with UnifiedExchangeConfig (mock_env.agents.alpha.evm_address)
         payer_address = mock_env.agents.alpha.evm_address
         
         invoice = EcoAdapter.build_x402_invoice(payee_address, "0.05", "compute_fee")
-        
         self.x402_receipt = EcoAdapter.process_x402_settlement(
             invoice, payer_address, self.wallet_adapter
         )
@@ -171,6 +179,7 @@ class ExchangeWorkflow(Workflow):
     async def phase_nexus(self, msg: ExSettlementMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 4] Protocol Core: Deterministic Epoch Collapse ---")
         parity = self.entangled_state["parity"]
+        
         seal_payload = StateAdapter.build_seal_epoch_payload(
             parity=parity, parent_nexus_id=0, self_parent_state="genesis",
             repos=self.entangled_state["repos"], cached_states=self.economy_state,
@@ -193,7 +202,6 @@ class ExchangeWorkflow(Workflow):
     @step
     async def phase_finalize(self, msg: ExNexusMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 5] Export Plug: Attest & Generate Payload ---")
-        
         self.receipt = self.exchange_adapter.finalize_settlement(
             entangled_state=self.entangled_state, 
             signatures=[],  
@@ -202,15 +210,16 @@ class ExchangeWorkflow(Workflow):
         
         receipt_dict = self.receipt.model_dump(exclude_none=True) if hasattr(self.receipt, 'model_dump') else self.receipt.__dict__
         canonical_receipt_bytes = StateAdapter.to_canonical_bytes(receipt_dict)
+        valid_signatures = [
+            self.agent_a.sign(canonical_receipt_bytes),
+            self.agent_b.sign(canonical_receipt_bytes),
+            self.field_node.sign(canonical_receipt_bytes)
+        ]
         
         if self.scenario.signature_injector:
-            export_signatures = self.scenario.signature_injector([])
+            export_signatures = self.scenario.signature_injector(valid_signatures)
         else:
-            export_signatures = [
-                self.agent_a.sign(canonical_receipt_bytes),
-                self.agent_b.sign(canonical_receipt_bytes),
-                self.field_node.sign(canonical_receipt_bytes)
-            ]
+            export_signatures = valid_signatures
         
         self.rollup_payload = self.exchange_adapter.generate_settlement_payload(
             receipt=self.receipt,

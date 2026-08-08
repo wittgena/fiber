@@ -1,6 +1,4 @@
 # receptor.edge.eco
-## @lineage: surface.receptor.edge.eco
-## @lineage: watcher.receptor.edge.eco
 import json
 import time
 from typing import Dict, Any, Optional

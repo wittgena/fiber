@@ -5,6 +5,7 @@ import random
 import json
 import hashlib
 from typing import Any, Dict, List, Optional
+from dataclasses import dataclass, field, asdict
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -18,6 +19,41 @@ from arch.contract.model.receptor import (
 from dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from receptor.edge.core import StreamAppendRequest, LedgerEventSchema
+
+@dataclass
+class DvmConfig:
+    """ EVM Runner 및 Pipeline 실행 시 사용되는 전역 설정 데이터 """
+    mode: str = "suite"
+    scenario: str = "ERC20_TRANSFER"
+    revert: bool = False
+    
+    # 런타임 시점에 mock_env 값을 안전하게 매핑하기 위해 default_factory 사용
+    rpc_url: str = field(default_factory=lambda: mock_env.network.rpc_url)
+    target: str = field(default_factory=lambda: mock_env.contracts.target_erc20)
+    caller: str = field(default_factory=lambda: mock_env.agents.alpha.evm_address)
+    
+    value: str = "0"
+    calldata: str = "0x"
+    slots: List[str] = field(default_factory=list)
+
+
+@dataclass
+class EvmIntent:
+    """ EVM 트랜잭션 실행 의도를 명세하는 정규화된 스키마 """
+    target: str
+    caller: str
+    calldata: str
+    scenario_type: str
+    value: int = 0
+    storage_slots: List[str] = field(default_factory=list)
+    requires_access_list: bool = False
+    allowance_slot_index: Optional[int] = None
+    
+    def to_workflow_dict(self) -> dict:
+        """ EvmWorkflow가 기대하는 dict 포맷으로 변환 (None 값은 제거) """
+        data = asdict(self)
+        data.pop("target") # target은 EvmWorkflow 생성자에 별도로 주입되므로 제외
+        return {k: v for k, v in data.items() if v is not None}
 
 class NotarySwarm:
     def __init__(self, size: int = 3):
@@ -239,7 +275,10 @@ class PhaseBuilder:
     def evm_user_intent(
         scenario_type: str = "ERC20_TRANSFER",
         should_revert: bool = False
-    ) -> Dict[str, Any]:
+    ) -> EvmIntent:
+        """
+        dict를 반환하던 기존과 달리, 타입 안정성이 확보된 EvmIntent 객체를 생성해 반환합니다.
+        """
         caller = mock_env.agents.alpha.evm_address
         value = 0
         requires_access_list = False
@@ -290,15 +329,15 @@ class PhaseBuilder:
         if should_revert:
             calldata = "0xdeadbeef"
             
-        return {
-            "target": target,
-            "calldata": calldata,
-            "caller": caller,
-            "value": value,
-            "storage_slots": storage_slots,
-            "requires_access_list": requires_access_list,
-            "scenario_type": scenario_type # Pass down for assertion logic
-        }
+        return EvmIntent(
+            target=target,
+            caller=caller,
+            calldata=calldata,
+            value=value,
+            storage_slots=storage_slots,
+            requires_access_list=requires_access_list,
+            scenario_type=scenario_type
+        )
 
     @staticmethod
     def evm_state_snapshot(
