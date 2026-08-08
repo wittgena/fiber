@@ -14,14 +14,14 @@ from arch.topos.tunnel.factory import TunnelFactory
 from kernel.bind.resolver import resolve_path
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from kernel.phase.daemon.task.wasm import WasmTaskerDaemon
-from kernel.dphi.broker import WasmBroker
+from kernel.dphi.broker import DphiBroker
 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("tester.pysand")
 
 class PysandTester:
-    def __init__(self, broker: WasmBroker):
+    def __init__(self, broker: DphiBroker):
         self.broker = broker
         self.success_count = 0
         self.fail_count = 0
@@ -145,7 +145,7 @@ class PysandOrchestrator:
             
             log.info("[SYSTEM] Initializing Async WasmBroker & Running Tests...")
             # 브로커 대기 시간은 무한 루프 컷오프(ex: 3초)보다 조금 더 길게 설정
-            broker = WasmBroker(timeout=6.0) 
+            broker = DphiBroker(timeout=6.0) 
             
             tester = PysandTester(broker)
             total_fails = await tester.run_all_suites()

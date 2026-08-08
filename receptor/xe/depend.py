@@ -17,7 +17,7 @@ from receptor.ingress.gov.policy import (
 )
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from kernel.phase.stream.store import LogStreamStore
-from kernel.dphi.broker import WasmBroker
+from kernel.dphi.broker import DphiBroker
 from kernel.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 from watcher.plane.emitter import get_emitter
@@ -36,7 +36,7 @@ def _get_state_attr(request: Request, attr_name: str) -> Any:
     return val
 
 ## WASM & Core Compute
-async def get_wasm_broker(request: Request) -> WasmBroker:
+async def get_wasm_broker(request: Request) -> DphiBroker:
     return _get_state_attr(request, "broker")
 
 ## Ledger & State Persistence

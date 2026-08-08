@@ -28,7 +28,7 @@ from receptor.xe.depend import (
 )
 from watcher.plane.emitter import get_emitter, flow_scope
 
-from kernel.dphi.broker import WasmBroker, WasmMethod
+from kernel.dphi.broker import DphiBroker, DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
 from dphi.adapter.anchor import NexusAnchor, AnchorProposal
 from kernel.phase.stream.store import LogStreamStore
@@ -42,7 +42,7 @@ async def otlp_logs_export(
     payload: ExportLogsServiceRequest = Body(...),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
-    broker: WasmBroker = Depends(get_wasm_broker),
+    broker: DphiBroker = Depends(get_wasm_broker),
     otlp_engine: StrictOtlpExtractionEngine = Depends(get_otlp_engine),  # 🌟 Strict 엔진 주입
     auth_token: Annotated[str | None, Header(alias="Authorization")] = None, 
 ):
@@ -122,7 +122,7 @@ async def otlp_logs_export(
 async def audit_log(
     payload: AuditLogRequest,
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
-    broker: WasmBroker = Depends(get_wasm_broker)
+    broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
     """단건 Audit Event의 PII 마스킹 및 WASM 위변조 방지 증명 반환"""
     request_time = str(time.time())
@@ -199,7 +199,7 @@ class StreamAppendResponse(BaseModel):
 )
 async def append_to_stream(
     req: StreamAppendRequest = Body(...),
-    broker: WasmBroker = Depends(get_wasm_broker),
+    broker: DphiBroker = Depends(get_wasm_broker),
     store: LogStreamStore = Depends(get_logstream_store)
 ):
     request_id = f"ledg_{uuid.uuid4().hex[:8]}"
@@ -228,7 +228,7 @@ async def append_to_stream(
             "events": events_dicts
         }
         canonical_payload = StateAdapter.to_canonical_bytes(payload_to_hash).decode('utf-8')
-        fp_res = await broker.invoke(WasmMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
+        fp_res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
         
         if not fp_res.success:
             raise HTTPException(
@@ -247,7 +247,7 @@ async def append_to_stream(
         ## Verbose 모드일 경우 ZK/Merkle Proof 추가 생성
         merkle_proof = None
         if req.verbose:
-            proof_res = await broker.invoke(WasmMethod.GENERATE_PROOF, canonical_payload)
+            proof_res = await broker.invoke(DphiMethod.GENERATE_PROOF, canonical_payload)
             if proof_res.success:
                 try:
                     merkle_proof = json.loads(proof_res.output).get("current_hash")

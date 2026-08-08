@@ -1,4 +1,5 @@
-# entry.shadow.workflow
+# entry.workflow.exchange
+## @lineage: entry.shadow.workflow
 ## @lineage: receptor.surface.workflow
 import asyncio
 import hashlib
@@ -22,7 +23,7 @@ from arch.contract.event.next import next_phase_id, generate_parity_triplet
 from dphi.adapter.eco import EcoAdapter, WalletAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
 from kernel.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.broker import WasmMethod
+from kernel.dphi.broker import DphiMethod
 
 from watcher.plane.emitter import get_emitter
 
@@ -57,7 +58,7 @@ class MockRpcBridge(RpcBridge):
         action = payload.get("action")
         await asyncio.sleep(0.05)
 
-        if action == WasmMethod.INIT_EPOCH.value:
+        if action == DphiMethod.INIT_EPOCH.value:
             mandate_result = payload.get("mandate", {})
             actual_mandate = mandate_result.get("mandate", {})
             constraints = actual_mandate.get("constraints", {})
@@ -70,7 +71,7 @@ class MockRpcBridge(RpcBridge):
             press = payload.get("press", 0)
             return {"status": 200, "data": {"phase_id": next_phase_id(topo=topo, press=press)}}
             
-        elif action == WasmMethod.SEAL_EPOCH.value:
+        elif action == DphiMethod.SEAL_EPOCH.value:
             return {"status": 200, "data": {"receipt_id": f"nexus_receipt_{uuid4().hex[:8]}"}}
             
         return {"status": 404, "error": f"Unknown action: {action}"}
@@ -119,7 +120,7 @@ class ExchangeWorkflow(Workflow):
         self.ap2_mandate = EcoAdapter.build_ap2_mandate(**mandate_params)
 
         req_payload = {
-            "action": WasmMethod.INIT_EPOCH.value, 
+            "action": DphiMethod.INIT_EPOCH.value, 
             "topo": 120, "press": 85,
             "mandate": self.ap2_mandate.model_dump(exclude_none=True)
         }
@@ -180,7 +181,7 @@ class ExchangeWorkflow(Workflow):
         )
         
         res = await self.rpc_bridge.request({
-            "action": WasmMethod.SEAL_EPOCH.value, 
+            "action": DphiMethod.SEAL_EPOCH.value, 
             "payload": StateAdapter.to_canonical_bytes(seal_payload).decode('utf-8')
         })
         

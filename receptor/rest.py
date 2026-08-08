@@ -15,7 +15,7 @@ from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpRulesetParser
 
-from kernel.dphi.broker import WasmBroker
+from kernel.dphi.broker import DphiBroker
 from kernel.phase.stream.store import LogStreamStore
 from watcher.plane.emitter import get_emitter
 
@@ -57,7 +57,7 @@ async def lifespan(app: FastAPI):
         await pubsub.start_listening()
         app.state.pubsub = pubsub
         
-        app.state.broker = WasmBroker(timeout=config.wasm_timeout)
+        app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
         # 🌟 신규: OTLP 규격 파서 및 결정론적 데이터 추출 엔진 초기화

@@ -12,7 +12,7 @@ from arch.topos.tunnel.factory import TunnelFactory
 from kernel.bind.resolver import resolve_path
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from kernel.phase.daemon.task.wasm import WasmTaskerDaemon
-from kernel.dphi.broker import WasmBroker
+from kernel.dphi.broker import DphiBroker
 from entry.tracer.auditor.wasm import CanonicalProofAuditor
 
 from watcher.plane.emitter import get_emitter, flow_scope
@@ -43,7 +43,7 @@ class WasmTester:
         except asyncio.CancelledError:
             pass # 정상적인 태스크 취소 흐름
 
-    async def _run_all_suites(self, broker: WasmBroker) -> int:
+    async def _run_all_suites(self, broker: DphiBroker) -> int:
         """@desc: Sequentially executes injected scenario suites without hardcoded dependencies"""
         total_fails = 0
         
@@ -91,7 +91,7 @@ class WasmTester:
             await asyncio.sleep(1) 
             
             log.info("[SYSTEM] Initializing WasmBroker & Scenarios...")
-            broker = WasmBroker(
+            broker = DphiBroker(
                 request_stream=test_stream, 
                 timeout=5.0,
                 target_auditor=proof_auditor

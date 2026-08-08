@@ -2,7 +2,7 @@
 ## @lineage: receptor.arch.billing
 import json
 from typing import Any, List
-from kernel.dphi.broker import WasmBroker, WasmMethod
+from kernel.dphi.broker import DphiBroker, DphiMethod
 from watcher.tracer.scope import scope_trace
 
 class VerificationError(Exception):
@@ -13,7 +13,7 @@ class BillingVerifier:
         self.target_context = target_context
         self.max_errors = max_errors
         self.mapped_state: List[str] = []
-        self.broker = WasmBroker()
+        self.broker = DphiBroker()
 
     async def verify_mapping(self, target_nodes: List[str]) -> str:
         observations = []
@@ -24,7 +24,7 @@ class BillingVerifier:
                 try:
                     # 1. Fetch Data
                     payload = json.dumps({"target_node": node_id, "action": "verify_billing"})
-                    res = await self.broker.invoke(target_func=WasmMethod.VERIFY_PACKET, payload=payload)
+                    res = await self.broker.invoke(target_func=DphiMethod.VERIFY_PACKET, payload=payload)
                     
                     if not res.success:
                         raise VerificationError(f"WASM Kernel rejected billing validation: {res.error}")

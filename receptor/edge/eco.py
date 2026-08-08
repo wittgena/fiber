@@ -22,7 +22,7 @@ from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.exchange import ExchangeAdapter
-from kernel.dphi.broker import WasmBroker
+from kernel.dphi.broker import DphiBroker
 from kernel.dphi.cgroup import Tier
 from kernel.dphi.exchange.config import tier_config, billing_config
 
@@ -38,7 +38,7 @@ profile_edge = ContractRouter(namespace="eco.profile", prefix="/profile", tags=[
     summary="1. Validate Intent", 
     response_model=IntentValidationResponse
 )
-async def validate_intent(req: IntentValidationRequest, broker: WasmBroker = Depends(get_wasm_broker)):
+async def validate_intent(req: IntentValidationRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     raw_payload = {**req.model_dump(), "timestamp": int(time.time() * 1000)}
     canonical_payload = StateAdapter.to_canonical_bytes(raw_payload).decode('utf-8')
     res = await broker.invoke("validate_intent", canonical_payload)
@@ -53,7 +53,7 @@ async def validate_intent(req: IntentValidationRequest, broker: WasmBroker = Dep
     summary="2. Execute Compute", 
     response_model=ExecuteComputeResponse
 )
-async def execute_compute(req: ExecuteComputeRequest, broker: WasmBroker = Depends(get_wasm_broker)):
+async def execute_compute(req: ExecuteComputeRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     res = await broker.execute(code=req.code, variables=req.variables)
     
     if not res.success:
@@ -66,7 +66,7 @@ async def execute_compute(req: ExecuteComputeRequest, broker: WasmBroker = Depen
     summary="3. Generate Proof", 
     response_model=ProofGenerationResponse
 )
-async def generate_proof(req: ProofGenerationRequest, broker: WasmBroker = Depends(get_wasm_broker)):
+async def generate_proof(req: ProofGenerationRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     canonical_payload = StateAdapter.to_canonical_bytes(req.model_dump()).decode('utf-8')
     res = await broker.invoke("generate_proof", canonical_payload)
     
@@ -85,7 +85,7 @@ async def generate_proof(req: ProofGenerationRequest, broker: WasmBroker = Depen
 )
 async def submit_trade_intent(
     req: TradeIngressRequest,
-    broker: WasmBroker = Depends(get_wasm_broker),
+    broker: DphiBroker = Depends(get_wasm_broker),
     policy_engine: IngressPolicyEngine = Depends(get_ingress_policy)
 ):
     context = await policy_engine.resolve_context(agent_id=req.agent_id, action=req.action)

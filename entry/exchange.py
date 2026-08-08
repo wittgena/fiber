@@ -3,7 +3,7 @@ import asyncio
 from kernel.phase.reactor import KernelReactor
 from watcher.plane.emitter import get_emitter
 
-from entry.shadow.workflow import ExchangeWorkflow, ScenarioConfig
+from entry.workflow.exchange import ExchangeWorkflow, ScenarioConfig
 from entry.tracer.tester.chaos.injector import RpcChaosInjector
 from dphi.phase.tracer import TracerPipeline, E2EConfig
 from dphi.phase.config import mock_env

@@ -1,7 +1,7 @@
-# receptor.adapter.anchor
+# dphi.adapter.anchor
+## @lineage: receptor.adapter.anchor
 ## @lineage: receptor.surface.adapter.anchor
 ## @lineage: surface.adapter.anchor
-## @lineage: dphi.adapter.anchor
 ## @lineage: kernel.dphi.adapter.anchor
 import json
 import time
@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 
 from kernel.dphi.adapter.exchange import TransactionReceipt
-from kernel.dphi.broker import WasmBroker
+from kernel.dphi.broker import DphiBroker
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 
@@ -36,7 +36,7 @@ class AnchorResult:
     rupture_reason: Optional[str] = None
 
 class NexusAnchor:
-    def __init__(self, broker: WasmBroker, consensus_threshold: int = 1, allowed_committee: List[str] = None):
+    def __init__(self, broker: DphiBroker, consensus_threshold: int = 1, allowed_committee: List[str] = None):
         self.broker = broker
         self.consensus_threshold = consensus_threshold
         self.allowed_committee = allowed_committee or []
