@@ -16,7 +16,7 @@ from arch.contract.model.receptor import (
     EdgeState, EdgeHeader,
     ParityTripletSchema, AnchorProposalRequest, AnchorSealResponse
 )
-from dphi.epoch.audit.secret import SecretAuditor, get_secret_auditor
+from kernel.phase.audit.secret import SecretAuditor, get_secret_auditor
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
 from watcher.receptor.contract.model import AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope, ExportLogsServiceRequest
@@ -28,8 +28,8 @@ from watcher.plane.emitter import get_emitter, flow_scope
 
 from kernel.dphi.broker import DphiBroker, DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
-from dphi.adapter.anchor import NexusAnchor, AnchorProposal
-from kernel.phase.stream.store import LogStreamStore
+from phase.dphi.adapter.anchor import NexusAnchor, AnchorProposal
+from receptor.stream.store import LogStreamStore
 
 log = get_emitter("edge.core")
 

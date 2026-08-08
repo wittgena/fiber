@@ -16,7 +16,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from receptor.ingress.sentinel import get_projector, SecurityContext, MetaRuleDef
 from receptor.ingress.server.mcp import SecureMCPServer
-from dphi.epoch.audit.warden import AuditWarden
+from kernel.phase.audit.warden import AuditWarden
 from watcher.plane.emitter import get_emitter
 
 class ServerRunConfig(TypedDict, total=False):

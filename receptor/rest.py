@@ -16,7 +16,7 @@ from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpRulesetParser
 
 from kernel.dphi.broker import DphiBroker
-from kernel.phase.stream.store import LogStreamStore
+from receptor.stream.store import LogStreamStore
 from watcher.plane.emitter import get_emitter
 
 from receptor.edge.eco import eco_router
