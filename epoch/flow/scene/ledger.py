@@ -1,7 +1,5 @@
-# epoch.flow.scheme.ledger
-## @lineage: dphi.scheme.ledger
-## @lineage: epoch.scheme.ledger
-## @lineage: dphi.epoch.scheme.ledger
+# epoch.flow.scene.ledger
+## @lineage: epoch.flow.scheme.ledger
 import time
 import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519

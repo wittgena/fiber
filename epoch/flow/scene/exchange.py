@@ -1,7 +1,5 @@
-# epoch.flow.scheme.exchange
-## @lineage: dphi.scheme.exchange
-## @lineage: epoch.scheme.exchange
-## @lineage: dphi.epoch.scheme.exchange
+# epoch.flow.scene.exchange
+## @lineage: epoch.flow.scheme.exchange
 import time
 import json
 import hashlib
@@ -75,14 +73,7 @@ class ExchangeScene(SchemeRunner):
         self.report()
 
     async def _step1_gateway_ingress(self, agent_pub, intent_action):
-        """
-        @flow: Raw Request -> API Gateway Validation -> Session (Phase) Initialization
-        @spec: 
-          - [Resource Sandbox]: Imposes a 'Fuel/Press' compute limit on raw transaction intents.
-          - [Lock-free Concurrency]: Generates independent Session IDs (Phase IDs) without locking the global state tree.
-        """
         log.info(f"\n--- [Gateway Ingress] Validating trade intent from {agent_pub[:8]}... ---")
-        
         raw_intent = {
             "agent_id": agent_pub,
             "action": intent_action,
@@ -106,12 +97,6 @@ class ExchangeScene(SchemeRunner):
         return parity_triplet
 
     async def _step2_exchange_entanglement(self, phase_a, phase_b):
-        """
-        @flow: Matching Engine -> Order Binding & State Merging
-        @spec:
-          - [Intent Matching]: Matches complementary orders directly. Eliminates need for AMM liquidity pools.
-          - [O(1) Parity Validation]: Binds execution states via XOR for constant-time state verification by validators.
-        """
         log.info("\n--- [Matching Engine] Binding Execution State A (Bid) and State B (Ask) ---")
         
         # Clearing logic validates if the paired Sessions leave zero remaining balance (imbalance/tension = 0)
@@ -136,18 +121,8 @@ class ExchangeScene(SchemeRunner):
         return {"parity": unified_parity, "repos": entangled_repos}
 
     async def _step3_nexus_collapse(self, entangled_state) -> List[str]:
-        """
-        @flow: Settlement -> Seal Epoch
-        @spec:
-          - [Deterministic Clearing]: Requires tripartite M-of-N consensus (Buyer + Seller + Clearing Engine).
-          - [Finality Commit]: Commits the pending matched state into a single, permanent Ledger State (Nexus ID).
-        @return: The list of cryptographic signatures representing the M-of-N consensus.
-        """
         log.info("\n--- [Trade Settlement] Finalizing clearing via 3-of-3 Multi-sig Consensus ---")
-        
         parity = entangled_state["parity"]
-        
-        # Construct Anchor state for deterministic settlement commit
         anchor_commit = StateAdapter.build_anchor_commit(
             parity=parity,
             parent_nexus_id=0, # Independent clearing batch genesis

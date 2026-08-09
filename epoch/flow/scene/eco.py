@@ -1,7 +1,5 @@
-# epoch.flow.scheme.eco
-## @lineage: dphi.scheme.eco
-## @lineage: epoch.scheme.eco
-## @lineage: dphi.epoch.scheme.eco
+# epoch.flow.scene.eco
+## @lineage: epoch.flow.scheme.eco
 import time
 import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
