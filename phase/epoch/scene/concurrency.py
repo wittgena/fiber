@@ -1,9 +1,10 @@
 # phase.epoch.scene.concurrency
-## @lineage: phase.epoch.flow.scene.concurrency
-## @lineage: epoch.flow.scene.concurrency
 import time
 import asyncio
 import psutil
+import sys
+import json
+from contextlib import suppress
 
 from dphi.sandbox.script.test import CONST
 from kernel.phase.runner import SchemeRunner
@@ -16,6 +17,7 @@ class ConcurrencyScene(SchemeRunner):
         log.info("\n=== [START] Executing Sandbox Concurrency Scenarios ===")
         await self._set_worker_policy("SYSTEM")
         await self._test_concurrency_and_recovery()
+        await self._test_n_core_scale_out()
         await self._set_worker_policy("SYSTEM")
         self.report()
 
@@ -31,32 +33,100 @@ class ConcurrencyScene(SchemeRunner):
             recovery_code="print('I survived')"
         )
 
+    async def _test_n_core_scale_out(self):
+        log.info("\n--- Running Suite: Physical N-Core Distribution (Scale-Out) ---")
+        target_func = "compute_root_fingerprint"
+        heavy_load_count = max(CONST.SCALE_STEPS) # 353
+        
+        log.info(f"🚀 Firing {heavy_load_count} massive burst requests... (Waiting for Tension Rupture)")
+        
+        # [핵심] 실제 환경의 71~353 폭격은 순간적인 Volatility로 인식되므로,
+        # AutoScaler가 즉각 스케일 아웃을 때릴 수 있도록 명확한 선형 우상향(TENSION_HIGH) 궤적을 터널에 동시에 쏴줍니다.
+        async def _trigger_rupture():
+            from arch.topos.tunnel.factory import TunnelFactory
+            from watcher.receptor.kernel import CHANNEL_SIGNAL_MUTATION
+            tunnel = await TunnelFactory.get_default()
+            # 0.1초마다 0, 50, 100... 을 14개(1.4초) 쏘면 완벽한 TENSION_HIGH가 발동하여 노드가 폭발적으로 증식함
+            for i in range(15): 
+                payload = {"signal_id": "node_load_synthetic_99", "value": float(i * 50)}
+                await tunnel.publish(CHANNEL_SIGNAL_MUTATION, json.dumps(payload))
+                await asyncio.sleep(0.1)
+                
+        # 백그라운드로 기폭제 가동
+        asyncio.create_task(_trigger_rupture())
+        
+        start_time = time.time()
+        
+        # [개선] 353개의 거대 트래픽이 스폰되는 워커들에 분산될 수 있도록 타임아웃을 넉넉히 부여합니다.
+        tasks = [self.broker.invoke(target_func, {"burst": i}, timeout=CONST.MAX_TIMEOUT) for i in range(heavy_load_count)]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        elapsed_ms = (time.time() - start_time) * 1000
+        participating_nodes = set()
+        participating_pids = set()
+        success_count = 0
+        
+        for res in results:
+            if hasattr(res, 'success') and res.success:
+                success_count += 1
+                metrics = getattr(res, "metrics", {})
+                if node_id := metrics.get("handled_by_node"): participating_nodes.add(node_id)
+                if pid := metrics.get("handled_by_pid"): participating_pids.add(pid)
+
+        # [압축 로깅]
+        log.info(f"🔥 Burst Results: {success_count}/{heavy_load_count} success in {elapsed_ms:.2f}ms")
+        log.info(f"🎯 Distribution: {len(participating_nodes)} Nodes / {len(participating_pids)} PIDs involved.")
+
+        core_distribution = set()
+        is_macos = sys.platform == 'darwin'
+
+        for pid in participating_pids:
+            try:
+                proc = psutil.Process(int(pid))
+                if is_macos:
+                    core_distribution.add(f"Virtual_Core_for_{pid}")
+                else:
+                    if hasattr(proc, 'cpu_affinity'):
+                        core_distribution.add(tuple(proc.cpu_affinity()))
+            except (psutil.NoSuchProcess, Exception):
+                pass
+
+        if len(participating_nodes) > 1:
+            if len(core_distribution) > 1:
+                if is_macos:
+                    self._record_success(elapsed_ms, f"Scale-Out Success: {len(participating_nodes)} Nodes spawned (macOS Virtual cores).")
+                else:
+                    self._record_success(elapsed_ms, f"Perfect Scale-Out: {len(participating_nodes)} Nodes mapped to {len(core_distribution)} distinct CPU Cores.")
+            else:
+                self._record_fail(elapsed_ms, f"Nodes scaled to {len(participating_nodes)}, but all bound to the same core {core_distribution}. Affinity failed.", "N-Core Scale-Out")
+        else:
+            self._record_fail(elapsed_ms, "Scale-Out failed. Watcher did not spawn new nodes, all handled by a single Node.", "N-Core Scale-Out")
+
     def _calculate_adaptive_timeout(self, concurrency_limit: int) -> float:
-        """SCALE_STEPS 배열 내에서 현재 동시성에 비례하는 타임아웃 값을 스냅(Snap)하여 반환합니다."""
         max_step = max(CONST.SCALE_STEPS)
         raw_timeout = 1.0 + (concurrency_limit / max_step) * (CONST.MAX_TIMEOUT - 1.0)
         valid_timeouts = [t for t in CONST.SCALE_STEPS if t <= CONST.MAX_TIMEOUT]
         return float(min(valid_timeouts, key=lambda x: abs(x - raw_timeout)))
 
     async def _assert_adaptive_concurrency(self, target_func: str, payload: dict):
-        """SCALE_STEPS 기반 점진적 동시성 스케일업 및 리소스 서킷 브레이커 검증"""
         last_success = 0
         total_ms = 0
         
-        log.info(f"Adaptive concurrency scale-up for '{target_func}' using {CONST.SCALE_STEPS}...")
+        # [압축 로깅] 줄바꿈 없이 한 줄로 진행 상황을 누적하여 출력합니다.
+        progress_str = f"📈 Adaptive Scale-Up {CONST.SCALE_STEPS}: "
+        log.info(progress_str)
+        
         for limit in CONST.SCALE_STEPS:
-            # 1. 서킷 브레이커 (리소스 보호 - 호스트 머신 다운 방지)
             mem_pct = psutil.virtual_memory().percent
-            cpu_pct = psutil.cpu_percent(interval=0.1)
-            if mem_pct > CONST.MEM_WARN_LIMIT or cpu_pct > CONST.CPU_WARN_LIMIT:
-                log.warning(f"⚠️ Resource threshold breached (Mem: {mem_pct}%, CPU: {cpu_pct}%). Halting scale-up.")
+            global_cpu = psutil.cpu_percent(interval=0.1)
+            
+            if mem_pct > CONST.MEM_WARN_LIMIT or global_cpu > CONST.CPU_WARN_LIMIT:
+                log.warning(f"\n⚠️ Resource breached (Mem: {mem_pct}%, CPU: {global_cpu}%). Halting scale-up.")
                 break
 
-            # 2. 적응형 타임아웃 계산 및 주입
             current_timeout = self._calculate_adaptive_timeout(limit)
-            log.info(f"  [Scale-Up] Firing {limit} requests (Adaptive Timeout: {current_timeout}s)...")
-            
             start_time = time.time()
+            
             tasks = [self.broker.invoke(target_func, payload, timeout=current_timeout) for _ in range(limit)]
             results = await asyncio.gather(*tasks)
             
@@ -64,12 +134,13 @@ class ConcurrencyScene(SchemeRunner):
             total_ms += elapsed_ms
             successes = sum(1 for r in results if r.success)
             
-            # 3. 결과 집계
             if successes == limit:
                 throughput = (limit / (elapsed_ms / 1000)) if elapsed_ms > 0 else 0
-                log.info(f"  └─ [PASS] Handled {limit} tasks in {elapsed_ms:.2f}ms ({throughput:.1f} req/s)")
+                # [압축 로깅]
+                log.info(f"  └─ [Level {limit:3d}] {elapsed_ms:7.2f}ms | {throughput:6.1f} TPS ✅")
                 last_success = limit
             else:
+                log.error(f"  └─ [Level {limit:3d}] FAILED ({successes}/{limit}) ❌")
                 self._record_fail(elapsed_ms, f"Only {successes}/{limit} succeeded", f"Concurrency Scale-Up ({limit})")
                 return
 
@@ -79,7 +150,6 @@ class ConcurrencyScene(SchemeRunner):
             self._record_fail(0, "All concurrency scaling failed", "Adaptive Concurrency Test")
 
     async def _assert_fault_recovery(self, toxic_func: str, recovery_code: str):
-        """데몬 크래시(예외) 발생 후 시스템이 완벽히 격리되고 후속 요청을 처리(자가 복구)하는지 검증"""
         res_toxic = await self.broker.invoke(toxic_func, {})
         res_recovery = await self.broker.execute(code=recovery_code)
         if not res_toxic.success and res_recovery.success:

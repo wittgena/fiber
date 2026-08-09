@@ -1,6 +1,4 @@
 # dphi.sandbox.script.test
-## @lineage: epoch.sandbox.script.test
-## @lineage: epoch.flow.scene.sandbox.script.test
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict, List
 
@@ -114,9 +112,9 @@ class TestConstants:
     PAYLOAD_50K: str = "A" * 50_000
     PAYLOAD_150K: str = "A" * 150_000
     
-    SCALE_STEPS: List[int] = field(default_factory=lambda: [1, 3, 5, 7, 11, 17, 23, 46, 71])
-    MAX_TIMEOUT: float = 17.0
+    SCALE_STEPS: List[int] = field(default_factory=lambda: [1, 5, 17, 46, 71, 128, 256, 353])
     
+    MAX_TIMEOUT: float = 35.0 
     MEM_WARN_LIMIT: float = 85.0
     CPU_WARN_LIMIT: float = 95.0
     
