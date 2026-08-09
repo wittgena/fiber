@@ -28,7 +28,7 @@ from watcher.plane.emitter import get_emitter, flow_scope
 
 from kernel.dphi.broker import DphiBroker, DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
-from phase.dphi.adapter.anchor import NexusAnchor, AnchorProposal
+from dphi.adapter.anchor import NexusAnchor, AnchorProposal
 from receptor.stream.store import LogStreamStore
 
 log = get_emitter("edge.core")

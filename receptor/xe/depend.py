@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import Request, HTTPException, status
 
-from phase.dphi.adapter.anchor import NexusAnchor
+from dphi.adapter.anchor import NexusAnchor
 from receptor.xe.profile import BenchProfile
 
 from arch.topos.tunnel.subs import DistributedPubSub
