@@ -1,4 +1,5 @@
-# phase.mesh.syzygy
+# phase.chain.syzygy
+## @lineage: phase.mesh.syzygy
 ## @lineage: kernel.phase.mesh.scheme.syzygy
 import json
 import time

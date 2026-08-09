@@ -1,9 +1,5 @@
-# phase.node.bound
-## @lineage: watcher.ator.node.bound
-## @lineage: arch.topos.ator.node.bound
-## @lineage: phase.ator.node.bound
-## @lineage: watcher.xe.node.bound
-## @lineage: eco.watcher.observer.bound
+# phase.node.contract.bound
+## @lineage: phase.node.bound
 from __future__ import annotations
 import asyncio
 import math

@@ -1,10 +1,5 @@
-# phase.node.network
-## @lineage: watcher.ator.node.network
-## @lineage: arch.topos.ator.node.network
-## @lineage: phase.ator.node.network
-## @lineage: watcher.xe.node.network
-## @lineage: meta.inter.network
-## @lineage: fiber.inter.network
+# phase.node.contract.network
+## @lineage: phase.node.network
 import math
 import random
 from typing import Dict, Any, List, Optional

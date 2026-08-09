@@ -1,9 +1,4 @@
 # phase.node.sensor
-## @lineage: watcher.ator.node.sensor
-## @lineage: arch.topos.ator.node.sensor
-## @lineage: phase.ator.node.sensor
-## @lineage: watcher.xe.node.sensor
-## @lineage: meta.plane.node.sensor
 import math
 import random
 from typing import List, Dict, Optional, Any

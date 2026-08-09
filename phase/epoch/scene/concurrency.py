@@ -39,25 +39,17 @@ class ConcurrencyScene(SchemeRunner):
         heavy_load_count = max(CONST.SCALE_STEPS) # 353
         
         log.info(f"🚀 Firing {heavy_load_count} massive burst requests... (Waiting for Tension Rupture)")
-        
-        # [핵심] 실제 환경의 71~353 폭격은 순간적인 Volatility로 인식되므로,
-        # AutoScaler가 즉각 스케일 아웃을 때릴 수 있도록 명확한 선형 우상향(TENSION_HIGH) 궤적을 터널에 동시에 쏴줍니다.
         async def _trigger_rupture():
             from arch.topos.tunnel.factory import TunnelFactory
             from watcher.receptor.kernel import CHANNEL_SIGNAL_MUTATION
             tunnel = await TunnelFactory.get_default()
-            # 0.1초마다 0, 50, 100... 을 14개(1.4초) 쏘면 완벽한 TENSION_HIGH가 발동하여 노드가 폭발적으로 증식함
             for i in range(15): 
                 payload = {"signal_id": "node_load_synthetic_99", "value": float(i * 50)}
                 await tunnel.publish(CHANNEL_SIGNAL_MUTATION, json.dumps(payload))
                 await asyncio.sleep(0.1)
                 
-        # 백그라운드로 기폭제 가동
         asyncio.create_task(_trigger_rupture())
-        
         start_time = time.time()
-        
-        # [개선] 353개의 거대 트래픽이 스폰되는 워커들에 분산될 수 있도록 타임아웃을 넉넉히 부여합니다.
         tasks = [self.broker.invoke(target_func, {"burst": i}, timeout=CONST.MAX_TIMEOUT) for i in range(heavy_load_count)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
@@ -73,10 +65,8 @@ class ConcurrencyScene(SchemeRunner):
                 if node_id := metrics.get("handled_by_node"): participating_nodes.add(node_id)
                 if pid := metrics.get("handled_by_pid"): participating_pids.add(pid)
 
-        # [압축 로깅]
         log.info(f"🔥 Burst Results: {success_count}/{heavy_load_count} success in {elapsed_ms:.2f}ms")
         log.info(f"🎯 Distribution: {len(participating_nodes)} Nodes / {len(participating_pids)} PIDs involved.")
-
         core_distribution = set()
         is_macos = sys.platform == 'darwin'
 
@@ -112,7 +102,6 @@ class ConcurrencyScene(SchemeRunner):
         last_success = 0
         total_ms = 0
         
-        # [압축 로깅] 줄바꿈 없이 한 줄로 진행 상황을 누적하여 출력합니다.
         progress_str = f"📈 Adaptive Scale-Up {CONST.SCALE_STEPS}: "
         log.info(progress_str)
         
@@ -136,7 +125,6 @@ class ConcurrencyScene(SchemeRunner):
             
             if successes == limit:
                 throughput = (limit / (elapsed_ms / 1000)) if elapsed_ms > 0 else 0
-                # [압축 로깅]
                 log.info(f"  └─ [Level {limit:3d}] {elapsed_ms:7.2f}ms | {throughput:6.1f} TPS ✅")
                 last_success = limit
             else:

@@ -1,9 +1,5 @@
-# phase.node.regime
-## @lineage: watcher.ator.node.regime
-## @lineage: arch.topos.ator.node.regime
-## @lineage: phase.ator.node.regime
-## @lineage: watcher.xe.node.regime
-## @lineage: meta.ops.kube.ops
+# phase.node.contract.field.regime
+## @lineage: phase.node.regime
 from __future__ import annotations
 import json
 import asyncio
@@ -26,7 +22,7 @@ from kernel.bind.resolver import find_current_self
 from kernel.phase.runtime.flow.cont import LoopCarrier
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("field.topos", phase="BOOT")
+log = get_emitter("field.regime", phase="BOOT")
 
 @contract.regime("node.regime")
 class NodeRegime(ISystemRegime):
