@@ -1,14 +1,11 @@
 # phase.entry.exchange
-## @lineage: phase.epoch.exchange
-## @lineage: epoch.entry.exchange
-## @lineage: entry.exchange
 import asyncio
 import random
 from typing import List, Callable, Coroutine, Dict, Any
 from dataclasses import dataclass
 import httpx
 
-from kernel.phase.reactor import KernelReactor
+from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter, flow_scope
 
 from phase.epoch.config.dphi import mock_env
@@ -19,7 +16,7 @@ from receptor.rest import api as rest_app, lifespan
 from receptor.ingress.tracer import HttpFlowTracer, RouteRegistry
 from receptor.ingress.sentinel import RpcChaosInjector, ChaosPayloadLibrary
 
-from dphi.workflow.scene import SceneWorkflow, E2EConfig, SceneConfig, TargetOp
+from dphi.workflow.edge import EdgeWorkflow, E2EConfig, SceneConfig, TargetOp
 from dphi.workflow.exchange import ExchangeWorkflow, ScenarioConfig
 from dphi.tracer.dphi import DphiTracer
 
@@ -113,7 +110,7 @@ class TracerPipeline(PipelineRunner):
                 event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
             ) as client:
                 
-                runner = SceneWorkflow(
+                runner = EdgeWorkflow(
                     config=self.config, 
                     scene_config=self.scene_config,
                     routes=self.routes,
@@ -278,7 +275,7 @@ class ExchangeSuiteRunner:
 
 def main():
     app = ExchangeSuiteRunner()
-    KernelReactor.ignite(main_coro_func=app.execute)
+    PhaseReactor.ignite(main_coro_func=app.execute)
 
 if __name__ == "__main__":
     main()

@@ -13,7 +13,7 @@ from phase.epoch.config.dphi import mock_env
 from phase.epoch.config.builder.phase import PhaseBuilder, DvmConfig, EvmIntent
 from dphi.workflow.evm import EvmWorkflow 
 
-from kernel.phase.reactor import KernelReactor
+from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("entry.dvm")
@@ -190,7 +190,7 @@ class DvmPipeline:
 def main() -> None:
     config = DvmConfig()
     app = DvmPipeline(config)
-    KernelReactor.ignite(lambda: app.execute())
+    PhaseReactor.ignite(lambda: app.execute())
 
 if __name__ == "__main__":
     main()

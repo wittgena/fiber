@@ -1,9 +1,4 @@
 # dphi.adapter.eco
-## @lineage: phase.dphi.adapter.eco
-## @lineage: receptor.adapter.eco
-## @lineage: receptor.surface.adapter.eco
-## @lineage: surface.adapter.eco
-## @lineage: kernel.dphi.adapter.eco
 import os
 import time
 import json

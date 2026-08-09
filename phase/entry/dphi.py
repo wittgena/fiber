@@ -12,7 +12,7 @@ import phase.epoch.scene as scene_module
 from dphi.tracer.tester.wasm import WasmTester
 from dphi.tracer.dphi import DphiTracer
 
-from kernel.phase.reactor import KernelReactor
+from kernel.phase.reactor import PhaseReactor
 from kernel.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 
@@ -118,7 +118,7 @@ def main():
     command = args.command or "all"
     config = PipelineConfig()
     app = DphiFlow(command=command, suites=args.suites, config=config)
-    KernelReactor.ignite(app.run)
+    PhaseReactor.ignite(app.run)
 
 if __name__ == "__main__":
     main()

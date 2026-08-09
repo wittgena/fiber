@@ -1,6 +1,4 @@
-# dphi.workflow.scene
-## @lineage: epoch.workflow.scene
-## @lineage: entry.workflow.scene
+# dphi.workflow.edge
 import uuid
 import time
 import hashlib
@@ -21,8 +19,7 @@ class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
 class GlobalAnchorMsg(WorkflowMessage): pass
 
-class SceneWorkflow(Workflow):
-    """도메인 데이터 생성 로직을 외부로 위임하고, 오직 통신 검증 로직만 수행합니다."""
+class EdgeWorkflow(Workflow):
     def __init__(self, config: E2EConfig, scene_config: SceneConfig, routes: RouteRegistry, client: httpx.AsyncClient, inject_faults: bool = False):
         super().__init__(name="E2E_SCENE_NET")
         self.config = config
