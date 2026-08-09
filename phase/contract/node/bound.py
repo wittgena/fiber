@@ -1,5 +1,5 @@
-# phase.node.contract.bound
-## @lineage: phase.node.bound
+# phase.contract.node.bound
+## @lineage: phase.node.contract.bound
 from __future__ import annotations
 import asyncio
 import math

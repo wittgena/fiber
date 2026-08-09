@@ -1,5 +1,5 @@
-# phase.node.contract.network
-## @lineage: phase.node.network
+# phase.contract.node.network
+## @lineage: phase.node.contract.network
 import math
 import random
 from typing import Dict, Any, List, Optional

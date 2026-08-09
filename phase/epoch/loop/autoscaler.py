@@ -1,5 +1,5 @@
-# phase.chain.loop.autoscaler
-## @lineage: phase.loop.autoscaler
+# phase.epoch.loop.autoscaler
+## @lineage: phase.chain.loop.autoscaler
 import asyncio
 import json
 from typing import Callable, Optional

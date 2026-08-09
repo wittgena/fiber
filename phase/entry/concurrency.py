@@ -14,7 +14,7 @@ from kernel.phase.runtime.gateway import RuntimeGateway
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
 
-from phase.chain.loop.autoscaler import PhaseAutoScaler
+from phase.epoch.loop.autoscaler import PhaseAutoScaler
 from arch.topos.tunnel.factory import TunnelFactory
 from watcher.receptor.bootstrap import receptor_bootstrap
 from phase.epoch.scene.concurrency import ConcurrencyScene
@@ -62,6 +62,10 @@ class ConcurrencyFlow:
         global _worker_spawn_count
         env = os.environ.copy()
         env["DPHI_WORKER_IDX"] = str(_worker_spawn_count)
+        
+        # [핵심 개선] 새로 스폰되는 워커에게 테스트 환경의 격리된 스트림(Queue) 정보를 명시적으로 주입합니다.
+        env["DPHI_WASM_STREAM_SUFFIX"] = "tester_isolated"
+        env["DPHI_PHASE_ENV"] = "TEST"
         
         self.log.warning(f"[AutoScaler] 🟢 Spawning Physical Phase Runtime (Worker Node: Idx {_worker_spawn_count})...")
         proc = subprocess.Popen([sys.executable, "-m", "kernel.phase.runtime.node"], env=env)

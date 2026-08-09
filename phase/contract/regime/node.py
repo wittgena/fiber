@@ -1,5 +1,5 @@
-# phase.node.contract.field.regime
-## @lineage: phase.node.regime
+# phase.contract.regime.node
+## @lineage: phase.node.contract.field.regime
 from __future__ import annotations
 import json
 import asyncio

@@ -1,4 +1,5 @@
-# phase.node.sensor
+# phase.contract.sensor
+## @lineage: phase.node.sensor
 import math
 import random
 from typing import List, Dict, Optional, Any
@@ -6,7 +7,7 @@ from dataclasses import dataclass, field, asdict
 
 from arch.contract.interface import IDynamicsKernel
 from arch.contract.registry.unified import contract
-from phase.node.config import KernelConfig
+from phase.contract.config import KernelConfig
 
 @contract.kernel("sensor.ator")
 class SensorAtor(IDynamicsKernel):

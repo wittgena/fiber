@@ -1,8 +1,5 @@
-# phase.node.config
-## @lineage: watcher.ator.node.config
-## @lineage: arch.topos.ator.node.config
-## @lineage: phase.ator.node.config
-## @lineage: watcher.xe.node.config
+# phase.contract.config
+## @lineage: phase.node.config
 import math
 import json
 from dataclasses import dataclass, asdict

@@ -6,7 +6,7 @@ import subprocess
 import json
 from typing import List
 
-from phase.chain.loop.autoscaler import PhaseAutoScaler
+from phase.epoch.loop.autoscaler import PhaseAutoScaler
 
 from arch.topos.tunnel.factory import TunnelFactory
 from kernel.phase.reactor import PhaseReactor

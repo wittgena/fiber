@@ -1,5 +1,5 @@
-# phase.node.ator.reflector
-## @lineage: watcher.ator.reflector
+# phase.contract.ator.reflector
+## @lineage: phase.node.ator.reflector
 import ast
 import asyncio
 import inspect
@@ -74,11 +74,6 @@ class AtorReflector(Transduction):
 
 @contract.ator("runtime.aligner")
 class RuntimeAligner(Align):
-    """
-    @role: Ribosome Attachment
-    @flow: mRNA(runtime_nodes) → attach to Ribosome(AtorRuntime) → WASM Resonance
-    """
-
     def align(self, flow: PhaseFlow, spec: Dict[str, Any]) -> Dict[str, Any]:
         runtime_nodes = flow.payload
 
@@ -100,8 +95,6 @@ class RuntimeAligner(Align):
                 }
 
             entry = next(iter(runtime_nodes))
-            
-            # Ignite the independent AtorRuntime which will communicate with the WASM Kernel
             flow_controller = AtorRuntime(
                 entry=entry,
                 nodes=runtime_nodes,

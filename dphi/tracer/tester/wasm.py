@@ -1,10 +1,4 @@
 # dphi.tracer.tester.wasm
-## @lineage: phase.tracer.tester.wasm
-## @lineage: entry.tracer.tester.wasm
-## @lineage: receptor.surface.tracer.tester.wasm
-## @lineage: surface.tracer.tester.wasm
-## @lineage: surface.tester.wasm
-## @lineage: dphi.wasm.tester
 import sys
 import json
 import asyncio
@@ -43,17 +37,14 @@ class WasmTester:
                         return
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
-            pass # 정상적인 태스크 취소 흐름
+            pass
 
     async def _run_all_suites(self, broker: DphiBroker) -> int:
         """@desc: Sequentially executes injected scenario suites without hardcoded dependencies"""
         total_fails = 0
-        
-        # 주입받은 시나리오 딕셔너리를 순회하며 동적 실행
         for suite_name, suite_cls in self.suites.items():
             log.info(f"\n>>> [PHASE] Starting Test Suite: {suite_name.upper()} <<<")
             try:
-                # 클래스 인스턴스화 (모든 시나리오는 broker를 주입받는 공통 인터페이스를 따른다고 가정)
                 suite_instance = suite_cls(broker)
                 await suite_instance.run_all()
                 total_fails += suite_instance.fail_count
