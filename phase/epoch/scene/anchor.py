@@ -6,7 +6,6 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from dphi.sandbox.runner import EpochBase
-from phase.epoch.config.eco import ActorIdentity
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.exchange import ExchangeAdapter
@@ -36,7 +35,6 @@ class LedgerSecuritySuite(SchemeRunner):
     """@desc: Multi-sig Consensus, Ed25519 Signatures, and Sybil Defense scenarios"""
     def __init__(self, broker):
         super().__init__(broker)
-        # 공통 ActorIdentity 사용
         self.committee = [ActorIdentity(f"Committee_{i}") for i in range(3)]
         self.committee_pubs = [member.pubkey_hex for member in self.committee]
         self.rogue = ActorIdentity("Rogue_Attacker")

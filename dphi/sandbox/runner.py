@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization
 from dphi.sandbox.script.test import ScriptDef
 from dphi.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from phase.epoch.config.client import PhaseBuilder
-from receptor.ext.client import ExtWalletClient
+from ext.client import ExtWalletClient
 
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter

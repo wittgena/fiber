@@ -1,4 +1,5 @@
-# receptor.ext.adapter
+# ext.adapter
+## @lineage: receptor.ext.adapter
 ## @lineage: receptor.ext.wallet
 import os
 import asyncio

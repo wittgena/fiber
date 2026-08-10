@@ -1,4 +1,5 @@
-# receptor.ext.evm.adapter
+# ext.evm.adapter
+## @lineage: receptor.ext.evm.adapter
 ## @lineage: dphi.adapter.evm
 import asyncio
 from typing import Dict, Any, List
@@ -7,7 +8,7 @@ from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from phase.epoch.config.dphi import mock_env
-from receptor.ext.evm.config import EvmBuilder
+from ext.evm.config import EvmBuilder
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.evm")

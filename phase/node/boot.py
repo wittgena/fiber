@@ -1,7 +1,10 @@
 # phase.node.boot
 import os
 import asyncio
-import uvicorn  # 🌟 REST 서버 구동을 위해 추가
+import uvicorn
+
+from phase.node.reaper import SystemOps
+from receptor.rest import api as rest_app
 
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.contract.event.bus import AsyncEventBus
@@ -21,13 +24,10 @@ from watcher.plane.emitter import get_emitter
 from watcher.receptor.bootstrap import receptor_bootstrap
 from watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
 
-# 🌟 신규: Edge/Membrane REST API 앱 임포트
-from receptor.rest import api as rest_app
-
 log = get_emitter("phase.boot")
 
 _node_instance = None
-_rest_server_instance = None  # 🌟 Uvicorn 서버 인스턴스 보관용
+_rest_server_instance = None
 
 class KernelGateway:
     @classmethod
@@ -44,7 +44,6 @@ class KernelGateway:
         asyncio.create_task(state_mesh.start_mesh_sync())
         
         if topology == "EXT_PROC":
-            # ExtProcStreamHandler가 정의되어 있다고 가정합니다.
             stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
             asyncio.create_task(stream_handler.serve())
         else:
@@ -87,27 +86,37 @@ class RoutingExecutor(BaseExecutor):
         else:
             return await self.swarm_executor.execute(psi)
 
+async def clear_zombie_port(port: int):
+    reaper = SystemOps(redis_conn=None, tag="boot.reaper")
+    pids = await reaper.get_pids_from_port(port)
+    my_pid = str(os.getpid())
+    for pid in pids:
+        if pid == my_pid:
+            continue
+            
+        log.warning(f"[Boot] Port {port} is occupied by PID {pid} (Possibly suspended). Reaping...")
+        await reaper._execute_kill(pid, force=True)
+        
+    if pids:
+        await asyncio.sleep(0.5)
 
-# 🌟 신규: REST API(Edge 서버)를 비동기로 구동하는 함수
 async def start_rest_membrane():
     global _rest_server_instance
-    log.info("[Boot] Igniting REST Edge Membrane (FastAPI/Uvicorn) on Port 8000...")
-    
-    # uvicorn Config 객체를 통해 설정. 로그 포맷 충돌을 막기 위해 uvicorn 자체 접근 로그를 제한할 수 있습니다.
+    target_port = int(os.getenv("REST_PORT", 8000))
+    await clear_zombie_port(target_port)
+
+    log.info(f"[Boot] Igniting REST Edge Membrane (FastAPI/Uvicorn) on Port {target_port}...")
     config = uvicorn.Config(
         app=rest_app, 
         host="0.0.0.0", 
-        port=8000, 
+        port=target_port, 
         loop="uvloop", 
-        log_level="warning",  # Dphi 자체 로거(get_emitter)를 활용하므로 Uvicorn의 내부 로그는 최소화
+        log_level="warning", 
         access_log=False
     )
     _rest_server_instance = uvicorn.Server(config)
-    
-    # 서버를 백그라운드 태스크로 구동 (블로킹 방지)
     asyncio.create_task(_rest_server_instance.serve())
-    log.info("[Boot] REST Edge Membrane listening on http://0.0.0.0:8000")
-
+    log.info(f"[Boot] REST Edge Membrane listening on http://0.0.0.0:{target_port}")
 
 async def main_async():
     global _node_instance
@@ -124,11 +133,8 @@ async def main_async():
     log.info("[Boot] Igniting Physical Membrane Receptor...")
     tunnel = await TunnelFactory.get_default()
     asyncio.create_task(receptor_bootstrap(tunnel))
-
-    # 🌟 추가: Embedded Node 시작 전에 Edge REST 서버 띄우기
     await start_rest_membrane()
 
-    # [핵심 변경점] Subprocess 대신 단일 프로세스 내에 Embedded NodeRuntime 마운트
     log.info("[Boot] Igniting Embedded Phase Runtime Node...")
     completion_signal = asyncio.Event()
     
@@ -139,24 +145,19 @@ async def main_async():
 
     log.info("[Boot] Control Plane, Embedded Node & REST Membrane fully operational.")
     log.info("[Boot] Entering observation mode...")
-    
-    # 노드의 라이프사이클을 메인 루프가 대기하도록 설정
     await _node_instance.wait_until_stopped()
-
 
 async def teardown():
     global _node_instance, _rest_server_instance
     log.info("[Boot] Releasing system resources...")
     
-    # 🌟 추가: REST Edge 서버 Graceful Shutdown
     if _rest_server_instance:
         log.info("[Boot] Shutting down REST Edge Membrane...")
         _rest_server_instance.should_exit = True
     
-    # Embedded Node의 Graceful Shutdown 우선 수행
     if _node_instance and getattr(_node_instance, 'running', False):
         await _node_instance.shutdown()
-        
+
     await TunnelFactory.close_all()
     try:
         KernelLedger().close()
@@ -164,7 +165,6 @@ async def teardown():
         log.warning(f"[Boot] Error while releasing KernelStore lock: {e}")
         
     log.info("[Boot] Resource cleanup complete.")
-
 
 if __name__ == "__main__":
     PhaseReactor.ignite(main_coro_func=main_async, teardown_hook=teardown)
