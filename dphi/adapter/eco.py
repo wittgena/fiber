@@ -1,5 +1,4 @@
 # dphi.adapter.eco
-import os
 import time
 import json
 import hashlib
@@ -7,14 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
-
 from arch.xor.surge.model import DynamicSurgeModel
-from arch.xor.secret.manager import get_secret_str
-from watcher.plane.emitter import get_emitter
-from kernel.dphi.exchange.config import billing_config
-from kernel.dphi.cgroup import Tier
-
-log = get_emitter("dphi.adapter")
 
 class Ap2MandateConstraints(DynamicSurgeModel):
     max_spend_usdc: str
@@ -112,11 +104,13 @@ class EcoAdapter:
         cls, 
         invoice: X402Invoice, 
         agent_wallet_address: str,
-        wallet_adapter: Any = None
+        wallet_adapter: Any = None  # 타입 힌팅을 Any로 두어 순환 참조 방지
     ) -> X402SettlementReceipt:
         """@desc: Settles the strictly typed X402Invoice via injected WalletAdapter"""
         tx_hash = ""
-        if wallet_adapter and not wallet_adapter.simulate:
+        
+        if wallet_adapter and not getattr(wallet_adapter, "simulate", True):
+            # 분리된 WalletAdapter의 transfer 메서드를 호출
             tx_hash = wallet_adapter.transfer(
                 to_address=invoice.pay_to,
                 amount=invoice.amount_usdc,
@@ -150,58 +144,3 @@ class EcoAdapter:
             updated_state["x402_settlement_receipt"] = receipt.model_dump(exclude_none=True)
             
         return updated_state
-
-def inject_and_clear_secrets(secrets: dict[str, str], action_fn: callable):
-    os.environ.update(secrets)
-    try:
-        return action_fn()
-    finally:
-        for k in secrets.keys():
-            os.environ.pop(k, None)
-
-class WalletAdapter:
-    def __init__(
-        self, 
-        network_id: str = "base-sepolia", 
-        simulate: bool = False,
-        api_name: Optional[str] = None,
-        api_pkey: Optional[str] = None
-    ):
-        self.network_id = network_id
-        self.simulate = simulate
-        self.wallet = None
-        self._api_name = api_name
-        self._api_pkey = api_pkey
-        
-        if not self.simulate:
-            self._initialize_secure_wallet()
-
-    def _initialize_secure_wallet(self):
-        try:
-            from coinbase_agentkit import CdpWalletProvider
-        except ImportError as e:
-            log.error("[Wallet] coinbase_agentkit not installed.")
-            raise RuntimeError("Missing required SDK for secure wallet") from e
-
-        api_name = self._api_name or get_secret_str("CDP_API_KEY_NAME")
-        api_pkey = self._api_pkey or get_secret_str("CDP_API_KEY_PRIVATE_KEY")
-        
-        if not api_name or not api_pkey:
-            log.error("[Wallet] CDP API Keys missing.")
-            raise ValueError("Incomplete credentials for CDP Wallet initialization")
-
-        api_pkey = api_pkey.replace('\\n', '\n')
-        injected_secrets = {
-            "CDP_API_KEY_NAME": api_name,
-            "CDP_API_KEY_PRIVATE_KEY": api_pkey
-        }
-        
-        try:
-            self.wallet = inject_and_clear_secrets(
-                injected_secrets, 
-                lambda: CdpWalletProvider.create_wallet(network_id=self.network_id)
-            )
-            log.info(f"[Wallet] CDP Wallet created successfully on {self.network_id}")
-        except Exception as e:
-            log.error(f"[Wallet] Failed to initialize CDP Wallet: {e}")
-            raise

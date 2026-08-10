@@ -1,12 +1,11 @@
-# phase.contract.ator.runtime
-## @lineage: phase.node.ator.runtime
-## @lineage: watcher.ator.runtime
+# phase.node.ator.runtime
 import asyncio
 import json
 from typing import Dict, Any, List
+
+from arch.model.phase.flow import PhaseFlow, FlowState
 from kernel.dphi.broker import DphiBroker
 from watcher.plane.emitter import get_logger
-from arch.model.phase.flow import PhaseFlow, FlowState
 
 log = get_logger("ator.runtime")
 

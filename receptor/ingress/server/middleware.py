@@ -1,13 +1,4 @@
 # receptor.ingress.server.middleware
-## @lineage: epoch.time.ingress.server.middleware
-## @lineage: dphi.gov.server.middleware
-## @lineage: arch.gov.server.middleware
-## @lineage: kernel.topos.gov.server.middleware
-## @lineage: kernel.arch.gov.server.middleware
-## @lineage: arch.kernel.gov.middleware
-## @lineage: arch.server.gov.middleware
-## @lineage: arch.topos.server.middleware
-## @lineage: topos.xelog.middleware
 import time
 import hashlib
 import json

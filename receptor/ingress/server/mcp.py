@@ -1,13 +1,4 @@
 # receptor.ingress.server.mcp
-## @lineage: epoch.time.ingress.server.mcp
-## @lineage: dphi.gov.server.mcp
-## @lineage: arch.gov.server.mcp
-## @lineage: kernel.topos.gov.server.mcp
-## @lineage: kernel.arch.gov.server.mcp
-## @lineage: arch.kernel.gov.mcp
-## @lineage: arch.server.gov.mcp
-## @lineage: arch.topos.server.mcp
-# arch.topos.server.mcp (개선본)
 import inspect
 import json
 from typing import Any, Optional, List
@@ -94,9 +85,6 @@ class FastAPIMCPAdapter:
 
         # Internal Loopback Dispatcher
         async def dynamic_tool_handler(ctx: Any = None, **kwargs) -> str:
-            # [FIX 3] Auth Bypass 방어 (Security Context Propagation)
-            # LLM 스키마에서는 Depends를 제거하더라도, 런타임에는 MCP 클라이언트의 원래 세션/인증 헤더를
-            # 백엔드 루프백 호출(httpx)에 강제로 주입하여 FastAPI의 권한 검증이 동작하게 만듭니다.
             client_headers = {}
             if ctx and hasattr(ctx, "session_token"):
                 client_headers["Authorization"] = f"Bearer {ctx.session_token}"
@@ -122,8 +110,6 @@ class FastAPIMCPAdapter:
 
         dynamic_tool_handler.__name__ = tool_name
         dynamic_tool_handler.__doc__ = docstring
-
-        # LLM에게 노출되는 스키마에서만 시스템 파라미터를 숨김 처리
         original_sig = inspect.signature(route.endpoint)
         clean_params = []
         for param in original_sig.parameters.values():
@@ -136,11 +122,9 @@ class FastAPIMCPAdapter:
         self.mcp_server.tool()(dynamic_tool_handler)
         log.debug(f"[MCP Adapter] Tool mapped safely: {tool_name} -> [{http_method}] {path}")
 
-
 class SecureMCPServer(MCPServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # [NEW] Sentinel의 핵심 인가 엔진 연결
         self.gateway = ToposGateway()
 
     def bind_fastapi(self, app: FastAPI, allowed_tags: List[str] = ["mcp-exposed"]):
@@ -149,11 +133,7 @@ class SecureMCPServer(MCPServer):
         adapter.register_routes(allowed_tags=allowed_tags)
 
     async def _handle_call_tool(self, ctx, params):
-        # [FIX 4] Tool Poisoning / OS Command Injection 방어 (Gateway 인가)
-        # LLM이 특정 도구를 호출하기 직전, 파라미터 내부에 악성 셸 명령어나
-        # 인젝션 구문이 있는지 Sentinel의 ToposGateway가 평가하고 인가합니다.
         tool_name = params.name
-        
         is_authorized = await self.gateway.authorize(
             action_id=f"invoke_tool_{tool_name}",
             action="INVOKE_TOOL",
@@ -166,9 +146,7 @@ class SecureMCPServer(MCPServer):
                 TextContent(type="text", text="Security Exception: Tool execution blocked by Sentinel Gateway.")
             ]})()
 
-        # 인가 성공 시에만 도구 실행
         result = await super()._handle_call_tool(ctx, params)
-        
         if getattr(result, "is_error", False):
             result.content = [
                 TextContent(

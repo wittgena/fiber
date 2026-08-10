@@ -1,6 +1,4 @@
 # receptor.rest
-## @lineage: surface.rest
-## @lineage: dphi.eco.rest
 from contextlib import asynccontextmanager
 from typing import Optional
 from urllib.parse import urlparse
@@ -21,6 +19,7 @@ from watcher.plane.emitter import get_emitter
 
 from receptor.edge.eco import eco_router
 from receptor.edge.core import core_edge
+from receptor.edge.ext import ext_router
 
 log = get_emitter(__name__)
 
@@ -60,8 +59,7 @@ async def lifespan(app: FastAPI):
         app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
-        # 🌟 신규: OTLP 규격 파서 및 결정론적 데이터 추출 엔진 초기화
-        # 실제 운영 환경에서는 데이터베이스나 별도 JSON 설정 파일에서 규칙을 동적으로 불러올 수 있습니다.
+        # OTLP 규격 파서 및 결정론적 데이터 추출 엔진 초기화
         default_otlp_ruleset = {
             "global_config": {"required_root_keys": ["resourceLogs"]},
             "targets": [
@@ -110,8 +108,9 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
     )
     
     app.state.config = config
-    app.include_router(eco_router)
-    app.include_router(core_edge, tags=["mcp-exposed"])
+    app.include_router(eco_router)                      # /v1/eco/... (Compute, Exchange, Profile)
+    app.include_router(core_edge, tags=["mcp-exposed"]) # /v1/core/... (Logs, Audit, Anchor)
+    app.include_router(ext_router)                      # /v1/ext/... (Wallet, Payment 등 외부 통신 전담)
 
     app.add_middleware(SentinelFirewallMiddleware)
     app.add_middleware(LocalMiddleware, allow_origins=config.allow_cors_origins)

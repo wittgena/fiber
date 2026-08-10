@@ -1,5 +1,4 @@
-# phase.contract.ator.reflector
-## @lineage: phase.node.ator.reflector
+# phase.node.ator.reflector
 import ast
 import asyncio
 import inspect

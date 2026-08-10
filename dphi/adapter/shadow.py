@@ -1,9 +1,4 @@
 # dphi.adapter.shadow
-## @lineage: phase.dphi.adapter.shadow
-## @lineage: receptor.adapter.shadow
-## @lineage: receptor.surface.adapter.shadow
-## @lineage: surface.adapter.shadow
-## @lineage: kernel.dphi.adapter.shadow
 import time
 import json
 import hashlib

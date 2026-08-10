@@ -26,7 +26,6 @@ class EvmRunner:
         return int(val)
 
     def _build_intent(self, mode: str, revert: bool, scenario_type: str) -> EvmIntent:
-        # 1. 커스텀 Calldata가 직접 전달된 경우
         if self.config.calldata != "0x" and scenario_type != "DPHI_INVERSION":
             return EvmIntent(
                 target=self.config.target,
@@ -37,7 +36,6 @@ class EvmRunner:
                 scenario_type=scenario_type
             )
 
-        # 2. Cross-VM Inversion 특별 처리
         if scenario_type == "DPHI_INVERSION":
             return EvmIntent(
                 target="0x0000000000000000000000000000000000000099",
@@ -46,10 +44,7 @@ class EvmRunner:
                 scenario_type=scenario_type
             )
 
-        # 3. PhaseBuilder를 통해 Base Intent 객체 획득 (dict 변환 불필요)
         intent = PhaseBuilder.evm_user_intent(scenario_type=scenario_type, should_revert=revert)
-
-        # 4. 런타임 모드 및 시나리오 특화 변형 (Mutation)
         if mode == "live":
             intent.caller = mock_env.agents.beta.evm_address
 
@@ -75,7 +70,6 @@ class EvmRunner:
             mode=mode
         )
         return await workflow.start()
-
 
 class DvmPipeline:
     def __init__(self, config: DvmConfig):

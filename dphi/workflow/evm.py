@@ -1,13 +1,16 @@
 # dphi.workflow.evm
-## @lineage: epoch.workflow.evm
-## @lineage: entry.workflow.evm
 import sys
 import argparse
 import asyncio
 import json
 from typing import Dict, Any, Optional
 
-from web3 import AsyncWeb3
+try:
+    from eth_utils import keccak
+except ImportError:
+    from web3 import Web3
+    keccak = Web3.keccak
+
 from phase.epoch.config.dphi import mock_env
 from phase.epoch.config.builder.phase import NotarySwarm
 from dphi.adapter.shadow import ShadowAdapter
@@ -33,6 +36,7 @@ class EvmWorkflow(Workflow):
         self.user_intent = user_intent
         self.mode = mode
         
+        # 🌟 복구됨: DVM의 "상태 투영(Read)"은 EVMOrchestrator가 Alchemy RPC를 통해 직접 수행하는 것이 올바른 구조입니다.
         if self.mode == "inversion":
             self.orchestrator = InversionOrchestrator(user_intent=self.user_intent)
         elif self.mode == "mock":
@@ -75,6 +79,8 @@ class EvmWorkflow(Workflow):
                     "value": hex(self.value) if self.value else "0x0",
                     "gas": hex(10_000_000) 
                 }
+                
+                # 🌟 오류 해결의 핵심: Access List 생성은 외부 지갑(Wallet)이 아닌 오케스트레이터(RPC)의 몫입니다.
                 access_list = await self.orchestrator.generate_access_list(tx_params)
                 self.log.info(f"  └ Access List generated successfully for {len(access_list)} distinct addresses.")
                 
@@ -103,9 +109,11 @@ class EvmWorkflow(Workflow):
                 slot_index = self.user_intent.get("allowance_slot_index", 4)
                 mapping_slot = hex(slot_index).replace("0x", "").zfill(64)
                 
-                w3 = AsyncWeb3()
-                inner_hash = w3.keccak(hexstr=owner_pad + mapping_slot).hex().replace("0x", "")
-                allowance_slot = w3.keccak(hexstr=spender_pad + inner_hash).hex()
+                # Web3 객체 생성 없이 keccak 유틸 함수를 바로 사용합니다.
+                inner_hash = keccak(hexstr=owner_pad + mapping_slot).hex().replace("0x", "")
+                allowance_slot = keccak(hexstr=spender_pad + inner_hash).hex()
+                if not allowance_slot.startswith("0x"):
+                    allowance_slot = "0x" + allowance_slot
                 
                 overrides_list.append({
                     "slot_hash": allowance_slot,

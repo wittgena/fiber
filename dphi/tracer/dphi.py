@@ -1,6 +1,4 @@
 # dphi.tracer.dphi
-## @lineage: phase.tracer.dphi
-## @lineage: entry.tracer.dphi
 import sys
 import asyncio
 import base64

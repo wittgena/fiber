@@ -1,3 +1,4 @@
+# phase.chain.recovery
 """
 Module: phase.chain.recovery
 Description: 체인 단편화 복구(Recovery) 및 위상 분기(Topological Drift) 해결을 담당하는 런타임 러너

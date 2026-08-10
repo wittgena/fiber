@@ -1,6 +1,4 @@
 # dphi.workflow.exchange
-## @lineage: epoch.workflow.exchange
-## @lineage: entry.workflow.exchange
 import asyncio
 import hashlib
 import time
@@ -10,17 +8,15 @@ from typing import Any, Callable, Dict, Optional, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from phase.epoch.config.builder.phase import PhaseBuilder
+from phase.epoch.config.builder.phase import PhaseBuilder, ExtWalletClient
 from phase.epoch.config.dphi import mock_env
 
 from arch.model.phase.gate import uuid4
-from arch.topos.network.bridge import FlowPropagator, RpcBridge
-from arch.topos.network.channel.codec import JsonMessageCodec
-from arch.topos.network.factory import ProtocolFactory
+from arch.topos.network.bridge import RpcBridge
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import next_phase_id, generate_parity_triplet
 
-from dphi.adapter.eco import EcoAdapter, WalletAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
+from dphi.adapter.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
 from kernel.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import DphiMethod
@@ -89,10 +85,12 @@ class ExchangeWorkflow(Workflow):
         
         self.field_node = NodeIdentity()
         self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field_node.pub_hex)
-        self.wallet_adapter = PhaseBuilder.get_testnet_wallet()
         
-        if simulate_wallet:
-            self.wallet_adapter.simulate = True
+        # ExtWalletClient를 통한 Edge.ext 통신
+        self.wallet_client: ExtWalletClient = PhaseBuilder.get_testnet_wallet()
+        
+        # 동적 속성 부여 (이전의 AttributeError 방지용)
+        self.wallet_client.simulate = simulate_wallet
         
         self.rpc_bridge: Optional[RpcBridge] = None
         self.agent_a = NodeIdentity()
@@ -108,7 +106,7 @@ class ExchangeWorkflow(Workflow):
         self.rollup_payload: Optional[SettlementPayload] = None
 
     async def start(self) -> bool:
-        mode = "Simulated" if self.wallet_adapter.simulate else "Testnet Live"
+        mode = "Simulated" if getattr(self.wallet_client, 'simulate', True) else "Testnet Live"
         self.log.info(f"\n{'='*60}\n🚀 [START] Scenario: {self.scenario.name} ({mode})\n{'='*60}")
         
         self.rpc_bridge = MockRpcBridge()
@@ -121,15 +119,14 @@ class ExchangeWorkflow(Workflow):
     async def phase_ingress(self, msg: ExStartMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 1] Protocol Core: Verify Intent Mandate ---")
         
-        # 1. 정상적인 Base Mandate 생성
         base_mandate = PhaseBuilder.ap2_mandate_params(self.agent_a.pub_hex, self.agent_a.key)
         
-        # 2. Injector(Mutator)가 존재한다면 Base 데이터를 조작
         if self.scenario.mandate_injector:
             mandate_params = self.scenario.mandate_injector(base_mandate)
         else:
             mandate_params = base_mandate
             
+        # 블록체인 통신 없이 순수 도메인 로직으로 JSON 페이로드 생성
         self.ap2_mandate = EcoAdapter.build_ap2_mandate(**mandate_params)
 
         req_payload = {
@@ -165,13 +162,26 @@ class ExchangeWorkflow(Workflow):
         self.log.info("--- [Phase 3] External Plug: EVM X402 Settlement ---")
         
         payee_address = mock_env.contracts.nexus_clearing
-        payer_address = mock_env.agents.alpha.evm_address
+        amount = "0.05"
+        resource_id = "compute_fee"
+
+        # 1. Edge.ext 외부 서버로 결제 위임 (API 호출)
+        try:
+            raw_receipt = await self.wallet_client.process_x402_payment(
+                payee_address=payee_address,
+                amount_usdc=amount,
+                resource_id=resource_id
+            )
+            
+            # 방어적 파싱: 응답이 {"receipt": {...}} 이거나 바로 {...} 인 경우 모두 처리
+            receipt_data = raw_receipt.get("receipt") if isinstance(raw_receipt, dict) and "receipt" in raw_receipt else raw_receipt
+            self.x402_receipt = X402SettlementReceipt(**receipt_data)
+            
+        except Exception as e:
+            self.log.error(f"X402 Settlement via API failed: {e}")
+            return ErrorMessage(f"Settlement failed: {e}")
         
-        invoice = EcoAdapter.build_x402_invoice(payee_address, "0.05", "compute_fee")
-        self.x402_receipt = EcoAdapter.process_x402_settlement(
-            invoice, payer_address, self.wallet_adapter
-        )
-        
+        # 2. 결과(Receipt)를 바탕으로 순수 도메인 경제 상태 임베딩
         self.economy_state = EcoAdapter.embed_economy_state(
             base_cached_states={}, mandate=self.ap2_mandate, receipt=self.x402_receipt
         )

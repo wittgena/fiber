@@ -1,5 +1,4 @@
 # receptor.stream.store
-## @lineage: kernel.phase.stream.store
 import asyncio
 import uuid
 import httpx

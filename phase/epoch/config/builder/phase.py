@@ -1,7 +1,4 @@
 # phase.epoch.config.builder.phase
-## @lineage: dphi.config.builder.phase
-## @lineage: phase.dphi.builder.phase
-## @lineage: dphi.phase.builder
 import time
 import uuid
 import random
@@ -10,6 +7,7 @@ import hashlib
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field, asdict
 
+import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from phase.epoch.config.dphi import mock_env
@@ -19,10 +17,62 @@ from arch.contract.model.receptor import (
     AnchorProposalRequest,
     ParityTripletSchema
 )
-from dphi.adapter.eco import WalletAdapter
 from watcher.receptor.contract.model import ExportLogsServiceRequest
 from receptor.edge.core import StreamAppendRequest, LedgerEventSchema
 
+class ExtWalletClient:
+    def __init__(self, base_url: str = "http://localhost:8000/v1/ext", client: Optional[httpx.AsyncClient] = None):
+        self.base_url = base_url.rstrip("/")
+        self.client = client  # In-memory E2E 테스트를 위한 커스텀 클라이언트 주입 지원
+        self.simulate = True  # 기본값, 외부 설정에 의해 덮어씌워짐
+
+    async def _request(self, method: str, path: str, **kwargs) -> Dict[str, Any]:
+        """내부 유틸리티: httpx 세션을 관리하고 공통 예외 처리를 수행합니다."""
+        url = f"{self.base_url}{path}"
+        timeout = kwargs.pop("timeout", 45.0)
+
+        if self.client:
+            response = await self.client.request(method, url, timeout=timeout, **kwargs)
+            response.raise_for_status()
+            return response.json()
+        else:
+            async with httpx.AsyncClient() as client:
+                response = await client.request(method, url, timeout=timeout, **kwargs)
+                response.raise_for_status()
+                return response.json()
+
+    # --- 1. Wallet & CDP Settlement ---
+    async def get_wallet_info(self) -> Dict[str, Any]:
+        """Edge 서버에 구성된 Agent 지갑 정보를 조회합니다."""
+        return await self._request("GET", "/wallet/info")
+
+    async def process_x402_payment(self, payee_address: str, amount_usdc: str, resource_id: str) -> Dict[str, Any]:
+        """Edge 서버에 X402 정산 결제를 요청합니다."""
+        payload = {
+            "payee_address": payee_address,
+            "amount_usdc": amount_usdc,
+            "resource_id": resource_id
+        }
+        return await self._request("POST", "/wallet/pay/x402", json=payload, timeout=60.0)
+
+    # --- 2. EVM Web3 Interactions ---
+    async def get_evm_balances(self, address: str) -> Dict[str, Any]:
+        """EVM 계정의 Native(ETH) 및 ERC20(WETH) 잔고를 조회합니다."""
+        return await self._request("GET", f"/evm/balance?address={address}")
+
+    async def wrap_weth(self, caller_address: str, amount_wei: int, agent_alias: str = "beta") -> Dict[str, Any]:
+        """Native ETH를 WETH로 Auto-wrap 스마트 컨트랙트 호출을 서버에 요청합니다."""
+        payload = {
+            "caller_address": caller_address, 
+            "amount_wei": str(amount_wei), 
+            "agent_alias": agent_alias
+        }
+        return await self._request("POST", "/evm/wrap", json=payload, timeout=90.0)
+
+
+# =====================================================================
+# DVM Models & Data Classes
+# =====================================================================
 @dataclass
 class DvmConfig:
     """ EVM Runner 및 Pipeline 실행 시 사용되는 전역 설정 데이터 """
@@ -30,7 +80,6 @@ class DvmConfig:
     scenario: str = "ERC20_TRANSFER"
     revert: bool = False
     
-    # 런타임 시점에 mock_env 값을 안전하게 매핑하기 위해 default_factory 사용
     rpc_url: str = field(default_factory=lambda: mock_env.network.rpc_url)
     target: str = field(default_factory=lambda: mock_env.contracts.target_erc20)
     caller: str = field(default_factory=lambda: mock_env.agents.alpha.evm_address)
@@ -58,6 +107,7 @@ class EvmIntent:
         data.pop("target") # target은 EvmWorkflow 생성자에 별도로 주입되므로 제외
         return {k: v for k, v in data.items() if v is not None}
 
+
 class NotarySwarm:
     def __init__(self, size: int = 3):
         self.notaries = []
@@ -77,6 +127,10 @@ class NotarySwarm:
     def attest_payload(self, canonical_hash: bytes) -> List[str]:
         return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
 
+
+# =====================================================================
+# PhaseBuilder (Payload Factories)
+# =====================================================================
 class PhaseBuilder:
     __domain_metadata__ = {
         "otlp_payload": "OTel + Datadog/LangSmith. Tracks LLM GenAI metrics (tokens/latency) for billing.",
@@ -88,14 +142,8 @@ class PhaseBuilder:
     }
 
     @staticmethod
-    def get_testnet_wallet() -> WalletAdapter:
-        has_keys = bool(mock_env.cdp_wallet.api_name and mock_env.cdp_wallet.api_private_key)
-        return WalletAdapter(
-            network_id=mock_env.cdp_wallet.network_id,
-            simulate=not has_keys,
-            api_name=mock_env.cdp_wallet.api_name,
-            api_pkey=mock_env.cdp_wallet.api_private_key
-        )
+    def get_testnet_wallet(edge_server_url: str = "http://localhost:8000/v1/ext") -> ExtWalletClient:
+        return ExtWalletClient(base_url=edge_server_url)
 
     @staticmethod
     def ap2_mandate_params(
@@ -279,9 +327,6 @@ class PhaseBuilder:
         scenario_type: str = "ERC20_TRANSFER",
         should_revert: bool = False
     ) -> EvmIntent:
-        """
-        dict를 반환하던 기존과 달리, 타입 안정성이 확보된 EvmIntent 객체를 생성해 반환합니다.
-        """
         caller = mock_env.agents.alpha.evm_address
         value = 0
         requires_access_list = False
@@ -294,7 +339,6 @@ class PhaseBuilder:
             
         elif scenario_type == "ERC4337_HANDLE_OPS":
             target = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789"
-            # 0x1fad948c + dummy encoded array to trigger deep beneficiary check
             calldata = "0x1fad948c" + "0000000000000000000000000000000000000000000000000000000000000040" + "0000000000000000000000001111111111111111111111111111111111111111" + ("00" * 32)
             storage_slots = []
             requires_access_list = True 
@@ -302,20 +346,16 @@ class PhaseBuilder:
         elif scenario_type == "UNISWAP_EXACT_INPUT":
             target = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
             
-            # [CRITICAL ENRICHMENT] Uniswap V3 exactInputSingle Parameters
-            token_in = mock_env.contracts.target_erc20.replace("0x", "").zfill(64).lower() # WETH
-            token_out = "1c7D4B196Cb0C7B01d743Fbc6116a902379C7238".zfill(64).lower()      # Sepolia USDC
-            fee = hex(3000).replace("0x", "").zfill(64)                                    # 0.3%
+            token_in = mock_env.contracts.target_erc20.replace("0x", "").zfill(64).lower() 
+            token_out = "1c7D4B196Cb0C7B01d743Fbc6116a902379C7238".zfill(64).lower()      
+            fee = hex(3000).replace("0x", "").zfill(64)                                    
             recipient = mock_env.agents.alpha.evm_address.replace("0x", "").zfill(64).lower()
-            deadline = hex(int(time.time()) + 1800).replace("0x", "").zfill(64)            # +30 mins
-            amount_in = hex(int(0.001 * 1e18)).replace("0x", "").zfill(64)                 # 0.001 WETH
+            deadline = hex(int(time.time()) + 1800).replace("0x", "").zfill(64)            
+            amount_in = hex(int(0.001 * 1e18)).replace("0x", "").zfill(64)                 
             amount_out_min = "0000000000000000000000000000000000000000000000000000000000000000"
             sqrt_price_limit = "0000000000000000000000000000000000000000000000000000000000000000"
             
-            # Pack ExactInputSingleParams struct
             params_struct = token_in + token_out + fee + recipient + deadline + amount_in + amount_out_min + sqrt_price_limit
-            
-            # Method Selector + offset to struct (32 bytes = 0x20) + struct payload
             calldata = "0x414bf389" + "0000000000000000000000000000000000000000000000000000000000000020" + params_struct
             
             storage_slots = []

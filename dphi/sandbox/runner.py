@@ -1,5 +1,4 @@
 # dphi.sandbox.runner
-## @lineage: epoch.sandbox.runner
 import time
 import json
 import hashlib
@@ -9,7 +8,9 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from dphi.sandbox.script.test import ScriptDef
-from dphi.adapter.eco import EcoAdapter, WalletAdapter, Ap2MandateResult, X402SettlementReceipt
+from dphi.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from phase.epoch.config.builder.phase import PhaseBuilder, ExtWalletClient
+
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
@@ -47,9 +48,14 @@ class EpochBase(SchemeRunner):
                 encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
             ).hex() for k in self.committee_keys
         ]
-        self.wallet_adapter = WalletAdapter(network_id="base-sepolia", simulate=simulate_wallet)
-        if not self.wallet_adapter.simulate:
-            self.wallet_adapter.fund_wallet()
+        
+        # 🌟 변경: 무거운 로컬 지갑 대신 ExtWalletClient 주입
+        self.wallet_client: ExtWalletClient = PhaseBuilder.get_testnet_wallet()
+        # 동적 속성으로 호환성 유지
+        self.wallet_client.simulate = simulate_wallet
+        
+        # [삭제됨] if not self.wallet_adapter.simulate: self.wallet_adapter.fund_wallet()
+        # 이유: 지갑 자금 충전 및 관리는 이제 Edge Server가 전담합니다. 샌드박스는 통신만 수행합니다.
 
     def _sign_multisig(self, signers: List[ed25519.Ed25519PrivateKey], commit_dict: Dict[str, Any]) -> List[str]:
         canonical_bytes = StateAdapter.to_canonical_bytes(commit_dict)
@@ -78,6 +84,7 @@ class EpochBase(SchemeRunner):
             repos = await self.hook_inscribe_nodes(parity_triplet)
 
             log.info("--- [Flow 2.5] Economy: x402 Micropayment Settlement ---")
+            # 🌟 hook이 비동기 REST API를 통해 결제를 처리하도록 변경됨
             x402_receipt = await self.hook_process_payment()
             economy_state = EcoAdapter.embed_economy_state({}, ap2_mandate, x402_receipt)
             
@@ -123,7 +130,32 @@ class EpochBase(SchemeRunner):
         raise NotImplementedError
         
     async def hook_process_payment(self) -> Optional[X402SettlementReceipt]: 
-        return None
+        """
+        [REFACTORED]
+        더 이상 Sandbox 내부에서 지갑 인스턴스를 다루지 않습니다.
+        외부 Edge Server(receptor.ext.wallet)에 HTTP 요청을 보내 결제를 위임합니다.
+        """
+        # 시나리오에 따라 동적으로 설정될 수 있도록 임시 값 할당
+        # 실제 하위 클래스(상속받는 쪽)에서 오버라이드하여 구체적인 주소와 금액을 정의합니다.
+        payee_address = "0x0000000000000000000000000000000000000000" 
+        amount_usdc = "0.00"
+        resource_id = f"sandbox_{self.scenario_name}"
+
+        # 결제 금액이 0인 기본 시나리오라면 진행 생략
+        if amount_usdc == "0.00":
+            return None
+
+        try:
+            raw_receipt = await self.wallet_client.process_x402_payment(
+                payee_address=payee_address,
+                amount_usdc=amount_usdc,
+                resource_id=resource_id
+            )
+            receipt_data = raw_receipt.get("receipt") if isinstance(raw_receipt, dict) and "receipt" in raw_receipt else raw_receipt
+            return X402SettlementReceipt(**receipt_data)
+        except Exception as e:
+            log.error(f"[Sandbox Runner] API Payment Hook Failed: {e}")
+            return None
         
     async def hook_seal_epoch(self, parity_triplet: Dict[str, Any], repos: Dict[str, str], economy_state: Dict[str, Any], timestamp: int) -> Dict[str, Any]: 
         raise NotImplementedError

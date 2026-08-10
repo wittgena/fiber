@@ -22,12 +22,8 @@ from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("server.sentinel", phase="DEFENSE")
 
-
-# =========================================================================
-# 🛡️ TRANSDUCER & VALIDATION
-# =========================================================================
 class StreamTransducer:
-    MAX_PAYLOAD_SIZE = 5242880  # 5MB
+    MAX_PAYLOAD_SIZE = 5242880
     def __init__(self):
         self._intent_router = {
             "initialize": ActionIntent.INITIALIZE,
@@ -197,10 +193,6 @@ class MembraneProjector:
             raise web.HTTPForbidden(reason="Blocked by Kernel Topological Tension")
         raise web.HTTPForbidden(reason=f"Blocked by Meta Projection (Rule: {rule_id})")
 
-
-# =========================================================================
-# 😈 CHAOS LIBRARY & INJECTORS (Merged from chaos.py)
-# =========================================================================
 class ChaosPayloadLibrary:
     """HTTP 방어벽 및 애플리케이션 파괴(Membrane Attack)를 위한 바이트/JSON 페이로드"""
     OOM = [

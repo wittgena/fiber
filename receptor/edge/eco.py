@@ -124,9 +124,6 @@ async def generate_external_receipt(
     external_payload = exchange.generate_settlement_payload(receipt)
     return ClearingReceiptResponse(status=EdgeState.RECEIPT_GENERATED, rollup_payload=external_payload)
 
-# =====================================================================
-# 3. Eco Profile (Billing & Execution)
-# =====================================================================
 class BilledExecutionRequest(BaseModel):
     agent_schema: Dict[str, Any]
     context_depth: int = 2
