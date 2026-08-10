@@ -9,8 +9,8 @@ from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter, flow_scope
 
 from phase.epoch.config.dphi import mock_env
-from phase.epoch.config.builder.phase import PhaseBuilder
-from phase.epoch.config.builder.wasm import WasmBuilder
+from phase.epoch.config.client import PhaseBuilder
+from dphi.wasm.builder import WasmBuilder
 
 from receptor.rest import api as rest_app, lifespan 
 from receptor.ingress.tracer import HttpFlowTracer, RouteRegistry

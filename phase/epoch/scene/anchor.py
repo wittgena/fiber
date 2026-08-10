@@ -1,16 +1,36 @@
 # phase.epoch.scene.anchor
-## @lineage: phase.epoch.flow.scene.anchor
-## @lineage: epoch.flow.scene.anchor
 import time
 from typing import Any, List
+import hashlib
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
 
 from dphi.sandbox.runner import EpochBase
 from phase.epoch.config.eco import ActorIdentity
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
+from kernel.dphi.adapter.exchange import ExchangeAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.anchor")
+
+class ActorIdentity:
+    def __init__(self, name: str = "Anonymous"):
+        self.name = name
+        self.private_key = ed25519.Ed25519PrivateKey.generate()
+        self.pubkey_hex = self._generate_pub_hex()
+
+    def _generate_pub_hex(self) -> str:
+        return self.private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw, 
+            format=serialization.PublicFormat.Raw
+        ).hex()
+
+    def sign(self, commit_dict: dict) -> str:
+        """StateAdapter의 JCS 규격을 사용하여 결정론적 서명을 생성합니다."""
+        canonical_bytes = StateAdapter.to_canonical_bytes(commit_dict)
+        commit_hash = hashlib.sha256(canonical_bytes).hexdigest()
+        return self.private_key.sign(commit_hash.encode('utf-8')).hex()
 
 class LedgerSecuritySuite(SchemeRunner):
     """@desc: Multi-sig Consensus, Ed25519 Signatures, and Sybil Defense scenarios"""

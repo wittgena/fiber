@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Tuple, Optional
 from dataclasses import asdict
 
-from phase.epoch.config.builder.wasm import WasmBuilder
+from dphi.wasm.builder import WasmBuilder
 from dphi.tracer.tester.wasm import WasmTester
 
 from kernel.bind.resolver import resolve_path

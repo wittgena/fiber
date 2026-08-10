@@ -6,7 +6,7 @@ from typing import Dict, Any
 import httpx
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from phase.epoch.config.builder.phase import NotarySwarm
+from phase.epoch.config.client import NotarySwarm
 from phase.epoch.config.dphi import mock_env
 from kernel.phase.runner import WebRunner
 from kernel.dphi.adapter.state import StateAdapter

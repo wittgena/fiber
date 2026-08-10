@@ -1,7 +1,5 @@
-# phase.epoch.config.builder.wasm
-## @lineage: dphi.config.builder.wasm
-## @lineage: phase.dphi.builder.wasm
-## @lineage: dphi.builder
+# dphi.wasm.builder
+## @lineage: phase.epoch.config.builder.wasm
 import os
 import shutil
 import json

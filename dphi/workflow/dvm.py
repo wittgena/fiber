@@ -1,4 +1,5 @@
-# dphi.workflow.evm
+# dphi.workflow.dvm
+## @lineage: dphi.workflow.evm
 import sys
 import argparse
 import asyncio
@@ -12,31 +13,29 @@ except ImportError:
     keccak = Web3.keccak
 
 from phase.epoch.config.dphi import mock_env
-from phase.epoch.config.builder.phase import NotarySwarm
+from phase.epoch.config.client import NotarySwarm
 from dphi.adapter.shadow import ShadowAdapter
-from dphi.adapter.evm import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
+from receptor.ext.evm.adapter import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.bind.inter.protocol import ExecutionResult
 from kernel.dphi.broker import DphiBroker
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("dvm.tester")
+log = get_emitter("dvm.workflow")
 
-class EvmStartMsg(WorkflowMessage): pass
-class EvmPreparedMsg(WorkflowMessage): pass
-class EvmExecutedMsg(WorkflowMessage): pass
+class DvmStartMsg(WorkflowMessage): pass
+class DvmPreparedMsg(WorkflowMessage): pass
+class DvmExecutedMsg(WorkflowMessage): pass
 
-class EvmWorkflow(Workflow):
+class DvmWorkflow(Workflow):
     def __init__(self, target_contract: str, user_intent: Dict[str, Any], rpc_url: Optional[str] = None, mode: str = "mock"):
-        super().__init__(name="EVM_WORKFLOW")
-        self.log = get_emitter("workflow.evm")
+        super().__init__(name="DVM_WORKFLOW")
+        self.log = get_emitter("workflow.dvm")
         
         self.target_contract = target_contract
         self.user_intent = user_intent
         self.mode = mode
-        
-        # 🌟 복구됨: DVM의 "상태 투영(Read)"은 EVMOrchestrator가 Alchemy RPC를 통해 직접 수행하는 것이 올바른 구조입니다.
         if self.mode == "inversion":
             self.orchestrator = InversionOrchestrator(user_intent=self.user_intent)
         elif self.mode == "mock":
@@ -59,13 +58,13 @@ class EvmWorkflow(Workflow):
         self.canonical_hash: str = ""
 
     async def start(self) -> bool:
-        self.post_message(EvmStartMsg())
+        self.post_message(DvmStartMsg())
         await self.run()
         await self.orchestrator.disconnect()
         return bool(self.canonical_hash) or (self.execution_result is not None and self.execution_result.success)
 
     @step
-    async def phase_projection(self, msg: EvmStartMsg) -> WorkflowMessage:
+    async def phase_projection(self, msg: DvmStartMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 1] Shadow State Projection ---")
         try:
             await self.orchestrator.verify_connection()
@@ -80,10 +79,8 @@ class EvmWorkflow(Workflow):
                     "gas": hex(10_000_000) 
                 }
                 
-                # 🌟 오류 해결의 핵심: Access List 생성은 외부 지갑(Wallet)이 아닌 오케스트레이터(RPC)의 몫입니다.
                 access_list = await self.orchestrator.generate_access_list(tx_params)
                 self.log.info(f"  └ Access List generated successfully for {len(access_list)} distinct addresses.")
-                
                 for entry in access_list:
                     addr = entry["address"]
                     keys = entry["storageKeys"]
@@ -108,8 +105,6 @@ class EvmWorkflow(Workflow):
                 
                 slot_index = self.user_intent.get("allowance_slot_index", 4)
                 mapping_slot = hex(slot_index).replace("0x", "").zfill(64)
-                
-                # Web3 객체 생성 없이 keccak 유틸 함수를 바로 사용합니다.
                 inner_hash = keccak(hexstr=owner_pad + mapping_slot).hex().replace("0x", "")
                 allowance_slot = keccak(hexstr=spender_pad + inner_hash).hex()
                 if not allowance_slot.startswith("0x"):
@@ -133,12 +128,12 @@ class EvmWorkflow(Workflow):
                     self.global_state_snapshot[weth_address]["storage"][ov.slot_hash] = ov.injected_value
                     self.log.info(f"    └ [ShadowAdapter] Injected Override at slot: {ov.slot_hash}")
 
-            return EvmPreparedMsg()
+            return DvmPreparedMsg()
         except Exception as e:
             return ErrorMessage(f"Projection Failed: {str(e)}")
 
     @step
-    async def phase_simulation(self, msg: EvmPreparedMsg) -> WorkflowMessage:
+    async def phase_simulation(self, msg: DvmPreparedMsg) -> WorkflowMessage:
         if self.mode == "inversion":
             self.log.info("--- [Phase 2] dvm.wasm -> Host -> dphi.wasm Inversion ---")
         else:
@@ -178,10 +173,10 @@ class EvmWorkflow(Workflow):
                     
                     if intent_struct.scenario_type == "ERC4337_HANDLE_OPS" and "41413930" in output_data:
                         self.log.info("  └─ [ASSERT SUCCESS] Expected EntryPoint Revert (AA90) securely bounded by sandbox.")
-                        return EvmExecutedMsg()
+                        return DvmExecutedMsg()
                     
                     self.log.error(f"🚨 [RAW ERROR] Reverted. Gas Used: {parsed_out.get('gas_used')} | Reason: {revert_msg}")
-                    return EvmExecutedMsg() 
+                    return DvmExecutedMsg() 
                 except Exception:
                     return ErrorMessage(f"EVM Execution Failed: {result.error}")
 
@@ -192,13 +187,13 @@ class EvmWorkflow(Workflow):
                 output_hex = parsed_out.get('output', '')
                 self.log.info(f"  └─ 🌌 Phase Residue Returned to EVM: {output_hex}")
 
-            return EvmExecutedMsg()
+            return DvmExecutedMsg()
             
         except Exception as e:
             return ErrorMessage(f"Broker/Interpreter crashed: {str(e)}")
 
     @step
-    async def phase_sealing(self, msg: EvmExecutedMsg) -> WorkflowMessage:
+    async def phase_sealing(self, msg: DvmExecutedMsg) -> WorkflowMessage:
         if self.mode == "inversion":
             self.log.info("--- [Phase 3] Inversion Verification Completed ---")
             if self.execution_result and self.execution_result.success:

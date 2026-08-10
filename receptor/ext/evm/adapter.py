@@ -1,5 +1,5 @@
-# dphi.adapter.evm
-## @lineage: phase.dphi.adapter.evm
+# receptor.ext.evm.adapter
+## @lineage: dphi.adapter.evm
 import asyncio
 from typing import Dict, Any, List
 
@@ -7,10 +7,10 @@ from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from phase.epoch.config.dphi import mock_env
-from phase.epoch.config.builder.phase import PhaseBuilder
+from receptor.ext.evm.config import EvmBuilder
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("dphi.adapter.evm")
+log = get_emitter("adapter.evm")
 
 class EVMOrchestrator:
     def __init__(self, rpc_url: str):
@@ -80,10 +80,10 @@ class MockOrchestrator:
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
         is_contract = (address.lower() == mock_env.contracts.target_erc20.lower())
         is_revert = (self.user_intent.get("calldata") == "0xdeadbeef" and self.user_intent.get("scenario_type") != "DPHI_INVERSION")
-        return PhaseBuilder.evm_state_snapshot(address, is_contract=is_contract, should_revert=is_revert)
+        return EvmBuilder.build_state_snapshot(address, is_contract=is_contract, should_revert=is_revert)
 
     async def fetch_block_context(self) -> Dict[str, Any]:
-        return PhaseBuilder.evm_block_context()
+        return EvmBuilder.build_block_context()
         
     async def disconnect(self):
         pass
@@ -106,7 +106,7 @@ class InversionOrchestrator:
         }
 
     async def fetch_block_context(self) -> Dict[str, Any]:
-        return PhaseBuilder.evm_block_context()
+        return EvmBuilder.build_block_context()
 
     async def disconnect(self):
         pass

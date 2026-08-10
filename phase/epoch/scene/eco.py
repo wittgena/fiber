@@ -1,16 +1,22 @@
 # phase.epoch.scene.eco
-## @lineage: phase.epoch.flow.scene.eco
-## @lineage: epoch.flow.scene.eco
 import time
 import json
 from typing import List
 
-from phase.epoch.config.eco import EcoContext
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.eco")
+
+class EcoContext:
+    """에코시스템 시나리오 실행에 필요한 주체들과 어댑터를 관리하는 컨텍스트"""
+    def __init__(self):
+        self.system = ActorIdentity("System_Core")
+        self.agent_a = ActorIdentity("Agent_A")
+        self.agent_b = ActorIdentity("Agent_B")
+        self.field = ActorIdentity("Clearing_Field")
+        self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field.pubkey_hex)
 
 class EcoScene(SchemeRunner):
     """@desc: Unified Zero-Trust Data Pipeline, Autonomous State Engine, Agent-to-Agent, and P2P Exchange scenarios."""

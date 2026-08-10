@@ -1,7 +1,4 @@
 # phase.epoch.config.validator
-## @lineage: dphi.config.validator
-## @lineage: phase.dphi.config.validator
-## @lineage: dphi.phase.validator
 import re
 import asyncio
 import httpx

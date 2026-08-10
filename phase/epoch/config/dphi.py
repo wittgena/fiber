@@ -3,6 +3,7 @@ import os
 from enum import Enum
 from typing import Dict, List
 from pydantic import BaseModel, Field
+from dataclasses import dataclass, field
 
 class DphiEnv(str, Enum):
     LOCAL = "local"
@@ -10,11 +11,7 @@ class DphiEnv(str, Enum):
     MAINNET = "mainnet"
 
 CURRENT_ENV = DphiEnv(os.getenv("DPHI_ENV", DphiEnv.TESTNET.value))
-
-# Alchemy API Key for seamless Live Testnet/Mainnet integration
 ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY", "")
-
-# Default mock private keys (Hardhat Account 0 and 1)
 DEFAULT_PKEY_0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 DEFAULT_PKEY_1 = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 
@@ -55,7 +52,6 @@ def _get_default_rpc() -> str:
         else:
             return f"https://eth-sepolia.g.alchemy.com/v2/{ALCHEMY_API_KEY}"
     
-    # Public fallback RPCs
     if CURRENT_ENV == DphiEnv.MAINNET:
         return "https://eth-mainnet.public.blastapi.io"
     return "https://ethereum-sepolia-rpc.publicnode.com"
@@ -146,5 +142,18 @@ class UnifiedExchangeConfig(BaseModel):
             return env_val.replace('\\n', '\n')
         return agent.fallback_pkey
 
-# Expose unified config globally
 mock_env = UnifiedExchangeConfig()
+
+@dataclass
+class DvmConfig:
+    mode: str = "suite"
+    scenario: str = "ERC20_TRANSFER"
+    revert: bool = False
+    
+    rpc_url: str = field(default_factory=lambda: mock_env.network.rpc_url)
+    target: str = field(default_factory=lambda: mock_env.contracts.target_erc20)
+    caller: str = field(default_factory=lambda: mock_env.agents.alpha.evm_address)
+    
+    value: str = "0"
+    calldata: str = "0x"
+    slots: List[str] = field(default_factory=list)

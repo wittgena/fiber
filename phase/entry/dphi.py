@@ -5,7 +5,7 @@ import importlib
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-from phase.epoch.config.builder.wasm import WasmBuilder
+from dphi.wasm.builder import WasmBuilder
 import phase.epoch.scene as scene_module
 
 from dphi.tracer.tester.wasm import WasmTester

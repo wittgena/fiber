@@ -6,19 +6,18 @@ import subprocess
 import os
 from typing import List
 
-from phase.epoch.config.builder.wasm import WasmBuilder
+from dphi.wasm.builder import WasmBuilder
+from phase.epoch.loop.autoscaler import PhaseAutoScaler
+from phase.epoch.scene.concurrency import ConcurrencyScene
 from dphi.tracer.tester.wasm import WasmTester
 from dphi.tracer.dphi import DphiTracer
 
+from arch.topos.tunnel.factory import TunnelFactory
 from kernel.bind.resolver import resolve_path
 from kernel.phase.runtime.gateway import RuntimeGateway
 from kernel.phase.reactor import PhaseReactor
-from watcher.plane.emitter import get_emitter
-
-from phase.epoch.loop.autoscaler import PhaseAutoScaler
-from arch.topos.tunnel.factory import TunnelFactory
 from watcher.receptor.bootstrap import receptor_bootstrap
-from phase.epoch.scene.concurrency import ConcurrencyScene
+from watcher.plane.emitter import get_emitter
 
 _worker_spawn_count = 0
 
@@ -93,7 +92,6 @@ class ConcurrencyFlow:
         _worker_spawn_count += 1
 
     def _teardown_physical_membrane(self):
-        """테스트 종료 후 스폰된 모든 워커 프로세스 및 백그라운드 태스크를 정리합니다."""
         self.log.info(f"[Concurrency] Tearing down {len(self.worker_processes)} physical worker nodes...")
         for proc in self.worker_processes:
             proc.terminate()

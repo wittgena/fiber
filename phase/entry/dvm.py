@@ -6,9 +6,9 @@ from typing import Dict, Any, Optional, List
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from phase.epoch.config.dphi import mock_env
-from phase.epoch.config.builder.phase import PhaseBuilder, DvmConfig, EvmIntent
-from dphi.workflow.evm import EvmWorkflow 
+from phase.epoch.config.dphi import mock_env, DvmConfig
+from receptor.ext.evm.config import EvmBuilder, EvmIntent
+from dphi.workflow.dvm import DvmWorkflow 
 
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
@@ -44,7 +44,7 @@ class EvmRunner:
                 scenario_type=scenario_type
             )
 
-        intent = PhaseBuilder.evm_user_intent(scenario_type=scenario_type, should_revert=revert)
+        intent = EvmBuilder.build_user_intent(scenario_type=scenario_type, should_revert=revert)
         if mode == "live":
             intent.caller = mock_env.agents.beta.evm_address
 
@@ -63,7 +63,7 @@ class EvmRunner:
         self.log.info(f"\n\n{'='*80}\n🚀 [SCENARIO] {name}\n{'='*80}")
         
         intent = self._build_intent(mode, revert, scenario_type)
-        workflow = EvmWorkflow(
+        workflow = DvmWorkflow(
             target_contract=intent.target, 
             user_intent=intent.to_workflow_dict(), 
             rpc_url=self.config.rpc_url, 

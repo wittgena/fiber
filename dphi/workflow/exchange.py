@@ -8,7 +8,8 @@ from typing import Any, Callable, Dict, Optional, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from phase.epoch.config.builder.phase import PhaseBuilder, ExtWalletClient
+from phase.epoch.config.client import PhaseBuilder
+from receptor.ext.client import ExtWalletClient
 from phase.epoch.config.dphi import mock_env
 
 from arch.model.phase.gate import uuid4

@@ -9,8 +9,7 @@ from pydantic import BaseModel
 from arch.contract.interface import ContractRouter
 from watcher.plane.emitter import get_emitter, flow_scope
 from dphi.adapter.eco import EcoAdapter, X402Invoice, X402SettlementReceipt
-from receptor.ext.wallet import WalletAdapter
-from receptor.ext.web3 import Web3Adapter
+from receptor.ext.adapter import WalletAdapter, Web3Adapter
 from phase.epoch.config.dphi import mock_env
 
 log = get_emitter("edge.ext")
