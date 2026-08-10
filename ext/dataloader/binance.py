@@ -1,6 +1,4 @@
 # ext.dataloader.binance
-## @lineage: receptor.ext.dataloader.binance
-## @lineage: receptor.dataloader.binance
 import time
 import hashlib
 import requests

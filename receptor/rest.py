@@ -7,24 +7,30 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from receptor.ingress.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
-from receptor.ingress.server.middleware import LocalMiddleware, WasTelemetry
+# --- Core Infrastructure (Arch, Kernel, Watcher) ---
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpRulesetParser
-
 from kernel.dphi.broker import DphiBroker
-from receptor.stream.store import LogStreamStore
 from watcher.plane.emitter import get_emitter
 
-from receptor.edge.eco import eco_router
+# --- Domain & Edge Routers (Receptor) ---
 from receptor.edge.core import core_edge
+from receptor.edge.eco import eco_router
 from receptor.edge.ext import ext_router
+from receptor.stream.store import LogStreamStore
+from receptor.ingress.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
+from receptor.ingress.server.middleware import (
+    AttestationMiddleware,
+    LocalMiddleware,
+    WasTelemetry,
+)
 
 log = get_emitter(__name__)
 
 API_KEY_NAME = "X-Dphi-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+
 
 class Config(BaseModel):
     web_url: str = ""
@@ -34,15 +40,21 @@ class Config(BaseModel):
     wasm_timeout: float = 10.0
     committee_pubs: list[str] = []
 
+
 def get_default_config() -> Config:
     return Config()
 
-async def verify_api_key(api_key: str = Security(api_key_header), config: Config = Depends(get_default_config)):
+
+async def verify_api_key(
+    api_key: str = Security(api_key_header), 
+    config: Config = Depends(get_default_config)
+):
     if not config.session_api_keys:
         return None
     if api_key not in config.session_api_keys:
         raise HTTPException(status_code=403, detail="Invalid or missing API Key.")
     return api_key
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,16 +62,18 @@ async def lifespan(app: FastAPI):
     config: Config = getattr(app.state, "config", get_default_config())
     
     try:
+        # 1. State Store & PubSub Init
         app.state.store = LogStreamStore()
         tunnel = await TunnelFactory.get_default() 
         pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
         await pubsub.start_listening()
         app.state.pubsub = pubsub
         
+        # 2. WASM Kernel Broker Init
         app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
-        # OTLP 규격 파서 및 결정론적 데이터 추출 엔진 초기화
+        # 3. OTLP Parser & Extraction Engine Init
         default_otlp_ruleset = {
             "global_config": {"required_root_keys": ["resourceLogs"]},
             "targets": [
@@ -92,36 +106,43 @@ async def lifespan(app: FastAPI):
         await TunnelFactory.close_all()
         log.info("Teardown complete. Goodbye.")
 
+
 def _get_root_path(config: Config) -> str:
     if config.web_url:
         return urlparse(config.web_url).path.rstrip("/")
     return ""
 
+
 def create_app(config: Optional[Config] = None) -> FastAPI:
     config = config or get_default_config()
+    
     app = FastAPI(
         title="Edge Router",
-        description="Immutable Ledger Interface",
+        description="Immutable Ledger Interface & First-Party Oracle",
         lifespan=lifespan,
         root_path=_get_root_path(config),
         dependencies=[Depends(verify_api_key)]
     )
     
     app.state.config = config
+    
+    # --- Mount Routers ---
     app.include_router(eco_router)                      # /v1/eco/... (Compute, Exchange, Profile)
     app.include_router(core_edge, tags=["mcp-exposed"]) # /v1/core/... (Logs, Audit, Anchor)
     app.include_router(ext_router)                      # /v1/ext/... (Wallet, Payment 등 외부 통신 전담)
 
+    # --- Mount Middlewares ---
     app.add_middleware(SentinelFirewallMiddleware)
     app.add_middleware(LocalMiddleware, allow_origins=config.allow_cors_origins)
+    app.add_middleware(AttestationMiddleware)
     app.add_middleware(WasTelemetry)
 
+    # --- Mount MCP Server ---
     log.info("Initializing Secure MCP Server...")
     mcp = SecureMCPServer(name="MCP-Server", version="1.0.0")
     mcp.bind_fastapi(app, allowed_tags=["mcp-exposed"])
     mcp_asgi_app = mcp.sse_app()
     app.mount("/mcp", mcp_asgi_app)
-    
     return app
 
 api = create_app()

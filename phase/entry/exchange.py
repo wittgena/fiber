@@ -1,27 +1,31 @@
 # phase.entry.exchange
 import asyncio
 import random
-from typing import List, Callable, Coroutine, Dict, Any
 from dataclasses import dataclass
+from typing import Any, Callable, Coroutine, Dict, List, Optional
+
 import httpx
-
-from kernel.phase.reactor import PhaseReactor
-from watcher.plane.emitter import get_emitter, flow_scope
-
-from phase.epoch.config.dphi import mock_env
-from phase.epoch.config.client import PhaseBuilder
-from dphi.wasm.builder import WasmBuilder
-
-from receptor.rest import api as rest_app, lifespan 
-from receptor.ingress.tracer import HttpFlowTracer, RouteRegistry
-from receptor.ingress.sentinel import RpcChaosInjector, ChaosPayloadLibrary
-
-from dphi.workflow.edge import EdgeWorkflow, E2EConfig, SceneConfig, TargetOp
-from dphi.workflow.exchange import ExchangeWorkflow, ScenarioConfig
-from dphi.tracer.dphi import DphiTracer
-
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+# --- Core Framework & Telemetry ---
+from kernel.phase.reactor import PhaseReactor
+from watcher.plane.emitter import flow_scope, get_emitter
+
+# --- Domain Workflows & Tracers ---
+from dphi.tracer.dphi import DphiTracer
+from dphi.wasm.builder import WasmBuilder
+from dphi.workflow.edge import EdgeWorkflow, E2EConfig, SceneConfig, TargetOp
+from dphi.workflow.exchange import ExchangeWorkflow, ScenarioConfig
+
+# --- Infrastructure & Mock Envs ---
+from phase.epoch.config.client import PhaseBuilder
+from phase.epoch.config.dphi import mock_env
+from receptor.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
+from receptor.ingress.tracer import HttpFlowTracer, RouteRegistry
+from receptor.rest import api as rest_app, lifespan 
+
+log = get_emitter("entry.exchange")
 
 @rest_app.exception_handler(RequestValidationError)
 async def safe_validation_exception_handler(request, exc):
@@ -30,8 +34,10 @@ async def safe_validation_exception_handler(request, exc):
         content={"detail": "Payload rejected: Malformed, invalid schema, or raw binary data detected."}
     )
 
-log = get_emitter("exchange.suite")
 
+# ==========================================
+# Payload Builders
+# ==========================================
 def create_otlp_payload(inject_faults: bool) -> dict:
     if inject_faults:
         return {"garbage_field_missing_required_keys": True}
@@ -54,6 +60,10 @@ def get_default_scene_config() -> SceneConfig:
         ledger_builder=create_ledger_payload
     )
 
+
+# ==========================================
+# Core Pipeline Runner
+# ==========================================
 @dataclass
 class Phase:
     name: str
@@ -75,6 +85,10 @@ class PipelineRunner:
             await phase.action()
         log.info(f"=== Pipeline Completed: {self.name} ===")
 
+
+# ==========================================
+# Tracer Pipeline (Membrane & Wasm E2E)
+# ==========================================
 class TracerPipeline(PipelineRunner):
     """Pipeline for Network Membrane and WASM Build Verification"""
     def __init__(self, config: E2EConfig):
@@ -84,13 +98,13 @@ class TracerPipeline(PipelineRunner):
         
         # Injects fallback_routes to guarantee safety when exact name match fails
         self.routes = RouteRegistry(rest_app, config.fallback_routes)
-        
         self.scene_config = get_default_scene_config()
         
         self.set_phases([
             Phase("Wasm Build", self.phase_wasm_build),
             Phase("Functional E2E (Golden Path)", self.phase_functional_e2e_golden),
             Phase("Functional E2E (Negative Path)", self.phase_functional_e2e_negative),
+            Phase("Functional E2E (Tampered Headers)", self.phase_functional_e2e_tampered), # 🔥 새로 추가된 페이즈
             Phase("Sentinel Security (Chaos Membrane)", self.phase_sentinel_security)
         ])
 
@@ -101,7 +115,7 @@ class TracerPipeline(PipelineRunner):
         if getattr(builder, 'rupture_confirmed', False):
             raise RuntimeError("WasmBuilder failed to construct valid binaries.")
 
-    async def _run_scene(self, inject_faults: bool):
+    async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
         transport = httpx.ASGITransport(app=rest_app)
         async with lifespan(rest_app):
             async with httpx.AsyncClient(
@@ -110,12 +124,14 @@ class TracerPipeline(PipelineRunner):
                 event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
             ) as client:
                 
+                # 🔥 EdgeWorkflow에 attestation_injector 전달
                 runner = EdgeWorkflow(
                     config=self.config, 
                     scene_config=self.scene_config,
                     routes=self.routes,
                     client=client, 
-                    inject_faults=inject_faults
+                    inject_faults=inject_faults,
+                    attestation_injector=attestation_injector 
                 )
                 
                 if hasattr(rest_app.state, 'config'):
@@ -125,6 +141,13 @@ class TracerPipeline(PipelineRunner):
                 await tracer.trace() 
                 
                 has_rupture = getattr(tracer, 'rupture_confirmed', False)
+                # 고의로 에러를 내는 Tampered Headers 시나리오의 경우, fail_count가 0보다 커야 성공(정상 차단)입니다.
+                if attestation_injector is not None:
+                    if runner.runner.fail_count == 0:
+                         raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")
+                    return # 정상적으로 차단되었으므로 에러를 발생시키지 않고 리턴
+                
+                # 일반 시나리오의 성공 여부 판단
                 if has_rupture or runner.runner.fail_count > 0:
                     raise RuntimeError(f"Functional E2E Phase failed (Fault Inject: {inject_faults}).")
 
@@ -133,6 +156,14 @@ class TracerPipeline(PipelineRunner):
 
     async def phase_functional_e2e_negative(self):
         await self._run_scene(inject_faults=True)
+
+    async def phase_functional_e2e_tampered(self):
+        """First-Party Oracle 응답 헤더가 훼손되었을 때 클라이언트가 거부하는지 확인합니다."""
+        tamper_func = getattr(RpcChaosInjector, 'corrupt_attestation_header', None)
+        if tamper_func is None:
+            log.warning("⚠️ Skipping Attestation Rejection Test: 'corrupt_attestation_header' not implemented.")
+            return
+        await self._run_scene(inject_faults=False, attestation_injector=tamper_func)
 
     async def phase_sentinel_security(self):
         log.info(f"\n[Pipeline] Initiating Sentinel Chaos Attacks against XeLog Membrane...")
@@ -155,6 +186,9 @@ class TracerPipeline(PipelineRunner):
             log.info("  └─ All Chaos probes successfully deflected by Sentinel Membrane.")
 
 
+# ==========================================
+# Domain Scenarios & Master Orchestrator
+# ==========================================
 @dataclass
 class TestResult:
     target: str
@@ -165,6 +199,7 @@ class TestResult:
     @property
     def passed(self) -> bool:
         return self.success == self.expected_success
+
 
 class ExchangeSuiteRunner:
     """Orchestrates the entire E2E Integration Test Suite."""
@@ -188,7 +223,7 @@ class ExchangeSuiteRunner:
 
         self.results.append(TestResult(
             target="NET_TEST",
-            scenario="TracerPipeline (Golden, Negative, Chaos)",
+            scenario="TracerPipeline (Golden, Negative, Tampered, Chaos)",
             success=net_success,
             expected_success=True
         ))
@@ -200,6 +235,8 @@ class ExchangeSuiteRunner:
         else:
             self.log.info("🛡️ [Notice] Workflows will execute in SIMULATION mode.")
 
+        # 🔥 도메인 워크플로우(ExchangeWorkflow)용 시나리오
+        # 여기서 signature_injector는 도메인 계층(리스트 객체)을 다룹니다.
         scenarios = [
             {
                 "config": ScenarioConfig(
@@ -271,7 +308,6 @@ class ExchangeSuiteRunner:
         await self._run_network_pipeline()
         await self._run_domain_workflows()
         self._print_report()
-
 
 def main():
     app = ExchangeSuiteRunner()

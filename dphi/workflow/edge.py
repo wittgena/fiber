@@ -1,26 +1,49 @@
 # dphi.workflow.edge
-import uuid
-import time
 import hashlib
-from typing import Dict, Any
+import time
+import uuid
+from typing import Callable, Dict, Optional
+
 import httpx
 
+# --- Core Framework & Adapters ---
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from ext.client.http import VerifiedHttpClient
+from kernel.dphi.adapter.state import StateAdapter
+from kernel.phase.runner import WebRunner
+
+# --- Configurations & Envs ---
 from phase.epoch.config.client import NotarySwarm
 from phase.epoch.config.dphi import mock_env
-from kernel.phase.runner import WebRunner
-from kernel.dphi.adapter.state import StateAdapter
-from watcher.plane.emitter import get_emitter
-from receptor.ingress.tracer import E2EConfig, SceneConfig, TargetOp, RouteRegistry
 
+# --- Ingress & Observability ---
+from receptor.ingress.tracer import E2EConfig, RouteRegistry, SceneConfig, TargetOp
+from watcher.plane.emitter import get_emitter
+
+
+# =========================================================================
+# Workflow Messages
+# =========================================================================
 class StartSceneMsg(WorkflowMessage): pass
 class OtlpIngressMsg(WorkflowMessage): pass
 class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
 class GlobalAnchorMsg(WorkflowMessage): pass
 
+
+# =========================================================================
+# Edge E2E Workflow Orchestrator
+# =========================================================================
 class EdgeWorkflow(Workflow):
-    def __init__(self, config: E2EConfig, scene_config: SceneConfig, routes: RouteRegistry, client: httpx.AsyncClient, inject_faults: bool = False):
+    def __init__(
+        self, 
+        config: E2EConfig, 
+        scene_config: SceneConfig, 
+        routes: RouteRegistry, 
+        client: httpx.AsyncClient, 
+        inject_faults: bool = False,
+        attestation_injector: Optional[Callable[[httpx.Response], httpx.Response]] = None
+    ):
         super().__init__(name="E2E_SCENE_NET")
         self.config = config
         self.scene_config = scene_config
@@ -30,9 +53,15 @@ class EdgeWorkflow(Workflow):
         self.state_roots: Dict[str, str] = {}
         self.log = get_emitter("workflow.scene_runner")
         self.notary_swarm = NotarySwarm(size=3)
+        
+        # 🔥 추가됨: 응답 헤더 서명(First-Party Oracle) 훼손 테스트용 카오스 인젝터
+        self.attestation_injector = attestation_injector
 
     async def execute(self):
         mode_str = "Negative/Faults" if self.inject_faults else "Golden Path"
+        if self.attestation_injector:
+            mode_str = "Attestation Rejection (Tampered Headers)"
+            
         self.log.info(f"\n=== [START] {self.name} ({mode_str}) ===")
         
         if not self.inject_faults:
@@ -42,6 +71,31 @@ class EdgeWorkflow(Workflow):
 
         self.post_message(StartSceneMsg())
         await self.run()
+
+    def _verify_attestation(self, response: httpx.Response, request_path: str) -> Optional[ErrorMessage]:
+        """
+        [Helper] Golden Path 200 OK 응답에 대해 서버(First-Party Oracle)의 
+        암호학적 서명(X-Dphi-Signature)이 올바른지 검증합니다.
+        """
+        # 에러 주입 테스트(Negative Path 422 응답 등)이거나 200 OK가 아닌 경우 서명 검증 생략
+        if response.status_code != 200:
+            return None
+
+        # 🔥 카오스 테스트: 고의로 헤더 서명 훼손
+        if self.attestation_injector:
+            self.log.warning(f"  └─ 👾 Injecting Chaos: Tampering Attestation Headers for {request_path}")
+            response = self.attestation_injector(response)
+            
+        try:
+            self.log.info(f"  └─ 🔍 Verifying First-Party Attestation for {request_path}...")
+            verifier = VerifiedHttpClient(client=self.runner.client)
+            verifier._verify_header_proof(response, request_path)
+            self.log.info("  └─ ✅ Attestation Signature Verified Successfully!")
+            return None
+        except Exception as e:
+            self.log.error(f"  └─ 🚨 Attestation Failed: {e}")
+            self.runner.fail_count += 1
+            return ErrorMessage(f"Attestation Proof Verification Failed: {e}")
 
     @step
     async def phase_head_smoke(self, msg: StartSceneMsg) -> WorkflowMessage:
@@ -75,8 +129,13 @@ class EdgeWorkflow(Workflow):
         if not res or res.status_code != expected_status:
             return ErrorMessage(f"OTLP Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
             
+        # 🔥 서명 검증 적용
+        attest_err = self._verify_attestation(res, path)
+        if attest_err: return attest_err
+            
         if not self.inject_faults:
             self.state_roots["otlp_root"] = res.headers.get("x-edge-content-hash", "0x_default_otlp_hash")
+            
         return D3FiExchangeMsg()
 
     @step
@@ -92,8 +151,13 @@ class EdgeWorkflow(Workflow):
         if not res or res.status_code != expected_status:
              return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
              
+        # 🔥 서명 검증 적용
+        attest_err = self._verify_attestation(res, path)
+        if attest_err: return attest_err
+             
         if not self.inject_faults:
             self.state_roots["exchange_root"] = f"d3fi_state_hash_{uuid.uuid4().hex[:8]}"
+            
         return LedgerAppendMsg()
 
     @step
@@ -109,6 +173,10 @@ class EdgeWorkflow(Workflow):
         res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
         if not res or res.status_code != expected_status:
             return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
+            
+        # 🔥 서명 검증 적용
+        attest_err = self._verify_attestation(res, path)
+        if attest_err: return attest_err
             
         if self.inject_faults:
             return GlobalAnchorMsg()
@@ -159,6 +227,9 @@ class EdgeWorkflow(Workflow):
         
         if not res or res.status_code != 200:
             return ErrorMessage("Global Anchor Export Failed")
+
+        attest_err = self._verify_attestation(res, path)
+        if attest_err: return attest_err
 
         self.log.info(f"\n[SUCCESS] {self.name} Completed successfully.")
         self.runner.report()

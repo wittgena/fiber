@@ -1,4 +1,5 @@
-# router.embedding.base_sparse
+# ext.router.embedding.base_sparse
+## @lineage: router.embedding.base_sparse
 ## @lineage: engine.router.embedding.base_sparse
 import asyncio
 import math

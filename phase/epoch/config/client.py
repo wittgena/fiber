@@ -9,6 +9,8 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+from ext.client.wallet import ExtWalletClient
+
 from phase.epoch.config.dphi import mock_env
 from arch.contract.model.receptor import (
     TradeIngressRequest,

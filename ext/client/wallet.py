@@ -1,6 +1,4 @@
-# ext.client
-## @lineage: receptor.ext.client
-## @lineage: phase.epoch.config.client
+# ext.client.wallet
 import json
 import hashlib
 from typing import Any, Dict, List, Optional
