@@ -8,7 +8,7 @@ from dataclasses import dataclass, field, asdict
 
 from arch.contract.interface import IDynamicsKernel
 from arch.contract.registry.unified import contract
-from meta.phase.contract.config import KernelConfig
+from phase.node.contract.config import KernelConfig
 
 @contract.kernel("sensor.ator")
 class SensorAtor(IDynamicsKernel):
