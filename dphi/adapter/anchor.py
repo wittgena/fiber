@@ -1,9 +1,4 @@
 # dphi.adapter.anchor
-## @lineage: phase.dphi.adapter.anchor
-## @lineage: receptor.adapter.anchor
-## @lineage: receptor.surface.adapter.anchor
-## @lineage: surface.adapter.anchor
-## @lineage: kernel.dphi.adapter.anchor
 import json
 import time
 from dataclasses import dataclass, field

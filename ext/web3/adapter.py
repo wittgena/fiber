@@ -1,6 +1,5 @@
-# ext.adapter
-## @lineage: receptor.ext.adapter
-## @lineage: receptor.ext.wallet
+# ext.web3.adapter
+## @lineage: ext.adapter
 import os
 import asyncio
 from typing import Dict, Any, Tuple, Optional

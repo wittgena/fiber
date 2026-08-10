@@ -15,7 +15,7 @@ except ImportError:
 from phase.epoch.config.dphi import mock_env
 from phase.epoch.config.client import NotarySwarm
 from dphi.adapter.shadow import ShadowAdapter
-from ext.evm.adapter import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
+from ext.web3.orchestrator import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.bind.inter.protocol import ExecutionResult

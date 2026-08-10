@@ -7,7 +7,7 @@ from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from phase.epoch.config.dphi import mock_env, DvmConfig
-from ext.evm.config import EvmBuilder, EvmIntent
+from ext.web3.config import EvmBuilder, EvmIntent
 from dphi.workflow.dvm import DvmWorkflow 
 
 from kernel.phase.reactor import PhaseReactor

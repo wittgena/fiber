@@ -1,4 +1,5 @@
-# ext.evm.config
+# ext.web3.config
+## @lineage: ext.evm.config
 ## @lineage: receptor.ext.evm.config
 ## @lineage: phase.epoch.config.evm
 import time

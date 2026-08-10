@@ -110,7 +110,6 @@ class EcoAdapter:
         tx_hash = ""
         
         if wallet_adapter and not getattr(wallet_adapter, "simulate", True):
-            # 분리된 WalletAdapter의 transfer 메서드를 호출
             tx_hash = wallet_adapter.transfer(
                 to_address=invoice.pay_to,
                 amount=invoice.amount_usdc,
@@ -139,7 +138,7 @@ class EcoAdapter:
         updated_state = dict(base_cached_states) if base_cached_states else {}
         if mandate is not None:
             updated_state["ap2_mandate"] = mandate.model_dump(exclude_none=True)
-            
+
         if receipt is not None:
             updated_state["x402_settlement_receipt"] = receipt.model_dump(exclude_none=True)
             
