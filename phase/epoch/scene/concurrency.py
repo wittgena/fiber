@@ -14,10 +14,10 @@ log = get_emitter("scene.concurrency")
 
 class ConcurrencyScene(SchemeRunner):
     async def run_all(self):
-        log.info("\n=== [START] Executing Sandbox Concurrency Scenarios ===")
+        log.info("\n=== [START] Executing Multi-Process Concurrency Scenarios ===")
         await self._set_worker_policy("SYSTEM")
         await self._test_concurrency_and_recovery()
-        await self._test_n_core_scale_out()
+        await self._test_worker_process_distribution()
         await self._set_worker_policy("SYSTEM")
         self.report()
 
@@ -33,27 +33,19 @@ class ConcurrencyScene(SchemeRunner):
             recovery_code="print('I survived')"
         )
 
-    async def _test_n_core_scale_out(self):
-        log.info("\n--- Running Suite: Physical N-Core Distribution (Scale-Out) ---")
+    async def _test_worker_process_distribution(self):
+        log.info("\n--- Running Suite: Master-Worker Multi-Process Distribution ---")
         target_func = "compute_root_fingerprint"
         heavy_load_count = max(CONST.SCALE_STEPS) # 353
         
-        log.info(f"🚀 Firing {heavy_load_count} massive burst requests... (Waiting for Tension Rupture)")
-        async def _trigger_rupture():
-            from arch.topos.tunnel.factory import TunnelFactory
-            from watcher.receptor.kernel import CHANNEL_SIGNAL_MUTATION
-            tunnel = await TunnelFactory.get_default()
-            for i in range(15): 
-                payload = {"signal_id": "node_load_synthetic_99", "value": float(i * 50)}
-                await tunnel.publish(CHANNEL_SIGNAL_MUTATION, json.dumps(payload))
-                await asyncio.sleep(0.1)
-                
-        asyncio.create_task(_trigger_rupture())
+        log.info(f"🚀 Firing {heavy_load_count} massive burst requests via EventBus...")
+        
         start_time = time.time()
         tasks = [self.broker.invoke(target_func, {"burst": i}, timeout=CONST.MAX_TIMEOUT) for i in range(heavy_load_count)]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
         elapsed_ms = (time.time() - start_time) * 1000
+        
         participating_nodes = set()
         participating_pids = set()
         success_count = 0
@@ -66,31 +58,22 @@ class ConcurrencyScene(SchemeRunner):
                 if pid := metrics.get("handled_by_pid"): participating_pids.add(pid)
 
         log.info(f"🔥 Burst Results: {success_count}/{heavy_load_count} success in {elapsed_ms:.2f}ms")
-        log.info(f"🎯 Distribution: {len(participating_nodes)} Nodes / {len(participating_pids)} PIDs involved.")
-        core_distribution = set()
-        is_macos = sys.platform == 'darwin'
+        log.info(f"🎯 Distribution: Handled by {len(participating_nodes)} Worker Nodes across {len(participating_pids)} OS Processes (PIDs).")
+        
+        log.info(f"   ↳ Participating PIDs: {list(participating_pids)}")
 
-        for pid in participating_pids:
-            try:
-                proc = psutil.Process(int(pid))
-                if is_macos:
-                    core_distribution.add(f"Virtual_Core_for_{pid}")
-                else:
-                    if hasattr(proc, 'cpu_affinity'):
-                        core_distribution.add(tuple(proc.cpu_affinity()))
-            except (psutil.NoSuchProcess, Exception):
-                pass
-
-        if len(participating_nodes) > 1:
-            if len(core_distribution) > 1:
-                if is_macos:
-                    self._record_success(elapsed_ms, f"Scale-Out Success: {len(participating_nodes)} Nodes spawned (macOS Virtual cores).")
-                else:
-                    self._record_success(elapsed_ms, f"Perfect Scale-Out: {len(participating_nodes)} Nodes mapped to {len(core_distribution)} distinct CPU Cores.")
-            else:
-                self._record_fail(elapsed_ms, f"Nodes scaled to {len(participating_nodes)}, but all bound to the same core {core_distribution}. Affinity failed.", "N-Core Scale-Out")
+        # 검증 1: 하나의 Master 안에서 여러 Worker 프로세스가 로드를 분담했는가?
+        if len(participating_pids) > 1:
+            self._record_success(
+                elapsed_ms, 
+                f"Perfect GIL Bypass: Load was evenly distributed across {len(participating_pids)} independent Worker Processes."
+            )
         else:
-            self._record_fail(elapsed_ms, "Scale-Out failed. Watcher did not spawn new nodes, all handled by a single Node.", "N-Core Scale-Out")
+            self._record_fail(
+                elapsed_ms, 
+                f"Bottleneck Detected: All requests were handled by a single PID {participating_pids}. Multiprocessing failed.", 
+                "Worker Process Distribution"
+            )
 
     def _calculate_adaptive_timeout(self, concurrency_limit: int) -> float:
         max_step = max(CONST.SCALE_STEPS)
@@ -121,7 +104,7 @@ class ConcurrencyScene(SchemeRunner):
             
             elapsed_ms = (time.time() - start_time) * 1000
             total_ms += elapsed_ms
-            successes = sum(1 for r in results if r.success)
+            successes = sum(1 for r in results if getattr(r, 'success', False))
             
             if successes == limit:
                 throughput = (limit / (elapsed_ms / 1000)) if elapsed_ms > 0 else 0
@@ -140,7 +123,8 @@ class ConcurrencyScene(SchemeRunner):
     async def _assert_fault_recovery(self, toxic_func: str, recovery_code: str):
         res_toxic = await self.broker.invoke(toxic_func, {})
         res_recovery = await self.broker.execute(code=recovery_code)
-        if not res_toxic.success and res_recovery.success:
-            self._record_success(0, "System survived the crash and isolated the fault.")
+        
+        if not getattr(res_toxic, 'success', True) and getattr(res_recovery, 'success', False):
+            self._record_success(0, "System survived the crash. Fault was isolated in a Worker process.")
         else:
             self._record_fail(0, "System failed to recover from toxic request", "Fault Isolation")

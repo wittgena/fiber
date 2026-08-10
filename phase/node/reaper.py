@@ -7,17 +7,21 @@ import signal
 import argparse
 from typing import List, Set
 from redis.asyncio import Redis
+import psutil
 
 from kernel.phase.reactor import PhaseReactor
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from watcher.plane.emitter import get_emitter
 
+# [개선] 현재 Master-Worker 아키텍처 및 OS 프로세스 명명 규칙에 맞춘 타겟 태그
 DEFAULT_TARGET_TAGS = [
-    "meta.ops", 
-    "kernel.phase",
-    "phase.entry",
-    "phase.chain"
+    "phase.node.boot",
+    "phase.entry.concurrency",
+    "kernel.phase.runtime.node",
+    "multiprocessing.spawn",           # OS 멀티프로세싱 워커 노드
+    "multiprocessing.resource_tracker" # 자원 추적 데몬
 ]
+
 log = get_emitter("phase.reaper", phase="BOOT")
 
 class SystemOps:
@@ -26,7 +30,6 @@ class SystemOps:
         self.redis = redis_conn
         self.tag = tag
         self.registry_key = f"system:{self.tag}:pids"
-        self.process_pattern = f"{self.tag}"
         self.log = get_emitter(f"ops.{self.tag}", phase="EXEC")
         
         self.supervisor = TaskSupervisor(source=f"Commander-{self.tag}")
@@ -100,15 +103,43 @@ class SystemOps:
         return len(pids)
 
     async def scorched_earth(self):
-        """@action: OS 레벨 패턴 매칭 및 Redis 레지스트리 기반의 잔여물 청소"""
+        """@action: Process Tree 추적을 통한 고아/좀비 프로세스 완벽 청소"""
         self.log.warning(f"🔥 Initiating Scorched Earth for [{self.tag}]...")
+        
+        # [Phase 1] psutil 기반의 정밀한 Process Tree 수거 (Master 잡아서 Worker까지 싹쓸이)
+        my_pid = os.getpid()
+        killed_count = 0
         try:
-            proc = await asyncio.create_subprocess_exec("pkill", "-9", "-f", self.process_pattern)
-            await proc.wait()
-            self.log.info(f"   [Phase 1] pkill sweep completed for {self.process_pattern}.")
+            for proc in psutil.process_iter(['pid', 'cmdline']):
+                try:
+                    cmdline = proc.info.get('cmdline') or []
+                    cmd_str = " ".join(cmdline)
+                    
+                    # 자기 자신(Reaper)은 자살하지 않도록 방어
+                    if self.tag in cmd_str and "phase.node.reaper" not in cmd_str and proc.pid != my_pid:
+                        # 1. 해당 프로세스의 모든 자식 프로세스(multiprocessing.spawn 등) 찾기
+                        children = proc.children(recursive=True)
+                        # 2. 자식들부터 먼저 죽이고, 마지막에 부모(Master)를 죽임 (좀비 방지)
+                        procs_to_kill = children + [proc]
+                        
+                        for p in procs_to_kill:
+                            try:
+                                p.kill()  # SIGKILL (-9)
+                                killed_count += 1
+                                self.log.info(f"   [Phase 1] 💀 Terminated PID {p.pid} (Command: {' '.join(p.cmdline()[:2])}...)")
+                            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                                pass
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
+                    
+            if killed_count > 0:
+                self.log.info(f"   [Phase 1] Process tree sweep completed. {killed_count} processes explicitly reaped.")
+            else:
+                self.log.info(f"   [Phase 1] No active processes matched for [{self.tag}].")
         except Exception as e:
-            self.log.error(f"   [Phase 1] pkill failed: {e}")
+            self.log.error(f"   [Phase 1] psutil sweep failed: {e}")
 
+        # [Phase 2] Redis Registry에 남아있는 잔여 PID 강제 처리
         try:
             pids = await self.redis.smembers(self.registry_key)
             if pids:
@@ -119,7 +150,7 @@ class SystemOps:
             await self.redis.delete(self.registry_key)
             self.log.info(f"   [Phase 3] Registry {self.registry_key} cleared.")
         except Exception as e:
-            self.log.error(f"   Registry cleanup failed: {e}")
+            self.log.error(f"   [Phase 2/3] Registry cleanup failed: {e}")
 
     async def nuke_redis_state(self):
         """@action: 현재 사용 중인 Redis Database의 모든 Key, Stream, PubSub 잔여물을 완전히 삭제"""

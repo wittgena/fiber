@@ -1,20 +1,14 @@
 # phase.node.boot
 import os
 import asyncio
-import uvicorn
-
-from phase.node.reaper import SystemOps
-from receptor.rest import api as rest_app
 
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.contract.event.bus import AsyncEventBus
 from arch.contract.executor import BaseExecutor
 from arch.contract.registry.unified import registry
 
-from kernel.bind.redirector import PhaseAirlock
 from kernel.phase.runtime.executor.swarm import SwarmExecutor
 from kernel.phase.runtime.flow.executor import FlowExecutor
-from kernel.dphi.ledger.consensus import KernelLedger
 from kernel.phase.signal import PhaseSignal
 from kernel.phase.reactor import PhaseReactor
 from kernel.phase.runtime.node import NodeRuntime
@@ -22,7 +16,7 @@ from kernel.phase.runtime.node import NodeRuntime
 from watcher.plane.regulator import default_plane
 from watcher.plane.emitter import get_emitter
 from watcher.receptor.bootstrap import receptor_bootstrap
-from watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh, RoutingDecision
+from watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
 
 log = get_emitter("phase.boot")
 
@@ -44,10 +38,13 @@ class KernelGateway:
         asyncio.create_task(state_mesh.start_mesh_sync())
         
         if topology == "EXT_PROC":
+            # ExtProcStreamHandler가 정의되어 있는 경우 지연 로딩
+            from watcher.receptor.policy.router import ExtProcStreamHandler
             stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
             asyncio.create_task(stream_handler.serve())
         else:
             log.info(f"[Orchestrator] Running in {topology} mode. (Ingress Receptor removed)")
+
 
 class RoutingExecutor(BaseExecutor):
     def __init__(self, completion_signal: asyncio.Event):
@@ -86,7 +83,11 @@ class RoutingExecutor(BaseExecutor):
         else:
             return await self.swarm_executor.execute(psi)
 
+
 async def clear_zombie_port(port: int):
+    # [지연 로딩] 프로세스를 통제하는 Reaper 모듈은 실행 시점에만 가져옵니다.
+    from phase.node.reaper import SystemOps
+    
     reaper = SystemOps(redis_conn=None, tag="boot.reaper")
     pids = await reaper.get_pids_from_port(port)
     my_pid = str(os.getpid())
@@ -100,10 +101,17 @@ async def clear_zombie_port(port: int):
     if pids:
         await asyncio.sleep(0.5)
 
+
 async def start_rest_membrane():
     global _rest_server_instance
     target_port = int(os.getenv("REST_PORT", 8000))
     await clear_zombie_port(target_port)
+
+    # [핵심 변경: 지연 로딩] 
+    # REST API(FastAPI)와 Uvicorn은 Worker 스폰 과정에서 절대 평가(Evaluation)되지 않도록 
+    # 오직 Master가 8000번 포트를 열 때만 메모리에 로딩합니다.
+    import uvicorn
+    from receptor.rest import api as rest_app
 
     log.info(f"[Boot] Igniting REST Edge Membrane (FastAPI/Uvicorn) on Port {target_port}...")
     config = uvicorn.Config(
@@ -117,6 +125,7 @@ async def start_rest_membrane():
     _rest_server_instance = uvicorn.Server(config)
     asyncio.create_task(_rest_server_instance.serve())
     log.info(f"[Boot] REST Edge Membrane listening on http://0.0.0.0:{target_port}")
+
 
 async def main_async():
     global _node_instance
@@ -133,6 +142,8 @@ async def main_async():
     log.info("[Boot] Igniting Physical Membrane Receptor...")
     tunnel = await TunnelFactory.get_default()
     asyncio.create_task(receptor_bootstrap(tunnel))
+    
+    # Master 프로세스에서만 REST 서버가 로드되고 열립니다.
     await start_rest_membrane()
 
     log.info("[Boot] Igniting Embedded Phase Runtime Node...")
@@ -147,6 +158,7 @@ async def main_async():
     log.info("[Boot] Entering observation mode...")
     await _node_instance.wait_until_stopped()
 
+
 async def teardown():
     global _node_instance, _rest_server_instance
     log.info("[Boot] Releasing system resources...")
@@ -160,11 +172,13 @@ async def teardown():
 
     await TunnelFactory.close_all()
     try:
+        from kernel.dphi.ledger.consensus import KernelLedger
         KernelLedger().close()
     except Exception as e:
         log.warning(f"[Boot] Error while releasing KernelStore lock: {e}")
         
     log.info("[Boot] Resource cleanup complete.")
+
 
 if __name__ == "__main__":
     PhaseReactor.ignite(main_coro_func=main_async, teardown_hook=teardown)
