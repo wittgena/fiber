@@ -1,4 +1,3 @@
-# phase.entry.dphi
 import sys
 import argparse
 import importlib
@@ -8,12 +7,13 @@ from typing import List, Dict
 from dphi.wasm.builder import WasmBuilder
 import phase.epoch.scene as scene_module
 
+# [핵심 추가] 격리된 로컬 테스트 오케스트레이터 가져오기
+from dphi.tracer.tester.wasm import WasmTester
+
 from arch.topos.tunnel.factory import TunnelFactory
 from kernel.bind.resolver import resolve_path
-from kernel.dphi.broker import DphiBroker
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
-from kernel.phase.daemon.bootstrap import KEY_HEARTBEAT_PATTERN
 
 MODULE_PATH = scene_module.__name__
 
@@ -29,9 +29,9 @@ class PipelineConfig:
 
 class DphiFlow:
     """
-    @role: Live Attach Integration Pipeline
-    @desc: 물리 환경(Membrane)을 직접 띄우지 않고, 기동 중인 클러스터에 접속(Attach)하여
-           WASM 모듈 빌드 및 통합 테스트(Sandbox, Anchor 등)를 고속으로 수행합니다.
+    @role: WASM Pipeline Orchestrator (Build & Test)
+    @desc: WASM 빌드를 수행하고, WasmTester를 통해 In-process(로컬 격리) 환경에서 
+           명확하고 추적 가능한 엔드투엔드 통합 테스트를 수행합니다.
     """
     def __init__(self, command: str = "all", suites: List[str] = None, config: PipelineConfig = None):
         self.config = config or PipelineConfig()
@@ -60,65 +60,65 @@ class DphiFlow:
             sys.exit(1)
 
     async def build(self):
-        self.log.info("[CLI] Starting standalone WasmBuilder...")
+        self.log.info("\n[CLI] Starting standalone WasmBuilder...")
         builder = WasmBuilder()
         await builder.trace()
         
         if builder.rupture_confirmed:
-            self.log.error("[CLI] Builder encountered a fatal rupture.")
+            self.log.error("❌ [CLI] Builder encountered a fatal rupture.")
             sys.exit(1)
-        self.log.info("[CLI] Builder completed successfully.")
-
-    async def _execute_live_suites(self):
-        """라이브 클러스터에 접속하여 지정된 테스트 씬들을 DphiBroker를 통해 분산 실행합니다."""
-        tunnel = await TunnelFactory.get_default()
-        
-        try:
-            active_nodes = await tunnel.keys(KEY_HEARTBEAT_PATTERN)
-            if not active_nodes:
-                self.log.error("❌ [CLI] No active nodes detected! Please run `python -m phase.node.boot` first.")
-                sys.exit(1)
-                
-            self.log.info(f"[CLI] Connected to live system. Detected {len(active_nodes)} active nodes.")
-            
-            # 라이브 워커들과 통신할 통합 브로커 생성
-            broker = DphiBroker()
-            
-            for suite_name in self.suites:
-                if suite_name not in self.config.suites_registry:
-                    self.log.warning(f"[CLI] Unknown suite '{suite_name}', skipping...")
-                    continue
-                
-                suite_class = self._resolve_suite_class(suite_name)
-                self.log.info(f"\n>>> [PHASE] Starting Test Suite: {suite_name.upper()} <<<")
-                
-                # 씬 인스턴스화 (Broker 주입)
-                scene_instance = suite_class(broker=broker)
-                
-                # 테스트 실행
-                await scene_instance.run_all()
-                
-        finally:
-            # DeprecationWarning 방지를 위한 안전한 Tunnel 종료
-            if hasattr(tunnel, 'aclose'):
-                await tunnel.aclose()
-            else:
-                await tunnel.close()
+        self.log.info("✅ [CLI] Builder completed successfully.")
 
     async def test(self):
-        self.log.info(f"[CLI] Starting Live Attach Tester for suites: {self.suites}...")
+        """
+        [개편 핵심] 라이브 브로커 직접 호출 대신, WasmTester를 이용해 로컬에서 통합 실행합니다.
+        이렇게 하면 워커 데몬의 로그와 테스트 로그가 동일한 콘솔에서 정렬되어 출력됩니다.
+        """
+        self.log.info(f"\n[CLI] Starting Isolated WasmTester for suites: {self.suites}...")
+        
         if not self.dest_wasm_file.exists():
-            self.log.error(f"[CLI] Missing WASM binary at {self.dest_wasm_file}. Run 'build' first.")
+            self.log.error(f"❌ [CLI] Missing WASM binary at {self.dest_wasm_file}. Run 'build' first.")
             sys.exit(1)
             
-        await self._execute_live_suites()
-        self.log.info("[CLI] Tester completed successfully.")
+        # 1. 실행할 Suite 클래스 객체들을 딕셔너리로 준비
+        suite_map = {}
+        for suite_name in self.suites:
+            if suite_name not in self.config.suites_registry:
+                self.log.warning(f"[CLI] Unknown suite '{suite_name}', skipping...")
+                continue
+            suite_map[suite_name] = self._resolve_suite_class(suite_name)
+            
+        if not suite_map:
+            self.log.error("❌ [CLI] No valid test suites found to execute.")
+            sys.exit(1)
+
+        # 2. WasmTester 인스턴스화 (데몬, 브로커, 스키마 오디터 내부 통합 관리)
+        tester = WasmTester(
+            wasm_module_path=str(self.dest_wasm_file),
+            sandbox_root=str(self.time_root),
+            suites=suite_map
+        )
+        
+        # 3. 테스트 실행 및 결과 명시적 반환
+        success, err_msg = await tester.execute()
+        
+        # 4. 성공/실패 여부를 콘솔에 명확하게 강제 출력
+        print("\n" + "="*60)
+        if success:
+            self.log.info(f"🟢 [SUCCESS] All Test Suites ({', '.join(suite_map.keys())}) PASSED.")
+            self.log.info(f"🔗 Execution Canonical Hash: {tester.test_execution_hash}")
+        else:
+            self.log.critical(f"🔴 [FAILED] Test execution terminated with errors.")
+            self.log.critical(f"Details: {err_msg}")
+            print("="*60 + "\n")
+            sys.exit(1)
+        print("="*60 + "\n")
 
     async def pipeline(self):
-        self.log.info(f"[CLI] Starting Full Pipeline (Build ➔ Test {self.suites})...")
+        self.log.info(f"\n[CLI] Starting Full Pipeline (Build ➔ Test {self.suites})...")
         await self.build()
         await self.test()
-        self.log.info("[CLI] Full pipeline executed successfully.")
+        self.log.info("🚀 [CLI] Full pipeline executed and validated successfully.")
 
     async def run(self):
         command_map = {
@@ -130,12 +130,12 @@ class DphiFlow:
         await target_action()
 
 def main():
-    parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI (True Attach Mode)")
+    parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI")
     parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor)")
     subparsers = parser.add_subparsers(dest="command", help="Execution modes")
     subparsers.add_parser("build", help="Compile the Rust WASM artifact only.")
-    subparsers.add_parser("test", help="Run the Live Test scenarios only.")
-    subparsers.add_parser("all", help="Run the full pipeline (Build -> Live Test).")
+    subparsers.add_parser("test", help="Run the Isolated Test scenarios only.")
+    subparsers.add_parser("all", help="Run the full pipeline (Build -> Isolated Test).")
 
     args = parser.parse_args()
     command = args.command or "all"

@@ -15,9 +15,6 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.anchor")
 
-# =========================================================================
-# 0. Shared Identity & Context
-# =========================================================================
 class ActorIdentity:
     def __init__(self, name: str = "Anonymous"):
         self.name = name
