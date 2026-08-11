@@ -1,4 +1,5 @@
-# meta.phase.contract.sensor
+# phase.node.contract.sensor
+## @lineage: meta.phase.contract.sensor
 ## @lineage: phase.contract.sensor
 ## @lineage: phase.node.sensor
 import math

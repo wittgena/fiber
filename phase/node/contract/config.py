@@ -1,4 +1,5 @@
-# meta.phase.contract.config
+# phase.node.contract.config
+## @lineage: meta.phase.contract.config
 ## @lineage: phase.contract.config
 ## @lineage: phase.node.config
 import math

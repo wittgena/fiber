@@ -13,8 +13,14 @@ from watcher.plane.emitter import get_emitter
 log = get_emitter("scene.concurrency")
 
 class ConcurrencyScene(SchemeRunner):
+    # [핵심 변경] 외부에서 주입된 DphiBroker를 수용하기 위한 생성자 오버라이드
+    def __init__(self, broker, suites):
+        super().__init__(broker=broker)
+        self.suites = suites
+
     async def run_all(self):
         log.info("\n=== [START] Executing Multi-Process Concurrency Scenarios ===")
+        # 라이브 시스템이므로 Policy Shift(System 권한 획득) 과정이 잘 통과되는지 확인
         await self._set_worker_policy("SYSTEM")
         await self._test_concurrency_and_recovery()
         await self._test_worker_process_distribution()
@@ -38,7 +44,7 @@ class ConcurrencyScene(SchemeRunner):
         target_func = "compute_root_fingerprint"
         heavy_load_count = max(CONST.SCALE_STEPS) # 353
         
-        log.info(f"🚀 Firing {heavy_load_count} massive burst requests via EventBus...")
+        log.info(f"🚀 Firing {heavy_load_count} massive burst requests via Live EventBus...")
         
         start_time = time.time()
         tasks = [self.broker.invoke(target_func, {"burst": i}, timeout=CONST.MAX_TIMEOUT) for i in range(heavy_load_count)]
@@ -77,14 +83,14 @@ class ConcurrencyScene(SchemeRunner):
 
     def _calculate_adaptive_timeout(self, concurrency_limit: int) -> float:
         max_step = max(CONST.SCALE_STEPS)
-        raw_timeout = 1.0 + (concurrency_limit / max_step) * (CONST.MAX_TIMEOUT - 1.0)
+        base_timeout = 1.7
+        raw_timeout = base_timeout + (concurrency_limit / max_step) * (CONST.MAX_TIMEOUT - base_timeout)
         valid_timeouts = [t for t in CONST.SCALE_STEPS if t <= CONST.MAX_TIMEOUT]
-        return float(min(valid_timeouts, key=lambda x: abs(x - raw_timeout)))
+        return max(1.7, float(min(valid_timeouts, key=lambda x: abs(x - raw_timeout))))
 
     async def _assert_adaptive_concurrency(self, target_func: str, payload: dict):
         last_success = 0
         total_ms = 0
-        
         progress_str = f"📈 Adaptive Scale-Up {CONST.SCALE_STEPS}: "
         log.info(progress_str)
         

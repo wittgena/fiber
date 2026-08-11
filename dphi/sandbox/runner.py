@@ -14,6 +14,7 @@ from ext.client.wallet import ExtWalletClient
 
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
+from kernel.dphi.method import DphiMethod
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("sandbox.runner")
@@ -33,9 +34,14 @@ class SandboxRunner(SchemeRunner):
             self._record_fail(elapsed_ms, f"Expected string '{script.expected_match}' not found in output. Output: {output_str}", script.title)
             return
             
-        if validator and not validator(output_str):
-            self._record_fail(elapsed_ms, f"Validation failed: {output_str}", script.title)
-            return
+        if validator:
+            try:
+                if not validator(output_str):
+                    self._record_fail(elapsed_ms, f"Validation failed: {output_str}", script.title)
+                    return
+            except Exception as e:
+                self._record_fail(elapsed_ms, f"Validation crashed: {e} (Output: {output_str})", script.title)
+                return
             
         self._record_success(elapsed_ms, output_str)
 
@@ -50,13 +56,8 @@ class EpochBase(SchemeRunner):
             ).hex() for k in self.committee_keys
         ]
         
-        # 🌟 변경: 무거운 로컬 지갑 대신 ExtWalletClient 주입
         self.wallet_client: ExtWalletClient = PhaseBuilder.get_testnet_wallet()
-        # 동적 속성으로 호환성 유지
         self.wallet_client.simulate = simulate_wallet
-        
-        # [삭제됨] if not self.wallet_adapter.simulate: self.wallet_adapter.fund_wallet()
-        # 이유: 지갑 자금 충전 및 관리는 이제 Edge Server가 전담합니다. 샌드박스는 통신만 수행합니다.
 
     def _sign_multisig(self, signers: List[ed25519.Ed25519PrivateKey], commit_dict: Dict[str, Any]) -> List[str]:
         canonical_bytes = StateAdapter.to_canonical_bytes(commit_dict)
@@ -69,11 +70,17 @@ class EpochBase(SchemeRunner):
         try:
             log.info("--- [Flow 1] Initialization: Requesting Parity Triplet ---")
             current_ts = int(time.time() * 1000)
-            init_req = {"ts": current_ts, "topo": topo, "press": press, "rupture": rupture, "injected_tick": None}
-            
-            res = await self.broker.invoke("init_epoch", json.dumps(init_req))
+            init_req = {
+                "ts": current_ts, 
+                "topo": topo, 
+                "press": press, 
+                "rupture": rupture,
+                "injected_tick": None
+            }
+            init_payload = StateAdapter.to_canonical_bytes(init_req).decode('utf-8')
+            res = await self.broker.invoke(DphiMethod.INIT_EPOCH.value, init_payload)
             if not res.success:
-                raise RuntimeError(f"init_epoch Failed: {res.error}")
+                raise RuntimeError(f"{DphiMethod.INIT_EPOCH.value} Failed: {res.error}")
                 
             parity_triplet = json.loads(res.output)
             log.info(f"  └─ Generated Nexus ID: {parity_triplet.get('nexus_id')}")
@@ -85,16 +92,16 @@ class EpochBase(SchemeRunner):
             repos = await self.hook_inscribe_nodes(parity_triplet)
 
             log.info("--- [Flow 2.5] Economy: x402 Micropayment Settlement ---")
-            # 🌟 hook이 비동기 REST API를 통해 결제를 처리하도록 변경됨
             x402_receipt = await self.hook_process_payment()
             economy_state = EcoAdapter.embed_economy_state({}, ap2_mandate, x402_receipt)
             
             log.info("--- [Flow 3] Sealing: Cryptographic Epoch Alignment ---")
-            seal_payload = await self.hook_seal_epoch(parity_triplet, repos, economy_state, current_ts)
+            seal_payload_dict = await self.hook_seal_epoch(parity_triplet, repos, economy_state, current_ts)
             
-            seal_res = await self.broker.invoke("seal_epoch", json.dumps(seal_payload))
+            seal_payload_str = StateAdapter.to_canonical_bytes(seal_payload_dict).decode('utf-8')
+            seal_res = await self.broker.invoke(DphiMethod.SEAL_EPOCH.value, seal_payload_str)
             if not seal_res.success:
-                raise RuntimeError(f"seal_epoch Failed: {seal_res.error}")
+                raise RuntimeError(f"{DphiMethod.SEAL_EPOCH.value} Failed: {seal_res.error}")
                 
             sealed_data = json.loads(seal_res.output)
             log.info("  └─ Epoch Sealed Successfully via Multi-sig Consensus.")
@@ -108,7 +115,12 @@ class EpochBase(SchemeRunner):
             transition_payload = StateAdapter.build_transition_payload(
                 intent_action="commit_era", intent_payload=anchor_result, evolution_ctx=evo_ctx
             )
-            await self._run_case(f"{self.scenario_name} (Flow 4): Execute Transition", "execute_transition", transition_payload, expected_success=True)
+            await self._run_case(
+                f"{self.scenario_name} (Flow 4): Execute Transition", 
+                DphiMethod.EXECUTE_TRANSITION.value, 
+                transition_payload, 
+                expected_success=True
+            )
 
             log.info("--- [Flow 5] Finality: Zero-Trust Parity & Recovery Verification ---")
             t_id_low32 = int(parity_triplet["topos_id"].split('_')[-1]) if '_' in parity_triplet["topos_id"] else 0
@@ -117,7 +129,12 @@ class EpochBase(SchemeRunner):
                 "phase_id": parity_triplet["phase_id"],
                 "nexus_id": parity_triplet["nexus_id"]
             }
-            await self._run_case(f"{self.scenario_name} (Flow 5): Verify Parity Completeness", "verify_parity", parity_req, expected_success=True)
+            await self._run_case(
+                f"{self.scenario_name} (Flow 5): Verify Parity Completeness", 
+                DphiMethod.VERIFY_PARITY.value, 
+                parity_req, 
+                expected_success=True
+            )
 
         except Exception as e:
             log.exception(f"[HALTED] Pipeline execution terminated at current phase. Error: {e}")
@@ -131,26 +148,16 @@ class EpochBase(SchemeRunner):
         raise NotImplementedError
         
     async def hook_process_payment(self) -> Optional[X402SettlementReceipt]: 
-        """
-        [REFACTORED]
-        더 이상 Sandbox 내부에서 지갑 인스턴스를 다루지 않습니다.
-        외부 Edge Server(receptor.ext.wallet)에 HTTP 요청을 보내 결제를 위임합니다.
-        """
-        # 시나리오에 따라 동적으로 설정될 수 있도록 임시 값 할당
-        # 실제 하위 클래스(상속받는 쪽)에서 오버라이드하여 구체적인 주소와 금액을 정의합니다.
         payee_address = "0x0000000000000000000000000000000000000000" 
         amount_usdc = "0.00"
         resource_id = f"sandbox_{self.scenario_name}"
 
-        # 결제 금액이 0인 기본 시나리오라면 진행 생략
         if amount_usdc == "0.00":
             return None
 
         try:
             raw_receipt = await self.wallet_client.process_x402_payment(
-                payee_address=payee_address,
-                amount_usdc=amount_usdc,
-                resource_id=resource_id
+                payee_address=payee_address, amount_usdc=amount_usdc, resource_id=resource_id
             )
             receipt_data = raw_receipt.get("receipt") if isinstance(raw_receipt, dict) and "receipt" in raw_receipt else raw_receipt
             return X402SettlementReceipt(**receipt_data)

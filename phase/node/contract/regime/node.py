@@ -1,4 +1,5 @@
-# meta.phase.contract.regime.node
+# phase.node.contract.regime.node
+## @lineage: meta.phase.contract.regime.node
 ## @lineage: phase.contract.regime.node
 ## @lineage: phase.node.contract.field.regime
 from __future__ import annotations

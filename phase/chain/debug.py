@@ -1,135 +1,174 @@
 # phase.chain.debug
-import os
-import sys
 import asyncio
-import subprocess
 import json
-from typing import List
-
-from phase.epoch.loop.autoscaler import PhaseAutoScaler
+import sys
+import uuid
+from dataclasses import asdict
 
 from arch.topos.tunnel.factory import TunnelFactory
-from kernel.phase.reactor import PhaseReactor
-from kernel.phase.runtime.gateway import RuntimeGateway
-from watcher.receptor.bootstrap import receptor_bootstrap
-from watcher.receptor.kernel import CHANNEL_SIGNAL_MUTATION
-from watcher.plane.emitter import get_emitter
+from arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType
+from arch.contract.event.next import next_id
+from kernel.phase.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
 
-log = get_emitter("chain.debug")
+class DebugShell:
+    """
+    @role: Interactive Live Debug Shell
+    @desc: 기동 중인 Master-Worker 런타임에 접속하여 상태를 쿼리하고 명령을 주입하는 콘솔
+    """
+    def __init__(self, tunnel):
+        self.tunnel = tunnel
+        self.running = True
 
-class ChainDiagnosticFlow:
-    def __init__(self):
-        self.worker_processes: List[subprocess.Popen] = []
-        self._autoscaler_task: asyncio.Task = None
-        self._watcher_task: asyncio.Task = None
-        self._injector_task: asyncio.Task = None
-        self.scale_out_success = asyncio.Event()
-
-    async def _setup_physical_membrane(self, tunnel):
-        log.info("\n" + "="*55)
-        log.info(" [Phase 1] Provisioning Initial Membrane (Node Idx 0)")
-        log.info("="*55)
-        
-        await RuntimeGateway.assemble(None)
-        self._watcher_task = asyncio.create_task(receptor_bootstrap(tunnel))
-        
-        autoscaler = PhaseAutoScaler(
-            tunnel=tunnel,
-            spawn_hook=self._spawn_worker,
-            despawn_hook=lambda: self.worker_processes.pop() if self.worker_processes else None,
-            get_worker_count=lambda: len(self.worker_processes),
-            max_workers=16,
-            debug_event=self.scale_out_success
-        )
-        self._autoscaler_task = asyncio.create_task(autoscaler.run())
-        
-        self._spawn_worker()
-
-    def _spawn_worker(self):
-        worker_idx = len(self.worker_processes)
-        env = os.environ.copy()
-        env["DPHI_WORKER_IDX"] = str(worker_idx)
-        log.warning(f"[AutoScaler] 🟢 Spawning Physical Phase Runtime (Worker Node: Idx {worker_idx})...")
-        proc = subprocess.Popen([sys.executable, "-m", "kernel.phase.runtime.node"], env=env)
-        self.worker_processes.append(proc)
-
-    async def _inject_synthetic_load(self, tunnel):
-        """
-        성공 시그널(scale_out_success)이 올 때까지 0.1초 간격으로 
-        지수적으로(Exponentially) 폭발하는 부하를 쏴서 HIGH_TENSION(Scale-Out)을 유도합니다.
-        """
-        log.info("\n" + "="*55)
-        log.info(" [Phase 2] Injecting Synthetic High Load Trajectory")
-        log.info("="*55)
-        
-        counter = 0
-        try:
-            while not self.scale_out_success.is_set():
-                load_value = float((counter ** 2) * 10) 
-                
-                payload = {
-                    "signal_id": "node_load_synthetic_99",
-                    "value": load_value
-                }
-                
-                await tunnel.publish(CHANNEL_SIGNAL_MUTATION, json.dumps(payload))
-                
-                # 부하가 증가하는 것을 시각적으로 확인하기 위해 0.5초마다 로그 출력
-                if counter % 5 == 0:
-                    log.info(f" 📈 Injecting tension pulse: {load_value} ...")
-                    
-                counter += 1
-                await asyncio.sleep(0.1)
-        except asyncio.CancelledError:
-            pass
-
-    def _teardown_physical_membrane(self):
-        log.info(f"\n[Diag] Tearing down {len(self.worker_processes)} physical worker nodes...")
-        for proc in self.worker_processes:
-            proc.terminate()
-            try:
-                proc.wait(timeout=3.0)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-        
-        if self._autoscaler_task: self._autoscaler_task.cancel()
-        if self._watcher_task: self._watcher_task.cancel()
-        if self._injector_task: self._injector_task.cancel()
+    async def _print_header(self):
+        print("\n" + "="*60)
+        print(" 🌌 [\033[95mDPHI Phase Chain Debug Shell\033[0m] - \033[92mConnected\033[0m")
+        print("="*60)
+        print(" Available Commands:")
+        print("  \033[96mnodes\033[0m        : 현재 살아있는 노드(Master/Worker) Heartbeat 조회")
+        print("  \033[96mping\033[0m         : 전체 시스템에 system:ping 브로드캐스트")
+        print("  \033[96mreload <fqn>\033[0m : 특정 모듈 분산 핫-리로드 (예: reload eco.mesh)")
+        print("  \033[96mexec <cmd>\033[0m   : Master 노드에 CLI 명령 주입 (예: exec align.imports)")
+        print("  \033[96mexit / quit\033[0m  : 디버그 셸 종료")
+        print("-" * 60)
 
     async def run(self):
-        log.info("=== [START] Diagnostic: N-Core Scale-Out Event Chain ===\n")
-        tunnel = await TunnelFactory.get_default()
+        await self._print_header()
+        
+        while self.running:
+            # 비동기 루프를 블로킹하지 않기 위해 스레드에서 입력 대기
+            cmd_line = await asyncio.to_thread(input, "\033[93mdebug>\033[0m ")
+            if not cmd_line.strip():
+                continue
+                
+            await self.process_command(cmd_line.strip())
+
+    async def process_command(self, cmd_line: str):
+        parts = cmd_line.split()
+        cmd = parts[0].lower()
+
+        try:
+            if cmd in ["exit", "quit"]:
+                self.running = False
+                print("👋 Exiting debug shell...")
+                
+            elif cmd == "nodes":
+                keys = await self.tunnel.keys(KEY_HEARTBEAT_PATTERN)
+                print(f"📊 Active Nodes Detected ({len(keys)}):")
+                for k in keys:
+                    # 'runtime:heartbeat:node-1234-w0' 형태에서 추출
+                    node_id = k.split(":")[-1]
+                    timestamp = await self.tunnel.get(k)
+                    print(f"  - \033[92m{node_id}\033[0m (Last pulse: {timestamp})")
+                    
+            elif cmd == "reload":
+                if len(parts) < 2:
+                    print("⚠️ Usage: reload <module_fqn>")
+                    return
+                target_module = parts[1]
+                await self._inject_reload(target_module)
+                
+            elif cmd == "exec":
+                if len(parts) < 2:
+                    print("⚠️ Usage: exec <cli_command> [args...]")
+                    return
+                cli_cmd = parts[1]
+                cli_args = parts[2:]
+                await self._inject_cli_command(cli_cmd, cli_args)
+                
+            elif cmd == "ping":
+                await self._inject_ping()
+                
+            else:
+                print(f"⚠️ Unknown command: {cmd}")
+                
+        except Exception as e:
+            print(f"❌ Error executing command: {e}")
+
+    async def _inject_reload(self, module_fqn: str):
+        """Worker들의 Dispatcher가 수신할 핫리로드 이벤트 발행"""
+        sync_event = PsiEvent(
+            event_id=next_id(), parent_id=None, source_id="debug.shell", scope="GLOBAL", tick=0, phase_id=0, context={},
+            carrier=PsiCarrier(
+                kind="system:topology", tag="reload", 
+                payload={"module_fqn": module_fqn}, carrier_type=CarrierType.FIXED
+            )
+        )
+        await self.tunnel.state_store.xadd(TOPIC_BUS_STREAM, {"data": json.dumps(sync_event.__dict__)})
+        print(f"📡 Broadcasted topology reload for '\033[96m{module_fqn}\033[0m'")
+
+    async def _inject_ping(self):
+        """시스템 전체 PubSub에 ping 발행 후 응답 대기"""
+        pubsub = self.tunnel.pubsub()
+        await pubsub.subscribe("system:echo")
+        
+        print("🦇 Emitting system:ping...")
+        await self.tunnel.publish("system:ping", json.dumps({"source": "debug.shell"}))
         
         try:
-            await self._setup_physical_membrane(tunnel)
-            
-            # 워커와 데몬이 켜질 물리적 시간을 4초 부여 (Pre-flight 대기 포함)
-            log.info("[Diag] Waiting 4 seconds for all daemons and listeners to fully boot...")
-            await asyncio.sleep(4.0)
-            
-            self._injector_task = asyncio.create_task(self._inject_synthetic_load(tunnel))
-            
-            try:
-                # 스케일 아웃 이벤트 감지 대기
-                await asyncio.wait_for(self.scale_out_success.wait(), timeout=15.0)
-                
-                log.warning("\n" + "="*55)
-                log.warning(" [Phase 3] 🚀 Scale-Out Triggered! Verifying Node 1...")
-                log.warning("="*55)
-                log.info("[Diag] Waiting 4 seconds to observe Node 1 ignition logs...")
-                await asyncio.sleep(4.0)
-                
-                log.info("\n🎉 [SUCCESS] PERFECT! The Real Physical Pub/Sub chain is connected.")
-                log.info(f"🎉 Total running worker nodes verified in OS: {len(self.worker_processes)}")
-            except asyncio.TimeoutError:
-                log.error("\n💀 [FAIL] The chain is broken. Receptor did not emit rupture OR AutoScaler missed it.")
-                
+            async with asyncio.timeout(2.0):
+                async for msg in pubsub.listen():
+                    if msg["type"] == "message":
+                        data = json.loads(msg["data"])
+                        print(f"  [ECHO] Received from: {data}")
+        except asyncio.TimeoutError:
+            print("⏳ Echo collection timeout (2.0s).")
         finally:
-            self._teardown_physical_membrane()
+            await pubsub.close()
 
-def main():
-    app = ChainDiagnosticFlow()
-    PhaseReactor.ignite(app.run)
+    async def _inject_cli_command(self, command: str, args: list):
+        """Master Node의 Control Bus가 수신할 COMMAND 이벤트 발행 및 로그 트래킹"""
+        task_id = f"debug-{uuid.uuid4().hex[:8]}"
+        response_channel = f"res:{task_id}"
+        
+        payload = { 
+            "_context": {
+                "command": command, 
+                "cli_args": args,
+                "timeout": 30.0
+            } 
+        }
+        
+        trigger_event = PsiEvent(
+            event_id=task_id, source_id="debug.shell", scope="GLOBAL", parent_id=None, tick=1, phase_id=0,
+            carrier=PsiCarrier(kind="COMMAND", tag=command, payload=payload),
+            context={"response_channel": response_channel}
+        )
+        
+        pubsub = self.tunnel.pubsub()
+        await pubsub.subscribe(response_channel)
+        
+        # Stream에 주입하여 Master가 잡아가게 함
+        event_dict = asdict(trigger_event) if hasattr(trigger_event, '__dataclass_fields__') else trigger_event.__dict__
+        await self.tunnel.state_store.xadd(TOPIC_BUS_STREAM, {"data": json.dumps(event_dict)})
+        print(f"🚀 Injected COMMAND '{command}' -> Stream. Listening on '{response_channel}'...")
+        
+        try:
+            async with asyncio.timeout(30.0):
+                async for msg in pubsub.listen():
+                    if msg["type"] == "message":
+                        result = json.loads(msg["data"])
+                        status = result.get("status", "UNKNOWN")
+                        color = "\033[92m" if status == "SUCCESS" else "\033[91m"
+                        print(f"\n{color}[{status}]\033[0m {result.get('summary', '')}")
+                        break
+        except asyncio.TimeoutError:
+            print("⏳ Execution timeout (Node did not reply within 30s).")
+        finally:
+            await pubsub.close()
+
+
+async def main():
+    tunnel = await TunnelFactory.get_default()
+    shell = DebugShell(tunnel)
+    
+    try:
+        await shell.run()
+    finally:
+        await tunnel.close()
+        print("System resources released.")
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("\n👋 Exiting...")
