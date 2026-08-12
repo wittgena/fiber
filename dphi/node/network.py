@@ -1,5 +1,4 @@
 # dphi.node.network
-## @lineage: phase.node.network
 import math
 import random
 from typing import Dict, Any, List, Optional

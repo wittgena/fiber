@@ -1,5 +1,4 @@
 # dphi.node.global
-## @lineage: phase.node.global
 from __future__ import annotations
 import asyncio
 import math

@@ -1,5 +1,4 @@
 # dphi.node.boot
-## @lineage: phase.node.boot
 import os
 import asyncio
 
@@ -40,13 +39,11 @@ class KernelGateway:
         asyncio.create_task(state_mesh.start_mesh_sync())
         
         if topology == "EXT_PROC":
-            # ExtProcStreamHandler가 정의되어 있는 경우 지연 로딩
             from watcher.receptor.policy.router import ExtProcStreamHandler
             stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
             asyncio.create_task(stream_handler.serve())
         else:
             log.info(f"[Orchestrator] Running in {topology} mode. (Ingress Receptor removed)")
-
 
 class RoutingExecutor(BaseExecutor):
     def __init__(self, completion_signal: asyncio.Event):
@@ -85,9 +82,7 @@ class RoutingExecutor(BaseExecutor):
         else:
             return await self.swarm_executor.execute(psi)
 
-
 async def clear_zombie_port(port: int):
-    # [지연 로딩] 프로세스를 통제하는 Reaper 모듈은 실행 시점에만 가져옵니다.
     from dphi.node.reaper import SystemOps
     
     reaper = SystemOps(redis_conn=None, tag="boot.reaper")
@@ -105,7 +100,6 @@ async def clear_zombie_port(port: int):
 
 
 async def start_rest_membrane():
-    """🌟 [변경됨] 내부 API 통신을 위해 FastAPI 백엔드를 로컬(127.0.0.1)에만 은닉하여 구동"""
     global _rest_server_instance
     target_port = int(os.getenv("REST_PORT", 8000))
     await clear_zombie_port(target_port)
@@ -116,7 +110,7 @@ async def start_rest_membrane():
     log.info(f"[Boot] Igniting Internal REST Edge (FastAPI/Uvicorn) on Port {target_port}...")
     config = uvicorn.Config(
         app=rest_app, 
-        host="127.0.0.1",  # 🔥 핵심 보안: 0.0.0.0에서 127.0.0.1로 변경하여 외부 노출 차단
+        host="127.0.0.1",
         port=target_port, 
         loop="uvloop", 
         log_level="warning", 
@@ -128,24 +122,16 @@ async def start_rest_membrane():
 
 
 async def start_public_gateway():
-    """🌟 [신규 추가] 외부 클라이언트를 마주하는 퍼블릭 게이트웨이 및 제어 평면 구동"""
     global _gateway_instance
-    
-    # 지연 로딩: Worker 스폰 시 불필요한 aiohttp 메모리 로드를 방지합니다.
     from receptor.ingress.server.gateway import DphiGatewayServer, GatewaySettings
     
     settings = GatewaySettings()
-    
-    # 게이트웨이가 사용할 포트들도 좀비 프로세스를 정리합니다.
     await clear_zombie_port(settings.proxy_port)
     await clear_zombie_port(settings.mcp_port)
 
     log.info("[Boot] Igniting Public Gateway & MCP Control Plane...")
     _gateway_instance = DphiGatewayServer(settings)
-    
-    # Asyncio Background Task로 듀얼 서버(Proxy, MCP) 동시 구동
     asyncio.create_task(_gateway_instance.start_dual_servers())
-
 
 async def main_async():
     global _node_instance
@@ -163,10 +149,7 @@ async def main_async():
     tunnel = await TunnelFactory.get_default()
     asyncio.create_task(receptor_bootstrap(tunnel))
     
-    # 1. Master 프로세스에서 내부망 전용 REST 서버를 로드합니다.
     await start_rest_membrane()
-
-    # 2. 🌟 REST 서버 앞단을 막아주는 Public Gateway를 로드합니다.
     await start_public_gateway()
 
     log.info("[Boot] Igniting Embedded Phase Runtime Node...")
