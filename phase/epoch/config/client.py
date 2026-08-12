@@ -18,7 +18,7 @@ from arch.contract.model.receptor import (
     ParityTripletSchema
 )
 from watcher.receptor.contract.model import ExportLogsServiceRequest
-from receptor.edge.core import StreamAppendRequest, LedgerEventSchema
+from receptor.edge.internal import StreamAppendRequest, LedgerEventSchema
 
 class NotarySwarm:
     def __init__(self, size: int = 3):

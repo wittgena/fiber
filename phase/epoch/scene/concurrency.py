@@ -5,15 +5,38 @@ import psutil
 import sys
 import json
 from contextlib import suppress
+from dataclasses import dataclass, field
+from typing import List, Dict, Any
 
-from dphi.sandbox.script.test import CONST
 from kernel.phase.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.concurrency")
 
+@dataclass(frozen=True)
+class TestConstants:
+    PAYLOAD_10K: str = "A" * 10_000
+    PAYLOAD_50K: str = "A" * 50_000
+    PAYLOAD_150K: str = "A" * 150_000
+    
+    SCALE_STEPS: List[int] = field(default_factory=lambda: [1, 5, 17, 46, 71, 128, 256, 353])
+    
+    MAX_TIMEOUT: float = 35.0 
+    MEM_WARN_LIMIT: float = 85.0
+    CPU_WARN_LIMIT: float = 95.0
+    
+    T_ID: int = 101010
+    P_ID: int = 999999
+    N_ID: int = 907049
+    
+    INJECTED_CTX: Dict[str, Any] = field(default_factory=lambda: {
+        "timestamp": 1600000000, 
+        "seed": "proof_of_compute_seed_777"
+    })
+
+CONST = TestConstants()
+
 class ConcurrencyScene(SchemeRunner):
-    # [핵심 변경] 외부에서 주입된 DphiBroker를 수용하기 위한 생성자 오버라이드
     def __init__(self, broker, suites):
         super().__init__(broker=broker)
         self.suites = suites

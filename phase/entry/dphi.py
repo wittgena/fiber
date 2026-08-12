@@ -1,3 +1,4 @@
+# phase.entry.dphi
 import sys
 import argparse
 import importlib
@@ -6,8 +7,6 @@ from typing import List, Dict
 
 from dphi.wasm.builder import WasmBuilder
 import phase.epoch.scene as scene_module
-
-# [핵심 추가] 격리된 로컬 테스트 오케스트레이터 가져오기
 from dphi.tracer.tester.wasm import WasmTester
 
 from arch.topos.tunnel.factory import TunnelFactory

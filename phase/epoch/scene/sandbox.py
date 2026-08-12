@@ -1,14 +1,42 @@
 # phase.epoch.scene.sandbox
-## @lineage: phase.epoch.flow.scene.sandbox
-## @lineage: epoch.flow.scene.sandbox
-## @lineage: epoch.sandbox.tester
-## @lineage: epoch.flow.scene.sandbox.tester
 import time
-from dphi.sandbox.script.test import TestScripts, TestPayloads, CONST
+from dataclasses import dataclass, field
+from typing import Optional, Any, Dict, List
+from dphi.sandbox.script import ScriptDef, TestScripts
 from dphi.sandbox.runner import SandboxRunner
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("sandbox.tester")
+
+class TestPayloads:
+    PHASE_GEN       = {"topo": 50, "press": -10, "rupture": False}
+    INJECTED_STATE  = {"topo": 100, "press": 200, "rupture": True, "injected_anchor": 999999, "injected_tick": 77}
+    VALID_PACKET    = {"packet_id": "123", "files": {"model.bin": "hash"}}
+    MALFORMED_JSON  = '{"topo": 50, "press": -10, "rupture": '
+
+@dataclass(frozen=True)
+class TestConstants:
+    PAYLOAD_10K: str = "A" * 10_000
+    PAYLOAD_50K: str = "A" * 50_000
+    PAYLOAD_150K: str = "A" * 150_000
+    
+    SCALE_STEPS: List[int] = field(default_factory=lambda: [1, 5, 17, 46, 71, 128, 256, 353])
+    
+    MAX_TIMEOUT: float = 35.0 
+    MEM_WARN_LIMIT: float = 85.0
+    CPU_WARN_LIMIT: float = 95.0
+    
+    T_ID: int = 101010
+    P_ID: int = 999999
+    N_ID: int = 907049
+    
+    INJECTED_CTX: Dict[str, Any] = field(default_factory=lambda: {
+        "timestamp": 1600000000, 
+        "seed": "proof_of_compute_seed_777"
+    })
+
+CONST = TestConstants()
+
 
 class SandboxScene(SandboxRunner):
     async def run_all(self):
@@ -38,14 +66,16 @@ class SandboxScene(SandboxRunner):
             target_func="hack_system_memory", 
             payload={}, 
             expected_success=False, 
-            expected_match="not registered"
+            expected_match="unknown variant"
         )
 
     async def _test_legacy_isolation(self):
         log.info("\n--- Running Suite: Determinism & Legacy Isolation ---")
         
-        # 1. 시맨틱 검증
+        # 1. 시맨틱 및 워크로드(Workload) 성능 검증 [추가됨]
         await self._assert_script(TestScripts.LEGACY_NORMAL)
+        await self._assert_script(TestScripts.COMPUTE_HEAVY)
+        await self._assert_script(TestScripts.DATA_PROCESSING)
         
         # 2. 시스템 탈옥 방어 (Escape Defense)
         await self._assert_script(TestScripts.IO_VIOLATION)

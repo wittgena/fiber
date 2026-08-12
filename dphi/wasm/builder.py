@@ -12,15 +12,9 @@ THEORIA_ROOT = resolve_path("theoria")
 TIME_ROOT = resolve_path("time")
 REGISTRY_FILE = TIME_ROOT / "registry.json"
 
-# --- 타겟 WASM 프로젝트 목록 정의 ---
-# 각 프로젝트별로 필요한 환경 변수(env)를 독립적으로 설정할 수 있습니다.
 WASM_PROJECTS = [
     {"name": "dphi"},
     {"name": "dvm"},
-    {
-        "name": "rpy", 
-        "env": {"RUSTFLAGS": '--cfg getrandom_backend="custom"'}
-    }
 ]
 
 

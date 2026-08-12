@@ -1,6 +1,8 @@
-# dphi.sandbox.script.test
+# dphi.sandbox.script
+import time
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict, List
+from watcher.plane.emitter import get_emitter
 
 @dataclass(frozen=True)
 class ScriptDef:
@@ -11,12 +13,45 @@ class ScriptDef:
     tier: str = "SYSTEM"
 
 class TestScripts:
+    # 1. 가벼운 베이스라인 연산 (예상 Exec: 1~5ms)
     LEGACY_NORMAL = ScriptDef(
-        title="Integrity: Complex Language Semantics",
-        code="print(sum([x**2 for x in range(10)]))",
+        title="Integrity: Light Compute (Simple Math)",
+        code="print(sum([x**2 for x in range(1000)]))",
         expect_success=True,
-        expected_match="285"
+        expected_match="332833500"
     )
+    
+    # 2. 무거운 CPU 연산 부하 (예상 Exec: 50~200ms)
+    COMPUTE_HEAVY = ScriptDef(
+        title="Workload: Heavy CPU Compute (Prime Factorization)",
+        code="""
+def is_prime(n):
+    if n < 2: return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0: return False
+    return True
+primes = [p for p in range(30000) if is_prime(p)]
+print(f'Found {len(primes)} primes')
+        """.strip(),
+        expect_success=True,
+        expected_match="Found 3245 primes"
+    )
+
+    # 3. 메모리 및 직렬화/역직렬화 부하 (예상 Exec: 30~100ms)
+    DATA_PROCESSING = ScriptDef(
+        title="Workload: Memory & Data Processing (JSON Array)",
+        code="""
+import json
+data = [{'id': i, 'val': i * 2.5, 'active': i % 2 == 0} for i in range(20000)]
+serialized = json.dumps(data)
+parsed = json.loads(serialized)
+print(f'Processed {len(parsed)} records')
+        """.strip(),
+        expect_success=True,
+        expected_match="Processed 20000 records"
+    )
+
+    # 4. 시간 누수 및 멱등성 검증 (Determinism)
     TIME_LEAK = ScriptDef(
         title="Determinism: Sandbox enforces 0.0s fallback time",
         code="import time\nprint(f'{time.time()}|{time.perf_counter()}')"
@@ -29,16 +64,15 @@ class TestScripts:
         title="Determinism: PRNG Idempotency",
         code="import random, os\nprint(f'{random.random()}|{os.urandom(4).hex()}')"
     )
+    
+    # 5. 시스템 탈옥 및 보안 방어선 테스트
     ENV_LEAK = ScriptDef(
         title="Isolation: Prevent Host Environment Variable Leakage",
         code="""
 import os
 is_virtual = '__LLVM_PROFILE_RT_INIT_ONCE' in os.environ
-
-# WASM 런타임이 자체적으로 생성한 최소한의 가상 PATH만 존재하는지 확인
 current_path = os.environ.get('PATH', '')
 is_host_path_blocked = len(current_path.split(':')) <= 3 and 'Users' not in current_path
-
 print(f'Isolated: {is_virtual and is_host_path_blocked}')
         """.strip(),
         expect_success=True,
@@ -73,6 +107,8 @@ print(f'Isolated: {is_virtual and is_host_path_blocked}')
         code="import threading\ndef f(): pass\nt = threading.Thread(target=f)\nt.start()",
         expect_success=False
     )
+    
+    # 6. 자원 고갈 공격 방어선 테스트 (Tier=STANDARD)
     INFINITE_LOOP_ATTACK = ScriptDef(
         title="Resource: Opcode-based Fuel Exhaustion",
         code="x = 2\nwhile True: x = x ** 2",
@@ -97,34 +133,3 @@ while True:
         expect_success=False,
         expected_match="RecursionError"
     )
-
-class TestPayloads:
-    """WASM 네이티브 함수에 주입할 표준 페이로드 딕셔너리"""
-    PHASE_GEN       = {"topo": 50, "press": -10, "rupture": False}
-    INJECTED_STATE  = {"topo": 100, "press": 200, "rupture": True, "injected_anchor": 999999, "injected_tick": 77}
-    VALID_PACKET    = {"packet_id": "123", "files": {"model.bin": "hash"}}
-    MALFORMED_JSON  = '{"topo": 50, "press": -10, "rupture": '
-
-@dataclass(frozen=True)
-class TestConstants:
-    """테스트 한계치 및 환경 상수 관리"""
-    PAYLOAD_10K: str = "A" * 10_000
-    PAYLOAD_50K: str = "A" * 50_000
-    PAYLOAD_150K: str = "A" * 150_000
-    
-    SCALE_STEPS: List[int] = field(default_factory=lambda: [1, 5, 17, 46, 71, 128, 256, 353])
-    
-    MAX_TIMEOUT: float = 35.0 
-    MEM_WARN_LIMIT: float = 85.0
-    CPU_WARN_LIMIT: float = 95.0
-    
-    T_ID: int = 101010
-    P_ID: int = 999999
-    N_ID: int = 907049
-    
-    INJECTED_CTX: Dict[str, Any] = field(default_factory=lambda: {
-        "timestamp": 1600000000, 
-        "seed": "proof_of_compute_seed_777"
-    })
-
-CONST = TestConstants()

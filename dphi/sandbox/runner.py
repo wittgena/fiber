@@ -7,7 +7,7 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from dphi.sandbox.script.test import ScriptDef
+from dphi.sandbox.script import ScriptDef
 from dphi.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from phase.epoch.config.client import PhaseBuilder
 from ext.client.wallet import ExtWalletClient

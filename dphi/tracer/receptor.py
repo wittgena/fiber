@@ -1,4 +1,4 @@
-# receptor.ingress.tracer
+# dphi.tracer.receptor
 import uuid
 from dataclasses import dataclass, field
 from typing import Callable, Dict
@@ -7,19 +7,35 @@ from fastapi.routing import APIRoute
 
 from watcher.plane.emitter import flow_scope, get_emitter
 
-log = get_emitter("net.tracer")
+log = get_emitter("tracer.receptor")
 
+# =====================================================================
+# [변경됨] Public Gateway와 Internal API의 명확한 분리 반영
+# =====================================================================
 class TargetOp:
-    OTLP_INGRESS = "core.otlp_logs_export"            
-    TRADE_INGRESS = "eco.exchange.submit_trade_intent" 
-    LEDGER_APPEND = "core.append_to_stream"            
-    ANCHOR_SEAL = "core.seal_state"                    
+    # --- Public Gateway Endpoints (외부 클라이언트 시뮬레이션용) ---
+    PUBLIC_AGENT_EXECUTE = "public.public_agent_execute"       # 단일 인텐트 실행 및 영수증 발급
+    PUBLIC_OTLP_INGRESS  = "public.public_otlp_logs_export"    # OTLP 텔레메트리 수집
+    PUBLIC_AUDIT_EVENT   = "public.public_audit_log"           # 감사 로그 ZK 증명 발급
+
+    # --- Internal Endpoints (내부망/백엔드 통합 테스트용) ---
+    INTERNAL_TRADE_INGRESS = "eco.exchange.submit_trade_intent"
+    INTERNAL_EXECUTE_BILLED= "eco.profile.execute_billed_workload"
+    INTERNAL_LEDGER_APPEND = "core.internal.append_to_stream"
+    INTERNAL_ANCHOR_SEAL   = "core.internal.seal_state"
+
 
 DEFAULT_FALLBACK_ROUTES: Dict[str, str] = {
-    TargetOp.OTLP_INGRESS: "/v1/logs",
-    TargetOp.TRADE_INGRESS: "/v1/eco/exchange/order/ingress",
-    TargetOp.LEDGER_APPEND: "/v1/ledger/stream/append",
-    TargetOp.ANCHOR_SEAL: "/v1/anchor/seal"
+    # Public Fallbacks
+    TargetOp.PUBLIC_AGENT_EXECUTE: "/v1/public/agent/execute",
+    TargetOp.PUBLIC_OTLP_INGRESS: "/v1/public/telemetry/logs",
+    TargetOp.PUBLIC_AUDIT_EVENT: "/v1/public/audit/event",
+    
+    # Internal Fallbacks
+    TargetOp.INTERNAL_TRADE_INGRESS: "/internal/v1/eco/exchange/order/ingress",
+    TargetOp.INTERNAL_EXECUTE_BILLED: "/internal/v1/eco/profile/execute/billed",
+    TargetOp.INTERNAL_LEDGER_APPEND: "/internal/v1/core/ledger/stream/append",
+    TargetOp.INTERNAL_ANCHOR_SEAL: "/internal/v1/core/anchor/seal"
 }
 
 @dataclass
@@ -37,9 +53,10 @@ class E2EConfig:
 @dataclass
 class SceneConfig:
     """DI container for payload builders."""
+    # 테스트 시나리오에 맞게 빌더 이름들도 직관적으로 변경 가능
     otlp_builder: Callable[[bool], dict]
-    trade_builder: Callable[[bool], dict]
-    ledger_builder: Callable[[str, bool], dict]
+    agent_intent_builder: Callable[[bool], dict]   # 기존 trade_builder 대체 (Public Agent)
+    ledger_builder: Callable[[str, bool], dict]    # Internal Ledger Append
 
 
 class RouteRegistry:

@@ -60,7 +60,6 @@ class PaymentStatusResponse(BaseModel):
     message: str
     receipt: Optional[Dict[str, Any]] = None
 
-# 🌟 신규: EVM 관련 Pydantic 모델
 class BalanceResponse(BaseModel):
     address: str
     eth_wei: str

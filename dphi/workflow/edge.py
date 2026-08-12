@@ -17,7 +17,7 @@ from phase.epoch.config.client import NotarySwarm
 from phase.epoch.config.dphi import mock_env
 
 # --- Ingress & Observability ---
-from receptor.ingress.tracer import E2EConfig, RouteRegistry, SceneConfig, TargetOp
+from dphi.tracer.receptor import E2EConfig, RouteRegistry, SceneConfig, TargetOp
 from watcher.plane.emitter import get_emitter
 
 
