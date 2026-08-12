@@ -1,20 +1,12 @@
 # dphi.tracer.kube.bound
-## @lineage: phase.tracer.kube.bound
-## @lineage: entry.tracer.kube.bound
-## @lineage: receptor.surface.tracer.kube.bound
-## @lineage: surface.tracer.kube.bound
-## @lineage: watcher.tracer.kube.bound
 import asyncio
 import httpx
 from typing import Optional, Any, Dict, List
 
-from watcher.tracer.bound import BaseBoundary, BaseStreamAuditor, BaseAuditor
-from watcher.plane.emitter import get_emitter
-
-# Pipeline 아키텍처 의존성 (arch.topos.network 기반)
 from arch.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
 from arch.topos.network.channel.codec import JsonMessageCodec
-
+from watcher.tracer.bound import BaseBoundary, BaseStreamAuditor, BaseAuditor
+from watcher.plane.emitter import get_emitter
 
 class KubeWatchTransport:
     """@desc: K8s Watch API의 HTTP Chunk 스트림을 읽어 파이프라인으로 주입하는 Async Transport"""

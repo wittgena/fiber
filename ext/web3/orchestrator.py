@@ -6,7 +6,7 @@ from typing import Dict, Any, List
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from phase.epoch.config.dphi import mock_env
+from dphi.adapter.config.dphi import mock_env
 from ext.web3.config import EvmBuilder
 from watcher.plane.emitter import get_emitter
 

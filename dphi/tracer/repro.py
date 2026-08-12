@@ -1,8 +1,5 @@
 # dphi.tracer.repro
-## @lineage: phase.tracer.repro
-## @lineage: entry.tracer.repro
-## @lineage: receptor.surface.tracer.repro
-## @lineage: surface.tracer.repro
+## @lineage: dphi.node.tracer.repro
 import sys
 import asyncio
 from functools import wraps

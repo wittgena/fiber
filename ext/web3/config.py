@@ -6,7 +6,7 @@ import time
 import random
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field, asdict
-from phase.epoch.config.dphi import mock_env
+from dphi.adapter.config.dphi import mock_env
 
 @dataclass
 class EvmIntent:
