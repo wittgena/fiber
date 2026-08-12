@@ -1,6 +1,4 @@
 # dphi.phase.scene.sandbox
-## @lineage: dphi.epoch.scene.sandbox
-## @lineage: phase.epoch.scene.sandbox
 import time
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict, List

@@ -1,5 +1,4 @@
 # dphi.adapter.config.dphi
-## @lineage: phase.epoch.config.dphi
 import os
 from enum import Enum
 from typing import Dict, List

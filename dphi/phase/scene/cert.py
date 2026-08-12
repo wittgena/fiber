@@ -1,6 +1,4 @@
 # dphi.phase.scene.cert
-## @lineage: dphi.epoch.scene.cert
-## @lineage: phase.epoch.scene.cert
 import time
 import asyncio
 import json
@@ -11,15 +9,11 @@ from dphi.node.runner.sandbox import SandboxRunner
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.method import DphiMethod
 from watcher.plane.emitter import get_emitter
-from dphi.phase.scene.anchor import ActorIdentity # 재사용 가정
+from dphi.phase.scene.anchor import ActorIdentity
 
 log = get_emitter("scene.cert")
 
 class CertProofScene(SandboxRunner):
-    """
-    @desc: CI/로컬 환경에서 증명 가능한 극한의 한계(Edge) 및 결정론적 무결성 4대 마스터 씬
-           (대규모 병렬 부하 및 워커 교차 오염 테스트는 entry.attach의 concurrency 씬으로 위임됨)
-    """
     def __init__(self, broker: Any):
         super().__init__(broker)
         # Byzantine 테스트를 위한 Actor 초기화

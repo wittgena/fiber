@@ -14,11 +14,9 @@ from kernel.phase.reactor import PhaseReactor
 from kernel.phase.daemon.task.supervisor import TaskSupervisor
 from watcher.plane.emitter import get_emitter
 
-# [개선] 현재 Master-Worker 아키텍처 및 OS 프로세스 명명 규칙에 맞춘 타겟 태그
 DEFAULT_TARGET_TAGS = [
-    "phase.node.boot",
-    "phase.entry.concurrency",
-    "kernel.phase.runtime.node",
+    "dphi.node.boot",
+    "dphi.phase",
     "multiprocessing.spawn",           # OS 멀티프로세싱 워커 노드
     "multiprocessing.resource_tracker" # 자원 추적 데몬
 ]

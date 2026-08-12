@@ -1,6 +1,4 @@
-# dphi.phase.epoch.dphi
-## @lineage: dphi.phase.entry.dphi
-## @lineage: phase.entry.dphi
+# dphi.phase.epoch
 import sys
 import argparse
 import importlib

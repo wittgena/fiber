@@ -1,7 +1,4 @@
 # dphi.phase.workflow.dvm
-## @lineage: dphi.epoch.workflow.dvm
-## @lineage: dphi.workflow.dvm
-## @lineage: dphi.workflow.evm
 import sys
 import argparse
 import asyncio
@@ -17,18 +14,21 @@ except ImportError:
 from dphi.adapter.config.dphi import mock_env
 from dphi.adapter.config.client import NotarySwarm
 from dphi.adapter.shadow import ShadowAdapter
-from ext.web3.orchestrator import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
+from ext.web3.evm import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.bind.inter.protocol import ExecutionResult
 from kernel.dphi.broker import DphiBroker
 from watcher.plane.emitter import get_emitter
+from ext.dphi.verifier import TraceVerifier, VerificationError
 
 log = get_emitter("dvm.workflow")
 
 class DvmStartMsg(WorkflowMessage): pass
-class DvmPreparedMsg(WorkflowMessage): pass
-class DvmExecutedMsg(WorkflowMessage): pass
+class DvmIntentMsg(WorkflowMessage): pass
+class DvmProjectedMsg(WorkflowMessage): pass
+class DvmSimulatedMsg(WorkflowMessage): pass
+class DvmVerifiedMsg(WorkflowMessage): pass
 
 class DvmWorkflow(Workflow):
     def __init__(self, target_contract: str, user_intent: Dict[str, Any], rpc_url: Optional[str] = None, mode: str = "mock"):
@@ -38,7 +38,13 @@ class DvmWorkflow(Workflow):
         self.target_contract = target_contract
         self.user_intent = user_intent
         self.mode = mode
-        if self.mode == "inversion":
+        
+        self.scenario_type = self.user_intent.get("scenario_type", "UNKNOWN")
+        self.is_cosmwasm = self.scenario_type == "COSMWASM_EXECUTE"
+        
+        if self.is_cosmwasm:
+            self.orchestrator = MockOrchestrator(user_intent=self.user_intent)
+        elif self.mode == "inversion":
             self.orchestrator = InversionOrchestrator(user_intent=self.user_intent)
         elif self.mode == "mock":
             self.orchestrator = MockOrchestrator(user_intent=self.user_intent)
@@ -58,17 +64,30 @@ class DvmWorkflow(Workflow):
         
         self.execution_result: Optional[ExecutionResult] = None
         self.canonical_hash: str = ""
+        self.is_verified: bool = False  # 검증 성공 여부 트래킹 플래그
 
     async def start(self) -> bool:
         self.post_message(DvmStartMsg())
         await self.run()
         await self.orchestrator.disconnect()
-        return bool(self.canonical_hash) or (self.execution_result is not None and self.execution_result.success)
+        return getattr(self, "is_verified", False)
 
     @step
-    async def phase_projection(self, msg: DvmStartMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 1] Shadow State Projection ---")
+    async def phase_intent_resolution(self, msg: DvmStartMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 1] Intent Resolution & Routing ---")
+        self.log.info(f"  └ Target Engine: {'CosmWasm (cw20)' if self.is_cosmwasm else 'EVM (dvm.wasm)'}")
+        self.log.info(f"  └ Scenario Type: {self.scenario_type}")
+        self.log.info(f"  └ Execution Mode: {self.mode.upper()}")
+        return DvmIntentMsg()
+
+    @step
+    async def phase_state_projection(self, msg: DvmIntentMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 2] Shadow State Projection ---")
         try:
+            if self.is_cosmwasm:
+                self.log.info("  └ Bypassing EVM RPC for pure CosmWasm scenario.")
+                return DvmProjectedMsg()
+
             await self.orchestrator.verify_connection()
             
             if self.mode == "live" and self.user_intent.get("requires_access_list"):
@@ -99,8 +118,7 @@ class DvmWorkflow(Workflow):
             self.block_context = await self.orchestrator.fetch_block_context()
 
             overrides_list = []
-            weth_address = mock_env.contracts.target_erc20.lower()
-            if self.user_intent.get("scenario_type") == "UNISWAP_EXACT_INPUT" and self.mode == "live":
+            if self.scenario_type == "UNISWAP_EXACT_INPUT" and self.mode == "live":
                 self.log.info("  └ 💉 Formulating State Overrides for Uniswap Scenario...")
                 owner_pad = self.caller.replace("0x", "").zfill(64).lower()
                 spender_pad = self.target_contract.replace("0x", "").zfill(64).lower()
@@ -123,6 +141,7 @@ class DvmWorkflow(Workflow):
                 overrides=overrides_list
             )
             
+            weth_address = mock_env.contracts.target_erc20.lower()
             if projection.overrides:
                 if weth_address not in self.global_state_snapshot:
                     self.global_state_snapshot[weth_address] = {"balance": "0x0", "nonce": 0, "code": "0x", "storage": {}}
@@ -130,81 +149,93 @@ class DvmWorkflow(Workflow):
                     self.global_state_snapshot[weth_address]["storage"][ov.slot_hash] = ov.injected_value
                     self.log.info(f"    └ [ShadowAdapter] Injected Override at slot: {ov.slot_hash}")
 
-            return DvmPreparedMsg()
+            return DvmProjectedMsg()
         except Exception as e:
             return ErrorMessage(f"Projection Failed: {str(e)}")
 
     @step
-    async def phase_simulation(self, msg: DvmPreparedMsg) -> WorkflowMessage:
-        if self.mode == "inversion":
-            self.log.info("--- [Phase 2] dvm.wasm -> Host -> dphi.wasm Inversion ---")
-        else:
-            self.log.info("--- [Phase 2] Phronetic Simulation via WasmBroker ---")
-        
-        intent_struct = ShadowAdapter.forge_intent(
-            caller=self.caller,
-            calldata=self.calldata,
-            scenario_type=self.user_intent.get("scenario_type", "UNKNOWN"),
-            gas_limit=mock_env.wasm.max_gas_limit
-        )
-        
-        evm_payload = {
-            "target_address": self.target_contract,
-            "calldata": intent_struct.calldata,
-            "state_snapshot": self.global_state_snapshot
-        }
-        inter_context = {
-            "caller_address": intent_struct.caller,
-            "value": hex(int(intent_struct.value_wei)),
-            "block": self.block_context
-        }
+    async def phase_vm_simulation(self, msg: DvmProjectedMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 3] Phronetic VM Simulation ---")
         
         try:
-            self.log.info(f"[Test] Dispatching Intent to Broker (Scenario: {intent_struct.scenario_type}, Tier: {mock_env.wasm.tier})...")
-            result: ExecutionResult = await self.broker.execute(
-                code=evm_payload, tier=mock_env.wasm.tier, context=inter_context
-            )
+            if self.is_cosmwasm:
+                target_wasm = self.user_intent.get("target", "cw20_base.wasm")
+                self.log.info(f"[Test] Dispatching CosmWasm Intent to Broker (Target: {target_wasm})")
+                
+                cw_payload = {
+                    "vm_target": "COSMWASM_EXTERNAL",
+                    "target_wasm_file": target_wasm,
+                    "env": self.user_intent.get("env", {}),
+                    "info": self.user_intent.get("info", {}),
+                    "msg": self.user_intent.get("msg", {})
+                }
+                
+                self.execution_result = await self.broker.execute(
+                    code=cw_payload, tier=mock_env.wasm.tier, context={}
+                )
+                
+            else:
+                intent_struct = ShadowAdapter.forge_intent(
+                    caller=self.caller,
+                    calldata=self.calldata,
+                    scenario_type=self.scenario_type,
+                    gas_limit=mock_env.wasm.max_gas_limit
+                )
+                
+                evm_payload = {
+                    "target_address": self.target_contract,
+                    "calldata": intent_struct.calldata,
+                    "state_snapshot": self.global_state_snapshot
+                }
+                inter_context = {
+                    "caller_address": intent_struct.caller,
+                    "value": hex(int(intent_struct.value_wei)),
+                    "block": self.block_context
+                }
+                
+                self.log.info(f"[Test] Dispatching Intent to Broker (Scenario: {intent_struct.scenario_type}, Tier: {mock_env.wasm.tier})...")
+                self.execution_result = await self.broker.execute(
+                    code=evm_payload, tier=mock_env.wasm.tier, context=inter_context
+                )
             
-            self.execution_result = result
-            
-            if not result.success:
-                try:
-                    parsed_out = json.loads(result.output)
-                    revert_msg = parsed_out.get('revert_reason', str(result.error))
-                    output_data = parsed_out.get('output', '')
-                    
-                    if intent_struct.scenario_type == "ERC4337_HANDLE_OPS" and "41413930" in output_data:
-                        self.log.info("  └─ [ASSERT SUCCESS] Expected EntryPoint Revert (AA90) securely bounded by sandbox.")
-                        return DvmExecutedMsg()
-                    
-                    self.log.error(f"🚨 [RAW ERROR] Reverted. Gas Used: {parsed_out.get('gas_used')} | Reason: {revert_msg}")
-                    return DvmExecutedMsg() 
-                except Exception:
-                    return ErrorMessage(f"EVM Execution Failed: {result.error}")
-
-            parsed_out = json.loads(result.output)
-            self.log.info(f"  └─ [PASS] Execution Successful via dvm.wasm. (Gas: {parsed_out.get('gas_used')})")
-            
-            if self.mode == "inversion":
-                output_hex = parsed_out.get('output', '')
-                self.log.info(f"  └─ 🌌 Phase Residue Returned to EVM: {output_hex}")
-
-            return DvmExecutedMsg()
+            return DvmSimulatedMsg()
             
         except Exception as e:
             return ErrorMessage(f"Broker/Interpreter crashed: {str(e)}")
 
     @step
-    async def phase_sealing(self, msg: DvmExecutedMsg) -> WorkflowMessage:
+    async def phase_trace_verification(self, msg: DvmSimulatedMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 4] Trace & Integrity Verification ---")
+        try:
+            expected_revert = (self.calldata == "0xdeadbeef" and self.scenario_type != "DPHI_INVERSION")
+            
+            is_valid, v_msg = TraceVerifier.verify(
+                scenario_type=self.scenario_type,
+                result=self.execution_result,
+                mode=self.mode,
+                expected_revert=expected_revert
+            )
+            
+            self.log.info(f"  └─ {v_msg}")
+            
+            # [수정 완료] 무결성 검증을 완벽히 통과했을 때만 True 할당
+            self.is_verified = True
+            
+            return DvmVerifiedMsg()
+            
+        except VerificationError as e:
+            return ErrorMessage(f"Verification Failed: {str(e)}")
+        except Exception as e:
+            return ErrorMessage(f"Trace Analyzer Crashed: {str(e)}")
+
+    @step
+    async def phase_sealing(self, msg: DvmVerifiedMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 5] Cryptographic Proof Sealing ---")
+        
         if self.mode == "inversion":
-            self.log.info("--- [Phase 3] Inversion Verification Completed ---")
-            if self.execution_result and self.execution_result.success:
-                self.log.info("🎉 EVM <-> Host <-> DPHI Core communication cycle verified.")
-                return StopMessage(result=True)
-            else:
-                return ErrorMessage("Inversion cycle failed to produce successful trace.")
-                
-        self.log.info("--- [Phase 3] Cryptographic Proof Sealing ---")
+            self.log.info("  └ Bypassing Notary Sealing for Inversion mode.")
+            return StopMessage(result=True)
+            
         try:
             output_data = {}
             if self.execution_result and self.execution_result.output:

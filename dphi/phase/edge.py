@@ -1,6 +1,4 @@
-# dphi.phase.epoch.edge
-## @lineage: dphi.phase.entry.edge
-## @lineage: phase.entry.edge
+# dphi.phase.edge
 import asyncio
 import random
 from dataclasses import dataclass
@@ -8,25 +6,19 @@ from typing import Any, Callable, Coroutine, List, Optional
 
 import httpx
 
-# --- Core Framework & Telemetry ---
-from kernel.phase.reactor import PhaseReactor
-from watcher.plane.emitter import flow_scope, get_emitter
-
-# --- Infrastructure Workflows & Tracers ---
-from watcher.tracer.dphi import DphiTracer
-from watcher.wasm.builder import WasmBuilder
 from dphi.phase.workflow.edge import EdgeWorkflow
-from watcher.tracer.edge import E2EConfig, SceneConfig, HttpFlowTracer, RouteRegistry
 from receptor.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
-
-# --- App Context ---
 from receptor.rest import api as rest_app, lifespan
 
-log = get_emitter("entry.edge_gateway")
+from kernel.phase.reactor import PhaseReactor
+from watcher.plane.emitter import flow_scope, get_emitter
+from watcher.tracer.dphi import DphiTracer
+from watcher.tracer.edge import E2EConfig, SceneConfig, HttpFlowTracer, RouteRegistry
+from watcher.wasm.builder import WasmBuilder
 
-# ==========================================
-# Payload Builders for Gateway Edge
-# ==========================================
+
+log = get_emitter("phase.edge")
+
 def create_otlp_payload(inject_faults: bool) -> dict:
     from dphi.adapter.config.client import PhaseBuilder
     if inject_faults:
@@ -34,7 +26,6 @@ def create_otlp_payload(inject_faults: bool) -> dict:
     return PhaseBuilder.otlp_payload(is_malformed=False)
 
 def create_agent_intent_payload(inject_faults: bool) -> dict:
-    """새로운 Gateway API (/v1/public/agent/execute) 테스트용 빌더"""
     if inject_faults:
         return {"invalid_intent": "missing_code_and_signature"}
     
@@ -50,12 +41,9 @@ def get_edge_scene_config() -> SceneConfig:
     return SceneConfig(
         otlp_builder=create_otlp_payload,
         agent_intent_builder=create_agent_intent_payload,
-        ledger_builder=lambda root_hash, fault: {} # Edge 테스트에서는 Internal Ledger 직접 호출 안함
+        ledger_builder=lambda root_hash, fault: {}
     )
 
-# ==========================================
-# Core Pipeline Runner
-# ==========================================
 @dataclass
 class Phase:
     name: str
@@ -77,12 +65,7 @@ class PipelineRunner:
             await phase.action()
         log.info(f"=== Pipeline Completed: {self.name} ===\n")
 
-
-# ==========================================
-# Tracer Pipeline (Gateway Ingress & Security)
-# ==========================================
 class GatewayTracerPipeline(PipelineRunner):
-    """Pipeline for Public Gateway, L7 WAF, and Internal Isolation Verification"""
     def __init__(self, config: E2EConfig):
         super().__init__(name="Public Gateway & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")
         self.config = config
@@ -154,10 +137,8 @@ class GatewayTracerPipeline(PipelineRunner):
         log.info(f"\n[Pipeline] Initiating Sentinel Chaos Attacks against Public Gateway...")
         transport = httpx.ASGITransport(app=rest_app)
         attack_vectors = ChaosPayloadLibrary.get_all_vectors()
-        
-        # OTLP Ingress API를 타겟으로 무작위 공격 시도
         target_path = self.routes.url_for("public.public_otlp_logs_export")
-        
+
         async with lifespan(rest_app):
             async with httpx.AsyncClient(
                 transport=transport, 
@@ -174,9 +155,6 @@ class GatewayTracerPipeline(PipelineRunner):
             log.info("  └─ All Chaos probes successfully deflected by Gateway Sentinel Membrane.")
 
 
-# ==========================================
-# Edge Master Orchestrator
-# ==========================================
 @dataclass
 class TestResult:
     target: str
@@ -197,7 +175,6 @@ class EdgeSuiteRunner:
 
     async def _run_gateway_pipeline(self):
         self.log.info("\n▶️ [PART 1] Running Public Gateway & Isolation Pipeline...")
-        # Gateway 테스트를 위해 localhost:8000 (또는 실제 프록시 포트) 설정
         net_config = E2EConfig(host="localhost", port=8000, protocol="http")
         tracer_pipeline = GatewayTracerPipeline(config=net_config)
         

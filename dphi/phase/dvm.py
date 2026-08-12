@@ -1,6 +1,4 @@
-# dphi.phase.epoch.dvm
-## @lineage: dphi.phase.entry.dvm
-## @lineage: phase.entry.dvm
+# dphi.phase.dvm
 import sys
 import asyncio
 from typing import Dict, Any, Optional, List
@@ -9,13 +7,13 @@ from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from dphi.adapter.config.dphi import mock_env, DvmConfig
-from ext.web3.config import EvmBuilder, EvmIntent
+from ext.web3.evm import EvmBuilder, EvmIntent
 from dphi.phase.workflow.dvm import DvmWorkflow 
 
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("entry.dvm")
+log = get_emitter("phase.dvm")
 
 class EvmRunner:
     def __init__(self, config: DvmConfig):
@@ -27,7 +25,23 @@ class EvmRunner:
             return int(val, 16)
         return int(val)
 
-    def _build_intent(self, mode: str, revert: bool, scenario_type: str) -> EvmIntent:
+    def _build_intent(self, mode: str, revert: bool, scenario_type: str) -> Any:
+        # =================================================================
+        # [정렬 1] CosmWasm 테스트용 인텐트 반환 구조 (EVM 아님)
+        # =================================================================
+        if scenario_type == "COSMWASM_EXECUTE":
+            return {
+                "target": "cw20_base.wasm",
+                "scenario_type": scenario_type,
+                "msg": {"transfer": {"recipient": "cosmos1targetaddress89012345678901234567890", "amount": "100"}},
+                "info": {"sender": "cosmos1senderaddress12345678901234567890123", "funds": []},
+                "env": {
+                    "block": {"height": 1234, "time": "1234567890", "chain_id": "test-1"}, 
+                    "contract": {"address": "cosmos1contractaddress456789012345678901234"}
+                }
+            }
+
+        # 기존 EVM 로직
         if self.config.calldata != "0x" and scenario_type != "DPHI_INVERSION":
             return EvmIntent(
                 target=self.config.target,
@@ -65,13 +79,21 @@ class EvmRunner:
         self.log.info(f"\n\n{'='*80}\n🚀 [SCENARIO] {name}\n{'='*80}")
         
         intent = self._build_intent(mode, revert, scenario_type)
+        
+        # [정렬 2] CosmWasm용 dict 분기 및 안전한 target_contract 추출
+        user_intent = intent if isinstance(intent, dict) else intent.to_workflow_dict()
+        
+        # EvmIntent 변환 시 target이 target_address로 치환될 수 있으므로 둘 다 확인하여 안전하게 확보
+        target_contract = user_intent.get("target_address") or user_intent.get("target")
+
         workflow = DvmWorkflow(
-            target_contract=intent.target, 
-            user_intent=intent.to_workflow_dict(), 
+            target_contract=target_contract, 
+            user_intent=user_intent, 
             rpc_url=self.config.rpc_url, 
             mode=mode
         )
         return await workflow.start()
+
 
 class DvmPipeline:
     def __init__(self, config: DvmConfig):
@@ -148,7 +170,7 @@ class DvmPipeline:
                 self.log.warning("⚠️ Pre-flight failed. Live WETH tests may revert. Proceeding anyway...")
 
         if self.config.mode == "suite":
-            self.log.info("\n[CLI] 🏃‍♂️ Initiating Comprehensive 6-Stage System Suite")
+            self.log.info("\n[CLI] 🏃‍♂️ Initiating 5-Phase Multi-VM System Suite (Intent -> Projection -> Simulation -> Verification -> Sealing)")
             
             s1 = await self.executor.run("1. Standard Mock (ERC20 Transfer)", "mock", False, "ERC20_TRANSFER")
             s2 = await self.executor.run("2. Revert Mock (ERC20 Transfer)", "mock", True, "ERC20_TRANSFER")
@@ -156,28 +178,30 @@ class DvmPipeline:
             s4 = await self.executor.run("4. Live Testnet (ERC20 Transfer)", "live", False, "ERC20_TRANSFER")
             s5 = await self.executor.run("5. Live Testnet (Uniswap V3 exactInputSingle)", "live", False, "UNISWAP_EXACT_INPUT")
             s6 = await self.executor.run("6. Live Testnet (ERC4337 EntryPoint Tracer)", "live", False, "ERC4337_HANDLE_OPS")
+            s7 = await self.executor.run("7. CosmWasm (cw20_base Transfer Test)", "mock", False, "COSMWASM_EXECUTE")
             
-            self.log.info(f"\n\n{'='*80}\n📊 [6-STAGE SUITE SUMMARY]\n{'='*80}")
-            self.log.info(f" 1. Standard Mock        : {'✅ PASS' if s1 else '❌ FAIL'}")
-            self.log.info(f" 2. Revert Mock          : {'✅ PASS (Reverted)' if s2 else '❌ FAIL'}")
-            self.log.info(f" 3. Cross-VM Inversion  : {'✅ PASS (Host-Mediated RPC)' if s3 else '❌ FAIL'}")
-            self.log.info(f" 4. Live Testnet ERC20  : {'✅ PASS (Tx logic successful)' if s4 else '❌ FAIL'}")
-            self.log.info(f" 5. Live Uniswap V3     : {'✅ TRACED (Revert Proven)' if s5 else '❌ FAIL'}")
-            self.log.info(f" 6. EntryPoint Tracer   : {'✅ TRACE SUCCESS (AA90 Caught)' if s6 else '❌ FAIL'}")
+            self.log.info(f"\n\n{'='*80}\n📊 [7-STAGE SUITE SUMMARY (Verified by TraceVerifier)]\n{'='*80}")
+            self.log.info(f" 1. Standard Mock EVM     : {'✅ PASS (Verified Trace)' if s1 else '❌ FAIL'}")
+            self.log.info(f" 2. Revert Mock EVM       : {'✅ PASS (Intentional Revert Verified)' if s2 else '❌ FAIL'}")
+            self.log.info(f" 3. Cross-VM Inversion    : {'✅ PASS (Host-Mediated RPC Verified)' if s3 else '❌ FAIL'}")
+            self.log.info(f" 4. Live Testnet ERC20    : {'✅ PASS (Live Tx Trace Verified)' if s4 else '❌ FAIL'}")
+            self.log.info(f" 5. Live Uniswap V3       : {'✅ TRACED (Revert/Logic Verified)' if s5 else '❌ FAIL'}")
+            self.log.info(f" 6. EntryPoint Tracer     : {'✅ TRACE SUCCESS (AA90 Boundary Verified)' if s6 else '❌ FAIL'}")
+            self.log.info(f" 7. CosmWasm CW20 Test    : {'✅ PASS (JSON Payload Executed & Verified)' if s7 else '❌ FAIL'}")
             
-            if s1 and s2 and s3 and s4 and s5 and s6:
-                self.log.info("\n🎉 All 6 Core Engine & Architecture test suites completed successfully!")
+            if s1 and s2 and s3 and s4 and s5 and s6 and s7:
+                self.log.info("\n🎉 All 7 Multi-VM Core Engine & Architecture test suites completed successfully!")
             else:
-                self.log.error("\n⚠️ One or more test suites failed. Please inspect logs above.")
+                self.log.error("\n⚠️ One or more test suites failed trace verification. Please inspect logs above.")
             return 
         else:
             name = f"Single Execution (Mode: {self.config.mode.upper()}, Scenario: {self.config.scenario})"
             success = await self.executor.run(name, self.config.mode, self.config.revert, self.config.scenario)
             
             if not success:
-                self.log.error("[CLI] EVM Workflow Execution Failed to produce Proof/Trace.")
+                self.log.error("[CLI] Workflow Execution or Verification Failed.")
             else:
-                self.log.info("[CLI] EVM Workflow Execution Completed Successfully.")
+                self.log.info("[CLI] 5-Phase Workflow Execution Completed Successfully.")
             return
 
 def main() -> None:
