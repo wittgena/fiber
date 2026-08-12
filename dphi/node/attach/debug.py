@@ -10,7 +10,7 @@ from dataclasses import asdict
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType
 from arch.contract.event.next import next_id
-from kernel.phase.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
+from kernel.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
 
 class DebugShell:
     def __init__(self, tunnel):

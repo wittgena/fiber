@@ -1,6 +1,4 @@
 # dphi.node.attach.scene.anchor
-## @lineage: dphi.phase.attach.scene.anchor
-## @lineage: phase.attach.scene.anchor
 import time
 import asyncio
 import random

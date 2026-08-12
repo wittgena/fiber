@@ -11,7 +11,7 @@ from redis.asyncio import Redis
 import psutil
 
 from kernel.phase.reactor import PhaseReactor
-from kernel.phase.daemon.task.supervisor import TaskSupervisor
+from kernel.daemon.task.supervisor import TaskSupervisor
 from watcher.plane.emitter import get_emitter
 
 DEFAULT_TARGET_TAGS = [

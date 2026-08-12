@@ -15,8 +15,8 @@ from contextlib import suppress
 from arch.topos.tunnel.factory import TunnelFactory
 
 from kernel.bind.resolver import resolve_path
-from kernel.phase.daemon.task.supervisor import TaskSupervisor
-from kernel.phase.daemon.task.wasm import WasmTaskerDaemon
+from kernel.daemon.task.supervisor import TaskSupervisor
+from kernel.daemon.task.wasm import TaskWasm
 from kernel.dphi.broker import DphiBroker
 
 from watcher.plane.emitter import get_emitter
@@ -125,7 +125,7 @@ class PysandOrchestrator:
             
             supervisor = TaskSupervisor(source="PysandTester")
             
-            tasker_daemon = WasmTaskerDaemon(
+            tasker_daemon = TaskWasm(
                 tunnel=tunnel, 
                 supervisor=supervisor
             )
