@@ -1,8 +1,4 @@
-# phase.chain.recovery
-"""
-Module: phase.chain.recovery
-Description: 체인 단편화 복구(Recovery) 및 위상 분기(Topological Drift) 해결을 담당하는 런타임 러너
-"""
+# phase.node.recovery.runner 
 import time
 from enum import Enum
 from typing import Dict, Optional
@@ -19,7 +15,7 @@ from kernel.dphi.method import DphiMethod
 from kernel.phase.runner import RuntimeRunner, RecoveryMethod
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("chain.recovery")
+log = get_emitter("recovery.runner")
 
 class RecoveryRunner(RuntimeRunner):
     def __init__(self, broker, resolvers: Optional[Dict[str, EffectResolver]] = None):

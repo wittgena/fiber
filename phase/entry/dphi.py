@@ -18,12 +18,21 @@ MODULE_PATH = scene_module.__name__
 
 @dataclass
 class PipelineConfig:
+    # [구조 정렬됨] concurrency 씬은 로컬 환경 제약과 충돌하므로 레지스트리에서 완전히 제거.
+    # 성능 및 분산 스트레스 검증은 라이브 전용인 entry.attach 파이프라인에서 전담합니다.
     suites_registry: Dict[str, str] = field(default_factory=lambda: {
         "sandbox": f"{MODULE_PATH}.sandbox:SandboxScene",
         "eco": f"{MODULE_PATH}.anchor:EcoScene",
-        "anchor": f"{MODULE_PATH}.anchor:AnchorScene"
+        "anchor": f"{MODULE_PATH}.anchor:AnchorScene",
+        "cert": f"{MODULE_PATH}.cert:CertProofScene"
     })
-    default_suites: List[str] = field(default_factory=lambda: ["sandbox", "anchor"])
+    
+    # 상향식(Bottom-Up) 실행 순서 배치 (Fail-fast 원칙 적용)
+    default_suites: List[str] = field(default_factory=lambda: [
+        "sandbox",     # 1. 런타임 보안 및 단일 샌드박스 격리 검증 (L1)
+        "anchor",      # 2. 영지식 증명, 다중 서명, 탈중앙 합의 로직 검증 (L3)
+        "cert"         # 3. 극한 환경 엣지 케이스 방어 및 무결성 최종 인증 (L4)
+    ])
     wasm_filename: str = "dphi.wasm"
 
 class DphiFlow:
@@ -129,8 +138,8 @@ class DphiFlow:
         await target_action()
 
 def main():
-    parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI")
-    parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor)")
+    parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI (Isolated CI)")
+    parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor, cert)")
     subparsers = parser.add_subparsers(dest="command", help="Execution modes")
     subparsers.add_parser("build", help="Compile the Rust WASM artifact only.")
     subparsers.add_parser("test", help="Run the Isolated Test scenarios only.")
