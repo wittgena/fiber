@@ -25,7 +25,7 @@ class TestResult:
 
 
 class ExchangeDomainRunner:
-    """Orchestrates the Pure Domain Logic E2E Test Suite (D3Fi Exchange)."""
+    """Orchestrates the Exchange E2E Pipeline integrating DVM, State Sync, and Attestation."""
     def __init__(self):
         self.log = log
         self.results: List[TestResult] = []
@@ -34,16 +34,17 @@ class ExchangeDomainRunner:
         self.should_simulate = not has_testnet_keys
 
     async def _run_domain_workflows(self):
-        self.log.info("\n▶️ [EXCHANGE DOMAIN] Running Core Settlement Scenarios...")
+        self.log.info("\n▶️ [EXCHANGE DOMAIN] Initiating Pipeline Execution Sequences...")
         if not self.should_simulate:
-            self.log.info(f"⚡ [Notice] Testnet Keys detected. Workflows will execute LIVE on {mock_env.cdp_wallet.network_id}!")
+            self.log.info(f"⚡ [Mode] Testnet Keys detected. External Ledger Sync (EVM) will target: {mock_env.cdp_wallet.network_id}")
         else:
-            self.log.info("🛡️ [Notice] Workflows will execute in SIMULATION mode.")
+            self.log.info("🛡️ [Mode] Executing in Local Simulation (External Ledger Sync Bypassed).")
 
+        # 시나리오 정의: 파이프라인의 각 Phase 통과/차단 검증을 위한 물리적/구조적 명칭 적용
         scenarios = [
             {
                 "config": ScenarioConfig(
-                    name="Golden Path (Pure Core + Valid Notaries)",
+                    name="Standard Pipeline (DVM Simulation -> EVM Ledger Sync -> Notary Attestation)",
                     mandate_injector=None,
                     signature_injector=None
                 ),
@@ -51,7 +52,7 @@ class ExchangeDomainRunner:
             },
             {
                 "config": ScenarioConfig(
-                    name="Core Rejection: Expired AP2 Mandate",
+                    name="Ingress Rejection (Expired AP2 Mandate Constraint)",
                     mandate_injector=RpcChaosInjector.corrupt_ap2_mandate,
                     signature_injector=None
                 ),
@@ -59,11 +60,11 @@ class ExchangeDomainRunner:
             },
             {
                 "config": ScenarioConfig(
-                    name="Export Forgery: Invalid Notary Attestations", 
+                    name="Attestation Failure (Invalid Cryptographic Signatures at Export Phase)", 
                     mandate_injector=None,
                     signature_injector=RpcChaosInjector.corrupt_consensus_signatures
                 ),
-                "expected": True  # 워크플로우 자체는 완료되나 영수증 내 서명이 오염됨
+                "expected": True  # 파이프라인 상 상태 확정(State Determination)과 EVM 동기화는 완료되나, 최종 내보내기에서 서명이 실패함
             }
         ]
 
@@ -83,7 +84,7 @@ class ExchangeDomainRunner:
 
     def _print_report(self):
         self.log.info("\n" + "="*80)
-        self.log.info("📊 [EXCHANGE DOMAIN TEST REPORT]")
+        self.log.info("📊 [EXCHANGE DOMAIN EXECUTION REPORT]")
         self.log.info("="*80)
         
         all_passed = True
@@ -93,18 +94,18 @@ class ExchangeDomainRunner:
             if not res.passed: all_passed = False
                 
             target_label = f"[{res.target}]"
-            self.log.info(f"{status_icon} {idx:02d}. {target_label.ljust(12)} {res.scenario.ljust(50)} | Result: {status_text}")
+            self.log.info(f"{status_icon} {idx:02d}. {target_label.ljust(12)} {res.scenario.ljust(75)} | Result: {status_text}")
             
         self.log.info("-" * 80)
         if all_passed:
-            self.log.info("🎉 ALL DOMAIN SCENARIOS EXECUTED SUCCESSFULLY.")
+            self.log.info("🎉 ALL PIPELINE SCENARIOS EXECUTED AS EXPECTED.")
         else:
-            self.log.critical("💥 SOME DOMAIN TESTS FAILED. Check the business logic logs.")
+            self.log.critical("💥 PIPELINE EXECUTION FAILED. Inspect structural logs for deviations.")
         self.log.info("="*80 + "\n")
 
     async def execute(self):
         self.log.info("\n" + "="*80)
-        self.log.info("🧪 [DPHI EXCHANGE SUITE] Commencing Core Domain Logic Tests")
+        self.log.info("🧪 [DPHI EXCHANGE SUITE] Commencing Exchange Domain Reactor")
         self.log.info("="*80)
         
         await self._run_domain_workflows()

@@ -1,6 +1,7 @@
 # dphi.exchange.workflow
 import asyncio
 import hashlib
+import json
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, List
@@ -21,7 +22,7 @@ from arch.contract.event.next import next_phase_id, generate_parity_triplet
 from kernel.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import DphiMethod
-
+from kernel.bind.inter.dvm import DvmInterpreter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("exchange.workflow")
@@ -34,7 +35,7 @@ class ScenarioConfig:
 
 class ExStartMsg(WorkflowMessage): pass
 class ExIngressMsg(WorkflowMessage): pass
-class ExEntanglementMsg(WorkflowMessage): pass
+class ExSimulationMsg(WorkflowMessage): pass
 class ExSettlementMsg(WorkflowMessage): pass
 class ExNexusMsg(WorkflowMessage): pass
 
@@ -49,11 +50,15 @@ class NodeIdentity:
     def sign(self, canonical_bytes: bytes) -> str:
         return self.key.sign(hashlib.sha256(canonical_bytes).digest()).hex()
 
-class MockRpcBridge(RpcBridge):
-    """Acts as a defensive firewall and simulates the WASM sandbox network validation node."""
+
+class DvmRpcBridge(RpcBridge):
+    """
+    Physical entry point to the Core Node's validation engine.
+    Orchestrates the DVM (revm/cosmwasm) for deterministic state derivation and validation.
+    """
     def __init__(self):
         super().__init__()
-        self.log = get_emitter("rpc.bridge.mock")
+        self.log = get_emitter("rpc.bridge.dvm")
 
     async def request(self, payload: Dict[str, Any], timeout: float = 5.0) -> Dict[str, Any]:
         action = payload.get("action")
@@ -64,23 +69,52 @@ class MockRpcBridge(RpcBridge):
             actual_mandate = mandate_result.get("mandate", {})
             constraints = actual_mandate.get("constraints", {})
             
-            # Mandate 만료 시간 검증 (Chaos Injector에 의해 조작될 수 있음)
             if constraints.get("expiration_ts", 0) < int(time.time() * 1000):
-                self.log.warning("🛑 [REJECTED] AP2 Mandate is expired!")
+                self.log.warning("🛑 [REJECTED] Ingress Validation Failed: AP2 Mandate Expired")
                 return {"status": 401, "error": "Unauthorized: AP2 Mandate Expired"}
                 
             topo = payload.get("topo", 0)
             press = payload.get("press", 0)
             return {"status": 200, "data": {"phase_id": next_phase_id(topo=topo, press=press)}}
             
+        elif action == "simulate_vm":
+            self.log.info("🔬 [DVM Engine] Initiating sandbox execution for state derivation...")
+            vm_args = payload.get("payload", {})
+            vm_target = vm_args.get("vm_target", "EVM")
+            target_address = vm_args.get("target_address", "0x00")
+            calldata = vm_args.get("calldata", "0x")
+            state_snapshot = vm_args.get("state_snapshot", {})
+            
+            try:
+                with DvmInterpreter(wasm_module_name="dvm.wasm") as dvm:
+                    res = dvm.execute(
+                        vm_target=vm_target,
+                        target_address=target_address,
+                        calldata=calldata,
+                        state_snapshot=state_snapshot,
+                        context={"caller": "0x_workflow_agent"}
+                    )
+                    
+                    if res.success:
+                        self.log.info("✅ [DVM Engine] State derivation successful.")
+                        return {"status": 200, "data": json.loads(res.output)}
+                    else:
+                        self.log.error(f"🛑 [DVM Reverted] Execution Halted: {res.error}")
+                        return {"status": 200, "data": {"success": False, "revert_reason": str(res.error)}}
+            except Exception as e:
+                self.log.error(f"💥 [DVM Fatality] Wasmtime Engine Exception: {e}")
+                return {"status": 500, "error": str(e)}
+            
         elif action == DphiMethod.SEAL_EPOCH.value:
             return {"status": 200, "data": {"receipt_id": f"nexus_receipt_{uuid4().hex[:8]}"}}
             
         return {"status": 404, "error": f"Unknown action: {action}"}
 
+
 class ExchangeWorkflow(Workflow):
+    """Pipeline orchestrating validation, local simulation, ledger sync, and final attestation."""
     def __init__(self, scenario: ScenarioConfig, simulate_wallet: bool = True):
-        super().__init__(name=f"EX_E2E [{scenario.name}]")
+        super().__init__(name=f"EX_PIPELINE [{scenario.name}]")
         self.scenario = scenario
         self.log = get_emitter(f"workflow.{scenario.name}")
         
@@ -104,10 +138,10 @@ class ExchangeWorkflow(Workflow):
         self.rollup_payload: Optional[SettlementPayload] = None
 
     async def start(self) -> bool:
-        mode = "Simulated" if getattr(self.wallet_client, 'simulate', True) else "Testnet Live"
-        self.log.info(f"\n{'='*60}\n🚀 [START] Scenario: {self.scenario.name} ({mode})\n{'='*60}")
+        mode = "Local Simulation" if getattr(self.wallet_client, 'simulate', True) else "Live External Ledger"
+        self.log.info(f"\n{'='*60}\n🚀 [START] Sequence: {self.scenario.name} ({mode})\n{'='*60}")
         
-        self.rpc_bridge = MockRpcBridge()
+        self.rpc_bridge = DvmRpcBridge()
         self.post_message(ExStartMsg())
         await self.run()
         
@@ -115,7 +149,7 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_ingress(self, msg: ExStartMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 1] Protocol Core: Verify Intent Mandate ---")
+        self.log.info("--- [Phase 1] Ingress Validation: AP2 Mandate Constraints ---")
         
         base_mandate = PhaseBuilder.ap2_mandate_params(self.agent_a.pub_hex, self.agent_a.key)
         
@@ -124,7 +158,6 @@ class ExchangeWorkflow(Workflow):
         else:
             mandate_params = base_mandate
             
-        # 블록체인 통신 없이 순수 도메인 로직으로 JSON 페이로드 생성
         self.ap2_mandate = EcoAdapter.build_ap2_mandate(**mandate_params)
 
         req_payload = {
@@ -135,35 +168,58 @@ class ExchangeWorkflow(Workflow):
         res_a = await self.rpc_bridge.request(req_payload)
         
         if res_a.get("status") != 200:
-            return ErrorMessage(f"Ingress Rejected: {res_a.get('error')}")
+            return ErrorMessage(f"Ingress Sequence Terminated: {res_a.get('error')}")
             
         self.phase_results['a'] = res_a.get("data", {})
         self.phase_results['b'] = res_a.get("data", {}) 
         return ExIngressMsg()
 
     @step
-    async def phase_entanglement(self, msg: ExIngressMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 2] Protocol Core: State Entanglement ---")
-        parity = generate_parity_triplet(topo=120, press=85)
+    async def phase_simulate(self, msg: ExIngressMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 2] DVM Execution: State Differential Derivation ---")
         
+        dvm_payload = {
+            "vm_target": "EVM",
+            "payload": {
+                "target_address": mock_env.contracts.nexus_clearing,
+                "calldata": "0x_x402_settlement_calldata",
+                "gas_limit": 100000,
+                "state_snapshot": {
+                    mock_env.contracts.nexus_clearing: {
+                        "balance": "0x0",
+                        "nonce": 0
+                    }
+                }
+            }
+        }
+        
+        res = await self.rpc_bridge.request({
+            "action": "simulate_vm",
+            "payload": dvm_payload
+        })
+        
+        data = res.get("data", {})
+        if res.get("status") != 200 or not data.get("success"):
+            return ErrorMessage(f"DVM Execution Halted: {data.get('revert_reason', 'Unknown Error')}")
+
         self.entangled_state = {
             "repos": {
                 "participant_a": self.phase_results['a'].get("phase_id"),
                 "participant_b": self.phase_results['b'].get("phase_id")
             },
-            "parity": parity
+            "parity": generate_parity_triplet(topo=120, press=85),
+            "dvm_state_diff": data.get("state_diff", {})
         }
-        return ExEntanglementMsg()
+        return ExSimulationMsg()
 
     @step
-    async def phase_settlement(self, msg: ExEntanglementMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 3] External Plug: EVM X402 Settlement ---")
+    async def phase_settlement(self, msg: ExSimulationMsg) -> WorkflowMessage:
+        self.log.info("--- [Phase 3] External Plug: Ledger State Synchronization ---")
         
         payee_address = mock_env.contracts.nexus_clearing
         amount = "0.05"
         resource_id = "compute_fee"
 
-        # 1. Edge.ext 외부 서버로 결제 위임 (API 호출)
         try:
             raw_receipt = await self.wallet_client.process_x402_payment(
                 payee_address=payee_address,
@@ -171,23 +227,23 @@ class ExchangeWorkflow(Workflow):
                 resource_id=resource_id
             )
             
-            # 방어적 파싱: 응답이 {"receipt": {...}} 이거나 바로 {...} 인 경우 모두 처리
             receipt_data = raw_receipt.get("receipt") if isinstance(raw_receipt, dict) and "receipt" in raw_receipt else raw_receipt
             self.x402_receipt = X402SettlementReceipt(**receipt_data)
             
         except Exception as e:
-            self.log.error(f"X402 Settlement via API failed: {e}")
-            return ErrorMessage(f"Settlement failed: {e}")
+            self.log.error(f"External Ledger Sync Failure: {e}")
+            return ErrorMessage(f"Ledger Sync Halted: {e}")
         
-        # 2. 결과(Receipt)를 바탕으로 순수 도메인 경제 상태 임베딩
         self.economy_state = EcoAdapter.embed_economy_state(
-            base_cached_states={}, mandate=self.ap2_mandate, receipt=self.x402_receipt
+            base_cached_states={"state_diff": self.entangled_state.get("dvm_state_diff")}, 
+            mandate=self.ap2_mandate, 
+            receipt=self.x402_receipt
         )
         return ExSettlementMsg()
 
     @step
     async def phase_nexus(self, msg: ExSettlementMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 4] Protocol Core: Deterministic Epoch Collapse ---")
+        self.log.info("--- [Phase 4] Core Ledger: State Commit (Epoch Seal) ---")
         parity = self.entangled_state["parity"]
         
         seal_payload = StateAdapter.build_seal_epoch_payload(
@@ -205,13 +261,13 @@ class ExchangeWorkflow(Workflow):
         })
         
         if res.get("status") != 200:
-            return ErrorMessage(f"Nexus Settlement Rejected: {res.get('error')}")
+            return ErrorMessage(f"Core Ledger Commit Rejected: {res.get('error')}")
             
         return ExNexusMsg()
 
     @step
     async def phase_finalize(self, msg: ExNexusMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 5] Export Plug: Attest & Generate Payload ---")
+        self.log.info("--- [Phase 5] Export Node: Cryptographic Attestation Generation ---")
         self.receipt = self.exchange_adapter.finalize_settlement(
             entangled_state=self.entangled_state, 
             signatures=[],  
@@ -239,5 +295,5 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def on_error(self, msg: ErrorMessage) -> WorkflowMessage:
-        self.log.error(f"❌ [HALTED] Scenario aborted: {msg.msg}")
+        self.log.error(f"❌ [HALTED] Pipeline execution terminated: {msg.msg}")
         return StopMessage(result=False)
