@@ -1,4 +1,5 @@
-# ext.client.http
+# dphi.adapter.client.http
+## @lineage: ext.client.http
 import hashlib
 import json
 import os
@@ -61,9 +62,6 @@ def _get_httpx_limits() -> httpx.Limits:
 def get_client(
     is_async: bool, params: Optional[dict] = None, **kwargs
 ) -> Union[httpx.Client, httpx.AsyncClient]:
-    """
-    기존의 무거운 래퍼 클래스 대신, 캐싱된 httpx Native Client를 직접 반환합니다.
-    """
     params_key = str(sorted((params or {}).items()))
     prefix = "async" if is_async else "sync"
     cache_key = f"{prefix}_{params_key}"
@@ -71,7 +69,7 @@ def get_client(
     if cache_key in _HTTPX_CLIENT_CACHE:
         return _HTTPX_CLIENT_CACHE[cache_key]
 
-    headers = {"User-Agent": os.environ.get("LITELLM_USER_AGENT", "gate/1.0")}
+    headers = {"User-Agent": os.environ.get("DPHI_USER_AGENT", "gate/1.0")}
     verify = _get_ssl_context()
     limits = _get_httpx_limits()
     

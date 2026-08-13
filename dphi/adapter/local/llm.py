@@ -1,8 +1,4 @@
-# ext.client.local.local
-## @lineage: engine.client.local.local
-## @lineage: kernel.bind.client.engine.local
-## @lineage: kernel.phase.bind.client.engine.local
-## @lineage: phase.bind.client.engine.local
+# dphi.adapter.local.local
 import os
 import time
 import subprocess

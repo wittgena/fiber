@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization
 from dphi.adapter.sandbox.scripts import ScriptDef
 from dphi.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from dphi.adapter.config.client import PhaseBuilder
-from ext.client.wallet import ExtWalletClient
+from dphi.adapter.local.wallet import LocalWalletClient
 
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
@@ -56,7 +56,7 @@ class EpochBase(SchemeRunner):
             ).hex() for k in self.committee_keys
         ]
         
-        self.wallet_client: ExtWalletClient = PhaseBuilder.get_testnet_wallet()
+        self.wallet_client: LocalWalletClient = PhaseBuilder.get_testnet_wallet()
         self.wallet_client.simulate = simulate_wallet
 
     def _sign_multisig(self, signers: List[ed25519.Ed25519PrivateKey], commit_dict: Dict[str, Any]) -> List[str]:

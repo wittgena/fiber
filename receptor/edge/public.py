@@ -55,7 +55,6 @@ async def public_agent_execute(intent: CodebotIntent):
         
         async with httpx.AsyncClient(base_url=INTERNAL_EDGE_URL, timeout=15.0) as internal_client:
             try:
-                # 1. [내부 호출] Ingress Guardrail 
                 val_payload = {
                     "agent_id": intent.agent_id,
                     "action": intent.action,
@@ -134,11 +133,6 @@ async def public_otlp_logs_export(
     broker: DphiBroker = Depends(get_wasm_broker),
     otlp_engine: StrictOtlpExtractionEngine = Depends(get_otlp_engine)
 ):
-    """
-    기존 core_edge.post("/logs")와 완전히 동일.
-    페이로드를 받아 자체적으로 해싱, WASM Broker를 통한 검증, 
-    PubSub 전송까지 한 번에 처리하므로 외부 노출에 완벽히 정합함.
-    """
     try:
         payload_dict = payload.model_dump(exclude_none=True)
         raw_json_bytes = orjson.dumps(payload_dict)
@@ -163,10 +157,7 @@ async def public_otlp_logs_export(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Kernel Seal Rejected")
             
         fingerprint = orjson.loads(res.output).get("fingerprint")
-
-        # Async PubSub
         bg_tasks.add_task(pubsub.publish_batch, topic="otlp_global_stream", events=[payload_dict])
-        
         return Response(
             status_code=status.HTTP_200_OK, 
             headers={
@@ -182,10 +173,6 @@ async def public_otlp_logs_export(
         log.error(f"[Public OTLP] Processing failed: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stream processing error")
 
-
-# =====================================================================
-# 3. [기존 API 편입] Regulated Audit Event Ingress (Naturally Public)
-# =====================================================================
 @public_edge.post(
     "/audit/event", 
     tags=["Log Ingress"], 

@@ -1,6 +1,4 @@
-# dphi.phase.workflow.exchange
-## @lineage: dphi.epoch.workflow.exchange
-## @lineage: dphi.workflow.exchange
+# dphi.exchange.workflow
 import asyncio
 import hashlib
 import time
@@ -11,22 +9,22 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from dphi.adapter.config.client import PhaseBuilder
-from ext.client.wallet import ExtWalletClient
 from dphi.adapter.config.dphi import mock_env
+from dphi.adapter.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
+from dphi.adapter.local.wallet import LocalWalletClient
 
 from arch.model.phase.gate import uuid4
 from arch.topos.network.bridge import RpcBridge
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import next_phase_id, generate_parity_triplet
 
-from dphi.adapter.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
 from kernel.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import DphiMethod
 
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("shadow.workflow")
+log = get_emitter("exchange.workflow")
 
 @dataclass
 class ScenarioConfig:
@@ -89,10 +87,7 @@ class ExchangeWorkflow(Workflow):
         self.field_node = NodeIdentity()
         self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field_node.pub_hex)
         
-        # ExtWalletClient를 통한 Edge.ext 통신
-        self.wallet_client: ExtWalletClient = PhaseBuilder.get_testnet_wallet()
-        
-        # 동적 속성 부여 (이전의 AttributeError 방지용)
+        self.wallet_client: LocalWalletClient = PhaseBuilder.get_testnet_wallet()
         self.wallet_client.simulate = simulate_wallet
         
         self.rpc_bridge: Optional[RpcBridge] = None

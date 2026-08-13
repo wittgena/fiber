@@ -46,7 +46,6 @@ async def verify_api_key(
     api_key: str = Security(api_key_header), 
     config: Config = Depends(get_default_config)
 ):
-    """퍼블릭 게이트웨이 및 API 보호용 글로벌 인증"""
     if not config.session_api_keys:
         return None
     if api_key not in config.session_api_keys:
@@ -124,21 +123,9 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
     
     app.state.config = config
     
-    # =========================================================================
-    # [Router Mounting] 네트워크 경계(Boundary)에 따른 라우터 분리 마운트
-    # =========================================================================
-    
-    # 1. Public Gateway (외부 노출 허용, MCP 연동 허용)
-    # 클라이언트는 오직 이 라우터를 통해서만 시스템에 접근합니다.
     app.include_router(public_edge, tags=["mcp-exposed"]) 
-
-    # 2. Internal Microservices (외부 접근 원천 차단 대상)
-    # 리버스 프록시(Nginx 등)에서 /internal 경로는 외부 통신을 차단해야 합니다.
     app.include_router(internal_router) 
-    
-    # 3. External Adapters (지갑 등 민감 정보, 내부망에서만 호출)
-    # 기존 ext_router의 prefix가 /v1/ext 라면, 강제로 /internal 밑으로 밀어 넣습니다.
-    app.include_router(ext_router, prefix="/internal") 
+    app.include_router(ext_router) 
 
     app.add_middleware(SentinelFirewallMiddleware)
     app.add_middleware(LocalMiddleware, allow_origins=config.allow_cors_origins)

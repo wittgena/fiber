@@ -10,7 +10,7 @@ import httpx
 
 # --- Core Framework & Adapters ---
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from ext.client.http import VerifiedHttpClient
+from dphi.adapter.client.http import VerifiedHttpClient
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.phase.runner import WebRunner
 

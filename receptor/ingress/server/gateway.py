@@ -25,10 +25,7 @@ class DphiGatewayServer:
         self.settings = settings
         self.log = get_emitter("ingress.gateway", phase="GATEWAY")
         self.mcp = SecureMCPServer(name="mcp-gateway-control", version="1.0")
-        
         self.client_session: ClientSession | None = None
-        
-        # L7 WAF (웹 방화벽) 메모리 데이터베이스
         self.firewall_rules = {
             "blocked_ips": set(),
             "quarantine_paths": set()
@@ -37,8 +34,6 @@ class DphiGatewayServer:
         self._register_mcp_tools()
 
     def _register_mcp_tools(self):
-        """MCP를 통한 동적 방화벽 제어 도구 (Zero-latency 룰 주입)"""
-        
         @self.mcp.tool()
         async def block_ip(ip_address: str, reason: str = "Malicious activity") -> str:
             """특정 IP의 접근을 즉각 차단합니다."""
@@ -69,7 +64,10 @@ class DphiGatewayServer:
         client_ip = request.remote
         path = request.path
         
-        # 1. 동적 방화벽 검사 (L7 WAF)
+        if not path.startswith("/v1/public"):
+            self.log.warning(f"Blocked unauthorized internal access attempt: {path} from {client_ip}")
+            raise web.HTTPForbidden(reason="Brane Security: Access Denied. Endpoint not exposed.")
+        
         if client_ip in self.firewall_rules["blocked_ips"]:
             self.log.warning(f"Blocked traffic from quarantined IP: {client_ip}")
             raise web.HTTPForbidden(reason="Brane Security: IP Quarantined.")
@@ -78,14 +76,11 @@ class DphiGatewayServer:
             self.log.warning(f"Blocked traffic to quarantined path: {path}")
             raise web.HTTPForbidden(reason="Brane Security: Path Quarantined.")
 
-        # 2. 헤더 조작 및 X-Forwarded-For 주입
         headers = dict(request.headers)
-        # aiohttp가 자체적으로 Host를 세팅하도록 기존 Host 제거
         headers.pop("Host", None) 
         headers['X-Forwarded-For'] = client_ip
         headers['X-Gateway-Passed'] = "true"
 
-        # 3. 백엔드(FastAPI)로 트래픽 릴레이 (Upstream Forwarding)
         target_url = f"{self.settings.upstream_url}{path}"
         data = await request.read()
         
@@ -98,10 +93,7 @@ class DphiGatewayServer:
                 params=request.query
             ) as resp:
                 response_body = await resp.read()
-                
-                # Upstream의 응답 헤더 필터링 (Hop-by-hop 헤더 제거)
-                hop_by_hop = {'connection', 'keep-alive', 'proxy-authenticate', 
-                              'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade'}
+                hop_by_hop = {'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade'}
                 clean_headers = {k: v for k, v in resp.headers.items() if k.lower() not in hop_by_hop}
                 
                 return web.Response(
@@ -113,17 +105,14 @@ class DphiGatewayServer:
             self.log.error(f"Upstream Relay Error: {e}")
             return web.Response(status=502, text="Bad Gateway: Internal REST Edge is unreachable.")
 
-    # --- MCP Control Plane Handlers ---
     async def mcp_sse_handler(self, request: web.Request) -> web.Response:
         return await self.mcp.handle_sse_connection(request)
 
     async def mcp_message_handler(self, request: web.Request) -> web.Response:
         return await self.mcp.handle_post_message(request)
 
-    # --- Lifecycle Hooks ---
     async def startup_context(self, app: web.Application):
         if not self.client_session:
-            # 커넥션 풀 최적화를 위해 전역 Session 사용
             self.client_session = ClientSession()
             self.log.info("Initialized global ClientSession for Upstream Relay.")
 
@@ -133,14 +122,11 @@ class DphiGatewayServer:
             self.log.info("Closed global ClientSession.")
 
     async def start_dual_servers(self):
-        """데이터 평면(Proxy)과 제어 평면(MCP)을 서로 다른 포트로 격리하여 구동"""
-        # 1. Proxy Application (Data Plane)
         proxy_app = web.Application()
         proxy_app.on_startup.append(self.startup_context)
         proxy_app.on_cleanup.append(self.cleanup_context)
         proxy_app.router.add_route('*', '/{tail:.*}', self.gateway_handler)
         
-        # 2. MCP Application (Control Plane)
         mcp_app = web.Application()
         mcp_app.router.add_get('/mcp/sse', self.mcp_sse_handler)
         mcp_app.router.add_post('/mcp/messages', self.mcp_message_handler)

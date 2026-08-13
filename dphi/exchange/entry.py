@@ -1,27 +1,17 @@
-# dphi.phase.exchange
-## @lineage: dphi.phase.epoch.exchange
-## @lineage: dphi.phase.entry.exchange
-## @lineage: phase.entry.exchange
+# dphi.exchange.entry
 import asyncio
 from dataclasses import dataclass
 from typing import List
 
-# --- Core Framework & Telemetry ---
+from dphi.adapter.config.dphi import mock_env
+from dphi.exchange.workflow import ExchangeWorkflow, ScenarioConfig
+from receptor.ingress.sentinel import RpcChaosInjector
+
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
 
-# --- Domain Workflows ---
-from dphi.phase.workflow.exchange import ExchangeWorkflow, ScenarioConfig
+log = get_emitter("exchange.entry")
 
-# --- Infrastructure & Mock Envs ---
-from dphi.adapter.config.dphi import mock_env
-from receptor.ingress.sentinel import RpcChaosInjector
-
-log = get_emitter("entry.exchange")
-
-# ==========================================
-# Domain Scenarios & Master Orchestrator
-# ==========================================
 @dataclass
 class TestResult:
     target: str
@@ -40,7 +30,6 @@ class ExchangeDomainRunner:
         self.log = log
         self.results: List[TestResult] = []
         
-        # Testnet 지갑 키가 환경변수에 존재하는지 확인하여 시뮬레이션 여부 결정
         has_testnet_keys = bool(mock_env.cdp_wallet.api_name and mock_env.cdp_wallet.api_private_key)
         self.should_simulate = not has_testnet_keys
 
@@ -51,8 +40,6 @@ class ExchangeDomainRunner:
         else:
             self.log.info("🛡️ [Notice] Workflows will execute in SIMULATION mode.")
 
-        # 🔥 도메인 워크플로우 전용 시나리오 정의
-        # 네트워크 패킷 공격이 아닌, 도메인 객체(Mandate, Signatures) 레벨의 결함을 주입합니다.
         scenarios = [
             {
                 "config": ScenarioConfig(
@@ -83,8 +70,6 @@ class ExchangeDomainRunner:
         for item in scenarios:
             scenario_config = item["config"]
             expected = item["expected"]
-            
-            # Workflow 실행
             workflow = ExchangeWorkflow(scenario=scenario_config, simulate_wallet=self.should_simulate)
             is_success = await workflow.start()
             

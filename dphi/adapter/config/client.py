@@ -1,5 +1,4 @@
 # dphi.adapter.config.client
-## @lineage: phase.epoch.config.client
 import time
 import uuid
 import random
@@ -10,7 +9,7 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from ext.client.wallet import ExtWalletClient
+from dphi.adapter.local.wallet import LocalWalletClient
 
 from dphi.adapter.config.dphi import mock_env
 from arch.contract.model.receptor import (
@@ -50,7 +49,7 @@ class PhaseBuilder:
 
     @staticmethod
     def get_testnet_wallet(edge_server_url: str = "http://localhost:8000/v1/ext") -> 'ExtWalletClient':
-        return ExtWalletClient(base_url=edge_server_url)
+        return LocalWalletClient(base_url=edge_server_url)
 
     @staticmethod
     def ap2_mandate_params(

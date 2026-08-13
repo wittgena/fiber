@@ -26,7 +26,6 @@ def get_wallet_adapter() -> WalletAdapter:
     if _global_wallet_adapter is None:
         log.info("[Edge Ext] Initializing Secure WalletAdapter...")
         try:
-            # 실제 운영 시 환경변수나 Secret Manager에서 키를 주입받아 simulate=False로 구동
             _global_wallet_adapter = WalletAdapter(network_id="base-sepolia", simulate=False)
         except Exception as e:
             log.warning(f"[Edge Ext] Failed to init secure wallet, falling back to simulation mode: {e}")
@@ -34,7 +33,6 @@ def get_wallet_adapter() -> WalletAdapter:
             
     return _global_wallet_adapter
 
-# 🌟 Web3 어댑터 주입기 추가
 async def get_web3_adapter() -> Web3Adapter:
     global _global_web3_adapter
     if _global_web3_adapter is None:
