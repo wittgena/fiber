@@ -1,4 +1,5 @@
-# bound.exchange.capital.coinbase.kline
+# bound.proof.coinbase.kline
+## @lineage: bound.exchange.capital.coinbase.kline
 ## @lineage: bound.capital.oracle.coinbase.kline
 """
 @arn: arn:bound:oracle:coinbase:kline:v1.0.0

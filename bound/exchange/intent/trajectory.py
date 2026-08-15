@@ -1,21 +1,118 @@
 # bound.exchange.intent.trajectory
-## @lineage: bound.capital.exchange.trajectory
+import os
 import time
 import hashlib
-from typing import Dict, Any, List, Optional
-
-from bound.exchange.capital.comparator import ProvableTrajectoryEngine
-
+from typing import Dict, Any, List, Optional, TypedDict
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 from watcher.plane.emitter import get_emitter
 
+class ArbitrageSignal(TypedDict):
+    is_actionable: bool        # 차익거래 실행 가능 여부 (스프레드가 임계치를 넘었는가?)
+    optimal_long_venue: str    # 롱(매수) 포지션을 잡아야 할 거래소 ARN (펀딩비가 가장 낮은 곳)
+    optimal_short_venue: str   # 숏(매도) 포지션을 잡아야 할 거래소 ARN (펀딩비가 가장 높은 곳)
+    net_spread_yield: float    # 예상되는 무위험 펀딩비 갭 (최대 펀딩비 - 최소 펀딩비)
+
+class SpreadMatrix(TypedDict):
+    symbol: str
+    timestamp: float
+    raw_states: Dict[str, float]       # ARN -> Funding Rate 매핑 (데이터 원형 보존)
+    arbitrage_signal: ArbitrageSignal  # 산출된 차익거래 시그널
+
+
+# =========================================================================
+# 2. Spread Matrix Comparator Core
+# =========================================================================
+class FundingRateComparator:
+    MIN_ACTIONABLE_SPREAD = 0.0005 
+
+    @staticmethod
+    def _extract_source_hash(module_or_file: Any) -> str:
+        path = os.path.abspath(getattr(module_or_file, '__file__', module_or_file))
+        if path.endswith('.pyc'):
+            path = path[:-1]
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    @property
+    def comparator_code_hash(self) -> str:
+        return self._extract_source_hash(__file__)
+
+    @classmethod
+    def evaluate_spread_matrix(
+        cls, 
+        symbol: str, 
+        observations: Dict[str, Dict[str, Any]]
+    ) -> SpreadMatrix:
+        if len(observations) < 2:
+            raise ValueError("Spread comparison requires at least 2 distinct data sources.")
+
+        raw_states = {arn: data["rate"] for arn, data in observations.items()}
+        highest_funding_arn = max(raw_states, key=raw_states.get)
+        lowest_funding_arn = min(raw_states, key=raw_states.get)
+        
+        max_rate = raw_states[highest_funding_arn]
+        min_rate = raw_states[lowest_funding_arn]
+        
+        net_spread = max_rate - min_rate
+        is_actionable = net_spread >= cls.MIN_ACTIONABLE_SPREAD
+        base_timestamp = list(observations.values())[0]["time"]
+
+        return {
+            "symbol": symbol,
+            "timestamp": base_timestamp,
+            "raw_states": raw_states,
+            "arbitrage_signal": {
+                "is_actionable": is_actionable,
+                "optimal_short_venue": highest_funding_arn,  # 펀딩비가 높은 곳에서 숏(지불 받음)
+                "optimal_long_venue": lowest_funding_arn,    # 펀딩비가 낮은 곳에서 롱(지불 받음)
+                "net_spread_yield": net_spread
+            }
+        }
+
+
+# =========================================================================
+# 3. Trajectory Engine
+# =========================================================================
+class ProvableTrajectoryEngine:
+    """
+    다중 소스의 시계열 데이터를 바탕으로 스프레드(Matrix)와 
+    시간 축에 따른 흐름(Trajectory: 미분/적분)을 산출하는 엔진.
+    """
+    def __init__(self):
+        # 내부적으로 FundingRateComparator를 사용하여 기본 스프레드를 구함
+        self.comparator = FundingRateComparator()
+
+    def execute_flow(
+        self, symbol: str, target_arns: List[str], time_window_sec: int, fetch_time: int
+    ) -> Dict[str, Any]:
+        
+        # TODO: 실제로는 시계열 DB나 오라클에서 time_window_sec 만큼의 과거 데이터를 가져와야 함.
+        # 현재는 아키텍처 연결을 위한 Dummy 데이터 생성
+        mock_observations = {
+            target_arns[0]: {"rate": 0.01, "time": fetch_time},
+            target_arns[1]: {"rate": -0.05, "time": fetch_time}
+        }
+        
+        # 1. 현재 시점의 정적 불균형 상태 산출
+        spread_matrix = self.comparator.evaluate_spread_matrix(symbol, mock_observations)
+        
+        # 2. 결과 조합 반환 (trajectory.py가 기대하는 인터페이스 매핑)
+        return {
+            "engine_code_hash": self.comparator.comparator_code_hash,
+            "composite_sources": {arn: "source_hash_mock" for arn in target_arns},
+            "individual_hashes": {arn: "obs_hash_mock" for arn in target_arns},
+            "spread_matrix": spread_matrix,
+            "velocity": 0.001,      # 미분: 스프레드 확장 속도 (예시)
+            "integral": 12.5,       # 적분: 누적 스트레스 (예시, SystemicAnomalyTrap이 평가할 값)
+            "payload_hash": hashlib.sha256(b"mock_payload").hexdigest()
+        }
+
+
+# =========================================================================
+# 4. Oracle Receptor (Facade)
+# =========================================================================
 class TrajectoryOracleReceptor:
-    """
-    @desc: 다중 거래소의 펀딩비/마찰력 데이터를 수집하여, 
-           단일 값이 아닌 시장의 '불균형(Spread)'과 '자본의 이동 궤적(Trajectory)'을 
-           암호학적으로 씰링(Sealing)하는 동적(Dynamic) 리셉터.
-    """
     def __init__(self, signer: Optional[NodeSigner] = None, logger: Optional[Any] = None):
         self.signer = signer or NodeSigner.get_instance()
         self.log = logger or get_emitter("exchange.trajectory")
@@ -40,14 +137,12 @@ class TrajectoryOracleReceptor:
         self.log.info(f"[Receptor] Tracking vector trajectory for {symbol} | Sources: {len(target_arns)} | Window: {time_window_sec}s")
 
         # =========================================================================
-        # 1. Trajectory Engine에게 데이터 수집, 매트릭스 비교 및 궤적 산출 위임
+        # 4-1. Trajectory Engine에게 데이터 수집, 매트릭스 비교 및 궤적 산출 위임
         # =========================================================================
-        # 엔진은 각 소스의 데이터를 `time_window_sec`만큼 수집하여 
-        # 1) 현재의 스프레드(Matrix)와 2) 시간 축에 따른 흐름(Trajectory Vector)을 산출함
         engine_result = self.engine.execute_flow(symbol, target_arns, time_window_sec, fetch_time)
 
         # =========================================================================
-        # 2. Context 정의 (오라클 노드의 서명 환경 정보)
+        # 4-2. Context 정의 (오라클 노드의 서명 환경 정보)
         # =========================================================================
         context = {
             "oracle_id": "trajectory_receptor_v1.0",
@@ -56,7 +151,7 @@ class TrajectoryOracleReceptor:
         }
 
         # =========================================================================
-        # 3. Recipe (의도 증명) - '어떤 전략'이 아니라 '어떤 시간 축(Window)'인가를 증명
+        # 4-3. Recipe (의도 증명) - '어떤 전략'이 아니라 '어떤 시간 축(Window)'인가를 증명
         # =========================================================================
         recipe = {
             "time_window_sec": time_window_sec,
@@ -65,7 +160,7 @@ class TrajectoryOracleReceptor:
         }
 
         # =========================================================================
-        # 4. Observation (상태 관측) - 스칼라 값(평균)이 아닌 벡터(흐름) 구조
+        # 4-4. Observation (상태 관측) - 스칼라 값(평균)이 아닌 벡터(흐름) 구조
         # =========================================================================
         observation = {
             "individual_hashes": engine_result["individual_hashes"],
@@ -83,7 +178,7 @@ class TrajectoryOracleReceptor:
         }
 
         # =========================================================================
-        # 5. Attestation (최종 씰링 및 부인방지 서명)
+        # 4-5. Attestation (최종 씰링 및 부인방지 서명)
         # =========================================================================
         recipe_root_bytes = StateAdapter.to_canonical_bytes(recipe)
         
@@ -97,7 +192,6 @@ class TrajectoryOracleReceptor:
         signature = self.signer.sign_payload(canonical_root)
 
         self.log.info(f"  └─ [Trajectory Seal] Sig: {signature[:12]}... | Root: {hashlib.sha256(canonical_root).hexdigest()[:8]}")
-
         return {
             "context": context,
             "recipe": recipe,

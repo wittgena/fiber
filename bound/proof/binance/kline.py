@@ -1,4 +1,5 @@
-# bound.exchange.capital.binance.kline
+# bound.proof.binance.kline
+## @lineage: bound.exchange.capital.binance.kline
 ## @lineage: bound.capital.oracle.binance.kline
 """
 @arn: arn:bound:oracle:binance:kline:v1.0.0

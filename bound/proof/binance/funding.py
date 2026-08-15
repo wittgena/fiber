@@ -1,4 +1,5 @@
-# bound.exchange.capital.binance.funding
+# bound.proof.binance.funding
+## @lineage: bound.exchange.capital.binance.funding
 ## @lineage: bound.capital.oracle.binance.funding
 """
 @arn: arn:bound:oracle:binance:funding:v1.0.0

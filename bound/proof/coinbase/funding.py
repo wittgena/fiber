@@ -1,4 +1,5 @@
-# bound.exchange.capital.coinbase.funding
+# bound.proof.coinbase.funding
+## @lineage: bound.exchange.capital.coinbase.funding
 ## @lineage: bound.capital.oracle.coinbase.funding
 """
 @arn: arn:bound:oracle:coinbase:funding:v1.0.0

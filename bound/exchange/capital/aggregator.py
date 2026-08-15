@@ -1,11 +1,4 @@
 # bound.exchange.capital.aggregator
-## @lineage: bound.capital.oracle.aggregator
-"""
-@arn: arn:bound:oracle:aggregator:v1.0.0
-@desc: Multi-source Oracle Aggregator with full cryptographic provability.
-@security: The raw bytes of this aggregator and all targeted sub-adapters are hashed for execution integrity.
-@constraint: Do not modify whitespace, comments, or logic after network deployment.
-"""
 import os
 import time
 import hashlib
@@ -17,9 +10,8 @@ from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 from watcher.plane.emitter import get_emitter
 
-# 개별 어댑터 스크립트 로드
-from bound.exchange.capital.binance import kline as binance_kline
-from bound.exchange.capital.coinbase import kline as coinbase_kline
+from bound.proof.binance import kline as binance_kline
+from bound.proof.coinbase import kline as coinbase_kline
 
 class ProvableOracleAggregator:
     # ARN 기반 모듈 레지스트리
