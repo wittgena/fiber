@@ -1,4 +1,6 @@
-# dphi.intent.agent
+# bound.agent.intent.potential
+## @lineage: bound.intent.agent
+## @lineage: dphi.intent.agent
 ## @lineage: dphi.exchange.intent
 import asyncio
 import time
@@ -8,7 +10,7 @@ from typing import Any, Dict, Optional
 
 from dphi.adapter.config.dphi import mock_env
 from dphi.adapter.eco import EcoAdapter
-from bound.intent.exchange.workflow import DvmRpcBridge, NodeIdentity
+from bound.exchange.intent.workflow import DvmRpcBridge, NodeIdentity
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import generate_parity_triplet

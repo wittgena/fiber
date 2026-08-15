@@ -1,4 +1,5 @@
-# ext.router.embedding.base
+# bound.agent.embedding.base
+## @lineage: ext.router.embedding.base
 ## @lineage: router.embedding.base
 ## @lineage: engine.router.embedding.base
 import asyncio

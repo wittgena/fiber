@@ -1,11 +1,11 @@
-# dphi.intent.exchange.entry
-## @lineage: dphi.exchange.entry
+# bound.exchange.intent.entry
+## @lineage: bound.intent.exchange.entry
 import asyncio
 from dataclasses import dataclass
 from typing import List
 
 from dphi.adapter.config.dphi import mock_env
-from bound.intent.exchange.workflow import ExchangeWorkflow, ScenarioConfig
+from bound.exchange.intent.workflow import ExchangeWorkflow, ScenarioConfig
 from receptor.ingress.sentinel import RpcChaosInjector
 
 from kernel.phase.reactor import PhaseReactor

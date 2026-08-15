@@ -1,4 +1,5 @@
-# ext.router.adapter.pydantic
+# bound.agent.adapter.pydantic
+## @lineage: ext.router.adapter.pydantic
 ## @lineage: router.adapter.pydantic
 ## @lineage: engine.adapter.pydantic
 ## @lineage: bound.adapter.pydantic

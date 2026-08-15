@@ -1,4 +1,5 @@
-# ext.router.adapter.types.schema
+# bound.agent.adapter.types.schema
+## @lineage: ext.router.adapter.types.schema
 ## @lineage: router.adapter.types.schema
 ## @lineage: engine.adapter.types.schema
 ## @lineage: bound.adapter.types.schema

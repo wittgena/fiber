@@ -1,5 +1,5 @@
-# ext.web3.adapter
-## @lineage: ext.adapter
+# bound.exchange.web3.adapter
+## @lineage: bound.capital.web3.adapter
 import os
 import asyncio
 from typing import Dict, Any, Tuple, Optional

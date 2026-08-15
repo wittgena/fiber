@@ -1,4 +1,5 @@
-# ext.router.exception.types
+# bound.agent.exception.types
+## @lineage: ext.router.exception.types
 ## @lineage: engine.exception.types
 from arch.contract.event.next import ToposId
 ConversationID = ToposId

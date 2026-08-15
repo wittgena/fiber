@@ -1,4 +1,5 @@
-# ext.router.adapter.callback.event
+# bound.agent.adapter.callback.event
+## @lineage: ext.router.adapter.callback.event
 ## @lineage: router.adapter.callback.event
 import uuid
 from dataclasses import dataclass

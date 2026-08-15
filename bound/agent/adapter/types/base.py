@@ -1,4 +1,5 @@
-# ext.router.adapter.types.base
+# bound.agent.adapter.types.base
+## @lineage: ext.router.adapter.types.base
 ## @lineage: router.adapter.types.base
 ## @lineage: engine.adapter.types.base
 ## @lineage: bound.adapter.types.base

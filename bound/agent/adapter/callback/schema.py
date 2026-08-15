@@ -1,4 +1,5 @@
-# ext.router.adapter.callback.schema
+# bound.agent.adapter.callback.schema
+## @lineage: ext.router.adapter.callback.schema
 ## @lineage: router.adapter.callback.schema
 import uuid
 from dataclasses import dataclass

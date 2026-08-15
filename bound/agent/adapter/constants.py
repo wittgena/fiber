@@ -1,4 +1,5 @@
-# ext.router.adapter.constants
+# bound.agent.adapter.constants
+## @lineage: ext.router.adapter.constants
 ## @lineage: router.adapter.constants
 ## @lineage: engine.adapter.constants
 import os

@@ -14,13 +14,13 @@ except ImportError:
 from dphi.adapter.config.dphi import mock_env
 from dphi.adapter.config.client import NotarySwarm
 from dphi.adapter.shadow import ShadowAdapter
-from bound.capital.web3.evm import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
+from bound.exchange.web3.evm import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.bind.inter.protocol import ExecutionResult
 from kernel.dphi.broker import DphiBroker
 from watcher.plane.emitter import get_emitter
-from bound.intent.verifier import TraceVerifier, VerificationError
+from bound.agent.intent.verifier import TraceVerifier, VerificationError
 
 log = get_emitter("dvm.workflow")
 

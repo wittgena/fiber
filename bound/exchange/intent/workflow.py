@@ -1,5 +1,5 @@
-# dphi.intent.exchange.workflow
-## @lineage: dphi.exchange.workflow
+# bound.exchange.intent.workflow
+## @lineage: bound.intent.exchange.workflow
 import asyncio
 import hashlib
 import json

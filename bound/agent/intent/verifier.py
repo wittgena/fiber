@@ -1,4 +1,5 @@
-# ext.dphi.verifier
+# bound.agent.intent.verifier
+## @lineage: bound.intent.verifier
 import json
 from typing import Dict, Any, Tuple
 from kernel.bind.inter.protocol import ExecutionResult
