@@ -14,7 +14,7 @@ from urllib.parse import urlparse, urlunparse
 import certifi
 import httpx
 
-from ext.router.adapter.constants import (
+from bound.agent.adapter.constants import (
     AIOHTTP_CONNECTOR_LIMIT,
     AIOHTTP_KEEPALIVE_TIMEOUT,
     COMPLETION_HTTP_FALLBACK_SECONDS,
