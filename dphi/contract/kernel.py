@@ -1,3 +1,4 @@
+# dphi.contract.kernel
 """
 @module: dphi.contract.kernel
 @desc: Physical & Cognitive Dynamics Kernels for Phase Topology Evolution

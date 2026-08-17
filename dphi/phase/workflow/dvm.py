@@ -67,9 +67,12 @@ class DvmWorkflow(Workflow):
         self.is_verified: bool = False  # 검증 성공 여부 트래킹 플래그
 
     async def start(self) -> bool:
-        self.post_message(DvmStartMsg())
-        await self.run()
-        await self.orchestrator.disconnect()
+        # [핵심 수정 구간] 명시적 disconnect() 호출 대신 async with를 사용하여 
+        # Orchestrator의 연결 및 해제 라이프사이클(connect/disconnect)을 안전하게 위임합니다.
+        async with self.orchestrator:
+            self.post_message(DvmStartMsg())
+            await self.run()
+            
         return getattr(self, "is_verified", False)
 
     @step
@@ -218,7 +221,7 @@ class DvmWorkflow(Workflow):
             
             self.log.info(f"  └─ {v_msg}")
             
-            # [수정 완료] 무결성 검증을 완벽히 통과했을 때만 True 할당
+            # 무결성 검증을 완벽히 통과했을 때만 True 할당
             self.is_verified = True
             
             return DvmVerifiedMsg()

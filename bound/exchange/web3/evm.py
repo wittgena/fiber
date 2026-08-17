@@ -13,6 +13,7 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("web3.evm")
 
+
 """@phase.1: Core Intent & State Builders intent"""
 @dataclass
 class EvmIntent:
@@ -31,6 +32,7 @@ class EvmIntent:
         data = asdict(self)
         data["target_address"] = data["target"]
         return {k: v for k, v in data.items() if v is not None}
+
 
 class EvmBuilder:
     """@desc: Deterministic builder exclusively responsible for EVM intent state and block context assemblies intent"""
@@ -127,7 +129,7 @@ class EVMOrchestrator:
         self.w3: Optional[AsyncWeb3] = None
         self._is_active: bool = False
 
-    async def _connect(self):
+    async def connect(self):
         """@desc: Binds the remote network into the controlled orchestration scope intent"""
         if self._is_active:
             return
@@ -140,7 +142,7 @@ class EVMOrchestrator:
     async def verify_connection(self):
         """@desc: Validates the physical network binding before allowing projection phases intent"""
         if not self._is_active or not self.w3:
-            raise ConnectionError("Orchestrator is not in an active state")
+            raise ConnectionError("Orchestrator is not in an active state. Call connect() or use 'async with' first.")
             
         is_connected = await self.w3.is_connected()
         if not is_connected:
@@ -157,8 +159,8 @@ class EVMOrchestrator:
             except Exception as e:
                 log.warning(f"AccessList RPC failed (Attempt {attempt}/{max_retries}) {str(e)}")
                 if attempt == max_retries:
-                    log.error("Failed to generate AccessList after maximum retries Halting")
-                    raise RuntimeError(f"AccessList Generation Error {str(e)}")
+                    log.error("Failed to generate AccessList after maximum retries. Halting.")
+                    raise RuntimeError(f"AccessList Generation Error: {str(e)}")
 
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
         checksum_addr = self.w3.to_checksum_address(address)
@@ -198,21 +200,17 @@ class EVMOrchestrator:
             provider = self.w3.provider
             log.trace("[EVMOrchestrator] Executing absolute structural teardown of external network bindings...")
 
-            ## @step.1: Pierce encapsulation to extract the raw aiohttp session architecture intent
             session = getattr(provider, '_session', None) or getattr(provider, 'session', None)
-            
-            ## @step.2: Execute violent socket truncation bypassing polite FIN/RST wait loops intent
             if session:
                 connector = getattr(session, 'connector', None)
                 if connector:
                     connector.force_close()
                 session.detach()
 
-            ## @step.3: Nullify the provider cache to terminate any internal background execution traces intent
             if hasattr(provider, 'cache_async_session'):
                 provider.cache_async_session = lambda *args, **kwargs: None
 
-            log.trace("[EVMOrchestrator] RPC external bindings forcibly amputated Zero tasks leaked")
+            log.trace("[EVMOrchestrator] RPC external bindings forcibly amputated. Zero tasks leaked.")
 
         except Exception as e:
             log.warning(f"[EVMOrchestrator] Teardown executed with anomalies: {e}")
@@ -222,7 +220,7 @@ class EVMOrchestrator:
 
     async def __aenter__(self):
         """@desc: Engages the trace-aware deterministic context scope intent"""
-        await self._connect()
+        await self.connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -234,13 +232,17 @@ class MockOrchestrator:
     """@desc: Autonomous local mock builder fully integrated into the orchestrated lifecycle intent"""
     def __init__(self, user_intent: Dict[str, Any] = None):
         self.user_intent = user_intent or {}
+        
+    async def connect(self):
+        """@desc: Interface compatibility for deterministic state orchestration"""
+        pass
 
     async def verify_connection(self):
         log.info(f"🧪 [MOCK MODE] Using Local Mock Builder Simulated Chain ID: {mock_env.network.chain_id}")
 
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
         if not address or not address.startswith("0x"):
-            log.warning(f"MockOrchestrator received non-EVM address {address} Returning empty state")
+            log.warning(f"MockOrchestrator received non-EVM address {address}. Returning empty state.")
             return {}
 
         is_contract = (address.lower() == mock_env.contracts.target_erc20.lower())
@@ -254,6 +256,7 @@ class MockOrchestrator:
         log.trace("[MockOrchestrator] Mock context dismantled instantaneously")
 
     async def __aenter__(self):
+        await self.connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -264,6 +267,10 @@ class InversionOrchestrator:
     """@desc: Special mock boundary to trigger cross-VM precompile callbacks intent"""
     def __init__(self, user_intent: Dict[str, Any] = None):
         self.user_intent = user_intent or {}
+        
+    async def connect(self):
+        """@desc: Interface compatibility for cross-VM callback orchestration"""
+        pass
 
     async def verify_connection(self):
         log.info("🌌 [INVERSION MODE] Cross-VM Precompile Hook Testing initialized")
@@ -283,6 +290,7 @@ class InversionOrchestrator:
         log.trace("[InversionOrchestrator] Inversion hook context obliterated")
 
     async def __aenter__(self):
+        await self.connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
