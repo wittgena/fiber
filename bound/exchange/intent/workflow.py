@@ -10,10 +10,10 @@ from typing import Any, Callable, Dict, Optional, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from dphi.adapter.config.client import PhaseBuilder
-from dphi.adapter.config.dphi import mock_env
-from dphi.adapter.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
-from dphi.adapter.local.wallet import LocalWalletClient
+from phase.dphi.anchor.config.client import PhaseBuilder
+from phase.dphi.anchor.config.dphi import mock_env
+from kernel.dphi.adapter.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
+from bound.client.local.wallet import LocalWalletClient
 
 from arch.model.phase.gate import uuid4
 from arch.topos.network.bridge import RpcBridge

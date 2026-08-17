@@ -28,7 +28,7 @@ from kernel.dphi.cgroup import Tier
 from kernel.dphi.exchange.config import tier_config, billing_config
 
 # --- Eco & Core Dependencies ---
-from dphi.adapter.anchor import NexusAnchor, AnchorProposal
+from phase.dphi.anchor.adapter import NexusAnchor, AnchorProposal
 from receptor.stream.store import LogStreamStore
 from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 from receptor.xe.depend import (

@@ -8,8 +8,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from dphi.adapter.config.dphi import mock_env
-from dphi.adapter.eco import EcoAdapter
+from phase.dphi.anchor.config.dphi import mock_env
+from kernel.dphi.adapter.eco import EcoAdapter
 from bound.exchange.intent.workflow import DvmRpcBridge, NodeIdentity
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step

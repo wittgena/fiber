@@ -8,7 +8,7 @@ from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
 from arch.xor.secret.manager import get_secret_str
-from dphi.adapter.config.dphi import mock_env
+from phase.dphi.anchor.config.dphi import mock_env
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("ext.adapter")
