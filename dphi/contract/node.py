@@ -1,17 +1,26 @@
-# dphi.node.global
+# dphi.contract.node
 from __future__ import annotations
+import json
 import asyncio
 import math
 import random
-from typing import List, Dict, Optional, Any, Type, Callable
+from typing import Optional, List, Dict, Any
 
-from arch.contract.registry.unified import registry, contract 
+from arch.contract.registry.unified import contract 
+from arch.contract.discovery import discover_modules
 from arch.contract.event.bus import AsyncEventBus
 from arch.contract.event.psi import PsiCarrier, PsiEvent
-from arch.contract.interface import IPhaseAtor, IPhaseField, ICriticalDetector, ISystemRegime
+from arch.contract.interface import IPhaseField, ICriticalDetector, ISystemRegime, IPhaseAtor
+
+from kernel.phase.runtime.executor.dynamics import DynamicsExecutor
+from kernel.phase.runtime.node import NodeRuntime
+from kernel.phase.runtime.flow.cont import LoopCarrier
+from kernel.bind.resolver import find_current_self
 from watcher.plane.emitter import get_emitter
 
-@contract.field("node.global")
+log = get_emitter("ator.node")
+
+@contract.ator("node.global", role="field")
 class GlobalNode(IPhaseField):
     """Φ: global phase manifold (state container)"""
     def __init__(self, size: int, init_phase_range: tuple, omega_range: tuple, kernel: Any, rng: random.Random):
@@ -40,12 +49,14 @@ class GlobalNode(IPhaseField):
                 self.nodes_state[node_id]["tension"] = delta["target_tension"]
 
     def update_node_state(self, node_id: str, new_state: str) -> None:
-        if node_id in self.nodes_state: self.nodes_state[node_id]["state"] = new_state
+        if node_id in self.nodes_state: 
+            self.nodes_state[node_id]["state"] = new_state
 
     def set_tension(self, node_id: str, tension: float) -> None:
-        if node_id in self.nodes_state: self.nodes_state[node_id]["tension"] = tension
+        if node_id in self.nodes_state: 
+            self.nodes_state[node_id]["tension"] = tension
 
-@contract.ator("topos.ator")
+@contract.ator("topos.ator", role="ator")
 class ToposAtor(IPhaseAtor):
     """ψ: local ator mediating Φ interaction"""
     def __init__(self, ator_id: str, reflector_boost: float = 0.5, attractor_gain: float = 1.2, state: str = "NORMAL"):
@@ -78,7 +89,37 @@ class ToposAtor(IPhaseAtor):
         elif self._state == "ATTRACTOR":
             my_data["omega"] *= self.attractor_gain 
 
-@contract.watcher("bound.observer")
+@contract.ator("topos.watcher", role="watcher")
+class ToposWatcher(ICriticalDetector):
+    """@role: ∂Φ 임계 감시자 (스케일링 돌파 감지)"""
+    def __init__(self, upper_limit: float = 80.0, lower_limit: float = 20.0):
+        self.upper_limit = upper_limit
+        self.lower_limit = lower_limit
+
+    def evaluate(self, field: IPhaseField, history: list, current_tick: int, parent: PsiEvent) -> Optional[PsiEvent]:
+        for node_id, data in field.get_state().items():
+            tension = data.get("tension", 0.0)
+            state = data.get("state", "NORMAL")
+            
+            if state in ["SCALED_OUT", "SCALED_IN"]:
+                continue
+
+            carrier = None
+            if tension >= self.upper_limit:
+                carrier = PsiCarrier(kind="AWS_SCALE_REQUEST", tag=node_id, payload="Φ0")
+            elif tension <= self.lower_limit:
+                carrier = PsiCarrier(kind="AWS_SCALE_REQUEST", tag=node_id, payload="∂Φ")
+
+            if carrier:
+                log.warning(f"Threshold breached for {node_id} (Tension: {tension:.1f}). Emitting Phase Transition.")
+                return PsiEvent(
+                    event_id=f"scale-{current_tick}-{node_id}", parent_id=parent.event_id,
+                    source_id="receptor.watcher", scope="SYSTEMIC", tick=current_tick, carrier=carrier
+                )
+        return None
+
+
+@contract.ator("bound.observer", role="watcher")
 class BoundObserver(ICriticalDetector):
     """∂Φ: boundary layer (continuous + rupture)"""
     def __init__(self, rupture_limit: float = 0.9):
@@ -99,8 +140,48 @@ class BoundObserver(ICriticalDetector):
                 )
         return None
 
+@contract.ator("node.regime", role="regime")
+class NodeRegime(ISystemRegime):
+    """@role: Γ_rupture actuator | System reset & topological realignment"""
+    def __init__(self, **kwargs):
+        self.params = kwargs
 
-@contract.regime("rupture.regime")
+    def modify_field(self, field: IPhaseField) -> None:
+        states = field.get_state()
+        for node_id, data in states.items():
+            data["tension"] = 0.0
+            if data["state"] == "NORMAL":
+                data["phase"] = random.uniform(0, 2 * math.pi)
+            elif data["state"] == "REFLECTOR":
+                data["phase"] = 0.0  
+
+        if hasattr(field, 'pressure'):
+            field.pressure = 0.0
+            
+        log.info("[Regime] Field collapsed and reformed. Tension reset to 0.0")
+
+    def constrain_ator(self, ator: IPhaseAtor) -> None:
+        pass
+
+    def filter_event(self, event: PsiEvent) -> Optional[PsiEvent]:
+        return event if event.context.get("epoch") == "new" else event
+
+
+@contract.ator("scale.regime", role="regime")
+class ScaleRegime(ISystemRegime):
+    """@role: 위상 전이 체제 (스케일링 쿨다운 처리)"""
+    def modify_field(self, field: IPhaseField, target_id: str) -> None:
+        target_data = field.get_state().get(target_id)
+        if target_data:
+            tension = target_data.get("tension", 0.0)
+            target_data["state"] = "SCALED_OUT" if tension >= 50.0 else "SCALED_IN"
+            target_data["tension"] = 50.0  # 안정 상태 초기화
+
+    def constrain_ator(self, ator: IPhaseAtor) -> None:
+        pass
+
+
+@contract.ator("rupture.regime", role="regime")
 class RuptureRegime(ISystemRegime):
     def __init__(self, target_state: str, reset_tension: bool):
         self.target_state = target_state
@@ -108,7 +189,8 @@ class RuptureRegime(ISystemRegime):
 
     def modify_field(self, field: IPhaseField, target_id: str) -> None:
         field.update_node_state(target_id, self.target_state)
-        if self.reset_tension: field.set_tension(target_id, 0.0)
+        if self.reset_tension: 
+            field.set_tension(target_id, 0.0)
 
     def constrain_ator(self, ator: IPhaseAtor) -> None:
         ator.set_state(self.target_state)

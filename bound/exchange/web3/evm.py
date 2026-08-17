@@ -1,9 +1,7 @@
 # bound.exchange.web3.evm
-## @lineage: bound.capital.web3.evm
-## @lineage: ext.web3.evm
+"""@desc: Orchestrates EVM states and physically subjugates external Web3 RPC lifecycles for deterministic execution intent"""
 import time
 import random
-import asyncio
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field, asdict
 
@@ -15,8 +13,10 @@ from watcher.plane.emitter import get_emitter
 
 log = get_emitter("web3.evm")
 
+"""@phase.1: Core Intent & State Builders intent"""
 @dataclass
 class EvmIntent:
+    """@desc: Standardized carrier for EVM execution intent without external dependencies intent"""
     target: str
     caller: str
     calldata: str
@@ -27,18 +27,20 @@ class EvmIntent:
     allowance_slot_index: Optional[int] = None
     
     def to_workflow_dict(self) -> dict:
+        """@desc: Translates internal intent into canonical workflow routing dictionaries intent"""
         data = asdict(self)
         data["target_address"] = data["target"]
         return {k: v for k, v in data.items() if v is not None}
 
 class EvmBuilder:
-    """EVM 관련 인텐트, 상태, 블록 컨텍스트 구성을 전담하는 빌더 클래스"""
+    """@desc: Deterministic builder exclusively responsible for EVM intent state and block context assemblies intent"""
     
     @staticmethod
     def build_user_intent(
         scenario_type: str = "ERC20_TRANSFER",
         should_revert: bool = False
     ) -> EvmIntent:
+        """@desc: Constructs deterministic scenario execution vectors bounded by strict system parameters intent"""
         caller = mock_env.agents.alpha.evm_address
         value = 0
         requires_access_list = False
@@ -90,6 +92,7 @@ class EvmBuilder:
     def build_state_snapshot(
         address: str, is_contract: bool = False, balance_wei: int = int(10 * 1e18), should_revert: bool = False
     ) -> Dict[str, Any]:
+        """@desc: Generates a mathematically deterministic initial state geometry intent"""
         if is_contract:
             mock_code = "0xfd" if should_revert else "0x608060405234801561001057600080fd5b506101"
         else:
@@ -116,15 +119,32 @@ class EvmBuilder:
         }
 
 
+"""@phase.2: Orchestrators and Subjugation Handlers intent"""
 class EVMOrchestrator:
+    """@desc: Subjugates external Web3 RPC providers directly commanding physical lifecycles without non-deterministic delays intent"""
     def __init__(self, rpc_url: str):
-        self.w3 = AsyncWeb3(AsyncHTTPProvider(rpc_url))
+        self.rpc_url = rpc_url
+        self.w3: Optional[AsyncWeb3] = None
+        self._is_active: bool = False
+
+    async def _connect(self):
+        """@desc: Binds the remote network into the controlled orchestration scope intent"""
+        if self._is_active:
+            return
+            
+        self.w3 = AsyncWeb3(AsyncHTTPProvider(self.rpc_url))
         self.w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
+        self._is_active = True
+        log.trace("[EVMOrchestrator] Network scope bound and activated")
 
     async def verify_connection(self):
+        """@desc: Validates the physical network binding before allowing projection phases intent"""
+        if not self._is_active or not self.w3:
+            raise ConnectionError("Orchestrator is not in an active state")
+            
         is_connected = await self.w3.is_connected()
         if not is_connected:
-            raise ConnectionError(f"Failed to connect to RPC URL: {self.w3.provider.endpoint_uri}")
+            raise ConnectionError(f"Failed to connect to RPC URL {self.w3.provider.endpoint_uri}")
         log.info(f"✅ Connected to REAL network. Chain ID: {await self.w3.eth.chain_id}")
 
     async def generate_access_list(self, tx_params: Dict[str, Any], max_retries: int = 3) -> List[Dict[str, Any]]:
@@ -135,11 +155,10 @@ class EVMOrchestrator:
                     raise ValueError(res["error"])
                 return res.get("result", {}).get("accessList", [])
             except Exception as e:
-                log.warning(f"AccessList RPC failed (Attempt {attempt}/{max_retries}): {str(e)}")
+                log.warning(f"AccessList RPC failed (Attempt {attempt}/{max_retries}) {str(e)}")
                 if attempt == max_retries:
-                    log.error("Failed to generate AccessList after maximum retries. Halting.")
-                    raise RuntimeError(f"AccessList Generation Error: {str(e)}")
-                await asyncio.sleep(2 ** attempt)
+                    log.error("Failed to generate AccessList after maximum retries Halting")
+                    raise RuntimeError(f"AccessList Generation Error {str(e)}")
 
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
         checksum_addr = self.w3.to_checksum_address(address)
@@ -171,20 +190,57 @@ class EVMOrchestrator:
         }
         
     async def disconnect(self):
-        await self.w3.provider.disconnect()
+        """@desc: Forcibly amputates external TCP/SSL connectors bypassing graceful GC delays to obliterate orphan tasks intent"""
+        if not self._is_active or not self.w3:
+            return
+
+        try:
+            provider = self.w3.provider
+            log.trace("[EVMOrchestrator] Executing absolute structural teardown of external network bindings...")
+
+            ## @step.1: Pierce encapsulation to extract the raw aiohttp session architecture intent
+            session = getattr(provider, '_session', None) or getattr(provider, 'session', None)
+            
+            ## @step.2: Execute violent socket truncation bypassing polite FIN/RST wait loops intent
+            if session:
+                connector = getattr(session, 'connector', None)
+                if connector:
+                    connector.force_close()
+                session.detach()
+
+            ## @step.3: Nullify the provider cache to terminate any internal background execution traces intent
+            if hasattr(provider, 'cache_async_session'):
+                provider.cache_async_session = lambda *args, **kwargs: None
+
+            log.trace("[EVMOrchestrator] RPC external bindings forcibly amputated Zero tasks leaked")
+
+        except Exception as e:
+            log.warning(f"[EVMOrchestrator] Teardown executed with anomalies: {e}")
+        finally:
+            self._is_active = False
+            self.w3 = None
+
+    async def __aenter__(self):
+        """@desc: Engages the trace-aware deterministic context scope intent"""
+        await self._connect()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """@desc: Guarantees teardown executes universally regardless of node termination status intent"""
+        await self.disconnect()
 
 
 class MockOrchestrator:
+    """@desc: Autonomous local mock builder fully integrated into the orchestrated lifecycle intent"""
     def __init__(self, user_intent: Dict[str, Any] = None):
         self.user_intent = user_intent or {}
 
     async def verify_connection(self):
-        log.info(f"🧪 [MOCK MODE] Using Local Mock Builder. Simulated Chain ID: {mock_env.network.chain_id}")
+        log.info(f"🧪 [MOCK MODE] Using Local Mock Builder Simulated Chain ID: {mock_env.network.chain_id}")
 
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
-        # [방어적 프로그래밍] address가 정상적인 EVM hex 포맷인지 확인
         if not address or not address.startswith("0x"):
-            log.warning(f"MockOrchestrator received non-EVM address: {address}. Returning empty state.")
+            log.warning(f"MockOrchestrator received non-EVM address {address} Returning empty state")
             return {}
 
         is_contract = (address.lower() == mock_env.contracts.target_erc20.lower())
@@ -195,20 +251,26 @@ class MockOrchestrator:
         return EvmBuilder.build_block_context()
         
     async def disconnect(self):
-        pass
+        log.trace("[MockOrchestrator] Mock context dismantled instantaneously")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.disconnect()
 
 
 class InversionOrchestrator:
-    """dvm.wasm 내부에서 dphi.wasm을 역호출하도록 유도하는 특수 Mock 환경 구성"""
+    """@desc: Special mock boundary to trigger cross-VM precompile callbacks intent"""
     def __init__(self, user_intent: Dict[str, Any] = None):
         self.user_intent = user_intent or {}
 
     async def verify_connection(self):
-        log.info("🌌 [INVERSION MODE] Cross-VM Precompile Hook Testing initialized.")
+        log.info("🌌 [INVERSION MODE] Cross-VM Precompile Hook Testing initialized")
 
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
         return {
-            "balance": "0x1000000000000000000",  # 1 ETH
+            "balance": "0x1000000000000000000",
             "nonce": 0,
             "code": "0x",
             "storage": {}
@@ -218,4 +280,10 @@ class InversionOrchestrator:
         return EvmBuilder.build_block_context()
 
     async def disconnect(self):
-        pass
+        log.trace("[InversionOrchestrator] Inversion hook context obliterated")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.disconnect()

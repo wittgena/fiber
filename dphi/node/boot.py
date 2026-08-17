@@ -18,7 +18,7 @@ from watcher.plane.emitter import get_emitter
 from watcher.receptor.bootstrap import receptor_bootstrap
 from watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
 
-log = get_emitter("phase.node.boot")
+log = get_emitter("node.boot")
 
 _node_instance = None
 _rest_server_instance = None
