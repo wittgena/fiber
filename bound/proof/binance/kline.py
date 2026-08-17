@@ -1,11 +1,9 @@
 # bound.proof.binance.kline
-## @lineage: bound.exchange.capital.binance.kline
-## @lineage: bound.capital.oracle.binance.kline
 """
 @arn: arn:bound:oracle:binance:kline:v1.0.0
-@desc: Deterministic data adapter and validator for Binance K-line (Candlestick) data.
-@security: The raw bytes of this source file (.py) are cryptographically hashed for execution integrity.
-@constraint: Do not modify whitespace, comments, or logic after network deployment.
+@desc: Deterministic data adapter and validator for Binance K-line data
+@security: The raw bytes of this source file are cryptographically hashed for execution integrity
+@constraint: Do not modify whitespace, comments, or logic after network deployment
 """
 from typing import Dict, Any, List, TypedDict
 
@@ -20,7 +18,7 @@ class Candle(TypedDict):
     v: float
 
 def build_intent_params(symbol: str, interval: str, limit: int, end_time_ms: int) -> Dict[str, Any]:
-    """Constructs deterministic HTTP request parameters with basic bound checks."""
+    """@desc: Constructs deterministic HTTP request parameters with strict bound constraints to prevent resource exhaustion during node execution"""
     if limit <= 0 or limit > 1000:
         raise ValueError("Limit must be strictly between 1 and 1000")
         
@@ -36,21 +34,21 @@ def build_intent_params(symbol: str, interval: str, limit: int, end_time_ms: int
     }
 
 def parse_observation(raw_data: List[List[Any]]) -> List[Candle]:
-    """@desc: Parses the raw exchange response, minifies it, and validates the integrity of the financial data to prevent State Poisoning on the ledger"""
+    """@desc: Parses the raw exchange response and enforces financial invariants to prevent state poisoning on the ledger"""
     parsed: List[Candle] = []
     for candle in raw_data:
-        ## @phase.1: Type casting
+        ## @phase.1: Coerce raw arrays into strict float types to guarantee deterministic cryptographic hashing
         ts = float(candle[0])
         o, h, l, c, v = map(float, candle[1:6])
         
-        ## @phase.2: Financial Logic Validation (Prevent anomalous data injection)
+        ## @phase.2: Enforce market invariants to reject anomalous data injections before they reach the execution router
         if h < l:
-            raise ValueError(f"Anomalous data: High price ({h}) cannot be lower than Low price ({l})")
+            raise ValueError(f"Anomalous data High price ({h}) cannot be lower than Low price ({l})")
         
         if any(val < 0 for val in (o, h, l, c, v)):
-            raise ValueError("Anomalous data: Negative prices or volume detected")
+            raise ValueError("Anomalous data Negative prices or volume detected")
             
-        ## @step.3: Serialize to canonical schema
+        ## @phase.3: Serialize to the canonical schema to ensure cross-exchange compatibility in downstream receptor logic
         parsed.append({
             "ts": ts,
             "o": o,
