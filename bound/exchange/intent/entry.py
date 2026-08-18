@@ -1,10 +1,10 @@
 # bound.exchange.intent.entry
-## @lineage: bound.intent.exchange.entry
 import asyncio
+import os
 from dataclasses import dataclass
 from typing import List
 
-from phase.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import dphi_env, NetEnv
 from bound.exchange.intent.workflow import ExchangeWorkflow, ScenarioConfig
 from receptor.ingress.sentinel import RpcChaosInjector
 
@@ -31,17 +31,17 @@ class ExchangeDomainRunner:
         self.log = log
         self.results: List[TestResult] = []
         
-        has_testnet_keys = bool(mock_env.cdp_wallet.api_name and mock_env.cdp_wallet.api_private_key)
-        self.should_simulate = not has_testnet_keys
+        is_local_mode = (dphi_env.mode == NetEnv.LOCAL)
+        has_real_pkey = os.getenv(dphi_env.agents.alpha.private_key_env_var) is not None
+        self.should_simulate = is_local_mode or not has_real_pkey
 
     async def _run_domain_workflows(self):
         self.log.info("\n▶️ [EXCHANGE DOMAIN] Initiating Pipeline Execution Sequences...")
         if not self.should_simulate:
-            self.log.info(f"⚡ [Mode] Testnet Keys detected. External Ledger Sync (EVM) will target: {mock_env.cdp_wallet.network_id}")
+            self.log.info(f"⚡ [Mode] Real EVM Keys detected. External Ledger Sync (EVM) will target Chain ID: {dphi_env.network.chain_id}")
         else:
             self.log.info("🛡️ [Mode] Executing in Local Simulation (External Ledger Sync Bypassed).")
 
-        # 시나리오 정의: 파이프라인의 각 Phase 통과/차단 검증을 위한 물리적/구조적 명칭 적용
         scenarios = [
             {
                 "config": ScenarioConfig(
@@ -65,7 +65,7 @@ class ExchangeDomainRunner:
                     mandate_injector=None,
                     signature_injector=RpcChaosInjector.corrupt_consensus_signatures
                 ),
-                "expected": True  # 파이프라인 상 상태 확정(State Determination)과 EVM 동기화는 완료되나, 최종 내보내기에서 서명이 실패함
+                "expected": True
             }
         ]
 

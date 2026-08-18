@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Body, status, Depends, HTTPException
+from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from arch.contract.interface import ContractRouter
@@ -46,6 +46,10 @@ compute_edge = ContractRouter(namespace="eco.compute", prefix="/eco/compute", ta
 exchange_edge = ContractRouter(namespace="eco.exchange", prefix="/eco/exchange", tags=["Internal Eco Exchange"])
 profile_edge = ContractRouter(namespace="eco.profile", prefix="/eco/profile", tags=["Internal Eco Profile"])
 
+
+# =====================================================================
+# [Data Models] Internal Data Structures
+# =====================================================================
 class LedgerEventSchema(BaseModel):
     action: str
     user_id: str
@@ -66,6 +70,39 @@ class StreamAppendResponse(BaseModel):
     status: str
     result: StreamAppendResult
 
+class MandateRegisterRequest(BaseModel):
+    agent_id: str
+    max_spend_usdc: str
+    expiration_ts: int
+    signature: str
+
+class MandateRegisterResponse(BaseModel):
+    receipt_id: str
+    status: str
+
+class BilledExecutionRequest(BaseModel):
+    agent_schema: Dict[str, Any]
+    context_depth: int = 2
+    target_entry: str
+
+class QuotationResponse(BaseModel):
+    status: str
+    tier_applied: str
+    fuel_estimated: int
+    estimated_cost_usd: float
+    reason: Optional[str] = None
+
+class BilledExecutionResponse(BaseModel):
+    status: str
+    tier_applied: str
+    fuel_billed: int
+    billed_cost_usd: float
+    reason: Optional[str] = None
+
+
+# =====================================================================
+# 1. Core (Ledger & Anchor)
+# =====================================================================
 @core_edge.post(
     "/ledger/stream/append", 
     status_code=status.HTTP_200_OK,
@@ -109,6 +146,7 @@ async def append_to_stream(
             result=StreamAppendResult(hash=event_hash, membership_proof=merkle_proof)
         )
 
+
 @core_edge.post(
     "/anchor/seal", 
     summary="[Internal] 상태 합의 및 영수증 방출 (Seal Epoch)",
@@ -131,9 +169,26 @@ async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(ge
         receipt=result.receipt.__dict__ if hasattr(result.receipt, "__dict__") else dict(result.receipt)
     )
 
+
 # =====================================================================
-# 2. ECO (Compute / Exchange / Profile)
+# 2. Eco Compute (Execution & Validation)
 # =====================================================================
+@compute_edge.get("/budget/verify", summary="[Internal] Tollgate용 X402 예산 잔고 확인")
+async def verify_budget(
+    receipt: str = Query(..., description="X402 영수증 해시"),
+    cost: float = Query(..., description="차감 예정 예상 비용 (USDC)"),
+    broker: DphiBroker = Depends(get_wasm_broker)
+):
+    """edge.public의 톨게이트가 호출하여 롤업 원장 내 예산을 검증"""
+    payload = json.dumps({"receipt_id": receipt, "required_cost": cost})
+    res = await broker.invoke("verify_ledger_budget", payload)
+    
+    if not res.success or not json.loads(res.output).get("is_sufficient"):
+        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, detail="Insufficient internal budget")
+        
+    return {"status": "BUDGET_SUFFICIENT"}
+
+
 @compute_edge.post("/intent/validate", summary="[Internal] Validate Intent", response_model=IntentValidationResponse)
 async def validate_intent(req: IntentValidationRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     raw_payload = {**req.model_dump(), "timestamp": int(time.time() * 1000)}
@@ -143,12 +198,14 @@ async def validate_intent(req: IntentValidationRequest, broker: DphiBroker = Dep
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.error.message)
     return IntentValidationResponse(status=EdgeState.INTENT_VALIDATED, clearance=json.loads(res.output))
 
+
 @compute_edge.post("/execute", summary="[Internal] Execute Compute", response_model=ExecuteComputeResponse)
 async def execute_compute(req: ExecuteComputeRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     res = await broker.execute(code=req.code, variables=req.variables)
     if not res.success:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=res.error.message)
     return ExecuteComputeResponse(status=EdgeState.EXECUTION_SUCCESS, output=res.output)
+
 
 @compute_edge.post("/proof/generate", summary="[Internal] Generate Proof", response_model=ProofGenerationResponse)
 async def generate_proof(req: ProofGenerationRequest, broker: DphiBroker = Depends(get_wasm_broker)):
@@ -158,7 +215,27 @@ async def generate_proof(req: ProofGenerationRequest, broker: DphiBroker = Depen
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.error.message)
     return ProofGenerationResponse(status=EdgeState.PROOF_GENERATED, zk_receipt=json.loads(res.output))
 
-# --- Eco Exchange ---
+
+# =====================================================================
+# 3. Eco Exchange (Mandate & Clearing)
+# =====================================================================
+@exchange_edge.post("/mandate/register", summary="[Internal] 에이전트 서명 검증 및 원장 예산 충전", response_model=MandateRegisterResponse)
+async def register_mandate(req: MandateRegisterRequest, broker: DphiBroker = Depends(get_wasm_broker)):
+    """edge.public에서 넘어온 EIP-712 서명을 검증하고, 성공 시 Ledger에 Deposit 후 Capability Token 발급"""
+    raw_payload = req.model_dump()
+    canonical_payload = StateAdapter.to_canonical_bytes(raw_payload).decode('utf-8')
+    
+    res = await broker.invoke("register_mandate_and_deposit", canonical_payload)
+    if not res.success:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.error.message)
+        
+    receipt_data = json.loads(res.output)
+    return MandateRegisterResponse(
+        receipt_id=receipt_data["receipt_id"],
+        status="REGISTERED_AND_FUNDED"
+    )
+
+
 @exchange_edge.post("/order/ingress", summary="[Internal] 거래 인텐트 인입 및 Session 발급", response_model=TradeIngressResponse)
 async def submit_trade_intent(
     req: TradeIngressRequest, broker: DphiBroker = Depends(get_wasm_broker),
@@ -178,6 +255,7 @@ async def submit_trade_intent(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.error.message)
     return TradeIngressResponse(status=EdgeState.INTENT_ACCEPTED, session=json.loads(res.output))
 
+
 @exchange_edge.post("/clearing/receipt/generate", summary="[Internal] 외부 네트워크용 정산 영수증 발급", response_model=ClearingReceiptResponse)
 async def generate_external_receipt(req: ClearingReceiptRequest, exchange: ExchangeAdapter = Depends(get_exchange_adapter)):
     receipt = exchange.finalize_settlement(
@@ -186,26 +264,10 @@ async def generate_external_receipt(req: ClearingReceiptRequest, exchange: Excha
     )
     return ClearingReceiptResponse(status=EdgeState.RECEIPT_GENERATED, rollup_payload=exchange.generate_settlement_payload(receipt))
 
-# --- Eco Profile ---
-class BilledExecutionRequest(BaseModel):
-    agent_schema: Dict[str, Any]
-    context_depth: int = 2
-    target_entry: str
 
-class QuotationResponse(BaseModel):
-    status: str
-    tier_applied: str
-    fuel_estimated: int
-    estimated_cost_usd: float
-    reason: Optional[str] = None
-
-class BilledExecutionResponse(BaseModel):
-    status: str
-    tier_applied: str
-    fuel_billed: int
-    billed_cost_usd: float
-    reason: Optional[str] = None
-
+# =====================================================================
+# 4. Eco Profile (Billing & Quota)
+# =====================================================================
 async def extract_client_project(api_key: str = "test_key") -> str:
     return "generative-language-client-1234" 
 
@@ -232,6 +294,7 @@ async def request_quotation(
         estimated_cost_usd=estimated_cost, reason=result.reason
     )
 
+
 @profile_edge.post("/execute/billed", summary="[Internal] Execute workload with account charging", response_model=BilledExecutionResponse)
 async def execute_billed_workload(
     req: BilledExecutionRequest, client_project_id: str = Depends(extract_client_project),
@@ -252,6 +315,10 @@ async def execute_billed_workload(
         billed_cost_usd=billed_cost, reason=result.reason
     )
 
+
+# =====================================================================
+# Main Router Inclusion
+# =====================================================================
 internal_router.include_router(core_edge)
 internal_router.include_router(compute_edge)
 internal_router.include_router(exchange_edge)

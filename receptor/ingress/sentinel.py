@@ -191,10 +191,6 @@ class MembraneProjector:
             raise web.HTTPForbidden(reason="Blocked by Kernel Topological Tension")
         raise web.HTTPForbidden(reason=f"Blocked by Meta Projection (Rule: {rule_id})")
 
-
-# =========================================================================
-# 3. CHAOS LIBRARY & INJECTORS
-# =========================================================================
 class ChaosPayloadLibrary:
     """HTTP 방어벽 및 애플리케이션 파괴(Membrane Attack)를 위한 바이트/JSON 페이로드"""
     OOM = [
@@ -268,8 +264,6 @@ class ChaosPayloadLibrary:
 
 
 class RpcChaosInjector:
-    """도메인 레벨 RPC 데이터(Mandate, Signature) 오염(Mutation)을 위한 인젝터"""
-    
     @staticmethod
     def corrupt_ap2_mandate(base_mandate: Dict[str, Any]) -> Dict[str, Any]:
         """권한 위임장(AP2 Mandate)을 고의로 과거(만료) 시점으로 조작하여 반환"""
@@ -289,27 +283,13 @@ class RpcChaosInjector:
 
     @staticmethod
     def corrupt_attestation_header(response: httpx.Response) -> httpx.Response:
-        """
-        🔥 [추가됨] First-Party Oracle 증명(Attestation) 헤더를 훼손합니다.
-        클라이언트 측 검증기(VerifiedHttpClient)가 이를 감지하고 에러를 내야 성공합니다.
-        """
         if "X-Dphi-Signature" in response.headers:
-            # 헤더를 수정 가능하도록 Mutable 매핑으로 변경 후 조작
             mutable_headers = httpx.Headers(response.headers)
             mutable_headers["X-Dphi-Signature"] = "0xdeadbeef_invalid_signature_chaos_injection"
-            
-            # (옵션) 타임스탬프도 만료되도록 훼손할 수 있습니다.
-            # mutable_headers["X-Dphi-Timestamp"] = "10000"
-            
-            # 조작된 헤더를 가진 새로운 Response 객체 반환
             response.headers = mutable_headers
             
         return response
 
-
-# =========================================================================
-# 4. DEFENSE ROUTER & SENTINEL ACTOR
-# =========================================================================
 class IngressRouter:
     """@desc: Internal router acting as the live target for the Sentinel."""
     def __init__(self, gateway: ToposGateway):
@@ -338,7 +318,6 @@ class IngressRouter:
             except Exception as e:
                 log.error(f"Manifold routing collapsed: {e}")
                 return {"status": "error", "reason": "Internal boundary failure"}
-
 
 class DefenseSentinel:
     """@desc: Chaos simulator that constantly attacks the router to ensure defensive integrity."""

@@ -6,8 +6,8 @@ from typing import Dict, Any, Optional, List
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from phase.anchor.config.dphi import mock_env, DvmConfig
-from bound.exchange.web3.evm import EvmBuilder, EvmIntent
+from phase.anchor.config.dphi import dphi_env, DvmConfig
+from bound.exchange.web3.adapter import EvmBuilder, EvmIntent
 from phase.dvm.workflow import DvmWorkflow 
 
 from kernel.phase.reactor import PhaseReactor
@@ -55,20 +55,20 @@ class EvmRunner:
         if scenario_type == "DPHI_INVERSION":
             return EvmIntent(
                 target="0x0000000000000000000000000000000000000099",
-                caller=mock_env.agents.alpha.evm_address,
+                caller=dphi_env.agents.alpha.evm_address,
                 calldata="0xdeadbeef",
                 scenario_type=scenario_type
             )
 
         intent = EvmBuilder.build_user_intent(scenario_type=scenario_type, should_revert=revert)
         if mode == "live":
-            intent.caller = mock_env.agents.beta.evm_address
+            intent.caller = dphi_env.agents.beta.evm_address
 
         if scenario_type == "UNISWAP_EXACT_INPUT":
             intent.allowance_slot_index = 4
 
         if scenario_type == "ERC20_TRANSFER" and not revert and mode == "live":
-            alpha_addr_clean = mock_env.agents.alpha.evm_address.replace("0x", "").zfill(64).lower()
+            alpha_addr_clean = dphi_env.agents.alpha.evm_address.replace("0x", "").zfill(64).lower()
             transfer_amount_hex = hex(int(0.001 * 1e18)).replace("0x", "").zfill(64)
             intent.calldata = f"0xa9059cbb{alpha_addr_clean}{transfer_amount_hex}"
             intent.requires_access_list = True 
@@ -108,8 +108,8 @@ class DvmPipeline:
         
         try:
             caller_addr = w3.to_checksum_address(agent.evm_address)
-            caller_pkey = mock_env.get_agent_pkey("beta")
-            weth_addr = w3.to_checksum_address(mock_env.contracts.target_erc20)
+            caller_pkey = dphi_env.get_agent_pkey("beta")
+            weth_addr = w3.to_checksum_address(dphi_env.contracts.target_erc20)
             
             weth_abi = [
                 {"constant": True, "inputs": [{"name": "", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
@@ -165,7 +165,7 @@ class DvmPipeline:
 
     async def execute(self):
         if self.config.mode in ["suite", "live"]:
-            weth_ready = await self._preflight_weth_check(self.config.rpc_url, mock_env.agents.beta)
+            weth_ready = await self._preflight_weth_check(self.config.rpc_url, dphi_env.agents.beta)
             if not weth_ready:
                 self.log.warning("⚠️ Pre-flight failed. Live WETH tests may revert. Proceeding anyway...")
 

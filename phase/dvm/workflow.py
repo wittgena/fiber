@@ -1,5 +1,4 @@
 # phase.dvm.workflow
-## @lineage: dphi.phase.workflow.dvm
 import sys
 import argparse
 import asyncio
@@ -12,10 +11,10 @@ except ImportError:
     from web3 import Web3
     keccak = Web3.keccak
 
-from phase.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import dphi_env
 from phase.anchor.config.client import NotarySwarm
 from kernel.dphi.adapter.shadow import ShadowAdapter
-from bound.exchange.web3.evm import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
+from bound.exchange.web3.adapter import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.bind.inter.protocol import ExecutionResult
@@ -145,7 +144,7 @@ class DvmWorkflow(Workflow):
                 overrides=overrides_list
             )
             
-            weth_address = mock_env.contracts.target_erc20.lower()
+            weth_address = dphi_env.contracts.target_erc20.lower()
             if projection.overrides:
                 if weth_address not in self.global_state_snapshot:
                     self.global_state_snapshot[weth_address] = {"balance": "0x0", "nonce": 0, "code": "0x", "storage": {}}
@@ -175,7 +174,7 @@ class DvmWorkflow(Workflow):
                 }
                 
                 self.execution_result = await self.broker.execute(
-                    code=cw_payload, tier=mock_env.wasm.tier, context={}
+                    code=cw_payload, tier=dphi_env.wasm.tier, context={}
                 )
                 
             else:
@@ -183,7 +182,7 @@ class DvmWorkflow(Workflow):
                     caller=self.caller,
                     calldata=self.calldata,
                     scenario_type=self.scenario_type,
-                    gas_limit=mock_env.wasm.max_gas_limit
+                    gas_limit=dphi_env.wasm.max_gas_limit
                 )
                 
                 evm_payload = {
@@ -197,9 +196,9 @@ class DvmWorkflow(Workflow):
                     "block": self.block_context
                 }
                 
-                self.log.info(f"[Test] Dispatching Intent to Broker (Scenario: {intent_struct.scenario_type}, Tier: {mock_env.wasm.tier})...")
+                self.log.info(f"[Test] Dispatching Intent to Broker (Scenario: {intent_struct.scenario_type}, Tier: {dphi_env.wasm.tier})...")
                 self.execution_result = await self.broker.execute(
-                    code=evm_payload, tier=mock_env.wasm.tier, context=inter_context
+                    code=evm_payload, tier=dphi_env.wasm.tier, context=inter_context
                 )
             
             return DvmSimulatedMsg()

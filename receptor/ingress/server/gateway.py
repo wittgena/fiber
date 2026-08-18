@@ -19,7 +19,6 @@ class GatewaySettings(BaseSettings):
     upstream_url: str = "http://127.0.0.1:8000"  # 숨겨진 내부 REST API (FastAPI) 주소
     transport_mode: Literal["stdio", "sse"] = "sse"
 
-
 class DphiGatewayServer:
     def __init__(self, settings: GatewaySettings):
         self.settings = settings
@@ -83,6 +82,12 @@ class DphiGatewayServer:
 
         target_url = f"{self.settings.upstream_url}{path}"
         data = await request.read()
+        
+        try:
+            data.decode('utf-8')
+        except UnicodeDecodeError:
+            self.log.warning(f"Blocked invalid UTF-8 payload from {client_ip}")
+            raise web.HTTPBadRequest(reason="Brane Security: Invalid UTF-8 Payload.")
         
         try:
             async with self.client_session.request(

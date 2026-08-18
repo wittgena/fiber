@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from bound.client.local.wallet import LocalWalletClient
 
-from phase.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import dphi_env
 from arch.contract.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
@@ -36,7 +36,7 @@ class NotarySwarm:
         # NotarySwarm이 인스턴스화 될 때, 자신이 생성한 공개키들을 
         # mock_env의 witness_pubkeys(커널이 신뢰하는 화이트리스트)에 강제로 덮어씌웁니다.
         # 이렇게 하면 Gateway가 만든 서명이 커널 검증을 100% 통과합니다.
-        mock_env.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
+        dphi_env.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
 
     @property
     def public_keys(self) -> List[str]:
@@ -89,10 +89,10 @@ class PhaseBuilder:
             slippage = 5000 
             
         req = TradeIngressRequest(
-            agent_id=mock_env.agents.alpha.did,
+            agent_id=dphi_env.agents.alpha.did,
             action=action,
             parameters={
-                "target_service": mock_env.agents.beta.did,
+                "target_service": dphi_env.agents.beta.did,
                 "payment_token": "USDC" if not should_fail_policy else token,
                 "max_fee_amount": max_fee,          
                 "slippage_tolerance_bps": slippage,      
@@ -124,7 +124,7 @@ class PhaseBuilder:
         
         trace_id = uuid.uuid4().hex
         span_id = uuid.uuid4().hex[:16]
-        agent_did = mock_env.agents.alpha.did 
+        agent_did = dphi_env.agents.alpha.did 
         
         req = ExportLogsServiceRequest(
             resourceLogs=[{
@@ -195,7 +195,7 @@ class PhaseBuilder:
             events.append(event)
             
         req = StreamAppendRequest(
-            stream_name=mock_env.da_layer.namespace_id,
+            stream_name=dphi_env.da_layer.namespace_id,
             verbose=True,
             events=events
         )
@@ -217,10 +217,10 @@ class PhaseBuilder:
             state_hash=ledger_root
         )
         
-        witnesses = mock_env.export_attestation.witness_pubkeys
+        witnesses = dphi_env.export_attestation.witness_pubkeys
         mock_signatures = [f"{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)]
         req = AnchorProposalRequest(
-            receptor_id=mock_env.contracts.nexus_clearing,
+            receptor_id=dphi_env.contracts.nexus_clearing,
             proposed_parity=parity,
             parent_nexus_id=14591,
             self_parent_state="genesis",

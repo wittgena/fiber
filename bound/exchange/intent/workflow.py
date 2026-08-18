@@ -1,32 +1,33 @@
 # bound.exchange.intent.workflow
-## @lineage: bound.intent.exchange.workflow
 import asyncio
 import hashlib
 import json
 import time
+import os
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, List
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from phase.anchor.config.client import PhaseBuilder
-from phase.anchor.config.dphi import mock_env
-from kernel.dphi.adapter.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
 from bound.client.local.wallet import LocalWalletClient
+from phase.anchor.config.client import PhaseBuilder
+from phase.anchor.config.dphi import dphi_env
 
 from arch.model.phase.gate import uuid4
 from arch.topos.network.bridge import RpcBridge
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import next_phase_id, generate_parity_triplet
 
+# 🌟 업데이트된 EcoAdapter 및 Settlement 모델 임포트
+from bound.exchange.eco import EcoAdapter, X402SettlementReceipt, Ap2MandateResult, SettlementPayload
 from kernel.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import DphiMethod
 from kernel.bind.inter.dvm import DvmInterpreter
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("exchange.workflow")
+log = get_emitter("intent.workflow")
 
 @dataclass
 class ScenarioConfig:
@@ -47,6 +48,9 @@ class NodeIdentity:
         self.pub_hex = self.key.public_key().public_bytes(
             encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
         ).hex()
+        # 🌟 지연 정산 시뮬레이션을 위한 파생 EVM 주소 추가
+        hash_seed = hashlib.sha1(self.pub_hex.encode()).hexdigest()
+        self.evm_address = f"0x{hash_seed}"
 
     def sign(self, canonical_bytes: bytes) -> str:
         return self.key.sign(hashlib.sha256(canonical_bytes).digest()).hex()
@@ -84,6 +88,8 @@ class DvmRpcBridge(RpcBridge):
             vm_target = vm_args.get("vm_target", "EVM")
             target_address = vm_args.get("target_address", "0x00")
             calldata = vm_args.get("calldata", "0x")
+            caller_address = vm_args.get("caller_address", "0x" + "1".rjust(40, "0"))
+            gas_price = vm_args.get("gas_price", hex(10**9))
             state_snapshot = vm_args.get("state_snapshot", {})
             
             try:
@@ -93,7 +99,7 @@ class DvmRpcBridge(RpcBridge):
                         target_address=target_address,
                         calldata=calldata,
                         state_snapshot=state_snapshot,
-                        context={"caller": "0x_workflow_agent"}
+                        context={"caller": caller_address, "gas_price": gas_price, "value": "0x0"}
                     )
                     
                     if res.success:
@@ -135,11 +141,12 @@ class ExchangeWorkflow(Workflow):
         
         self.ap2_mandate: Optional[Ap2MandateResult] = None
         self.x402_receipt: Optional[X402SettlementReceipt] = None
+        self.pull_receipt: Optional[X402SettlementReceipt] = None
         self.receipt: Optional[TransactionReceipt] = None
         self.rollup_payload: Optional[SettlementPayload] = None
 
     async def start(self) -> bool:
-        mode = "Local Simulation" if getattr(self.wallet_client, 'simulate', True) else "Live External Ledger"
+        mode = "Local Simulation" if getattr(self.wallet_client, 'simulate', True) else "Live Native EVM Ledger"
         self.log.info(f"\n{'='*60}\n🚀 [START] Sequence: {self.scenario.name} ({mode})\n{'='*60}")
         
         self.rpc_bridge = DvmRpcBridge()
@@ -152,7 +159,13 @@ class ExchangeWorkflow(Workflow):
     async def phase_ingress(self, msg: ExStartMsg) -> WorkflowMessage:
         self.log.info("--- [Phase 1] Ingress Validation: AP2 Mandate Constraints ---")
         
-        base_mandate = PhaseBuilder.ap2_mandate_params(self.agent_a.pub_hex, self.agent_a.key)
+        # 🌟 지연 정산을 위해 에이전트가 오프체인 서명(Mandate) 제출
+        base_mandate = {
+            "requester_id": self.agent_a.evm_address,
+            "target_action": "compute_intent",
+            "max_spend_usdc": "100.0",
+            "signer_key": self.agent_a.key
+        }
         
         if self.scenario.mandate_injector:
             mandate_params = self.scenario.mandate_injector(base_mandate)
@@ -177,20 +190,21 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_simulate(self, msg: ExIngressMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 2] DVM Execution: State Differential Derivation ---")
+        self.log.info("--- [Phase 2] DVM Execution: Intent Execution & Metering ---")
+        
+        caller_address = self.agent_a.evm_address
+        target_contract = getattr(dphi_env.contracts, 'nexus_clearing', "0x" + "c".rjust(40, "0"))
         
         dvm_payload = {
             "vm_target": "EVM",
-            "payload": {
-                "target_address": mock_env.contracts.nexus_clearing,
-                "calldata": "0x_x402_settlement_calldata",
-                "gas_limit": 100000,
-                "state_snapshot": {
-                    mock_env.contracts.nexus_clearing: {
-                        "balance": "0x0",
-                        "nonce": 0
-                    }
-                }
+            "caller_address": caller_address,
+            "gas_price": hex(10**9),
+            "target_address": target_contract,
+            "calldata": "0x00000000",
+            "gas_limit": 100000,
+            "state_snapshot": {
+                caller_address: {"balance": hex(10**18), "nonce": 1},
+                target_contract: {"balance": "0x0", "nonce": 0, "code": "0x"}
             }
         }
         
@@ -215,31 +229,32 @@ class ExchangeWorkflow(Workflow):
 
     @step
     async def phase_settlement(self, msg: ExSimulationMsg) -> WorkflowMessage:
-        self.log.info("--- [Phase 3] External Plug: Ledger State Synchronization ---")
+        self.log.info("--- [Phase 3] Deferred Economy: Off-chain Token Issuance & Netting ---")
         
-        payee_address = mock_env.contracts.nexus_clearing
-        amount = "0.05"
-        resource_id = "compute_fee"
-
-        try:
-            raw_receipt = await self.wallet_client.process_x402_payment(
-                payee_address=payee_address,
-                amount_usdc=amount,
-                resource_id=resource_id
-            )
-            
-            receipt_data = raw_receipt.get("receipt") if isinstance(raw_receipt, dict) and "receipt" in raw_receipt else raw_receipt
-            self.x402_receipt = X402SettlementReceipt(**receipt_data)
-            
-        except Exception as e:
-            self.log.error(f"External Ledger Sync Failure: {e}")
-            return ErrorMessage(f"Ledger Sync Halted: {e}")
+        # 🌟 1. 즉시 결제가 아닌, Mandate 기반 오프체인 역량 토큰(Capability Token) 발급
+        self.x402_receipt = EcoAdapter.issue_deferred_receipt(self.ap2_mandate)
+        self.log.info(f"  └─ Issued Capability Receipt: {self.x402_receipt.receipt_id} (Type: {self.x402_receipt.receipt_type})")
         
         self.economy_state = EcoAdapter.embed_economy_state(
             base_cached_states={"state_diff": self.entangled_state.get("dvm_state_diff")}, 
             mandate=self.ap2_mandate, 
             receipt=self.x402_receipt
         )
+
+        # 🌟 2. (E2E 검증용) 백그라운드 워커의 L1 징수(Pull) 시뮬레이션
+        self.log.info("  └─ [Background Worker Mock] Pulling accrued debt from L1 Network...")
+        try:
+            # 테스트 환경이므로 LocalWalletClient를 DPHI 청산소 시스템 지갑으로 가정하고 대리 호출
+            self.pull_receipt = await EcoAdapter.process_deferred_pull(
+                agent_wallet_address=self.agent_a.evm_address,
+                accrued_amount_usdc="0.05",
+                clearing_wallet_adapter=self.wallet_client
+            )
+            self.log.info(f"  └─ L1 Pull Successful. Final Settlement Receipt: {self.pull_receipt.receipt_id}")
+        except Exception as e:
+            self.log.error(f"L1 Pull Settlement Failure: {e}")
+            return ErrorMessage(f"Deferred Pull Halted: {e}")
+            
         return ExSettlementMsg()
 
     @step
@@ -251,9 +266,7 @@ class ExchangeWorkflow(Workflow):
             parity=parity, parent_nexus_id=0, self_parent_state="genesis",
             repos=self.entangled_state["repos"], cached_states=self.economy_state,
             timestamp=time.time(), 
-            signers=[],
-            signatures=[],
-            threshold=0
+            signers=[], signatures=[], threshold=0
         )
         
         res = await self.rpc_bridge.request({
@@ -287,7 +300,7 @@ class ExchangeWorkflow(Workflow):
             export_signatures = self.scenario.signature_injector(valid_signatures)
         else:
             export_signatures = valid_signatures
-        
+            
         self.rollup_payload = self.exchange_adapter.generate_settlement_payload(
             receipt=self.receipt,
             attestations=export_signatures

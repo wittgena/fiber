@@ -4,13 +4,14 @@ import hashlib
 import random
 import time
 import uuid
+import uvicorn
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 import httpx
 
 from bound.client.http import VerifiedHttpClient
-from phase.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import dphi_env
 from phase.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
@@ -22,7 +23,7 @@ from watcher.tracer.dphi import DphiTracer
 from watcher.wasm.builder import WasmBuilder
 
 from receptor.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
-from receptor.rest import create_app, lifespan, Config
+from receptor.rest import create_app, Config
 
 
 log = get_emitter("phase.edge")
@@ -50,6 +51,15 @@ class TestResult:
     @property
     def passed(self) -> bool:
         return self.success == self.expected_success
+
+
+# =====================================================================
+# Uvicorn Managed Server for E2E Tests
+# =====================================================================
+class ManagedTestServer(uvicorn.Server):
+    """테스트 러너의 이벤트 루프와 충돌하지 않도록 시그널 핸들러를 비활성화한 서버"""
+    def install_signal_handlers(self):
+        pass
 
 
 # =====================================================================
@@ -140,8 +150,8 @@ class EdgeWorkflow(Workflow):
         self.log.info(f"\n=== [START] {self.name} ({mode_str}) ===")
         
         if not self.inject_faults:
-            self.log.info(f"  └─ Settlement Sink: Chain {mock_env.network.chain_id} (Receptor: {mock_env.contracts.nexus_clearing})")
-            self.log.info(f"  └─ Exchange Agents: {mock_env.agents.alpha.did} ⟷ {mock_env.agents.beta.did}")
+            self.log.info(f"  └─ Settlement Sink: Chain {dphi_env.network.chain_id} (Receptor: {dphi_env.contracts.nexus_clearing})")
+            self.log.info(f"  └─ Exchange Agents: {dphi_env.agents.alpha.did} ⟷ {dphi_env.agents.beta.did}")
 
         self.post_message(StartSceneMsg())
         await self.run()
@@ -271,10 +281,14 @@ class EdgeWorkflow(Workflow):
         self.log.info("\n--- [Phase 6] External EVM & Wallet Integration ---")
         
         path = "/v1/ext/evm/wrap"
+        
+        caller_did = dphi_env.agents.alpha.did
+        eth_address = caller_did.split(":")[-1] if "did:pkh" in caller_did else caller_did
+        
         payload = {
-            "caller_address": mock_env.agents.alpha.did,
-            "amount_wei": "1000000000000000000",
-            "agent_alias": "beta"
+            "caller_address": eth_address,
+            "amount_wei": "10000000000000000", # 0.01 ETH for Faucet limits
+            "agent_alias": "alpha"
         }
         
         if self.inject_faults:
@@ -317,12 +331,9 @@ class PipelineRunner:
     def set_phases(self, phases: List[Phase]):
         self.phases = phases
         
-    async def run_pipeline(self):
-        log.info(f"\n=== Starting Pipeline: {self.name} ({self.scope_name}) ===")
-        for phase in self.phases:
-            log.info(f"--> Executing Phase: {phase.name}")
-            await phase.action()
-        log.info(f"=== Pipeline Completed: {self.name} ===\n")
+    async def run_pipeline(self) -> List[TestResult]:
+        """기본 파이프라인 런너 (오버라이드 권장)"""
+        pass
 
 
 class GatewayTracerPipeline(PipelineRunner):
@@ -330,9 +341,24 @@ class GatewayTracerPipeline(PipelineRunner):
         super().__init__(name="Public Gateway & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")
         self.config = config
         self.tracer = HttpFlowTracer()
-        test_config = Config(wasm_timeout=5.0)
-        self.rest_app = create_app(test_config)
         self.scene_config = get_edge_scene_config()
+        
+        self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
+        self.test_config = Config(
+            wasm_timeout=5.0,
+            internal_edge_url=self.local_url 
+        )
+        self.rest_app = create_app(self.test_config)
+        
+        u_config = uvicorn.Config(
+            app=self.rest_app, 
+            host="127.0.0.1", 
+            port=self.config.port, 
+            log_level="error", 
+            access_log=False
+        )
+        self.server = ManagedTestServer(u_config)
+        self._server_task = None
         
         self.set_phases([
             Phase("Wasm Build & Pre-warm", self.phase_wasm_build),
@@ -342,42 +368,90 @@ class GatewayTracerPipeline(PipelineRunner):
             Phase("Sentinel Security (Chaos WAF Check)", self.phase_sentinel_security)
         ])
 
+    async def _wait_for_server(self):
+        async with httpx.AsyncClient() as client:
+            for _ in range(20):
+                try:
+                    res = await client.get(f"{self.local_url}/openapi.json")
+                    if res.status_code == 200:
+                        return
+                except Exception:
+                    pass
+                await asyncio.sleep(0.2)
+        raise RuntimeError("Failed to boot embedded REST server for tests.")
+
+    async def run_pipeline(self) -> List[TestResult]:
+        """파이프라인 전체를 Uvicorn 서버 라이프사이클로 래핑하고 Phase별 결과 반환"""
+        log.info(f"\n=== Starting Pipeline: {self.name} ({self.scope_name}) ===")
+        
+        log.info(f"[Pipeline] Booting embedded Uvicorn REST server on {self.local_url}...")
+        self._server_task = asyncio.create_task(self.server.serve())
+        await self._wait_for_server()
+
+        results = []
+        try:
+            for idx, phase in enumerate(self.phases, 1):
+                log.info(f"\n▶️ [PHASE {idx}/{len(self.phases)}] {phase.name}")
+                try:
+                    await phase.action()
+                    results.append(TestResult(
+                        target="EDGE_GATEWAY",
+                        scenario=phase.name,
+                        success=True,
+                        expected_success=True
+                    ))
+                except Exception as e:
+                    log.error(f"Phase '{phase.name}' Halted: {str(e)}")
+                    results.append(TestResult(
+                        target="EDGE_GATEWAY",
+                        scenario=phase.name,
+                        success=False,
+                        expected_success=True
+                    ))
+                    break # Fail Fast 기조 유지 (에러 시 이후 Phase 생략)
+        finally:
+            log.info(f"\n[Pipeline] Shutting down embedded Uvicorn REST server...")
+            self.server.should_exit = True
+            if self._server_task:
+                await self._server_task
+
+        log.info(f"=== Pipeline Completed: {self.name} ===\n")
+        return results
+
     async def phase_wasm_build(self):
-        log.info("\n[Pipeline] Validating WasmBuilder...")
+        log.info("[Pipeline] Validating WasmBuilder...")
         builder = WasmBuilder()
         await builder.trace()
         if getattr(builder, 'rupture_confirmed', False):
-            raise RuntimeError("WasmBuilder failed to construct valid binaries. Cannot proceed with Edge test.")
+            raise RuntimeError("WasmBuilder failed to construct valid binaries.")
 
     async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
-        transport = httpx.ASGITransport(app=self.rest_app)
-        async with lifespan(self.rest_app):
-            async with httpx.AsyncClient(
-                transport=transport, 
-                base_url=self.config.base_url,
-                event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
-            ) as client:
-                
-                runner = EdgeWorkflow(
-                    config=self.config, 
-                    scene_config=self.scene_config,
-                    client=client, 
-                    inject_faults=inject_faults,
-                    attestation_injector=attestation_injector 
-                )
-                
-                tracer = DphiTracer(tester=runner)
-                await tracer.trace() 
-                
-                has_rupture = getattr(tracer, 'rupture_confirmed', False)
-                
-                if attestation_injector is not None:
-                    if runner.runner.fail_count == 0:
-                         raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected by Gateway.")
-                    return 
-                
-                if has_rupture or runner.runner.fail_count > 0:
-                    raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
+        async with httpx.AsyncClient(
+            base_url=self.config.base_url,
+            event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]},
+            timeout=15.0
+        ) as client:
+            
+            runner = EdgeWorkflow(
+                config=self.config, 
+                scene_config=self.scene_config,
+                client=client, 
+                inject_faults=inject_faults,
+                attestation_injector=attestation_injector 
+            )
+            
+            tracer = DphiTracer(tester=runner)
+            await tracer.trace() 
+            
+            has_rupture = getattr(tracer, 'rupture_confirmed', False)
+            
+            if attestation_injector is not None:
+                if runner.runner.fail_count == 0:
+                     raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected by Gateway.")
+                return 
+            
+            if has_rupture or runner.runner.fail_count > 0:
+                raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
 
     async def phase_ingress_e2e_golden(self):
         await self._run_scene(inject_faults=False)
@@ -393,26 +467,21 @@ class GatewayTracerPipeline(PipelineRunner):
         await self._run_scene(inject_faults=False, attestation_injector=tamper_func)
 
     async def phase_sentinel_security(self):
-        log.info(f"\n[Pipeline] Initiating Sentinel Chaos Attacks against Public Gateway...")
-        transport = httpx.ASGITransport(app=self.rest_app)
+        log.info("[Pipeline] Initiating Sentinel Chaos Attacks against Public Gateway...")
         attack_vectors = ChaosPayloadLibrary.get_all_vectors()
-        
-        # OTLP 엔드포인트를 타겟으로 삼아 WAF 필터 및 멤브레인 방어 기작 점검
         target_path = "/v1/public/telemetry/logs"
 
-        async with lifespan(self.rest_app):
-            async with httpx.AsyncClient(
-                transport=transport, 
-                base_url=self.config.base_url,
-                event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
-            ) as client:
-                for vector_name, rule_list in attack_vectors:
-                    payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
-                    with flow_scope(execution_mode="CHAOS_TEST", security_probe=vector_name):
-                        response = await client.post(target_path, content=payload)
-                        if response.status_code >= 500 or response.status_code < 400:
-                            raise RuntimeError(f"Gateway Breach! '{vector_name}' bypassed defenses. Status: {response.status_code}")
-            log.info("  └─ All Chaos probes successfully deflected by Gateway Sentinel Membrane.")
+        async with httpx.AsyncClient(
+            base_url=self.config.base_url,
+            event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
+        ) as client:
+            for vector_name, rule_list in attack_vectors:
+                payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
+                with flow_scope(execution_mode="CHAOS_TEST", security_probe=vector_name):
+                    response = await client.post(target_path, content=payload)
+                    if response.status_code >= 500 or response.status_code < 400:
+                        raise RuntimeError(f"Gateway Breach! '{vector_name}' bypassed defenses. Status: {response.status_code}")
+        log.info("  └─ All Chaos probes successfully deflected by Gateway Sentinel Membrane.")
 
 
 class EdgeSuiteRunner:
@@ -423,22 +492,12 @@ class EdgeSuiteRunner:
 
     async def _run_gateway_pipeline(self):
         self.log.info("\n▶️ [PART 1] Running Public Gateway & Isolation Pipeline...")
-        net_config = E2EConfig(host="localhost", port=8000, protocol="http")
+        net_config = E2EConfig(host="127.0.0.1", port=8353, protocol="http")
         tracer_pipeline = GatewayTracerPipeline(config=net_config)
         
-        net_success = True
-        try:
-            await tracer_pipeline.run_pipeline()
-        except Exception as e:
-            self.log.error(f"Gateway Pipeline Halted: {str(e)}")
-            net_success = False
-
-        self.results.append(TestResult(
-            target="EDGE_GATEWAY",
-            scenario="Gateway L7 Shield, Agent Execution & Internal Isolation",
-            success=net_success,
-            expected_success=True
-        ))
+        # 💡 [MODIFIED] PipelineRunner가 수집한 Phase별 결과를 받아 메인 result에 추가
+        phase_results = await tracer_pipeline.run_pipeline()
+        self.results.extend(phase_results)
 
     def _print_report(self):
         self.log.info("\n" + "="*80)
@@ -452,7 +511,8 @@ class EdgeSuiteRunner:
             if not res.passed: all_passed = False
                 
             target_label = f"[{res.target}]"
-            self.log.info(f"{status_icon} {idx:02d}. {target_label.ljust(15)} {res.scenario.ljust(50)} | Result: {status_text}")
+            # 💡 [MODIFIED] 이제 Phase의 이름이 scenario 부분에 출력됩니다.
+            self.log.info(f"{status_icon} {idx:02d}. {target_label.ljust(15)} {res.scenario.ljust(45)} | Result: {status_text}")
             
         self.log.info("-" * 80)
         if all_passed:
