@@ -14,7 +14,7 @@ except ImportError:
 from phase.anchor.config.dphi import dphi_env
 from phase.anchor.config.client import NotarySwarm
 from kernel.dphi.adapter.shadow import ShadowAdapter
-from bound.exchange.web3.adapter import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
+from phase.anchor.adapter.web3 import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.bind.inter.protocol import ExecutionResult

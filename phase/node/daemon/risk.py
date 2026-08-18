@@ -6,7 +6,7 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-from bound.exchange.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
+from bound.agent.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
 from bound.proof.observer import (
     TensionPhase,
     RiskPolicy,

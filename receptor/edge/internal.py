@@ -7,6 +7,12 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
+from phase.anchor.adapter.dphi import NexusAnchor, AnchorProposal
+from receptor.stream.store import LogStreamStore
+from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
+from receptor.xe.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
+from receptor.xe.profile import BenchProfile
+
 from arch.contract.interface import ContractRouter
 from arch.contract.model.receptor import (
     EdgeState,
@@ -18,23 +24,13 @@ from arch.contract.model.receptor import (
     EpochInitPayload,
     ClearingReceiptRequest, ClearingReceiptResponse
 )
-from watcher.plane.emitter import get_emitter, flow_scope
 
-# --- Kernel & Adapter Imports ---
 from kernel.dphi.broker import DphiBroker, DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.cgroup import Tier
 from kernel.dphi.exchange.config import tier_config, billing_config
-
-# --- Eco & Core Dependencies ---
-from phase.anchor.dphi.adapter import NexusAnchor, AnchorProposal
-from receptor.stream.store import LogStreamStore
-from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
-from receptor.xe.depend import (
-    get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
-)
-from receptor.xe.profile import BenchProfile
+from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.internal")
 

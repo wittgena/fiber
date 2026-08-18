@@ -1,4 +1,5 @@
-# bound.exchange.intent.trajectory
+# bound.agent.intent.trajectory
+## @lineage: bound.exchange.intent.trajectory
 """@desc: Defines cryptographic data structures and engines to securely capture, evaluate, and seal arbitrage trajectory data for trustless environments"""
 import os
 import time

@@ -8,7 +8,7 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from bound.exchange.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from phase.anchor.adapter.eco import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from phase.anchor.config.client import PhaseBuilder
 from bound.client.local.wallet import LocalWalletClient
 
