@@ -28,7 +28,7 @@ from kernel.dphi.cgroup import Tier
 from kernel.dphi.exchange.config import tier_config, billing_config
 
 # --- Eco & Core Dependencies ---
-from phase.dphi.anchor.adapter import NexusAnchor, AnchorProposal
+from phase.anchor.dphi.adapter import NexusAnchor, AnchorProposal
 from receptor.stream.store import LogStreamStore
 from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 from receptor.xe.depend import (
@@ -37,7 +37,8 @@ from receptor.xe.depend import (
 from receptor.xe.profile import BenchProfile
 
 log = get_emitter("edge.internal")
-internal_router = APIRouter(prefix="/internal/v1")
+
+internal_router = APIRouter(prefix="/v1")
 
 # Sub-routers
 core_edge = ContractRouter(namespace="core.internal", prefix="/core", tags=["Internal Core (Ledger & Anchor)"])
@@ -129,7 +130,6 @@ async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(ge
         commit_hash=result.commit_hash, 
         receipt=result.receipt.__dict__ if hasattr(result.receipt, "__dict__") else dict(result.receipt)
     )
-
 
 # =====================================================================
 # 2. ECO (Compute / Exchange / Profile)
@@ -251,7 +251,6 @@ async def execute_billed_workload(
         tier_applied=result.tier_applied, fuel_billed=result.fuel_consumed,
         billed_cost_usd=billed_cost, reason=result.reason
     )
-
 
 internal_router.include_router(core_edge)
 internal_router.include_router(compute_edge)

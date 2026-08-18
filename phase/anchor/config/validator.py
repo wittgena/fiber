@@ -1,13 +1,11 @@
-# phase.dphi.anchor.config.validator
-## @lineage: dphi.adapter.config.validator
-## @lineage: phase.epoch.config.validator
+# phase.anchor.config.validator
 import re
 import asyncio
 import httpx
 from typing import List, Tuple
 
 from watcher.plane.emitter import get_emitter
-from phase.dphi.anchor.config.dphi import mock_env, DphiEnv
+from phase.anchor.config.dphi import mock_env, DphiEnv
 
 log = get_emitter("config.validator")
 

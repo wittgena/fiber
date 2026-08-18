@@ -1,11 +1,12 @@
 # receptor.rest
+import os
 from contextlib import asynccontextmanager
 from typing import Optional
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security, Request
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.tunnel.subs import DistributedPubSub
@@ -29,6 +30,7 @@ log = get_emitter(__name__)
 API_KEY_NAME = "X-Dphi-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
+
 class Config(BaseModel):
     web_url: str = ""
     allow_cors_origins: list[str] = ["http://localhost:3000"] 
@@ -36,6 +38,7 @@ class Config(BaseModel):
     pubsub_channel: str = "audit_channel"
     wasm_timeout: float = 10.0
     committee_pubs: list[str] = []
+    internal_edge_url: str = Field(default_factory=lambda: os.getenv("INTERNAL_EDGE_URL", "http://internal-edge-cluster.local:8080"))
 
 
 def get_default_config() -> Config:
@@ -43,9 +46,10 @@ def get_default_config() -> Config:
 
 
 async def verify_api_key(
-    api_key: str = Security(api_key_header), 
-    config: Config = Depends(get_default_config)
+    request: Request,  # 🌟 Request 객체를 통해 주입된 상태(State)에 접근
+    api_key: str = Security(api_key_header)
 ):
+    config: Config = request.app.state.config
     if not config.session_api_keys:
         return None
     if api_key not in config.session_api_keys:
@@ -92,7 +96,7 @@ async def lifespan(app: FastAPI):
         raise
 
     finally:
-        log.info("Shutting down XeLog Hub safely...")
+        log.info("Shutting down receptor.rest safely...")
         if hasattr(app.state, "pubsub"):
             await app.state.pubsub.close()
             
@@ -122,7 +126,6 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
     )
     
     app.state.config = config
-    
     app.include_router(public_edge, tags=["mcp-exposed"]) 
     app.include_router(internal_router) 
     app.include_router(ext_router) 
@@ -138,7 +141,4 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
     
     mcp_asgi_app = mcp.sse_app()
     app.mount("/mcp", mcp_asgi_app)
-    
     return app
-
-api = create_app()

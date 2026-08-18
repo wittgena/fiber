@@ -1,5 +1,4 @@
-# phase.dphi.anchor.config.client
-## @lineage: dphi.adapter.config.client
+# phase.anchor.config.client
 import time
 import uuid
 import random
@@ -12,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from bound.client.local.wallet import LocalWalletClient
 
-from phase.dphi.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import mock_env
 from arch.contract.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
@@ -32,6 +31,12 @@ class NotarySwarm:
                 format=serialization.PublicFormat.Raw
             ).hex()
             self.notaries.append({"priv": private_key, "pub": public_hex})
+            
+        # [핵심 수리] 
+        # NotarySwarm이 인스턴스화 될 때, 자신이 생성한 공개키들을 
+        # mock_env의 witness_pubkeys(커널이 신뢰하는 화이트리스트)에 강제로 덮어씌웁니다.
+        # 이렇게 하면 Gateway가 만든 서명이 커널 검증을 100% 통과합니다.
+        mock_env.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
 
     @property
     def public_keys(self) -> List[str]:

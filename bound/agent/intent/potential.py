@@ -8,7 +8,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from phase.dphi.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import mock_env
 from kernel.dphi.adapter.eco import EcoAdapter
 from bound.exchange.intent.workflow import DvmRpcBridge, NodeIdentity
 

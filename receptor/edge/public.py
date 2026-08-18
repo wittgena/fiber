@@ -3,23 +3,29 @@ import json
 import time
 import uuid
 import hashlib
+from datetime import datetime, timezone
 from typing import Annotated, Dict, Any, List, Optional
 import orjson
 import httpx
 
-from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Request
 from pydantic import BaseModel
+
+from phase.anchor.config.client import NotarySwarm
+from phase.anchor.config.dphi import mock_env
+from receptor.xe.depend import get_wasm_broker, get_pubsub, get_otlp_engine
 
 from arch.contract.interface import ContractRouter
 from arch.contract.model.receptor import EdgeState, EdgeHeader
+from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
-from watcher.receptor.contract.model import ExportLogsServiceRequest, AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope
-from watcher.receptor.audit.secret import SecretAuditor, get_secret_auditor
-from receptor.xe.depend import get_wasm_broker, get_pubsub, get_otlp_engine
+
 from kernel.dphi.broker import DphiBroker
 from kernel.dphi.adapter.state import StateAdapter
+
+from watcher.receptor.contract.model import ExportLogsServiceRequest, AuditLogRequest, AuditLogResponse, AuditResult, AuditEnvelope
+from watcher.receptor.audit.secret import SecretAuditor, get_secret_auditor
 from watcher.plane.emitter import get_emitter, flow_scope
-from arch.topos.tunnel.subs import DistributedPubSub
 
 log = get_emitter("edge.public")
 
@@ -41,23 +47,35 @@ class AuditReceipt(BaseModel):
     state_root: str
     audit_trail: List[str]
 
-INTERNAL_EDGE_URL = "http://internal-edge-cluster.local:8080"
+
+def get_internal_edge_url(request: Request) -> str:
+    """Boot 타임에 주입된 App State에서 동적으로 내부망 URL을 획득합니다."""
+    return request.app.state.config.internal_edge_url
+
 
 @public_edge.post(
     "/agent/execute", 
     summary="[Gateway] AI 에이전트 인텐트 단일 실행 및 영수증 발급",
     response_model=AuditReceipt
 )
-async def public_agent_execute(intent: CodebotIntent):
+async def public_agent_execute(
+    intent: CodebotIntent,
+    internal_url: str = Depends(get_internal_edge_url),
+    broker: DphiBroker = Depends(get_wasm_broker)
+):
     request_id = f"cbot_{uuid.uuid4().hex[:8]}"
     with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
         log.info(f"Incoming public request for agent: {intent.agent_id}")
         
-        async with httpx.AsyncClient(base_url=INTERNAL_EDGE_URL, timeout=15.0) as internal_client:
+        async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
             try:
+                # 1. [내부 호출] Intent 검증 (Gateway의 기본 임무)
                 val_payload = {
-                    "agent_id": intent.agent_id,
+                    "requester_id": intent.agent_id,
+                    "responder_id": intent.agent_id,
                     "action": intent.action,
+                    "max_fuel_budget": intent.max_fuel,
+                    "agent_id": intent.agent_id,
                     "payload": {"code_hash": hashlib.sha256(intent.source_code.encode()).hexdigest()},
                     "signature": intent.signature
                 }
@@ -65,11 +83,11 @@ async def public_agent_execute(intent: CodebotIntent):
                 if val_res.status_code != 200:
                     raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"Intent Rejected: {val_res.text}")
 
-                # 2. [내부 호출] Trustless Compute & Metering
+                # 2. [내부 호출] Trustless Compute & Metering (격리 실행 및 연료 계측)
                 exec_payload = {
                     "agent_schema": {
                         "runtime": "python3.11-wasm",
-                        "source": intent.source_code,
+                        "files": {"main.py": intent.source_code}, 
                         "limits": {"max_fuel": intent.max_fuel}
                     },
                     "target_entry": "main.py",
@@ -83,25 +101,37 @@ async def public_agent_execute(intent: CodebotIntent):
                 fuel_metered = exec_data.get("fuel_billed", 0)
                 cost_usd = exec_data.get("billed_cost_usd", 0.0)
 
-                # 3. [내부 호출] Anchor & Seal (클라이언트가 해시를 위조할 수 없도록 서버가 직접 해시 생성)
+                # 3. [보증인 서명] 실행 결과에 대한 Notary Swarm의 보증 
+                # (글로벌 앵커 서명이 아닌, 단건 실행 내역에 대한 제3자 증명)
                 exec_hash = hashlib.sha256(json.dumps(exec_data).encode()).hexdigest()
-                anchor_payload = {
-                    "receptor_id": intent.agent_id,
-                    "proposed_parity": {"topos_id": "codebot_vm", "nexus_id": 99, "phase_id": 1},
-                    "parent_nexus_id": 0,
-                    "self_parent_state": "0x00",
-                    "repos": {"vm_trace_hash": exec_hash, "metered_fuel": str(fuel_metered)},
-                    "signers": ["PublicGateway"],
-                    "signatures": ["0x_gateway_signature"],
-                    "timestamp": int(time.time() * 1000)
-                }
-                anchor_res = await internal_client.post("/v1/core/anchor/seal", json=anchor_payload)
-                if anchor_res.status_code != 200:
-                    raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Anchor Failed: {anchor_res.text}")
-                
-                commit_hash = anchor_res.json().get("commit_hash", "0x_sealed_root")
+                repos = {"vm_trace_hash": exec_hash, "metered_fuel": str(fuel_metered)}
 
-                # 4. 최종 결과(영수증) 반환
+                swarm = NotarySwarm(size=3)
+                canonical_hash = StateAdapter.to_canonical_bytes(repos)
+                commit_hash_bytes = hashlib.sha256(canonical_hash).digest()
+                attested_signatures = swarm.attest_payload(commit_hash_bytes)
+
+                # 4. [커널 기록] 글로벌 Anchor/Seal을 호출하는 월권 행위를 제거하고, 
+                # 단순히 커널에 "이러한 실행과 보증이 있었다"는 발자국(Fingerprint)만 남깁니다.
+                kernel_payload = {
+                    "action": "record_agent_execution",
+                    "receipt_id": request_id,
+                    "agent_id": intent.agent_id,
+                    "repos": repos,
+                    "guarantors": swarm.public_keys,
+                    "signatures": attested_signatures,
+                    "timestamp": float(time.time() * 1000)
+                }
+                canonical_payload = StateAdapter.to_canonical_bytes(kernel_payload).decode('utf-8')
+                fp_res = await broker.invoke("compute_root_fingerprint", canonical_payload)
+                
+                if not fp_res.success:
+                    raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Kernel Record Failed: {fp_res.error}")
+                
+                # 커널이 발급한 상태 무결성 해시
+                commit_hash = json.loads(fp_res.output).get("fingerprint", "0x_sealed_root")
+
+                # 5. 최종 결과(영수증) 반환
                 return AuditReceipt(
                     receipt_id=request_id,
                     receipt_type="Proof-of-Agent-Action",
@@ -113,8 +143,8 @@ async def public_agent_execute(intent: CodebotIntent):
                 )
 
             except httpx.RequestError as e:
-                log.error(f"Internal Network Error: {e}")
-                raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Internal Edge Network Down")
+                log.error(f"Internal Network Error to {internal_url}: {e}")
+                raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"Internal Edge Network Down ({internal_url})")
 
 
 # =====================================================================
@@ -173,6 +203,7 @@ async def public_otlp_logs_export(
         log.error(f"[Public OTLP] Processing failed: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stream processing error")
 
+
 @public_edge.post(
     "/audit/event", 
     tags=["Log Ingress"], 
@@ -183,11 +214,6 @@ async def public_audit_log(
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
-    """
-    기존 core_edge.post("/audit/log")와 완전히 동일.
-    외부에서 민감 데이터를 던지면 PII를 마스킹하고 영수증(Proof)을 
-    발급하는 단일 책임(Single Responsibility)을 가지므로 Public API로 적합.
-    """
     request_time = str(time.time())
     event_dict = payload.event.model_dump(exclude_none=True)
     

@@ -10,7 +10,7 @@ from arch.contract.interface import ContractRouter
 from watcher.plane.emitter import get_emitter, flow_scope
 from kernel.dphi.adapter.eco import EcoAdapter, X402Invoice, X402SettlementReceipt
 from bound.exchange.web3.adapter import WalletAdapter, Web3Adapter
-from phase.dphi.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import mock_env
 
 log = get_emitter("edge.ext")
 

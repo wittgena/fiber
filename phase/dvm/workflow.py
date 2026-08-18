@@ -12,8 +12,8 @@ except ImportError:
     from web3 import Web3
     keccak = Web3.keccak
 
-from phase.dphi.anchor.config.dphi import mock_env
-from phase.dphi.anchor.config.client import NotarySwarm
+from phase.anchor.config.dphi import mock_env
+from phase.anchor.config.client import NotarySwarm
 from kernel.dphi.adapter.shadow import ShadowAdapter
 from bound.exchange.web3.evm import EVMOrchestrator, MockOrchestrator, InversionOrchestrator
 

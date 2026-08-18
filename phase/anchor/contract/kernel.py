@@ -1,9 +1,4 @@
-# phase.dphi.contract.kernel
-## @lineage: dphi.contract.kernel
-"""
-@module: dphi.contract.kernel
-@desc: Physical & Cognitive Dynamics Kernels for Phase Topology Evolution
-"""
+# phase.anchor.contract.kernel
 import math
 import random
 import json
@@ -14,9 +9,6 @@ from pydantic import BaseModel, Field
 from arch.contract.interface import IDynamicsKernel
 from arch.contract.registry.unified import contract
 
-# =========================================================================
-# CONFIGURATION MANIFOLDS
-# =========================================================================
 class TransitionPolicy(BaseModel):
     """Meta-transition rule: event → state reconfiguration"""
     rupture_to: str = "ATTRACTOR"
@@ -163,10 +155,6 @@ class SensorKuramoto(IDynamicsKernel):
         avg_tension = sum(s['tension'] for s in states.values()) / max(1, len(states))
         return f"Tension: {avg_tension:.2f} | {''.join(visual)}"
 
-
-# =========================================================================
-# ADVANCED KERNELS (Tail Risk & Structural Dynamics)
-# =========================================================================
 @contract.ator("sensor.kuramoto_inertia", role="kernel")
 class SensorKuramotoInertia(IDynamicsKernel):
     """

@@ -1,5 +1,4 @@
-# phase.dphi.anchor.config.dphi
-## @lineage: dphi.adapter.config.dphi
+# phase.anchor.config.dphi
 import os
 from enum import Enum
 from typing import Dict, List

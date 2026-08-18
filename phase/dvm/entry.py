@@ -1,5 +1,4 @@
 # phase.dvm.entry
-## @lineage: dphi.phase.dvm
 import sys
 import asyncio
 from typing import Dict, Any, Optional, List
@@ -7,7 +6,7 @@ from typing import Dict, Any, Optional, List
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from phase.dphi.anchor.config.dphi import mock_env, DvmConfig
+from phase.anchor.config.dphi import mock_env, DvmConfig
 from bound.exchange.web3.evm import EvmBuilder, EvmIntent
 from phase.dvm.workflow import DvmWorkflow 
 

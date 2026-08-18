@@ -1,5 +1,4 @@
-# phase.dphi.anchor.adapter
-## @lineage: dphi.adapter.anchor
+# phase.anchor.dphi.adapter
 import json
 import time
 from dataclasses import dataclass, field
@@ -70,7 +69,7 @@ class NexusAnchor:
         seal_payload = StateAdapter.build_seal_epoch_payload(
             parity=proposal.proposed_parity,
             parent_nexus_id=proposal.parent_nexus_id,
-            self_parent_state=proposal.self_parent_state,  # 🌟 [핵심 개선] "genesis" 하드코딩 제거! 동적 할당
+            self_parent_state=proposal.self_parent_state,
             repos=proposal.repos,
             cached_states={},
             timestamp=proposal.timestamp,

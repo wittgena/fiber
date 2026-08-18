@@ -1,5 +1,4 @@
 # phase.node.boot
-## @lineage: dphi.node.boot
 import os
 import asyncio
 
@@ -106,11 +105,15 @@ async def start_rest_membrane():
     await clear_zombie_port(target_port)
 
     import uvicorn
-    from receptor.rest import api as rest_app
+    from receptor.rest import create_app, Config
 
-    log.info(f"[Boot] Igniting Internal REST Edge (FastAPI/Uvicorn) on Port {target_port}...")
+    log.info(f"[Boot] Injecting runtime configurations for REST Edge on Port {target_port}...")
+    resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{target_port}")
+    runtime_config = Config(internal_edge_url=resolved_internal_url)
+    injected_app = create_app(runtime_config)
+
     config = uvicorn.Config(
-        app=rest_app, 
+        app=injected_app,
         host="127.0.0.1",
         port=target_port, 
         loop="uvloop", 
@@ -119,7 +122,9 @@ async def start_rest_membrane():
     )
     _rest_server_instance = uvicorn.Server(config)
     asyncio.create_task(_rest_server_instance.serve())
+    
     log.info(f"[Boot] Internal REST Edge listening safely on http://127.0.0.1:{target_port}")
+    log.info(f"[Boot] Routing internal traffic to: {resolved_internal_url}")
 
 
 async def start_public_gateway():
@@ -190,7 +195,6 @@ async def teardown():
         log.warning(f"[Boot] Error while releasing KernelStore lock: {e}")
         
     log.info("[Boot] Resource cleanup complete.")
-
 
 if __name__ == "__main__":
     PhaseReactor.ignite(main_coro_func=main_async, teardown_hook=teardown)

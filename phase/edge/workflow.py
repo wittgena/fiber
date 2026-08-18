@@ -1,46 +1,124 @@
 # phase.edge.workflow
-## @lineage: phase.edge.worklow
+import asyncio
 import hashlib
+import random
 import time
 import uuid
-from typing import Callable, Dict, Optional
+from dataclasses import dataclass
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 import httpx
 
-# --- Core Framework & Adapters ---
-from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from bound.client.http import VerifiedHttpClient
-from kernel.dphi.adapter.state import StateAdapter
+from phase.anchor.config.dphi import mock_env
+from phase.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
+
+from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.phase.runner import WebRunner
+from kernel.phase.reactor import PhaseReactor
 
-# --- Configurations & Envs ---
-from phase.dphi.anchor.config.client import NotarySwarm
-from phase.dphi.anchor.config.dphi import mock_env
+from watcher.plane.emitter import flow_scope, get_emitter
+from watcher.tracer.dphi import DphiTracer
+from watcher.wasm.builder import WasmBuilder
 
-# --- Ingress & Observability ---
-from watcher.tracer.edge import E2EConfig, RouteRegistry, SceneConfig, TargetOp
-from watcher.plane.emitter import get_emitter
+from receptor.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
+from receptor.rest import create_app, lifespan, Config
 
 
-# =========================================================================
-# Workflow Messages
-# =========================================================================
+log = get_emitter("phase.edge")
+
+
 class StartSceneMsg(WorkflowMessage): pass
+class AgentExecuteMsg(WorkflowMessage): pass  
 class OtlpIngressMsg(WorkflowMessage): pass
 class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
-class GlobalAnchorMsg(WorkflowMessage): pass
+class EvmOperationsMsg(WorkflowMessage): pass 
+
+@dataclass
+class Phase:
+    name: str
+    action: Callable[[], Coroutine[Any, Any, None]]
+
+@dataclass
+class TestResult:
+    target: str
+    scenario: str
+    success: bool
+    expected_success: bool
+
+    @property
+    def passed(self) -> bool:
+        return self.success == self.expected_success
 
 
-# =========================================================================
-# Edge E2E Workflow Orchestrator
-# =========================================================================
+# =====================================================================
+# Payload Builders (Edge Router Pydantic 스키마에 맞춤)
+# =====================================================================
+def create_otlp_payload(inject_faults: bool) -> dict:
+    from phase.anchor.config.client import PhaseBuilder
+    if inject_faults:
+        return {"garbage_field_missing_required_keys": True}
+    return PhaseBuilder.otlp_payload(is_malformed=False)
+
+def create_agent_intent_payload(inject_faults: bool) -> dict:
+    if inject_faults:
+        return {"invalid_intent": "missing_code_and_signature"}
+    
+    return {
+        "agent_id": "test-agent-01",
+        "action": "EXECUTE_PYTHON",
+        "source_code": "print('Hello from Edge E2E Test')",
+        "max_fuel": 1000000,
+        "signature": "0x_valid_dummy_signature"
+    }
+
+def create_trade_payload(inject_faults: bool) -> dict:
+    if inject_faults:
+        return {"agent_id": "test-agent-01"}  # Missing action & parameters
+        
+    return {
+        "agent_id": "test-agent-01", 
+        "action": "TRADE", 
+        "parameters": {
+            "target_pair": "ETH/USDC", 
+            "amount": 100
+        }
+    }
+
+def create_ledger_payload(exchange_root: str, inject_faults: bool) -> dict:
+    if inject_faults:
+        return {"stream_name": "audit_stream"}  # Missing required 'events' array
+        
+    return {
+        "stream_name": "system_audit",
+        "events": [
+            {
+                "action": "D3FI_SETTLEMENT",
+                "user_id": "agent-01",
+                "details": f"Trade Executed. State Root: {exchange_root}"
+            }
+        ],
+        "verbose": False
+    }
+
+def get_edge_scene_config() -> SceneConfig:
+    return SceneConfig(
+        otlp_builder=create_otlp_payload,
+        agent_intent_builder=create_agent_intent_payload,
+        trade_builder=create_trade_payload,
+        ledger_builder=create_ledger_payload
+    )
+
+
+# =====================================================================
+# Edge Workflow Definitions
+# =====================================================================
 class EdgeWorkflow(Workflow):
     def __init__(
         self, 
         config: E2EConfig, 
         scene_config: SceneConfig, 
-        routes: RouteRegistry, 
         client: httpx.AsyncClient, 
         inject_faults: bool = False,
         attestation_injector: Optional[Callable[[httpx.Response], httpx.Response]] = None
@@ -49,13 +127,9 @@ class EdgeWorkflow(Workflow):
         self.config = config
         self.scene_config = scene_config
         self.inject_faults = inject_faults
-        self.routes = routes  # DI: rest_app 의존성 제거
         self.runner = WebRunner(config.base_url, client=client)
         self.state_roots: Dict[str, str] = {}
         self.log = get_emitter("workflow.scene_runner")
-        self.notary_swarm = NotarySwarm(size=3)
-        
-        # 🔥 추가됨: 응답 헤더 서명(First-Party Oracle) 훼손 테스트용 카오스 인젝터
         self.attestation_injector = attestation_injector
 
     async def execute(self):
@@ -68,21 +142,14 @@ class EdgeWorkflow(Workflow):
         if not self.inject_faults:
             self.log.info(f"  └─ Settlement Sink: Chain {mock_env.network.chain_id} (Receptor: {mock_env.contracts.nexus_clearing})")
             self.log.info(f"  └─ Exchange Agents: {mock_env.agents.alpha.did} ⟷ {mock_env.agents.beta.did}")
-            self.log.info(f"  └─ Export Notaries: {len(self.notary_swarm.public_keys)} Notary Nodes Loaded")
 
         self.post_message(StartSceneMsg())
         await self.run()
 
     def _verify_attestation(self, response: httpx.Response, request_path: str) -> Optional[ErrorMessage]:
-        """
-        [Helper] Golden Path 200 OK 응답에 대해 서버(First-Party Oracle)의 
-        암호학적 서명(X-Dphi-Signature)이 올바른지 검증합니다.
-        """
-        # 에러 주입 테스트(Negative Path 422 응답 등)이거나 200 OK가 아닌 경우 서명 검증 생략
         if response.status_code != 200:
             return None
 
-        # 🔥 카오스 테스트: 고의로 헤더 서명 훼손
         if self.attestation_injector:
             self.log.warning(f"  └─ 👾 Injecting Chaos: Tampering Attestation Headers for {request_path}")
             response = self.attestation_injector(response)
@@ -115,13 +182,31 @@ class EdgeWorkflow(Workflow):
             self.runner.fail_count += 1
             return ErrorMessage("MCP Server unreachable")
             
+        return AgentExecuteMsg() 
+
+    @step
+    async def phase_agent_execute(self, msg: AgentExecuteMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 2] Public Agent Execution & Metering ---")
+        
+        path = "/v1/public/agent/execute"
+        payload = self.scene_config.agent_intent_builder(self.inject_faults)
+        expected_status = 422 if self.inject_faults else 200
+        test_desc = f"Agent Intent Execution ({'Invalid Intent Test' if self.inject_faults else 'Golden Path'})"
+        
+        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
+        if not res or res.status_code != expected_status:
+            return ErrorMessage(f"Agent Execution Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
+            
+        attest_err = self._verify_attestation(res, path)
+        if attest_err: return attest_err
+            
         return OtlpIngressMsg()
 
     @step
     async def phase_otlp_ingress(self, msg: OtlpIngressMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 2] OTLP Telemetry Ingress & WASM Seal ---")
-        path = self.routes.url_for(TargetOp.OTLP_INGRESS)
+        self.log.info("\n--- [Phase 3] OTLP Telemetry Ingress & WASM Fingerprint ---")
         
+        path = "/v1/public/telemetry/logs"
         payload = self.scene_config.otlp_builder(self.inject_faults)
         expected_status = 422 if self.inject_faults else 200
         test_desc = f"OTLP Ingress ({'Membrane Strict Block Test' if self.inject_faults else 'Golden Path'})"
@@ -130,7 +215,6 @@ class EdgeWorkflow(Workflow):
         if not res or res.status_code != expected_status:
             return ErrorMessage(f"OTLP Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
             
-        # 🔥 서명 검증 적용
         attest_err = self._verify_attestation(res, path)
         if attest_err: return attest_err
             
@@ -141,9 +225,9 @@ class EdgeWorkflow(Workflow):
 
     @step
     async def phase_d3fi_exchange(self, msg: D3FiExchangeMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 3] D3Fi P2P Trade & Settlement (ExchangeNet) ---")
-        path = self.routes.url_for(TargetOp.TRADE_INGRESS)
+        self.log.info("\n--- [Phase 4] D3Fi P2P Trade & Settlement (ExchangeNet) ---")
         
+        path = "/v1/eco/exchange/order/ingress"
         payload = self.scene_config.trade_builder(self.inject_faults)
         expected_status = 422 if self.inject_faults else 200
         test_desc = f"D3Fi Trade Ingress ({'Membrane Strict Block Test' if self.inject_faults else 'Golden Path'})"
@@ -152,20 +236,19 @@ class EdgeWorkflow(Workflow):
         if not res or res.status_code != expected_status:
              return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
              
-        # 🔥 서명 검증 적용
         attest_err = self._verify_attestation(res, path)
         if attest_err: return attest_err
              
         if not self.inject_faults:
-            self.state_roots["exchange_root"] = f"d3fi_state_hash_{uuid.uuid4().hex[:8]}"
+            self.state_roots["exchange_root"] = res.json().get("session", {}).get("topo_id", f"d3fi_{uuid.uuid4().hex[:8]}")
             
         return LedgerAppendMsg()
 
     @step
     async def phase_ledger_append(self, msg: LedgerAppendMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 4] Immutable Ledger Stream Append ---")
-        path = self.routes.url_for(TargetOp.LEDGER_APPEND)
+        self.log.info("\n--- [Phase 5] Immutable Ledger Stream Append ---")
         
+        path = "/v1/core/ledger/stream/append"
         exchange_root = self.state_roots.get("exchange_root", "0x00")
         payload = self.scene_config.ledger_builder(exchange_root, self.inject_faults)
         expected_status = 422 if self.inject_faults else 200
@@ -175,64 +258,43 @@ class EdgeWorkflow(Workflow):
         if not res or res.status_code != expected_status:
             return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
             
-        # 🔥 서명 검증 적용
         attest_err = self._verify_attestation(res, path)
         if attest_err: return attest_err
             
-        if self.inject_faults:
-            return GlobalAnchorMsg()
+        if not self.inject_faults:
+            self.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "0x_default_ledger_hash")
 
-        self.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "0x_default_ledger_hash")
-        return GlobalAnchorMsg()
+        return EvmOperationsMsg()
 
     @step
-    async def phase_global_anchor(self, msg: GlobalAnchorMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 5] Export Plug: Attest & Submit Anchor ---")
-        if self.inject_faults:
-            self.log.info(f"\n[SUCCESS] {self.name} Fault-Injection Scenario Completed.")
-            self.runner.report()
-            return StopMessage(result=True)
-            
-        required_keys = ["otlp_root", "exchange_root", "ledger_root"]
-        if not all(k in self.state_roots for k in required_keys):
-            return ErrorMessage("Cannot anchor: Sub-state roots are missing.")
+    async def phase_evm_operations(self, msg: EvmOperationsMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 6] External EVM & Wallet Integration ---")
         
-        parity_triplet = {"topos_id": f"epoch_{time.strftime('%Y%m%d')}_batch_01", "nexus_id": 1, "phase_id": 1}
-        receptor_id = mock_env.contracts.nexus_clearing
-        parent_state_hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-        
-        anchor_commit = StateAdapter.build_anchor_commit(
-            parity=parity_triplet, 
-            parent_nexus_id=0, 
-            parent_commit_id=parent_state_hash, 
-            repos=self.state_roots, 
-            cached_states={}
-        )
-        
-        commit_hash = hashlib.sha256(StateAdapter.to_canonical_bytes(anchor_commit)).hexdigest().encode('utf-8')
-        signatures = self.notary_swarm.attest_payload(commit_hash)
-        
+        path = "/v1/ext/evm/wrap"
         payload = {
-            "receptor_id": receptor_id,  
-            "proposed_parity": parity_triplet,
-            "parent_nexus_id": 0,
-            "self_parent_state": parent_state_hash,
-            "repos": self.state_roots,
-            "signers": self.notary_swarm.public_keys, 
-            "signatures": signatures,
-            "timestamp": int(time.time() * 1000)
+            "caller_address": mock_env.agents.alpha.did,
+            "amount_wei": "1000000000000000000",
+            "agent_alias": "beta"
         }
         
-        path = self.routes.url_for(TargetOp.ANCHOR_SEAL)
-        res = await self.runner._run_api_case("Export Attested Anchor", "POST", path, payload, 200)
+        if self.inject_faults:
+            payload.pop("amount_wei") 
+            
+        expected_status = 422 if self.inject_faults else 200
+        test_desc = f"EVM Wrap Execution ({'Malformed Payload Test' if self.inject_faults else 'Golden Path'})"
         
-        if not res or res.status_code != 200:
-            return ErrorMessage("Global Anchor Export Failed")
-
+        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
+        if not res or res.status_code != expected_status:
+            return ErrorMessage(f"EVM Wrap Execution Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
+            
         attest_err = self._verify_attestation(res, path)
         if attest_err: return attest_err
 
-        self.log.info(f"\n[SUCCESS] {self.name} Completed successfully.")
+        if self.inject_faults:
+            self.log.info(f"\n[SUCCESS] {self.name} Fault-Injection Scenario Completed.")
+        else:
+            self.log.info(f"\n[SUCCESS] {self.name} Completed successfully.")
+            
         self.runner.report()
         return StopMessage(result=True)
 
@@ -241,3 +303,176 @@ class EdgeWorkflow(Workflow):
         self.log.error(f"\n[HALTED] {self.name} aborted during execution: {msg.msg}")
         self.runner.report()
         return StopMessage(result=False)
+
+
+# =====================================================================
+# Pipelines & Core Runners
+# =====================================================================
+class PipelineRunner:
+    def __init__(self, name: str, scope_name: str):
+        self.name = name
+        self.scope_name = scope_name
+        self.phases: List[Phase] = []
+        
+    def set_phases(self, phases: List[Phase]):
+        self.phases = phases
+        
+    async def run_pipeline(self):
+        log.info(f"\n=== Starting Pipeline: {self.name} ({self.scope_name}) ===")
+        for phase in self.phases:
+            log.info(f"--> Executing Phase: {phase.name}")
+            await phase.action()
+        log.info(f"=== Pipeline Completed: {self.name} ===\n")
+
+
+class GatewayTracerPipeline(PipelineRunner):
+    def __init__(self, config: E2EConfig):
+        super().__init__(name="Public Gateway & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")
+        self.config = config
+        self.tracer = HttpFlowTracer()
+        test_config = Config(wasm_timeout=5.0)
+        self.rest_app = create_app(test_config)
+        self.scene_config = get_edge_scene_config()
+        
+        self.set_phases([
+            Phase("Wasm Build & Pre-warm", self.phase_wasm_build),
+            Phase("Gateway Ingress (Golden Path)", self.phase_ingress_e2e_golden),
+            Phase("Gateway Ingress (Negative Path)", self.phase_ingress_e2e_negative),
+            Phase("Gateway Ingress (Tampered Attestation)", self.phase_ingress_e2e_tampered),
+            Phase("Sentinel Security (Chaos WAF Check)", self.phase_sentinel_security)
+        ])
+
+    async def phase_wasm_build(self):
+        log.info("\n[Pipeline] Validating WasmBuilder...")
+        builder = WasmBuilder()
+        await builder.trace()
+        if getattr(builder, 'rupture_confirmed', False):
+            raise RuntimeError("WasmBuilder failed to construct valid binaries. Cannot proceed with Edge test.")
+
+    async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
+        transport = httpx.ASGITransport(app=self.rest_app)
+        async with lifespan(self.rest_app):
+            async with httpx.AsyncClient(
+                transport=transport, 
+                base_url=self.config.base_url,
+                event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
+            ) as client:
+                
+                runner = EdgeWorkflow(
+                    config=self.config, 
+                    scene_config=self.scene_config,
+                    client=client, 
+                    inject_faults=inject_faults,
+                    attestation_injector=attestation_injector 
+                )
+                
+                tracer = DphiTracer(tester=runner)
+                await tracer.trace() 
+                
+                has_rupture = getattr(tracer, 'rupture_confirmed', False)
+                
+                if attestation_injector is not None:
+                    if runner.runner.fail_count == 0:
+                         raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected by Gateway.")
+                    return 
+                
+                if has_rupture or runner.runner.fail_count > 0:
+                    raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
+
+    async def phase_ingress_e2e_golden(self):
+        await self._run_scene(inject_faults=False)
+
+    async def phase_ingress_e2e_negative(self):
+        await self._run_scene(inject_faults=True)
+
+    async def phase_ingress_e2e_tampered(self):
+        tamper_func = getattr(RpcChaosInjector, 'corrupt_attestation_header', None)
+        if tamper_func is None:
+            log.warning("⚠️ Skipping Attestation Rejection Test: Missing Chaos Injector.")
+            return
+        await self._run_scene(inject_faults=False, attestation_injector=tamper_func)
+
+    async def phase_sentinel_security(self):
+        log.info(f"\n[Pipeline] Initiating Sentinel Chaos Attacks against Public Gateway...")
+        transport = httpx.ASGITransport(app=self.rest_app)
+        attack_vectors = ChaosPayloadLibrary.get_all_vectors()
+        
+        # OTLP 엔드포인트를 타겟으로 삼아 WAF 필터 및 멤브레인 방어 기작 점검
+        target_path = "/v1/public/telemetry/logs"
+
+        async with lifespan(self.rest_app):
+            async with httpx.AsyncClient(
+                transport=transport, 
+                base_url=self.config.base_url,
+                event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
+            ) as client:
+                for vector_name, rule_list in attack_vectors:
+                    payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
+                    with flow_scope(execution_mode="CHAOS_TEST", security_probe=vector_name):
+                        response = await client.post(target_path, content=payload)
+                        if response.status_code >= 500 or response.status_code < 400:
+                            raise RuntimeError(f"Gateway Breach! '{vector_name}' bypassed defenses. Status: {response.status_code}")
+            log.info("  └─ All Chaos probes successfully deflected by Gateway Sentinel Membrane.")
+
+
+class EdgeSuiteRunner:
+    """Orchestrates the Gateway Ingress & Network Isolation Test Suite."""
+    def __init__(self):
+        self.log = log
+        self.results: List[TestResult] = []
+
+    async def _run_gateway_pipeline(self):
+        self.log.info("\n▶️ [PART 1] Running Public Gateway & Isolation Pipeline...")
+        net_config = E2EConfig(host="localhost", port=8000, protocol="http")
+        tracer_pipeline = GatewayTracerPipeline(config=net_config)
+        
+        net_success = True
+        try:
+            await tracer_pipeline.run_pipeline()
+        except Exception as e:
+            self.log.error(f"Gateway Pipeline Halted: {str(e)}")
+            net_success = False
+
+        self.results.append(TestResult(
+            target="EDGE_GATEWAY",
+            scenario="Gateway L7 Shield, Agent Execution & Internal Isolation",
+            success=net_success,
+            expected_success=True
+        ))
+
+    def _print_report(self):
+        self.log.info("\n" + "="*80)
+        self.log.info("🛡️ [EDGE GATEWAY TEST SUITE REPORT]")
+        self.log.info("="*80)
+        
+        all_passed = True
+        for idx, res in enumerate(self.results, 1):
+            status_icon = "✅" if res.passed else "❌"
+            status_text = "PASSED" if res.passed else "FAILED"
+            if not res.passed: all_passed = False
+                
+            target_label = f"[{res.target}]"
+            self.log.info(f"{status_icon} {idx:02d}. {target_label.ljust(15)} {res.scenario.ljust(50)} | Result: {status_text}")
+            
+        self.log.info("-" * 80)
+        if all_passed:
+            self.log.info("🎉 ALL EDGE INGRESS & ISOLATION TESTS EXECUTED SUCCESSFULLY.")
+        else:
+            self.log.critical("💥 EDGE BOUNDARY COMPROMISED. Check the execution logs for trace details.")
+        self.log.info("="*80 + "\n")
+
+    async def execute(self):
+        self.log.info("\n" + "="*80)
+        self.log.info("🧪 [DPHI EDGE MASTER SUITE] Commencing Gateway Ingress & Security Tests")
+        self.log.info("="*80)
+        
+        await self._run_gateway_pipeline()
+        self._print_report()
+
+
+def main():
+    app = EdgeSuiteRunner()
+    PhaseReactor.ignite(main_coro_func=app.execute)
+
+if __name__ == "__main__":
+    main()

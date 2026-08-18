@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import List
 
-from phase.dphi.anchor.config.dphi import mock_env
+from phase.anchor.config.dphi import mock_env
 from bound.exchange.intent.workflow import ExchangeWorkflow, ScenarioConfig
 from receptor.ingress.sentinel import RpcChaosInjector
 
