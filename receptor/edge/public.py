@@ -15,7 +15,7 @@ from phase.anchor.config.dphi import dphi_env
 from receptor.xe.depend import get_wasm_broker, get_pubsub, get_otlp_engine
 
 from arch.contract.interface import ContractRouter
-from arch.contract.model.receptor import EdgeState, EdgeHeader
+from arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
@@ -28,7 +28,10 @@ from watcher.receptor.contract.model import (
     AuditLogRequest, 
     AuditLogResponse, 
     AuditResult, 
-    AuditEnvelope
+    AuditEnvelope,
+    BilledExecutionRequest,
+    KernelExecutionRecord,
+    KernelOtlpRecord
 )
 from watcher.receptor.audit.secret import SecretAuditor, get_secret_auditor
 from watcher.plane.emitter import get_emitter, flow_scope
@@ -39,10 +42,6 @@ public_edge = ContractRouter(namespace="public", prefix="/v1/public", tags=["Pub
 
 def get_internal_edge_url(request: Request) -> str:
     return request.app.state.config.internal_edge_url
-
-# ❌ [삭제됨]: DB 조회를 전제로 하는 verify_x402_budget 톨게이트 로직 폐기
-# ❌ [삭제됨]: 상태 저장을 전제로 하는 /billing/mandate (public_submit_mandate) 엔드포인트 폐기
-
 
 @public_edge.post(
     "/agent/execute", 
@@ -55,33 +54,32 @@ async def public_agent_execute(
     internal_url: str = Depends(get_internal_edge_url),
     broker: DphiBroker = Depends(get_wasm_broker)
 ):
-    # Gateway는 사전에 잔고를 묻지 않습니다. 인텐트를 그대로 내부망(WASM)에 던져 판단을 위임합니다.
     request_id = f"cbot_{uuid.uuid4().hex[:8]}"
     with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
         async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
             try:
-                # 1. 인텐트 서명 무결성 검증 (Stateless)
-                val_payload = {
-                    "requester_id": intent.agent_id,
-                    "action": intent.action,
-                    "max_fuel_budget": intent.max_fuel,
-                    "signature": intent.signature,
-                    "payment_receipt": x_x402_receipt
-                }
-                val_res = await internal_client.post("/v1/eco/compute/intent/validate", json=val_payload)
+                val_req = IntentValidationRequest(
+                    requester_id=intent.agent_id,
+                    responder_id=intent.responder_id or "edge-gateway-01",
+                    action=intent.action,
+                    max_fuel_budget=intent.max_fuel,
+                    signature=intent.signature,
+                    payment_receipt=x_x402_receipt
+                )
+                val_res = await internal_client.post("/v1/eco/compute/intent/validate", json=val_req.model_dump(exclude_none=True))
                 if val_res.status_code != 200:
                     raise HTTPException(status.HTTP_401_UNAUTHORIZED, f"Intent Rejected: {val_res.text}")
 
-                # 2. WASM 샌드박스 실행
-                exec_payload = {
-                    "agent_schema": {
+                exec_req = BilledExecutionRequest(
+                    agent_schema={
                         "runtime": "python3.11-wasm",
                         "files": {"main.py": intent.source_code}, 
                         "limits": {"max_fuel": intent.max_fuel}
                     },
-                    "target_entry": "main.py"
-                }
-                exec_res = await internal_client.post("/v1/eco/profile/execute/billed", json=exec_payload)
+                    target_entry="main.py",
+                    context_depth=2
+                )
+                exec_res = await internal_client.post("/v1/eco/profile/execute/billed", json=exec_req.model_dump())
                 if exec_res.status_code != 200:
                     raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Compute Failed: {exec_res.text}")
                 
@@ -91,24 +89,28 @@ async def public_agent_execute(
                 exec_hash = hashlib.sha256(json.dumps(exec_data).encode()).hexdigest()
                 repos = {"vm_trace_hash": exec_hash, "metered_fuel": str(fuel_metered)}
 
-                # 3. Notary Attestation
                 swarm = NotarySwarm(size=3)
                 canonical_hash = StateAdapter.to_canonical_bytes(repos)
                 commit_hash_bytes = hashlib.sha256(canonical_hash).digest()
                 attested_signatures = swarm.attest_payload(commit_hash_bytes)
 
-                kernel_payload = {
-                    "action": "record_agent_execution",
-                    "receipt_id": request_id,
-                    "repos": repos,
-                    "signatures": attested_signatures,
-                    "timestamp": float(time.time() * 1000)
-                }
-                canonical_payload = StateAdapter.to_canonical_bytes(kernel_payload).decode('utf-8')
-                
-                # 🌟 [개선됨]: 문자열 하드코딩 제거 및 DphiMethod Enum 사용
+                kernel_req_dict = KernelExecutionRecord(
+                    receipt_id=request_id,
+                    repos=repos,
+                    signatures=attested_signatures,
+                    timestamp=float(time.time() * 1000)
+                ).model_dump(exclude_none=True)
+
+                # 🌟 [개선] WASM 파싱 에러(Event Horizon Rejected)를 막기 위한 TransitionPayload 래핑
+                evo_ctx = StateAdapter.build_evolution_context(phase_root={})
+                transition_payload = StateAdapter.build_transition_payload(
+                    intent_action="record_agent_execution",
+                    intent_payload=kernel_req_dict,
+                    evolution_ctx=evo_ctx
+                )
+
+                canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
                 fp_res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
-                
                 if not fp_res.success:
                     raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Kernel Record Failed: {fp_res.error}")
                 
@@ -151,17 +153,22 @@ async def public_otlp_logs_export(
         except ValueError as e:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
 
-        kernel_payload = {
-            "action": "seal_otlp_transaction",
-            "content_hash": content_hash,
-            "metrics_summary": extracted_metrics,
-            "receipt_ref": x_x402_receipt
-        }
-        canonical_payload = StateAdapter.to_canonical_bytes(kernel_payload).decode('utf-8')
-        
-        # 🌟 [개선됨]: 문자열 하드코딩 제거 및 DphiMethod Enum 사용
+        kernel_req_dict = KernelOtlpRecord(
+            content_hash=content_hash,
+            metrics_summary=extracted_metrics,
+            receipt_ref=x_x402_receipt
+        ).model_dump(exclude_none=True)
+
+        # 🌟 [개선] OTLP 텔레메트리 역시 TransitionPayload로 래핑
+        evo_ctx = StateAdapter.build_evolution_context(phase_root={})
+        transition_payload = StateAdapter.build_transition_payload(
+            intent_action="record_otlp_telemetry",
+            intent_payload=kernel_req_dict,
+            evolution_ctx=evo_ctx
+        )
+
+        canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
         res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
-        
         if not res.success:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Kernel Seal Rejected")
             
@@ -201,9 +208,15 @@ async def public_audit_log(
     sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
     sanitized_event["_billing_ref"] = x_x402_receipt
     
-    canonical_payload = StateAdapter.to_canonical_bytes(sanitized_event).decode('utf-8')
-    
-    # 🌟 [개선됨]: 문자열 하드코딩 제거 및 DphiMethod Enum 사용
+    # 🌟 [개선] Audit Event 데이터 역시 TransitionPayload로 래핑
+    evo_ctx = StateAdapter.build_evolution_context(phase_root={})
+    transition_payload = StateAdapter.build_transition_payload(
+        intent_action="record_audit_event",
+        intent_payload=sanitized_event,
+        evolution_ctx=evo_ctx
+    )
+
+    canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
     fp_res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
     
     if not fp_res.success:
@@ -213,7 +226,6 @@ async def public_audit_log(
     merkle_proof = None
     
     if payload.verbose:
-        # 🌟 [개선됨]: 문자열 하드코딩 제거 및 DphiMethod Enum 사용
         proof_res = await broker.invoke(DphiMethod.GENERATE_PROOF, canonical_payload)
         if proof_res.success:
             merkle_proof = json.loads(proof_res.output).get("current_hash")

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from phase.anchor.adapter.web3 import Web3Adapter
 from phase.anchor.adapter.wallet.eth import EthWalletAdapter
-from phase.anchor.adapter.wallet.ledger import LedgerWalletAdapter
+from phase.anchor.adapter.rollup import RollupAdapter
 from phase.anchor.config.dphi import dphi_env
 
 from arch.contract.interface import ContractRouter
@@ -23,7 +23,7 @@ evm_edge = ContractRouter(namespace="ext.evm", prefix="/evm", tags=["Ext EVM (We
 
 _global_web3_adapter: Optional[Web3Adapter] = None
 _global_eth_adapter: Optional[EthWalletAdapter] = None
-_global_ledger_adapter: Optional[LedgerWalletAdapter] = None
+_global_rollup_adapter: Optional[RollupAdapter] = None
 _global_clearing_adapter: Optional[EthWalletAdapter] = None
 
 async def get_web3_adapter() -> Web3Adapter:
@@ -44,16 +44,17 @@ async def get_eth_adapter(web3: Web3Adapter = Depends(get_web3_adapter)) -> EthW
             _global_eth_adapter = EthWalletAdapter(web3_adapter=web3, agent_alias="alpha", simulate=True)
     return _global_eth_adapter
 
-async def get_ledger_adapter() -> LedgerWalletAdapter:
-    global _global_ledger_adapter
-    if _global_ledger_adapter is None:
-        log.info("[Edge Ext] Initializing DVM LedgerWalletAdapter...")
+async def get_ledger_adapter() -> RollupAdapter:
+    global _global_rollup_adapter
+    if _global_rollup_adapter is None:
+        log.info("[Edge Ext] Initializing DVM RollupAdapter for System Clearing...")
         try:
-            _global_ledger_adapter = LedgerWalletAdapter(agent_alias="alpha", simulate=False)
+            # 🌟 [교정] 롤업 어댑터는 청산소(system_clearing)의 주체로 동작해야 합니다.
+            _global_rollup_adapter = RollupAdapter(agent_alias="system_clearing", simulate=False)
         except Exception as e:
             log.warning(f"[Edge Ext] Failed to init ledger wallet, falling back to simulation: {e}")
-            _global_ledger_adapter = LedgerWalletAdapter(agent_alias="alpha", simulate=True)
-    return _global_ledger_adapter
+            _global_rollup_adapter = RollupAdapter(agent_alias="system_clearing", simulate=True)
+    return _global_rollup_adapter
 
 async def get_clearing_adapter(web3: Web3Adapter = Depends(get_web3_adapter)) -> EthWalletAdapter:
     global _global_clearing_adapter
@@ -99,7 +100,6 @@ class WrapResponse(BaseModel):
     message: str
 
 class DeferredSettlementRequest(BaseModel):
-    """오프체인에서 마이너스(부채) 상태가 된 에이전트의 잔고를 L1에서 강제 징수(Pull)하는 요청"""
     agent_address: str = Field(..., description="과금을 승인했던 에이전트의 L1 지갑 주소")
     accrued_debt_usdc: str = Field(..., description="징수할 누적 금액 (예: '15.5')")
     receipt_id: str = Field(..., description="부채가 기록된 X402 내부 영수증 ID")
@@ -118,7 +118,7 @@ class DeferredSettlementResponse(BaseModel):
 async def get_wallet_info(
     use_ledger: bool = False,
     eth_wallet: EthWalletAdapter = Depends(get_eth_adapter),
-    ledger_wallet: LedgerWalletAdapter = Depends(get_ledger_adapter)
+    ledger_wallet: RollupAdapter = Depends(get_ledger_adapter)
 ):
     wallet = ledger_wallet if use_ledger else eth_wallet
     mode_str = "DVM_LEDGER" if use_ledger else "NATIVE_EVM"
@@ -139,14 +139,13 @@ async def get_wallet_info(
 async def process_x402_payment(
     req: X402PaymentRequest,
     eth_wallet: EthWalletAdapter = Depends(get_eth_adapter),
-    ledger_wallet: LedgerWalletAdapter = Depends(get_ledger_adapter)
+    ledger_wallet: RollupAdapter = Depends(get_ledger_adapter)
 ):
     request_id = f"pay_{int(time.time() * 1000)}"
     mode_tag = "DVM Ledger" if req.use_ledger else "Native EVM"
     
     with flow_scope(phase="X402_PAYMENT", bound="edge.ext", req_id=request_id):
         log.info(f"Processing X402 payment via [{mode_tag}]: {req.amount_usdc} USDC to {req.payee_address}")
-        active_wallet = ledger_wallet if req.use_ledger else eth_wallet
         
         try:
             invoice = EcoAdapter.build_x402_invoice(
@@ -155,13 +154,31 @@ async def process_x402_payment(
                 resource_id=req.resource_id
             )
             
-            agent_address = active_wallet.wallet_address
-            
-            receipt: X402SettlementReceipt = await EcoAdapter.process_x402_settlement(
-                invoice=invoice,
-                agent_wallet_address=agent_address,
-                wallet_adapter=active_wallet
-            )
+            if req.use_ledger:
+                # 🌟 [교정] DVM 지연 정산: 청산소(RollupAdapter)가 에이전트(eth_wallet)의 자금을 차감 (transferFrom 연산)
+                agent_payer_address = eth_wallet.wallet_address
+                tx_hash = await ledger_wallet.process_deferred_charge(
+                    agent_address=agent_payer_address,
+                    amount_str=req.amount_usdc,
+                    asset="usdc"
+                )
+                
+                receipt = X402SettlementReceipt(
+                    receipt_id=f"rcpt_dvm_{tx_hash[2:14]}",
+                    receipt_type="DVM_DEFERRED_CHARGE",
+                    tx_hash=tx_hash,
+                    network=ledger_wallet.network_id,
+                    amount_usdc=req.amount_usdc,
+                    payer_wallet=agent_payer_address,
+                    settled_at=int(time.time() * 1000)
+                )
+            else:
+                # 🌟 외부망(EVM) 로직: 기존대로 EcoAdapter에 위임하여 즉시 전송
+                receipt = await EcoAdapter.process_instant_settlement(
+                    invoice=invoice,
+                    agent_wallet_address=eth_wallet.wallet_address,
+                    wallet_adapter=eth_wallet
+                )
             
             log.info(f"[{mode_tag}] Payment successful. Tx/Rollup Hash: {receipt.tx_hash}")
             return PaymentStatusResponse(
@@ -245,7 +262,6 @@ async def wrap_native_to_weth(req: WrapRequest, web3: Web3Adapter = Depends(get_
     except Exception as e:
         log.error(f"[EVM Edge] Wrap execution failed: {e}")
         raise HTTPException(status_code=500, detail="Internal Web3 Error")
-
 
 ext_router = APIRouter(prefix="/v1/ext")
 ext_router.include_router(wallet_edge)

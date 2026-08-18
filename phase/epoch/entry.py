@@ -14,6 +14,8 @@ from kernel.bind.resolver import resolve_path
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
 
+log = get_emitter("epoch.entry")
+
 MODULE_PATH = scene_module.__name__
 
 @dataclass
@@ -99,41 +101,40 @@ class DphiFlow:
         
         success, err_msg = await tester.execute()
         
-        print("\n" + "="*75)
-        print("🚀 PIPELINE EXECUTION REPORT".center(75))
-        print("="*75)
+        log.info("\n" + "="*75)
+        log.info("🚀 PIPELINE EXECUTION REPORT".center(75))
+        log.info("="*75)
         
         if success:
             self.log.info(f"🟢 [SUCCESS] All Test Suites ({', '.join(suite_map.keys())}) PASSED.")
             if getattr(tester, 'test_execution_hash', None):
                 self.log.info(f"🔗 Execution Canonical Hash: {tester.test_execution_hash}")
-            print("="*75 + "\n")
+            log.info("="*75 + "\n")
         else:
             self.log.critical(f"🔴 [FAILED] Test execution terminated with errors.")
             self.log.critical(f"📝 [SUMMARY] {err_msg}")
             
-            # [정확한 추출] 이제 동적 탐색 없이 명확히 저장된 suite_runners에서 정보를 추출합니다.
             if hasattr(tester, 'suite_runners') and tester.suite_runners:
-                print("\n" + "🔥"*37)
-                print("🚨 DETAILED FAILURE TRACES 🚨".center(75))
-                print("🔥"*37)
+                log.info("\n" + "🔥"*37)
+                log.info("🚨 DETAILED FAILURE TRACES 🚨".center(75))
+                log.info("🔥"*37)
                 
                 for suite_name, runner in tester.suite_runners.items():
                     fail_cnt = getattr(runner, 'fail_count', 0)
                     failed_cases = getattr(runner, 'failed_cases', [])
                     
                     if fail_cnt > 0 or failed_cases:
-                        print(f"\n❌ [SUITE: {suite_name.upper()}] ➔ {fail_cnt} Test(s) Failed")
+                        log.info(f"\n❌ [SUITE: {suite_name.upper()}] ➔ {fail_cnt} Test(s) Failed")
                         for idx, fc in enumerate(failed_cases, 1):
                             title = fc.get('title', 'Unknown Test Case')
                             err = fc.get('error', 'No error details provided')
-                            print(f"  └─ {idx}. {title}")
-                            print(f"     [Reason] {err}\n")
+                            log.info(f"  └─ {idx}. {title}")
+                            log.info(f"     [Reason] {err}\n")
                 
-                print("="*75 + "\n")
+                log.info("="*75 + "\n")
             else:
                 self.log.error("Detailed failure traces could not be extracted (no runners found).")
-                print("="*75 + "\n")
+                log.info("="*75 + "\n")
             
             sys.exit(1)
 

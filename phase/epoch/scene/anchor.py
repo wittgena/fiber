@@ -56,7 +56,6 @@ class EcoScene(SchemeRunner):
         # 글로벌 상태 조작 폐기 (모든 제어는 SYSTEM 베이스로 동작)
         
         # @pipeline.1: Zero-Trust Data Integrity
-        await self._test_oracle_packet_integrity()
         await self._test_oracle_data_provenance()
         await self._test_oracle_epoch_initialization()
         await self._test_oracle_self_healing()
@@ -67,18 +66,12 @@ class EcoScene(SchemeRunner):
         await self._test_dao_epoch_sealing()
 
         # @pipeline.3: Agent-to-Agent (Eco) Proof-of-Compute
-        await self._test_a2a_intent_validation()
         await self._test_a2a_trustless_execution()
         await self._test_a2a_proof_generation()
         await self._test_a2a_ledger_inscription()
 
         # @pipeline.4: Decentralized Exchange & Deterministic Settlement
         await self._test_p2p_exchange_settlement()
-
-    async def _test_oracle_packet_integrity(self):
-        log.info("\n--- [Data Pipeline] Phase 1: Packet Integrity Check ---")
-        payload = {"packet_id": "ext-data-2026", "files": {"transaction_log.csv": "hash_xyz"}}
-        await self._run_case("Pipeline: Verify Incoming Data Stream", DphiMethod.VERIFY_PACKET.value, payload, expected_success=True)
 
     async def _test_oracle_data_provenance(self):
         log.info("\n--- [Data Pipeline] Phase 2: Provenance Fingerprinting ---")
@@ -128,21 +121,14 @@ class EcoScene(SchemeRunner):
         )
         await self._run_case("Engine: Seal Epoch & Finalize State Transition", DphiMethod.SEAL_EPOCH.value, payload, expected_success=True)
 
-    async def _test_a2a_intent_validation(self):
-        log.info("\n--- [Eco Pipeline] Phase 1: Intent Validation ---")
-        payload = {"requester_id": "agent-a-gpt4", "responder_id": "agent-b-data-oracle", "action": "compute_financial_risk", "max_fuel_budget": 5_000_000, "timestamp": int(time.time() * 1000)}
-        await self._run_case("Eco: Validate Execution Intent", DphiMethod.VALIDATE_INTENT.value, payload, expected_success=True)
-
     async def _test_a2a_trustless_execution(self):
         log.info("\n--- [Eco Pipeline] Phase 2: Trustless Execution (Sandboxed) ---")
         code_payload = "\ndef analyze_risk():\n    return 'Validated Risk Score: 42.5'\nprint(analyze_risk())\n"
-        # [핵심 변경] 글로벌 상태 변경 없이 이 호출에만 STANDARD 티어를 주입합니다.
         await self._run_case("Eco: Execute Constrained Task (Fuel Tracked)", DphiMethod.EXECUTE_CODE.value, code_payload, expected_success=True, tier="STANDARD")
 
     async def _test_a2a_proof_generation(self):
         log.info("\n--- [Eco Pipeline] Phase 3: Cryptographic Proof Generation ---")
         payload = {"execution_hash": "dummy_output_hash_abc123", "fuel_consumed": 15420, "verification_seed": "random_seed_999"}
-        # 이제 글로벌 티어가 오염되지 않아 기본값(SYSTEM)인 20억 Fuel로 넉넉하게 암호화 증명을 생성합니다.
         await self._run_case("Eco: Generate Proof-of-Compute", DphiMethod.GENERATE_PROOF.value, payload, expected_success=True)
 
     async def _test_a2a_ledger_inscription(self):
@@ -387,7 +373,6 @@ class AnchorScene(SchemeRunner):
         await eco.execute_suite()
         self.success_count += eco.success_count
         self.fail_count += eco.fail_count
-        # [핵심] 실패 내역 병합
         self.failed_cases.extend(eco.failed_cases)
         
         # 2. 암호학적 기반 보안 규칙 검증 (Ledger)

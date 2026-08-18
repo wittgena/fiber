@@ -1,5 +1,4 @@
 # phase.anchor.adapter.eco
-## @lineage: bound.exchange.eco
 import time
 import json
 import hashlib
@@ -43,10 +42,10 @@ class X402Invoice(DynamicSurgeModel):
 
 class X402SettlementReceipt(DynamicSurgeModel):
     receipt_id: str
-    receipt_type: str  # 🌟 추가: 'DEFERRED_ALLOWANCE' (예치), 'INSTANT_PUSH', 'DEFERRED_PULL'
-    tx_hash: str       # 오프체인이면 'off-chain-mandate', 온체인이면 실제 해시
+    receipt_type: str
+    tx_hash: str
     network: str
-    amount_usdc: str   # 🌟 변경: paid_amount_usdc -> amount_usdc (예산과 지불을 포괄)
+    amount_usdc: str
     payer_wallet: str
     settled_at: int
 
@@ -56,7 +55,6 @@ class SettlementPayload(DynamicSurgeModel):
     attestations: List[str] 
     gas_used: int
     timestamp: int
-
 
 class EcoAdapter:
     @classmethod
@@ -69,7 +67,6 @@ class EcoAdapter:
         validity_ms: int = 3600000,
         **kwargs
     ) -> Ap2MandateResult:
-        """에이전트가 오프체인에서 DPHI에게 과금을 허용하는 '백지수표(Mandate)' 생성"""
         expiration_ts = int(time.time() * 1000) + validity_ms
         constraints = Ap2MandateConstraints(
             max_spend_usdc=max_spend_usdc,
@@ -96,7 +93,6 @@ class EcoAdapter:
 
     @classmethod
     def verify_mandate_signature(cls, mandate_result: Ap2MandateResult) -> bool:
-        """DPHI 엣지에서 에이전트가 제출한 Mandate의 서명을 수학적으로 검증"""
         try:
             pub_bytes = bytes.fromhex(mandate_result.authorization.signer_pub)
             public_key = ed25519.Ed25519PublicKey.from_public_bytes(pub_bytes)
@@ -112,17 +108,11 @@ class EcoAdapter:
 
     @classmethod
     def issue_deferred_receipt(cls, mandate: Ap2MandateResult) -> X402SettlementReceipt:
-        """
-        🌟 [지연 정산 - 1단계] 
-        트랜잭션 발생 없이 서명된 Mandate를 기반으로 롤업용 '역량 토큰(Capability Receipt)' 발급
-        """
         amount = mandate.mandate.constraints.max_spend_usdc
         payer = mandate.mandate.requester_id
         ts = int(time.time() * 1000)
         
-        # 오프체인 발급이므로 트랜잭션 해시 대신 Mandate의 서명 해시를 사용
         pseudo_hash = f"0x_offchain_{hashlib.sha256(mandate.authorization.signature.encode()).hexdigest()[:16]}"
-        
         return X402SettlementReceipt(
             receipt_id=f"cap_{pseudo_hash[12:24]}",
             receipt_type="DEFERRED_ALLOWANCE",
@@ -140,12 +130,7 @@ class EcoAdapter:
         accrued_amount_usdc: str,
         clearing_wallet_adapter: Any
     ) -> X402SettlementReceipt:
-        """
-        🌟 [지연 정산 - 2단계] 
-        DPHI 백그라운드 워커가 L1/L2 메인넷에서 에이전트의 빚을 징수(transferFrom) 후 최종 영수증 발급
-        """
         if clearing_wallet_adapter and not getattr(clearing_wallet_adapter, "simulate", True):
-            # clearing_wallet_adapter는 DPHI 마스터 키를 가지고 있으며 transfer_from 메서드를 호출함
             tx_hash = await clearing_wallet_adapter.transfer_from(
                 from_address=agent_wallet_address,
                 amount_str=accrued_amount_usdc,

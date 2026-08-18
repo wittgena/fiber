@@ -34,8 +34,10 @@ KNOWN_RPC_URLS = {
 }
 
 ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY", "")
+# Anvil/Hardhat 표준 테스트 계정 0, 1, 2
 DEFAULT_PKEY_0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 DEFAULT_PKEY_1 = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+DEFAULT_PKEY_2 = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"  # 🌟 [추가] System Clearing용 키
 
 class AgentAccount(BaseModel):
     """Unified account structure serving both D3Fi Intent workflows and DVM Shadow executions"""
@@ -60,6 +62,14 @@ class AgentRegistry(BaseModel):
         evm_address="0xDD43a52B5Cf94fA2E65Cd5aC7820614C31C6c097",
         private_key_env_var="AGENT_PKEY_BETA",
         fallback_pkey=os.getenv("AGENT_PKEY_BETA", DEFAULT_PKEY_1)
+    )
+    # 🌟 [추가] DVM 롤업 및 지연 정산을 주관하는 시스템 청산소 계정 추가
+    system_clearing: AgentAccount = AgentAccount(
+        name="System_Clearinghouse_Master",
+        did=f"did:pkh:eip155:{ACTIVE_CHAIN_ID}:0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        evm_address="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+        private_key_env_var="SYSTEM_CLEARING_PKEY",
+        fallback_pkey=os.getenv("SYSTEM_CLEARING_PKEY", DEFAULT_PKEY_2)
     )
 
 def _get_default_rpc() -> str:

@@ -10,7 +10,6 @@ log = get_emitter("scene.sandbox")
 class TestPayloads:
     PHASE_GEN       = {"topo": 50, "press": -10, "rupture": False}
     INJECTED_STATE  = {"topo": 100, "press": 200, "rupture": True, "injected_anchor": 999999, "injected_tick": 77}
-    VALID_PACKET    = {"packet_id": "123", "files": {"model.bin": "hash"}}
     MALFORMED_JSON  = '{"topo": 50, "press": -10, "rupture": '
 
 @dataclass(frozen=True)
@@ -45,7 +44,6 @@ class SandboxScene(SandboxRunner):
         # 1. Isolation & Security
         await self._test_wasmcg_resilience()
         await self._test_legacy_isolation()
-        await self._test_guardrail_validation()
         
         # 2. Causality & State
         await self._test_topos_and_phase()
@@ -88,10 +86,11 @@ class SandboxScene(SandboxRunner):
         await self._assert_script(TestScripts.INFINITE_LOOP_ATTACK)
         await self._assert_script(TestScripts.OOM_ATTACK)
         await self._assert_script(TestScripts.STACK_OVERFLOW_ATTACK)
+
+        import asyncio
+        await asyncio.sleep(3.0)
         
         # 4. 시간 누수 및 멱등성 검증 (Determinism)
-        
-        # Broker가 자동 주입한 절대 시간(Epoch)과 샌드박스가 통제하는 가상 경과 시간(0.001)이 올바르게 격리되었는지 확인
         def validate_time_leak(out: str) -> bool:
             try:
                 epoch_time, perf_time = map(float, out.strip().split('|'))
@@ -104,7 +103,6 @@ class SandboxScene(SandboxRunner):
             validator=validate_time_leak
         )
         
-        # 명시적으로 시간을 주입했을 때 해당 시간이 출력되는지 검증
         def validate_injection(out: str) -> bool:
             try:
                 out_time, _ = out.strip().split('|')
@@ -118,7 +116,7 @@ class SandboxScene(SandboxRunner):
             validator=validate_injection
         )
         
-        # PRNG 결정론 검증 (두 번 실행해서 난수가 완벽히 일치하는지 확인)
+        # PRNG 결정론 검증
         r1 = await self.broker.execute(code=TestScripts.PRNG_IDEMPOTENT.code)
         r2 = await self.broker.execute(code=TestScripts.PRNG_IDEMPOTENT.code)
         if r1.success and r2.success and (r1.output == r2.output):
@@ -126,10 +124,7 @@ class SandboxScene(SandboxRunner):
         else:
             self._record_fail(0, "PRNG outputs diverge", "PRNG Idempotency Test")
 
-    async def _test_guardrail_validation(self):
-        log.info("\n--- Running Suite: Guardrail Validation ---")
-        await self._run_case("Guardrail: Missing Files", "verify_packet", {"packet_id": "123"}, False, expected_match="Missing")
-        await self._run_case("Guardrail: Valid Packet", "verify_packet", TestPayloads.VALID_PACKET, True)
+    # ❌ _test_guardrail_validation 함수 전체 삭제됨
 
     # --- Domain 2: Causality & State ---
     async def _test_topos_and_phase(self):

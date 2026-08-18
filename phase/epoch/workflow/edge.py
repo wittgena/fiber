@@ -35,7 +35,7 @@ class AgentExecuteMsg(WorkflowMessage): pass
 class OtlpIngressMsg(WorkflowMessage): pass
 class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
-class EvmOperationsMsg(WorkflowMessage): pass 
+class DvmClearingMsg(WorkflowMessage): pass
 
 @dataclass
 class Phase:
@@ -66,9 +66,9 @@ def create_otlp_payload(inject_faults: bool) -> dict:
     return PhaseBuilder.otlp_payload(is_malformed=False)
 
 def create_agent_intent_payload(inject_faults: bool) -> dict:
-    # 🌟 [개선] Fault 주입 시 아예 스키마를 망가뜨리지 않고, '서명'만 조작하여 WASM의 서명 검증 실패(401)를 유도
     return {
         "agent_id": "test-agent-01",
+        "responder_id": "target-node-01", 
         "action": "EXECUTE_PYTHON",
         "source_code": "print('Hello from Edge E2E Test')",
         "max_fuel": 1000000,
@@ -77,7 +77,7 @@ def create_agent_intent_payload(inject_faults: bool) -> dict:
 
 def create_trade_payload(inject_faults: bool) -> dict:
     if inject_faults:
-        return {"agent_id": "test-agent-01"} # Missing required fields -> 422
+        return {"agent_id": "test-agent-01"} 
     return {
         "agent_id": "test-agent-01", 
         "action": "TRADE", 
@@ -86,7 +86,7 @@ def create_trade_payload(inject_faults: bool) -> dict:
 
 def create_ledger_payload(exchange_root: str, inject_faults: bool) -> dict:
     if inject_faults:
-        return {"stream_name": "audit_stream"} # Missing required events -> 422
+        return {"stream_name": "audit_stream"} 
     return {
         "stream_name": "system_audit",
         "events": [
@@ -126,12 +126,10 @@ class EdgeWorkflow(Workflow):
         self.log = get_emitter("workflow.scene_runner")
         self.attestation_injector = attestation_injector
         
-        # 🌟 실제 테스트 계정 동적 생성 (WASM 서명 검증 통과용)
         self.test_acct = Account.create()
         self.test_agent_id = self.test_acct.address
 
     def _sign_payload(self, text_to_sign: str) -> str:
-        """EIP-191 표준으로 문자열 페이로드를 서명하여 반환"""
         msg = encode_defunct(text=text_to_sign)
         return self.test_acct.sign_message(msg).signature.hex()
 
@@ -178,7 +176,6 @@ class EdgeWorkflow(Workflow):
             self.runner.fail_count += 1
             return ErrorMessage("MCP Server unreachable")
             
-        # 🌟 [수정] 불필요한 Billing 단계를 건너뛰고 바로 Agent Execute로 직행
         return AgentExecuteMsg() 
 
     @step
@@ -190,12 +187,10 @@ class EdgeWorkflow(Workflow):
         payload["agent_id"] = self.test_agent_id
         
         if not self.inject_faults:
-            # 🌟 올바른 서명 생성
             sig_text = f"EXECUTE:{self.test_agent_id}:{payload['action']}:{payload['max_fuel']}"
             payload["signature"] = self._sign_payload(sig_text)
             expected_status = 200
         else:
-            # 🌟 [정렬] Faults 주입 시 WASM이 서명을 검증하고 실패하면 401 Unauthorized를 뱉어야 정상 (방어 성공)
             expected_status = 401 
         
         headers = {"X-X402-Receipt": "audit_receipt_dummy_string"}
@@ -225,7 +220,6 @@ class EdgeWorkflow(Workflow):
         
         path = "/v1/public/telemetry/logs"
         payload = self.scene_config.otlp_builder(self.inject_faults)
-        # 🌟 Faults 주입 시 쓰레기 데이터는 OTLP 엔진 파서에 의해 422 컷 당함
         expected_status = 422 if self.inject_faults else 200
         headers = {"X-X402-Receipt": "audit_receipt_dummy_string"}
             
@@ -291,27 +285,33 @@ class EdgeWorkflow(Workflow):
         if not self.inject_faults:
             self.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "0x_default_ledger_hash")
 
-        return EvmOperationsMsg()
+        return DvmClearingMsg()
 
     @step
-    async def phase_evm_operations(self, msg: EvmOperationsMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 6] External EVM & Wallet Integration ---")
+    async def phase_dvm_clearing(self, msg: DvmClearingMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 6] DVM Ledger Clearing & Settlement (Internal L2) ---")
         
-        path = "/v1/ext/evm/wrap"
-        caller_did = dphi_env.agents.alpha.did
-        eth_address = caller_did.split(":")[-1] if "did:pkh" in caller_did else caller_did
+        path = "/v1/ext/wallet/pay/x402"
+        payload = {
+            "payee_address": "0x000000000000000000000000000000000000dEaD",
+            "amount_usdc": "10.0",
+            "resource_id": f"res_{uuid.uuid4().hex[:8]}",
+            "use_ledger": True
+        }
         
-        payload = {"caller_address": eth_address, "amount_wei": "10000000000000000", "agent_alias": "alpha"}
-        if self.inject_faults: payload.pop("amount_wei") 
+        if self.inject_faults: 
+            payload.pop("amount_usdc") 
             
         expected_status = 422 if self.inject_faults else 200
         
+        self.log.info(f"  └─ Sending POST to {path} with use_ledger=True (Expected: {expected_status})")
         res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+        
         if res.status_code == expected_status:
              self.runner.success_count += 1
         else:
              self.runner.fail_count += 1
-             return ErrorMessage(f"EVM Wrap Execution Failed: Expected {expected_status}, Got {res.status_code}")
+             return ErrorMessage(f"DVM Clearing Execution Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
 
         if self.inject_faults:
             self.log.info(f"\n[SUCCESS] {self.name} Fault-Injection Scenario Completed.")
@@ -351,15 +351,6 @@ class GatewayTracerPipeline(PipelineRunner):
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
         self.test_config = Config(wasm_timeout=5.0, internal_edge_url=self.local_url)
         self.rest_app = create_app(self.test_config)
-        
-        # 🌟 테스트 서버 구동 시 내부망 라우터들을 필수로 마운트
-        try:
-            from receptor.edge.internal import internal_router
-            from receptor.edge.ext import ext_router
-            self.rest_app.include_router(internal_router)
-            self.rest_app.include_router(ext_router)
-        except ImportError as e:
-            log.warning(f"Failed to mount internal/ext routers for E2E tests: {e}")
         
         u_config = uvicorn.Config(app=self.rest_app, host="127.0.0.1", port=self.config.port, log_level="error", access_log=False)
         self.server = ManagedTestServer(u_config)

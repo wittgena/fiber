@@ -17,6 +17,7 @@ from watcher.plane.emitter import get_emitter
 DEFAULT_TARGET_TAGS = [
     "phase.node.boot",
     "dphi.phase",
+    "deno",
     "multiprocessing.spawn",           # OS 멀티프로세싱 워커 노드
     "multiprocessing.resource_tracker" # 자원 추적 데몬
 ]

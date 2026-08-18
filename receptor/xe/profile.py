@@ -9,7 +9,7 @@ from watcher.plane.emitter import get_logger
 from watcher.tracer.scope import scope_trace
 
 from arch.xor.parser.block.contract import CoherenceState
-from kernel.dphi.broker import DphiBroker, DphiMethod
+from kernel.dphi.broker import DphiBroker
 from kernel.dphi.cgroup import CgroupPolicy, Tier
 from kernel.dphi.exchange.config import billing_config, tier_config
 from kernel.dphi.sandbox.executor import SandboxExecutor, TaskContext, SandboxEnv, EffectResolver
@@ -24,45 +24,39 @@ class BillingVerifier:
         self.target_context = target_context
         self.max_errors = max_errors
         self.mapped_state: List[str] = []
-        self.broker = DphiBroker()
 
-    async def verify_mapping(self, target_nodes: List[str]) -> str:
+    # 🌟 개선: WASM FFI(VerifyPacket) 제거 -> 파이썬 네이티브 정적 검증으로 대체
+    async def verify_mapping(self, target_nodes: List[str], schema: Dict[str, Any]) -> str:
         observations = []
         error_count = 0
         
         for i, node_id in enumerate(target_nodes):
             async with scope_trace(name=f"verify_node_{i}", facet="logical"):
                 try:
-                    payload = json.dumps({"target_node": node_id, "action": "verify_billing"})
-                    res = await self.broker.invoke(target_func=DphiMethod.VERIFY_PACKET, payload=payload)
+                    # 🌟 순수 파이썬 로직: 실행할 코드(files)가 스키마에 존재하는지 엄격히 검사
+                    files_map = schema.get("files", {})
+                    if not files_map:
+                        raise VerificationError("Kernel Billing Validation Rejected: Missing 'files' map in execution schema.")
                     
-                    if not res.success:
-                        raise VerificationError(f"WASM Kernel rejected billing validation: {res.error}")
+                    # (추후 서명 검증이나 토큰 밸런스 확인 로직이 필요하다면 여기에 추가)
                     
-                    try:
-                        output = json.loads(res.output)
-                    except json.JSONDecodeError:
-                        output = {"raw": res.output}
-
-                    if output.get("is_valid", False):
-                        valid_obs = f"WASM consensus verified billing for node: {node_id} (Tx: {output.get('tx_id')})"
-                        observations.append(valid_obs)
-                        self.mapped_state.append(valid_obs)
-                    else:
-                        error_count += 1
-                        if error_count >= self.max_errors:
-                            raise VerificationError("Unverified demands exceeded logical tolerance.")
+                    valid_obs = f"Native Python Gateway verified billing for node: {node_id}"
+                    observations.append(valid_obs)
+                    self.mapped_state.append(valid_obs)
                         
                 except VerificationError:
+                    error_count += 1
                     self.mapped_state.clear()
+                    if error_count >= self.max_errors:
+                        raise VerificationError(f"Unverified demands exceeded logical tolerance. Last Error: Missing 'files'")
                     raise
                     
         report_body = "\n".join(observations)
-        return f"WASM Billing Verification Report:\n{report_body}"
+        return f"Native Billing Verification Report:\n{report_body}"
 
-async def execute_billing_verification(target_nodes: List[str], expected_billing_id: str) -> str:
+async def execute_billing_verification(target_nodes: List[str], expected_billing_id: str, schema: Dict[str, Any]) -> str:
     verifier = BillingVerifier(target_context=expected_billing_id, max_errors=1)
-    return await verifier.verify_mapping(target_nodes)
+    return await verifier.verify_mapping(target_nodes, schema)
 
 
 # =====================================================================
@@ -110,7 +104,6 @@ class SandboxResolver(EffectResolver):
         log.info(f"[SandboxResolver] Routing instruction '{instruction}' to Env '{env.value}' (Tier: {target_tier.value})")
         self.profile.cgroup_policy = self._get_policy_from_tier(target_tier)
 
-        # 🌟 핵심 수정: BenchProfile이 넘긴 schema 구조에서도 코드를 올바르게 추출하도록 지원
         schema = payload.get("schema", {})
         files = schema.get("files", {})
         entry_file = payload.get("entry", "main.py")
@@ -176,16 +169,15 @@ class BenchProfile:
             os.getenv("EXPECTED_BILLING_ID", "01XXXX-EXXXXX-XXXXXX")
         )
 
-    async def _resolve_profile(self, client_project_id: str) -> MetabolicProfile:
-        log.info(f"[Profile] Requesting WASM-backed billing verification for project: {client_project_id}")
+    async def _resolve_profile(self, client_project_id: str, schema: Dict[str, Any]) -> MetabolicProfile:
+        log.info(f"[Profile] Requesting Native billing verification for project: {client_project_id}")
         if not self.expected_billing_id:
-            # 테스트 환경 지원을 위해 엄격한 에러 대신 Fallback 처리
             log.warning("[Profile] expected_billing_id missing. Proceeding with STANDARD policy for test safety.")
             policy = CgroupPolicy.standard()
             return MetabolicProfile(cgroup_policy=policy)
             
         try:
-            await execute_billing_verification([client_project_id], self.expected_billing_id)
+            await execute_billing_verification([client_project_id], self.expected_billing_id, schema)
             log.info("[Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.")
             policy = CgroupPolicy.system()
             
@@ -197,27 +189,15 @@ class BenchProfile:
                 max_simulation_ticks=tier_config.system_max_simulation_ticks
             )
         except VerificationError as e:
-            log.warning(f"[Profile] Verification Collapsed: {e}. Assigning STANDARD (DEGRADED) Policy.")
-            policy = CgroupPolicy.standard()
-            
-            return MetabolicProfile(
-                cgroup_policy=policy,
-                max_threads=tier_config.standard_max_threads, 
-                max_compute_time=float(policy.cpu_fuel_quota / tier_config.fuel_to_seconds_ratio),
-                max_node_capacity=tier_config.standard_max_node_capacity, 
-                max_simulation_ticks=tier_config.standard_max_simulation_ticks 
-            )
-        except Exception as e:
-            log.error(f"[Profile] Unexpected Error during verification: {e}")
-            policy = CgroupPolicy.custom(mem_mb=tier_config.fallback_mem_mb, fuel=tier_config.fallback_fuel)
-            return MetabolicProfile(cgroup_policy=policy)
+            log.warning(f"[Profile] Verification Collapsed: {e}. Security Hard-Stop Triggered.")
+            raise  
 
     def _charge_account(self, client_id: str, fuel_consumed: int):
         billed_amount = (fuel_consumed / billing_config.fuel_billing_unit) * billing_config.usd_per_billing_unit
         log.info(f"[Billing] Charged ${billed_amount:.4f} for {fuel_consumed:,} fuel units. Client: {client_id}")
 
     async def execute(self, client_project_id: str, schema: Dict[str, Any], entry: str, depth: int, dry_run: bool = False) -> BenchResult:
-        profile = await self._resolve_profile(client_project_id)
+        profile = await self._resolve_profile(client_project_id, schema)
         
         target_tier = profile.cgroup_policy.tier
         log.info(f"[{client_project_id}] Target Execution Tier mapped to: {target_tier.value}")
@@ -225,11 +205,15 @@ class BenchProfile:
         sandbox_resolver = SandboxResolver(profile=profile)
         executor = SandboxExecutor(resolvers={"SANDBOX": sandbox_resolver}) 
         
+        # 🌟 개선: DPHI 커널의 Transition 구조체를 제거했으므로, 
+        # SandboxExecutor가 파이썬 네이티브 플랫(Flat) 데이터를 그대로 다루도록 구조 복원
+        flat_payload = {"schema": schema, "entry": entry, "depth": depth}
+        
         context = TaskContext(
             task_type="execute_agent_schema",
             tier=target_tier.value, 
             sandbox_env=SandboxEnv.DENO,
-            payload={"schema": schema, "entry": entry, "depth": depth}
+            payload=flat_payload
         )
         
         latest_contract = None

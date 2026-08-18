@@ -30,7 +30,6 @@ class CertProofScene(SandboxRunner):
 
         # Domain A: Resource & Payload Boundary
         await self._proof_gas_boundary_trap()
-        await self._proof_deserialization_bomb()
 
         # Domain B: Determinism & Consensus Integrity
         await self._proof_floating_point_determinism()
@@ -56,21 +55,6 @@ while True:
             self._record_fail(0, "System failed to trap infinite resource allocation.", "Gas Boundary")
             
         await self._set_worker_policy("SYSTEM")
-
-    async def _proof_deserialization_bomb(self):
-        log.info("\n--- [Proof 2] Deserialization Bomb Defense ---")
-        # 악의적으로 중첩된 거대 JSON 딕셔너리 생성 (Zip Bomb 유사)
-        deep_dict = {"level_0": "payload"}
-        for i in range(100):
-            deep_dict = {f"level_{i+1}": deep_dict}
-        
-        # 패킷 검증 엔드포인트에 투척
-        res = await self.broker.invoke(DphiMethod.VERIFY_PACKET.value, deep_dict, timeout=3.0)
-        
-        if not getattr(res, 'success', True):
-            self._record_success(0, "System gracefully rejected JSON bomb without crashing.")
-        else:
-            self._record_fail(0, "System parsed the bomb and survived, but should have rejected it as oversized/malformed.", "Deserialization Bomb")
 
     # =========================================================================
     # [Domain B] 로직 결정론 및 비잔틴 합의 무결성 증명
