@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 from phase.anchor.config.dphi import dphi_env
 
 from phase.anchor.adapter.eco import EcoAdapter
-from phase.anchor.epoch.workflow.intent import DvmRpcBridge, NodeIdentity
+from phase.epoch.workflow.intent import DvmRpcBridge, NodeIdentity
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import generate_parity_triplet

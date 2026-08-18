@@ -1,4 +1,5 @@
 # phase.node.runner.sandbox
+import os
 import time
 import json
 import hashlib
@@ -227,7 +228,6 @@ class EpochBase(SchemeRunner):
             repos = await self.hook_inscribe_nodes(parity_triplet)
 
             log.info("--- [Flow 2.5] Economy: Off-chain Capability Token Issuance / Metering ---")
-            # 🌟 개선: 더 이상 송금을 시도하지 않고, Mandate를 기반으로 영수증 발급 및 차감 시뮬레이션
             x402_receipt = await self.hook_process_payment(ap2_mandate)
             economy_state = EcoAdapter.embed_economy_state({}, ap2_mandate, x402_receipt)
             

@@ -20,7 +20,7 @@ from arch.topos.network.bridge import RpcBridge
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 
 from phase.anchor.adapter.eco import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
-from bound.client.wallet.eth import EthWalletAdapter
+from phase.anchor.adapter.wallet.eth import EthWalletAdapter
 from phase.anchor.adapter.web3 import Web3Adapter
 
 from kernel.bind.inter.dvm import DvmInterpreter

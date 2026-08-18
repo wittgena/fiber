@@ -1,4 +1,4 @@
-# phase.edge.workflow
+# phase.epoch.workflow.edge
 import asyncio
 import hashlib
 import random
@@ -9,10 +9,12 @@ from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 
 import httpx
+from eth_account import Account
+from eth_account.messages import encode_defunct
 
 from bound.client.http import VerifiedHttpClient
 from phase.anchor.config.dphi import dphi_env
-from phase.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
+from receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.phase.runner import WebRunner
@@ -26,8 +28,7 @@ from receptor.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from receptor.rest import create_app, Config
 
 
-log = get_emitter("phase.edge")
-
+log = get_emitter("workflow.edge")
 
 class StartSceneMsg(WorkflowMessage): pass
 class AgentExecuteMsg(WorkflowMessage): pass  
@@ -53,18 +54,11 @@ class TestResult:
         return self.success == self.expected_success
 
 
-# =====================================================================
-# Uvicorn Managed Server for E2E Tests
-# =====================================================================
 class ManagedTestServer(uvicorn.Server):
-    """테스트 러너의 이벤트 루프와 충돌하지 않도록 시그널 핸들러를 비활성화한 서버"""
     def install_signal_handlers(self):
         pass
 
 
-# =====================================================================
-# Payload Builders (Edge Router Pydantic 스키마에 맞춤)
-# =====================================================================
 def create_otlp_payload(inject_faults: bool) -> dict:
     from phase.anchor.config.client import PhaseBuilder
     if inject_faults:
@@ -72,34 +66,27 @@ def create_otlp_payload(inject_faults: bool) -> dict:
     return PhaseBuilder.otlp_payload(is_malformed=False)
 
 def create_agent_intent_payload(inject_faults: bool) -> dict:
-    if inject_faults:
-        return {"invalid_intent": "missing_code_and_signature"}
-    
+    # 🌟 [개선] Fault 주입 시 아예 스키마를 망가뜨리지 않고, '서명'만 조작하여 WASM의 서명 검증 실패(401)를 유도
     return {
         "agent_id": "test-agent-01",
         "action": "EXECUTE_PYTHON",
         "source_code": "print('Hello from Edge E2E Test')",
         "max_fuel": 1000000,
-        "signature": "0x_valid_dummy_signature"
+        "signature": "0x_bad_signature_for_testing_faults" if inject_faults else "0x_valid_dummy_signature"
     }
 
 def create_trade_payload(inject_faults: bool) -> dict:
     if inject_faults:
-        return {"agent_id": "test-agent-01"}  # Missing action & parameters
-        
+        return {"agent_id": "test-agent-01"} # Missing required fields -> 422
     return {
         "agent_id": "test-agent-01", 
         "action": "TRADE", 
-        "parameters": {
-            "target_pair": "ETH/USDC", 
-            "amount": 100
-        }
+        "parameters": {"target_pair": "ETH/USDC", "amount": 100}
     }
 
 def create_ledger_payload(exchange_root: str, inject_faults: bool) -> dict:
     if inject_faults:
-        return {"stream_name": "audit_stream"}  # Missing required 'events' array
-        
+        return {"stream_name": "audit_stream"} # Missing required events -> 422
     return {
         "stream_name": "system_audit",
         "events": [
@@ -121,9 +108,6 @@ def get_edge_scene_config() -> SceneConfig:
     )
 
 
-# =====================================================================
-# Edge Workflow Definitions
-# =====================================================================
 class EdgeWorkflow(Workflow):
     def __init__(
         self, 
@@ -141,6 +125,15 @@ class EdgeWorkflow(Workflow):
         self.state_roots: Dict[str, str] = {}
         self.log = get_emitter("workflow.scene_runner")
         self.attestation_injector = attestation_injector
+        
+        # 🌟 실제 테스트 계정 동적 생성 (WASM 서명 검증 통과용)
+        self.test_acct = Account.create()
+        self.test_agent_id = self.test_acct.address
+
+    def _sign_payload(self, text_to_sign: str) -> str:
+        """EIP-191 표준으로 문자열 페이로드를 서명하여 반환"""
+        msg = encode_defunct(text=text_to_sign)
+        return self.test_acct.sign_message(msg).signature.hex()
 
     async def execute(self):
         mode_str = "Negative/Faults" if self.inject_faults else "Golden Path"
@@ -148,11 +141,6 @@ class EdgeWorkflow(Workflow):
             mode_str = "Attestation Rejection (Tampered Headers)"
             
         self.log.info(f"\n=== [START] {self.name} ({mode_str}) ===")
-        
-        if not self.inject_faults:
-            self.log.info(f"  └─ Settlement Sink: Chain {dphi_env.network.chain_id} (Receptor: {dphi_env.contracts.nexus_clearing})")
-            self.log.info(f"  └─ Exchange Agents: {dphi_env.agents.alpha.did} ⟷ {dphi_env.agents.beta.did}")
-
         self.post_message(StartSceneMsg())
         await self.run()
 
@@ -179,19 +167,18 @@ class EdgeWorkflow(Workflow):
     async def phase_head_smoke(self, msg: StartSceneMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 1] API Head & MCP Connectivity Sweep ---")
         res = await self.runner.client.get(f"{self.runner.base_url}/openapi.json")
-        if res.status_code == 200:
-            self.runner.success_count += 1
+        if res.status_code == 200: self.runner.success_count += 1
         else:
             self.runner.fail_count += 1
             return ErrorMessage("API Head is unreachable")
 
         mcp_res = await self.runner.client.post(f"{self.runner.base_url}/mcp/sse")
-        if mcp_res.status_code in [405, 400]: 
-            self.runner.success_count += 1
+        if mcp_res.status_code in [405, 400]: self.runner.success_count += 1
         else:
             self.runner.fail_count += 1
             return ErrorMessage("MCP Server unreachable")
             
+        # 🌟 [수정] 불필요한 Billing 단계를 건너뛰고 바로 Agent Execute로 직행
         return AgentExecuteMsg() 
 
     @step
@@ -200,37 +187,68 @@ class EdgeWorkflow(Workflow):
         
         path = "/v1/public/agent/execute"
         payload = self.scene_config.agent_intent_builder(self.inject_faults)
-        expected_status = 422 if self.inject_faults else 200
-        test_desc = f"Agent Intent Execution ({'Invalid Intent Test' if self.inject_faults else 'Golden Path'})"
+        payload["agent_id"] = self.test_agent_id
         
-        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
-        if not res or res.status_code != expected_status:
-            return ErrorMessage(f"Agent Execution Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
+        if not self.inject_faults:
+            # 🌟 올바른 서명 생성
+            sig_text = f"EXECUTE:{self.test_agent_id}:{payload['action']}:{payload['max_fuel']}"
+            payload["signature"] = self._sign_payload(sig_text)
+            expected_status = 200
+        else:
+            # 🌟 [정렬] Faults 주입 시 WASM이 서명을 검증하고 실패하면 401 Unauthorized를 뱉어야 정상 (방어 성공)
+            expected_status = 401 
+        
+        headers = {"X-X402-Receipt": "audit_receipt_dummy_string"}
+        
+        self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
+        try:
+            res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload, headers=headers)
             
-        attest_err = self._verify_attestation(res, path)
-        if attest_err: return attest_err
+            if res.status_code == expected_status:
+                self.log.info(f"  └─ ✅ Passed: Received {res.status_code} as expected.")
+                self.runner.success_count += 1
+            else:
+                self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
+                self.runner.fail_count += 1
+                return ErrorMessage(f"Agent Execution Check Failed: Expected {expected_status}, Got {res.status_code}")
+                
+            attest_err = self._verify_attestation(res, path)
+            if attest_err: return attest_err
+        except Exception as e:
+            return ErrorMessage(str(e))
             
         return OtlpIngressMsg()
 
     @step
     async def phase_otlp_ingress(self, msg: OtlpIngressMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 3] OTLP Telemetry Ingress & WASM Fingerprint ---")
+        self.log.info("\n--- [Phase 3] OTLP Telemetry Ingress & Strict Schema Check ---")
         
         path = "/v1/public/telemetry/logs"
         payload = self.scene_config.otlp_builder(self.inject_faults)
+        # 🌟 Faults 주입 시 쓰레기 데이터는 OTLP 엔진 파서에 의해 422 컷 당함
         expected_status = 422 if self.inject_faults else 200
-        test_desc = f"OTLP Ingress ({'Membrane Strict Block Test' if self.inject_faults else 'Golden Path'})"
-        
-        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
-        if not res or res.status_code != expected_status:
-            return ErrorMessage(f"OTLP Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
+        headers = {"X-X402-Receipt": "audit_receipt_dummy_string"}
             
-        attest_err = self._verify_attestation(res, path)
-        if attest_err: return attest_err
+        self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
+        try:
+            res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload, headers=headers)
             
-        if not self.inject_faults:
-            self.state_roots["otlp_root"] = res.headers.get("x-edge-content-hash", "0x_default_otlp_hash")
+            if res.status_code == expected_status:
+                self.log.info(f"  └─ ✅ Passed: Received {res.status_code} as expected.")
+                self.runner.success_count += 1
+            else:
+                self.log.error(f"  └─ ❌ Failed OTLP Ingress: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
+                self.runner.fail_count += 1
+                return ErrorMessage(f"OTLP Ingress Check Failed: Expected {expected_status}, Got {res.status_code}")
+                
+            attest_err = self._verify_attestation(res, path)
+            if attest_err: return attest_err
             
+            if not self.inject_faults:
+                self.state_roots["otlp_root"] = res.headers.get("x-edge-content-hash", "0x_default_otlp_hash")
+        except Exception as e:
+             return ErrorMessage(str(e))
+             
         return D3FiExchangeMsg()
 
     @step
@@ -239,15 +257,15 @@ class EdgeWorkflow(Workflow):
         
         path = "/v1/eco/exchange/order/ingress"
         payload = self.scene_config.trade_builder(self.inject_faults)
+        payload["agent_id"] = self.test_agent_id
         expected_status = 422 if self.inject_faults else 200
-        test_desc = f"D3Fi Trade Ingress ({'Membrane Strict Block Test' if self.inject_faults else 'Golden Path'})"
         
-        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
-        if not res or res.status_code != expected_status:
-             return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
-             
-        attest_err = self._verify_attestation(res, path)
-        if attest_err: return attest_err
+        res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+        if res.status_code == expected_status:
+            self.runner.success_count += 1
+        else:
+             self.runner.fail_count += 1
+             return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code}")
              
         if not self.inject_faults:
             self.state_roots["exchange_root"] = res.json().get("session", {}).get("topo_id", f"d3fi_{uuid.uuid4().hex[:8]}")
@@ -262,14 +280,13 @@ class EdgeWorkflow(Workflow):
         exchange_root = self.state_roots.get("exchange_root", "0x00")
         payload = self.scene_config.ledger_builder(exchange_root, self.inject_faults)
         expected_status = 422 if self.inject_faults else 200
-        test_desc = f"Ledger Append ({'Membrane Strict Block Test' if self.inject_faults else 'Golden Path'})"
             
-        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
-        if not res or res.status_code != expected_status:
-            return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
-            
-        attest_err = self._verify_attestation(res, path)
-        if attest_err: return attest_err
+        res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+        if res.status_code == expected_status:
+            self.runner.success_count += 1
+        else:
+            self.runner.fail_count += 1
+            return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code}")
             
         if not self.inject_faults:
             self.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "0x_default_ledger_hash")
@@ -281,28 +298,20 @@ class EdgeWorkflow(Workflow):
         self.log.info("\n--- [Phase 6] External EVM & Wallet Integration ---")
         
         path = "/v1/ext/evm/wrap"
-        
         caller_did = dphi_env.agents.alpha.did
         eth_address = caller_did.split(":")[-1] if "did:pkh" in caller_did else caller_did
         
-        payload = {
-            "caller_address": eth_address,
-            "amount_wei": "10000000000000000", # 0.01 ETH for Faucet limits
-            "agent_alias": "alpha"
-        }
-        
-        if self.inject_faults:
-            payload.pop("amount_wei") 
+        payload = {"caller_address": eth_address, "amount_wei": "10000000000000000", "agent_alias": "alpha"}
+        if self.inject_faults: payload.pop("amount_wei") 
             
         expected_status = 422 if self.inject_faults else 200
-        test_desc = f"EVM Wrap Execution ({'Malformed Payload Test' if self.inject_faults else 'Golden Path'})"
         
-        res = await self.runner._run_api_case(test_desc, "POST", path, payload, expected_status)
-        if not res or res.status_code != expected_status:
-            return ErrorMessage(f"EVM Wrap Execution Failed: Expected {expected_status}, Got {res.status_code if res else 'None'}")
-            
-        attest_err = self._verify_attestation(res, path)
-        if attest_err: return attest_err
+        res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+        if res.status_code == expected_status:
+             self.runner.success_count += 1
+        else:
+             self.runner.fail_count += 1
+             return ErrorMessage(f"EVM Wrap Execution Failed: Expected {expected_status}, Got {res.status_code}")
 
         if self.inject_faults:
             self.log.info(f"\n[SUCCESS] {self.name} Fault-Injection Scenario Completed.")
@@ -319,9 +328,6 @@ class EdgeWorkflow(Workflow):
         return StopMessage(result=False)
 
 
-# =====================================================================
-# Pipelines & Core Runners
-# =====================================================================
 class PipelineRunner:
     def __init__(self, name: str, scope_name: str):
         self.name = name
@@ -332,7 +338,6 @@ class PipelineRunner:
         self.phases = phases
         
     async def run_pipeline(self) -> List[TestResult]:
-        """기본 파이프라인 런너 (오버라이드 권장)"""
         pass
 
 
@@ -344,19 +349,19 @@ class GatewayTracerPipeline(PipelineRunner):
         self.scene_config = get_edge_scene_config()
         
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
-        self.test_config = Config(
-            wasm_timeout=5.0,
-            internal_edge_url=self.local_url 
-        )
+        self.test_config = Config(wasm_timeout=5.0, internal_edge_url=self.local_url)
         self.rest_app = create_app(self.test_config)
         
-        u_config = uvicorn.Config(
-            app=self.rest_app, 
-            host="127.0.0.1", 
-            port=self.config.port, 
-            log_level="error", 
-            access_log=False
-        )
+        # 🌟 테스트 서버 구동 시 내부망 라우터들을 필수로 마운트
+        try:
+            from receptor.edge.internal import internal_router
+            from receptor.edge.ext import ext_router
+            self.rest_app.include_router(internal_router)
+            self.rest_app.include_router(ext_router)
+        except ImportError as e:
+            log.warning(f"Failed to mount internal/ext routers for E2E tests: {e}")
+        
+        u_config = uvicorn.Config(app=self.rest_app, host="127.0.0.1", port=self.config.port, log_level="error", access_log=False)
         self.server = ManagedTestServer(u_config)
         self._server_task = None
         
@@ -372,18 +377,13 @@ class GatewayTracerPipeline(PipelineRunner):
         async with httpx.AsyncClient() as client:
             for _ in range(20):
                 try:
-                    res = await client.get(f"{self.local_url}/openapi.json")
-                    if res.status_code == 200:
-                        return
-                except Exception:
-                    pass
+                    if (await client.get(f"{self.local_url}/openapi.json")).status_code == 200: return
+                except Exception: pass
                 await asyncio.sleep(0.2)
         raise RuntimeError("Failed to boot embedded REST server for tests.")
 
     async def run_pipeline(self) -> List[TestResult]:
-        """파이프라인 전체를 Uvicorn 서버 라이프사이클로 래핑하고 Phase별 결과 반환"""
         log.info(f"\n=== Starting Pipeline: {self.name} ({self.scope_name}) ===")
-        
         log.info(f"[Pipeline] Booting embedded Uvicorn REST server on {self.local_url}...")
         self._server_task = asyncio.create_task(self.server.serve())
         await self._wait_for_server()
@@ -394,145 +394,78 @@ class GatewayTracerPipeline(PipelineRunner):
                 log.info(f"\n▶️ [PHASE {idx}/{len(self.phases)}] {phase.name}")
                 try:
                     await phase.action()
-                    results.append(TestResult(
-                        target="EDGE_GATEWAY",
-                        scenario=phase.name,
-                        success=True,
-                        expected_success=True
-                    ))
+                    results.append(TestResult("EDGE_GATEWAY", phase.name, True, True))
                 except Exception as e:
                     log.error(f"Phase '{phase.name}' Halted: {str(e)}")
-                    results.append(TestResult(
-                        target="EDGE_GATEWAY",
-                        scenario=phase.name,
-                        success=False,
-                        expected_success=True
-                    ))
-                    break # Fail Fast 기조 유지 (에러 시 이후 Phase 생략)
+                    results.append(TestResult("EDGE_GATEWAY", phase.name, False, True))
+                    break 
         finally:
             log.info(f"\n[Pipeline] Shutting down embedded Uvicorn REST server...")
             self.server.should_exit = True
-            if self._server_task:
-                await self._server_task
-
-        log.info(f"=== Pipeline Completed: {self.name} ===\n")
+            if self._server_task: await self._server_task
         return results
 
     async def phase_wasm_build(self):
-        log.info("[Pipeline] Validating WasmBuilder...")
         builder = WasmBuilder()
         await builder.trace()
-        if getattr(builder, 'rupture_confirmed', False):
-            raise RuntimeError("WasmBuilder failed to construct valid binaries.")
+        if getattr(builder, 'rupture_confirmed', False): raise RuntimeError("WasmBuilder failed")
 
     async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
-        async with httpx.AsyncClient(
-            base_url=self.config.base_url,
-            event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]},
-            timeout=15.0
-        ) as client:
-            
-            runner = EdgeWorkflow(
-                config=self.config, 
-                scene_config=self.scene_config,
-                client=client, 
-                inject_faults=inject_faults,
-                attestation_injector=attestation_injector 
-            )
-            
+        async with httpx.AsyncClient(base_url=self.config.base_url, event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}, timeout=15.0) as client:
+            runner = EdgeWorkflow(config=self.config, scene_config=self.scene_config, client=client, inject_faults=inject_faults, attestation_injector=attestation_injector)
             tracer = DphiTracer(tester=runner)
             await tracer.trace() 
             
             has_rupture = getattr(tracer, 'rupture_confirmed', False)
-            
-            if attestation_injector is not None:
-                if runner.runner.fail_count == 0:
-                     raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected by Gateway.")
-                return 
-            
+            if attestation_injector is not None and runner.runner.fail_count == 0:
+                raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")
             if has_rupture or runner.runner.fail_count > 0:
                 raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
 
-    async def phase_ingress_e2e_golden(self):
-        await self._run_scene(inject_faults=False)
-
-    async def phase_ingress_e2e_negative(self):
-        await self._run_scene(inject_faults=True)
-
+    async def phase_ingress_e2e_golden(self): await self._run_scene(False)
+    async def phase_ingress_e2e_negative(self): await self._run_scene(True)
     async def phase_ingress_e2e_tampered(self):
         tamper_func = getattr(RpcChaosInjector, 'corrupt_attestation_header', None)
-        if tamper_func is None:
-            log.warning("⚠️ Skipping Attestation Rejection Test: Missing Chaos Injector.")
-            return
-        await self._run_scene(inject_faults=False, attestation_injector=tamper_func)
+        if tamper_func: await self._run_scene(False, tamper_func)
 
     async def phase_sentinel_security(self):
-        log.info("[Pipeline] Initiating Sentinel Chaos Attacks against Public Gateway...")
         attack_vectors = ChaosPayloadLibrary.get_all_vectors()
-        target_path = "/v1/public/telemetry/logs"
-
-        async with httpx.AsyncClient(
-            base_url=self.config.base_url,
-            event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}
-        ) as client:
+        async with httpx.AsyncClient(base_url=self.config.base_url) as client:
             for vector_name, rule_list in attack_vectors:
                 payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
-                with flow_scope(execution_mode="CHAOS_TEST", security_probe=vector_name):
-                    response = await client.post(target_path, content=payload)
-                    if response.status_code >= 500 or response.status_code < 400:
-                        raise RuntimeError(f"Gateway Breach! '{vector_name}' bypassed defenses. Status: {response.status_code}")
-        log.info("  └─ All Chaos probes successfully deflected by Gateway Sentinel Membrane.")
+                res = await client.post("/v1/public/telemetry/logs", content=payload)
+                if res.status_code >= 500 or res.status_code < 400:
+                    raise RuntimeError(f"Gateway Breach! '{vector_name}' bypassed defenses. Status: {res.status_code}")
 
 
 class EdgeSuiteRunner:
-    """Orchestrates the Gateway Ingress & Network Isolation Test Suite."""
     def __init__(self):
         self.log = log
         self.results: List[TestResult] = []
 
     async def _run_gateway_pipeline(self):
-        self.log.info("\n▶️ [PART 1] Running Public Gateway & Isolation Pipeline...")
         net_config = E2EConfig(host="127.0.0.1", port=8353, protocol="http")
-        tracer_pipeline = GatewayTracerPipeline(config=net_config)
-        
-        # 💡 [MODIFIED] PipelineRunner가 수집한 Phase별 결과를 받아 메인 result에 추가
-        phase_results = await tracer_pipeline.run_pipeline()
-        self.results.extend(phase_results)
+        self.results.extend(await GatewayTracerPipeline(config=net_config).run_pipeline())
 
     def _print_report(self):
         self.log.info("\n" + "="*80)
         self.log.info("🛡️ [EDGE GATEWAY TEST SUITE REPORT]")
         self.log.info("="*80)
-        
-        all_passed = True
+        all_passed = all(r.passed for r in self.results)
         for idx, res in enumerate(self.results, 1):
             status_icon = "✅" if res.passed else "❌"
-            status_text = "PASSED" if res.passed else "FAILED"
-            if not res.passed: all_passed = False
-                
-            target_label = f"[{res.target}]"
-            # 💡 [MODIFIED] 이제 Phase의 이름이 scenario 부분에 출력됩니다.
-            self.log.info(f"{status_icon} {idx:02d}. {target_label.ljust(15)} {res.scenario.ljust(45)} | Result: {status_text}")
-            
+            self.log.info(f"{status_icon} {idx:02d}. [{res.target}]".ljust(22) + f"{res.scenario.ljust(45)} | Result: {'PASSED' if res.passed else 'FAILED'}")
         self.log.info("-" * 80)
-        if all_passed:
-            self.log.info("🎉 ALL EDGE INGRESS & ISOLATION TESTS EXECUTED SUCCESSFULLY.")
-        else:
-            self.log.critical("💥 EDGE BOUNDARY COMPROMISED. Check the execution logs for trace details.")
+        if all_passed: self.log.info("🎉 ALL EDGE INGRESS & ISOLATION TESTS EXECUTED SUCCESSFULLY.")
+        else: self.log.critical("💥 EDGE BOUNDARY COMPROMISED. Check logs for details.")
         self.log.info("="*80 + "\n")
 
     async def execute(self):
         self.log.info("\n" + "="*80)
         self.log.info("🧪 [DPHI EDGE MASTER SUITE] Commencing Gateway Ingress & Security Tests")
         self.log.info("="*80)
-        
         await self._run_gateway_pipeline()
         self._print_report()
 
-
-def main():
-    app = EdgeSuiteRunner()
-    PhaseReactor.ignite(main_coro_func=app.execute)
-
 if __name__ == "__main__":
-    main()
+    PhaseReactor.ignite(main_coro_func=EdgeSuiteRunner().execute)

@@ -36,16 +36,11 @@ log = get_emitter("edge.internal")
 
 internal_router = APIRouter(prefix="/v1")
 
-# Sub-routers
 core_edge = ContractRouter(namespace="core.internal", prefix="/core", tags=["Internal Core (Ledger & Anchor)"])
 compute_edge = ContractRouter(namespace="eco.compute", prefix="/eco/compute", tags=["Internal Eco Compute"])
 exchange_edge = ContractRouter(namespace="eco.exchange", prefix="/eco/exchange", tags=["Internal Eco Exchange"])
 profile_edge = ContractRouter(namespace="eco.profile", prefix="/eco/profile", tags=["Internal Eco Profile"])
 
-
-# =====================================================================
-# [Data Models] Internal Data Structures
-# =====================================================================
 class LedgerEventSchema(BaseModel):
     action: str
     user_id: str
@@ -65,16 +60,6 @@ class StreamAppendResponse(BaseModel):
     request_id: str
     status: str
     result: StreamAppendResult
-
-class MandateRegisterRequest(BaseModel):
-    agent_id: str
-    max_spend_usdc: str
-    expiration_ts: int
-    signature: str
-
-class MandateRegisterResponse(BaseModel):
-    receipt_id: str
-    status: str
 
 class BilledExecutionRequest(BaseModel):
     agent_schema: Dict[str, Any]
@@ -96,9 +81,6 @@ class BilledExecutionResponse(BaseModel):
     reason: Optional[str] = None
 
 
-# =====================================================================
-# 1. Core (Ledger & Anchor)
-# =====================================================================
 @core_edge.post(
     "/ledger/stream/append", 
     status_code=status.HTTP_200_OK,
@@ -125,6 +107,8 @@ async def append_to_stream(
             "events": events_dicts
         }
         canonical_payload = StateAdapter.to_canonical_bytes(payload_to_hash).decode('utf-8')
+        
+        # 🌟 DphiMethod Enum 사용
         fp_res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
         
         if not fp_res.success:
@@ -166,32 +150,16 @@ async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(ge
     )
 
 
-# =====================================================================
-# 2. Eco Compute (Execution & Validation)
-# =====================================================================
-@compute_edge.get("/budget/verify", summary="[Internal] Tollgate용 X402 예산 잔고 확인")
-async def verify_budget(
-    receipt: str = Query(..., description="X402 영수증 해시"),
-    cost: float = Query(..., description="차감 예정 예상 비용 (USDC)"),
-    broker: DphiBroker = Depends(get_wasm_broker)
-):
-    """edge.public의 톨게이트가 호출하여 롤업 원장 내 예산을 검증"""
-    payload = json.dumps({"receipt_id": receipt, "required_cost": cost})
-    res = await broker.invoke("verify_ledger_budget", payload)
-    
-    if not res.success or not json.loads(res.output).get("is_sufficient"):
-        raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED, detail="Insufficient internal budget")
-        
-    return {"status": "BUDGET_SUFFICIENT"}
-
-
 @compute_edge.post("/intent/validate", summary="[Internal] Validate Intent", response_model=IntentValidationResponse)
 async def validate_intent(req: IntentValidationRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     raw_payload = {**req.model_dump(), "timestamp": int(time.time() * 1000)}
     canonical_payload = StateAdapter.to_canonical_bytes(raw_payload).decode('utf-8')
-    res = await broker.invoke("validate_intent", canonical_payload)
+    
+    # 🌟 문자열 하드코딩 제거 -> 공식 Enum 규약 사용
+    res = await broker.invoke(DphiMethod.VALIDATE_INTENT, canonical_payload)
     if not res.success:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.error.message)
+        # 🌟 예외 처리 버그 패치 (res.error.message -> str)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(res.error))
     return IntentValidationResponse(status=EdgeState.INTENT_VALIDATED, clearance=json.loads(res.output))
 
 
@@ -199,37 +167,19 @@ async def validate_intent(req: IntentValidationRequest, broker: DphiBroker = Dep
 async def execute_compute(req: ExecuteComputeRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     res = await broker.execute(code=req.code, variables=req.variables)
     if not res.success:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=res.error.message)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(res.error))
     return ExecuteComputeResponse(status=EdgeState.EXECUTION_SUCCESS, output=res.output)
 
 
 @compute_edge.post("/proof/generate", summary="[Internal] Generate Proof", response_model=ProofGenerationResponse)
 async def generate_proof(req: ProofGenerationRequest, broker: DphiBroker = Depends(get_wasm_broker)):
     canonical_payload = StateAdapter.to_canonical_bytes(req.model_dump()).decode('utf-8')
-    res = await broker.invoke("generate_proof", canonical_payload)
-    if not res.success:
-        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=res.error.message)
-    return ProofGenerationResponse(status=EdgeState.PROOF_GENERATED, zk_receipt=json.loads(res.output))
-
-
-# =====================================================================
-# 3. Eco Exchange (Mandate & Clearing)
-# =====================================================================
-@exchange_edge.post("/mandate/register", summary="[Internal] 에이전트 서명 검증 및 원장 예산 충전", response_model=MandateRegisterResponse)
-async def register_mandate(req: MandateRegisterRequest, broker: DphiBroker = Depends(get_wasm_broker)):
-    """edge.public에서 넘어온 EIP-712 서명을 검증하고, 성공 시 Ledger에 Deposit 후 Capability Token 발급"""
-    raw_payload = req.model_dump()
-    canonical_payload = StateAdapter.to_canonical_bytes(raw_payload).decode('utf-8')
     
-    res = await broker.invoke("register_mandate_and_deposit", canonical_payload)
+    # 🌟 문자열 하드코딩 제거 -> 공식 Enum 규약 사용
+    res = await broker.invoke(DphiMethod.GENERATE_PROOF, canonical_payload)
     if not res.success:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.error.message)
-        
-    receipt_data = json.loads(res.output)
-    return MandateRegisterResponse(
-        receipt_id=receipt_data["receipt_id"],
-        status="REGISTERED_AND_FUNDED"
-    )
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(res.error))
+    return ProofGenerationResponse(status=EdgeState.PROOF_GENERATED, zk_receipt=json.loads(res.output))
 
 
 @exchange_edge.post("/order/ingress", summary="[Internal] 거래 인텐트 인입 및 Session 발급", response_model=TradeIngressResponse)
@@ -246,9 +196,11 @@ async def submit_trade_intent(
         ts=int(time.time() * 1000), topo=context.topo_id, press=press_limit,
         rupture=context.is_ruptured, injected_intent=req
     )
-    res = await broker.invoke("init_epoch", StateAdapter.to_canonical_bytes(payload_obj.model_dump()).decode('utf-8'))
+    
+    # 🌟 문자열 하드코딩 제거 -> 공식 Enum 규약 사용
+    res = await broker.invoke(DphiMethod.INIT_EPOCH, StateAdapter.to_canonical_bytes(payload_obj.model_dump()).decode('utf-8'))
     if not res.success:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=res.error.message)
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(res.error))
     return TradeIngressResponse(status=EdgeState.INTENT_ACCEPTED, session=json.loads(res.output))
 
 
@@ -261,9 +213,6 @@ async def generate_external_receipt(req: ClearingReceiptRequest, exchange: Excha
     return ClearingReceiptResponse(status=EdgeState.RECEIPT_GENERATED, rollup_payload=exchange.generate_settlement_payload(receipt))
 
 
-# =====================================================================
-# 4. Eco Profile (Billing & Quota)
-# =====================================================================
 async def extract_client_project(api_key: str = "test_key") -> str:
     return "generative-language-client-1234" 
 
@@ -311,10 +260,6 @@ async def execute_billed_workload(
         billed_cost_usd=billed_cost, reason=result.reason
     )
 
-
-# =====================================================================
-# Main Router Inclusion
-# =====================================================================
 internal_router.include_router(core_edge)
 internal_router.include_router(compute_edge)
 internal_router.include_router(exchange_edge)

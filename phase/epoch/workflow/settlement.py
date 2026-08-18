@@ -1,5 +1,4 @@
-# phase.epoch.workflow.wallet
-## @lineage: bound.exchange.wallet.workflow
+# phase.epoch.workflow.settlement
 import asyncio
 import hashlib
 import json
@@ -21,12 +20,12 @@ from kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
 from kernel.bind.inter.dvm import DvmInterpreter
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("wallet.workflow")
+log = get_emitter("wallet.settlement")
 
 @dataclass
 class ScenarioConfig:
     name: str
-    snapshot_injector: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None
+    snapshot_injector: Optional[Callable[[Dict[str, Any], str, str], Dict[str, Any]]] = None
     calldata_injector: Optional[Callable[[str], str]] = None
 
 @dataclass
@@ -48,15 +47,17 @@ class SwCommitMsg(WorkflowMessage): pass
 
 class WalletChaosInjector:
     @staticmethod
-    def force_insufficient_allowance(snapshot: Dict[str, Any], agent_address: str) -> Dict[str, Any]:
+    def force_insufficient_allowance(snapshot: Dict[str, Any], agent_address: str, contract_address: str) -> Dict[str, Any]:
         """
         [지연 정산 룰 검증] 
-        에이전트가 DPHI 청산소에 부여한 Allowance(위임 한도)가 부족한 상태를 
-        논리적으로 스냅샷에 주입하여 DVM Revert를 강제함.
+        EVM 계정 속성이 아닌, 실제 ERC20 컨트랙트의 Storage를 조작.
+        Allowance/Balance 값을 담고 있는 Storage Slot(0x0)을 0으로 덮어씌워 DVM Revert를 강제함.
         """
-        if agent_address in snapshot:
-            # 잔고는 있지만 위임 한도가 없다고 논리적 마킹 (EVM Storage Slot 조작 시뮬레이션)
-            snapshot[agent_address]["allowance"] = "0x0" 
+        if contract_address in snapshot:
+            if "storage" not in snapshot[contract_address]:
+                snapshot[contract_address]["storage"] = {}
+            # Storage Slot 0을 0x0으로 조작하여 잔고/한도 부족 상황 시뮬레이션
+            snapshot[contract_address]["storage"]["0x0000000000000000000000000000000000000000000000000000000000000000"] = "0x0000000000000000000000000000000000000000000000000000000000000000" 
         return snapshot
 
     @staticmethod
@@ -155,16 +156,27 @@ class ShadowWalletWorkflow(Workflow):
         
         self.active_calldata = self.scenario.calldata_injector(base_calldata) if self.scenario.calldata_injector else base_calldata
 
-        # 0x23b872dd (transferFrom) 호출 시 STOP 하도록 패치된 Mock 바이트코드
-        valid_mock_erc20_bytecode = "0x6080604052348015600f57600080fd5b506004361060285760003560e01c806323b872dd14602d575b600080fd5b00"
+        # 🌟 개선: 0x23b872dd (transferFrom) 호출 시 Storage Slot[0] 값을 확인(SLOAD)하여 
+        # 값이 0이면 REVERT, 0보다 크면 STOP 하도록 작성된 스마트 Mock 바이트코드
+        valid_mock_erc20_bytecode = "0x6000341160165760003560e01c6323b872dd14601b575b600080fd5b6000541560165700"
 
         base_snapshot = {
             self.clearing_node.evm_address: {"balance": hex(10**18), "nonce": 1},
-            self.contract_address: {"balance": "0x0", "code": valid_mock_erc20_bytecode},
-            self.agent_node.evm_address: {"balance": hex(self.charge_amount * 10), "allowance": "unlimited", "nonce": 0}
+            self.contract_address: {
+                "balance": "0x0", 
+                "code": valid_mock_erc20_bytecode,
+                "storage": {
+                    # 정상적인 위임 한도(Allowance)가 남아있다고 간주하는 기본 스토리지 상태
+                    "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000000000000000000000000000000000000000000001"
+                }
+            },
+            self.agent_node.evm_address: {"balance": hex(self.charge_amount * 10), "nonce": 0}
         }
         
-        self.active_snapshot = self.scenario.snapshot_injector(base_snapshot, self.agent_node.evm_address) if self.scenario.snapshot_injector else base_snapshot
+        if self.scenario.snapshot_injector:
+            self.active_snapshot = self.scenario.snapshot_injector(base_snapshot, self.agent_node.evm_address, self.contract_address)
+        else:
+            self.active_snapshot = base_snapshot
         
         return SwPrepareMsg()
 

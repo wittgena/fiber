@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
 from phase.anchor.adapter.web3 import Web3Adapter
-from bound.client.wallet.eth import EthWalletAdapter
-from bound.client.wallet.ledger import LedgerWalletAdapter
+from phase.anchor.adapter.wallet.eth import EthWalletAdapter
+from phase.anchor.adapter.wallet.ledger import LedgerWalletAdapter
 from phase.anchor.config.dphi import dphi_env
 
 from arch.contract.interface import ContractRouter
@@ -55,23 +55,17 @@ async def get_ledger_adapter() -> LedgerWalletAdapter:
             _global_ledger_adapter = LedgerWalletAdapter(agent_alias="alpha", simulate=True)
     return _global_ledger_adapter
 
-# 🌟 신규: 지연 정산을 수행할 DPHI 시스템 마스터 어댑터 의존성
 async def get_clearing_adapter(web3: Web3Adapter = Depends(get_web3_adapter)) -> EthWalletAdapter:
     global _global_clearing_adapter
     if _global_clearing_adapter is None:
         log.info("[Edge Ext] Initializing Native EthWalletAdapter (Clearinghouse Master)...")
         try:
-            # "system_clearing" 키는 DPHI가 에이전트 자금을 Pull할 권한(transferFrom)을 가진 메인 키
             _global_clearing_adapter = EthWalletAdapter(web3_adapter=web3, agent_alias="system_clearing", simulate=False)
         except Exception as e:
             log.warning(f"[Edge Ext] Failed to init clearing wallet, simulation mode: {e}")
             _global_clearing_adapter = EthWalletAdapter(web3_adapter=web3, agent_alias="system_clearing", simulate=True)
     return _global_clearing_adapter
 
-
-# =====================================================================
-# [Data Models] 
-# =====================================================================
 class WalletInfoResponse(BaseModel):
     network_id: str
     wallet_address: str
@@ -104,7 +98,6 @@ class WrapResponse(BaseModel):
     tx_hash: str
     message: str
 
-# 🌟 신규 모델: 지연 정산 징수 요청
 class DeferredSettlementRequest(BaseModel):
     """오프체인에서 마이너스(부채) 상태가 된 에이전트의 잔고를 L1에서 강제 징수(Pull)하는 요청"""
     agent_address: str = Field(..., description="과금을 승인했던 에이전트의 L1 지갑 주소")
@@ -117,10 +110,6 @@ class DeferredSettlementResponse(BaseModel):
     tx_hash: Optional[str] = None
     settled_amount: str
 
-
-# =====================================================================
-# 1. Ext Wallet Endpoints
-# =====================================================================
 @wallet_edge.get(
     "/info",
     summary="Agent 지갑 상태 및 주소 조회",
@@ -188,8 +177,6 @@ async def process_x402_payment(
                 detail=f"Transaction/Rollup Failed: {str(e)}"
             )
 
-
-# 🌟 신규 추가 API: 지연 정산용 Pull API
 @wallet_edge.post(
     "/settle/deferred",
     summary="[Internal/Worker] 지연 정산: 에이전트의 L1 지갑에서 누적 부채를 강제 징수 (transferFrom)",
@@ -200,18 +187,11 @@ async def process_deferred_settlement(
     internal_auth: str = Header(..., description="내부 시스템 통신 인증 토큰"),
     clearing_wallet: EthWalletAdapter = Depends(get_clearing_adapter)
 ):
-    """
-    에이전트가 DPHI를 호출하는 API가 아닙니다.
-    DPHI 내부의 배치(Batch) 프로세스나 커널이 특정 에이전트의 오프체인 빚을 
-    실제 L1/L2 블록체인에서 청산(수금)하고자 할 때 호출합니다.
-    """
     request_id = f"stl_{int(time.time() * 1000)}"
     with flow_scope(phase="DEFERRED_SETTLEMENT", bound="edge.ext", req_id=request_id):
         log.info(f"Initiating L1 Pull Settlement: Pulling {req.accrued_debt_usdc} USDC from {req.agent_address}")
         
         try:
-            # 에이전트가 사전에 DPHI 시스템 계정에 approve를 해둔 금액 한도 내에서 
-            # clearing_wallet (DPHI 시스템 계정)이 transferFrom 트랜잭션을 발생시킴
             tx_hash = await clearing_wallet.transfer_from(
                 from_address=req.agent_address,
                 amount_str=req.accrued_debt_usdc,
@@ -232,10 +212,6 @@ async def process_deferred_settlement(
                 detail=f"L1 transferFrom Failed: {str(e)}"
             )
 
-
-# =====================================================================
-# 2. Ext EVM (Web3) Endpoints
-# =====================================================================
 @evm_edge.get("/balance", summary="EVM Native(ETH) 및 ERC20(WETH) 잔고 조회", response_model=BalanceResponse)
 async def get_evm_balance(address: str, web3: Web3Adapter = Depends(get_web3_adapter)):
     try:
