@@ -20,7 +20,7 @@ from kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
 from kernel.bind.inter.dvm import DvmInterpreter
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("wallet.settlement")
+log = get_emitter("workflow.settlement")
 
 @dataclass
 class ScenarioConfig:

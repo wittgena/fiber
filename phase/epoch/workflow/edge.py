@@ -72,7 +72,8 @@ def create_agent_intent_payload(inject_faults: bool) -> dict:
         "action": "EXECUTE_PYTHON",
         "source_code": "print('Hello from Edge E2E Test')",
         "max_fuel": 1000000,
-        "signature": "0x_bad_signature_for_testing_faults" if inject_faults else "0x_valid_dummy_signature"
+        "signature": "0x_bad_signature_for_testing_faults" if inject_faults else "0x_valid_dummy_signature",
+        "sig_algo": "ECDSA_SECP256K1" # 정렬된 멀티 알고리즘 필드 주입
     }
 
 def create_trade_payload(inject_faults: bool) -> dict:
@@ -408,8 +409,16 @@ class GatewayTracerPipeline(PipelineRunner):
             await tracer.trace() 
             
             has_rupture = getattr(tracer, 'rupture_confirmed', False)
-            if attestation_injector is not None and runner.runner.fail_count == 0:
-                raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")
+            
+            # [수정 구간] 변조(Attestation Injector) 시나리오 평가 로직 수정
+            if attestation_injector is not None:
+                # 방어벽이 변조를 잡아내서 에러(fail)가 발생했어야 정상. fail_count가 0이면 뚫린 것.
+                if runner.runner.fail_count == 0:
+                    raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")
+                # 방어 성공: 테스트는 통과한 것이므로 에러를 던지지 않고 return
+                return 
+
+            # 일반 시나리오 (Golden Path 및 Negative Payload 테스트)
             if has_rupture or runner.runner.fail_count > 0:
                 raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
 

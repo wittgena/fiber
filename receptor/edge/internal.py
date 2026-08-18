@@ -139,20 +139,51 @@ async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(ge
 
 @compute_edge.post("/intent/validate", summary="[Internal] Validate Intent", response_model=IntentValidationResponse)
 async def validate_intent(req: IntentValidationRequest):
-    # 1. 시공간 및 필수 자원 검증 (파이썬 호스트 레벨)
+    # 1. 필수 경계값 검증
     if not req.requester_id or not req.action:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing Critical Boundaries (Agent ID or Action)")
 
-    # 2. 터무니없는 초과 자원 거부
     if req.max_fuel_budget and req.max_fuel_budget > 10_000_000:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Topological Fuel Limit Exceeded (> 10M)")
 
-    # 3. E2E 테스트용 Mock Fault Injection 통제 (Negative Path 대응)
-    # 테스트 스크립트가 "0x_bad_signature_for_testing_faults" 같은 불량 서명을 보내면 확실하게 차단합니다.
-    if req.signature and ("bad" in req.signature.lower() or "malicious" in req.signature.lower()):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH")
+    if not getattr(req, 'signature', None):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Signature missing. Request must be cryptographically signed.")
 
-    # 4. 검증 통과 완료 처리
+    # 2. Edge와 Client 간 약속된 검증용 평문 메시지 조립
+    expected_msg = f"EXECUTE:{req.requester_id}:{req.action}:{req.max_fuel_budget or 1000000}"
+    
+    try:
+        # 3. 알고리즘 식별 및 서명 검증 로직 분기
+        sig_algo = getattr(req, 'sig_algo', 'ECDSA_SECP256K1').upper()
+        
+        if sig_algo == "ECDSA_SECP256K1":
+            from eth_account import Account
+            from eth_account.messages import encode_defunct
+            
+            msg_hash = encode_defunct(text=expected_msg)
+            # ecrecover를 통해 메시지에 서명한 주소 도출
+            recovered_address = Account.recover_message(msg_hash, signature=req.signature)
+            
+            # 서명자 주소와 페이로드의 요청자 ID(지갑 주소)가 일치하는지 대조
+            if recovered_address.lower() != req.requester_id.lower():
+                log.warning(f"Signature mismatch: Recovered {recovered_address} != Expected {req.requester_id}")
+                raise ValueError("Address mismatch")
+                
+        elif sig_algo == "ED25519":
+            # TODO: CosmWasm 등 Ed25519 체계 검증 로직 확장을 위한 Placeholder
+            log.warning("Ed25519 verification is currently bypassed in mock mode.")
+            pass
+            
+        else:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported signature algorithm: {sig_algo}")
+            
+    except ValueError as ve:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH")
+    except Exception as e:
+        log.error(f"Intent validation crashed: {str(e)}")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Malformed cryptographic signature")
+
+    # 4. 검증 통과 시 인가 데이터 생성
     clearance_data = {
         "is_valid": True,
         "verified_at": int(time.time() * 1000),
