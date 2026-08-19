@@ -1,5 +1,4 @@
 # eco.model.token.convert
-## @lineage: engine.model.token.convert
 from typing import Dict, List, Type, Union, cast
 from pydantic import BaseModel
 import tiktoken

@@ -1,5 +1,4 @@
 # eco.model.api.base
-## @lineage: engine.model.api.base
 from typing import Optional, Union
 from eco.model.types.param.legacy import LegacyParams
 from eco.model.registry import get_llm_provider

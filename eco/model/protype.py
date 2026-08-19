@@ -1,5 +1,4 @@
 # eco.model.protype
-## @lineage: engine.model.protype
 from enum import Enum
 from typing import Optional, Literal, List, Dict
 from typing_extensions import TypedDict

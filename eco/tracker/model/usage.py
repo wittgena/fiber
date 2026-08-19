@@ -1,26 +1,14 @@
-# eco.model.cost.tracker.usage
-## @lineage: engine.model.cost.tracker.usage
-## @lineage: bound.model.cost.tracker.usage
-## @lineage: llm.cost.tracker.usage
-## @lineage: eco.llms.cost.tracker.usage
-## @lineage: eco.cost.tracker.usage
-## @lineage: eco.mesh.cost.tracker.usage
-## @lineage: runtime.mesh.cost.tracker.usage
-## @lineage: mesh.cost.tracker.usage
-## @lineage: tenant.cost.tracker.usage
-## @lineage: phi.tenant.cost.tracker.usage
+# eco.tracker.model.usage
+## @lineage: eco.model.cost.tracker.usage
 import logging
 from typing import Any, Dict, Optional, Generator, Optional
 from pydantic import BaseModel
 from collections import defaultdict
 from contextlib import contextmanager
 
-from arch.contract.event.next import LogEvent
-
 from eco.model.types.general import ModelInfo
 from eco.model.types.core import Usage
 from eco.model.registry import ModelCostRegistry 
-
 from eco.model.cost.unit import UnitCostCalculator
 from eco.model.cost.policy import CostPolicy
 

@@ -1,15 +1,5 @@
-# eco.model.cost.tracker.metric
-## @lineage: engine.model.cost.tracker.metric
-## @lineage: bound.model.cost.tracker.metric
-## @lineage: llm.cost.tracker.metric
-## @lineage: eco.llms.cost.tracker.metric
-## @lineage: eco.cost.tracker.metric
-## @lineage: eco.mesh.cost.tracker.metric
-## @lineage: runtime.mesh.cost.tracker.metric
-## @lineage: mesh.cost.tracker.metric
-## @lineage: tenant.cost.tracker.metric
-## @lineage: phi.tenant.cost.tracker.metric
-## @lineage: bound.watcher.snapshot.metrics
+# eco.tracker.model.metric
+## @lineage: eco.model.cost.tracker.metric
 import copy
 import time
 from typing import final

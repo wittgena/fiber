@@ -1,7 +1,4 @@
 # eco.model.registry
-## @lineage: engine.model.registry
-## @lineage: engine.driver.registry
-## @lineage: llm.registry
 from __future__ import annotations
 import json
 import os
@@ -14,13 +11,11 @@ from email.utils import formatdate
 from typing import Dict, List, Tuple, Optional, Callable, Union
 
 from eco.bound.agent.adapter.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
-
 from eco.model.protype import ProviderTypes
 from eco.model.types.param.legacy import LegacyParams
 
 from arch.model.config import config
 from arch.xor.secret.manager import get_secret_str, get_secret
-
 from kernel.bind.resolver import resolve_path 
 from watcher.plane.emitter import get_emitter 
 

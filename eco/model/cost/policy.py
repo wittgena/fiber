@@ -1,12 +1,4 @@
 # eco.model.cost.policy
-## @lineage: engine.model.cost.policy
-## @lineage: bound.model.cost.policy
-## @lineage: llm.cost.policy
-## @lineage: eco.llms.cost.policy
-## @lineage: eco.cost.policy
-## @lineage: eco.mesh.cost.policy
-## @lineage: runtime.mesh.cost.policy
-## @lineage: mesh.cost.policy
 import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Optional, Tuple, Union, cast
 from pydantic import BaseModel
