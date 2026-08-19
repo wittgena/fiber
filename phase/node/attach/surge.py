@@ -9,7 +9,7 @@ from typing import Any
 from watcher.plane.emitter import get_emitter
 from kernel.dphi.method import DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
-from phase.epoch.scene.anchor import ActorIdentity 
+from phase.dphi.scene.anchor import ActorIdentity 
 
 log = get_emitter("attach.surge")
 

@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import Request, HTTPException, status
 
-from phase.anchor.adapter.dphi import NexusAnchor
+from phase.dphi.adapter.anchor import NexusAnchor
 from receptor.xe.profile import BenchProfile
 from receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
@@ -16,7 +16,7 @@ from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from receptor.stream.store import LogStreamStore
 from kernel.dphi.broker import DphiBroker
-from kernel.dphi.adapter.exchange import ExchangeAdapter
+from phase.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 
 from watcher.receptor.audit.secret import SecretAuditor
