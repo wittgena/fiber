@@ -1,13 +1,12 @@
 # phase.node.daemon.risk
-## @lineage: dphi.node.daemon.risk
 """@desc: Defines the autonomous risk daemon that monitors dynamic tension and executes safe routing based on cryptographic receipts intent"""
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-from bound.agent.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
-from bound.proof.observer import (
+from bound.observer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
+from bound.observer.tension import (
     TensionPhase,
     RiskPolicy,
     TensionGradientObserver,

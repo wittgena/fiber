@@ -1,12 +1,11 @@
 # bound.eco.wallet.eth
-## @lineage: bound.adapter.wallet.eth
 import os
 import asyncio
 import time
 from typing import Optional
 
 from bound.eco.web3 import Web3Adapter
-from bound.client.config.dphi import dphi_env
+from phase.dphi.config import dphi_env
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("wallet.eth")

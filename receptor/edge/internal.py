@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from phase.dphi.adapter.anchor import NexusAnchor, AnchorProposal
+from phase.dphi.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
 from receptor.stream.store import LogStreamStore
 from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 from receptor.xe.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
@@ -45,17 +45,6 @@ core_edge = ContractRouter(namespace="core.internal", prefix="/core", tags=["Int
 compute_edge = ContractRouter(namespace="eco.compute", prefix="/eco/compute", tags=["Internal Eco Compute"])
 exchange_edge = ContractRouter(namespace="eco.exchange", prefix="/eco/exchange", tags=["Internal Eco Exchange"])
 profile_edge = ContractRouter(namespace="eco.profile", prefix="/eco/profile", tags=["Internal Eco Profile"])
-
-class LedgerEventSchema(BaseModel):
-    action: str
-    user_id: str
-    pii_data: Optional[Dict[str, Any]] = None
-    details: str
-
-class StreamAppendRequest(BaseModel):
-    stream_name: str
-    events: List[LedgerEventSchema]
-    verbose: bool = False
 
 class StreamAppendResult(BaseModel):
     hash: str

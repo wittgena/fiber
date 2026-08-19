@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, Optional, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from bound.client.config.dphi import dphi_env
+from phase.dphi.config import dphi_env
 from arch.topos.network.bridge import RpcBridge
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.phase.reactor import PhaseReactor

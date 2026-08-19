@@ -1,4 +1,5 @@
-# phase.dvm.billing
+# phase.dphi.workflow.billing
+## @lineage: phase.dvm.billing
 import sys
 import json
 import asyncio
@@ -10,8 +11,8 @@ from dataclasses import dataclass, field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from bound.client.config.dphi import dphi_env
-from bound.client.config.client import NotarySwarm
+from phase.dphi.config import dphi_env
+from phase.dphi.adapter.anchor import NotarySwarm
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from kernel.dphi.adapter.shadow import ShadowAdapter
 from kernel.dphi.adapter.utxo import (
@@ -22,7 +23,7 @@ from kernel.dphi.broker import DphiBroker
 from kernel.phase.reactor import PhaseReactor
 from kernel.phase.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
-from bound.agent.intent.verifier import VerificationError
+from bound.observer.intent.verifier import VerificationError
 
 log = get_emitter("dvm.cosm")
 

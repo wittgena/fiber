@@ -1,14 +1,12 @@
 # phase.dphi.adapter.clearing
-## @lineage: bound.adapter.rollup
-## @lineage: phase.anchor.adapter.rollup
 import os
 import time
 import hashlib
 import json
 from typing import Dict, Any
 
-from bound.client.config.dphi import dphi_env
-from phase.dvm.adapter import DvmAdapter
+from phase.dphi.config import dphi_env
+from phase.dphi.adapter.dvm import DvmAdapter
 from kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
 from kernel.dphi.broker import DphiBroker
 from kernel.dphi.adapter.state import StateAdapter

@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from bound.eco.web3 import Web3Adapter
 from bound.eco.wallet.eth import EthWalletAdapter
 from phase.dphi.adapter.clearing import RollupAdapter
-from bound.client.config.dphi import dphi_env
+from phase.dphi.config import dphi_env
 
 from arch.contract.interface import ContractRouter
 from bound.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt

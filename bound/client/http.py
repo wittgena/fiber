@@ -1,6 +1,4 @@
 # bound.client.http
-## @lineage: dphi.adapter.client.http
-## @lineage: ext.client.http
 import hashlib
 import json
 import os
@@ -15,7 +13,7 @@ from urllib.parse import urlparse, urlunparse
 import certifi
 import httpx
 
-from bound.agent.adapter.constants import (
+from bound.eco.agent.adapter.constants import (
     AIOHTTP_CONNECTOR_LIMIT,
     AIOHTTP_KEEPALIVE_TIMEOUT,
     COMPLETION_HTTP_FALLBACK_SECONDS,

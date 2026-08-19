@@ -14,7 +14,7 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 
 from bound.client.http import VerifiedHttpClient
-from bound.client.config.dphi import dphi_env
+from phase.dphi.config import dphi_env
 from receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
@@ -61,7 +61,7 @@ class ManagedTestServer(uvicorn.Server):
 
 
 def create_otlp_payload(inject_faults: bool) -> dict:
-    from bound.client.config.client import PhaseBuilder
+    from phase.dphi.adapter.anchor import PhaseBuilder
     if inject_faults:
         return {"garbage_field_missing_required_keys": True}
     return PhaseBuilder.otlp_payload(is_malformed=False)
