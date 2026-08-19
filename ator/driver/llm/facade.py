@@ -14,8 +14,8 @@ from eco.bound.exception.mapping import map_provider_exception
 from eco.bound.exception.types import LLMNoResponseError
 from eco.tracker.model.metric import MetricsSnapshot
 
-from ator.agent.engine.entry import acompletion as brane_acompletion
-from phase.stream.wrapper import StreamWrapper
+from ator.runtime.entry import acompletion as brane_acompletion
+from phase.llm.stream.wrapper import StreamWrapper
 from ator.client.model.param import (
     ModelResponseStream, 
     ModelResponse, 
@@ -27,7 +27,7 @@ from ator.conv.schema.types import TokenCallbackType, ConversationTokenCallbackT
 from ator.conv.schema.event import Event, LLMConvertibleEvent
 
 from ator.conv.protocol.llm.response import LLMResponse
-from ator.agent.action.builder import ActionDefinition
+from ator.runtime.action.builder import ActionDefinition
 from eco.bound.xor.visual.action import View
 from ator.driver.llm.model import LLMModel
 from ator.driver.llm.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS

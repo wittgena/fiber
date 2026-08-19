@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple, Union, List, Callable, Any
 
 from pydantic import BaseModel, Field
 
-from ator.agent.action.factory import CoreAction
+from ator.runtime.action.factory import CoreAction
 from ator.conv.context.blueprint import BlueprintType, build_blueprint, TaskResolver, BLUEPRINT_REGISTRY
 from ator.conv.schema.message import Message, TextContent
 

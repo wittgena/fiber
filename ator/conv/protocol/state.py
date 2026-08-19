@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from typing import Any, Protocol, TYPE_CHECKING
 
 from ator.conv.schema.types import ConversationID, ConversationTags, ConversationCallbackType
-from ator.agent.space.base import BaseWorkspace
+from ator.runtime.space.base import BaseWorkspace
 from ator.conv.schema.event import Event
 from ator.conv.schema.event import EventID
 
@@ -16,7 +16,7 @@ from ator.conv.command import StateCommand
 
 if TYPE_CHECKING:
     from ator.conv.context.state.status import ConverStatus
-    from ator.agent.action.schema.ator import Ator
+    from ator.driver.schema.ator import Ator
     from arch.contract.resolver.secret import SecretRegistry
     from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any

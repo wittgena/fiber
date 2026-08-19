@@ -5,18 +5,17 @@ from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager, AsyncExitStack
 
 from eco.observer.proof.flow import ManifoldFolder, FlowTransition
+from phase.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 
-from ator.agent.loop.executor import LoopExecutor
-from ator.agent.space.manager import SpaceNode, space_provider
-from ator.agent.node import RuntimeNode
+from ator.runtime.loop.executor import LoopExecutor
+from ator.runtime.space.manager import SpaceNode, space_provider
+from ator.runtime.node import RuntimeNode
 from ator.conv.registry import get_surface_class, SurfaceConfig
 
 from arch.xor.surge.blueprint import SurgeBlueprint
 from arch.contract.model.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.model.sealer import EpochSealer
-
-from phase.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.broker import DphiBroker
 from kernel.dphi.cgroup import Tier
 from watcher.plane.emitter import get_emitter

@@ -1,6 +1,4 @@
 # eco.observer.intent.potential
-## @lineage: bound.observer.intent.potential
-## @lineage: bound.agent.intent.potential
 import asyncio
 import time
 import json
@@ -10,7 +8,7 @@ from typing import Any, Dict, Optional
 from phase.dphi.config import dphi_env
 
 from eco.bound.settlement import EcoAdapter
-from phase.dphi.workflow.intent import DvmRpcBridge, NodeIdentity
+from eco.observer.intent.exchange import DvmRpcBridge, NodeIdentity
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import generate_parity_triplet

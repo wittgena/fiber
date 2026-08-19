@@ -10,7 +10,7 @@ from ator.conv.protocol.llm.response import LLMResponse
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from ator.agent.activator import Activator, AgentStateSnapshot
+    from ator.runtime.activator import Activator, AgentStateSnapshot
     ActivatorType = Activator | Any
     SnapshotType = AgentStateSnapshot | Any
 else:

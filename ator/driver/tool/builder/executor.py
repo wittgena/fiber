@@ -25,7 +25,7 @@ from eco.bound.xor.store.fifo import FIFOLock
 if TYPE_CHECKING:
     from ator.conv.schema.event import Event
     from ator.conv.event.llm_convertible import ActionEvent
-    from ator.agent.action.builder import DeclaredResources, ActionDefinition
+    from ator.runtime.action.builder import DeclaredResources, ActionDefinition
 
 log = get_emitter(__name__)
 

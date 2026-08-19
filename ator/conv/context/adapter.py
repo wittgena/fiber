@@ -18,7 +18,7 @@ from jinja2 import (
     TemplateNotFound,
 )
 
-from ator.agent.action.schema.action import Action, Observation
+from ator.driver.schema.action import Action, Observation
 from ator.conv.context.state.protocol import (
     AgentCommunicationProtocol, 
     ExecutionControlProtocol, 

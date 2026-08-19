@@ -16,7 +16,7 @@ from rich.text import Text
 from ator.conv.schema.event import N_CHAR_PREVIEW, LLMConvertibleEvent
 from ator.conv.schema.event import EventID, SourceType, ToolCallID
 from ator.conv.schema.message import Message, TextContent, content_to_str
-from ator.agent.action.schema.action import Action, Observation
+from ator.driver.schema.action import Action, Observation
 
 # Source of action rejection - used to distinguish user rejections from hook blocks
 RejectionSource = Literal["user", "hook"]

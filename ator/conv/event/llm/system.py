@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 from ator.conv.schema.event import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
 from ator.conv.schema.event import SourceType
 from ator.conv.schema.message import Message, TextContent
-from ator.agent.action.builder import ActionDefinition
+from ator.runtime.action.builder import ActionDefinition
 
 class SystemPromptEvent(LLMConvertibleEvent):
     source: SourceType = "agent"

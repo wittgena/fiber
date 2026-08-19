@@ -19,7 +19,7 @@ from ator.conv.schema.message import (
     ThinkingBlock,
 )
 from eco.bound.xor.bridge.security.eval import SecurityRisk
-from ator.agent.action.schema.action import Action
+from ator.driver.schema.action import Action
 
 class ActionEvent(LLMConvertibleEvent):
     source: SourceType = "agent"

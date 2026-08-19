@@ -9,8 +9,8 @@ if TYPE_CHECKING:
 from rich.text import Text
 from ator.conv.schema.message import ImageContent, TextContent
 from ator.conv.protocol.executor import ActionExecutor
-from ator.agent.action.schema.action import Action, Observation
-from ator.agent.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
+from ator.driver.schema.action import Action, Observation
+from ator.runtime.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
 from eco.bound.xor.bridge.mark.truncate import maybe_truncate
 from eco.bound.xor.bridge.tool.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
 from eco.bound.xor.bridge.tool.terminal import CmdOutputMetadata

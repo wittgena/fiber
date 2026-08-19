@@ -24,9 +24,9 @@ from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase
 from arch.contract.resolver.secret import SecretValue
 
 from ator.conv.schema.message import Message
-from ator.agent.action.schema.action import Action, Observation
+from ator.driver.schema.action import Action, Observation
 
-from ator.agent.space.manager import SandboxWorkspace
+from ator.runtime.space.manager import SandboxWorkspace
 from arch.xor.secret.validator import Cipher
 
 from arch.contract.event.next import next_id

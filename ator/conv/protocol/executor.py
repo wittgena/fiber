@@ -8,7 +8,7 @@ from typing import (
     Protocol,
     TypeVar,
 )
-from ator.agent.action.schema.action import Action, Observation
+from ator.driver.schema.action import Action, Observation
 
 if TYPE_CHECKING:
     from ator.conv.context.state.protocol import ToolExecutionContextProtocol

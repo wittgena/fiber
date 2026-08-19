@@ -13,12 +13,12 @@ import mcp_types
 
 from ator.client.model.param import ChatCompletionToolParam
 
-from ator.agent.action.schema.action import Action, Observation, Schema
+from ator.driver.schema.action import Action, Observation, Schema
 
 from ator.conv.protocol.mcp.client import MCPClient
-from ator.agent.action.builder import ActionAnnotations, ActionDefinition
+from ator.runtime.action.builder import ActionAnnotations, ActionDefinition
 from ator.conv.protocol.executor import ActionExecutor
-from ator.agent.action.schema.mcp import MCPAction, MCPObservation
+from ator.driver.schema.mcp import MCPAction, MCPObservation
 
 from arch.xor.surge.disc import DiscMixin
 from watcher.plane.observer.span import observe

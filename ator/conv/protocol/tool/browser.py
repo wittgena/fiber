@@ -13,7 +13,7 @@
 from collections.abc import Sequence
 from typing import Self
 
-from ator.agent.action.builder import ActionAnnotations, ActionDefinition
+from ator.runtime.action.builder import ActionAnnotations, ActionDefinition
 from ator.conv.protocol.executor import ActionExecutor
 from ator.conv.protocol.observation.browser import (
     BrowserAction,

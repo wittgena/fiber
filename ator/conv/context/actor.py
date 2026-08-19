@@ -9,14 +9,14 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from ator.conv.state import ConversationState
-from ator.agent.action.schema.action import Action, Observation
+from ator.driver.schema.action import Action, Observation
 from ator.conv.event.llm.message import MessageEvent
 from ator.conv.event.llm.action import ActionEvent
 from ator.conv.event.llm.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from ator.conv.event.llm.system import SystemPromptEvent
 from ator.conv.event.conv import ConversationErrorEvent, PauseEvent
 from ator.conv.context.state.status import ConverStatus
-from ator.agent.action.factory import CoreAction
+from ator.runtime.action.factory import CoreAction
 
 from eco.bound.exception.types import ConversationRunError
 from ator.conv.command import TransitionStatus

@@ -7,7 +7,7 @@ import json
 from typing import Optional, Dict, Any, List, Tuple, Union
 from enum import Enum
 
-from ator.agent.action.factory import CoreAction
+from ator.runtime.action.factory import CoreAction
 from arch.xor.surge.blueprint import SurgeBlueprint, SurgeNode
 from watcher.plane.emitter import get_emitter
 

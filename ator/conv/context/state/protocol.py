@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, Any
 
 from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase
-from ator.agent.action.schema.action import Action, Observation
+from ator.driver.schema.action import Action, Observation
 from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
 
 from arch.contract.resolver.secret import SecretValue
@@ -19,8 +19,8 @@ from ator.conv.protocol.state import ConvStateProtocol
 from ator.conv.context.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from ator.agent.action.schema.ator import Ator 
-    from ator.agent.space.base import BaseWorkspace
+    from ator.driver.schema.ator import Ator 
+    from ator.runtime.space.base import BaseWorkspace
 
 from watcher.plane.observer.span import end_active_span, should_enable_observability, start_active_span
 

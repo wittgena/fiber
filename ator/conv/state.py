@@ -16,7 +16,7 @@ from ator.conv.event.llm.observation import (
 )
 from ator.conv.schema.event import Event
 from ator.conv.schema.event import EventID
-from ator.agent.space.base import BaseWorkspace
+from ator.runtime.space.base import BaseWorkspace
 from ator.conv.context.state.status import ConverStatus
 from ator.conv.schema.types import ConversationCallbackType, ConversationID, ConversationTags
 
@@ -30,7 +30,7 @@ else:
     SecurityType = Any
 
 from arch.contract.resolver.secret import SecretRegistry
-from ator.agent.space.io import IOManager
+from ator.runtime.space.io import IOManager
 from eco.bound.xor.store.log import LogStore, VirtualEventLogProxy
 from ator.conv.command import (
     StateCommand, 
