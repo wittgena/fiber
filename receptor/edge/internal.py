@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from phase.anchor.adapter.dphi import NexusAnchor, AnchorProposal
+from phase.dphi.adapter.anchor import NexusAnchor, AnchorProposal
 from receptor.stream.store import LogStreamStore
 from receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 from receptor.xe.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
@@ -32,7 +32,7 @@ from watcher.receptor.contract.model import (
 )
 
 from kernel.dphi.broker import DphiBroker, DphiMethod
-from kernel.dphi.adapter.exchange import ExchangeAdapter
+from phase.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.cgroup import Tier
 from kernel.dphi.exchange.config import tier_config, billing_config
 from watcher.plane.emitter import get_emitter, flow_scope

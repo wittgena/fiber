@@ -6,13 +6,13 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from phase.anchor.adapter.web3 import Web3Adapter
-from phase.anchor.adapter.wallet.eth import EthWalletAdapter
-from phase.anchor.adapter.rollup import RollupAdapter
-from phase.anchor.config.dphi import dphi_env
+from bound.eco.web3 import Web3Adapter
+from bound.eco.wallet.eth import EthWalletAdapter
+from phase.dphi.adapter.clearing import RollupAdapter
+from bound.client.config.dphi import dphi_env
 
 from arch.contract.interface import ContractRouter
-from phase.anchor.adapter.eco import EcoAdapter, X402Invoice, X402SettlementReceipt
+from bound.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")
@@ -49,7 +49,6 @@ async def get_ledger_adapter() -> RollupAdapter:
     if _global_rollup_adapter is None:
         log.info("[Edge Ext] Initializing DVM RollupAdapter for System Clearing...")
         try:
-            # 🌟 [교정] 롤업 어댑터는 청산소(system_clearing)의 주체로 동작해야 합니다.
             _global_rollup_adapter = RollupAdapter(agent_alias="system_clearing", simulate=False)
         except Exception as e:
             log.warning(f"[Edge Ext] Failed to init ledger wallet, falling back to simulation: {e}")
