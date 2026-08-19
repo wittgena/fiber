@@ -1,4 +1,5 @@
-# eco.client.local.wallet
+# ator.client.local.wallet
+## @lineage: eco.client.local.wallet
 ## @lineage: bound.client.local.wallet
 import json
 import hashlib

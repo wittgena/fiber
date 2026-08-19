@@ -1,4 +1,5 @@
-# engine.xor.bridge.tool.terminal
+# eco.bound.xor.bridge.tool.terminal
+## @lineage: engine.xor.bridge.tool.terminal
 ## @lineage: xor.bridge.tool.terminal
 ## @lineage: xor.tool.terminal
 ## @lineage: arch.xor.bridge.tool.terminal

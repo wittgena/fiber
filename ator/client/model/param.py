@@ -1,4 +1,5 @@
-# eco.client.model.param
+# ator.client.model.param
+## @lineage: eco.client.model.param
 ## @lineage: engine.client.param.model
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from eco.model.types.core import (

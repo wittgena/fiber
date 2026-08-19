@@ -1,4 +1,5 @@
-# engine.stream.accumulator
+# phase.stream.accumulator
+## @lineage: engine.stream.accumulator
 ## @lineage: engine.client.stream.accumulator
 import time
 from typing import Any, Dict, List, Optional
