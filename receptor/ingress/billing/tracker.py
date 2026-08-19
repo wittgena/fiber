@@ -1,10 +1,4 @@
 # receptor.ingress.billing.tracker
-## @lineage: receptor.surface.billing.tracker
-## @lineage: exchange.billing.tracker
-## @lineage: epoch.time.exchange.billing.tracker
-## @lineage: dphi.exchange.billing.tracker
-## @lineage: dphi.xelog.billing.tracker
-## @lineage: dphi.net.tracker.billing
 import json
 import hashlib
 import asyncio

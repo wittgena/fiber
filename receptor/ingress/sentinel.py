@@ -1,37 +1,32 @@
 # receptor.ingress.sentinel
-## @lineage: epoch.time.ingress.sentinel
-## @lineage: dphi.gov.ingress.sentinel
-## @lineage: arch.gov.ingress.sentinel
-## @lineage: kernel.topos.gov.ingress.sentinel
-## @lineage: kernel.arch.gov.ingress.sentinel
-## @lineage: arch.kernel.gov.sentinel
-## @lineage: arch.server.gov.sentinel
-## @lineage: arch.topos.server.sentinel
 import asyncio
+import json
 import random
 import re
-import json
-from typing import Dict, Any, Callable, List, Optional
 from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
+
+import httpx
 from aiohttp import web
 from pydantic import BaseModel, Field, ValidationError
 
 from kernel.phase.stream.schema import (
-    LogicStream,
-    StreamMetadata,
-    StreamIdentity,
+    ActionIntent,
     LogicPayload,
+    LogicStream,
     ProtocolSource,
-    ActionIntent
+    StreamIdentity,
+    StreamMetadata,
 )
-from kernel.phase.mesh.gateway import ToposGateway
+from watcher.plane.emitter import flow_scope, get_emitter
 from watcher.plane.observer.span import span_context
-from watcher.plane.emitter import get_emitter, flow_scope
+from watcher.receptor.policy.gateway import ToposGateway
 
-log = get_emitter("server.sentinel", phase="DEFENSE")
+log = get_emitter("ingress.sentinel", phase="DEFENSE")
 
 class StreamTransducer:
-    MAX_PAYLOAD_SIZE = 5242880  # 5MB
+    MAX_PAYLOAD_SIZE = 5242880
+
     def __init__(self):
         self._intent_router = {
             "initialize": ActionIntent.INITIALIZE,
@@ -41,7 +36,6 @@ class StreamTransducer:
 
     def process_ingress(self, headers: Dict[str, str], raw_body: bytes, client_ip: str) -> LogicStream:
         """@action: Strip transport shell and cast to a 1D LogicStream."""
-        
         body_length = len(raw_body)
         if body_length > self.MAX_PAYLOAD_SIZE:
             raise ValueError("Volumetric invariant breached. Payload exceeds absolute limit.")
@@ -86,6 +80,7 @@ class StreamTransducer:
         ## @action: Trigger Pydantic schema validation (Raises ValidationError on failure)
         return LogicStream(meta=meta, identity=identity, payload=payload)
 
+
 class SpecValidator:
     """
     @desc: Formal topological validator. 
@@ -96,22 +91,22 @@ class SpecValidator:
 
     def process_ingress(self, headers: Dict[str, str], raw_body: bytes, client_ip: str) -> LogicStream:
         """@action: Fold raw vectors into an immutable Spec and record spatial tension."""
-        
-        ## @action: Anchor evaluation within the native Topos manifold
         with span_context("ingress.spec.validation", attributes={"client_ip": client_ip, "body_size": len(raw_body)}):
             try:
                 valid_stream = self.transducer.process_ingress(headers, raw_body, client_ip)
                 log.info(f"Spec invariant confirmed. Stream ID: {valid_stream.meta.stream_id}")
                 return valid_stream
             except ValidationError as ve:
-                ## @failure: Smuggling or OOM vector detected via strict schema rejection
                 log.error(f"Spec Violation (Smuggling/OOM Attempt): {ve.errors()}")
                 raise ValueError("Payload violates strict topological ingress spec.") from ve
             except Exception as e:
                 log.critical(f"Transduction collapse: {str(e)}")
                 raise
 
-## PART 1: SPATIAL FENCE SCHEMAS (Meta Rules)
+
+# =========================================================================
+# 2. MEMBRANE SPATIAL FENCE SCHEMAS
+# =========================================================================
 class ActorRule(BaseModel):
     blacklist_ip: Optional[list[str]] = None
     require_auth: Optional[bool] = False
@@ -141,6 +136,7 @@ class SecurityContext:
     topology_version: Optional[str]
     substance_hash: Optional[str] = None
 
+
 class MembraneProjector:
     def __init__(self, gateway: ToposGateway):
         self.gateway = gateway
@@ -163,8 +159,6 @@ class MembraneProjector:
                     await self._trigger_action(rule.action, rule_id, ctx)
 
     def _is_match(self, ctx: SecurityContext, rule: MetaRuleDef, phase: str) -> bool:
-        """@desc: Inline logical AND evaluation of Actor, Vector, and Asset rules."""
-        
         if rule.actor:
             actor_match = False
             if rule.actor.blacklist_ip and ctx.origin_ip in rule.actor.blacklist_ip: actor_match = True
@@ -187,7 +181,6 @@ class MembraneProjector:
         return True
 
     async def _trigger_action(self, action: str, rule_id: str, ctx: SecurityContext):
-        """@action: Reports violation to WASM Kernel and ruptures the HTTP context."""
         if action == "ledger_tension":
             await self.gateway.authorize(
                 action_id=f"proxy.tension.{rule_id}",
@@ -199,17 +192,19 @@ class MembraneProjector:
         raise web.HTTPForbidden(reason=f"Blocked by Meta Projection (Rule: {rule_id})")
 
 class ChaosPayloadLibrary:
+    """HTTP 방어벽 및 애플리케이션 파괴(Membrane Attack)를 위한 바이트/JSON 페이로드"""
     OOM = [
         lambda: b"A" * 6 * 1024 * 1024,
         lambda: b'{"data": "' + b"B" * 5 * 1024 * 1024 + b'"}',
         lambda: b"[" * 50000 + b"]" * 50000,
-        lambda: b'{"a":' * 25000 + b'"b"' + b'}' * 25000  # 깊은 중첩 (Recursion Error 발생 후 안전하게 차단됨)
+        lambda: b'{"a":' * 25000 + b'"b"' + b'}' * 25000  # Recursion Bomb
     ]
 
     SMUGGLING = [
         lambda: b'{"version": "1.0", "smuggled": {"version": "2.0", "bypass": true}}', 
         lambda: b'{"method": "initialize", "params": {"__proto__": {"admin": true}}}', 
-        lambda: b'{"action": "initialize", "protocolVersion": "1.0\\u0000", "bypass": true}'
+        lambda: b'{"action": "initialize", "protocolVersion": "1.0\\u0000", "bypass": true}',
+        lambda: b"GET / HTTP/1.1\r\n\r\nGET /admin HTTP/1.1\r\n"
     ]
 
     INVALID_STATE = [
@@ -254,8 +249,46 @@ class ChaosPayloadLibrary:
             "action": "read_resource",
             "protocolVersion": "2.0",
             "params": {"uri": "file:///var/log/%2e%2e%2f%2e%2e%2fetc/passwd"}
-        }).encode()
+        }).encode(),
+        lambda: b"../../../../etc/passwd"
     ]
+
+    @classmethod
+    def get_all_vectors(cls) -> list[tuple[str, Callable]]:
+        return [
+            ("OOM_Exhaustion", random.choice(cls.OOM)),
+            ("Protocol_Smuggling", random.choice(cls.SMUGGLING)),
+            ("Invalid_State_Transition", random.choice(cls.INVALID_STATE)),
+            ("MCP_Path_Traversal", random.choice(cls.MCP_PATH_TRAVERSAL))
+        ]
+
+
+class RpcChaosInjector:
+    @staticmethod
+    def corrupt_ap2_mandate(base_mandate: Dict[str, Any]) -> Dict[str, Any]:
+        """권한 위임장(AP2 Mandate)을 고의로 과거(만료) 시점으로 조작하여 반환"""
+        corrupted = base_mandate.copy()
+        corrupted["validity_ms"] = -3600000 
+        return corrupted
+
+    @staticmethod
+    def corrupt_consensus_signatures(signatures: list[str]) -> list[str]:
+        """M-of-N 다중 서명 배열 중 하나를 파괴하여 Byzantine Fault 유발"""
+        if not signatures:
+            return signatures
+        
+        corrupted = list(signatures)
+        corrupted[0] = "0xBAD_SIGNATURE_CORRUPTED_BY_CHAOS_INJECTOR"
+        return corrupted
+
+    @staticmethod
+    def corrupt_attestation_header(response: httpx.Response) -> httpx.Response:
+        if "X-Dphi-Signature" in response.headers:
+            mutable_headers = httpx.Headers(response.headers)
+            mutable_headers["X-Dphi-Signature"] = "0xdeadbeef_invalid_signature_chaos_injection"
+            response.headers = mutable_headers
+            
+        return response
 
 class IngressRouter:
     """@desc: Internal router acting as the live target for the Sentinel."""
@@ -320,6 +353,7 @@ class DefenseSentinel:
                         )
             
             await asyncio.sleep(300)
+
 
 _projector_instance = None
 

@@ -1,25 +1,25 @@
 # receptor.xe.depend
-## @lineage: surface.receptor.xe.depend
 from typing import Any
 
 from fastapi import Request, HTTPException, status
 
-from dphi.adapter.anchor import NexusAnchor
+from phase.anchor.adapter.dphi import NexusAnchor
 from receptor.xe.profile import BenchProfile
-
-from arch.topos.tunnel.subs import DistributedPubSub
-from dphi.epoch.audit.secret import SecretAuditor
 from receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
     FuelAllocator, 
     HealthMonitor
 )
+
+from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
-from kernel.phase.stream.store import LogStreamStore
-from kernel.dphi.broker import WasmBroker
+from receptor.stream.store import LogStreamStore
+from kernel.dphi.broker import DphiBroker
 from kernel.dphi.adapter.exchange import ExchangeAdapter
 from kernel.dphi.adapter.sign import NodeSigner
+
+from watcher.receptor.audit.secret import SecretAuditor
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("xe.depend")
@@ -36,7 +36,7 @@ def _get_state_attr(request: Request, attr_name: str) -> Any:
     return val
 
 ## WASM & Core Compute
-async def get_wasm_broker(request: Request) -> WasmBroker:
+async def get_wasm_broker(request: Request) -> DphiBroker:
     return _get_state_attr(request, "broker")
 
 ## Ledger & State Persistence

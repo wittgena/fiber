@@ -1,7 +1,4 @@
 # receptor.ingress.server.pypi
-## @lineage: epoch.time.ingress.server.pypi
-## @lineage: dphi.gov.server.pypi
-## @lineage: arch.gov.server.pypi
 import asyncio
 import datetime
 import hashlib
@@ -16,7 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from receptor.ingress.sentinel import get_projector, SecurityContext, MetaRuleDef
 from receptor.ingress.server.mcp import SecureMCPServer
-from dphi.epoch.audit.warden import AuditWarden
+from watcher.receptor.audit.warden import AuditWarden
 from watcher.plane.emitter import get_emitter
 
 class ServerRunConfig(TypedDict, total=False):
@@ -35,9 +32,6 @@ class PyPIProxySettings(BaseSettings):
     upstream_url: str = "https://pypi.org"
     transport_mode: Literal["stdio", "sse"] = "sse"
 
-# ---------------------------------------------------------
-# Core Server Class (Stateful Membrane)
-# ---------------------------------------------------------
 class PyPIMembraneServer:
     def __init__(self, settings: PyPIProxySettings):
         """서버 초기화 및 의존성, 상태(State) 할당"""
@@ -47,8 +41,6 @@ class PyPIMembraneServer:
         self.projector = get_projector()
         
         self.client_session: ClientSession | None = None
-        
-        # [제어/데이터 평면이 공유하는 휘발성 상태]
         self.artifact_cache: dict[str, Any] = {}
         self.quarantine_db: dict[str, Any] = {}
         
@@ -61,9 +53,6 @@ class PyPIMembraneServer:
         self.mcp.tool()(self.inject_meta_rule)
         self.mcp.tool()(self.clear_cache)
 
-    # -----------------------------------------------------
-    # MCP Tools (Control Plane)
-    # -----------------------------------------------------
     async def tool_get_time(self) -> dict[str, str | float]:
         now = datetime.datetime.now()
         return {
@@ -74,8 +63,6 @@ class PyPIMembraneServer:
 
     async def inject_mock_vulnerability(self, package_name: str, action: str, cve_id: str) -> str:
         """Kernel 인가 후 런타임 메모리(quarantine_db)를 즉시 변형하여 프록시 트래픽을 차단"""
-        
-        # [FIX] 입력값 무결성(Sanitization) 검증 추가: Command Injection 및 Path Traversal 원천 차단
         if not re.match(r"^[a-zA-Z0-9_\-\.]+$", package_name):
             self.log.warning(f"Injection attempt detected in package_name: {package_name}")
             return "[ERROR] Invalid package name format. Alphanumeric, dash, underscore, dot only."
@@ -102,14 +89,11 @@ class PyPIMembraneServer:
         return f"[SUCCESS] Rule applied and sealed for {package_name}."
 
     async def inject_meta_rule(self, rule_id: str, rule_json: str) -> str:
-        # [FIX] Rule ID 형식을 엄격히 검증하여 논리적 오염 방지
         if not re.match(r"^[a-zA-Z0-9_\-]+$", rule_id):
             return "[ERROR] Invalid rule_id format."
             
         try:
             rule_def = MetaRuleDef.model_validate_json(rule_json)
-            
-            # [FIX] 주입되는 Action이 시스템 권한을 상승시키는지 검사 (최소 권한 원칙)
             if rule_def.action not in ["block", "ledger_tension"]:
                 return "[ERROR] Meta-rules can only enforce blocking actions."
 
@@ -131,33 +115,19 @@ class PyPIMembraneServer:
         self.artifact_cache.clear()
         return "[SUCCESS] Internal PyPI cache cleared."
 
-    # -----------------------------------------------------
-    # HTTP Handlers (Data Plane Pipeline)
-    # -----------------------------------------------------
     async def membrane_handler(self, request: web.Request) -> web.Response:
-        """
-        @desc: Core HTTP relay pipeline
-        @flow: Boundary Check -> Local Quarantine -> Pre-fetch -> Upstream Fetch -> Post-fetch -> Cache
-        """
         path = request.path
-
         try:
-            # [FIX] 최전방 Boundary Check (Path Traversal 방어)
             if ".." in path or "%" in path:
                 AuditWarden.record_anomaly("proxy.path_traversal", f"Traversal attempt blocked: {path}")
                 raise web.HTTPForbidden(reason="Boundary breach: Path traversal attempt blocked.")
 
-            # [FIX] 정규식을 통한 엄격한 패키지명 추출 (정상 PyPI 인덱스 규격만 허용)
             match = re.match(r"^/(simple|packages)/([a-zA-Z0-9_\-\.]+)/?.*?$", path)
             if not match:
                 raise web.HTTPForbidden(reason="Boundary breach: Malformed PyPI URI.")
             
             package_name = match.group(2).lower()
-
-            # 1. Zero-latency Local Quarantine Check
             self._enforce_local_quarantine(package_name)
-
-            # 2. Pre-Fetch Security Evaluation (안전하게 정제된 컨텍스트 주입)
             ctx = SecurityContext(
                 origin_ip=request.remote, 
                 auth_header=request.headers.get('Authorization'),
@@ -168,34 +138,25 @@ class PyPIMembraneServer:
                 substance_hash=None
             )
             await self.projector.evaluate_pre_fetch(ctx)
-
-            # 3. Cache Check
             if cached := self.artifact_cache.get(path):
                 return web.Response(body=cached['body'], content_type=cached['content_type'])
 
-            # 4. Fetch from Upstream
             content, content_type = await self._fetch_upstream(path)
-
-            # 5. Post-Fetch Security Evaluation (Hash Check)
             ctx.substance_hash = hashlib.sha256(content).hexdigest()
             try:
                 await self.projector.evaluate_post_fetch(ctx)
             except Exception as e:
-                # [FIX] 캐시 오염 방어: 검증에 실패한 악성 페이로드는 메모리에서 즉시 파기(Zeroing)
                 del content 
                 raise e
 
-            # 6. Cache and Return
             self.artifact_cache[path] = {"content_type": content_type, "body": content}
             return web.Response(body=content, content_type=content_type)
-
         except web.HTTPForbidden as hf:
             return web.Response(status=403, text=str(hf.reason))
         except Exception as e:
             self.log.error(f"Internal Proxy Error: {str(e)}")
             return web.Response(status=500, text="Internal Server Error: Secure Membrane Engaged")
 
-    # --- Internal Pipeline Steps ---
     def _enforce_local_quarantine(self, package_name: str):
         if package_name and package_name in self.quarantine_db:
             policy = self.quarantine_db[package_name]
@@ -213,7 +174,6 @@ class PyPIMembraneServer:
             if resp.status != 200:
                 raise web.HTTPForbidden(reason=f"Upstream returned {resp.status}")
             
-            # [FIX] Volumetric 제한: Upstream 응답이 지나치게 클 경우(예: 50MB 이상) OOM 방지
             content_length = int(resp.headers.get('Content-Length', 0))
             if content_length > 52428800:  # 50MB
                 raise web.HTTPForbidden(reason="Upstream response exceeds volumetric limits.")
@@ -222,18 +182,12 @@ class PyPIMembraneServer:
             content_type = resp.headers.get('Content-Type', 'application/octet-stream')
             return content, content_type
 
-    # -----------------------------------------------------
-    # MCP Protocol Handlers
-    # -----------------------------------------------------
     async def mcp_sse_handler(self, request: web.Request) -> web.Response:
         return await self.mcp.handle_sse_connection(request)
 
     async def mcp_message_handler(self, request: web.Request) -> web.Response:
         return await self.mcp.handle_post_message(request)
 
-    # -----------------------------------------------------
-    # Server Lifecycle (Dual App Setup)
-    # -----------------------------------------------------
     async def startup_context(self, app: web.Application):
         if not self.client_session:
             self.client_session = ClientSession()
@@ -273,7 +227,6 @@ class PyPIMembraneServer:
         }), file=sys.stderr)
 
     def run(self):
-        """서버 구동 진입점"""
         if self.settings.transport_mode == "sse":
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
