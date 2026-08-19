@@ -30,15 +30,9 @@ from kernel.phase.reactor import PhaseReactor
 
 from watcher.plane.emitter import get_emitter
 
-# =============================================================================
-# 1. Globals & Logging
-# =============================================================================
 entry_log = get_emitter("exchange.entry")
 workflow_log = get_emitter("intent.workflow")
 
-# =============================================================================
-# 2. Data Models & Messages
-# =============================================================================
 @dataclass
 class ScenarioConfig:
     name: str

@@ -100,8 +100,6 @@ async def public_agent_execute(
                     signatures=attested_signatures,
                     timestamp=float(time.time() * 1000)
                 ).model_dump(exclude_none=True)
-
-                # 🌟 [개선] WASM 파싱 에러(Event Horizon Rejected)를 막기 위한 TransitionPayload 래핑
                 evo_ctx = StateAdapter.build_evolution_context(phase_root={})
                 transition_payload = StateAdapter.build_transition_payload(
                     intent_action="record_agent_execution",
@@ -158,8 +156,6 @@ async def public_otlp_logs_export(
             metrics_summary=extracted_metrics,
             receipt_ref=x_x402_receipt
         ).model_dump(exclude_none=True)
-
-        # 🌟 [개선] OTLP 텔레메트리 역시 TransitionPayload로 래핑
         evo_ctx = StateAdapter.build_evolution_context(phase_root={})
         transition_payload = StateAdapter.build_transition_payload(
             intent_action="record_otlp_telemetry",
@@ -208,7 +204,6 @@ async def public_audit_log(
     sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
     sanitized_event["_billing_ref"] = x_x402_receipt
     
-    # 🌟 [개선] Audit Event 데이터 역시 TransitionPayload로 래핑
     evo_ctx = StateAdapter.build_evolution_context(phase_root={})
     transition_payload = StateAdapter.build_transition_payload(
         intent_action="record_audit_event",

@@ -1,5 +1,4 @@
 # receptor.edge.tracer
-## @lineage: phase.edge.tracer
 import uuid
 import asyncio
 import time
