@@ -5,8 +5,8 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-from bound.observer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
-from bound.observer.tension import (
+from eco.observer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
+from eco.observer.tension import (
     TensionPhase,
     RiskPolicy,
     TensionGradientObserver,

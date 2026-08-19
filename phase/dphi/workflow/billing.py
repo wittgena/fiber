@@ -23,7 +23,7 @@ from kernel.dphi.broker import DphiBroker
 from kernel.phase.reactor import PhaseReactor
 from kernel.phase.runner import SchemeRunner
 from watcher.plane.emitter import get_emitter
-from bound.observer.intent.verifier import VerificationError
+from eco.observer.intent.verifier import VerificationError
 
 log = get_emitter("dvm.cosm")
 

@@ -19,9 +19,9 @@ from arch.model.phase.gate import uuid4
 from arch.topos.network.bridge import RpcBridge
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 
-from bound.eco.settlement import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
-from bound.eco.wallet.eth import EthWalletAdapter
-from bound.eco.web3 import Web3Adapter
+from eco.bound.settlement import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
+from eco.bound.wallet.eth import EthWalletAdapter
+from eco.bound.web3 import Web3Adapter
 
 from kernel.bind.inter.dvm import DvmInterpreter
 from phase.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt

@@ -12,7 +12,7 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from bound.client.local.wallet import LocalWalletClient
+from eco.client.local.wallet import LocalWalletClient
 from phase.dphi.config import dphi_env
 from phase.dphi.adapter.exchange import TransactionReceipt
 

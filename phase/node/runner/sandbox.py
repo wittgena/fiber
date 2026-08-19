@@ -9,9 +9,9 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from bound.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from eco.bound.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from phase.dphi.adapter.anchor import PhaseBuilder
-from bound.client.local.wallet import LocalWalletClient
+from eco.client.local.wallet import LocalWalletClient
 
 from kernel.phase.runner import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter

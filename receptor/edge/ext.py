@@ -6,13 +6,13 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from bound.eco.web3 import Web3Adapter
-from bound.eco.wallet.eth import EthWalletAdapter
-from phase.dphi.adapter.clearing import RollupAdapter
+from eco.bound.web3 import Web3Adapter
+from eco.bound.wallet.eth import EthWalletAdapter
+from phase.dphi.adapter.rollup import RollupAdapter
 from phase.dphi.config import dphi_env
 
 from arch.contract.interface import ContractRouter
-from bound.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt
+from eco.bound.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt
 from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")
