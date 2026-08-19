@@ -8,9 +8,9 @@ from ator.agent.space.base import BaseWorkspace
 from ator.conv.schema.event import Event
 from ator.conv.schema.event import EventID
 
-from engine.xor.bridge.security.confirm import ConfirmationPolicyBase
+from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase
 from ator.conv.context.stats import ConversationStats
-from engine.xor.store.log import LogStore
+from eco.bound.xor.store.log import LogStore
 
 from ator.conv.command import StateCommand
 
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from ator.conv.context.state.status import ConverStatus
     from ator.agent.action.schema.ator import Ator
     from arch.contract.resolver.secret import SecretRegistry
-    from engine.xor.bridge.security.analyzer import SecurityAnalyzerBase
+    from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any

@@ -8,7 +8,7 @@ from typing import SupportsIndex, overload
 
 from ator.conv.schema.event import Event
 from ator.conv.schema.event import EventID
-from engine.xor.store.base import EventsListBase
+from eco.bound.xor.store.base import EventsListBase
 
 from arch.xor.store.file import FileStore
 from watcher.plane.emitter import get_logger

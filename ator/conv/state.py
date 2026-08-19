@@ -20,18 +20,18 @@ from ator.agent.space.base import BaseWorkspace
 from ator.conv.context.state.status import ConverStatus
 from ator.conv.schema.types import ConversationCallbackType, ConversationID, ConversationTags
 
-from engine.xor.bridge.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase, NeverConfirm
 from ator.conv.context.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from engine.xor.bridge.security.analyzer import SecurityAnalyzerBase
+    from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
 
 from arch.contract.resolver.secret import SecretRegistry
 from ator.agent.space.io import IOManager
-from engine.xor.store.log import LogStore, VirtualEventLogProxy
+from eco.bound.xor.store.log import LogStore, VirtualEventLogProxy
 from ator.conv.command import (
     StateCommand, 
     TransitionStatus, 

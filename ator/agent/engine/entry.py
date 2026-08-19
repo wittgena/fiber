@@ -2,13 +2,13 @@
 import asyncio
 from typing import Any, List, Union
 
-from eco.client.model.param import ModelResponse
+from ator.client.model.param import ModelResponse
 from eco.model.types.general import EmbeddingResponse
 from eco.bound.exception.mapping import exception_type
 
-from engine.stream.wrapper import StreamWrapper
-from engine.client.pipeline import ContextBinder, ChannelObserver, StreamAggregator
-from engine.client.handler import PromptTransformer, MockBypass, FallbackHandler, PayloadTranslator
+from phase.stream.wrapper import StreamWrapper
+from ator.agent.engine.pipeline import ContextBinder, ChannelObserver, StreamAggregator
+from ator.agent.engine.handler import PromptTransformer, MockBypass, FallbackHandler, PayloadTranslator
 from eco.model.router.inter.registry import AdapterRegistry
 
 from arch.topos.network.bridge import RpcBridge

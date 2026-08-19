@@ -20,12 +20,12 @@ from eco.model.types.openai import (
     AllMessageValues, 
     OpenAIMessageContent
 )
-from eco.client.model.param import ChatCompletionToolParam
+from ator.client.model.param import ChatCompletionToolParam
 from eco.model.types.general import SelectTokenizerResponse
 from arch.model.config import config
 from eco.bound.agent.adapter.constants import DEFAULT_IMAGE_TOKEN_COUNT
 
-from eco.client.model.param import Message
+from ator.client.model.param import Message
 
 from watcher.plane.emitter import get_emitter
 

@@ -2,7 +2,7 @@
 ## @lineage: engine.router.inter.embedding
 from typing import List, Union
 
-from eco.client.model.execution import EmbeddingContext
+from ator.client.model.execution import EmbeddingContext
 from eco.model.router.base import BaseProviderAdapter
 from eco.model.router.embedding import EmbeddingRouter
 

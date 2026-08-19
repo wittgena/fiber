@@ -12,7 +12,7 @@ from enum import IntEnum
 from collections import defaultdict
 
 from eco.tracker.model.metric import Metrics
-from eco.client.model.param import ModelResponse
+from ator.client.model.param import ModelResponse
 
 from arch.model.phase.gate import uuid4
 from watcher.plane.emitter import get_emitter, _flow_context

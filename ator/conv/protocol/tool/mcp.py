@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
 
-from eco.client.model.param import ChatCompletionToolParam
+from ator.client.model.param import ChatCompletionToolParam
 
 from ator.agent.action.schema.action import Action, Observation, Schema
 

@@ -13,15 +13,15 @@ from eco.bound.agent.adapter.constants import MAX_STREAMING_DURATION_SECONDS
 
 from eco.bound.exception.mapping import exception_type
 from eco.bound.exception.eco import OpenAIError
-from eco.client.model.param import ModelResponseStream
-from engine.stream.pipeline import (
+from ator.client.model.param import ModelResponseStream
+from phase.stream.pipeline import (
     ChunkCodecHandler, 
     RuleGuardHandler, 
     StreamTelemetryHandler, 
     StreamYieldHandler
 )
-from engine.stream.accumulator import StreamAccumulator
-from engine.stream.rule import Rules
+from phase.stream.accumulator import StreamAccumulator
+from phase.stream.rule import Rules
 
 from arch.model.config import config
 from arch.topos.network.channel.pipeline import ChannelPipeline

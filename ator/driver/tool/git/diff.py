@@ -31,7 +31,7 @@ from ator.driver.tool.git.exceptions import (
     GitPathError,
     GitRepositoryError,
 )
-from engine.xor.bridge.tool.git import GitDiff
+from eco.bound.xor.bridge.tool.git import GitDiff
 from ator.driver.tool.git.utils import (
     get_valid_ref,
     run_git_command,

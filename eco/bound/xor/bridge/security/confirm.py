@@ -13,7 +13,7 @@
 from abc import ABC, abstractmethod
 from pydantic import field_validator
 
-from engine.xor.bridge.security.eval import SecurityRisk
+from eco.bound.xor.bridge.security.eval import SecurityRisk
 from arch.xor.surge.disc import DiscMixin
 
 class ConfirmationPolicyBase(DiscMixin, ABC):

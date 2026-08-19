@@ -12,7 +12,7 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from eco.client.http import VerifiedHttpClient
+from ator.client.http import VerifiedHttpClient
 from phase.dphi.config import dphi_env
 from receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
 

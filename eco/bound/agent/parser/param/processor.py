@@ -17,8 +17,8 @@ from eco.model.info import get_features, supports_httpx_timeout, supports_functi
 from eco.bound.exception.eco import UnsupportedParamsError
 from eco.model.types.openai import ValidUserMessageContentTypes
 
-from eco.client.model.param import ModelResponse
-from eco.client.model.execution import ExecutionMetadata, CompletionContext, EmbeddingContext
+from ator.client.model.param import ModelResponse
+from ator.client.model.execution import ExecutionMetadata, CompletionContext, EmbeddingContext
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("param.processor")
@@ -121,7 +121,7 @@ class BaseProcessor:
             return getattr(config, "OpenAILikeChatConfig", None)
 
         module_suffix, class_name = CONFIG_MAP[self.provider_key]
-        import engine.parser.param.vendor as VENDOR_PARAM_PKG
+        import eco.bound.agent.parser.param.vendor as VENDOR_PARAM_PKG
         
         path = VENDOR_PARAM_PKG.__name__
         search_paths = [f"{path}.{module_suffix}"]

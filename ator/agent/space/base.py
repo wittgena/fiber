@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Annotated, Any
 from pydantic import BeforeValidator, Field
 
-from engine.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
-from engine.xor.bridge.tool.git import GitChange, GitDiff
+from eco.bound.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
+from eco.bound.xor.bridge.tool.git import GitChange, GitDiff
 from arch.xor.surge.disc import DiscMixin
 
 # ✅ DynamicSurgeModel 임포트 추가

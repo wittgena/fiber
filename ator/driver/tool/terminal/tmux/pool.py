@@ -18,7 +18,7 @@ import libtmux
 
 from watcher.plane.emitter import get_logger
 from ator.driver.tool.builder.executor import sanitized_env
-from engine.xor.bridge.tool.terminal import (
+from eco.bound.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,

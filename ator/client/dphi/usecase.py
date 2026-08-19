@@ -8,7 +8,7 @@ from typing import Dict, Any
 import httpx
 
 from watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
-from eco.client.http import VerifiedHttpClient, ProofVerificationError, ReplayAttackError
+from ator.client.http import VerifiedHttpClient, ProofVerificationError, ReplayAttackError
 
 """CONSTANTS & DTO"""
 class PublicEndpoints:

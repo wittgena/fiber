@@ -9,7 +9,7 @@ from eco.model.registry import model_cost
 from eco.model.types.openai import AllMessageValues
 from eco.bound.agent.adapter.constants import DEFAULT_TRIM_RATIO
 
-from engine.parser.token.evaluator import token_counter
+from eco.bound.agent.parser.token.evaluator import token_counter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.window")

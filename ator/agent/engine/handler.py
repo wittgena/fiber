@@ -5,7 +5,7 @@ import httpx
 import json
 from typing import Any, Dict
 
-from engine.parser.param.processor import CompletionProcessor, EmbeddingProcessor
+from eco.bound.agent.parser.param.processor import CompletionProcessor, EmbeddingProcessor
 
 from arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
 from watcher.plane.emitter import get_emitter

@@ -20,8 +20,8 @@ from docker.models.containers import Container
 from ator.agent.space.base import BaseWorkspace
 from ator.driver.tool.git.changes import get_git_changes
 from ator.driver.tool.git.diff import get_git_diff
-from engine.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
-from engine.xor.bridge.tool.git import GitChange, GitDiff
+from eco.bound.xor.bridge.tool.command.workspace import CommandResult, FileOperationResult
+from eco.bound.xor.bridge.tool.git import GitChange, GitDiff
 
 from ator.driver.tool.builder.executor import executor_factory, sanitized_env
 

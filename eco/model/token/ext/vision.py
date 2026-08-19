@@ -5,7 +5,7 @@ import io
 import struct
 from typing import Tuple, Union
 
-from eco.client.http import get_client, SafeHttpClient
+from ator.client.http import get_client, SafeHttpClient
 from eco.bound.agent.adapter.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

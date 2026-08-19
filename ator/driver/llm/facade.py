@@ -14,9 +14,9 @@ from eco.bound.exception.mapping import map_provider_exception
 from eco.bound.exception.types import LLMNoResponseError
 from eco.tracker.model.metric import MetricsSnapshot
 
-from engine.client.entry import acompletion as brane_acompletion
-from engine.stream.wrapper import StreamWrapper
-from eco.client.model.param import (
+from ator.agent.engine.entry import acompletion as brane_acompletion
+from phase.stream.wrapper import StreamWrapper
+from ator.client.model.param import (
     ModelResponseStream, 
     ModelResponse, 
     ChatCompletionToolParam
@@ -28,7 +28,7 @@ from ator.conv.schema.event import Event, LLMConvertibleEvent
 
 from ator.conv.protocol.llm.response import LLMResponse
 from ator.agent.action.builder import ActionDefinition
-from engine.xor.visual.action import View
+from eco.bound.xor.visual.action import View
 from ator.driver.llm.model import LLMModel
 from ator.driver.llm.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
 
@@ -232,7 +232,7 @@ class DriverIO:
                         final_response = accumulator.get_complete_response()
 
                         if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
-                            from engine.parser.token.evaluator import calculate_fallback_usage
+                            from eco.bound.agent.parser.token.evaluator import calculate_fallback_usage
                             
                             content = final_response.choices[0].message.content or ""
                             fallback_usage = calculate_fallback_usage(

@@ -4,7 +4,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from arch.model.phase.gate import uuid
-from engine.stream.parser.chunk import ParsedChunk
+from phase.stream.parser.chunk import ParsedChunk
 from eco.model.types.core import (
     Choices,
     Delta,

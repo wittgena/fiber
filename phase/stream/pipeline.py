@@ -3,9 +3,9 @@
 import time
 from typing import Any
 from arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
-from engine.stream.parser.chunk import StreamChunkParser
-from engine.stream.accumulator import StreamAccumulator
-from engine.stream.rule import Rules
+from phase.stream.parser.chunk import StreamChunkParser
+from phase.stream.accumulator import StreamAccumulator
+from phase.stream.rule import Rules
 from eco.model.types.stream import ModelResponseStream
 
 class ChunkCodecHandler(DuplexChannel):

@@ -14,9 +14,9 @@ from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
 from ator.agent.action.schema.action import Action, Observation, Schema
-from engine.xor.bridge.security.eval import SecurityRisk
+from eco.bound.xor.bridge.security.eval import SecurityRisk
 
-from eco.client.model.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from ator.client.model.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 
 from ator.agent.action.schema.tool import Tool
 from ator.conv.protocol.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT

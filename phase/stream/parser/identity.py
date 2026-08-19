@@ -12,7 +12,7 @@ import re
 import os
 from typing import Any, Dict, Iterable, Optional, Type
 from starlette.datastructures import Headers
-from eco.client.model.param import DecodedResponseId
+from ator.client.model.param import DecodedResponseId
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.identity")

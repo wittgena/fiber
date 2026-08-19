@@ -37,8 +37,8 @@ from ator.conv.context.state.status import ConverStatus
 from ator.conv.protocol.state import ConvStateProtocol
 
 from ator.conv.command import TransitionStatus, UpdateSecurityPolicy
-from engine.xor.bridge.security.analyzer import SecurityAnalyzerBase
-from engine.xor.bridge.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
+from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase, NeverConfirm
 
 from ator.conv.context.actor import Actor
 from arch.contract.resolver.secret import SecretValue

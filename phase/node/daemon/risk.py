@@ -43,14 +43,9 @@ class DormantTrajectorySentinel:
         
         while True:
             try:
-                ## @step.1: Fetch current state evaluation from engine (returns EngineEvaluation dataclass) intent
                 eval_result = self.receptor.engine.execute_flow(symbol, target_arns, current_interval, int(time.time()))
-                
-                ## @step.2: Access flattened dataclass properties instead of nested dicts intent
                 current_spread = eval_result.intent.expected_yield
                 current_stress = eval_result.dynamics.accumulated_stress
-                
-                ## @step.3: Evaluate gradient phase and calculate Z-Score intent
                 phase, z_score = self.observer.evaluate_tension(current_spread, current_stress)
 
                 if phase == TensionPhase.NORMAL:

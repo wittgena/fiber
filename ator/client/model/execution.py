@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 
 from eco.model.types.general import EmbeddingResponse
-from eco.client.model.param import ModelResponse
+from ator.client.model.param import ModelResponse
 
 @dataclass
 class ExecutionMetadata:

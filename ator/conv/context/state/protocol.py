@@ -5,9 +5,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, Any
 
-from engine.xor.bridge.security.confirm import ConfirmationPolicyBase
+from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase
 from ator.agent.action.schema.action import Action, Observation
-from engine.xor.bridge.security.analyzer import SecurityAnalyzerBase
+from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
 
 from arch.contract.resolver.secret import SecretValue
 

@@ -31,12 +31,12 @@ import pty
 import select
 
 from ator.driver.tool.builder.executor import sanitized_env
-from engine.xor.bridge.tool.terminal import (
+from eco.bound.xor.bridge.tool.terminal import (
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,
     HISTORY_LIMIT,
 )
-from engine.xor.bridge.tool.terminal import CmdOutputMetadata
+from eco.bound.xor.bridge.tool.terminal import CmdOutputMetadata
 from ator.driver.tool.terminal.interface import TerminalInterface
 
 from watcher.plane.emitter import get_logger

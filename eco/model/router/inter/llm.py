@@ -8,7 +8,7 @@ from typing import AsyncGenerator, Generator, Any
 from eco.model.router.base import BaseProviderAdapter
 from eco.model.router.llm import LLMRouter, ModuleMissingError
 
-from eco.client.model.execution import CompletionContext
+from ator.client.model.execution import CompletionContext
 from eco.model.registry import get_llm_provider
 from eco.bound.exception.mapping import exception_type
 

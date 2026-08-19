@@ -9,7 +9,7 @@ from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
 from ator.conv.schema.event import Event
-from eco.client.model.param import ModelResponseStream
+from ator.client.model.param import ModelResponseStream
 from arch.contract.event.next import ToposId
 
 LLMStreamChunk = ModelResponseStream

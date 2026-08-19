@@ -6,7 +6,7 @@ import re
 import textwrap
 from typing import Callable, Optional, Dict, Any
 
-from eco.client.local.llm import LLMEngine
+from ator.client.local.llm import LLMEngine
 
 from arch.topos.tunnel.factory import TunnelFactory
 from kernel.daemon.bootstrap import TOPIC_BUS_STREAM, KEY_HEARTBEAT_PATTERN

@@ -13,7 +13,7 @@ from ator.agent.action.schema.tool import Tool
 from ator.driver.llm.model import LLMModel
 
 from arch.xor.surge.disc import SurgeBaseModel
-from engine.xor.bridge.mark.depre import warn_deprecated
+from eco.bound.xor.bridge.mark.depre import warn_deprecated
 
 AGENT_SETTINGS_SCHEMA_VERSION = 1
 SecurityAnalyzerType = Literal["llm", "none"]

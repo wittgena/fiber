@@ -7,7 +7,7 @@ import logging
 from typing import Dict, Optional
 
 from arch.xor.secret.validator import Cipher
-from engine.xor.store.log import LogStore, BASE_STATE, EVENTS_DIR
+from eco.bound.xor.store.log import LogStore, BASE_STATE, EVENTS_DIR
 
 from arch.xor.store.file import LocalFileStore
 from arch.xor.store.memfile import InMemoryFileStore

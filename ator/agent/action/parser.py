@@ -19,8 +19,8 @@ from ator.agent.action.builder import ActionDefinition
 from ator.conv.event.llm.action import ActionEvent
 from ator.conv.event.llm.observation import AgentErrorEvent
 from ator.agent.action.schema.action import Action, Observation
-from engine.xor.bridge.security.analyzer import SecurityAnalyzerBase
-import engine.xor.bridge.security.eval as risk
+from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
+import eco.bound.xor.bridge.security.eval as risk
 
 from ator.conv.schema.message import (
     MessageToolCall,

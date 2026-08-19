@@ -18,7 +18,7 @@ from ator.conv.schema.message import (
     TextContent,
     ThinkingBlock,
 )
-from engine.xor.bridge.security.eval import SecurityRisk
+from eco.bound.xor.bridge.security.eval import SecurityRisk
 from ator.agent.action.schema.action import Action
 
 class ActionEvent(LLMConvertibleEvent):

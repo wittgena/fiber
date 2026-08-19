@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from pydantic import Field, PrivateAttr
 from ator.conv.protocol.state import ConvStateProtocol
-from engine.xor.bridge.tool.diff import visualize_diff
+from eco.bound.xor.bridge.tool.diff import visualize_diff
 from rich.text import Text
 
 from ator.agent.action.schema.action import Action, Observation

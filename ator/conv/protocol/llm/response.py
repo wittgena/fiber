@@ -9,7 +9,7 @@ import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from eco.client.model.param import ModelResponse
+from ator.client.model.param import ModelResponse
 from ator.conv.schema.message import Message
 from eco.tracker.model.metric import MetricsSnapshot
 

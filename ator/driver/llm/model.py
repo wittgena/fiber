@@ -26,8 +26,8 @@ from eco.tracker.model.metric import Metrics
 from eco.bound.exception.types import LLMContextWindowTooSmallError
 
 from arch.xor.secret.validator import serialize_secret, validate_secret
-from engine.xor.bridge.mark.convset import SettingProminence, field_meta
-from engine.xor.bridge.mark.depre import warn_deprecated
+from eco.bound.xor.bridge.mark.convset import SettingProminence, field_meta
+from eco.bound.xor.bridge.mark.depre import warn_deprecated
 
 from ator.driver.config.vendor import VendorConfig
 from ator.driver.llm.strategy.fallback import FallbackStrategy

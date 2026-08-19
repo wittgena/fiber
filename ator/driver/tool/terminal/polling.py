@@ -8,7 +8,7 @@
 import re
 import time
 from typing import TYPE_CHECKING, Any
-from engine.xor.bridge.tool.terminal import (
+from eco.bound.xor.bridge.tool.terminal import (
     CMD_OUTPUT_PS1_END,
     MAX_CMD_OUTPUT_SIZE,
     POLL_INTERVAL,
@@ -19,11 +19,11 @@ import bashlex
 from bashlex.errors import ParsingError
 
 from ator.conv.protocol.tool.terminal import TerminalAction, TerminalObservation
-from engine.xor.bridge.tool.terminal import CmdOutputMetadata
-from engine.xor.bridge.tool.command.terminal import TerminalCommandStatus
+from eco.bound.xor.bridge.tool.terminal import CmdOutputMetadata
+from eco.bound.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from ator.driver.tool.terminal.context import ExecutionEngine, ExecutionContext
 
-from engine.xor.bridge.mark.truncate import maybe_truncate
+from eco.bound.xor.bridge.mark.truncate import maybe_truncate
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:

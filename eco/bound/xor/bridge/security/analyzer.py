@@ -5,7 +5,7 @@ from typing import ClassVar, Any
 
 from ator.conv.schema.event import Event
 from ator.conv.event.llm.action import ActionEvent
-from engine.xor.bridge.security.eval import SecurityRisk
+from eco.bound.xor.bridge.security.eval import SecurityRisk
 
 from arch.xor.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter

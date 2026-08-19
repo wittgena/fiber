@@ -13,7 +13,7 @@ from ator.conv.context.prompt import BlueprintCompiler
 from ator.conv.schema.event import LLMConvertibleEvent
 from ator.conv.context.adapter import AgentCommunicator, ExecutionController
 from ator.conv.state import ConversationState
-from engine.xor.visual.context import ConversationVisualizer
+from eco.bound.xor.visual.context import ConversationVisualizer
 from ator.agent.action.factory import CoreAction
 from ator.agent.action.resolver import ActionResolver
 from ator.agent.action.schema.tool import Tool

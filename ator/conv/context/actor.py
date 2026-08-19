@@ -20,7 +20,7 @@ from ator.agent.action.factory import CoreAction
 
 from eco.bound.exception.types import ConversationRunError
 from ator.conv.command import TransitionStatus
-from engine.xor.store.log import LogStore
+from eco.bound.xor.store.log import LogStore
 
 from arch.xor.store.file import LocalFileStore
 from arch.model.payload import StreamPayloadAdapter

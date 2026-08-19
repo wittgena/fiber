@@ -3,8 +3,8 @@ import time
 import uuid
 from typing import Any, Dict
 
-from engine.stream.wrapper import StreamWrapper
-from eco.client.model.execution import ExecutionMetadata
+from phase.stream.wrapper import StreamWrapper
+from ator.client.model.execution import ExecutionMetadata
 
 from watcher.plane.emitter import get_emitter
 from arch.topos.network.channel.pipeline import ChannelContext, DuplexChannel

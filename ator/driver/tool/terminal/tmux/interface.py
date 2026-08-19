@@ -8,14 +8,14 @@ import time
 import uuid
 import libtmux
 from ator.driver.tool.builder.executor import sanitized_env
-from engine.xor.bridge.tool.terminal import (
+from eco.bound.xor.bridge.tool.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
     CMD_OUTPUT_PS1_END
 )
-from engine.xor.bridge.tool.terminal import CmdOutputMetadata
+from eco.bound.xor.bridge.tool.terminal import CmdOutputMetadata
 from ator.driver.tool.terminal.interface import TerminalInterface
 from watcher.plane.emitter import get_logger
 

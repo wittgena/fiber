@@ -20,7 +20,7 @@ from anyio.from_thread import start_blocking_portal
 from arch.xor.secret.redact import redact_string
 from watcher.plane.emitter import get_emitter
 from ator.conv.event.llm.observation import AgentErrorEvent
-from engine.xor.store.fifo import FIFOLock
+from eco.bound.xor.store.fifo import FIFOLock
 
 if TYPE_CHECKING:
     from ator.conv.schema.event import Event

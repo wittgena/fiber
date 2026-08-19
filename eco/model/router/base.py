@@ -4,9 +4,9 @@ import json
 from typing import AsyncGenerator, Union
 import httpx
 
-from eco.client.model.param import ModelResponse
-from eco.client.model.execution import CompletionContext 
-from eco.client.http import get_client
+from ator.client.model.param import ModelResponse
+from ator.client.model.execution import CompletionContext 
+from ator.client.http import get_client
 
 from watcher.plane.emitter import get_emitter
 
