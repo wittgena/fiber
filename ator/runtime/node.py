@@ -3,7 +3,7 @@
 import os
 from pydantic import SecretStr
 
-from ator.runtime.config import AgentConfig
+from bound.config.agent import AgentConfig
 from ator.driver.llm.model import LLMModel
 from ator.driver.schema.tool import Tool
 

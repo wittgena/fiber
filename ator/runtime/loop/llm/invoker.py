@@ -3,7 +3,7 @@
 import json
 from ator.conv.event.llm.action import ActionEvent
 from ator.conv.event.llm.message import MessageEvent
-from eco.bound.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
+from ator.runtime.exception.types import FunctionCallValidationError, LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 from ator.conv.protocol.step import StepHandler
 from ator.driver.llm.facade import MessageBuilder, LLMFacade

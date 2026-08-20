@@ -14,7 +14,7 @@ from ator.conv.context.prompt import BlueprintCompiler
 from ator.conv.schema.event import LLMConvertibleEvent
 from ator.conv.context.adapter import AgentCommunicator, ExecutionController
 from ator.conv.state import ConversationState
-from eco.bound.xor.visual.context import ConversationVisualizer
+from bound.xor.visual.context import ConversationVisualizer
 from ator.runtime.action.factory import CoreAction
 from ator.runtime.action.resolver import ActionResolver
 from ator.driver.schema.tool import Tool

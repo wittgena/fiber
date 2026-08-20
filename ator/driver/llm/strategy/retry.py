@@ -13,8 +13,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from eco.bound.exception.types import LLMNoResponseError
-from eco.bound.exception.eco import (
+from ator.runtime.exception.types import LLMNoResponseError
+from ator.runtime.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,

@@ -1,15 +1,13 @@
 # ator.client.dphi.usecase
-## @lineage: eco.client.dphi.usecase
 import time
 import asyncio
 import logging
 from dataclasses import dataclass, asdict
 from typing import Dict, Any
-
 import httpx
 
-from watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 from ator.client.http import VerifiedHttpClient, ProofVerificationError, ReplayAttackError
+from watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 
 """CONSTANTS & DTO"""
 class PublicEndpoints:

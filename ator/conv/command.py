@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ator.conv.context.state.status import ConverStatus
-from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase
+from bound.xor.bridge.security.confirm import ConfirmationPolicyBase
 
 @dataclass(kw_only=True)
 class StateCommand:

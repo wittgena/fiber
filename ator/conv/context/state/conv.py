@@ -16,10 +16,10 @@ from ator.conv.schema.types import (
 )
 from ator.conv.context.state.protocol import ProtoConv
 from ator.driver.llm.model import LLMModel
-from eco.bound.xor.visual.context import ConversationVisualizer
+from bound.xor.visual.context import ConversationVisualizer
 from ator.conv.state import ConversationState
-from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
-from eco.bound.xor.bridge.security.confirm import ConfirmationPolicyBase
+from bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
+from bound.xor.bridge.security.confirm import ConfirmationPolicyBase
 
 from arch.contract.resolver.secret import SecretValue
 

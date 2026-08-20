@@ -22,7 +22,7 @@
 import os
 from abc import ABC, abstractmethod
 
-from eco.bound.xor.bridge.tool.terminal import NO_CHANGE_TIMEOUT_SECONDS
+from bound.xor.bridge.tool.terminal import NO_CHANGE_TIMEOUT_SECONDS
 from ator.conv.protocol.tool.terminal import TerminalAction, TerminalObservation
 
 class TerminalInterface(ABC):

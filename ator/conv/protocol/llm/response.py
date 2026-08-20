@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from ator.client.model.param import ModelResponse
 from ator.conv.schema.message import Message
-from eco.tracker.model.metric import MetricsSnapshot
+from bound.xor.model.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 

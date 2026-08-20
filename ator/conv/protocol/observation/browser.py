@@ -11,7 +11,7 @@ from pydantic import Field
 
 from ator.conv.schema.message import ImageContent, TextContent
 from ator.driver.schema.action import Action, Observation
-from eco.bound.xor.bridge.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from bound.xor.bridge.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 
 BROWSER_RECORDING_OUTPUT_DIR = os.path.join(".agent_tmp", "browser_observations")
 

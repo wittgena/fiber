@@ -4,8 +4,8 @@ import json
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager, AsyncExitStack
 
-from eco.observer.proof.flow import ManifoldFolder, FlowTransition
-from phase.dphi.adapter.exchange import ExchangeAdapter, TransactionReceipt
+from bound.observer.proof.flow import ManifoldFolder, FlowTransition
+from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
 
 from ator.runtime.loop.executor import LoopExecutor
 from ator.runtime.space.manager import SpaceNode, space_provider

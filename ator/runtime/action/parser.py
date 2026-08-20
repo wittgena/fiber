@@ -20,8 +20,8 @@ from ator.runtime.action.builder import ActionDefinition
 from ator.conv.event.llm.action import ActionEvent
 from ator.conv.event.llm.observation import AgentErrorEvent
 from ator.driver.schema.action import Action, Observation
-from eco.bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
-import eco.bound.xor.bridge.security.eval as risk
+from bound.xor.bridge.security.analyzer import SecurityAnalyzerBase
+import bound.xor.bridge.security.eval as risk
 
 from ator.conv.schema.message import (
     MessageToolCall,

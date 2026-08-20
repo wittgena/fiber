@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from collections import defaultdict
 
-from eco.tracker.model.metric import Metrics
+from bound.xor.model.metric import Metrics
 from ator.client.model.param import ModelResponse
 
 from arch.model.phase.gate import uuid4

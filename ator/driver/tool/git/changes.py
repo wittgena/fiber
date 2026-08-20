@@ -26,7 +26,7 @@ import logging
 import os
 from pathlib import Path
 from ator.driver.tool.git.exceptions import GitCommandError
-from eco.bound.xor.bridge.tool.git import GitChange, GitChangeStatus
+from bound.xor.bridge.tool.git import GitChange, GitChangeStatus
 from ator.driver.tool.git.utils import get_valid_ref, run_git_command, validate_git_repository
 from watcher.plane.emitter import get_emitter
 

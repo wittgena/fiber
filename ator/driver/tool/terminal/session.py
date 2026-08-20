@@ -20,7 +20,7 @@ from ator.driver.tool.terminal.interface import TerminalInterface, TerminalSessi
 from ator.driver.tool.terminal.context import ExecutionEngine, ExecutionContext
 from ator.driver.tool.terminal.polling import PollingExecutionEngine
 
-from eco.bound.xor.bridge.tool.command.terminal import TerminalCommandStatus
+from bound.xor.bridge.tool.command.terminal import TerminalCommandStatus
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

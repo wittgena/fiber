@@ -8,7 +8,7 @@ import warnings
 from typing import Any, get_args, get_origin, TYPE_CHECKING
 from pydantic import BaseModel, SecretStr
 
-from eco.model.registry import get_llm_provider
+from bound.xor.model.registry import get_llm_provider
 if TYPE_CHECKING:
     from ator.driver.llm.model import LLMModel
     DriverType = LLMModel | Any

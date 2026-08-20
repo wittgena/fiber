@@ -23,8 +23,8 @@ from ator.driver.tool.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTer
 
 from ator.conv.schema.message import TextContent
 
-from eco.bound.xor.bridge.tool.command.terminal import TerminalCommandStatus
-from eco.bound.xor.bridge.tool.terminal import CMD_OUTPUT_PS1_END
+from bound.xor.bridge.tool.command.terminal import TerminalCommandStatus
+from bound.xor.bridge.tool.terminal import CMD_OUTPUT_PS1_END
 
 from watcher.plane.emitter import get_emitter
 

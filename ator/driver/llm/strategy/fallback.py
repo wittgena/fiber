@@ -10,7 +10,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
-from eco.bound.exception.eco import (
+from ator.runtime.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
@@ -18,13 +18,13 @@ from eco.bound.exception.eco import (
     Timeout as Timeout,
 )
 from pydantic import BaseModel, Field, PrivateAttr
-from eco.bound.exception.types import LLMNoResponseError
+from ator.runtime.exception.types import LLMNoResponseError
 from ator.driver.profile import LLMProfileStore
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
     from ator.conv.protocol.llm.response import LLMResponse
-    from eco.tracker.model.metric import Metrics
+    from bound.xor.model.metric import Metrics
 
 logger = get_logger(__name__)
 

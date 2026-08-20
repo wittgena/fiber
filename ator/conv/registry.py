@@ -15,7 +15,7 @@ from typing import Type, Optional, Callable, Any
 import httpx
 import redis
 
-from ator.client.local.llm import LLMEngine
+from arch.local.llm import LLMEngine
 from watcher.plane.emitter import get_emitter
 
 log_local = get_emitter("surface.local")

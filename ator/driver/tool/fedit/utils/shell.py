@@ -36,7 +36,7 @@ import subprocess
 import time
 
 from ator.driver.tool.builder.executor import sanitized_env
-from eco.bound.xor.bridge.mark.truncate import maybe_truncate
+from bound.xor.bridge.mark.truncate import maybe_truncate
 from ator.driver.tool.fedit.utils.constants import (
     CONTENT_TRUNCATED_NOTICE,
     MAX_RESPONSE_LEN_CHAR,

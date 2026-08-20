@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, Field, PrivateAttr, model_serializer
 
 from ator.driver.registry import RegistryEvent
-from eco.tracker.model.metric import Metrics
+from bound.xor.model.metric import Metrics
 from watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)

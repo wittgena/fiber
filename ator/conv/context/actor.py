@@ -18,9 +18,9 @@ from ator.conv.event.conv import ConversationErrorEvent, PauseEvent
 from ator.conv.context.state.status import ConverStatus
 from ator.runtime.action.factory import CoreAction
 
-from eco.bound.exception.types import ConversationRunError
+from ator.runtime.exception.types import ConversationRunError
 from ator.conv.command import TransitionStatus
-from eco.bound.xor.store.log import LogStore
+from bound.xor.store.log import LogStore
 
 from arch.xor.store.file import LocalFileStore
 from arch.model.payload import StreamPayloadAdapter

@@ -1,5 +1,4 @@
 # ator.driver.llm.facade
-## @lineage: driver.llm.facade
 from __future__ import annotations
 
 import asyncio
@@ -9,13 +8,13 @@ from collections.abc import Sequence
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-from eco.model.info import get_features
-from eco.bound.exception.mapping import map_provider_exception
-from eco.bound.exception.types import LLMNoResponseError
-from eco.tracker.model.metric import MetricsSnapshot
+from bound.xor.model.info import get_features
+from ator.runtime.exception.mapping import map_provider_exception
+from ator.runtime.exception.types import LLMNoResponseError
+from bound.xor.model.metric import MetricsSnapshot
 
-from ator.runtime.entry import acompletion as brane_acompletion
-from phase.llm.stream.wrapper import StreamWrapper
+from ator.driver.llm.entry import acompletion as brane_acompletion
+from ator.driver.llm.stream.wrapper import StreamWrapper
 from ator.client.model.param import (
     ModelResponseStream, 
     ModelResponse, 
@@ -28,7 +27,7 @@ from ator.conv.schema.event import Event, LLMConvertibleEvent
 
 from ator.conv.protocol.llm.response import LLMResponse
 from ator.runtime.action.builder import ActionDefinition
-from eco.bound.xor.visual.action import View
+from bound.xor.visual.action import View
 from ator.driver.llm.model import LLMModel
 from ator.driver.llm.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
 
@@ -232,7 +231,7 @@ class DriverIO:
                         final_response = accumulator.get_complete_response()
 
                         if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
-                            from eco.bound.agent.parser.token.evaluator import calculate_fallback_usage
+                            from bound.xor.model.token.evaluator import calculate_fallback_usage
                             
                             content = final_response.choices[0].message.content or ""
                             fallback_usage = calculate_fallback_usage(
