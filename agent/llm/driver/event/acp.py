@@ -4,8 +4,8 @@
 from __future__ import annotations
 from typing import Any
 from rich.text import Text
-from agent.loop.conv.event import Event
-from agent.loop.conv.event import SourceType
+from arch.model.conv.event import Event
+from arch.model.conv.event import SourceType
 
 _MAX_DISPLAY_CHARS = 500
 

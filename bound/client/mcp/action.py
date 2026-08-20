@@ -1,4 +1,5 @@
-# bound.adapter.mcp.action
+# bound.client.mcp.action
+## @lineage: bound.adapter.mcp.action
 ## @lineage: agent.protocol.tool.mcp
 import re
 from collections.abc import Sequence
@@ -7,12 +8,12 @@ from pydantic import Field, ValidationError
 import mcp_types
 
 from agent.anchor.llm.param import ChatCompletionToolParam
-from bound.adapter.schema.action import Action, Observation, Schema
+from bound.space.action.action import Action, Observation, Schema
 from agent.runtime.conv.action.builder import ActionAnnotations, ActionDefinition
-from bound.adapter.schema.executor import ActionExecutor
-from bound.adapter.schema.mcp import MCPAction, MCPObservation
+from bound.space.action.executor import ActionExecutor
+from bound.space.action.mcp import MCPAction, MCPObservation
 
-from bound.adapter.mcp.client import MCPClient
+from bound.client.mcp.client import MCPClient
 
 from arch.model.surge.disc import DiscMixin
 from watcher.plane.observer.span import observe

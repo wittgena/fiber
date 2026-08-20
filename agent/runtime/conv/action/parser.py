@@ -16,11 +16,11 @@ from pydantic import ValidationError
 from agent.runtime.conv.action.builder import ActionDefinition
 from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.observation import AgentErrorEvent
-from bound.adapter.schema.action import Action, Observation
-from agent.llm.security.analyzer import SecurityAnalyzerBase
-import agent.llm.security.eval as risk
+from agent.runtime.conv.security import SecurityAnalyzerBase
+import arch.model.conv.security.eval as risk
 
-from bound.adapter.schema.message import (
+from bound.space.action.action import Action, Observation
+from bound.space.action.message import (
     MessageToolCall,
     ReasoningItemModel,
     RedactedThinkingBlock,
@@ -340,7 +340,7 @@ class ActionParser:
         tool_name: str,
         read_only_tool: bool,
         security_analyzer: Any = None,
-    ) -> str:  # [수정됨] Enum 객체 대신 순수 str 반환
+    ) -> str:
         requires_sr = isinstance(security_analyzer, LLMSecurityAnalyzer)
         raw = arguments.pop("security_risk", None)
         
@@ -362,7 +362,6 @@ class ActionParser:
         if not requires_sr and raw is None:
             return default_risk_val
             
-        # [수정됨] 이미 Enum 인스턴스거나 알 수 없는 dict 형태인 경우 안전하게 문자열로 캐스팅
         if isinstance(raw, risk.SecurityRisk):
             return raw.value
         elif isinstance(raw, dict) and "_value_" in raw:

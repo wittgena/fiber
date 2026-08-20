@@ -1,7 +1,5 @@
-# bound.adapter.space.manager
-## @lineage: agent.bridge.space.manager
-## @lineage: agent.space.manager
-## @lineage: ator.runtime.space.manager
+# bound.space.manager
+## @lineage: bound.adapter.space.manager
 import os
 import signal
 import shutil
@@ -50,7 +48,6 @@ RUN apt-get update && apt-get install -y git python3-pip
 class HotWarmContainerPool:
     def __init__(self, pool_size: int = 3):
         self.pool_size = pool_size
-        # [개선 1] 모듈 Import 시점의 Docker 연결 강제(Anti-pattern) 제거 (지연 초기화)
         self.client = None
         self.ready_queue: asyncio.Queue[Container] = asyncio.Queue(maxsize=pool_size)
         self._initialized = False
@@ -58,10 +55,7 @@ class HotWarmContainerPool:
     async def initialize(self):
         if self._initialized: return
         
-        # [개선 2] 실제 사용 시점에 연결 시도 및 친절한 에러 핸들링
         try:
-            # 동기식 from_env 호출 시 blocking이 길어질 수 있으므로 스레드로 감싸는 것도 좋으나 
-            # 일반적으로 환경변수 파싱 및 소켓 생성은 빠르므로 직접 호출 후 ping으로 검증합니다.
             self.client = docker.from_env()
             await asyncio.to_thread(self.client.ping)
         except Exception as e:
@@ -70,7 +64,6 @@ class HotWarmContainerPool:
             log.error(" -> 호스트 머신에서 Docker Desktop이 실행 중인지 확인해주세요.")
             log.error(f" -> 상세 예외 정보: {str(e)}")
             log.error("=========================================================")
-            # 시스템이 멈추지 않고 적절히 실패 처리를 할 수 있도록 예외를 발생시킵니다.
             raise RuntimeError("Docker is not running. Please start Docker Desktop and try again.") from e
 
         await asyncio.to_thread(SPACE_DIR.mkdir, parents=True, exist_ok=True)

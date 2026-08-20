@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from agent.llm.security.confirm import ConfirmationPolicyBase
+from arch.model.conv.security.confirm import ConfirmationPolicyBase
 from arch.topos.context.status import ConverStatus
 
 @dataclass(kw_only=True)

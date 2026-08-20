@@ -1,6 +1,5 @@
-# agent.loop.ator
-## @lineage: agent.bridge.schema.ator
-## @lineage: ator.driver.schema.ator
+# agent.topos.ator
+## @lineage: agent.loop.ator
 from __future__ import annotations
 import re
 import json
@@ -12,12 +11,12 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from bound.config.agent import PromptContext
-from bound.adapter.schema.tool import Tool
+from bound.space.action.tool import Tool
 from agent.llm.driver.model import LLMModel
 
-from bound.adapter.mcp.client import MCPClient
-from bound.adapter.mcp.factory import create_mcp_tools
-from bound.adapter.mcp.action import MCPExecutor
+from bound.client.mcp.client import MCPClient
+from bound.client.mcp.factory import create_mcp_tools
+from bound.client.mcp.action import MCPExecutor
 from agent.runtime.conv.action.builder import ActionDefinition
 
 from agent.runtime.conv.action.factory import CoreAction

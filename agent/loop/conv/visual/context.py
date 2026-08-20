@@ -19,7 +19,7 @@ from agent.runtime.conv.stats import ConversationStats
 
 from agent.runtime.protocol.conv import ConvStateProtocol
 
-from agent.loop.conv.event import Event
+from arch.model.conv.event import Event
 
 logger = logging.getLogger(__name__)
 

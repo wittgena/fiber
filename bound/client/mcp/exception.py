@@ -1,4 +1,5 @@
-# bound.adapter.mcp.exception
+# bound.client.mcp.exception
+## @lineage: bound.adapter.mcp.exception
 ## @lineage: agent.protocol.mcp.exception
 ## @lineage: agent.space.conv.protocol.mcp.exception
 ## @lineage: agent.conv.protocol.mcp.exception

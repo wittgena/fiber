@@ -1,6 +1,5 @@
-# bound.adapter.context.adapter
-## @lineage: agent.bridge.context.adapter
-## @lineage: agent.context.adapter
+# bound.space.context.adapter
+## @lineage: bound.adapter.context.adapter
 import json
 import os
 import sys
@@ -19,21 +18,21 @@ from jinja2 import (
     TemplateNotFound,
 )
 
-from bound.adapter.schema.action import Action, Observation
+from bound.space.action.action import Action, Observation
 from agent.llm.driver.event.message import MessageEvent
 from agent.llm.driver.event.observation import UserRejectObservation
-from bound.adapter.schema.types import ConversationID
+from bound.space.action.types import ConversationID
 from agent.llm.driver.model import LLMModel
-from bound.adapter.schema.message import Message, TextContent
+from bound.space.action.message import Message, TextContent
 from agent.runtime.conv.stats import ConversationStats
-from agent.llm.security.analyzer import SecurityAnalyzerBase
-from agent.llm.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from agent.runtime.conv.security import SecurityAnalyzerBase
+from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
 
 from agent.runtime.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
 from agent.runtime.protocol.conv import ProtoConv, EngineContextProtocol
 from agent.runtime.protocol.conv import ConvStateProtocol
 from agent.runtime.conv.command import TransitionStatus, UpdateSecurityPolicy
-from bound.adapter.context.actor import Actor
+from bound.space.context.actor import Actor
 from agent.llm.driver.facade import MessageBuilder, LLMFacade
 
 from arch.topos.context.status import ConverStatus
@@ -116,17 +115,7 @@ def render_template(prompt_dir: str, template_name: str, **ctx) -> str:
         tpl = _get_template(prompt_dir, template_name)
     return refine(tpl.render(**ctx).strip())
 
-
-# ============================================================================
-# 2. Context Adapters
-# ============================================================================
-
 class AgentCommunicator:
-    """
-    @implements: AgentCommunicationProtocol
-    @desc: 외부 API(웹 소켓, REST)나 UI 컴포넌트가 에이전트와 대화하기 위한 입출력 전용 어댑터.
-           불필요한 Sidecar 래퍼를 제거하고 자체적으로 메시징 및 비동기 질의(ask)를 처리합니다.
-    """
     def __init__(self, context: ProtoConv):
         self._context = context
 

@@ -1,4 +1,5 @@
-# bound.adapter.schema.mcp
+# bound.space.action.mcp
+## @lineage: bound.adapter.schema.mcp
 ## @lineage: ator.driver.schema.mcp
 ## @lineage: agent.bridge.schema.mcp
 import json
@@ -7,8 +8,8 @@ import mcp_types
 from pydantic import Field
 from rich.text import Text
 
-from bound.adapter.schema.message import ImageContent, TextContent
-from bound.adapter.schema.action import Action, Observation
+from bound.space.action.message import ImageContent, TextContent
+from bound.space.action.action import Action, Observation
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

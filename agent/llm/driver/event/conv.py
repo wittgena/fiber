@@ -5,7 +5,7 @@ import uuid
 from typing import Any
 from pydantic import Field
 from rich.text import Text
-from agent.loop.conv.event import Event, SourceType
+from arch.model.conv.event import Event, SourceType
 from pydantic import Field, field_validator
 
 class ConversationErrorEvent(Event):

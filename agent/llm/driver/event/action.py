@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 from pydantic import Field
 from rich.text import Text
 
-from agent.loop.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from agent.loop.conv.event import SourceType, ToolCallID
-from bound.adapter.schema.message import (
+from arch.model.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from arch.model.conv.event import SourceType, ToolCallID
+from bound.space.action.message import (
     Message,
     MessageToolCall,
     ReasoningItemModel,
@@ -15,8 +15,8 @@ from bound.adapter.schema.message import (
     TextContent,
     ThinkingBlock,
 )
-from agent.llm.security.eval import SecurityRisk
-from bound.adapter.schema.action import Action
+from arch.model.conv.security.eval import SecurityRisk
+from bound.space.action.action import Action
 
 class ActionEvent(LLMConvertibleEvent):
     source: SourceType = "agent"

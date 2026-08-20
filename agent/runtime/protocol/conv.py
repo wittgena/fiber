@@ -5,18 +5,18 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Protocol, Any
 
-from bound.adapter.schema.types import ConversationID, ConversationTags, ConversationCallbackType
+from bound.space.action.types import ConversationID, ConversationTags, ConversationCallbackType
 from agent.llm.driver.model import LLMModel
 from agent.runtime.conv.stats import ConversationStats
-from agent.llm.security.confirm import ConfirmationPolicyBase
-from agent.llm.security.analyzer import SecurityAnalyzerBase
+from arch.model.conv.security.confirm import ConfirmationPolicyBase
+from agent.runtime.conv.security import SecurityAnalyzerBase
 
 from agent.runtime.conv.command import StateCommand
 # from agent.loop.ator import Ator
 
 from arch.topos.context.space import BaseWorkspace
 from arch.topos.context.status import ConverStatus
-from agent.loop.conv.event import Event, EventID
+from arch.model.conv.event import Event, EventID
 from arch.xor.stream.conv import LogStore
 from arch.contract.resolver.secret import SecretRegistry
 from watcher.plane.observer.span import end_active_span, should_enable_observability, start_active_span

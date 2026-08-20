@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.observation import ObservationBaseEvent
 
-from agent.loop.conv.event import Event, LLMConvertibleEvent
-from agent.loop.conv.event import EventID, ToolCallID
+from arch.model.conv.event import Event, LLMConvertibleEvent
+from arch.model.conv.event import EventID, ToolCallID
 from watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)

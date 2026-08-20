@@ -5,11 +5,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol, Any
 
-from agent.llm.security.confirm import ConfirmationPolicyBase
-from agent.llm.security.analyzer import SecurityAnalyzerBase
-from bound.adapter.schema.action import Action, Observation
-from bound.adapter.schema.types import ConversationID
-from bound.adapter.schema.message import Message
+from arch.model.conv.security.confirm import ConfirmationPolicyBase
+from agent.runtime.conv.security import SecurityAnalyzerBase
+from bound.space.action.action import Action, Observation
+from bound.space.action.types import ConversationID
+from bound.space.action.message import Message
 
 from arch.contract.resolver.secret import SecretValue
 

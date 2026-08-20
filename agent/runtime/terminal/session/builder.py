@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from agent.llm.driver.event.action import ActionEvent
     from agent.runtime.conv.action.builder import DeclaredResources, ActionDefinition
 
-from agent.loop.conv.event import Event
+from arch.model.conv.event import Event
 from arch.xor.secret.redact import redact_string
 from watcher.plane.emitter import get_emitter
 

@@ -1,4 +1,5 @@
-# bound.adapter.schema.tool
+# bound.space.action.tool
+## @lineage: bound.adapter.schema.tool
 ## @lineage: ator.driver.schema.tool
 from typing import Any
 from pydantic import BaseModel, Field, field_validator

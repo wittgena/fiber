@@ -1,4 +1,5 @@
-# bound.adapter.mcp.client
+# bound.client.mcp.client
+## @lineage: bound.adapter.mcp.client
 ## @lineage: agent.protocol.mcp.client
 import asyncio
 import inspect
@@ -11,7 +12,7 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 
 from agent.runtime.terminal.session.builder import AsyncExecutorProtocol
-from bound.adapter.mcp.exception import MCPError
+from bound.client.mcp.exception import MCPError
 from bound.config.mcp import MCPConfig
 
 from watcher.plane.emitter import get_logger

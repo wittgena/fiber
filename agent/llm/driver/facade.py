@@ -22,8 +22,8 @@ from agent.anchor.llm.param import (
     ModelResponse, 
     ChatCompletionToolParam
 )
-from bound.adapter.schema.message import Message
-from bound.adapter.schema.types import TokenCallbackType, ConversationTokenCallbackType
+from bound.space.action.message import Message
+from bound.space.action.types import TokenCallbackType, ConversationTokenCallbackType
 from agent.llm.driver.response import LLMResponse
 from agent.llm.driver.model import LLMModel
 from agent.llm.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
@@ -31,7 +31,7 @@ from agent.llm.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EX
 from agent.runtime.conv.action.builder import ActionDefinition
 from agent.runtime.conv.view import View
 
-from agent.loop.conv.event import Event, LLMConvertibleEvent
+from arch.model.conv.event import Event, LLMConvertibleEvent
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.facade")

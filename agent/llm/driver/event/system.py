@@ -5,9 +5,9 @@ import json
 from pydantic import Field, model_validator
 from rich.text import Text
 from typing import TYPE_CHECKING, Any
-from agent.loop.conv.event import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
-from agent.loop.conv.event import SourceType
-from bound.adapter.schema.message import Message, TextContent
+from arch.model.conv.event import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
+from arch.model.conv.event import SourceType
+from bound.space.action.message import Message, TextContent
 from agent.runtime.conv.action.builder import ActionDefinition
 
 class SystemPromptEvent(LLMConvertibleEvent):

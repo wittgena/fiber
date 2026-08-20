@@ -1,5 +1,5 @@
-# bound.adapter.schema.message
-## @lineage: ator.driver.schema.message
+# bound.space.action.message
+## @lineage: bound.adapter.schema.message
 import json
 from collections.abc import Sequence
 from typing import Any, ClassVar

@@ -11,8 +11,8 @@ from typing import Any, Literal, Dict, Optional, Tuple, Union, List, Callable
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from bound.adapter.schema.message import Message, TextContent
-from bound.adapter.schema.tool import Tool
+from bound.space.action.message import Message, TextContent
+from bound.space.action.tool import Tool
 from agent.llm.driver.model import LLMModel
 from bound.config.mcp import MCPConfig
 

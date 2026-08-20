@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Dict, Any, Optional
 from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
-from bound.adapter.schema.action import Action, Observation
-from bound.adapter.schema.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
+from bound.space.action.action import Action, Observation
+from bound.space.action.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
 from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.message import MessageEvent
 from agent.llm.driver.event.system import SystemPromptEvent, TokenEvent
@@ -19,10 +19,10 @@ from agent.llm.driver.event.observation import ObservationEvent, UserRejectObser
 from agent.llm.driver.response import LLMResponse
 
 from agent.runtime.conv.action.parser import format_context_exceeded_message, ActionParser
-from agent.loop.ator import Ator
+from agent.topos.ator import Ator
 from agent.runtime.protocol.step import StepHandler, StepContext
 
-from agent.loop.conv.event import Event
+from arch.model.conv.event import Event
 from arch.topos.context.status import ConverStatus
 from arch.topos.node.state.compiler import StateCompiler
 from arch.topos.node.state.projector import StateProjector

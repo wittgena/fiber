@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from agent.runtime.conv.action.factory import CoreAction
 from agent.runtime.blueprint import BlueprintType, build_blueprint, TaskResolver, BLUEPRINT_REGISTRY
-from bound.adapter.schema.message import Message, TextContent
+from bound.space.action.message import Message, TextContent
 
 from arch.contract.model.graph import EntryNode
 from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode

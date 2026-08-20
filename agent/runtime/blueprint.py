@@ -1,6 +1,4 @@
 # agent.runtime.blueprint
-## @lineage: ator.runtime.blueprint
-## @lineage: agent.context.blueprint
 from __future__ import annotations
 
 import os

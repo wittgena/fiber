@@ -1,6 +1,5 @@
-# bound.adapter.schema.executor
-## @lineage: ator.driver.schema.executor
-## @lineage: agent.bridge.schema.executor
+# bound.space.action.executor
+## @lineage: bound.adapter.schema.executor
 from abc import ABC, abstractmethod
 from typing import (
     TYPE_CHECKING,
@@ -8,7 +7,7 @@ from typing import (
     Protocol,
     TypeVar,
 )
-from bound.adapter.schema.action import Action, Observation
+from bound.space.action.action import Action, Observation
 from agent.runtime.protocol.context import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)

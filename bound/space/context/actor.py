@@ -1,7 +1,5 @@
-# bound.adapter.context.actor
-## @lineage: agent.bridge.context.actor
-## @lineage: agent.context.actor
-## @lineage: agent.space.context.actor
+# bound.space.context.actor
+## @lineage: bound.adapter.context.actor
 import json
 import asyncio
 from pathlib import Path
@@ -10,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from agent.loop.conv.state import ConversationState
 
-from bound.adapter.schema.action import Action, Observation
+from bound.space.action.action import Action, Observation
 from agent.llm.driver.event.message import MessageEvent
 from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
@@ -29,7 +27,7 @@ from watcher.plane.observer.span import observe
 from watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from agent.loop.conv.config import ConvContext
+    from agent.loop.conv.context import ConvContext
     convType = ConvContext | Any
 else:
     convType = Any

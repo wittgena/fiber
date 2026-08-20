@@ -14,17 +14,17 @@ from agent.llm.driver.event.observation import (
     ObservationEvent,
     UserRejectObservation,
 )
-from agent.loop.conv.event import Event
-from agent.loop.conv.event import EventID
+from arch.model.conv.event import Event
+from arch.model.conv.event import EventID
 from arch.topos.context.space import BaseWorkspace
 from arch.topos.context.status import ConverStatus
-from bound.adapter.schema.types import ConversationCallbackType, ConversationID, ConversationTags
+from bound.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
 
-from agent.llm.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
 from agent.runtime.conv.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from agent.llm.security.analyzer import SecurityAnalyzerBase
+    from agent.runtime.conv.security import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
@@ -248,10 +248,7 @@ class ConversationState(SurgeBaseModel):
         
         is_field = name in self.__class__.model_fields
         autosave_enabled = getattr(self, "autosave_enabled", False)
-
-        # 직접 변수 할당을 검출하고 로그를 남기는 로직
         if autosave_enabled and is_field and old is not _sentinel and old != value:
-            # 주요 상태 변수를 외부에서 '='로 직접 변경하려 할 때만 추적
             if name in ("execution_status", "blocked_actions", "blocked_messages", "activated_knowledge_skills", "agent_state", "tags"):
                 stack = inspect.stack()
                 if len(stack) > 1:

@@ -7,8 +7,8 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from bound.adapter.schema.executor import ActionExecutor
-from bound.adapter.schema.message import TextContent
+from bound.space.action.executor import ActionExecutor
+from bound.space.action.message import TextContent
 from agent.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
 from agent.runtime.protocol.context import ToolExecutionContextProtocol
 from agent.runtime.protocol.terminal.session import TerminalSession

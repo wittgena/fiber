@@ -1,13 +1,12 @@
-# agent.llm.security.analyzer
-## @lineage: ator.driver.security.analyzer
-## @lineage: agent.bridge.security.analyzer
+# agent.runtime.conv.security
+## @lineage: agent.llm.security.analyzer
 from abc import ABC, abstractmethod
 from typing import ClassVar, Any
 
 from agent.llm.driver.event.action import ActionEvent
-from agent.llm.security.eval import SecurityRisk
+from arch.model.conv.security.eval import SecurityRisk
 
-from agent.loop.conv.event import Event
+from arch.model.conv.event import Event
 from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_emitter
 

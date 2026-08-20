@@ -1,4 +1,5 @@
-# bound.adapter.schema.action
+# bound.space.action.action
+## @lineage: bound.adapter.schema.action
 ## @lineage: ator.driver.schema.action
 from abc import ABC
 from collections.abc import Sequence
@@ -6,8 +7,8 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from pydantic import ConfigDict, Field, create_model
 from rich.text import Text
 
-from bound.adapter.schema.message import ImageContent, TextContent
-from bound.adapter.schema.message import content_to_str
+from bound.space.action.message import ImageContent, TextContent
+from bound.space.action.message import content_to_str
 
 from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger

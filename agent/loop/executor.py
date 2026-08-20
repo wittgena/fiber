@@ -3,19 +3,19 @@ import asyncio
 import json
 from typing import Optional, Dict, Any, List, Callable
 
-from bound.adapter.space.manager import SandboxWorkspace, SandboxProxy 
+from bound.space.manager import SandboxWorkspace, SandboxProxy 
 from agent.runtime.protocol.tool.terminal import TerminalTool
 from agent.loop.activator import Activator
 from agent.runtime.prompt import BlueprintCompiler
 
-from agent.loop.conv.event import LLMConvertibleEvent
-from bound.adapter.context.adapter import AgentCommunicator, ExecutionController
+from arch.model.conv.event import LLMConvertibleEvent
+from bound.space.context.adapter import AgentCommunicator, ExecutionController
 from agent.loop.conv.state import ConversationState
 from agent.loop.conv.visual.context import ConversationVisualizer
 from agent.runtime.conv.action.factory import CoreAction
 from agent.runtime.conv.action.resolver import ActionResolver
 from agent.loop.organizer import EvalReflector, TensionHandler, LLMInvocationHandler, ToolCallHandler, TextResponseHandler
-from bound.adapter.schema.tool import Tool
+from bound.space.action.tool import Tool
 
 from arch.contract.model.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode

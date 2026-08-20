@@ -7,8 +7,8 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from bound.adapter.schema.action import Action, Observation
-from bound.adapter.schema.tool import Tool
+from bound.space.action.action import Action, Observation
+from bound.space.action.tool import Tool
 from agent.runtime.conv.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:

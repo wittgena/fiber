@@ -1,4 +1,5 @@
-# agent.loop.conv.config
+# agent.loop.conv.context
+## @lineage: agent.loop.conv.config
 ## @lineage: agent.context.conv.config
 import warnings
 from collections.abc import Mapping
@@ -6,22 +7,22 @@ from pathlib import Path
 from typing import Any
 
 from agent.llm.driver.registry import LLMRegistry
-from bound.adapter.schema.types import (
+from bound.space.action.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
 )
 from agent.llm.driver.model import LLMModel
-from bound.adapter.schema.message import Message
-from bound.adapter.schema.action import Action, Observation
-from agent.llm.security.analyzer import SecurityAnalyzerBase
-from agent.llm.security.confirm import ConfirmationPolicyBase
+from bound.space.action.message import Message
+from bound.space.action.action import Action, Observation
+from agent.runtime.conv.security import SecurityAnalyzerBase
+from arch.model.conv.security.confirm import ConfirmationPolicyBase
 
 from agent.runtime.protocol.conv import ProtoConv
 from agent.loop.conv.visual.context import ConversationVisualizer
 from agent.loop.conv.state import ConversationState
-from bound.adapter.space.manager import SandboxWorkspace
-from bound.adapter.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
+from bound.space.manager import SandboxWorkspace
+from bound.space.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
 
 from arch.contract.resolver.secret import SecretValue
 from arch.xor.secret.validator import Cipher

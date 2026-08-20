@@ -11,10 +11,10 @@ from rich.text import Text
 if TYPE_CHECKING:
     from agent.runtime.protocol.conv import ConvStateProtocol
 
-from bound.adapter.schema.executor import ActionExecutor
+from bound.space.action.executor import ActionExecutor
 from agent.runtime.conv.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
-from bound.adapter.schema.message import ImageContent, TextContent
-from bound.adapter.schema.action import Action, Observation
+from bound.space.action.message import ImageContent, TextContent
+from bound.space.action.action import Action, Observation
 
 from arch.xor.parser.mark.truncate import maybe_truncate
 from arch.xor.bridge.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS

@@ -5,7 +5,7 @@ from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from agent.anchor.llm.param import ModelResponse
-from bound.adapter.schema.message import Message
+from bound.space.action.message import Message
 from agent.anchor.model.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")

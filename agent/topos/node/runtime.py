@@ -1,12 +1,11 @@
-# agent.runtime.node
-## @lineage: ator.runtime.node
-## @lineage: ator.agent.node
+# agent.topos.node.runtime
+## @lineage: agent.runtime.node
 import os
 from pydantic import SecretStr
 
-from bound.config.agent import AgentConfig
 from agent.llm.driver.model import LLMModel
-from bound.adapter.schema.tool import Tool
+from bound.config.agent import AgentConfig
+from bound.space.action.tool import Tool
 
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.node.event import AgentConfigured

@@ -1,24 +1,25 @@
-# agent.loop.conv.flow
-## @lineage: agent.context.conv.flow
+# agent.topos.flow
+## @lineage: agent.loop.conv.flow
 import asyncio
 import json
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager, AsyncExitStack
 
-from dphi.observer.proof.flow import ManifoldFolder, FlowTransition
-from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
-
 from agent.loop.executor import LoopExecutor
-from bound.adapter.space.manager import SpaceNode, space_provider
-from agent.runtime.node import RuntimeNode
-from agent.loop.conv.registry import get_surface_class, SurfaceConfig
+from agent.topos.node.runtime import RuntimeNode
+from bound.space.sandbox.surface import get_surface_class, SurfaceConfig
+
+from bound.space.manager import SpaceNode, space_provider
+from dphi.observer.proof.flow import ManifoldFolder, FlowTransition
 
 from arch.model.surge.blueprint import SurgeBlueprint
 from arch.contract.model.graph import EntryNode
 from arch.topos.node.gan import Message, GanNode
 from arch.model.sealer import EpochSealer
+
 from kernel.dphi.broker import DphiBroker
 from kernel.dphi.cgroup import Tier
+from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
 from watcher.plane.emitter import get_emitter
 from watcher.tracer.scope import scope_trace, get_current_trace_path
 
@@ -72,7 +73,6 @@ class ToposController:
         cost: float,
         fuel_consumed: int
     ) -> Optional[TransactionReceipt]:
-        """@desc: 에포크를 봉인하고 영지(Dominium)에 도달하기 위한 합의 및 정산 과정을 총괄합니다."""
         entangled_state = {
             "parity": {"topos_id": f"task_{transition.id}", "phase_id": 0, "nexus_id": 0},
             "repos": {}

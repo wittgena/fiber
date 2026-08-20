@@ -8,9 +8,9 @@ from typing import ClassVar
 from pydantic import ConfigDict, Field
 from rich.text import Text
 
-from agent.loop.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from agent.loop.conv.event import SourceType
-from bound.adapter.schema.message import (
+from arch.model.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from arch.model.conv.event import SourceType
+from bound.space.action.message import (
     ImageContent,
     Message,
     RedactedThinkingBlock,

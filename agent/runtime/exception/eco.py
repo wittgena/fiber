@@ -1,10 +1,4 @@
 # agent.runtime.exception.eco
-## @lineage: ator.runtime.exception.eco
-## @lineage: bound.eco.exception.eco
-## @lineage: eco.bound.exception.eco
-## @lineage: bound.agent.exception.eco
-## @lineage: ext.router.exception.eco
-## @lineage: engine.exception.eco
 from __future__ import annotations
 from typing import Any, Dict, Optional, Union
 from enum import Enum

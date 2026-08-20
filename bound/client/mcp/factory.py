@@ -1,4 +1,5 @@
-# bound.adapter.mcp.factory
+# bound.client.mcp.factory
+## @lineage: bound.adapter.mcp.factory
 ## @lineage: agent.protocol.mcp.factory
 ## @lineage: agent.space.conv.protocol.mcp.factory
 ## @lineage: agent.conv.protocol.mcp.factory
@@ -12,11 +13,11 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from bound.adapter.mcp.action import MCPActionDefinition
+from bound.client.mcp.action import MCPActionDefinition
 
 from bound.config.mcp import MCPConfig
-from bound.adapter.mcp.exception import MCPTimeoutError
-from bound.adapter.mcp.client import MCPClient
+from bound.client.mcp.exception import MCPTimeoutError
+from bound.client.mcp.client import MCPClient
 
 from arch.contract.event.next import LogEvent
 from watcher.plane.emitter import get_emitter

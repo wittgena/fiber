@@ -1,11 +1,5 @@
-# agent.loop.conv.registry
-## @lineage: agent.context.conv.registry
-## @lineage: agent.space.conv.registry
-## @lineage: agent.conv.registry
-## @lineage: ator.conv.registry
-## @lineage: ator.state.registry
-## @lineage: dphi.eco.surface.registry
-## @lineage: dphi.eco.scope.surface.registry
+# bound.space.sandbox.surface
+## @lineage: agent.loop.conv.registry
 import os
 import sys
 import time

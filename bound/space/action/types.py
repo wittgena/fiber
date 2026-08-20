@@ -1,8 +1,5 @@
-# bound.adapter.schema.types
-## @lineage: ator.driver.schema.types
-## @lineage: ator.conv.schema.types
-## @lineage: ator.conv.parser.types
-## @lineage: bound.parser.conv.types
+# bound.space.action.types
+## @lineage: bound.adapter.schema.types
 import re
 import uuid
 from collections.abc import Callable
@@ -10,8 +7,9 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
-from agent.loop.conv.event import Event
 from agent.anchor.llm.param import ModelResponseStream
+
+from arch.model.conv.event import Event
 from arch.contract.event.next import ToposId
 
 LLMStreamChunk = ModelResponseStream
