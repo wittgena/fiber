@@ -9,7 +9,7 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
-from ator.driver.schema.event import Event
+from arch.model.event import Event
 from ator.client.model.param import ModelResponseStream
 from arch.contract.event.next import ToposId
 

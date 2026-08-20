@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from pydantic import Field
 from rich.text import Text
 
-from ator.driver.schema.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from ator.driver.schema.event import SourceType, ToolCallID
+from arch.model.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from arch.model.event import SourceType, ToolCallID
 from ator.driver.schema.message import (
     Message,
     MessageToolCall,

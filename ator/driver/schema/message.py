@@ -1,25 +1,38 @@
 # ator.driver.schema.message
-## @lineage: ator.conv.schema.message
 import json
-from abc import abstractmethod
 from collections.abc import Sequence
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar
 
 from openai.types.responses.response_output_message import ResponseOutputMessage
 from openai.types.responses.response_reasoning_item import ResponseReasoningItem
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from arch.xor.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 from arch.xor.mark.depre import handle_deprecated_model_fields
 
-from ator.client.model.param import ChatCompletionMessageToolCall, ResponseFunctionToolCall, OutputFunctionToolCall
-from ator.client.model.param import GenericResponseOutputItem
+from ator.client.model.param import (
+    ChatCompletionMessageToolCall,
+    ResponseFunctionToolCall,
+    OutputFunctionToolCall,
+    GenericResponseOutputItem,
+)
 
+from arch.model.message import (
+    MessageToolCall as CoreMessageToolCall,
+    TextContent as CoreTextContent,
+    ImageContent,
+    ThinkingBlock,
+    RedactedThinkingBlock,
+    ReasoningItemModel,
+    Message as CoreMessage,
+    content_to_str,
+)
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
 class SafeAttributeObjectProxy:
+    """OpenAI API 응답 객체를 안전하게 탐색하기 위한 유틸리티 프록시"""
     def __init__(self, obj: Any):
         self._obj = obj
 
@@ -39,16 +52,12 @@ class SafeAttributeObjectProxy:
         val = self.__getattr__(key)
         return default if val is None else val
 
-class MessageToolCall(BaseModel):
-    id: str = Field(..., description="Canonical tool call id")
-    name: str = Field(..., description="Tool/function name")
-    arguments: str = Field(..., description="JSON string of arguments")
-    origin: Literal["completion", "responses"] = Field(..., description="Originating API family")
 
+# 2. 순수 모델 확장: OpenAI 파싱 로직 주입 (어댑터 패턴)
+
+class MessageToolCall(CoreMessageToolCall):
     @classmethod
-    def from_chat_tool_call(
-        cls, tool_call: Any
-    ) -> "MessageToolCall":
+    def from_chat_tool_call(cls, tool_call: Any) -> "MessageToolCall":
         """Create a MessageToolCall from a Chat Completions tool call."""
         tc = SafeAttributeObjectProxy(tool_call)
         if not tc.type == "function":
@@ -88,65 +97,8 @@ class MessageToolCall(BaseModel):
             origin="responses",
         )
 
-    def to_chat_dict(self) -> dict[str, Any]:
-        """Serialize to OpenAI Chat Completions tool_calls format."""
-        return {
-            "id": self.id,
-            "type": "function",
-            "function": {
-                "name": self.name,
-                "arguments": self.arguments,
-            },
-        }
 
-    def to_responses_dict(self) -> dict[str, Any]:
-        """Serialize to OpenAI Responses 'function_call' input item format."""
-        resp_id = self.id if str(self.id).startswith("fc") else f"fc_{self.id}"
-        args_str = (
-            self.arguments
-            if isinstance(self.arguments, str)
-            else json.dumps(self.arguments)
-        )
-        return {
-            "type": "function_call",
-            "id": resp_id,
-            "call_id": resp_id,
-            "name": self.name,
-            "arguments": args_str,
-        }
-
-
-class ThinkingBlock(BaseModel):
-    type: Literal["thinking"] = "thinking"
-    thinking: str = Field(..., description="The thinking content")
-    signature: str | None = Field(
-        default=None, description="Cryptographic signature for the thinking block"
-    )
-
-class RedactedThinkingBlock(BaseModel):
-    type: Literal["redacted_thinking"] = "redacted_thinking"
-    data: str = Field(..., description="The redacted thinking content")
-
-class ReasoningItemModel(BaseModel):
-    id: str | None = Field(default=None)
-    summary: list[str] = Field(default_factory=list)
-    content: list[str] | None = Field(default=None)
-    encrypted_content: str | None = Field(default=None)
-    status: str | None = Field(default=None)
-
-
-class BaseContent(BaseModel):
-    cache_prompt: bool = False
-
-    @abstractmethod
-    def to_llm_dict(self) -> list[dict[str, str | dict[str, str]]]:
-        """Convert to LLM API format."""
-
-
-class TextContent(BaseContent):
-    type: Literal["text"] = "text"
-    text: str
-    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", populate_by_name=True)
+class TextContent(CoreTextContent):
     _DEPRECATED_FIELDS: ClassVar[tuple[str, ...]] = ("enable_truncation",)
 
     @model_validator(mode="before")
@@ -154,43 +106,11 @@ class TextContent(BaseContent):
     def _handle_deprecated_fields(cls, data: Any) -> Any:
         return handle_deprecated_model_fields(data, cls._DEPRECATED_FIELDS)
 
-    def to_llm_dict(self) -> list[dict[str, str | dict[str, str]]]:
-        data: dict[str, str | dict[str, str]] = {
-            "type": self.type,
-            "text": self.text,
-        }
-        if self.cache_prompt:
-            data["cache_control"] = {"type": "ephemeral"}
-        return [data]
 
-class ImageContent(BaseContent):
-    type: Literal["image"] = "image"
-    image_urls: list[str]
-
-    def to_llm_dict(self) -> list[dict[str, str | dict[str, str]]]:
-        images: list[dict[str, str | dict[str, str]]] = []
-        for url in self.image_urls:
-            images.append({"type": "image_url", "image_url": {"url": url}})
-        if self.cache_prompt and images:
-            images[-1]["cache_control"] = {"type": "ephemeral"}
-        return images
-
-class Message(BaseModel):
-    role: Literal["user", "system", "assistant", "tool", "environment", "watcher"]
+class Message(CoreMessage):
+    # Pydantic 필드 타입을 서브클래스(어댑터) 타입으로 오버라이드
     content: Sequence[TextContent | ImageContent] = Field(default_factory=list)
     tool_calls: list[MessageToolCall] | None = None
-    tool_call_id: str | None = None
-    name: str | None = None
-    reasoning_content: str | None = Field(
-        default=None,
-        description="Intermediate reasoning/thinking content from reasoning models",
-    )
-    thinking_blocks: Sequence[ThinkingBlock | RedactedThinkingBlock] = Field(
-        default_factory=list,
-    )
-    responses_reasoning_item: ReasoningItemModel | None = Field(
-        default=None,
-    )
 
     _DEPRECATED_FIELDS: ClassVar[tuple[str, ...]] = (
         "cache_enabled",
@@ -207,19 +127,21 @@ class Message(BaseModel):
     def _handle_deprecated_fields(cls, data: Any) -> Any:
         return handle_deprecated_model_fields(data, cls._DEPRECATED_FIELDS)
 
-    @property
-    def contains_image(self) -> bool:
-        return any(isinstance(content, ImageContent) for content in self.content)
+    def _maybe_truncate_tool_text(self, text: str) -> str:
+        """CoreMessage의 truncate를 덮어쓰고, 내부 watcher 로거를 사용합니다."""
+        if not text or len(text) <= DEFAULT_TEXT_CONTENT_LIMIT:
+            return text
 
-    @field_validator("content", mode="before")
-    @classmethod
-    def _coerce_content(cls, v: Any) -> Sequence[TextContent | ImageContent] | Any:
-        if v is None:
-            return []
-        if isinstance(v, str):
-            return [TextContent(text=v)]
-        return v
+        log.warning(
+            "Tool TextContent text length (%s) exceeds limit (%s), truncating",
+            len(text),
+            DEFAULT_TEXT_CONTENT_LIMIT,
+        )
+        return maybe_truncate(text, DEFAULT_TEXT_CONTENT_LIMIT)
 
+    # -------------------------------------------------------------------------
+    # 직렬화 (Serialization) 로직 - OpenAI 포맷
+    # -------------------------------------------------------------------------
     def to_chat_dict(
         self,
         *,
@@ -262,8 +184,8 @@ class Message(BaseModel):
     def _list_serializer(self, *, vision_enabled: bool) -> dict[str, Any]:
         content: list[dict[str, Any]] = []
         role_tool_with_prompt_caching = False
-
         thinking_blocks_dicts = []
+        
         if self.role == "assistant":
             thinking_blocks = list(self.thinking_blocks)
             for thinking_block in thinking_blocks:
@@ -408,17 +330,9 @@ class Message(BaseModel):
             return items
         return items
 
-    def _maybe_truncate_tool_text(self, text: str) -> str:
-        if not text or len(text) <= DEFAULT_TEXT_CONTENT_LIMIT:
-            return text
-
-        log.warning(
-            "Tool TextContent text length (%s) exceeds limit (%s), truncating",
-            len(text),
-            DEFAULT_TEXT_CONTENT_LIMIT,
-        )
-        return maybe_truncate(text, DEFAULT_TEXT_CONTENT_LIMIT)
-
+    # -------------------------------------------------------------------------
+    # 역직렬화/파싱 (Deserialization/Parsing) 로직 - OpenAPI 객체 -> 스키마
+    # -------------------------------------------------------------------------
     @classmethod
     def from_llm_chat_message(cls, message: Any) -> "Message":
         msg = SafeAttributeObjectProxy(message)
@@ -462,6 +376,7 @@ class Message(BaseModel):
         content_text = msg.content if isinstance(msg.content, str) else ""
         has_text = bool(content_text.strip())
         has_tools = bool(tool_calls)
+        
         if not has_text and not has_tools:
             raise ValueError("LLM returned an entirely empty response (no text, no tool calls).")
 
@@ -473,19 +388,8 @@ class Message(BaseModel):
             thinking_blocks=thinking_blocks,
         )
 
-        return cls(
-            role=msg.role,
-            content=[TextContent(text=msg.content)] if isinstance(msg.content, str) else [],
-            tool_calls=tool_calls,
-            reasoning_content=rc,
-            thinking_blocks=thinking_blocks,
-        )
-
     @classmethod
-    def from_llm_responses_output(
-        cls,
-        output: Any,
-    ) -> "Message":
+    def from_llm_responses_output(cls, output: Any) -> "Message":
         assistant_text_parts: list[str] = []
         tool_calls: list[MessageToolCall] = []
         responses_reasoning_item: ReasoningItemModel | None = None
@@ -521,18 +425,9 @@ class Message(BaseModel):
                 )
 
         assistant_text = "\n".join(assistant_text_parts).strip()
-        return Message(
+        return cls(
             role="assistant",
             content=[TextContent(text=assistant_text)] if assistant_text else [],
             tool_calls=tool_calls or None,
             responses_reasoning_item=responses_reasoning_item,
         )
-
-def content_to_str(contents: Sequence[TextContent | ImageContent]) -> list[str]:
-    text_parts = []
-    for content_item in contents:
-        if isinstance(content_item, TextContent):
-            text_parts.append(content_item.text)
-        elif isinstance(content_item, ImageContent):
-            text_parts.append(f"[Image: {len(content_item.image_urls)} URLs]")
-    return text_parts

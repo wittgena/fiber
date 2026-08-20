@@ -16,7 +16,7 @@ from dphi.receptor.ingress.gov.policy import (
 
 from arch.topos.tunnel.subs import DistributedPubSub
 from arch.xor.parser.otlp import StrictOtlpExtractionEngine
-from bound.xor.store.stream import LogStreamStore
+from arch.xor.stream.store import LogStreamStore
 from kernel.dphi.broker import DphiBroker
 from kernel.dphi.exchange.transaction import ExchangeAdapter
 from kernel.dphi.adapter.sign import NodeSigner

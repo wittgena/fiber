@@ -18,7 +18,7 @@ from watcher.plane.emitter import get_emitter
 from dphi.receptor.edge.public import public_edge
 from dphi.receptor.edge.internal import internal_router
 from dphi.receptor.edge.ext import ext_router
-from bound.xor.store.stream import LogStreamStore
+from arch.xor.stream.store import LogStreamStore
 from watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from watcher.ingress.middleware import (
     AttestationMiddleware,

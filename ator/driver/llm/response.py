@@ -1,5 +1,4 @@
 # ator.driver.llm.response
-## @lineage: ator.conv.protocol.llm.response
 import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
