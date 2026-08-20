@@ -11,9 +11,9 @@ from typing import Any, Literal, Dict, Optional, Tuple, Union, List, Callable
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from ator.driver.schema.message import Message, TextContent
-from ator.driver.schema.tool import Tool
-from ator.driver.llm.model import LLMModel
+from bound.adapter.schema.message import Message, TextContent
+from bound.adapter.schema.tool import Tool
+from agent.llm.driver.model import LLMModel
 from bound.config.mcp import MCPConfig
 
 from arch.contract.model.graph import EntryNode

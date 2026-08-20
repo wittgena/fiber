@@ -13,7 +13,7 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from ator.client.wallet import LocalWalletClient
+from bound.client.wallet import LocalWalletClient
 from bound.config.dphi import dphi_env
 from kernel.dphi.exchange.transaction import TransactionReceipt
 

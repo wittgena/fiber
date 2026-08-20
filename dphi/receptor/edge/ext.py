@@ -7,8 +7,8 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from ator.client.ext.evm import Web3Adapter
-from ator.client.ext.wallet import EthWalletAdapter
+from bound.client.ext.evm import Web3Adapter
+from bound.client.ext.wallet import EthWalletAdapter
 from dphi.adapter.rollup import RollupAdapter
 from bound.config.dphi import dphi_env
 

@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import serialization
 
 from kernel.dphi.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from dphi.adapter.anchor import PhaseBuilder
-from ator.client.wallet import LocalWalletClient
+from bound.client.wallet import LocalWalletClient
 
 from kernel.dphi.runner.phase import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter
