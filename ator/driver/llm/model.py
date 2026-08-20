@@ -30,8 +30,8 @@ from ator.runtime.exception.types import LLMContextWindowTooSmallError
 from ator.driver.llm.factory import DriverFactory
 from ator.driver.observer import DriverObserver
 
-from arch.xor.mark.convset import SettingProminence, field_meta
-from arch.xor.mark.depre import warn_deprecated
+from arch.xor.parser.mark.convset import SettingProminence, field_meta
+from arch.xor.parser.mark.depre import warn_deprecated
 from arch.model.config import config
 from arch.xor.secret.validator import serialize_secret, validate_secret
 from kernel.bind.resolver import find_current_self

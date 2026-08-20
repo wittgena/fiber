@@ -12,7 +12,7 @@ from typing import List, Literal, Optional, Union
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from pydantic import PrivateAttr
 from typing_extensions import Any, List, Optional, TypedDict
-from arch.xor.surge.model import DynamicSurgeModel
+from arch.model.surge.model import DynamicSurgeModel
 
 Phase = Optional[Literal["commentary", "final_answer"]]
 

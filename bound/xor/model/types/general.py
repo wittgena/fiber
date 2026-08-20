@@ -27,7 +27,7 @@ from bound.xor.model.types.openai import ChatCompletionToolCallChunk, ChatComple
 from bound.xor.model.types.openai import OpenAIChatCompletionFinishReason
 
 from arch.model.phase.gate import uuid
-from arch.xor.surge.model import DynamicSurgeModel
+from arch.model.surge.model import DynamicSurgeModel
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("types.general")

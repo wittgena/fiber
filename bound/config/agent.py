@@ -17,10 +17,10 @@ from ator.driver.llm.model import LLMModel
 from bound.config.mcp import MCPConfig
 
 from arch.contract.model.graph import EntryNode
-from arch.xor.surge.blueprint import SurgeBlueprint, SurgeNode
+from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
 from arch.contract.resolver.secret import SecretSource, SecretValue
-from arch.xor.surge.disc import SurgeBaseModel
-from arch.xor.mark.depre import warn_deprecated
+from arch.model.surge.disc import SurgeBaseModel
+from arch.xor.parser.mark.depre import warn_deprecated
 from kernel.bind.resolver import resolve_path
 from watcher.plane.emitter import get_emitter
 

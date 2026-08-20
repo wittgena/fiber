@@ -8,7 +8,7 @@ from rich.text import Text
 from ator.driver.schema.message import ImageContent, TextContent
 from ator.driver.schema.message import content_to_str
 
-from arch.xor.surge.disc import DiscMixin
+from arch.model.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:

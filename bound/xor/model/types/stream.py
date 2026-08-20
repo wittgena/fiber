@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 from bound.xor.model.types.core import StreamingChoices, Usage
 from arch.model.phase.gate import uuid
-from arch.xor.surge.model import DynamicSurgeModel
+from arch.model.surge.model import DynamicSurgeModel
 
 def _generate_id():
     """private helper function"""

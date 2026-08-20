@@ -1,7 +1,7 @@
 # bound.config.mcp
 ## @lineage: ator.conv.protocol.mcp.config
 from typing import Dict, List, Optional
-from arch.xor.surge.disc import SurgeBaseModel
+from arch.model.surge.disc import SurgeBaseModel
 
 class MCPServerConfig(SurgeBaseModel):
     command: str

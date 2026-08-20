@@ -11,7 +11,7 @@ import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Required, TypedDict
 from pydantic import Field
-from arch.xor.surge.model import DynamicSurgeModel
+from arch.model.surge.model import DynamicSurgeModel
 
 Phase = Optional[Literal["commentary", "final_answer"]]
 
