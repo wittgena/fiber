@@ -22,15 +22,16 @@ from pydantic.json_schema import SkipJsonSchema
 from bound.xor.model.info import get_features, supports_vision
 from bound.xor.model.token.splitter import create_pretrained_tokenizer
 from bound.xor.model.metric import Metrics
-from ator.runtime.exception.types import LLMContextWindowTooSmallError
-from bound.xor.bridge.mark.convset import SettingProminence, field_meta
-from bound.xor.bridge.mark.depre import warn_deprecated
 from bound.config.cloud import VendorConfig
 
 from ator.driver.llm.strategy.fallback import FallbackStrategy
+
+from ator.runtime.exception.types import LLMContextWindowTooSmallError
 from ator.driver.llm.factory import DriverFactory
 from ator.driver.observer import DriverObserver
 
+from arch.xor.mark.convset import SettingProminence, field_meta
+from arch.xor.mark.depre import warn_deprecated
 from arch.model.config import config
 from arch.xor.secret.validator import serialize_secret, validate_secret
 from kernel.bind.resolver import find_current_self

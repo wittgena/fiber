@@ -1,18 +1,5 @@
-# bound.xor.bridge.security.eval
-## @lineage: bound.eco.xor.bridge.security.eval
-## @lineage: eco.bound.xor.bridge.security.eval
-## @lineage: engine.xor.bridge.security.eval
-## @lineage: xor.bridge.security.eval
-## @lineage: xor.security.eval
-## @lineage: driver.security.eval
-## @lineage: ator.driver.security.eval
-## @lineage: engine.driver.security.eval
-## @lineage: engine.security.eval
-## @lineage: phi.security.eval
-## @lineage: agent.atoa.event.security.eval
-## @lineage: atoa.event.security.eval
-## @lineage: swarm.atoa.event.security.eval
-## @lineage: atoa.secure.security.eval
+# ator.driver.security.eval
+## @lineage: bound.xor.bridge.security.eval
 from __future__ import annotations
 from enum import Enum
 from rich.text import Text

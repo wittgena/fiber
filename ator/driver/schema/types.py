@@ -1,4 +1,5 @@
-# ator.conv.schema.types
+# ator.driver.schema.types
+## @lineage: ator.conv.schema.types
 ## @lineage: ator.conv.parser.types
 ## @lineage: bound.parser.conv.types
 import re
@@ -8,7 +9,7 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
-from ator.conv.schema.event import Event
+from ator.driver.schema.event import Event
 from ator.client.model.param import ModelResponseStream
 from arch.contract.event.next import ToposId
 

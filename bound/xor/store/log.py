@@ -9,8 +9,8 @@ import operator
 from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
-from ator.conv.schema.event import Event
-from ator.conv.schema.event import EventID
+from ator.driver.schema.event import Event
+from ator.driver.schema.event import EventID
 from bound.xor.store.base import EventsListBase
 
 from arch.xor.store.file import FileStore

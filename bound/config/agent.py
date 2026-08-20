@@ -1,18 +1,106 @@
 # bound.config.agent
-## @lineage: ator.runtime.config
-from typing import Any, Literal
+from __future__ import annotations
 
-from pydantic import Field, field_serializer, field_validator
+import asyncio
+import json
+import os
+from collections.abc import Mapping
+from datetime import datetime
+from enum import Enum
+from typing import Any, Literal, Dict, Optional, Tuple, Union, List, Callable
 
-from ator.conv.context.prompt import PromptContext
-from ator.runtime.activator import Activator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from ator.conv.protocol.mcp.config import MCPConfig
+from ator.driver.schema.message import Message, TextContent
 from ator.driver.schema.tool import Tool
 from ator.driver.llm.model import LLMModel
+from bound.config.mcp import MCPConfig
 
+from arch.contract.model.graph import EntryNode
+from arch.xor.surge.blueprint import SurgeBlueprint, SurgeNode
+from arch.contract.resolver.secret import SecretSource, SecretValue
 from arch.xor.surge.disc import SurgeBaseModel
-from bound.xor.bridge.mark.depre import warn_deprecated
+from arch.xor.mark.depre import warn_deprecated
+from kernel.bind.resolver import resolve_path
+from watcher.plane.emitter import get_emitter
+
+log = get_emitter("config.agent")
+
+SYSTEM_PROMPTS = {
+    "role": "You are a precise, autonomous, and cost-aware execution agent. Your primary purpose is to perfectly execute structural blueprints while minimizing computational overhead.",
+    "economics": "Resource Constraints: You operate inside a deterministic WASM Sandbox. Every execution consumes 'Fuel' from a hard cap dictated by your current Tier. Exhausting fuel causes an immediate Trap (termination). Always optimize algorithms and CLI commands (e.g., limit find depths, avoid large data pipes) to minimize overhead.",
+    "execution": "Execution Protocol: Process the Blueprint sequentially. Use the 'terminal' tool to execute the exact commands provided. If a 'file not found' error occurs, use `find $(pwd) -maxdepth 3 -name <filename>` with targeted depth to locate it. NEVER repeat the exact same failed command.",
+    "focus": "Task Focus: Do not invent steps outside the blueprint. Focus entirely on the current node. If a command fails, you MUST analyze the error and attempt ONE logical alternative (Self-Heal) before triggering an escalation via the 'bridge' tool. Once validated, use 'finish'."
+}
+
+class PromptContext(BaseModel):
+    system_message_suffix: str | None = Field(default=None)
+    user_message_suffix: str | None = Field(default=None)
+    secrets: Mapping[str, SecretValue] | None = Field(default=None)
+    current_datetime: datetime | str | None = Field(default_factory=datetime.now)
+
+    def get_secret_infos(self) -> list[dict[str, str | None]]:
+        if not self.secrets:
+            return []
+        return [
+            {
+                "name": name, 
+                "description": val.description if isinstance(val, SecretSource) else None
+            }
+            for name, val in self.secrets.items()
+        ]
+
+    def get_formatted_datetime(self) -> str | None:
+        if not self.current_datetime:
+            return None
+        return self.current_datetime.isoformat() if isinstance(self.current_datetime, datetime) else str(self.current_datetime)
+
+    def get_static_system_message(
+        self, 
+        llm_model: str, 
+        llm_model_canonical: str | None, 
+        has_browser_tool: bool
+    ) -> str:
+        base_prompt = "\n\n".join(SYSTEM_PROMPTS.values())
+        if has_browser_tool:
+            base_prompt += "\n\nBrowser: Tool is enabled for web research."
+            
+        return base_prompt
+
+    def get_system_message_suffix(
+        self,
+        llm_model: str | None = None,
+        llm_model_canonical: str | None = None,
+        additional_secret_infos: list[dict[str, str | None]] | None = None,
+    ) -> str | None:
+        parts = []
+        if dt := self.get_formatted_datetime():
+            parts.append(f"[Current Time Context: {dt}]")
+
+        if self.system_message_suffix and self.system_message_suffix.strip():
+            parts.append(self.system_message_suffix.strip())
+
+        secret_infos = self.get_secret_infos()
+        if additional_secret_infos:
+            secret_dict = {s["name"]: s for s in secret_infos}
+            for add in additional_secret_infos:
+                secret_dict[add["name"]] = add
+            secret_infos = list(secret_dict.values())
+            
+        if secret_infos:
+            secret_lines = ["<SECRETS> (Auto-exported as ENV vars)"]
+            for s in secret_infos:
+                desc = f" - {s.get('description', '')}" if s.get('description') else ""
+                secret_lines.append(f"* ${{{s['name']}}}{desc}")
+            secret_lines.append("</SECRETS>")
+            parts.append("\n".join(secret_lines))
+
+        return "\n\n".join(parts) if parts else None
+
+    def get_user_message_suffix(self, user_message: Message, skip_skill_names: list[str]) -> tuple[TextContent, list[str]] | None:
+        if self.user_message_suffix and self.user_message_suffix.strip():
+            return TextContent(text=self.user_message_suffix.strip()), []
+        return None
 
 AGENT_SETTINGS_SCHEMA_VERSION = 1
 SecurityAnalyzerType = Literal["llm", "none"]
@@ -99,6 +187,7 @@ def _default_llm_settings() -> LLMModel:
     assert isinstance(model, str)
     return LLMModel(model=model)
 
+
 class AgentConfig(SurgeBaseModel):
     schema_version: int = Field(default=AGENT_SETTINGS_SCHEMA_VERSION, ge=1)
     agent: str = Field(
@@ -143,11 +232,3 @@ class AgentConfig(SurgeBaseModel):
         if value is None:
             return {}
         return value.model_dump(exclude_none=True, exclude_defaults=True)
-
-    def create_activator(self) -> Activator:
-        return Activator(
-            llm=self.llm,
-            tools=self.tools,
-            mcp_config=self._serialize_mcp_config(self.mcp_config),
-            prompt_context=self.prompt_context
-        )

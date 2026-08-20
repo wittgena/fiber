@@ -1,16 +1,13 @@
-# ator.conv.event.llm.action
-## @lineage: ator.state.event.llm.action
-## @lineage: engine.atoa.event.llm.action
-## @lineage: engine.protocol.atoa.event.llm.action
-## @lineage: phi.agent.atoa.event.llm.action
-## @lineage: agent.atoa.event.llm.action
+# ator.driver.llm.event
+## @lineage: ator.conv.event.llm.action
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 from pydantic import Field
 from rich.text import Text
-from ator.conv.schema.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from ator.conv.schema.event import SourceType, ToolCallID
-from ator.conv.schema.message import (
+
+from ator.driver.schema.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from ator.driver.schema.event import SourceType, ToolCallID
+from ator.driver.schema.message import (
     Message,
     MessageToolCall,
     ReasoningItemModel,
@@ -18,7 +15,7 @@ from ator.conv.schema.message import (
     TextContent,
     ThinkingBlock,
 )
-from bound.xor.bridge.security.eval import SecurityRisk
+from ator.driver.security.eval import SecurityRisk
 from ator.driver.schema.action import Action
 
 class ActionEvent(LLMConvertibleEvent):

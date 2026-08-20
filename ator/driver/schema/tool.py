@@ -1,14 +1,4 @@
 # ator.driver.schema.tool
-## @lineage: ator.agent.action.schema.tool
-## @lineage: driver.disc.tool
-## @lineage: ator.driver.disc.tool
-## @lineage: engine.driver.disc.tool
-## @lineage: engine.protocol.atoa.schema.disc.tool
-## @lineage: phi.agent.atoa.schema.disc.tool
-## @lineage: agent.atoa.schema.disc.tool
-## @lineage: atoa.agent.disc.tool
-## @lineage: phi.agent.disc.tool
-## @lineage: agent.tool
 from typing import Any
 from pydantic import BaseModel, Field, field_validator
 

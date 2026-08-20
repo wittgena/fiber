@@ -5,7 +5,7 @@
 ## @lineage: xor.store.base
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from ator.conv.schema.event import Event
+from ator.driver.schema.event import Event
 
 class EventsListBase(Sequence[Event], ABC):
     @abstractmethod

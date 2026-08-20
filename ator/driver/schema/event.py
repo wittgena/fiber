@@ -1,4 +1,5 @@
-# ator.conv.schema.event
+# ator.driver.schema.event
+## @lineage: ator.conv.schema.event
 ## @lineage: ator.conv.parser.event
 import __future__
 import uuid
@@ -8,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 from pydantic import ConfigDict, Field
 from rich.text import Text
 
-from ator.conv.schema.message import ImageContent, Message, TextContent
+from ator.driver.schema.message import ImageContent, Message, TextContent
 from arch.xor.surge.disc import DiscMixin
 from arch.contract.event.next import ToposId, next_id
 
@@ -91,7 +92,7 @@ class LLMConvertibleEvent(Event, ABC):
 
     @staticmethod
     def events_to_messages(events: list["LLMConvertibleEvent"]) -> list[Message]:
-        from ator.conv.event.llm.action import ActionEvent
+        from ator.driver.llm.event import ActionEvent
         messages = []
         i = 0
 

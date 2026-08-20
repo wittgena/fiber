@@ -1,20 +1,12 @@
 # ator.driver.schema.action
-## @lineage: ator.agent.action.schema.action
-## @lineage: driver.disc.action
-## @lineage: ator.driver.disc.action
-## @lineage: engine.driver.disc.action
-## @lineage: engine.protocol.atoa.schema.disc.action
-## @lineage: phi.agent.atoa.schema.disc.action
-## @lineage: agent.atoa.schema.disc.action
-## @lineage: atoa.schema.action
 from abc import ABC
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from pydantic import ConfigDict, Field, create_model
 from rich.text import Text
 
-from ator.conv.schema.message import ImageContent, TextContent
-from ator.conv.schema.message import content_to_str
+from ator.driver.schema.message import ImageContent, TextContent
+from ator.driver.schema.message import content_to_str
 
 from arch.xor.surge.disc import DiscMixin
 from watcher.plane.emitter import get_logger

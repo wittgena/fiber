@@ -1,16 +1,11 @@
-# ator.conv.protocol.llm.response
-## @lineage: engine.protocol.llm.response
-## @lineage: agent.protocol.llm.response
-## @lineage: engine.protocol.atoa.schema.llm.response
-## @lineage: phi.agent.atoa.schema.llm.response
-## @lineage: agent.atoa.schema.llm.response
-## @lineage: agent.conver.llm.response
+# ator.driver.llm.response
+## @lineage: ator.conv.protocol.llm.response
 import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from ator.client.model.param import ModelResponse
-from ator.conv.schema.message import Message
+from ator.driver.schema.message import Message
 from bound.xor.model.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")

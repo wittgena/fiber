@@ -1,4 +1,5 @@
-# ator.conv.schema.message
+# ator.driver.schema.message
+## @lineage: ator.conv.schema.message
 import json
 from abc import abstractmethod
 from collections.abc import Sequence
@@ -8,8 +9,8 @@ from openai.types.responses.response_output_message import ResponseOutputMessage
 from openai.types.responses.response_reasoning_item import ResponseReasoningItem
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from bound.xor.bridge.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
-from bound.xor.bridge.mark.depre import handle_deprecated_model_fields
+from arch.xor.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from arch.xor.mark.depre import handle_deprecated_model_fields
 
 from ator.client.model.param import ChatCompletionMessageToolCall, ResponseFunctionToolCall, OutputFunctionToolCall
 from ator.client.model.param import GenericResponseOutputItem
