@@ -1,5 +1,4 @@
 # ator.driver.llm.event.system
-## @lineage: agent.space.conv.event.llm.system
 import __future__
 import json
 from pydantic import Field, model_validator
@@ -8,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 from arch.model.event import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
 from arch.model.event import SourceType
 from ator.driver.schema.message import Message, TextContent
-from agent.bridge.action.builder import ActionDefinition
+from ator.runtime.action.builder import ActionDefinition
 
 class SystemPromptEvent(LLMConvertibleEvent):
     source: SourceType = "agent"
