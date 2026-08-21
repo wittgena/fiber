@@ -1,5 +1,5 @@
 # dphi.receptor.edge.public
-## @lineage: receptor.edge.public
+import os
 import json
 import time
 import uuid
@@ -22,6 +22,7 @@ from arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
 from kernel.dphi.broker import DphiBroker, DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
+from kernel.dphi.adapter.sign import NodeSigner
 from watcher.receptor.contract.model import (
     CodebotIntent, 
     AuditReceipt,
@@ -39,19 +40,59 @@ from watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.public")
 
-public_edge = ContractRouter(namespace="public", prefix="/v1/public", tags=["Public Gateway"])
+public_edge = ContractRouter(
+    namespace="public", 
+    prefix="/v1/public", 
+    tags=["Public Gateway"],
+    description="Edge Gateway orchestrating WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts."
+)
 
 def get_internal_edge_url(request: Request) -> str:
     return request.app.state.config.internal_edge_url
 
+
+@public_edge.get(
+    "/keys", 
+    summary="Get Trusted Signer Keys (Strictly Pre-Signed)",
+    description=(
+        "Returns the list of active Edge nodes' public keys. "
+        "Strictly serves offline pre-signed signatures by the Master Root Key. Fails securely if misconfigured."
+    )
+)
+async def get_public_keys():
+    """
+    클라이언트 SDK가 캐싱할 서명자 목록 엔드포인트입니다.
+    이 노드는 절대 Root Key를 갖지 않으며, 주입된 환경변수(사전 생성된 서명)만 서빙합니다.
+    """
+    active_signers_env = os.getenv("DPHI_ACTIVE_SIGNERS")
+    root_signature = os.getenv("DPHI_PRE_SIGNED_ROOT_SIG")
+
+    if not active_signers_env or not root_signature:
+        log.critical("[Security] DPHI_ACTIVE_SIGNERS or DPHI_PRE_SIGNED_ROOT_SIG not configured. Rejecting request.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail="Security misconfiguration: Trusted registry is offline."
+        )
+
+    # 쉼표로 구분된 퍼블릭 키 목록을 파싱
+    payload_dict = {"active_signers": [key.strip() for key in active_signers_env.split(",")]}
+    
+    return Response(
+        content=orjson.dumps(payload_dict),
+        media_type="application/json",
+        headers={"X-Dphi-Root-Signature": root_signature}
+    )
+
+
 @public_edge.post(
     "/agent/execute", 
-    summary="[Gateway] AI 에이전트 인텐트 단일 실행 (Stateless 검증 및 실행)",
+    summary="Execute Billed AI Agent Intent & Issue Cryptographic Proof-of-Action",
+    description="Orchestrates metered AI intent execution and WASM state transitions to issue an immutable AuditReceipt with a canonical fingerprint.",
     response_model=AuditReceipt
 )
 async def public_agent_execute(
     intent: CodebotIntent,
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="지불 증명 영수증"),
+    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="Payment proof receipt (L402/X402)"),
     internal_url: str = Depends(get_internal_edge_url),
     broker: DphiBroker = Depends(get_wasm_broker)
 ):
@@ -131,7 +172,8 @@ async def public_agent_execute(
 @public_edge.post(
     "/telemetry/logs", 
     tags=["Log Ingress"], 
-    summary="[Gateway] 외부 에이전트의 OTLP 로그 수집",
+    summary="Ingest OTLP Telemetry, Verify Integrity & Seal Global Stream",
+    description="Extracts OTLP metrics and generates secure kernel fingerprints before delegating payloads to the distributed pub/sub stream.",
     status_code=status.HTTP_200_OK
 )
 async def public_otlp_logs_export(
@@ -191,7 +233,8 @@ async def public_otlp_logs_export(
 @public_edge.post(
     "/audit/event", 
     tags=["Log Ingress"], 
-    summary="[Gateway] 단건 Audit Event 마스킹 및 ZK 증명 발급"
+    summary="Secure Audit Event Recording & Conditional Cryptographic Proof Issuance",
+    description="Encrypts sensitive audit events for ledger recording, conditionally issuing Merkle/ZK proofs upon request."
 )
 async def public_audit_log(
     payload: AuditLogRequest,

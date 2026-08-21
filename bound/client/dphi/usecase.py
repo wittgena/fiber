@@ -1,5 +1,4 @@
 # bound.client.dphi.usecase
-## @lineage: ator.client.dphi.usecase
 import time
 import asyncio
 import logging
@@ -12,10 +11,10 @@ from watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportL
 
 """CONSTANTS & DTO"""
 class PublicEndpoints:
-    """DPHI Public Gateway API 엔드포인트 URL 정의"""
-    AGENT_EXECUTE  = "/v1/public/agent/execute"    # 단일 인텐트 실행
-    TELEMETRY_LOGS = "/v1/public/telemetry/logs"   # OTLP 텔레메트리 스트리밍
-    AUDIT_EVENT    = "/v1/public/audit/event"      # 민감 정보 마스킹 및 ZK 증명 발급
+    """DPHI Public Gateway API Endpoints"""
+    AGENT_EXECUTE  = "/v1/public/agent/execute"    # 과금 기반 인텐트 실행 및 Proof-of-Action 발급
+    TELEMETRY_LOGS = "/v1/public/telemetry/logs"   # OTLP 텔레메트리 인입 및 커널 씰링(Sealed Stream)
+    AUDIT_EVENT    = "/v1/public/audit/event"      # 감사 로그 암호화 기록 및 조건부 ZK/Merkle 증명
 
 @dataclass
 class CodebotIntent:
@@ -29,8 +28,8 @@ class CodebotIntent:
 """PUBLIC CLIENT SDK"""
 class DphiPublicClient:
     """
-    - 외부망에서 DPHI Public Gateway와 통신하는 보안 클라이언트 SDK
-    - VerifiedHttpClient를 래핑하여, 서버(Gateway)가 반환하는 모든 응답의 암호학적 서명(X-Dphi-Signature)을 자동으로 검증하여 중간자 공격(MitM)을 방어
+    Secure SDK for DPHI Public Gateway. 
+    서버 응답의 암호학적 서명(X-Dphi-Signature)을 자동 검증하여 MitM 및 Replay 공격을 방어합니다.
     """
     def __init__(self, base_url: str = "http://localhost:443", api_key: str = "test_key"):
         self.base_url = base_url
@@ -42,19 +41,18 @@ class DphiPublicClient:
             logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     def _get_verified_client(self) -> VerifiedHttpClient:
-        """기본 httpx 클라이언트를 생성하고 VerifiedHttpClient로 래핑하여 반환"""
+        """응답 무결성 검증 및 60초 Replay Attack 방어가 적용된 HTTP 클라이언트 반환"""
         headers = {"X-Dphi-API-Key": self.api_key}
         base_client = httpx.AsyncClient(
             base_url=self.base_url, 
             headers=headers, 
             timeout=self.http_timeout
         )
-        # max_age_seconds=60: 60초가 지난 Replay Attack 방어
         return VerifiedHttpClient(client=base_client, max_age_seconds=60)
 
     ## API 1: Agent Execute
     async def execute_agent_intent(self, intent: CodebotIntent) -> Dict[str, Any]:
-        """AI 에이전트의 코드를 실행하고 암호학적 영수증을 반환"""
+        """AI 인텐트를 전송하고, 위변조가 불가능한 실행 상태 영수증(AuditReceipt)을 검증 및 수령"""
         self.log.info(f"\n🚀 [API 1: Agent Execute] Requesting remote execution for {intent.agent_id}...")
         verifier = self._get_verified_client()
         url = PublicEndpoints.AGENT_EXECUTE
@@ -83,7 +81,7 @@ class DphiPublicClient:
 
     ## API 2: OTLP Telemetry Ingress
     async def push_telemetry(self, request: ExportLogsServiceRequest) -> Dict[str, Any]:
-        """서버 공통 DTO 모델(ExportLogsServiceRequest)을 사용하여 OTLP 텔레메트리 전송"""
+        """OTLP 메트릭을 전송하고, 커널이 봉인(Sealing)한 콘텐츠 해시와 지문(Fingerprint)을 검증"""
         self.log.info("\n📡 [API 2: Telemetry Logs] Pushing OTLP metrics to Edge Stream...")
         verifier = self._get_verified_client()
         url = PublicEndpoints.TELEMETRY_LOGS
@@ -112,7 +110,7 @@ class DphiPublicClient:
 
     ## API 3: Regulated Audit Event
     async def record_audit_event(self, request: AuditLogRequest) -> Dict[str, Any]:
-        """서버 공통 DTO 모델(AuditLogRequest)을 사용하여 민감한 감사 기록 전송"""
+        """민감 감사 로그를 암호화하여 원장에 기록하고, 조건부 Merkle/ZK 증명을 수령"""
         self.log.info(f"\n🔒 [API 3: Audit Event] Recording sensitive event: {request.event.message}...")
         verifier = self._get_verified_client()
         url = PublicEndpoints.AUDIT_EVENT
@@ -138,10 +136,10 @@ class DphiPublicClient:
 
 
 # =====================================================================
-# 3. PAYLOAD BUILDERS (Inspired by workflow patterns)
+# 3. PAYLOAD BUILDERS
 # =====================================================================
 class UsecasePayloadBuilder:
-    """Workflow의 SceneConfig 처럼 요청 더미 데이터를 조립하는 역할을 분리"""
+    """암호학적 워크플로우 검증을 위한 Mock 페이로드 조립 팩토리"""
     
     @staticmethod
     def build_intent() -> CodebotIntent:
@@ -187,7 +185,7 @@ class UsecasePayloadBuilder:
 # 4. SCENARIO RUNNER
 # =====================================================================
 class UsecaseRunner:
-    """순차적인 API 테스트를 Workflow Phase 처럼 명확하게 실행"""
+    """보안 클라이언트(SDK) 엔드투엔드 워크플로우 검증 러너"""
     
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.client = DphiPublicClient(base_url=base_url)

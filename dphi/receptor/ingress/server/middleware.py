@@ -1,5 +1,4 @@
 # dphi.receptor.ingress.server.middleware
-## @lineage: receptor.ingress.server.middleware
 import hashlib
 import os
 import time
@@ -93,12 +92,13 @@ class AttestationMiddleware(BaseHTTPMiddleware):
         async for chunk in response.body_iterator:
             body_bytes += chunk
             
-        if not body_bytes or response.status_code >= 400:
+        if not body_bytes:
             return self._reconstruct_response(response, body_bytes)
 
         timestamp = int(time.time())
         body_hash = hashlib.sha256(body_bytes).hexdigest()
         request_path = request.url.path
+        
         signature_payload = {
             "path": request_path,
             "timestamp": timestamp,
@@ -116,13 +116,12 @@ class AttestationMiddleware(BaseHTTPMiddleware):
         response.headers["X-Dphi-Signature"] = signature_hex
         response.headers["X-Dphi-Timestamp"] = str(timestamp)
         response.headers["X-Dphi-Signer"] = signer.pubkey_hex
-        
         response.headers["X-Dphi-Content-Hash"] = body_hash
-        log.debug(f"[Attestation] Payload signed for {request_path}. Hash: {body_hash[:8]}")
+        
+        log.debug(f"[Attestation] Payload signed for {request_path} (Status: {response.status_code}). Hash: {body_hash[:8]}")
         return self._reconstruct_response(response, body_bytes)
 
     def _reconstruct_response(self, response: Response, body_bytes: bytes) -> Response:
-        """소비된 body_iterator를 다시 생성하여 Response 객체를 복구합니다."""
         async def new_body_iterator():
             yield body_bytes
         response.body_iterator = new_body_iterator()

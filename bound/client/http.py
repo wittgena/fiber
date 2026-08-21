@@ -1,6 +1,4 @@
 # bound.client.http
-## @lineage: ator.client.http
-## @lineage: eco.client.http
 import hashlib
 import json
 import os
@@ -93,11 +91,6 @@ def mask_sensitive_info(text: str) -> str:
         return text
     return re.sub(r"([?&](?:key|api_key)=)[^&]+", r"\1[REDACTED_API_KEY]", text)
 
-
-# ==========================================
-# 3. SSRF Protection & URL Validation
-# ==========================================
-
 class SSRFError(ValueError):
     """Raised when a URL targets a blocked network."""
     pass
@@ -188,25 +181,59 @@ class ReplayAttackError(ValueError):
 
 class VerifiedHttpClient:
     """
-    내가 구축한 서버(또는 신뢰할 수 있는 노드)에서 
-    AttestationMiddleware를 통해 주입한 X-Dphi-* 헤더의 서명을 검증하는 클라이언트입니다.
+    내가 구축한 서버(Edge Node)에서 AttestationMiddleware를 통해 주입한 
+    암호학적 서명을 검증하는 클라이언트입니다. Root Key 기반의 동적 키 교환을 지원합니다.
     """
     def __init__(self, client: Union[httpx.Client, httpx.AsyncClient], max_age_seconds: int = 60):
         self._client = client
         self._max_age_seconds = max_age_seconds
-        # 검증에 사용할 싱글톤 Signer (외부 시스템인 경우 PyNaCl의 VerifyKey를 직접 주입받을 수 있도록 수정 가능)
         self._signer = NodeSigner.get_instance()
+        self._root_pubkey = os.getenv("DPHI_ROOT_PUBKEY")
+        self._trusted_signers = set()
 
-    def _verify_header_proof(self, response: httpx.Response, request_url: str) -> None:
-        """응답 헤더의 암호학적 서명을 검증합니다."""
+    async def _ensure_trusted_signers_async(self):
+        if self._trusted_signers:
+            return
+            
+        if not self._root_pubkey:
+            log.warning("[VerifiedHttpClient] DPHI_ROOT_PUBKEY is not set. Bypassing Root Key verification (Dev Mode).")
+            return
+
+        try:
+            # 설정된 base_url을 기준으로 keys 엔드포인트 호출
+            res = await self._client.get("/v1/public/keys")
+            res.raise_for_status()
+            
+            data = res.json()
+            root_signature = res.headers.get("X-Dphi-Root-Signature")
+            
+            if not root_signature:
+                raise ProofVerificationError("Keys 엔드포인트 응답에 Root Signature가 없습니다.")
+                
+            canonical_bytes = StateAdapter.to_canonical_bytes(data)
+            if not self._signer.verify_signature(canonical_bytes, root_signature, self._root_pubkey):
+                raise ProofVerificationError("서명자 목록을 신뢰할 수 없습니다. (Root Key 검증 실패)")
+                
+            self._trusted_signers = set(data.get("active_signers", []))
+            log.info(f"[VerifiedHttpClient] 🔐 Trusted signers cached: {len(self._trusted_signers)} node(s).")
+            
+        except Exception as e:
+            log.critical(f"[VerifiedHttpClient] 🚨 Failed to bootstrap trusted signers: {e}")
+            raise
+
+    def _verify_header_proof(self, response: httpx.Response) -> None:
         signature = response.headers.get("X-Dphi-Signature")
         timestamp = response.headers.get("X-Dphi-Timestamp")
         signer_pubkey = response.headers.get("X-Dphi-Signer")
         
-        if not signature or not timestamp:
-            raise ProofVerificationError("응답 헤더에 증명서(X-Dphi-Signature/Timestamp)가 누락되었습니다.")
+        if not signature or not timestamp or not signer_pubkey:
+            raise ProofVerificationError("응답 헤더에 증명서(Signature/Timestamp/Signer)가 누락되었습니다.")
 
-        # 1. Replay Attack 검증
+        if self._root_pubkey and self._trusted_signers:
+            if signer_pubkey not in self._trusted_signers:
+                log.critical(f"[VerifiedHttpClient] 🚨 Untrusted signer detected: {signer_pubkey}")
+                raise ProofVerificationError("신뢰할 수 없는 서명자(MitM 의심 노드)의 응답입니다.")
+
         try:
             ts_int = int(timestamp)
         except ValueError:
@@ -215,20 +242,14 @@ class VerifiedHttpClient:
         if time.time() - ts_int > self._max_age_seconds:
             raise ReplayAttackError(f"응답이 만료되었습니다. (Age: {time.time() - ts_int:.1f}s)")
             
-        # 2. Payload 해싱 (서버 미들웨어와 동일한 방식)
         body_hash = hashlib.sha256(response.content).hexdigest()
-        parsed_url = urlparse(request_url)
-        
+        request_path = urlparse(str(response.url)).path
         signature_payload = {
-            "path": parsed_url.path,
+            "path": request_path,
             "timestamp": ts_int,
             "body_hash": body_hash
         }
-        
-        # 3. Canonicalization
         canonical_bytes = StateAdapter.to_canonical_bytes(signature_payload)
-        
-        # 4. 서명 검증 (NodeSigner.verify_signature 활용)
         is_valid = self._signer.verify_signature(
             canonical_bytes=canonical_bytes,
             signature_hex=signature,
@@ -236,21 +257,20 @@ class VerifiedHttpClient:
         )
         
         if not is_valid:
-            log.critical(f"[VerifiedHttpClient] 🚨 Signature mismatch! URL: {request_url}")
+            log.critical(f"[VerifiedHttpClient] 🚨 Signature mismatch! Path: {request_path}")
             raise ProofVerificationError("서명 검증 실패: 데이터가 변조되었거나 잘못된 서명자입니다.")
-            
-        log.debug(f"[VerifiedHttpClient] ✅ Proof verified for {parsed_url.path}")
 
-    def get_verified(self, url: str, **kwargs: Any) -> httpx.Response:
-        """동기식 검증 GET 요청"""
-        response = self._client.get(url, **kwargs)
+    async def async_request_verified(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        """비동기식 검증 요청의 핵심 코어 (MitM DoS 방어를 위한 순서 보장)"""
+        await self._ensure_trusted_signers_async()
+        
+        response = await self._client.request(method, url, **kwargs)
+        self._verify_header_proof(response)
         response.raise_for_status()
-        self._verify_header_proof(response, url)
         return response
 
     async def async_get_verified(self, url: str, **kwargs: Any) -> httpx.Response:
-        """비동기식 검증 GET 요청"""
-        response = await self._client.get(url, **kwargs)
-        response.raise_for_status()
-        self._verify_header_proof(response, url)
-        return response
+        return await self.async_request_verified("GET", url, **kwargs)
+
+    async def async_post_verified(self, url: str, **kwargs: Any) -> httpx.Response:
+        return await self.async_request_verified("POST", url, **kwargs)

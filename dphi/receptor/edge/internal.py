@@ -1,5 +1,4 @@
 # dphi.receptor.edge.internal
-## @lineage: receptor.edge.internal
 import json
 import time
 import uuid

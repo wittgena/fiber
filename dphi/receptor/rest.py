@@ -1,5 +1,4 @@
 # dphi.receptor.rest
-## @lineage: receptor.rest
 import os
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -9,28 +8,27 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security, Reques
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
-from arch.topos.tunnel.factory import TunnelFactory
-from arch.topos.tunnel.subs import DistributedPubSub
-from arch.xor.parser.otlp import StrictOtlpRulesetParser
-from kernel.dphi.broker import DphiBroker
-from watcher.plane.emitter import get_emitter
-
 from dphi.receptor.edge.public import public_edge
 from dphi.receptor.edge.internal import internal_router
 from dphi.receptor.edge.ext import ext_router
+
+from arch.topos.tunnel.factory import TunnelFactory
+from arch.topos.tunnel.subs import DistributedPubSub
+from arch.xor.parser.otlp import StrictOtlpRulesetParser
 from arch.xor.stream.edge import LogStreamStore
+from kernel.dphi.broker import DphiBroker
 from watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from watcher.ingress.middleware import (
     AttestationMiddleware,
     LocalMiddleware,
     WasTelemetry,
 )
+from watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
 API_KEY_NAME = "X-Dphi-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
-
 
 class Config(BaseModel):
     web_url: str = ""
