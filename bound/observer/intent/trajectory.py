@@ -1,5 +1,5 @@
-# dphi.observer.intent.trajectory
-## @lineage: bound.observer.intent.trajectory
+# bound.observer.intent.trajectory
+## @lineage: dphi.observer.intent.trajectory
 ## @lineage: eco.observer.intent.trajectory
 ## @lineage: bound.agent.intent.trajectory
 ## @lineage: bound.exchange.intent.trajectory

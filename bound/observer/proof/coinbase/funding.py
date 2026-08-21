@@ -1,5 +1,5 @@
-# dphi.observer.proof.coinbase.funding
-## @lineage: bound.observer.proof.coinbase.funding
+# bound.observer.proof.coinbase.funding
+## @lineage: dphi.observer.proof.coinbase.funding
 ## @lineage: eco.observer.proof.coinbase.funding
 ## @lineage: bound.proof.coinbase.funding
 """

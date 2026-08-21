@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from dphi.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
+from bound.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
 from arch.xor.stream.edge import LogStreamStore
 from dphi.receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 from dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter

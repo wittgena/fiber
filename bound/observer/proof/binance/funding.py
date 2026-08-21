@@ -1,5 +1,5 @@
-# dphi.observer.proof.binance.funding
-## @lineage: bound.observer.proof.binance.funding
+# bound.observer.proof.binance.funding
+## @lineage: dphi.observer.proof.binance.funding
 ## @lineage: eco.observer.proof.binance.funding
 ## @lineage: bound.proof.binance.funding
 """

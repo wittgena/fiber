@@ -1,5 +1,5 @@
-# dphi.observer.intent.verifier
-## @lineage: bound.observer.intent.verifier
+# bound.observer.intent.verifier
+## @lineage: dphi.observer.intent.verifier
 ## @lineage: eco.observer.intent.verifier
 ## @lineage: bound.agent.intent.verifier
 ## @lineage: bound.intent.verifier

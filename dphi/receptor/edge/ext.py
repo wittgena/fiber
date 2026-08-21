@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from bound.client.ext.evm import Web3Adapter
 from bound.client.ext.wallet import EthWalletAdapter
-from dphi.adapter.rollup import RollupAdapter
+from bound.adapter.rollup import RollupAdapter
 from bound.config.dphi import dphi_env
 
 from arch.contract.interface import ContractRouter
