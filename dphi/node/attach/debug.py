@@ -1,5 +1,4 @@
 # dphi.node.attach.debug
-## @lineage: phase.node.attach.debug
 import sys
 import asyncio
 import json

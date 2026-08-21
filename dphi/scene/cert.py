@@ -1,6 +1,4 @@
 # dphi.scene.cert
-## @lineage: phase.dphi.scene.cert
-## @lineage: phase.epoch.scene.cert
 import time
 import asyncio
 import json
