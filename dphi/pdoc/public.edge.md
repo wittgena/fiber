@@ -1,13 +1,4 @@
 # dphi.pdoc.public.edge
-제시해 주신 기준("기존 골격 유지", "정량 수치 자연스러운 통합", "엄격하고 기술적이며 명확한 서술")에 따라 이전 초안을 자체 분석해 본 결과, **이전 초안은 '기술 피치(Tech Pitch)'의 성격이 강해 다소 선언적이고 감정적인 서사("We abandon...", "DPHI is not...")가 남아있었다는 점을 인정합니다.**
-
-요구하신 기준에 부합하려면, 문서는 마케팅 자료가 아닌 **RFC(Request for Comments)나 IEEE 기술 표준 문서처럼 극도로 건조하고, 정확하며, 인과관계가 명확한 엔지니어링 명세서**가 되어야 합니다.
-
-기존의 뼈대(Heading 구조)를 100% 유지하면서, 정량 수치를 시스템의 물리적 제약(Constraints)과 보장(Guarantees)으로 엄격하게 기술한 개선된 명세서를 제안합니다.
-
----
-
-# dphi.pdoc.public.edge
 
 @desc: DPHI Edge Technical Specification
 
