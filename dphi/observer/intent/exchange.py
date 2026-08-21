@@ -26,7 +26,7 @@ from kernel.dphi.eco.settlement import Ap2MandateResult, EcoAdapter, SettlementP
 from bound.client.ext.wallet import EthWalletAdapter
 from bound.client.ext.evm import Web3Adapter
 
-from kernel.bind.inter.dvm import DvmInterpreter
+from kernel.phase.inter.dvm import DvmInterpreter
 from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.broker import DphiMethod

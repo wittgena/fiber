@@ -12,7 +12,7 @@ import httpx
 from aiohttp import web
 from pydantic import BaseModel, Field, ValidationError
 
-from kernel.phase.stream.schema import (
+from arch.xor.stream.schema import (
     ActionIntent,
     LogicPayload,
     LogicStream,

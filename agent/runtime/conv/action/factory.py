@@ -1,6 +1,4 @@
 # agent.runtime.conv.action.factory
-## @lineage: ator.runtime.action.factory
-## @lineage: agent.bridge.action.factory
 from collections.abc import Callable, Sequence
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -34,7 +32,6 @@ class CoreAction(str, Enum):
 
     @classmethod
     def is_safe_cognitive(cls, tool_name: str) -> bool:
-        """사용자 확인(Confirmation)을 우회할 수 있는 안전한 인지/제어 흐름 도구인지 판별"""
         return tool_name in {cls.FINISH, cls.THINK, cls.LANG, cls.BRIDGE}
 
 ActionHandler = Callable[[Any, "ProtoConv | None", type[Observation]], Observation]

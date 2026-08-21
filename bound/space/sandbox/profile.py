@@ -1,16 +1,10 @@
-# bound.space.bench.profile
-## @lineage: bound.bench.profile
-## @lineage: bound.xor.bench.profile
-## @lineage: dphi.receptor.xe.profile
-## @lineage: receptor.xe.profile
+# bound.space.sandbox.profile
+## @lineage: bound.space.bench.profile
 import os
 import json
 import time
 from dataclasses import dataclass, asdict, field
 from typing import Dict, Any, Optional, List, Union
-
-from watcher.plane.emitter import get_logger
-from watcher.tracer.scope import scope_trace
 
 from arch.xor.parser.block.contract import CoherenceState
 from kernel.dphi.broker import DphiBroker
@@ -18,7 +12,10 @@ from kernel.dphi.cgroup import CgroupPolicy, Tier
 from kernel.dphi.exchange.config import billing_config, tier_config
 from kernel.dphi.sandbox.executor import SandboxExecutor, TaskContext, SandboxEnv, EffectResolver
 
-log = get_logger("xe.profile")
+from watcher.tracer.scope import scope_trace
+from watcher.plane.emitter import get_logger
+
+log = get_logger("sandbox.profile")
 
 class VerificationError(Exception):
     pass
@@ -29,7 +26,6 @@ class BillingVerifier:
         self.max_errors = max_errors
         self.mapped_state: List[str] = []
 
-    # 🌟 개선: WASM FFI(VerifyPacket) 제거 -> 파이썬 네이티브 정적 검증으로 대체
     async def verify_mapping(self, target_nodes: List[str], schema: Dict[str, Any]) -> str:
         observations = []
         error_count = 0
@@ -37,12 +33,9 @@ class BillingVerifier:
         for i, node_id in enumerate(target_nodes):
             async with scope_trace(name=f"verify_node_{i}", facet="logical"):
                 try:
-                    # 🌟 순수 파이썬 로직: 실행할 코드(files)가 스키마에 존재하는지 엄격히 검사
                     files_map = schema.get("files", {})
                     if not files_map:
                         raise VerificationError("Kernel Billing Validation Rejected: Missing 'files' map in execution schema.")
-                    
-                    # (추후 서명 검증이나 토큰 밸런스 확인 로직이 필요하다면 여기에 추가)
                     
                     valid_obs = f"Native Python Gateway verified billing for node: {node_id}"
                     observations.append(valid_obs)
@@ -208,11 +201,7 @@ class BenchProfile:
         
         sandbox_resolver = SandboxResolver(profile=profile)
         executor = SandboxExecutor(resolvers={"SANDBOX": sandbox_resolver}) 
-        
-        # 🌟 개선: DPHI 커널의 Transition 구조체를 제거했으므로, 
-        # SandboxExecutor가 파이썬 네이티브 플랫(Flat) 데이터를 그대로 다루도록 구조 복원
         flat_payload = {"schema": schema, "entry": entry, "depth": depth}
-        
         context = TaskContext(
             task_type="execute_agent_schema",
             tier=target_tier.value, 
