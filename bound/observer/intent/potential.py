@@ -1,5 +1,5 @@
-# dphi.observer.intent.potential
-## @lineage: bound.observer.intent.potential
+# bound.observer.intent.potential
+## @lineage: dphi.observer.intent.potential
 ## @lineage: eco.observer.intent.potential
 import asyncio
 import time
@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from bound.config.dphi import dphi_env
 
 from kernel.dphi.eco.settlement import EcoAdapter
-from dphi.observer.intent.exchange import DvmRpcBridge, NodeIdentity
+from bound.observer.intent.exchange import DvmRpcBridge, NodeIdentity
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import generate_parity_triplet

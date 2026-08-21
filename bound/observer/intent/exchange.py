@@ -1,5 +1,5 @@
-# dphi.observer.intent.exchange
-## @lineage: bound.observer.intent.exchange
+# bound.observer.intent.exchange
+## @lineage: dphi.observer.intent.exchange
 ## @lineage: eco.observer.intent.exchange
 ## @lineage: phase.dphi.workflow.intent
 ## @lineage: phase.epoch.workflow.intent

@@ -1,5 +1,5 @@
-# dphi.observer.tension
-## @lineage: bound.observer.tension
+# bound.observer.tension
+## @lineage: dphi.observer.tension
 import os
 import math
 import hashlib

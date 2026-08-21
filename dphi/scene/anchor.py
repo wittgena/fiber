@@ -1,6 +1,4 @@
 # dphi.scene.anchor
-## @lineage: phase.dphi.scene.anchor
-## @lineage: phase.epoch.scene.anchor
 import time
 import json
 from typing import Any, List, Dict

@@ -1,15 +1,14 @@
 # dphi.node.attach.surge
-## @lineage: phase.node.attach.surge
 import time
 import asyncio
 import random
 import json
 from typing import Any
 
-from watcher.plane.emitter import get_emitter
+from dphi.scene.anchor import ActorIdentity 
 from kernel.dphi.method import DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
-from dphi.scene.anchor import ActorIdentity 
+from watcher.plane.emitter import get_emitter
 
 log = get_emitter("attach.surge")
 

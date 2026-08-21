@@ -1,5 +1,5 @@
-# dphi.observer.oracle.receptor
-## @lineage: bound.observer.oracle.receptor
+# bound.observer.oracle.receptor
+## @lineage: dphi.observer.oracle.receptor
 ## @lineage: eco.observer.oracle.receptor
 ## @lineage: bound.proof.oracle.receptor
 ## @lineage: bound.exchange.capital.receptor
@@ -7,7 +7,7 @@ import time
 import hashlib
 from typing import Dict, Any, List, Optional
 
-from dphi.observer.oracle.aggregator import ProvableOracleAggregator
+from bound.observer.oracle.aggregator import ProvableOracleAggregator
 from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 from watcher.plane.emitter import get_emitter

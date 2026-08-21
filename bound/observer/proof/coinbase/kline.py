@@ -1,5 +1,5 @@
-# dphi.observer.proof.coinbase.kline
-## @lineage: bound.observer.proof.coinbase.kline
+# bound.observer.proof.coinbase.kline
+## @lineage: dphi.observer.proof.coinbase.kline
 ## @lineage: eco.observer.proof.coinbase.kline
 ## @lineage: bound.proof.coinbase.kline
 """

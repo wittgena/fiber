@@ -1,5 +1,5 @@
-# dphi.observer.oracle.aggregator
-## @lineage: bound.observer.oracle.aggregator
+# bound.observer.oracle.aggregator
+## @lineage: dphi.observer.oracle.aggregator
 ## @lineage: eco.observer.oracle.aggregator
 ## @lineage: bound.proof.oracle.aggregator
 ## @lineage: bound.exchange.capital.aggregator
@@ -14,8 +14,8 @@ from kernel.dphi.adapter.state import StateAdapter
 from kernel.dphi.adapter.sign import NodeSigner
 from watcher.plane.emitter import get_emitter
 
-from dphi.observer.proof.binance import kline as binance_kline
-from dphi.observer.proof.coinbase import kline as coinbase_kline
+from bound.observer.proof.binance import kline as binance_kline
+from bound.observer.proof.coinbase import kline as coinbase_kline
 
 class ProvableOracleAggregator:
     # ARN 기반 모듈 레지스트리
