@@ -1,5 +1,4 @@
 # dphi.pdoc.public.edge
-
 @desc: DPHI Edge Technical Specification
 
 ## 1. Architectural Overview

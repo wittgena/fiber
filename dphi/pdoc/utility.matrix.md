@@ -1,9 +1,7 @@
 # dphi.pdoc.utility.matrix
-
-@desc: DPHI Edge: Utility Target & Solution Matrix
+@desc: Utility Target & Solution Matrix
 
 > **"The Zero-Trust Compute Blackbox for Autonomous Systems"**
-
 This specification defines how the empirical limits of DPHI Edge (microsecond latency, cryptographic metering) resolve catastrophic infrastructure bottlenecks across high-value markets. It demands zero understanding of the underlying WASM or cryptographic architecture from the client. It delivers purely quantitative utility and guaranteed outcomes.
 
 ---
@@ -18,12 +16,9 @@ Providers of sandbox infrastructure required to securely and continuously execut
 2. **Cost of Warm Pools:** To mitigate latency, platforms maintain thousands of idle containers, resulting in massive, unsustainable cloud compute expenditures.
 3. **Host Vulnerability:** Agents executing malicious loops or memory leak payloads pose a persistent risk of exhausting host OS resources.
 
-
 * **The DPHI Utility (Blackbox Solution):**
 * **`[< 500 µs Cold Boot]` Infinite Density:** Instantiates isolated WASM kernels in-memory without containers. Eliminates warm pool requirements and reduces idle compute costs to absolute zero.
 * **`[< 100 µs Trap]` Guaranteed Physical Kill:** Malicious workloads exceeding the `max_fuel` quota (e.g., OOM, infinite loops) are forcefully terminated at the kernel level within 100 microseconds. 0% probability of host contamination.
-
-
 
 ---
 
@@ -41,8 +36,6 @@ Autonomous economic networks where AI agents must dynamically trade, clear, and 
 * **`[100,000+ TPS]` In-Memory Netting:** Mathematically binds and clears Bid/Ask intents directly in node memory, bypassing external ledgers and databases. Intermediate gas fees are exactly `$0.0000`.
 * **`[Zero-DB Cryptography]` Stateless L402 Billing:** Grants resource access strictly through Ed25519 mathematical signatures and L402 capability receipts. No centralized credential database exists to be hacked.
 
-
-
 ---
 
 ## Profile C: Regulated Enterprise AIOps & SecOps
@@ -58,8 +51,6 @@ Entities operating in highly regulated environments (Finance, Healthcare, Defens
 * **The DPHI Utility (Blackbox Solution):**
 * **`[< 200 µs]` Real-Time O(N) Hashing Ingress:** Absorbs standard OTLP logs without thread blocking. Immediately returns a mathematical state fingerprint (Root Hash) derived purely from in-memory cryptographic computation.
 * **`[< 500 µs]` Synchronous Merkle Proof Emission:** Defers actual data storage to asynchronous background queues while synchronously issuing legally binding, mathematically unforgeable inclusion proofs (`AuditReceipt`). Completely neutralizes retroactive log tampering.
-
-
 
 ---
 
