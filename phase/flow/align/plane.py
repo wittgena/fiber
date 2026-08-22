@@ -1,5 +1,5 @@
-# phase.align.plane
-## @lineage: phase.flow.align.plane
+# phase.flow.align.plane
+## @lineage: phase.align.plane
 ## @lineage: flow.align.plane
 import os
 import sys

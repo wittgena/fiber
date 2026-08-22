@@ -124,8 +124,6 @@ class SandboxScene(SandboxRunner):
         else:
             self._record_fail(0, "PRNG outputs diverge", "PRNG Idempotency Test")
 
-    # ❌ _test_guardrail_validation 함수 전체 삭제됨
-
     # --- Domain 2: Causality & State ---
     async def _test_topos_and_phase(self):
         log.info("\n--- Running Suite: Causality (Epoch-Tick) ---")

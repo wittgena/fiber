@@ -1,5 +1,5 @@
-# phase.align.path
-## @lineage: phase.flow.align.path
+# phase.flow.align.path
+## @lineage: phase.align.path
 import os
 import sys
 import argparse

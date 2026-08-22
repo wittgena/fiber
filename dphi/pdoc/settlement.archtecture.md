@@ -1,5 +1,4 @@
 # dphi.pdoc.settlement.archtecture
-@lineage: dphi.pdoc.settlement.architecture
 @desc: DPHI Universal Cryptographic Metering & Settlement Architecture
 
 ---
@@ -88,6 +87,3 @@ When deployed as a Standalone Metering Gateway in front of existing enterprise i
 * **Proxy Pass-through Latency:** `< 500 µs` overhead added to standard API requests.
 * **Cryptographic Netting Latency:** `< 1 ms` per state entanglement and UTXO update.
 * **Throughput:** `100,000+` state transitions per second (TPS) per single node. Completely immune to traditional database row-locking latency.
-
----
-**End of Specification**

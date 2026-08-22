@@ -1,5 +1,5 @@
-# phase.align.commit
-## @lineage: phase.flow.align.commit
+# phase.flow.align.commit
+## @lineage: phase.align.commit
 ## @lineage: flow.align.commit
 import argparse
 import sys

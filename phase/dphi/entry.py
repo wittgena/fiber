@@ -1,6 +1,4 @@
-# phase.dphi.wasm.entry
-## @lineage: nexus.phase.dphi.wasm.entry
-## @lineage: meta.phase.dphi.wasm.entry
+# phase.dphi.entry
 import sys
 import argparse
 import importlib
@@ -16,7 +14,7 @@ from kernel.bind.resolver import resolve_path
 from kernel.phase.reactor import PhaseReactor
 from watcher.plane.emitter import get_emitter
 
-log = get_emitter("epoch.entry")
+log = get_emitter("dphi.entry")
 
 MODULE_PATH = scene_module.__name__
 
@@ -26,15 +24,16 @@ class PipelineConfig:
         "sandbox": f"{MODULE_PATH}.sandbox:SandboxScene",
         "eco": f"{MODULE_PATH}.anchor:EcoScene",
         "anchor": f"{MODULE_PATH}.anchor:AnchorScene",
-        "cert": f"{MODULE_PATH}.cert:CertProofScene"
+        "cert": f"{MODULE_PATH}.cert:CertProofScene",
     })
     
     default_suites: List[str] = field(default_factory=lambda: [
         "sandbox",     # 1. 런타임 보안 및 단일 샌드박스 격리 검증 (L1)
         "anchor",      # 2. 영지식 증명, 다중 서명, 탈중앙 합의 로직 검증 (L3)
-        "cert"         # 3. 극한 환경 엣지 케이스 방어 및 무결성 최종 인증 (L4)
+        "cert",        # 3. 극한 환경 엣지 케이스 방어 및 무결성 최종 인증 (L4)
     ])
     wasm_filename: str = "dphi.wasm"
+
 
 class DphiFlow:
     """
@@ -155,6 +154,7 @@ class DphiFlow:
         target_action = command_map.get(self.command, self.pipeline)
         await target_action()
 
+
 def main():
     parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI (Isolated CI)")
     parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor, cert)")
@@ -167,6 +167,8 @@ def main():
     command = args.command or "all"
     config = PipelineConfig()
     app = DphiFlow(command=command, suites=args.suites, config=config)
+    
+    # 커스텀 리액터를 통한 실행
     PhaseReactor.ignite(app.run)
 
 if __name__ == "__main__":
