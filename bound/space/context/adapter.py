@@ -24,14 +24,14 @@ from agent.llm.driver.event.observation import UserRejectObservation
 from bound.space.action.types import ConversationID
 from agent.llm.driver.model import LLMModel
 from bound.space.action.message import Message, TextContent
-from agent.runtime.conv.stats import ConversationStats
-from agent.runtime.conv.security import SecurityAnalyzerBase
+from agent.loop.conv.stats import ConversationStats
+from agent.loop.conv.security import SecurityAnalyzerBase
 from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
 
-from agent.runtime.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
-from agent.runtime.protocol.conv import ProtoConv, EngineContextProtocol
-from agent.runtime.protocol.conv import ConvStateProtocol
-from agent.runtime.conv.command import TransitionStatus, UpdateSecurityPolicy
+from agent.loop.runtime.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
+from agent.loop.runtime.protocol.conv import ProtoConv, EngineContextProtocol
+from agent.loop.runtime.protocol.conv import ConvStateProtocol
+from agent.loop.conv.command import TransitionStatus, UpdateSecurityPolicy
 from bound.space.context.actor import Actor
 from agent.llm.driver.facade import MessageBuilder, LLMFacade
 

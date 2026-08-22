@@ -18,9 +18,9 @@ from agent.llm.driver.event.system import SystemPromptEvent, TokenEvent
 from agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from agent.llm.driver.response import LLMResponse
 
-from agent.runtime.conv.action.parser import format_context_exceeded_message, ActionParser
-from agent.topos.ator import Ator
-from agent.runtime.protocol.step import StepHandler, StepContext
+from agent.loop.conv.action.parser import format_context_exceeded_message, ActionParser
+from phase.agent.topos.ator import Ator
+from agent.loop.runtime.protocol.step import StepHandler, StepContext
 
 from arch.model.conv.event import Event
 from arch.topos.context.status import ConverStatus

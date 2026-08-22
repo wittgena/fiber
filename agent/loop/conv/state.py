@@ -21,10 +21,10 @@ from arch.topos.context.status import ConverStatus
 from bound.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
 
 from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
-from agent.runtime.conv.stats import ConversationStats
+from agent.loop.conv.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from agent.runtime.conv.security import SecurityAnalyzerBase
+    from agent.loop.conv.security import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
@@ -32,7 +32,7 @@ else:
 from arch.contract.resolver.secret import SecretRegistry
 from arch.xor.bridge.io.manager import IOManager
 from arch.xor.stream.conv import LogStore, VirtualEventLogProxy
-from agent.runtime.conv.command import (
+from agent.loop.conv.command import (
     StateCommand, 
     TransitionStatus, 
     BlockAction, 

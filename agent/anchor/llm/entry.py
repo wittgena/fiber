@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Union
 from agent.anchor.llm.param import ModelResponse
 from agent.anchor.llm.execution import ExecutionMetadata
 from agent.anchor.model.types.general import EmbeddingResponse
-from agent.runtime.exception.mapping import exception_type
+from agent.loop.runtime.exception.mapping import exception_type
 from bound.client.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
 from agent.llm.router.inter.registry import AdapterRegistry
 

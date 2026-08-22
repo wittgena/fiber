@@ -11,8 +11,8 @@ from collections import deque
 
 from agent.llm.router.constants import MAX_STREAMING_DURATION_SECONDS
 
-from agent.runtime.exception.mapping import exception_type
-from agent.runtime.exception.eco import OpenAIError
+from agent.loop.runtime.exception.mapping import exception_type
+from agent.loop.runtime.exception.eco import OpenAIError
 from agent.anchor.llm.param import ModelResponseStream
 from agent.llm.stream.pipeline import (
     ChunkCodecHandler, 
@@ -125,7 +125,7 @@ class StreamWrapper:
         self._fire_fallback_error(e)
 
     def _fire_fallback_error(self, e: Exception) -> NoReturn:
-        from agent.runtime.exception.eco import MidStreamFallbackError
+        from agent.loop.runtime.exception.eco import MidStreamFallbackError
         if isinstance(e, OpenAIError): 
             mapped_exception = e
         else:

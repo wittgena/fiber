@@ -14,9 +14,9 @@ from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from agent.llm.driver.event.system import SystemPromptEvent
 from agent.llm.driver.event.conv import ConversationErrorEvent, PauseEvent
-from agent.runtime.conv.action.factory import CoreAction
-from agent.runtime.exception.types import ConversationRunError
-from agent.runtime.conv.command import TransitionStatus
+from agent.loop.conv.action.factory import CoreAction
+from agent.loop.runtime.exception.types import ConversationRunError
+from agent.loop.conv.command import TransitionStatus
 
 from arch.xor.stream.conv import LogStore
 from arch.topos.context.status import ConverStatus

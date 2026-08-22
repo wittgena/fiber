@@ -8,7 +8,7 @@ from typing import (
     TypeVar,
 )
 from bound.space.action.action import Action, Observation
-from agent.runtime.protocol.context import ToolExecutionContextProtocol
+from agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)
 ObservationT = TypeVar("ObservationT", bound=Observation)

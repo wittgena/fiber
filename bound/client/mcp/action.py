@@ -9,7 +9,7 @@ import mcp_types
 
 from agent.anchor.llm.param import ChatCompletionToolParam
 from bound.space.action.action import Action, Observation, Schema
-from agent.runtime.conv.action.builder import ActionAnnotations, ActionDefinition
+from agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
 from bound.space.action.executor import ActionExecutor
 from bound.space.action.mcp import MCPAction, MCPObservation
 

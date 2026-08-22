@@ -6,14 +6,14 @@ from bound.space.action.message import Message, TextContent
 from agent.llm.driver.event.message import MessageEvent
 from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from agent.runtime.exception.types import (
+from agent.loop.runtime.exception.types import (
     FunctionCallValidationError, 
     LLMContextWindowExceedError, 
     LLMMalformedConversationHistoryError
 )
 
-from agent.runtime.conv.command import TransitionStatus
-from agent.runtime.protocol.step import StepHandler, StepContext, ActivatorProtocol
+from agent.loop.conv.command import TransitionStatus
+from agent.loop.runtime.protocol.step import StepHandler, StepContext, ActivatorProtocol
 from agent.llm.driver.facade import MessageBuilder, LLMFacade
 
 from arch.topos.context.status import ConverStatus

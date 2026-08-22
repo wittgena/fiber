@@ -27,9 +27,9 @@ from bound.config.cloud import VendorConfig
 
 from agent.llm.driver.strategy.fallback import FallbackStrategy
 
-from agent.runtime.exception.types import LLMContextWindowTooSmallError
+from agent.loop.runtime.exception.types import LLMContextWindowTooSmallError
 from agent.llm.driver.factory import DriverFactory
-from agent.topos.llm.observer import DriverObserver
+from phase.agent.topos.llm.observer import DriverObserver
 
 from arch.xor.parser.mark.convset import SettingProminence, field_meta
 from arch.xor.parser.mark.depre import warn_deprecated

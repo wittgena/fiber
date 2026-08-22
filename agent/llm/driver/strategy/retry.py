@@ -14,8 +14,8 @@ from tenacity import (
     wait_exponential,
 )
 
-from agent.runtime.exception.types import LLMNoResponseError
-from agent.runtime.exception.eco import (
+from agent.loop.runtime.exception.types import LLMNoResponseError
+from agent.loop.runtime.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,

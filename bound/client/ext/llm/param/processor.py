@@ -18,7 +18,7 @@ from agent.llm.router.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT
 from arch.model.config import config
 from agent.anchor.model.types.core import Usage
 from agent.anchor.model.info import get_features, supports_httpx_timeout, supports_function_calling, get_supported_openai_params
-from agent.runtime.exception.eco import UnsupportedParamsError
+from agent.loop.runtime.exception.eco import UnsupportedParamsError
 from agent.anchor.model.types.openai import ValidUserMessageContentTypes
 
 from agent.anchor.llm.param import ModelResponse

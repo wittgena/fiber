@@ -15,10 +15,10 @@ from bound.space.action.types import (
 from agent.llm.driver.model import LLMModel
 from bound.space.action.message import Message
 from bound.space.action.action import Action, Observation
-from agent.runtime.conv.security import SecurityAnalyzerBase
+from agent.loop.conv.security import SecurityAnalyzerBase
 from arch.model.conv.security.confirm import ConfirmationPolicyBase
 
-from agent.runtime.protocol.conv import ProtoConv
+from agent.loop.runtime.protocol.conv import ProtoConv
 from agent.loop.conv.visual.context import ConversationVisualizer
 from agent.loop.conv.state import ConversationState
 from bound.space.manager import SandboxWorkspace

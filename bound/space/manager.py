@@ -21,7 +21,7 @@ from arch.xor.bridge.git.changes import get_git_changes
 from arch.xor.bridge.git.diff import get_git_diff
 from arch.xor.bridge.command.workspace import CommandResult, FileOperationResult
 
-from agent.runtime.terminal.session.builder import executor_factory, sanitized_env
+from bound.psace.terminal.session.builder import executor_factory, sanitized_env
 
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.node.event import WorkspaceReady

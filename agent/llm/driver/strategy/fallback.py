@@ -7,14 +7,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 from pydantic import BaseModel, Field, PrivateAttr
 
-from agent.runtime.exception.eco import (
+from agent.loop.runtime.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout as Timeout,
 )
-from agent.runtime.exception.types import LLMNoResponseError
+from agent.loop.runtime.exception.types import LLMNoResponseError
 from agent.llm.driver.profile import LLMProfileStore
 
 if TYPE_CHECKING:

@@ -15,9 +15,9 @@ from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.message import MessageEvent
 from agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
 from agent.llm.driver.event.system import SystemPromptEvent
-from agent.runtime.conv.stats import ConversationStats
+from agent.loop.conv.stats import ConversationStats
 
-from agent.runtime.protocol.conv import ConvStateProtocol
+from agent.loop.runtime.protocol.conv import ConvStateProtocol
 
 from arch.model.conv.event import Event
 

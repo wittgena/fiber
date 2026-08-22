@@ -11,7 +11,7 @@ from mcp.client.client import Client as AnchorClient
 from mcp.client.session import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 
-from agent.runtime.terminal.session.builder import AsyncExecutorProtocol
+from bound.psace.terminal.session.builder import AsyncExecutorProtocol
 from bound.client.mcp.exception import MCPError
 from bound.config.mcp import MCPConfig
 
@@ -34,7 +34,7 @@ class MCPClient(AnchorClient):
     ):
         if executor is None:
             # 하위 호환성을 위해 주입되지 않은 경우에만 팩토리를 통해 가져옴
-            from agent.runtime.terminal.session.builder import executor_factory
+            from bound.psace.terminal.session.builder import executor_factory
             self._executor = executor_factory.get_async_executor()
         else:
             self._executor = executor
