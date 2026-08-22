@@ -1,4 +1,5 @@
-# dphi.pdoc.settlement.architecture 
+# dphi.pdoc.settlement.archtecture
+@lineage: dphi.pdoc.settlement.architecture
 @desc: DPHI Universal Cryptographic Metering & Settlement Architecture
 
 ---
