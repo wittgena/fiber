@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "brane"
+name = "fiber"
 version = "1.0.1"
 description = "The Universal Integration Boundary for heterogeneous AI ecosystems"
 readme = "README.md"
@@ -19,10 +19,10 @@ dependencies = [
 [project.optional-dependencies]
 readers = ["PyJWT", "pypdf", "python-docx"]
 dev = ["pytest", "pytest-asyncio"]
-all = ["brane[readers,dev]"]
+all = ["fiber[readers,dev]"]
 
 [tool.hatch.build.hooks.custom]
-path = "xor/hatch.py"
+path = "phase/flow/hatch.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["brane"]
+packages = ["agent", "dphi", "phase"]
