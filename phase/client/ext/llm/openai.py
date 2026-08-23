@@ -1,12 +1,4 @@
 # phase.client.ext.llm.openai
-## @lineage: bound.client.ext.llm.openai
-## @lineage: ator.client.ext.llm.openai
-## @lineage: bound.eco.agent.llm.openai
-## @lineage: eco.bound.agent.llm.openai
-## @lineage: bound.agent.llm.openai
-## @lineage: ext.router.llm.openai
-## @lineage: router.llm.openai
-## @lineage: engine.router.llm.openai
 import functools
 import re
 from json.decoder import JSONDecodeError

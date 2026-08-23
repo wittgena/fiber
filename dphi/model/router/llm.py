@@ -1,6 +1,4 @@
 # dphi.model.router.llm
-## @lineage: agent.llm.router.llm
-## @lineage: bound.xor.model.router.llm
 import importlib
 import inspect
 import pkgutil

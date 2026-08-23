@@ -1,5 +1,4 @@
 # agent.llm.driver.event.action
-## @lineage: ator.driver.llm.event.action
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 from pydantic import Field

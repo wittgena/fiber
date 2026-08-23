@@ -1,16 +1,4 @@
 # phase.client.ext.llm.anthropic
-## @lineage: bound.client.ext.llm.anthropic
-## @lineage: ator.client.ext.llm.anthropic
-## @lineage: bound.eco.agent.llm.anthropic
-## @lineage: eco.bound.agent.llm.anthropic
-## @lineage: bound.agent.llm.anthropic
-## @lineage: ext.router.llm.anthropic
-## @lineage: router.llm.anthropic
-## @lineage: engine.router.llm.anthropic
-## @lineage: engine.eco.llm.anthropic
-## @lineage: runtime.engine.eco.llm.anthropic
-## @lineage: eco.llms.anthropic
-## @lineage: eco.llama.llms.anthropic
 import json
 import logging
 from importlib.metadata import version as get_version

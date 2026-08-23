@@ -1,8 +1,4 @@
 # phase.agent.executor
-## @lineage: agent.nexus.executor
-## @lineage: nexus.agent.executor
-## @lineage: meta.agent.executor
-## @lineage: agent.loop.executor
 import asyncio
 import json
 from typing import Optional, Dict, Any, List, Callable
@@ -20,6 +16,7 @@ from fiber.agent.loop.conv.visual.context import ConversationVisualizer
 from fiber.agent.loop.conv.action.factory import CoreAction
 from fiber.agent.loop.conv.action.resolver import ActionResolver
 from fiber.agent.loop.organizer import EvalReflector, TensionHandler, LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from fiber.phase.tracer.router import InfraRouter
 
 from xphi.arch.model.conv.event import LLMConvertibleEvent
 from xphi.arch.contract.model.graph import EntryNode
@@ -28,7 +25,6 @@ from xphi.arch.contract.event.next import next_id
 from xphi.arch.topos.tunnel.factory import TunnelFactory
 from xphi.arch.topos.node.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
 from xphi.kernel.bind.resolver import resolve_path
-from fiber.phase.tracer.router import InfraRouter
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("loop.executor")

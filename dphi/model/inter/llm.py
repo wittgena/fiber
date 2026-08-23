@@ -1,8 +1,4 @@
 # dphi.model.inter.llm
-## @lineage: agent.llm.router.inter.llm
-## @lineage: bound.xor.model.router.inter.llm
-## @lineage: eco.model.router.inter.llm
-## @lineage: engine.router.inter.llm
 import asyncio
 import functools
 from pathlib import Path

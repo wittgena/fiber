@@ -1,7 +1,4 @@
 # phase.agent.workflow
-## @lineage: agent.nexus.workflow
-## @lineage: nexus.agent.workflow
-## @lineage: meta.agent.workflow
 from __future__ import annotations
 
 import argparse

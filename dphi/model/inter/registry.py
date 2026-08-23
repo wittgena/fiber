@@ -1,9 +1,4 @@
 # dphi.model.inter.registry
-## @lineage: agent.llm.router.inter.registry
-## @lineage: bound.xor.model.router.inter.registry
-## @lineage: eco.model.router.inter.registry
-## @lineage: engine.router.inter.registry
-## @lineage: engine.client.inter.registry
 from typing import Dict
 
 from fiber.agent.llm.router.base import BaseProviderAdapter, GenericHTTPAdapter

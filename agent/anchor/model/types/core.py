@@ -1,13 +1,4 @@
 # agent.anchor.model.types.core
-## @lineage: bound.xor.model.types.core
-## @lineage: eco.model.types.core
-## @lineage: engine.model.types.core
-## @lineage: bound.model.types.core
-## @lineage: llm.types.core
-## @lineage: eco.mesh.model.types.core
-## @lineage: runtime.mesh.model.types.core
-## @lineage: mesh.model.types.core
-## @lineage: tenant.model.types.core
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Required, TypedDict
@@ -65,9 +56,6 @@ class StreamingChoices(DynamicSurgeModel):
     finish_reason: Optional[str] = None
 
 class ModelResponse(DynamicSurgeModel):
-    """
-    [FIXED] Pydantic v2 strict validation 방어를 위한 초기값 명시적 세팅
-    """
     id: str = Field(default_factory=lambda: f"chatcmpl-{int(time.time())}")
     model: Optional[str] = None
     choices: List[Choices] = Field(default_factory=lambda: [Choices()])

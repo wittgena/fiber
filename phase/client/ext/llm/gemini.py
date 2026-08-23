@@ -1,11 +1,4 @@
 # phase.client.ext.llm.gemini
-## @lineage: bound.client.ext.llm.gemini
-## @lineage: ator.client.ext.llm.gemini
-## @lineage: bound.eco.agent.llm.gemini
-## @lineage: eco.bound.agent.llm.gemini
-## @lineage: bound.agent.llm.gemini
-## @lineage: ext.router.llm.gemini
-## @lineage: router.llm.gemini
 import asyncio
 import inspect
 import functools
