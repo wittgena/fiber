@@ -8,11 +8,11 @@ from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from fiber.dphi.bound.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
-from xphi.arch.xor.stream.edge import LogStreamStore
 from fiber.dphi.receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
-from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
+from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter, get_utxo_adapter
 from fiber.agent.space.sandbox.profile import BenchProfile, VerificationError
 
+from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.contract.model.receptor import (
     EdgeState,
@@ -35,6 +35,8 @@ from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
 from xphi.kernel.dphi.cgroup import Tier
 from xphi.kernel.dphi.exchange.config import tier_config, billing_config
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.internal")
@@ -61,6 +63,11 @@ class QuotationResponse(BaseModel):
     fuel_estimated: int
     estimated_cost_usd: float
     reason: Optional[str] = None
+
+class InvoiceIssueRequest(BaseModel):
+    payee_address: str
+    amount_usdc: str
+    resource_id: str
 
 
 @core_edge.post(
@@ -104,12 +111,7 @@ async def append_to_stream(
             result=StreamAppendResult(hash=event_hash, membership_proof=merkle_proof)
         )
 
-
-@core_edge.post(
-    "/anchor/seal", 
-    summary="[Internal] 상태 합의 및 영수증 방출 (Seal Epoch)",
-    response_model=AnchorSealResponse
-)
+@core_edge.post("/anchor/seal", summary="상태 합의 및 영수증 방출 (Seal Epoch)", response_model=AnchorSealResponse)
 async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(get_nexus_anchor)):
     proposal = AnchorProposal(
         receptor_id=req.receptor_id, proposed_parity=req.proposed_parity.model_dump(),
@@ -125,6 +127,28 @@ async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(ge
         commit_hash=result.commit_hash, 
         receipt=result.receipt.__dict__ if hasattr(result.receipt, "__dict__") else dict(result.receipt)
     )
+
+@core_edge.post("/ledger/verify", summary="AuditReceipt 수학적 진위 검증 (Verify Parity)")
+async def verify_receipt(receipt_payload: Dict[str, Any] = Body(...), broker: DphiBroker = Depends(get_wasm_broker)):
+    try:
+        canonical_payload = StateAdapter.to_canonical_bytes(receipt_payload).decode('utf-8')
+        res = await broker.invoke(DphiMethod.VERIFY_PARITY, canonical_payload)
+        
+        if not res.success:
+            log.warning(f"Receipt verification crashed in WASM: {res.error}")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Verification execution failed: {res.error}")
+        
+        output = json.loads(res.output)
+        is_valid = output.get("is_valid", False)
+        
+        return {
+            "status": "SUCCESS",
+            "is_valid": is_valid,
+            "message": "Cryptographically verified via WASM Parity Rule" if is_valid else "Mathematical verification failed (Tampered or Invalid)"
+        }
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Verification Error: {str(e)}")
+
 
 @compute_edge.post("/intent/validate", summary="[Internal] Validate Intent", response_model=IntentValidationResponse)
 async def validate_intent(req: IntentValidationRequest):
@@ -227,6 +251,39 @@ async def generate_external_receipt(req: ClearingReceiptRequest, exchange: Excha
         cost_metrics=req.cost_metrics, tier=Tier.SYSTEM  
     )
     return ClearingReceiptResponse(status=EdgeState.RECEIPT_GENERATED, rollup_payload=exchange.generate_settlement_payload(receipt))
+
+@exchange_edge.post("/invoice/issue", summary="L402 청구서 발급 (Issue Payment Invoice)")
+async def issue_invoice(req: InvoiceIssueRequest):
+    try:
+        from xphi.kernel.dphi.eco.settlement import EcoAdapter
+        invoice = EcoAdapter.build_x402_invoice(
+            payee_address=req.payee_address,
+            amount_usdc=req.amount_usdc,
+            resource_id=req.resource_id
+        )
+        return {
+            "status": "INVOICE_ISSUED", 
+            "invoice": invoice.model_dump() if hasattr(invoice, "model_dump") else invoice.__dict__
+        }
+    except Exception as e:
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Invoice Issue Failed: {str(e)}")
+
+@exchange_edge.get("/balance", summary="[Internal] 에이전트 인메모리 UTXO 연료 잔고 조회 (O(N) Hot State Read)")
+async def get_utxo_balance(
+    agent_id: str = Query(..., description="조회할 에이전트 주소"),
+    asset_type: str = Query("fuel", description="조회할 자산 타입"),
+    utxo_adapter: UtxoAdapter = Depends(get_utxo_adapter)
+):
+    try:
+        balance = await utxo_adapter.get_balance(owner_address=agent_id, asset_type=asset_type)
+        return {
+            "agent_id": agent_id,
+            "asset_type": asset_type,
+            "balance": balance
+        }
+    except Exception as e:
+        log.error(f"UTXO Balance check failed for {agent_id}: {str(e)}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to read hot state balance.")
 
 
 async def extract_client_project(api_key: str = "test_key") -> str:

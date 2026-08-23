@@ -1,7 +1,4 @@
 # dphi.bound.workflow.settlement
-## @lineage: phase.dphi.workflow.settlement
-## @lineage: nexus.phase.dphi.workflow.settlement
-## @lineage: meta.phase.dphi.workflow.settlement
 import asyncio
 import hashlib
 import json

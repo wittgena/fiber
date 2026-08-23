@@ -1,4 +1,10 @@
-# dphi.receptor.edge.public
+## @lineage: dphi.receptor.edge.public
+"""
+@desc: DPHI Edge Public Gateway
+- Orchestrates WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts.
+- Exposes a symmetric Zero-Trust interface for Autonomous AI Agents.
+"""
+
 import os
 import json
 import time
@@ -9,7 +15,8 @@ from typing import Dict, Any, List, Optional
 import orjson
 import httpx
 
-from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Request, Query
+from pydantic import BaseModel
 
 from fiber.dphi.bound.config import dphi_env
 from fiber.dphi.bound.adapter.anchor import NotarySwarm
@@ -44,25 +51,43 @@ public_edge = ContractRouter(
     namespace="public", 
     prefix="/v1/public", 
     tags=["Public Gateway"],
-    description="Edge Gateway orchestrating WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts."
+    description="Deterministic Zero-Trust Gateway for Agentic Workloads"
 )
 
 def get_internal_edge_url(request: Request) -> str:
     return request.app.state.config.internal_edge_url
 
+"""DATA TRANSFER OBJECTS (DTO)"""
+class InvoiceIssueRequest(BaseModel):
+    payee_address: str
+    amount_usdc: str
+    resource_id: str
+
+class AgentHandshakeResponse(BaseModel):
+    status: str
+    estimated_fuel: int
+    estimated_cost_usd: float
+    invoice: Dict[str, Any]
+    macaroon: Optional[str] = None
+    next_action: str = "POST /v1/public/agent/execute with X-X402-Receipt header"
+
+
+"""
+=============================================================================
+1. BASE INFRASTRUCTURE (TRUST ANCHOR)
+=============================================================================
+"""
 
 @public_edge.get(
     "/keys", 
     summary="Get Trusted Signer Keys (Strictly Pre-Signed)",
-    description=(
-        "Returns the list of active Edge nodes' public keys. "
-        "Strictly serves offline pre-signed signatures by the Master Root Key. Fails securely if misconfigured."
-    )
+    description="Returns the list of active Edge nodes' public keys."
 )
 async def get_public_keys():
     """
-    클라이언트 SDK가 캐싱할 서명자 목록 엔드포인트입니다.
-    이 노드는 절대 Root Key를 갖지 않으며, 주입된 환경변수(사전 생성된 서명)만 서빙합니다.
+    @desc: 서명자 목록 엔드포인트
+    - 클라이언트 SDK의 VerifiedHttpClient가 서버 응답 검증을 위해 캐싱합니다.
+    - 노드는 절대 Root Key를 갖지 않으며, 주입된 환경변수(사전 생성된 서명)만 서빙합니다.
     """
     active_signers_env = os.getenv("DPHI_ACTIVE_SIGNERS")
     root_signature = os.getenv("DPHI_PRE_SIGNED_ROOT_SIG")
@@ -74,7 +99,6 @@ async def get_public_keys():
             detail="Security misconfiguration: Trusted registry is offline."
         )
 
-    # 쉼표로 구분된 퍼블릭 키 목록을 파싱
     payload_dict = {"active_signers": [key.strip() for key in active_signers_env.split(",")]}
     
     return Response(
@@ -84,10 +108,47 @@ async def get_public_keys():
     )
 
 
+"""
+=============================================================================
+2. COMPUTE SYMMETRY (QUOTE ↔ EXECUTE)
+=============================================================================
+"""
+
+@public_edge.post(
+    "/agent/quote", 
+    summary="Get Pre-flight Execution Quotation (Dry-run)"
+)
+async def public_agent_quote(
+    intent: CodebotIntent,
+    internal_url: str = Depends(get_internal_edge_url)
+):
+    """
+    @desc: WASM 샌드박스에서 시뮬레이션을 돌려 예상되는 연료(Fuel) 소모량과 과금액을 사전 확인합니다.
+    """
+    exec_req = {
+        "agent_schema": {
+            "runtime": "python3.11-wasm",
+            "files": {"main.py": intent.source_code}, 
+            "limits": {"max_fuel": intent.max_fuel}
+        },
+        "target_entry": "main.py",
+        "context_depth": 2
+    }
+    
+    async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
+        try:
+            res = await internal_client.post("/v1/eco/profile/quote", json=exec_req)
+            if res.status_code != 200:
+                raise HTTPException(res.status_code, detail=f"Quotation Failed: {res.text}")
+            return res.json()
+        except httpx.RequestError as e:
+            log.error(f"Internal Network Error to {internal_url}: {e}")
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"Internal Edge Network Down ({internal_url})")
+
+
 @public_edge.post(
     "/agent/execute", 
     summary="Execute Billed AI Agent Intent & Issue Cryptographic Proof-of-Action",
-    description="Orchestrates metered AI intent execution and WASM state transitions to issue an immutable AuditReceipt with a canonical fingerprint.",
     response_model=AuditReceipt
 )
 async def public_agent_execute(
@@ -96,6 +157,10 @@ async def public_agent_execute(
     internal_url: str = Depends(get_internal_edge_url),
     broker: DphiBroker = Depends(get_wasm_broker)
 ):
+    """
+    @desc: Orchestrates metered AI intent execution and WASM state transitions.
+    - L402 결제 영수증 확인 후 샌드박스 연산을 수행하고, 불변의 AuditReceipt를 발행합니다.
+    """
     request_id = f"cbot_{uuid.uuid4().hex[:8]}"
     with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
         async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
@@ -169,11 +234,121 @@ async def public_agent_execute(
                 raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"Internal Edge Network Down ({internal_url})")
 
 
+"""
+=============================================================================
+3. ECONOMY SYMMETRY (INVOICE ↔ BALANCE & HANDSHAKE)
+=============================================================================
+"""
+
+@public_edge.post(
+    "/agent/handshake", 
+    summary="Agent Pre-flight Handshake (Quote & Invoice)",
+    response_model=AgentHandshakeResponse
+)
+async def public_agent_handshake(
+    intent: CodebotIntent,
+    internal_url: str = Depends(get_internal_edge_url)
+):
+    """
+    @desc: Orchestrates Quotation and Invoice Issue.
+    - 실행할 인텐트의 비용을 사전 계산하고, 지불을 위한 L402 청구서를 통합 발급합니다.
+    """
+    async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
+        try:
+            # 1. Quote
+            quote_req = {
+                "agent_schema": {
+                    "runtime": "python3.11-wasm",
+                    "files": {"main.py": intent.source_code}, 
+                    "limits": {"max_fuel": intent.max_fuel}
+                },
+                "target_entry": "main.py",
+                "context_depth": 2
+            }
+            quote_res = await internal_client.post("/v1/eco/profile/quote", json=quote_req)
+            if quote_res.status_code != 200:
+                raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Quotation Failed: {quote_res.text}")
+            
+            quote_data = quote_res.json()
+            cost_usd = quote_data.get("estimated_cost_usd", 0.0)
+            fuel = quote_data.get("fuel_estimated", 0)
+
+            # 2. Invoice
+            invoice_req = {
+                "payee_address": "0x000000000000000000000000000000000000dEaD",
+                "amount_usdc": str(cost_usd),
+                "resource_id": f"res_intent_{uuid.uuid4().hex[:8]}"
+            }
+            invoice_res = await internal_client.post("/v1/eco/exchange/invoice/issue", json=invoice_req)
+            if invoice_res.status_code != 200:
+                raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Invoice Issue Failed: {invoice_res.text}")
+            
+            invoice_data = invoice_res.json()
+
+            return AgentHandshakeResponse(
+                status="HANDSHAKE_READY",
+                estimated_fuel=fuel,
+                estimated_cost_usd=cost_usd,
+                invoice=invoice_data.get("invoice", {}),
+                macaroon=invoice_data.get("macaroon")
+            )
+        except httpx.RequestError as e:
+            log.error(f"Internal Network Error to {internal_url}: {e}")
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Internal Edge Network Down")
+
+@public_edge.post(
+    "/billing/invoice", 
+    summary="Issue L402 Invoice for Resource Access"
+)
+async def public_issue_invoice(
+    req: InvoiceIssueRequest,
+    internal_url: str = Depends(get_internal_edge_url)
+):
+    """@desc: 자원 소비 전 지불해야 할 금액과 결제 목적지 정보를 담은 독립된 인보이스 요청"""
+    async with httpx.AsyncClient(base_url=internal_url, timeout=10.0) as internal_client:
+        try:
+            res = await internal_client.post("/v1/eco/exchange/invoice/issue", json=req.model_dump())
+            if res.status_code != 200:
+                raise HTTPException(res.status_code, detail=f"Invoice Issue Failed: {res.text}")
+            return res.json()
+        except httpx.RequestError as e:
+            log.error(f"Internal Network Error to {internal_url}: {e}")
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Internal Edge Network Down")
+
+@public_edge.get(
+    "/billing/balance", 
+    summary="Check UTXO Fuel Balance"
+)
+async def public_get_balance(
+    agent_id: str = Query(..., description="조회할 에이전트 주소"),
+    asset_type: str = Query("fuel", description="조회할 자산 타입"),
+    internal_url: str = Depends(get_internal_edge_url)
+):
+    """@desc: 에이전트의 현재 인메모리 연료(Fuel) 잔고를 원장 조회 없이 실시간 O(N)으로 확인"""
+    async with httpx.AsyncClient(base_url=internal_url, timeout=10.0) as internal_client:
+        try:
+            res = await internal_client.get(
+                "/v1/eco/exchange/balance", 
+                params={"agent_id": agent_id, "asset_type": asset_type}
+            )
+            if res.status_code != 200:
+                raise HTTPException(res.status_code, detail=f"Balance Check Failed: {res.text}")
+            return res.json()
+        except httpx.RequestError as e:
+            log.error(f"Internal Network Error to {internal_url}: {e}")
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Internal Edge Network Down")
+
+
+"""
+=============================================================================
+4. COMPLIANCE SYMMETRY (RECORD ↔ VERIFY)
+=============================================================================
+"""
+
 @public_edge.post(
     "/telemetry/logs", 
     tags=["Log Ingress"], 
     summary="Ingest OTLP Telemetry, Verify Integrity & Seal Global Stream",
-    description="Extracts OTLP metrics and generates secure kernel fingerprints before delegating payloads to the distributed pub/sub stream.",
     status_code=status.HTTP_200_OK
 )
 async def public_otlp_logs_export(
@@ -184,6 +359,9 @@ async def public_otlp_logs_export(
     broker: DphiBroker = Depends(get_wasm_broker),
     otlp_engine: StrictOtlpExtractionEngine = Depends(get_otlp_engine)
 ):
+    """
+    @desc: Extracts OTLP metrics and generates secure kernel fingerprints before delegating payloads to pub/sub.
+    """
     try:
         payload_dict = payload.model_dump(exclude_none=True)
         raw_json_bytes = orjson.dumps(payload_dict)
@@ -233,8 +411,7 @@ async def public_otlp_logs_export(
 @public_edge.post(
     "/audit/event", 
     tags=["Log Ingress"], 
-    summary="Secure Audit Event Recording & Conditional Cryptographic Proof Issuance",
-    description="Encrypts sensitive audit events for ledger recording, conditionally issuing Merkle/ZK proofs upon request."
+    summary="Secure Audit Event Recording & Conditional Cryptographic Proof Issuance"
 )
 async def public_audit_log(
     payload: AuditLogRequest,
@@ -242,7 +419,9 @@ async def public_audit_log(
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
-    
+    """
+    @desc: Encrypts sensitive audit events for ledger recording, issuing Merkle/ZK proofs upon request.
+    """
     request_time = str(time.time())
     event_dict = payload.event.model_dump(exclude_none=True)
     sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
@@ -281,3 +460,24 @@ async def public_audit_log(
         status="success",
         result=audit_result
     )
+
+@public_edge.post(
+    "/audit/verify", 
+    summary="Verify AuditReceipt Authenticity"
+)
+async def public_audit_verify(
+    receipt: Dict[str, Any] = Body(...),
+    internal_url: str = Depends(get_internal_edge_url)
+):
+    """
+    @desc: 감사관(Auditor)이 발행받은 AuditReceipt의 수학적 위변조 여부를 커널을 통해 교차 증명(Verify)
+    """
+    async with httpx.AsyncClient(base_url=internal_url, timeout=10.0) as internal_client:
+        try:
+            res = await internal_client.post("/v1/core/ledger/verify", json=receipt)
+            if res.status_code != 200:
+                raise HTTPException(res.status_code, detail=f"Verification Failed: {res.text}")
+            return res.json()
+        except httpx.RequestError as e:
+            log.error(f"Internal Network Error to {internal_url}: {e}")
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Internal Edge Network Down")

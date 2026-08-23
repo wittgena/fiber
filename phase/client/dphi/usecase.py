@@ -1,24 +1,42 @@
-# phase.client.dphi.usecase
-## @lineage: bound.client.dphi.usecase
+## @lineage: phase.client.dphi.usecase
+"""
+@desc: DPHI Public Gateway SDK & Usecase Runner
+- Provides a zero-trust computing blackbox client for autonomous systems.
+- Abstracts L402 micro-transactions and cryptographic attestations into a seamless drop-in integration.
+"""
+
 import time
 import asyncio
 import logging
 from dataclasses import dataclass, asdict
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import httpx
 
 from fiber.phase.client.http import VerifiedHttpClient, ProofVerificationError, ReplayAttackError
 from xphi.watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 
-"""CONSTANTS & DTO"""
+
+"""CONSTANTS & DATA TRANSFER OBJECTS (DTO)"""
 class PublicEndpoints:
-    """DPHI Public Gateway API Endpoints"""
-    AGENT_EXECUTE  = "/v1/public/agent/execute"    # 과금 기반 인텐트 실행 및 Proof-of-Action 발급
-    TELEMETRY_LOGS = "/v1/public/telemetry/logs"   # OTLP 텔레메트리 인입 및 커널 씰링(Sealed Stream)
-    AUDIT_EVENT    = "/v1/public/audit/event"      # 감사 로그 암호화 기록 및 조건부 ZK/Merkle 증명
+    """
+    @desc: DPHI Public Gateway API Endpoints
+    - Reflects the exact symmetric architecture of edge.public
+    """
+    AGENT_QUOTE     = "/v1/public/agent/quote"          # 사전 견적 (Dry-run)
+    AGENT_HANDSHAKE = "/v1/public/agent/handshake"      # L402 견적 및 청구서 통합 발급
+    AGENT_EXECUTE   = "/v1/public/agent/execute"        # 과금 기반 인텐트 실행 및 Proof-of-Action 발급
+    
+    BILLING_INVOICE = "/v1/public/billing/invoice"      # L402 청구서 발급
+    BILLING_BALANCE = "/v1/public/billing/balance"      # 인메모리 연료 잔고 조회
+    
+    TELEMETRY_LOGS  = "/v1/public/telemetry/logs"       # OTLP 텔레메트리 인입 및 커널 씰링
+    AUDIT_EVENT     = "/v1/public/audit/event"          # 감사 로그 암호화 기록 및 ZK/Merkle 증명
+    AUDIT_VERIFY    = "/v1/public/audit/verify"         # 영수증 진위 여부 검증 (Auditor 접점)
+
 
 @dataclass
 class CodebotIntent:
+    """@desc: Payload schema for requesting isolated agent execution"""
     agent_id: str
     action: str
     source_code: str
@@ -26,11 +44,12 @@ class CodebotIntent:
     signature: str
 
 
-"""PUBLIC CLIENT SDK"""
+"""PUBLIC CLIENT SDK (THE ZERO-TRUST BLACKBOX)"""
 class DphiPublicClient:
     """
-    Secure SDK for DPHI Public Gateway. 
-    서버 응답의 암호학적 서명(X-Dphi-Signature)을 자동 검증하여 MitM 및 Replay 공격을 방어합니다.
+    @desc: Secure SDK for DPHI Public Gateway
+    - Automatically verifies cryptographic signatures (X-Dphi-Signature) of server responses to defend against MitM and Replay attacks
+    - Abstracts the entire L402 payment pipeline
     """
     def __init__(self, base_url: str = "http://localhost:443", api_key: str = "test_key"):
         self.base_url = base_url
@@ -42,7 +61,7 @@ class DphiPublicClient:
             logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     def _get_verified_client(self) -> VerifiedHttpClient:
-        """응답 무결성 검증 및 60초 Replay Attack 방어가 적용된 HTTP 클라이언트 반환"""
+        """@desc: Instantiates a VerifiedHttpClient with a 60-second replay attack defense"""
         headers = {"X-Dphi-API-Key": self.api_key}
         base_client = httpx.AsyncClient(
             base_url=self.base_url, 
@@ -51,96 +70,147 @@ class DphiPublicClient:
         )
         return VerifiedHttpClient(client=base_client, max_age_seconds=60)
 
-    ## API 1: Agent Execute
-    async def execute_agent_intent(self, intent: CodebotIntent) -> Dict[str, Any]:
-        """AI 인텐트를 전송하고, 위변조가 불가능한 실행 상태 영수증(AuditReceipt)을 검증 및 수령"""
-        self.log.info(f"\n🚀 [API 1: Agent Execute] Requesting remote execution for {intent.agent_id}...")
+    async def request_handshake(self, intent: CodebotIntent) -> Dict[str, Any]:
+        """@desc: Computes the required fuel via dry-run and issues an L402 invoice"""
+        self.log.info(f"\n🤝 [Economy] Negotiating execution budget for {intent.agent_id}...")
+        verifier = self._get_verified_client()
+        url = PublicEndpoints.AGENT_HANDSHAKE
+        try:
+            response = await verifier.async_post_verified(url, json=asdict(intent))
+            data = response.json()
+            self.log.info(f"  └─ ✅ Handshake Ready. Estimated Cost: ${data.get('estimated_cost_usd', 0):.4f}")
+            return data
+        except Exception as e:
+            self.log.error(f"  └─ ❌ Handshake Failed: {e}")
+            return {"error": str(e)}
+        finally:
+            await verifier._client.aclose()
+
+    async def get_fuel_balance(self, agent_id: str, asset_type: str = "fuel") -> Dict[str, Any]:
+        """@desc: Retrieves the real-time hot state UTXO balance of the given agent"""
+        self.log.info(f"\n💰 [Economy] Checking UTXO hot state for {agent_id}...")
+        verifier = self._get_verified_client()
+        url = PublicEndpoints.BILLING_BALANCE
+        try:
+            response = await verifier.async_get_verified(url, params={"agent_id": agent_id, "asset_type": asset_type})
+            data = response.json()
+            self.log.info(f"  └─ ✅ Balance: {data.get('balance')} {asset_type}")
+            return data
+        except Exception as e:
+            self.log.error(f"  └─ ❌ Balance Check Failed: {e}")
+            return {"error": str(e)}
+        finally:
+            await verifier._client.aclose()
+
+    async def execute_agent_intent(self, intent: CodebotIntent, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
+        """@desc: Transmits the intent for isolated WASM execution and retrieves a Proof-of-Action receipt"""
+        self.log.info(f"\n🚀 [Compute] Requesting isolated execution for {intent.agent_id}...")
         verifier = self._get_verified_client()
         url = PublicEndpoints.AGENT_EXECUTE
-        
-        try:
-            response = await verifier._client.post(url, json=asdict(intent))
-            response.raise_for_status()
+        headers = {}
+        if payment_receipt:
+            headers["X-X402-Receipt"] = payment_receipt
             
-            try:
-                verifier._verify_header_proof(response, f"{self.base_url}{url}")
-                self.log.info("  └─ 🛡️ Server Attestation Verified (No tampering detected).")
-            except (ProofVerificationError, ReplayAttackError) as e:
-                self.log.critical(f"  └─ 🚨 CRITICAL: Server Response is compromised! {e}")
-                return {"error": "Attestation Verification Failed", "detail": str(e)}
-
+        try:
+            response = await verifier.async_post_verified(url, json=asdict(intent), headers=headers)
             receipt = response.json()
             self.log.info(f"  └─ ✅ Success! Billed: ${receipt.get('metered_cost_usd', 0):.4f}")
-            self.log.info(f"  └─ 📜 State Root (Anchor): {receipt.get('state_root')}")
+            self.log.info(f"  └─ 📜 State Root: {receipt.get('state_root')}")
             return receipt
-            
-        except httpx.HTTPStatusError as e:
-            self.log.error(f"  └─ ❌ Gateway Rejected (HTTP {e.response.status_code}): {e.response.text}")
-            return {"error": e.response.text}
+        except Exception as e:
+            self.log.error(f"  └─ ❌ Execution Rejected: {e}")
+            return {"error": str(e)}
         finally:
             await verifier._client.aclose()
 
-    ## API 2: OTLP Telemetry Ingress
+    async def verify_audit_receipt(self, receipt: Dict[str, Any]) -> Dict[str, Any]:
+        """@desc: Submits a receipt to the kernel to mathematically prove its authenticity (Parity Check)"""
+        self.log.info(f"\n🔍 [Compliance] Verifying cryptographic integrity of the receipt...")
+        verifier = self._get_verified_client()
+        url = PublicEndpoints.AUDIT_VERIFY
+        try:
+            response = await verifier.async_post_verified(url, json=receipt)
+            data = response.json()
+            if data.get("is_valid"):
+                self.log.info("  └─ ✅ VERIFIED: Receipt is cryptographically authentic.")
+            else:
+                self.log.critical("  └─ 🚨 COMPROMISED: Receipt verification failed!")
+            return data
+        except Exception as e:
+            self.log.error(f"  └─ ❌ Verification Error: {e}")
+            return {"error": str(e)}
+        finally:
+            await verifier._client.aclose()
+
+    async def run_autonomous_intent(self, intent: CodebotIntent) -> Dict[str, Any]:
+        """
+        @desc: THE INTEGRATION CONTRACT (Zero-Trust Auto-Orchestration)
+        - Abstracts the entire symmetric lifecycle: Handshake -> Execute -> Verify
+        """
+        self.log.info("\n" + "="*65)
+        self.log.info(f"🤖 [Auto-Orchestration] Initiating Zero-Trust Autonomous Run")
+        self.log.info("="*65)
+        
+        ## @step.1: Negotiate Execution Budget & Procure Invoice
+        hs_res = await self.request_handshake(intent)
+        if "error" in hs_res:
+            return {"error": "Handshake sequence failed", "details": hs_res}
+            
+        macaroon = hs_res.get("macaroon", "dummy_macaroon_for_internal_auth")
+        
+        ## @step.2: Optional Read - Confirm available UTXO fuel
+        await self.get_fuel_balance(intent.agent_id)
+        
+        ## @step.3: Transmit intent with authorized capability receipt
+        exec_res = await self.execute_agent_intent(intent, payment_receipt=macaroon)
+        if "error" in exec_res:
+            return {"error": "Execution sequence failed", "details": exec_res}
+            
+        ## @step.4: Cross-verify the authenticity of the obtained receipt
+        verify_res = await self.verify_audit_receipt(exec_res)
+        if not verify_res.get("is_valid"):
+            self.log.critical("🚨 Execution succeeded but receipt verification failed. Possible interception!")
+            return {"error": "Receipt tampered during transit"}
+            
+        self.log.info("\n🎉 [Autonomous Run] All sequences completed securely.")
+        return exec_res
+
     async def push_telemetry(self, request: ExportLogsServiceRequest) -> Dict[str, Any]:
-        """OTLP 메트릭을 전송하고, 커널이 봉인(Sealing)한 콘텐츠 해시와 지문(Fingerprint)을 검증"""
-        self.log.info("\n📡 [API 2: Telemetry Logs] Pushing OTLP metrics to Edge Stream...")
+        """@desc: Pushes OTLP metrics to the Edge Stream and verifies the kernel-sealed content hash"""
+        self.log.info("\n📡 [Compliance] Pushing OTLP metrics to Edge Stream...")
         verifier = self._get_verified_client()
         url = PublicEndpoints.TELEMETRY_LOGS
-        
         try:
-            response = await verifier._client.post(url, json=request.model_dump(exclude_none=True))
-            response.raise_for_status()
-            
-            try:
-                verifier._verify_header_proof(response, f"{self.base_url}{url}")
-            except Exception as e:
-                self.log.warning(f"  └─ ⚠️ Attestation Warning (Telemetry): {e}")
-            
+            response = await verifier.async_post_verified(url, json=request.model_dump(exclude_none=True))
             headers = response.headers
             content_hash = headers.get("x-edge-content-hash", "N/A")
-            fingerprint = headers.get("x-edge-fingerprint", "N/A")
-            
-            self.log.info(f"  └─ ✅ Telemetry Accepted. Content Hash: {content_hash} / FP: {fingerprint}")
-            return {"status": "success", "content_hash": content_hash, "fingerprint": fingerprint}
-            
-        except httpx.HTTPStatusError as e:
-            self.log.error(f"  └─ ❌ Telemetry Rejected: {e.response.text}")
-            return {"error": e.response.text}
+            self.log.info(f"  └─ ✅ Telemetry Accepted. Content Hash: {content_hash}")
+            return {"status": "success", "content_hash": content_hash}
+        except Exception as e:
+            self.log.error(f"  └─ ❌ Telemetry Rejected: {e}")
+            return {"error": str(e)}
         finally:
             await verifier._client.aclose()
 
-    ## API 3: Regulated Audit Event
     async def record_audit_event(self, request: AuditLogRequest) -> Dict[str, Any]:
-        """민감 감사 로그를 암호화하여 원장에 기록하고, 조건부 Merkle/ZK 증명을 수령"""
-        self.log.info(f"\n🔒 [API 3: Audit Event] Recording sensitive event: {request.event.message}...")
+        """@desc: Anchors sensitive audit logs to the ledger, conditionally returning ZK/Merkle proofs"""
+        self.log.info(f"\n🔒 [Compliance] Recording sensitive event: {request.event.message}...")
         verifier = self._get_verified_client()
         url = PublicEndpoints.AUDIT_EVENT
-        
         try:
-            response = await verifier._client.post(url, json=request.model_dump(exclude_none=True))
-            response.raise_for_status()
-            
-            verifier._verify_header_proof(response, f"{self.base_url}{url}")
+            response = await verifier.async_post_verified(url, json=request.model_dump(exclude_none=True))
             audit_res = response.json().get("result", {})
             self.log.info(f"  └─ ✅ Audit Secured. Hash: {audit_res.get('hash')}")
-            
-            if audit_res.get("membership_proof"):
-                self.log.info("  └─ 🛡️ ZK/Merkle Proof securely attached.")
-                
             return audit_res
-            
-        except httpx.HTTPStatusError as e:
-            self.log.error(f"  └─ ❌ Audit Rejected: {e.response.text}")
-            return {"error": e.response.text}
+        except Exception as e:
+            self.log.error(f"  └─ ❌ Audit Rejected: {e}")
+            return {"error": str(e)}
         finally:
             await verifier._client.aclose()
 
-
-# =====================================================================
-# 3. PAYLOAD BUILDERS
-# =====================================================================
+"""PAYLOAD BUILDERS"""
 class UsecasePayloadBuilder:
-    """암호학적 워크플로우 검증을 위한 Mock 페이로드 조립 팩토리"""
+    """@desc: Factory for assembling mock payloads used in end-to-end cryptographic workflow verification"""
     
     @staticmethod
     def build_intent() -> CodebotIntent:
@@ -149,7 +219,7 @@ class UsecasePayloadBuilder:
             action="EXECUTE_PYTHON",
             source_code="print('Verified Execution!')", 
             max_fuel=1_500_000,
-            signature="0xab1234567890..."
+            signature="0xab1234567890_mock_signature"
         )
 
     @staticmethod
@@ -181,13 +251,9 @@ class UsecasePayloadBuilder:
             verbose=True
         )
 
-
-# =====================================================================
-# 4. SCENARIO RUNNER
-# =====================================================================
+"""SCENARIO RUNNER"""
 class UsecaseRunner:
-    """보안 클라이언트(SDK) 엔드투엔드 워크플로우 검증 러너"""
-    
+    """@desc: Master execution runner that simulates an external agent integrating via the Public SDK"""
     def __init__(self, base_url: str = "http://localhost:8000"):
         self.client = DphiPublicClient(base_url=base_url)
         self.log = logging.getLogger("dphi.client.sdk")
@@ -195,25 +261,20 @@ class UsecaseRunner:
     async def run_all(self):
         self.log.info("\n=== [START] DPHI Public Usecase Scenarios ===")
 
-        # Phase 1: Agent Execution
-        self.log.info("\n--- [Phase 1] Remote Agent Execution ---")
+        ## @phase.1: Autonomous Agent Execution (Full L402 Cycle) - Initiates the auto-orchestration method that encapsulates Handshake, Execute, and Verify
         intent_req = UsecasePayloadBuilder.build_intent()
-        await self.client.execute_agent_intent(intent_req)
+        await self.client.run_autonomous_intent(intent_req)
         await asyncio.sleep(1.0)
         
-        # Phase 2: OTLP Push
-        self.log.info("\n--- [Phase 2] OTLP Telemetry Ingress ---")
+        ## @phase.2: OTLP Telemetry Ingress
         otlp_req = UsecasePayloadBuilder.build_otlp()
         await self.client.push_telemetry(otlp_req)
         await asyncio.sleep(1.0)
         
-        # Phase 3: Audit Log
-        self.log.info("\n--- [Phase 3] Secure Audit Logging ---")
+        ## @phase.3: Secure Regulated Audit Logging
         audit_req = UsecasePayloadBuilder.build_audit()
         await self.client.record_audit_event(audit_req)
-
         self.log.info("\n=== [SUCCESS] All Usecase Scenarios Completed ===")
-
 
 if __name__ == "__main__":
     runner = UsecaseRunner()

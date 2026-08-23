@@ -28,8 +28,13 @@ from xphi.watcher.wasm.builder import WasmBuilder
 
 log = get_emitter("workflow.edge")
 
+# 🌟 [신규 추가] Read & Verify 대칭성을 위한 신규 워크플로우 메시지
 class StartSceneMsg(WorkflowMessage): pass
+class AgentQuoteMsg(WorkflowMessage): pass
+class BillingInvoiceMsg(WorkflowMessage): pass
+class BillingBalanceMsg(WorkflowMessage): pass
 class AgentExecuteMsg(WorkflowMessage): pass  
+class AuditVerifyMsg(WorkflowMessage): pass
 class OtlpIngressMsg(WorkflowMessage): pass
 class D3FiExchangeMsg(WorkflowMessage): pass
 class LedgerAppendMsg(WorkflowMessage): pass
@@ -71,7 +76,7 @@ def create_agent_intent_payload(inject_faults: bool) -> dict:
         "source_code": "print('Hello from Edge E2E Test')",
         "max_fuel": 1000000,
         "signature": "0x_bad_signature_for_testing_faults" if inject_faults else "0x_valid_dummy_signature",
-        "sig_algo": "ECDSA_SECP256K1" # 정렬된 멀티 알고리즘 필드 주입
+        "sig_algo": "ECDSA_SECP256K1" 
     }
 
 def create_trade_payload(inject_faults: bool) -> dict:
@@ -175,7 +180,80 @@ class EdgeWorkflow(Workflow):
             self.runner.fail_count += 1
             return ErrorMessage("MCP Server unreachable")
             
-        return AgentExecuteMsg() 
+        return AgentQuoteMsg() 
+
+    # 🌟 [신규 추가] 견적 시스템 테스트 (Compute)
+    @step
+    async def phase_agent_quote(self, msg: AgentQuoteMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 1.5] Public Agent Pre-flight Quotation (Dry-run) ---")
+        path = "/v1/public/agent/quote"
+        payload = self.scene_config.agent_intent_builder(self.inject_faults)
+        expected_status = 422 if self.inject_faults else 200
+        
+        self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
+        try:
+            res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+            if res.status_code == expected_status:
+                self.log.info(f"  └─ ✅ Passed: Dry-run quotation handled correctly.")
+                self.runner.success_count += 1
+            else:
+                self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+                self.runner.fail_count += 1
+                return ErrorMessage(f"Quote Check Failed: Expected {expected_status}, Got {res.status_code}")
+        except Exception as e:
+            return ErrorMessage(str(e))
+            
+        return BillingInvoiceMsg()
+
+    # 🌟 [신규 추가] 송장 발급 시스템 테스트 (Economy)
+    @step
+    async def phase_billing_invoice(self, msg: BillingInvoiceMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 1.6] Public L402 Invoice Generation ---")
+        path = "/v1/public/billing/invoice"
+        payload = {
+            "payee_address": "0x000000000000000000000000000000000000dEaD",
+            "amount_usdc": "5.0",
+            "resource_id": f"res_{uuid.uuid4().hex[:8]}"
+        }
+        if self.inject_faults:
+            payload.pop("amount_usdc") # 필드 누락으로 422 에러 유도
+        expected_status = 422 if self.inject_faults else 200
+        
+        self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
+        res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+        
+        if res.status_code == expected_status:
+            self.log.info(f"  └─ ✅ Passed: Invoice generation handled correctly.")
+            self.runner.success_count += 1
+        else:
+            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+            self.runner.fail_count += 1
+            return ErrorMessage(f"Invoice Issue Check Failed: Got {res.status_code}")
+            
+        return BillingBalanceMsg()
+
+    # 🌟 [신규 추가] 잔고 조회 시스템 테스트 (Economy)
+    @step
+    async def phase_billing_balance(self, msg: BillingBalanceMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 1.7] Public UTXO Hot State Balance Read ---")
+        path = "/v1/public/billing/balance"
+        params = {"agent_id": self.test_agent_id, "asset_type": "fuel"}
+        if self.inject_faults:
+            params.pop("agent_id")
+        expected_status = 422 if self.inject_faults else 200
+        
+        self.log.info(f"  └─ Sending GET to {path} (Expected: {expected_status})")
+        res = await self.runner.client.get(f"{self.runner.base_url}{path}", params=params)
+        
+        if res.status_code == expected_status:
+            self.log.info(f"  └─ ✅ Passed: Balance read handled correctly.")
+            self.runner.success_count += 1
+        else:
+            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+            self.runner.fail_count += 1
+            return ErrorMessage(f"Balance Check Failed: Got {res.status_code}")
+            
+        return AgentExecuteMsg()
 
     @step
     async def phase_agent_execute(self, msg: AgentExecuteMsg) -> WorkflowMessage:
@@ -201,6 +279,10 @@ class EdgeWorkflow(Workflow):
             if res.status_code == expected_status:
                 self.log.info(f"  └─ ✅ Passed: Received {res.status_code} as expected.")
                 self.runner.success_count += 1
+                
+                # 🌟 [신규 추가] 정상 처리 시 발급받은 영수증을 다음 Verification 단계에서 쓰기 위해 저장
+                if not self.inject_faults:
+                    self.state_roots["audit_receipt"] = res.json()
             else:
                 self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
                 self.runner.fail_count += 1
@@ -210,6 +292,37 @@ class EdgeWorkflow(Workflow):
             if attest_err: return attest_err
         except Exception as e:
             return ErrorMessage(str(e))
+            
+        return AuditVerifyMsg()
+
+    # 🌟 [신규 추가] 영수증 진위 검증 시스템 테스트 (Compliance)
+    @step
+    async def phase_audit_verify(self, msg: AuditVerifyMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 2.5] AuditReceipt Verification (Auditor Validation) ---")
+        path = "/v1/public/audit/verify"
+        
+        # 앞선 Execute 단계에서 저장한 영수증을 꺼냄
+        receipt = self.state_roots.get("audit_receipt", {})
+        if not receipt and not self.inject_faults:
+            self.log.warning("  └─ ⚠️ No receipt found from previous step. Skipping verification.")
+            return OtlpIngressMsg()
+            
+        if self.inject_faults:
+            receipt = {"state_root": "0x_tampered_root_hash_for_chaos", "receipt_id": "fake_123"}
+            expected_status = 422  # Parity Verification 실패 유도
+        else:
+            expected_status = 200
+            
+        self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
+        res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=receipt)
+        
+        if res.status_code == expected_status:
+            self.log.info(f"  └─ ✅ Passed: Cryptographic verification handled correctly.")
+            self.runner.success_count += 1
+        else:
+            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+            self.runner.fail_count += 1
+            return ErrorMessage(f"Audit Verify Check Failed: Got {res.status_code}")
             
         return OtlpIngressMsg()
 
@@ -408,15 +521,11 @@ class GatewayTracerPipeline(PipelineRunner):
             
             has_rupture = getattr(tracer, 'rupture_confirmed', False)
             
-            # [수정 구간] 변조(Attestation Injector) 시나리오 평가 로직 수정
             if attestation_injector is not None:
-                # 방어벽이 변조를 잡아내서 에러(fail)가 발생했어야 정상. fail_count가 0이면 뚫린 것.
                 if runner.runner.fail_count == 0:
                     raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")
-                # 방어 성공: 테스트는 통과한 것이므로 에러를 던지지 않고 return
                 return 
 
-            # 일반 시나리오 (Golden Path 및 Negative Payload 테스트)
             if has_rupture or runner.runner.fail_count > 0:
                 raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
 
