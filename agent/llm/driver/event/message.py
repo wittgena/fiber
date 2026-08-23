@@ -8,9 +8,9 @@ from typing import ClassVar
 from pydantic import ConfigDict, Field
 from rich.text import Text
 
-from arch.model.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
-from arch.model.conv.event import SourceType
-from agent.space.action.message import (
+from xphi.arch.model.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
+from xphi.arch.model.conv.event import SourceType
+from fiber.agent.space.action.message import (
     ImageContent,
     Message,
     RedactedThinkingBlock,

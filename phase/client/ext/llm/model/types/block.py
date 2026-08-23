@@ -37,8 +37,8 @@ except ImportError:  # pragma: no cover
 import filetype
 from tinytag import TinyTag, UnsupportedFormatError
 from typing_extensions import Self
-from agent.llm.router.parser import asyncio_run
-from agent.llm.router.pydantic import (
+from fiber.agent.llm.router.parser import asyncio_run
+from fiber.agent.llm.router.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,
@@ -48,9 +48,9 @@ from agent.llm.router.pydantic import (
     field_validator,
     model_validator,
 )
-from agent.llm.router.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
-from agent.llm.router.types.schema import ImageDocument
-from agent.llm.router.parser import get_tokenizer, resolve_binary
+from fiber.agent.llm.router.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
+from fiber.agent.llm.router.types.schema import ImageDocument
+from fiber.agent.llm.router.parser import get_tokenizer, resolve_binary
 
 _logger = logging.getLogger(__name__)
 
@@ -179,7 +179,7 @@ class BaseContentBlock(ABC, BaseModel):
         """
         Get template variables from the content block.
         """
-        from agent.llm.router.parser import get_template_vars
+        from fiber.agent.llm.router.parser import get_template_vars
 
         for attribute_name in self.templatable_attributes:
             attribute = getattr(self, attribute_name, None)
@@ -204,7 +204,7 @@ class BaseContentBlock(ABC, BaseModel):
 
         For that to work, the validation on those fields would need to be updated though.
         """
-        from agent.llm.router.parser import format_string
+        from fiber.agent.llm.router.parser import format_string
 
         formatted_attrs: Dict[str, Any] = {}
         for attribute_name in self.templatable_attributes:
@@ -292,7 +292,7 @@ class TextBlock(BaseContentBlock):
     async def asplit(
         self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None
     ) -> List["TextBlock"]:
-        from agent.llm.router.node_parser import TokenTextSplitter
+        from fiber.agent.llm.router.node_parser import TokenTextSplitter
 
         text_splitter = TokenTextSplitter(
             chunk_size=max_tokens, chunk_overlap=overlap, tokenizer=tokenizer

@@ -8,9 +8,9 @@ import asyncio
 import time
 from typing import Optional
 
-from phase.client.ext.evm import Web3Adapter
-from dphi.bound.config import dphi_env
-from watcher.plane.emitter import get_emitter
+from fiber.phase.client.ext.evm import Web3Adapter
+from fiber.dphi.bound.config import dphi_env
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("wallet.eth")
 

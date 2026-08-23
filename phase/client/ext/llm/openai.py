@@ -32,7 +32,7 @@ from typing import (
 import httpx
 import tiktoken
 
-from phase.client.ext.llm.handle.converter import (
+from fiber.phase.client.ext.llm.handle.converter import (
     achat_to_completion_decorator,
     acompletion_to_chat_decorator,
     astream_chat_to_completion_decorator,
@@ -42,7 +42,7 @@ from phase.client.ext.llm.handle.converter import (
     stream_chat_to_completion_decorator,
     stream_completion_to_chat_decorator,
 )
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -56,20 +56,20 @@ from phase.client.ext.llm.model.types.block import (
     ToolCallBlock,
     TextBlock,
 )
-from agent.llm.router.pydantic import Field, PrivateAttr
-from agent.llm.router.callback.manager import CallbackManager
-from agent.llm.router.constants import DEFAULT_TEMPERATURE
-from agent.llm.router.callback.manager import (
+from fiber.agent.llm.router.pydantic import Field, PrivateAttr
+from fiber.agent.llm.router.callback.manager import CallbackManager
+from fiber.agent.llm.router.constants import DEFAULT_TEMPERATURE
+from fiber.agent.llm.router.callback.manager import (
     llm_chat_callback,
     llm_completion_callback,
 )
-from phase.client.ext.llm.model.funcall import FunctionCallingLLM
-from phase.client.ext.llm.model.llm import ToolSelection, Model
-from agent.llm.router.parser import parse_partial_json
-from phase.client.ext.llm.handle.template import PromptTemplate
-from phase.client.ext.llm.model.flex import FlexibleModel
-from agent.llm.router.types.base import BaseOutputParser, PydanticProgramMode
-from phase.client.ext.llm.handle.openai import (
+from fiber.phase.client.ext.llm.model.funcall import FunctionCallingLLM
+from fiber.phase.client.ext.llm.model.llm import ToolSelection, Model
+from fiber.agent.llm.router.parser import parse_partial_json
+from fiber.phase.client.ext.llm.handle.template import PromptTemplate
+from fiber.phase.client.ext.llm.model.flex import FlexibleModel
+from fiber.agent.llm.router.types.base import BaseOutputParser, PydanticProgramMode
+from fiber.phase.client.ext.llm.handle.openai import (
     O1_MODELS,
     create_retry_decorator,
     from_openai_completion_logprobs,
@@ -93,10 +93,10 @@ from openai.types.chat.chat_completion_chunk import (
     ChoiceDelta,
     ChoiceDeltaToolCall,
 )
-from agent.llm.router.callback.dispatcher import dispatcher
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
 
 if TYPE_CHECKING:
-    from phase.client.ext.llm.model.types.tool import BaseTool
+    from fiber.phase.client.ext.llm.model.types.tool import BaseTool
 
 DEFAULT_OPENAI_MODEL = "gpt-3.5-turbo"
 

@@ -7,14 +7,14 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from phase.client.ext.evm import Web3Adapter
-from phase.client.ext.wallet import EthWalletAdapter
-from dphi.bound.adapter.rollup import RollupAdapter
-from dphi.bound.config import dphi_env
+from fiber.phase.client.ext.evm import Web3Adapter
+from fiber.phase.client.ext.wallet import EthWalletAdapter
+from fiber.dphi.bound.adapter.rollup import RollupAdapter
+from fiber.dphi.bound.config import dphi_env
 
-from arch.contract.interface import ContractRouter
-from kernel.dphi.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt
-from watcher.plane.emitter import get_emitter, flow_scope
+from xphi.arch.contract.interface import ContractRouter
+from xphi.kernel.dphi.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt
+from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")
 

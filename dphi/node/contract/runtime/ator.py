@@ -5,9 +5,9 @@ import asyncio
 import json
 from typing import Dict, Any, List
 
-from arch.model.phase.flow import PhaseFlow, FlowState
-from kernel.dphi.broker import DphiBroker
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.phase.flow import PhaseFlow, FlowState
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger("ator.runtime")
 

@@ -8,15 +8,15 @@ from typing import Any, TYPE_CHECKING
 import bashlex
 from bashlex.errors import ParsingError
 
-from agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
-from agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
+from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
+from fiber.agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
 
-from agent.loop.runtime.protocol.terminal.interface import TerminalInterface, TerminalSessionBase
-from agent.loop.runtime.protocol.terminal.context import ExecutionEngine, ExecutionContext
-from agent.loop.runtime.protocol.terminal.polling import PollingExecutionEngine
+from fiber.agent.loop.runtime.protocol.terminal.interface import TerminalInterface, TerminalSessionBase
+from fiber.agent.loop.runtime.protocol.terminal.context import ExecutionEngine, ExecutionContext
+from fiber.agent.loop.runtime.protocol.terminal.polling import PollingExecutionEngine
 
-from arch.xor.bridge.command.terminal import TerminalCommandStatus
-from watcher.plane.emitter import get_emitter
+from xphi.arch.xor.bridge.command.terminal import TerminalCommandStatus
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

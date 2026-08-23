@@ -2,11 +2,11 @@
 ## @lineage: bound.xor.model.api.base
 ## @lineage: eco.model.api.base
 from typing import Optional, Union
-from agent.anchor.model.types.param.legacy import LegacyParams
-from agent.anchor.provider.registry import get_llm_provider
+from fiber.agent.anchor.model.types.param.legacy import LegacyParams
+from fiber.agent.anchor.provider.registry import get_llm_provider
 
-from arch.model.config import config
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.config import config
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("bridge.api")
 

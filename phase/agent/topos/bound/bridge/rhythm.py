@@ -6,8 +6,8 @@
 ## @lineage: kernel.bind.rhythm.bridge
 import json
 from typing import Dict, Any, Optional
-from arch.contract.event.next import next_id, parse_id
-from arch.topos.tunnel.factory import UniversalFacade
+from xphi.arch.contract.event.next import next_id, parse_id
+from xphi.arch.topos.tunnel.factory import UniversalFacade
 
 class RhythmBridge:
     def __init__(self, tunnel: UniversalFacade, channel: str):

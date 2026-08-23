@@ -6,14 +6,14 @@ import importlib
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-from watcher.wasm.builder import WasmBuilder
-import dphi.bound.scene as scene_module
-from watcher.wasm.tester import WasmTester
+from xphi.watcher.wasm.builder import WasmBuilder
+import fiber.dphi.bound.scene as scene_module
+from xphi.watcher.wasm.tester import WasmTester
 
-from arch.topos.tunnel.factory import TunnelFactory
-from kernel.bind.resolver import resolve_path
-from kernel.phase.reactor import PhaseReactor
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.entry")
 

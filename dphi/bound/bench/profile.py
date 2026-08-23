@@ -6,13 +6,13 @@ import statistics
 import operator
 from typing import Any, List, Dict, Callable
 
-from dphi.bound.scene.anchor import ActorIdentity
-from dphi.node.attach.sandbox import TestScripts
+from fiber.dphi.bound.scene.anchor import ActorIdentity
+from fiber.dphi.node.attach.sandbox import TestScripts
 
-from kernel.dphi.runner.phase import SchemeRunner
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.method import DphiMethod
-from watcher.plane.emitter import get_emitter, set_log_level
+from xphi.kernel.dphi.runner.phase import SchemeRunner
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.method import DphiMethod
+from xphi.watcher.plane.emitter import get_emitter, set_log_level
 
 log = get_emitter("bench.profile")
 

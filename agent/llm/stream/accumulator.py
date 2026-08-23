@@ -3,9 +3,9 @@
 import time
 from typing import Any, Dict, List, Optional
 
-from arch.model.phase.gate import uuid
-from agent.llm.stream.parser.chunk import ParsedChunk
-from agent.anchor.model.types.core import (
+from xphi.arch.model.phase.gate import uuid
+from fiber.agent.llm.stream.parser.chunk import ParsedChunk
+from fiber.agent.anchor.model.types.core import (
     Choices,
     Delta,
     Message,
@@ -15,8 +15,8 @@ from agent.anchor.model.types.core import (
     FunctionCall,
     ChatCompletionMessageToolCall,
 )
-from agent.anchor.model.types.stream import ModelResponseStream, StreamingChoices
-from watcher.plane.emitter import get_emitter
+from fiber.agent.anchor.model.types.stream import ModelResponseStream, StreamingChoices
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.accumulator")
 

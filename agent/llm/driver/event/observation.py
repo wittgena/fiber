@@ -4,10 +4,10 @@
 from typing import Literal
 from pydantic import Field
 from rich.text import Text
-from arch.model.conv.event import N_CHAR_PREVIEW, LLMConvertibleEvent
-from arch.model.conv.event import EventID, SourceType, ToolCallID
-from agent.space.action.message import Message, TextContent, content_to_str
-from agent.space.action.action import Action, Observation
+from xphi.arch.model.conv.event import N_CHAR_PREVIEW, LLMConvertibleEvent
+from xphi.arch.model.conv.event import EventID, SourceType, ToolCallID
+from fiber.agent.space.action.message import Message, TextContent, content_to_str
+from fiber.agent.space.action.action import Action, Observation
 
 # Source of action rejection - used to distinguish user rejections from hook blocks
 RejectionSource = Literal["user", "hook"]

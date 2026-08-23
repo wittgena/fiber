@@ -9,17 +9,17 @@ from openai.types.responses.response_output_message import ResponseOutputMessage
 from openai.types.responses.response_reasoning_item import ResponseReasoningItem
 from pydantic import ConfigDict, Field, model_validator
 
-from arch.xor.parser.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
-from arch.xor.parser.mark.depre import handle_deprecated_model_fields
+from xphi.arch.xor.parser.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from xphi.arch.xor.parser.mark.depre import handle_deprecated_model_fields
 
-from agent.anchor.llm.param import (
+from fiber.agent.anchor.llm.param import (
     ChatCompletionMessageToolCall,
     ResponseFunctionToolCall,
     OutputFunctionToolCall,
     GenericResponseOutputItem,
 )
 
-from arch.model.message import (
+from xphi.arch.model.message import (
     MessageToolCall as CoreMessageToolCall,
     TextContent as CoreTextContent,
     ImageContent,
@@ -29,7 +29,7 @@ from arch.model.message import (
     Message as CoreMessage,
     content_to_str,
 )
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

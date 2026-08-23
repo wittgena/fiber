@@ -11,15 +11,15 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from agent.llm.router.pydantic import BaseModel, SerializeAsAny, ConfigDict
-from phase.client.ext.llm.model.types.block import (
+from fiber.agent.llm.router.pydantic import BaseModel, SerializeAsAny, ConfigDict
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     CompletionResponse,
 )
-from agent.llm.router.pydantic import ConfigDict, Field
-from phase.client.ext.llm.handle.template import BasePromptTemplate
-from arch.model.phase.gate import uuid4
+from fiber.agent.llm.router.pydantic import ConfigDict, Field
+from fiber.phase.client.ext.llm.handle.template import BasePromptTemplate
+from xphi.arch.model.phase.gate import uuid4
 
 class BaseEvent(BaseModel):
     model_config = ConfigDict(

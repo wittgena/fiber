@@ -5,7 +5,7 @@
 import re
 import time
 from typing import TYPE_CHECKING, Any
-from arch.xor.bridge.terminal import (
+from xphi.arch.xor.bridge.terminal import (
     CMD_OUTPUT_PS1_END,
     MAX_CMD_OUTPUT_SIZE,
     POLL_INTERVAL,
@@ -15,16 +15,16 @@ import traceback
 import bashlex
 from bashlex.errors import ParsingError
 
-from agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
-from agent.loop.runtime.protocol.terminal.context import ExecutionEngine, ExecutionContext
+from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
+from fiber.agent.loop.runtime.protocol.terminal.context import ExecutionEngine, ExecutionContext
 
-from arch.xor.bridge.terminal import CmdOutputMetadata
-from arch.xor.bridge.command.terminal import TerminalCommandStatus
-from arch.xor.parser.mark.truncate import maybe_truncate
-from watcher.plane.emitter import get_emitter
+from xphi.arch.xor.bridge.terminal import CmdOutputMetadata
+from xphi.arch.xor.bridge.command.terminal import TerminalCommandStatus
+from xphi.arch.xor.parser.mark.truncate import maybe_truncate
+from xphi.watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from agent.loop.runtime.protocol.terminal.session import TerminalSession
+    from fiber.agent.loop.runtime.protocol.terminal.session import TerminalSession
 
 log = get_emitter(__name__)
 

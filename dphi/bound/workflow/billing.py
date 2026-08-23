@@ -13,20 +13,20 @@ from dataclasses import dataclass, field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from dphi.bound.config import dphi_env
-from dphi.bound.adapter.anchor import NotarySwarm
+from fiber.dphi.bound.config import dphi_env
+from fiber.dphi.bound.adapter.anchor import NotarySwarm
 
-from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from kernel.dphi.adapter.shadow import ShadowAdapter
-from kernel.dphi.adapter.utxo import (
+from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.dphi.adapter.shadow import ShadowAdapter
+from xphi.kernel.dphi.adapter.utxo import (
     UtxoAdapter, UtxoPointer, UtxoInput, UtxoOutput, UtxoTransaction,
     AgentWallet, compute_merkle_root
 )
-from kernel.dphi.broker import DphiBroker
-from kernel.phase.reactor import PhaseReactor
-from kernel.dphi.runner.phase import SchemeRunner
-from watcher.plane.emitter import get_emitter
-from phase.tracer.intent.verifier import VerificationError
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.kernel.dphi.runner.phase import SchemeRunner
+from xphi.watcher.plane.emitter import get_emitter
+from fiber.phase.tracer.intent.verifier import VerificationError
 
 log = get_emitter("dvm.cosm")
 

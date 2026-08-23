@@ -12,14 +12,14 @@ from urllib.parse import urlparse
 from email.utils import formatdate
 from typing import Dict, List, Tuple, Optional, Callable, Union
 
-from agent.llm.router.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
-from agent.anchor.provider.protype import ProviderTypes
-from agent.anchor.model.types.param.legacy import LegacyParams
+from fiber.agent.llm.router.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
+from fiber.agent.anchor.provider.protype import ProviderTypes
+from fiber.agent.anchor.model.types.param.legacy import LegacyParams
 
-from arch.model.config import config
-from arch.xor.secret.manager import get_secret_str, get_secret
-from kernel.bind.resolver import resolve_path 
-from watcher.plane.emitter import get_emitter 
+from xphi.arch.model.config import config
+from xphi.arch.xor.secret.manager import get_secret_str, get_secret
+from xphi.kernel.bind.resolver import resolve_path 
+from xphi.watcher.plane.emitter import get_emitter 
 
 log_cost = get_emitter("registry.model")
 log_route = get_emitter("routing.locator")

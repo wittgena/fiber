@@ -3,8 +3,8 @@
 import time
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict, List
-from dphi.node.attach.sandbox import SandboxRunner, ScriptDef, TestScripts
-from watcher.plane.emitter import get_emitter
+from fiber.dphi.node.attach.sandbox import SandboxRunner, ScriptDef, TestScripts
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")
 

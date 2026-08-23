@@ -34,13 +34,13 @@ from typing import (
     Union,
 )
 
-from phase.client.ext.llm.model.types.block import ChatMessage, MessageRole, TextBlock
-from agent.llm.router.pydantic import (
+from fiber.phase.client.ext.llm.model.types.block import ChatMessage, MessageRole, TextBlock
+from fiber.agent.llm.router.pydantic import (
     BaseModel,
     GetCoreSchemaHandler,
     GetJsonSchemaHandler,
 )
-from agent.llm.router.pydantic import CoreSchema, core_schema
+from fiber.agent.llm.router.pydantic import CoreSchema, core_schema
 
 Model = TypeVar("Model", bound=BaseModel)
 
@@ -49,7 +49,7 @@ TokenAsyncGen = AsyncGenerator[str, None]
 RESPONSE_TEXT_TYPE = Union[BaseModel, str, TokenGen, TokenAsyncGen]
 
 if TYPE_CHECKING:
-    from phase.client.ext.llm.model.flex import FlexibleModel
+    from fiber.phase.client.ext.llm.model.flex import FlexibleModel
 
 
 # TODO: move into a `core` folder

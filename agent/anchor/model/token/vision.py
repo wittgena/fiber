@@ -7,8 +7,8 @@ import io
 import struct
 from typing import Tuple, Union
 
-from phase.client.http import get_client, SafeHttpClient
-from agent.llm.router.constants import (
+from fiber.phase.client.http import get_client, SafeHttpClient
+from fiber.agent.llm.router.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,
     MAX_IMAGE_URL_DOWNLOAD_SIZE_MB,
@@ -17,7 +17,7 @@ from agent.llm.router.constants import (
     MAX_TILE_HEIGHT,
     MAX_TILE_WIDTH,
 )
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("ext.vision")
 

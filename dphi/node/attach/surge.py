@@ -5,10 +5,10 @@ import random
 import json
 from typing import Any
 
-from dphi.bound.scene.anchor import ActorIdentity 
-from kernel.dphi.method import DphiMethod
-from kernel.dphi.adapter.state import StateAdapter
-from watcher.plane.emitter import get_emitter
+from fiber.dphi.bound.scene.anchor import ActorIdentity 
+from xphi.kernel.dphi.method import DphiMethod
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("attach.surge")
 

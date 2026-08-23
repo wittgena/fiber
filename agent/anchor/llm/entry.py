@@ -10,20 +10,20 @@ import uuid
 from typing import Any, Dict, List, Union
 
 # Eco & Ator Models
-from agent.anchor.llm.param import ModelResponse
-from agent.anchor.llm.execution import ExecutionMetadata
-from agent.anchor.model.types.general import EmbeddingResponse
-from agent.loop.runtime.exception.mapping import exception_type
-from phase.client.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
-from agent.llm.router.inter.registry import AdapterRegistry
+from fiber.agent.anchor.llm.param import ModelResponse
+from fiber.agent.anchor.llm.execution import ExecutionMetadata
+from fiber.agent.anchor.model.types.general import EmbeddingResponse
+from fiber.agent.loop.runtime.exception.mapping import exception_type
+from fiber.phase.client.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
+from fiber.agent.llm.router.inter.registry import AdapterRegistry
 
 # Arch & Watcher
-from arch.topos.network.bridge import RpcBridge
-from arch.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.network.bridge import RpcBridge
+from xphi.arch.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
+from xphi.watcher.plane.emitter import get_emitter
 
 # Phase LLM Components
-from agent.llm.stream.wrapper import StreamWrapper
+from fiber.agent.llm.stream.wrapper import StreamWrapper
 
 # Loggers
 log = get_emitter("runtime.entry")

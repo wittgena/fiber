@@ -5,24 +5,24 @@ from typing import Any
 
 from fastapi import Request, HTTPException, status
 
-from dphi.bound.adapter.anchor import NexusAnchor
-from agent.space.sandbox.profile import BenchProfile
-from dphi.receptor.ingress.gov.policy import (
+from fiber.dphi.bound.adapter.anchor import NexusAnchor
+from fiber.agent.space.sandbox.profile import BenchProfile
+from fiber.dphi.receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
     FuelAllocator, 
     HealthMonitor
 )
 
-from arch.topos.tunnel.subs import DistributedPubSub
-from arch.xor.parser.otlp import StrictOtlpExtractionEngine
-from arch.xor.stream.edge import LogStreamStore
-from kernel.dphi.broker import DphiBroker
-from kernel.dphi.exchange.transaction import ExchangeAdapter
-from kernel.dphi.adapter.sign import NodeSigner
+from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
+from xphi.arch.xor.stream.edge import LogStreamStore
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
+from xphi.kernel.dphi.adapter.sign import NodeSigner
 
-from watcher.receptor.audit.secret import SecretAuditor
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.receptor.audit.secret import SecretAuditor
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("xe.depend")
 

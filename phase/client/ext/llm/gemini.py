@@ -27,8 +27,8 @@ from typing import (
     Callable,
     Literal,
 )
-from phase.client.ext.llm.handle.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.handle.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -40,16 +40,16 @@ from phase.client.ext.llm.model.types.block import (
     MessageRole,
     ToolCallBlock,
 )
-from agent.llm.router.pydantic import BaseModel, Field, PrivateAttr
-from agent.llm.router.callback.manager import CallbackManager
-from agent.llm.router.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
-from agent.llm.router.callback.manager import llm_chat_callback, llm_completion_callback
-from phase.client.ext.llm.model.funcall import FunctionCallingLLM
-from phase.client.ext.llm.model.llm import ToolSelection, Model
-from phase.client.ext.llm.handle.template import PromptTemplate
-from phase.client.ext.llm.model.flex import FlexibleModel, create_flexible_model
-from agent.llm.router.types.base import PydanticProgramMode
-from phase.client.ext.llm.handle.gemini import (
+from fiber.agent.llm.router.pydantic import BaseModel, Field, PrivateAttr
+from fiber.agent.llm.router.callback.manager import CallbackManager
+from fiber.agent.llm.router.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
+from fiber.agent.llm.router.callback.manager import llm_chat_callback, llm_completion_callback
+from fiber.phase.client.ext.llm.model.funcall import FunctionCallingLLM
+from fiber.phase.client.ext.llm.model.llm import ToolSelection, Model
+from fiber.phase.client.ext.llm.handle.template import PromptTemplate
+from fiber.phase.client.ext.llm.model.flex import FlexibleModel, create_flexible_model
+from fiber.agent.llm.router.types.base import PydanticProgramMode
+from fiber.phase.client.ext.llm.handle.gemini import (
     chat_from_gemini_response,
     chat_message_to_gemini,
     convert_schema_to_function_declaration,
@@ -63,15 +63,15 @@ from phase.client.ext.llm.handle.gemini import (
 import google.genai
 import google.auth
 import google.genai.types as types
-from agent.llm.router.callback.dispatcher import dispatcher
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
 
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
 if TYPE_CHECKING:
-    from phase.client.ext.llm.model.types.tool import BaseTool
+    from fiber.phase.client.ext.llm.model.types.tool import BaseTool
 
-from arch.model.phase.gate import uuid4 
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.phase.gate import uuid4 
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

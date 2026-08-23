@@ -4,11 +4,11 @@ import json
 from typing import AsyncGenerator, Union
 import httpx
 
-from agent.anchor.llm.param import ModelResponse
-from agent.anchor.llm.execution import CompletionContext 
-from phase.client.http import get_client
+from fiber.agent.anchor.llm.param import ModelResponse
+from fiber.agent.anchor.llm.execution import CompletionContext 
+from fiber.phase.client.http import get_client
 
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.base")
 

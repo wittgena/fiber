@@ -21,15 +21,15 @@ from openai.types.completion_usage import CompletionTokensDetails, PromptTokensD
 from openai.types.images_response import Image as OpenAIImage
 from openai.types.images_response import ImagesResponse as OpenAIImageResponse
 
-from agent.anchor.model.types.param.legacy import PricingParams
-from agent.anchor.provider.protype import ProviderSpecificModelInfo, ProviderTypes
-from agent.anchor.model.types.core import Usage
-from agent.anchor.model.types.openai import ChatCompletionToolCallChunk, ChatCompletionUsageBlock
-from agent.anchor.model.types.openai import OpenAIChatCompletionFinishReason
+from fiber.agent.anchor.model.types.param.legacy import PricingParams
+from fiber.agent.anchor.provider.protype import ProviderSpecificModelInfo, ProviderTypes
+from fiber.agent.anchor.model.types.core import Usage
+from fiber.agent.anchor.model.types.openai import ChatCompletionToolCallChunk, ChatCompletionUsageBlock
+from fiber.agent.anchor.model.types.openai import OpenAIChatCompletionFinishReason
 
-from arch.model.phase.gate import uuid
-from arch.model.surge.model import DynamicSurgeModel
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.phase.gate import uuid
+from xphi.arch.model.surge.model import DynamicSurgeModel
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("types.general")
 

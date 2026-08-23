@@ -10,17 +10,17 @@ import math
 import random
 from typing import Optional, List, Dict, Any
 
-from arch.contract.registry.unified import contract 
-from arch.contract.discovery import discover_modules
-from arch.contract.event.bus import AsyncEventBus
-from arch.contract.event.psi import PsiCarrier, PsiEvent
-from arch.contract.interface import IPhaseField, ICriticalDetector, ISystemRegime, IPhaseAtor
+from xphi.arch.contract.registry.unified import contract 
+from xphi.arch.contract.discovery import discover_modules
+from xphi.arch.contract.event.bus import AsyncEventBus
+from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
+from xphi.arch.contract.interface import IPhaseField, ICriticalDetector, ISystemRegime, IPhaseAtor
 
-from kernel.phase.runtime.executor.dynamics import DynamicsExecutor
-from kernel.phase.runtime.node import NodeRuntime
-from kernel.phase.runtime.flow.cont import LoopCarrier
-from kernel.bind.resolver import find_current_self
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.phase.runtime.executor.dynamics import DynamicsExecutor
+from xphi.kernel.phase.runtime.node import NodeRuntime
+from xphi.kernel.phase.runtime.flow.cont import LoopCarrier
+from xphi.kernel.bind.resolver import find_current_self
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("ator.node")
 

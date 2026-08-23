@@ -41,7 +41,7 @@ from deprecated import deprecated
 from typing_extensions import Self
 from PIL import Image
 
-from agent.llm.router.pydantic import (
+from fiber.agent.llm.router.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,
@@ -57,13 +57,13 @@ from agent.llm.router.pydantic import (
     field_validator,
     model_serializer,
 )
-from agent.llm.router.pydantic import CoreSchema
-from agent.llm.router.parser import SAMPLE_TEXT, truncate_text
+from fiber.agent.llm.router.pydantic import CoreSchema
+from fiber.agent.llm.router.parser import SAMPLE_TEXT, truncate_text
 
 if TYPE_CHECKING:
     from haystack.schema import Document as HaystackDocument
     from semantic_kernel.memory.memory_record import MemoryRecord
-    from phase.client.ext.llm.model.types.block import BaseContentBlock
+    from fiber.phase.client.ext.llm.model.types.block import BaseContentBlock
 
 DEFAULT_TEXT_NODE_TMPL = "{metadata_str}\n\n{content}"
 DEFAULT_METADATA_TMPL = "{key}: {value}"
@@ -306,7 +306,7 @@ class BaseNode(BaseComponent):
     def get_metadata_content_blocks(
         self, metadata_mode: MetadataMode
     ) -> list[BaseContentBlock]:
-        from phase.client.ext.llm.model.types.block import TextBlock
+        from fiber.phase.client.ext.llm.model.types.block import TextBlock
 
         if metadata_mode == MetadataMode.NONE:
             return []
@@ -501,7 +501,7 @@ class Node(BaseNode):
         return ""
 
     def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from phase.client.ext.llm.model.types.block import (
+        from fiber.phase.client.ext.llm.model.types.block import (
             TextBlock, ImageBlock, AudioBlock, VideoBlock,
         )
         blocks: list[BaseContentBlock] = []
@@ -579,7 +579,7 @@ class TextNode(BaseNode):
         return self.text_template.format(content=self.text, metadata_str=metadata_str).strip()
 
     def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from phase.client.ext.llm.model.types.block import TextBlock
+        from fiber.phase.client.ext.llm.model.types.block import TextBlock
         blocks: list[BaseContentBlock] = []
         blocks.extend(self.get_metadata_content_blocks(metadata_mode))
         blocks.append(TextBlock(text=self.text))
@@ -656,7 +656,7 @@ class ImageNode(TextNode):
         return str(sha256(doc_identity.encode("utf-8", "surrogatepass")).hexdigest())
 
     def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from phase.client.ext.llm.model.types.block import ImageBlock
+        from fiber.phase.client.ext.llm.model.types.block import ImageBlock
         blocks: list[BaseContentBlock] = []
         blocks.extend(self.get_metadata_content_blocks(metadata_mode))
         resolved = self.resolve_image()
@@ -672,7 +672,7 @@ class IndexNode(TextNode):
     obj: Any = None
 
     def _serialize_obj(self) -> Any:
-        from agent.llm.router.storage.docstore.utils import doc_to_json
+        from fiber.agent.llm.router.storage.docstore.utils import doc_to_json
         try:
             if self.obj is None:
                 return None
@@ -709,7 +709,7 @@ class IndexNode(TextNode):
         if isinstance(obj, str):
             parsed_obj = TextNode(text=obj)
         elif isinstance(obj, dict):
-            from agent.llm.router.storage.docstore.utils import json_to_doc
+            from fiber.agent.llm.router.storage.docstore.utils import json_to_doc
             try:
                 parsed_obj = json_to_doc(obj)
             except Exception:

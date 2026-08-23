@@ -13,21 +13,21 @@ from typing import (
     cast,
 )
 
-from agent.anchor.model.types.anthropic import AnthropicMessagesToolResultParam, AnthropicMessagesToolUseParam
-from agent.anchor.model.types.openai import (
+from fiber.agent.anchor.model.types.anthropic import AnthropicMessagesToolResultParam, AnthropicMessagesToolUseParam
+from fiber.agent.anchor.model.types.openai import (
     ChatCompletionNamedToolChoiceParam,
     AllMessageValues, 
     OpenAIMessageContent
 )
-from agent.anchor.llm.param import ChatCompletionToolParam
-from agent.anchor.model.types.general import SelectTokenizerResponse
-from agent.anchor.model.token.vision import VisionMetadataExtractor
-from arch.model.config import config
-from agent.llm.router.constants import DEFAULT_IMAGE_TOKEN_COUNT
+from fiber.agent.anchor.llm.param import ChatCompletionToolParam
+from fiber.agent.anchor.model.types.general import SelectTokenizerResponse
+from fiber.agent.anchor.model.token.vision import VisionMetadataExtractor
+from xphi.arch.model.config import config
+from fiber.agent.llm.router.constants import DEFAULT_IMAGE_TOKEN_COUNT
 
-from agent.anchor.llm.param import Message
+from fiber.agent.anchor.llm.param import Message
 
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.counter")
 
@@ -320,8 +320,8 @@ def token_counter(
     """
     @desc: 외부 호출을 위한 파사드입니다. 기존 서명을 완벽하게 유지합니다.
     """
-    from agent.anchor.model.encoder import convert_list_message_to_dict
-    from agent.anchor.model.token.encoder import encode # 정규화된 인코더 사용
+    from fiber.agent.anchor.model.encoder import convert_list_message_to_dict
+    from fiber.agent.anchor.model.token.encoder import encode # 정규화된 인코더 사용
     
     if text is not None and messages is not None:
         raise ValueError("text and messages cannot both be set")

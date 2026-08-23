@@ -7,8 +7,8 @@ from dataclasses import dataclass, asdict
 from typing import Dict, Any
 import httpx
 
-from phase.client.http import VerifiedHttpClient, ProofVerificationError, ReplayAttackError
-from watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
+from fiber.phase.client.http import VerifiedHttpClient, ProofVerificationError, ReplayAttackError
+from xphi.watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 
 """CONSTANTS & DTO"""
 class PublicEndpoints:

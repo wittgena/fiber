@@ -15,19 +15,19 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from dphi.bound.config import dphi_env
-from phase.client.http import VerifiedHttpClient
-from dphi.receptor.rest import create_app, Config
+from fiber.dphi.bound.config import dphi_env
+from fiber.phase.client.http import VerifiedHttpClient
+from fiber.dphi.receptor.rest import create_app, Config
 
-from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from kernel.dphi.runner.phase import WebRunner
-from kernel.phase.reactor import PhaseReactor
+from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.dphi.runner.phase import WebRunner
+from xphi.kernel.phase.reactor import PhaseReactor
 
-from watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
-from watcher.receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
-from watcher.plane.emitter import flow_scope, get_emitter
-from watcher.tracer.dphi import DphiTracer
-from watcher.wasm.builder import WasmBuilder
+from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
+from xphi.watcher.receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
+from xphi.watcher.plane.emitter import flow_scope, get_emitter
+from xphi.watcher.tracer.dphi import DphiTracer
+from xphi.watcher.wasm.builder import WasmBuilder
 
 log = get_emitter("workflow.edge")
 
@@ -61,7 +61,7 @@ class ManagedTestServer(uvicorn.Server):
 
 
 def create_otlp_payload(inject_faults: bool) -> dict:
-    from dphi.bound.adapter.anchor import PhaseBuilder
+    from fiber.dphi.bound.adapter.anchor import PhaseBuilder
     if inject_faults:
         return {"garbage_field_missing_required_keys": True}
     return PhaseBuilder.otlp_payload(is_malformed=False)

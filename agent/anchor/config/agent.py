@@ -12,18 +12,18 @@ from typing import Any, Literal, Dict, Optional, Tuple, Union, List, Callable
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
 
-from agent.space.action.message import Message, TextContent
-from agent.space.action.tool import Tool
-from agent.llm.driver.model import LLMModel
-from agent.anchor.config.mcp import MCPConfig
+from fiber.agent.space.action.message import Message, TextContent
+from fiber.agent.space.action.tool import Tool
+from fiber.agent.llm.driver.model import LLMModel
+from fiber.agent.anchor.config.mcp import MCPConfig
 
-from arch.contract.model.graph import EntryNode
-from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
-from arch.contract.resolver.secret import SecretSource, SecretValue
-from arch.model.surge.disc import SurgeBaseModel
-from arch.xor.parser.mark.depre import warn_deprecated
-from kernel.bind.resolver import resolve_path
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.model.graph import EntryNode
+from xphi.arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
+from xphi.arch.contract.resolver.secret import SecretSource, SecretValue
+from xphi.arch.model.surge.disc import SurgeBaseModel
+from xphi.arch.xor.parser.mark.depre import warn_deprecated
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("config.agent")
 

@@ -13,7 +13,7 @@
 ## @lineage: bound.legacy.anthropic
 from typing import Iterable, Optional, Union
 from typing_extensions import Literal, Required, TypedDict
-from agent.anchor.model.types.openai import ChatCompletionCachedContent
+from fiber.agent.anchor.model.types.openai import ChatCompletionCachedContent
 
 class AnthropicThinkingParam(TypedDict, total=False):
     type: Literal["enabled", "adaptive"]

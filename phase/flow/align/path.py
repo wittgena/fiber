@@ -7,11 +7,11 @@ import re
 from typing import List, Dict, Any
 from pathlib import Path
 
-from arch.contract.registry.unified import contract
-from arch.model.phase.aligner import PhaseAligner, AlignRecord
-from kernel.bind.resolver import find_current_self
-from kernel.phase.runtime.executor.cli import execute_cli_task, CliTaskAdapter, dispatch_cli, parse_local
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.registry.unified import contract
+from xphi.arch.model.phase.aligner import PhaseAligner, AlignRecord
+from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.phase.runtime.executor.cli import execute_cli_task, CliTaskAdapter, dispatch_cli, parse_local
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("align.path")
 

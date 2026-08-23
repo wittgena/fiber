@@ -6,12 +6,12 @@ import sys
 import argparse
 from pathlib import Path
 
-from phase.flow.imports.aligner import RelativeImportAligner
+from fiber.phase.flow.imports.aligner import RelativeImportAligner
 
-from arch.contract.registry.unified import contract
-from kernel.phase.runtime.executor.cli import CliTaskAdapter, parse_local, dispatch_cli
-from kernel.bind.resolver import find_current_self
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.registry.unified import contract
+from xphi.kernel.phase.runtime.executor.cli import CliTaskAdapter, parse_local, dispatch_cli
+from xphi.kernel.bind.resolver import find_current_self
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("align.plane", phase="SYSTEM")
 

@@ -7,7 +7,7 @@
 import json
 from typing import Any, Dict, List, Optional, Union
 from typing_extensions import TypedDict
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("chunk.parser")
 

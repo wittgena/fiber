@@ -8,10 +8,10 @@ import math
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
 
-from arch.contract.interface import IDynamicsKernel, ICriticalDetector, ISystemRegime, IPhaseField, IPhaseAtor
-from arch.contract.event.psi import PsiEvent, PsiCarrier
-from arch.contract.registry.unified import contract
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.interface import IDynamicsKernel, ICriticalDetector, ISystemRegime, IPhaseField, IPhaseAtor
+from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier
+from xphi.arch.contract.registry.unified import contract
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("contract.nonlinear")
 

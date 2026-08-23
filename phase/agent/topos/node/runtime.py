@@ -8,13 +8,13 @@
 import os
 from pydantic import SecretStr
 
-from agent.llm.driver.model import LLMModel
-from agent.anchor.config.agent import AgentConfig
-from agent.space.action.tool import Tool
+from fiber.agent.llm.driver.model import LLMModel
+from fiber.agent.anchor.config.agent import AgentConfig
+from fiber.agent.space.action.tool import Tool
 
-from arch.topos.node.gan import Message, GanNode
-from arch.topos.node.event import AgentConfigured
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.arch.topos.node.event import AgentConfigured
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("runtime.node")
 

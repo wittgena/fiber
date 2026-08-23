@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Awaitable, Protocol
 from dataclasses import dataclass
 
-from agent.llm.driver.response import LLMResponse
-from watcher.plane.emitter import get_emitter
+from fiber.agent.llm.driver.response import LLMResponse
+from xphi.watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)
 

@@ -7,18 +7,18 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any
 
-from agent.llm.router.base import BaseProviderAdapter
-from agent.llm.router.llm import LLMRouter, ModuleMissingError
+from fiber.agent.llm.router.base import BaseProviderAdapter
+from fiber.agent.llm.router.llm import LLMRouter, ModuleMissingError
 
-from agent.anchor.llm.execution import CompletionContext
-from agent.anchor.provider.registry import get_llm_provider
-from agent.loop.runtime.exception.mapping import exception_type
+from fiber.agent.anchor.llm.execution import CompletionContext
+from fiber.agent.anchor.provider.registry import get_llm_provider
+from fiber.agent.loop.runtime.exception.mapping import exception_type
 
-from agent.llm.router.mapper.state import StateMapper
+from fiber.agent.llm.router.mapper.state import StateMapper
 
-from arch.model.phase.gate import uuid4 
-from kernel.bind.resolver import find_current_self, get_invoker
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.phase.gate import uuid4 
+from xphi.kernel.bind.resolver import find_current_self, get_invoker
+from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")

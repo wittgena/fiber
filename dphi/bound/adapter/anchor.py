@@ -15,19 +15,19 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from phase.client.wallet import LocalWalletClient
-from dphi.bound.config import dphi_env
-from kernel.dphi.exchange.transaction import TransactionReceipt
+from fiber.phase.client.wallet import LocalWalletClient
+from fiber.dphi.bound.config import dphi_env
+from xphi.kernel.dphi.exchange.transaction import TransactionReceipt
 
-from arch.contract.model.receptor import (
+from xphi.arch.contract.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
     ParityTripletSchema
 )
-from kernel.dphi.broker import DphiBroker
-from kernel.dphi.adapter.state import StateAdapter
-from watcher.receptor.contract.model import ExportLogsServiceRequest
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.watcher.receptor.contract.model import ExportLogsServiceRequest
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.anchor")
 

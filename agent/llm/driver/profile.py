@@ -6,12 +6,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 from filelock import FileLock, Timeout
-from watcher.plane.emitter import get_logger
-from kernel.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_logger
+from xphi.kernel.bind.resolver import resolve_path
 
 if TYPE_CHECKING:
-    from agent.llm.driver.model import LLMModel
-    from agent.llm.driver.factory import DriverFactory
+    from fiber.agent.llm.driver.model import LLMModel
+    from fiber.agent.llm.driver.factory import DriverFactory
 
 _DEFAULT_PROFILE_DIR: Final[Path] = resolve_path("io") / "profiles"
 _LOCK_TIMEOUT_SECONDS: Final[float] = 30.0
@@ -87,7 +87,7 @@ class LLMProfileStore:
                 )
 
             try:
-                from agent.llm.driver.model import LLMModel
+                from fiber.agent.llm.driver.model import LLMModel
                 llm_instance = DriverFactory.load_from_json(str(profile_path))
             except Exception as e:
                 # Re-raise as ValueError for clearer error handling

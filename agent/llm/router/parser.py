@@ -30,13 +30,13 @@ from urllib.parse import urlparse
 import platformdirs
 import requests
 
-from agent.llm.router.callback.dispatcher import dispatcher
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
 
 # ---------------------------------------------------------
 # [순환 참조 해결 1] 타입 힌트용으로만 임포트 (런타임에는 실행되지 않음)
 # ---------------------------------------------------------
 if TYPE_CHECKING:
-    from phase.client.ext.llm.model.types.block import ContentBlock, TextBlock
+    from fiber.phase.client.ext.llm.model.types.block import ContentBlock, TextBlock
 
 
 T = TypeVar("T")
@@ -345,7 +345,7 @@ def format_content_blocks(
     # ---------------------------------------------------------
     # [순환 참조 해결 2] 함수 내부에서 지연 임포트(Lazy Import) 실행
     # ---------------------------------------------------------
-    from phase.client.ext.llm.model.types.block import TextBlock
+    from fiber.phase.client.ext.llm.model.types.block import TextBlock
     
     formatter = SafeFormatter(format_dict=kwargs)
     formatted_blocks: List["ContentBlock"] = []

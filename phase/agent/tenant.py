@@ -4,8 +4,8 @@
 ## @lineage: meta.agent.tenant
 ## @lineage: ops.chat.adapter.tenant
 from typing import AsyncGenerator, Protocol, Any
-from agent.anchor.llm.entry import acompletion
-from agent.anchor.llm.param import ModelResponse
+from fiber.agent.anchor.llm.entry import acompletion
+from fiber.agent.anchor.llm.param import ModelResponse
 
 class SimpleMessage(dict):
     role: str

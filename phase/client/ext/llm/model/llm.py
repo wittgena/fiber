@@ -27,8 +27,8 @@ from typing import (
 )
 from typing_extensions import Annotated
 
-from agent.llm.router.parser import asyncio_run
-from phase.client.ext.llm.model.types.block import (
+from fiber.agent.llm.router.parser import asyncio_run
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponseAsyncGen,
     ChatResponseGen,
@@ -36,7 +36,7 @@ from phase.client.ext.llm.model.types.block import (
     CompletionResponseGen,
     MessageRole,
 )
-from agent.llm.router.pydantic import (
+from fiber.agent.llm.router.pydantic import (
     BaseModel,
     WithJsonSchema,
     Field,
@@ -44,31 +44,31 @@ from agent.llm.router.pydantic import (
     model_validator,
     ValidationError,
 )
-from agent.llm.router.callback.event import CBEventType, EventPayload
-from phase.client.ext.llm.model.base import BaseLLM
-from phase.client.ext.llm.handle.template import default_messages_to_prompt as generic_messages_to_prompt
-from phase.client.ext.llm.handle.template import BasePromptTemplate, PromptTemplate
-from agent.llm.router.types.base import (
+from fiber.agent.llm.router.callback.event import CBEventType, EventPayload
+from fiber.phase.client.ext.llm.model.base import BaseLLM
+from fiber.phase.client.ext.llm.handle.template import default_messages_to_prompt as generic_messages_to_prompt
+from fiber.phase.client.ext.llm.handle.template import BasePromptTemplate, PromptTemplate
+from fiber.agent.llm.router.types.base import (
     BaseOutputParser,
     PydanticProgramMode,
     TokenAsyncGen,
     TokenGen,
     Model,
 )
-from agent.llm.router.callback.event import (
+from fiber.agent.llm.router.callback.event import (
     LLMPredictEndEvent,
     LLMPredictStartEvent,
     LLMStructuredPredictInProgressEvent,
     LLMStructuredPredictEndEvent,
     LLMStructuredPredictStartEvent,
 )
-from agent.llm.router.callback.dispatcher import dispatcher
-from phase.client.ext.llm.model.types.block import ChatMessage
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
+from fiber.phase.client.ext.llm.model.types.block import ChatMessage
 
 if TYPE_CHECKING:
-    from agent.llm.router.chat_engine.types import AgentChatResponse
-    from phase.client.ext.llm.model.flex import FlexibleModel
-    from phase.client.ext.llm.model.types.tool import BaseTool
+    from fiber.agent.llm.router.chat_engine.types import AgentChatResponse
+    from fiber.phase.client.ext.llm.model.flex import FlexibleModel
+    from fiber.phase.client.ext.llm.model.types.tool import BaseTool
 
 class ToolSelection(BaseModel):
     tool_id: str = Field(description="Tool ID to select.")
@@ -365,12 +365,12 @@ class LLM(BaseLLM):
         verbose: bool = False,
         **kwargs: Any,
     ) -> "AgentChatResponse":
-        from agent.llm.router.agent.workflow import ReActAgent
-        from agent.llm.router.agent.workflow.agent_context import SimpleAgentContext
-        from agent.llm.router.chat_engine.types import AgentChatResponse
-        from agent.llm.router.memory import Memory
-        from agent.llm.router.tools import adapt_to_async_tool
-        from agent.llm.router.tools.calling import call_tool_with_selection
+        from fiber.agent.llm.router.agent.workflow import ReActAgent
+        from fiber.agent.llm.router.agent.workflow.agent_context import SimpleAgentContext
+        from fiber.agent.llm.router.chat_engine.types import AgentChatResponse
+        from fiber.agent.llm.router.memory import Memory
+        from fiber.agent.llm.router.tools import adapt_to_async_tool
+        from fiber.agent.llm.router.tools.calling import call_tool_with_selection
 
         agent = ReActAgent(
             tools=tools,
@@ -436,12 +436,12 @@ class LLM(BaseLLM):
         **kwargs: Any,
     ) -> "AgentChatResponse":
         """Predict and call the tool."""
-        from agent.llm.router.agent.workflow import ReActAgent
-        from agent.llm.router.agent.workflow.agent_context import SimpleAgentContext
-        from agent.llm.router.chat_engine.types import AgentChatResponse
-        from agent.llm.router.memory import Memory
-        from agent.llm.router.tools import adapt_to_async_tool
-        from agent.llm.router.tools.calling import acall_tool_with_selection
+        from fiber.agent.llm.router.agent.workflow import ReActAgent
+        from fiber.agent.llm.router.agent.workflow.agent_context import SimpleAgentContext
+        from fiber.agent.llm.router.chat_engine.types import AgentChatResponse
+        from fiber.agent.llm.router.memory import Memory
+        from fiber.agent.llm.router.tools import adapt_to_async_tool
+        from fiber.agent.llm.router.tools.calling import acall_tool_with_selection
 
         agent = ReActAgent(
             tools=tools,

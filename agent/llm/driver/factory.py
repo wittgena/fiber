@@ -6,9 +6,9 @@ import warnings
 from typing import Any, get_args, get_origin, TYPE_CHECKING
 from pydantic import BaseModel, SecretStr
 
-from agent.anchor.provider.registry import get_llm_provider
+from fiber.agent.anchor.provider.registry import get_llm_provider
 if TYPE_CHECKING:
-    from agent.llm.driver.model import LLMModel
+    from fiber.agent.llm.driver.model import LLMModel
     DriverType = LLMModel | Any
 else:
     DriverType = Any

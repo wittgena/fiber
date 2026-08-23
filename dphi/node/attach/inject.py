@@ -5,10 +5,10 @@ import random
 from dataclasses import asdict
 from typing import Any
 
-from arch.contract.event.psi import PsiEvent, PsiCarrier
-from arch.contract.event.next import next_id
-from kernel.daemon.bootstrap import TOPIC_BUS_STREAM
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier
+from xphi.arch.contract.event.next import next_id
+from xphi.kernel.daemon.bootstrap import TOPIC_BUS_STREAM
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("attach.inject")
 

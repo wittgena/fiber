@@ -8,13 +8,13 @@ import asyncio
 from typing import List, Callable
 from pathlib import Path
 
-from arch.contract.registry.unified import contract
-from arch.topos.node.discovery import NodeDiscovery
-from kernel.bind.resolver import find_current_self
-from kernel.dphi.broker import DphiBroker
-from kernel.phase.commit import anchor_commit, Attractor, EpochManager
-from kernel.phase.runtime.flow.executor import dispatch_flow_cli
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.registry.unified import contract
+from xphi.arch.topos.node.discovery import NodeDiscovery
+from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.phase.commit import anchor_commit, Attractor, EpochManager
+from xphi.kernel.phase.runtime.flow.executor import dispatch_flow_cli
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("align.commit", mode="SLIM")
 

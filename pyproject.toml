@@ -25,4 +25,4 @@ all = ["fiber[readers,dev]"]
 path = "phase/flow/hatch.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["agent", "dphi", "phase"]
+packages = ["fiber"]

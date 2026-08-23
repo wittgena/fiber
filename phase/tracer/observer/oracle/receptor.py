@@ -8,10 +8,10 @@ import time
 import hashlib
 from typing import Dict, Any, List, Optional
 
-from phase.tracer.observer.oracle.aggregator import ProvableOracleAggregator
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.adapter.sign import NodeSigner
-from watcher.plane.emitter import get_emitter
+from fiber.phase.tracer.observer.oracle.aggregator import ProvableOracleAggregator
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.watcher.plane.emitter import get_emitter
 
 class OracleReceptor:
     def __init__(self, signer: Optional[NodeSigner] = None, logger: Optional[Any] = None):

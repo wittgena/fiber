@@ -34,8 +34,8 @@ import httpx
 from google.genai import _transformers, Client
 from google.genai import errors
 
-from agent.llm.router.pydantic import BaseModel, ValidationError
-from phase.client.ext.llm.model.types.block import (
+from fiber.agent.llm.router.pydantic import BaseModel, ValidationError
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ImageBlock,
@@ -47,7 +47,7 @@ from phase.client.ext.llm.model.types.block import (
     ToolCallBlock,
     ContentBlock,
 )
-from phase.client.ext.llm.model.flex import _repair_incomplete_json
+from fiber.phase.client.ext.llm.model.flex import _repair_incomplete_json
 from tenacity import (
     before_sleep_log,
     retry,
@@ -61,7 +61,7 @@ from tenacity import (
 from tenacity.stop import stop_base
 
 if TYPE_CHECKING:
-    from phase.client.ext.llm.model.types.tool import BaseTool
+    from fiber.phase.client.ext.llm.model.types.tool import BaseTool
 
 logger = logging.getLogger(__name__)
 

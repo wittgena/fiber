@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate
 from typing import Optional
 
-from agent.llm.router.constants import DEFAULT_MAX_RECURSE_DEPTH
-from agent.loop.runtime.exception.eco import JSONSchemaValidationError, APIResponseValidationError
+from fiber.agent.llm.router.constants import DEFAULT_MAX_RECURSE_DEPTH
+from fiber.agent.loop.runtime.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
-from arch.model.config import config
+from xphi.arch.model.config import config
 
 class Rules:
     def __init__(self) -> None:

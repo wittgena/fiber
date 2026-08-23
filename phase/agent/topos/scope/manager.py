@@ -9,24 +9,24 @@ import json
 from typing import Dict, Any, Optional
 from contextlib import asynccontextmanager, AsyncExitStack
 
-from phase.agent.executor import LoopExecutor
+from fiber.phase.agent.executor import LoopExecutor
 
-from phase.agent.topos.node.runtime import RuntimeNode
-from phase.agent.topos.scope.observer import ManifoldFolder, FlowTransition
-from phase.agent.topos.scope.surface import get_surface_class, SurfaceConfig
+from fiber.phase.agent.topos.node.runtime import RuntimeNode
+from fiber.phase.agent.topos.scope.observer import ManifoldFolder, FlowTransition
+from fiber.phase.agent.topos.scope.surface import get_surface_class, SurfaceConfig
 
-from agent.space.manager import SpaceNode, space_provider
+from fiber.agent.space.manager import SpaceNode, space_provider
 
-from arch.model.surge.blueprint import SurgeBlueprint
-from arch.contract.model.graph import EntryNode
-from arch.topos.node.gan import Message, GanNode
-from arch.model.sealer import EpochSealer
+from xphi.arch.model.surge.blueprint import SurgeBlueprint
+from xphi.arch.contract.model.graph import EntryNode
+from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.arch.model.sealer import EpochSealer
 
-from kernel.dphi.broker import DphiBroker
-from kernel.dphi.cgroup import Tier
-from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
-from watcher.plane.emitter import get_emitter
-from watcher.tracer.scope import scope_trace, get_current_trace_path
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.cgroup import Tier
+from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.tracer.scope import scope_trace, get_current_trace_path
 
 log = get_emitter("conv.flow")
 

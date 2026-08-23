@@ -7,12 +7,12 @@ from dataclasses import dataclass
 from typing import Optional, ClassVar, Literal, List, Dict
 from pydantic import BaseModel, ConfigDict
 
-from agent.anchor.provider.registry import model_cost, lookup_base_model_info, get_llm_provider
-from agent.anchor.model.types.general import ModelInfo
-from agent.loop.runtime.exception.eco import BadRequestError
+from fiber.agent.anchor.provider.registry import model_cost, lookup_base_model_info, get_llm_provider
+from fiber.agent.anchor.model.types.general import ModelInfo
+from fiber.agent.loop.runtime.exception.eco import BadRequestError
 
-from arch.model.config import config
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.config import config
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("model.info")
 

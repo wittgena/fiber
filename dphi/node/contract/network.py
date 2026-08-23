@@ -6,8 +6,8 @@
 import math
 import random
 from typing import Dict, Any, List, Optional
-from arch.contract.registry.unified import contract
-from arch.contract.interface import IPhaseField
+from xphi.arch.contract.registry.unified import contract
+from xphi.arch.contract.interface import IPhaseField
 
 @contract.ator("node.network", role="field")
 class NodeNetwork(IPhaseField):

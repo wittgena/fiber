@@ -23,10 +23,10 @@ from pathlib import Path
 from collections import Counter
 from typing import TypedDict, List, Dict, Any
 from dataclasses import dataclass, asdict
-from arch.contract.model.graph import MetaModel, NodeData, EdgeData, LoopEdgeData, GraphSchema
-from watcher.plane.emitter import get_emitter
-from kernel.bind.resolver import resolve_path
-from phase.flow.logic.transformer import LogicTransformer
+from xphi.arch.contract.model.graph import MetaModel, NodeData, EdgeData, LoopEdgeData, GraphSchema
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.kernel.bind.resolver import resolve_path
+from fiber.phase.flow.logic.transformer import LogicTransformer
 
 CODE_ROOT = resolve_path("code")
 log = get_emitter("logic.analyzer")

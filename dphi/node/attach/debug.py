@@ -6,16 +6,16 @@ import uuid
 from dataclasses import asdict
 from typing import Optional
 
-from watcher.wasm.builder import WasmBuilder
-from arch.topos.tunnel.factory import TunnelFactory
-from arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType
-from arch.contract.event.next import next_id
-from kernel.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
-from kernel.dphi.broker import DphiBroker
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.wasm.builder import WasmBuilder
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType
+from xphi.arch.contract.event.next import next_id
+from xphi.kernel.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.watcher.plane.emitter import get_emitter
 
-from dphi.node.attach.surge import MarketSurge, LedgerSurge, EcoSurge
-from dphi.node.attach.inject import PhysicsInjector
+from fiber.dphi.node.attach.surge import MarketSurge, LedgerSurge, EcoSurge
+from fiber.dphi.node.attach.inject import PhysicsInjector
 
 log = get_emitter("attach.debug")
 

@@ -27,18 +27,18 @@ from typing import (
 )
 from typing_extensions import Annotated
 
-from agent.llm.router.pydantic import (
+from fiber.agent.llm.router.pydantic import (
     Field,
     WithJsonSchema,
     PlainSerializer,
     SerializeAsAny,
 )
 
-from phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
-from agent.llm.router.pydantic import BaseModel, ConfigDict
-from phase.client.ext.llm.model.base import BaseLLM
-from agent.llm.router.parser import get_template_vars, format_string
-from agent.llm.router.types.base import BaseOutputParser
+from fiber.phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
+from fiber.agent.llm.router.pydantic import BaseModel, ConfigDict
+from fiber.phase.client.ext.llm.model.base import BaseLLM
+from fiber.agent.llm.router.parser import get_template_vars, format_string
+from fiber.agent.llm.router.types.base import BaseOutputParser
 
 def default_messages_to_prompt(messages: Sequence[ChatMessage]) -> str:
     """Convert messages to a prompt string."""

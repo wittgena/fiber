@@ -15,12 +15,12 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional
 
-from phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
-from arch.model.phase.gate import uuid4 
-from kernel.bind.resolver import get_invoker
-from watcher.plane.emitter import get_emitter
+from fiber.phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
+from xphi.arch.model.phase.gate import uuid4 
+from xphi.kernel.bind.resolver import get_invoker
+from xphi.watcher.plane.emitter import get_emitter
 
-from agent.llm.router.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
+from fiber.agent.llm.router.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")

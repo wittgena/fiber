@@ -17,11 +17,11 @@ import yaml
 from abc import abstractmethod
 from typing import Any, Dict, List, Tuple
 
-from arch.model.phase.flow import PhaseFlow, FlowState, Transduction
-from arch.contract.registry.unified import contract, registry
-from arch.xor.parser.lang.md import MdAstParser
-from arch.xor.parser.block.extractor import BlockExtractor
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.phase.flow import PhaseFlow, FlowState, Transduction
+from xphi.arch.contract.registry.unified import contract, registry
+from xphi.arch.xor.parser.lang.md import MdAstParser
+from xphi.arch.xor.parser.block.extractor import BlockExtractor
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger("transcript.phi")
 

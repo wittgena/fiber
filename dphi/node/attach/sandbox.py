@@ -9,14 +9,14 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from kernel.dphi.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
-from dphi.bound.adapter.anchor import PhaseBuilder
-from phase.client.wallet import LocalWalletClient
+from xphi.kernel.dphi.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from fiber.dphi.bound.adapter.anchor import PhaseBuilder
+from fiber.phase.client.wallet import LocalWalletClient
 
-from kernel.dphi.runner.phase import SchemeRunner
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.method import DphiMethod
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.runner.phase import SchemeRunner
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.method import DphiMethod
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("sandbox.runner")
 

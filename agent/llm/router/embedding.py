@@ -3,8 +3,8 @@
 import importlib
 from typing import Any
 
-import phase.client.ext.embedding as embedding_pkg
-from watcher.plane.emitter import get_emitter
+import fiber.phase.client.ext.embedding as embedding_pkg
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("embedding.router")
 

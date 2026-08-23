@@ -20,22 +20,22 @@ from pydantic import (
 )
 from pydantic.json_schema import SkipJsonSchema
 
-from agent.anchor.model.info import get_features, supports_vision
-from agent.anchor.model.token.splitter import create_pretrained_tokenizer
-from agent.anchor.model.metric import Metrics
-from agent.anchor.config.cloud import VendorConfig
+from fiber.agent.anchor.model.info import get_features, supports_vision
+from fiber.agent.anchor.model.token.splitter import create_pretrained_tokenizer
+from fiber.agent.anchor.model.metric import Metrics
+from fiber.agent.anchor.config.cloud import VendorConfig
 
-from agent.llm.driver.strategy.fallback import FallbackStrategy
+from fiber.agent.llm.driver.strategy.fallback import FallbackStrategy
 
-from agent.loop.runtime.exception.types import LLMContextWindowTooSmallError
-from agent.llm.driver.factory import DriverFactory
-from phase.agent.topos.llm.observer import DriverObserver
+from fiber.agent.loop.runtime.exception.types import LLMContextWindowTooSmallError
+from fiber.agent.llm.driver.factory import DriverFactory
+from fiber.phase.agent.topos.llm.observer import DriverObserver
 
-from arch.xor.parser.mark.convset import SettingProminence, field_meta
-from arch.xor.parser.mark.depre import warn_deprecated
-from arch.model.config import config
-from arch.xor.secret.validator import serialize_secret, validate_secret
-from kernel.bind.resolver import find_current_self
+from xphi.arch.xor.parser.mark.convset import SettingProminence, field_meta
+from xphi.arch.xor.parser.mark.depre import warn_deprecated
+from xphi.arch.model.config import config
+from xphi.arch.xor.secret.validator import serialize_secret, validate_secret
+from xphi.kernel.bind.resolver import find_current_self
 
 SELF_ROOT = find_current_self()
 

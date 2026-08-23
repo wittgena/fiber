@@ -14,17 +14,17 @@ import httpx
 from pydantic import BaseModel
 from openai.lib import _parsing, _pydantic
 
-from agent.anchor.provider.registry import get_llm_provider
-from agent.llm.router.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
-from arch.model.config import config
-from agent.anchor.model.types.core import Usage
-from agent.anchor.model.info import get_features, supports_httpx_timeout, supports_function_calling, get_supported_openai_params
-from agent.loop.runtime.exception.eco import UnsupportedParamsError
-from agent.anchor.model.types.openai import ValidUserMessageContentTypes
+from fiber.agent.anchor.provider.registry import get_llm_provider
+from fiber.agent.llm.router.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
+from xphi.arch.model.config import config
+from fiber.agent.anchor.model.types.core import Usage
+from fiber.agent.anchor.model.info import get_features, supports_httpx_timeout, supports_function_calling, get_supported_openai_params
+from fiber.agent.loop.runtime.exception.eco import UnsupportedParamsError
+from fiber.agent.anchor.model.types.openai import ValidUserMessageContentTypes
 
-from agent.anchor.llm.param import ModelResponse
-from agent.anchor.llm.execution import ExecutionMetadata, CompletionContext, EmbeddingContext
-from watcher.plane.emitter import get_emitter
+from fiber.agent.anchor.llm.param import ModelResponse
+from fiber.agent.anchor.llm.execution import ExecutionMetadata, CompletionContext, EmbeddingContext
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("param.processor")
 
@@ -126,7 +126,7 @@ class BaseProcessor:
             return getattr(config, "OpenAILikeChatConfig", None)
 
         module_suffix, class_name = CONFIG_MAP[self.provider_key]
-        import phase.client.ext.llm.param.vendor as VENDOR_PARAM_PKG
+        import fiber.phase.client.ext.llm.param.vendor as VENDOR_PARAM_PKG
         
         path = VENDOR_PARAM_PKG.__name__
         search_paths = [f"{path}.{module_suffix}"]

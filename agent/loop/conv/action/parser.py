@@ -14,21 +14,21 @@ from typing import Annotated, Any, Union, get_args, get_origin
 
 from pydantic import ValidationError
 
-from agent.loop.conv.action.builder import ActionDefinition
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.observation import AgentErrorEvent
-from agent.loop.conv.security import SecurityAnalyzerBase
-import arch.model.conv.security.eval as risk
+from fiber.agent.loop.conv.action.builder import ActionDefinition
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.observation import AgentErrorEvent
+from fiber.agent.loop.conv.security import SecurityAnalyzerBase
+import xphi.arch.model.conv.security.eval as risk
 
-from agent.space.action.action import Action, Observation
-from agent.space.action.message import (
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.space.action.message import (
     MessageToolCall,
     ReasoningItemModel,
     RedactedThinkingBlock,
     TextContent,
     ThinkingBlock,
 )
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 logger = logging.getLogger(__name__)

@@ -15,22 +15,22 @@ from typing import Any, Callable, Coroutine, List, Optional, Sequence, Tuple, ca
 from typing_extensions import Self
 
 import numpy as np
-from agent.llm.router.pydantic import (
+from fiber.agent.llm.router.pydantic import (
     Field,
     ConfigDict,
     model_validator,
 )
-from agent.llm.router.callback.manager import CallbackManager
-from agent.llm.router.callback.event import CBEventType, EventPayload
-from agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
-from agent.llm.router.types.schema import BaseNode, MetadataMode, TransformComponent
-from agent.llm.router.parser import get_tqdm_iterable
-from agent.llm.router.parser import run_jobs
+from fiber.agent.llm.router.callback.manager import CallbackManager
+from fiber.agent.llm.router.callback.event import CBEventType, EventPayload
+from fiber.agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
+from fiber.agent.llm.router.types.schema import BaseNode, MetadataMode, TransformComponent
+from fiber.agent.llm.router.parser import get_tqdm_iterable
+from fiber.agent.llm.router.parser import run_jobs
 
 Embedding = List[float]
 
-from agent.llm.router.callback.event import EmbeddingEndEvent, EmbeddingStartEvent
-from agent.llm.router.callback.dispatcher import dispatcher
+from fiber.agent.llm.router.callback.event import EmbeddingEndEvent, EmbeddingStartEvent
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
 
 class SimilarityMode(str, Enum):
     """Modes for similarity/distance."""
@@ -101,7 +101,7 @@ class BaseEmbedding(TransformComponent):
 
     @model_validator(mode="after")
     def check_base_embeddings_class(self) -> Self:
-        from agent.llm.router.storage.kvstore.types import BaseKVStore
+        from fiber.agent.llm.router.storage.kvstore.types import BaseKVStore
 
         if self.callback_manager is None:
             self.callback_manager = CallbackManager([])

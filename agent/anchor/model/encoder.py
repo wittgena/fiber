@@ -8,8 +8,8 @@ import time
 import random
 from functools import lru_cache
 
-from agent.anchor.model.types.openai import AllMessageValues
-from watcher.plane.emitter import get_emitter
+from fiber.agent.anchor.model.types.openai import AllMessageValues
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.convert")
 

@@ -7,12 +7,12 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from dphi.node.attach.sandbox import EpochBase
-from kernel.dphi.runner.phase import SchemeRunner
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.exchange.transaction import ExchangeAdapter
-from kernel.dphi.method import DphiMethod
-from watcher.plane.emitter import get_emitter
+from fiber.dphi.node.attach.sandbox import EpochBase
+from xphi.kernel.dphi.runner.phase import SchemeRunner
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
+from xphi.kernel.dphi.method import DphiMethod
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.anchor")
 

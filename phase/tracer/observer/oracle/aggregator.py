@@ -11,12 +11,12 @@ import statistics
 import requests
 from typing import List, Dict, Any, Optional
 
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.adapter.sign import NodeSigner
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.watcher.plane.emitter import get_emitter
 
-from phase.tracer.observer.proof.binance import kline as binance_kline
-from phase.tracer.observer.proof.coinbase import kline as coinbase_kline
+from fiber.phase.tracer.observer.proof.binance import kline as binance_kline
+from fiber.phase.tracer.observer.proof.coinbase import kline as coinbase_kline
 
 class ProvableOracleAggregator:
     # ARN 기반 모듈 레지스트리

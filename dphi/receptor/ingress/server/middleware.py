@@ -11,10 +11,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import StreamingResponse
 from starlette.types import ASGIApp
 
-from kernel.dphi.adapter.sign import NodeSigner
-from kernel.dphi.adapter.state import StateAdapter
-from watcher.plane.emitter import get_emitter
-from watcher.plane.observer.span import start_active_span, end_active_span
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.observer.span import start_active_span, end_active_span
 
 log = get_emitter("server.middleware")
 

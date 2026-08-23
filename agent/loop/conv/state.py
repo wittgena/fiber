@@ -8,31 +8,31 @@ from collections.abc import Sequence
 from typing import Any, Self, TYPE_CHECKING
 from pydantic import Field
 
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.observation import (
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.observation import (
     AgentErrorEvent,
     ObservationEvent,
     UserRejectObservation,
 )
-from arch.model.conv.event import Event
-from arch.model.conv.event import EventID
-from arch.topos.context.space import BaseWorkspace
-from arch.topos.context.status import ConverStatus
-from agent.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
+from xphi.arch.model.conv.event import Event
+from xphi.arch.model.conv.event import EventID
+from xphi.arch.topos.context.space import BaseWorkspace
+from xphi.arch.topos.context.status import ConverStatus
+from fiber.agent.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
 
-from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
-from agent.loop.conv.stats import ConversationStats
+from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from fiber.agent.loop.conv.stats import ConversationStats
 
 if TYPE_CHECKING:
-    from agent.loop.conv.security import SecurityAnalyzerBase
+    from fiber.agent.loop.conv.security import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
 
-from arch.contract.resolver.secret import SecretRegistry
-from arch.xor.bridge.io.manager import IOManager
-from arch.xor.stream.conv import LogStore, VirtualEventLogProxy
-from agent.loop.conv.command import (
+from xphi.arch.contract.resolver.secret import SecretRegistry
+from xphi.arch.xor.bridge.io.manager import IOManager
+from xphi.arch.xor.stream.conv import LogStore, VirtualEventLogProxy
+from fiber.agent.loop.conv.command import (
     StateCommand, 
     TransitionStatus, 
     BlockAction, 
@@ -42,8 +42,8 @@ from agent.loop.conv.command import (
     UpdateTags
 )
 
-from arch.model.surge.disc import SurgeBaseModel
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.surge.disc import SurgeBaseModel
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
@@ -281,7 +281,7 @@ class ConversationState(SurgeBaseModel):
             callback = getattr(self, "on_state_change", None)
             if callback is not None and old is not _sentinel:
                 try:
-                    from agent.llm.driver.event.conv import ConversationStateUpdateEvent
+                    from fiber.agent.llm.driver.event.conv import ConversationStateUpdateEvent
                     callback(ConversationStateUpdateEvent(key=name, value=value))
                 except Exception:
                     log.exception(f"State change callback failed for field {name}", exc_info=True)

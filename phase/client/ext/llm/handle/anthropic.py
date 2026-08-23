@@ -13,7 +13,7 @@
 ## @lineage: eco.llama.llms.handle.anthropic
 ## @lineage: eco.llama.llms.anthropic.utils
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union, cast
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.model.types.block import (
     CachePoint,
     ChatMessage,
     ChatResponse,

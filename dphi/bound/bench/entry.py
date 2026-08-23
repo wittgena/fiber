@@ -4,13 +4,13 @@ import sys
 import argparse
 from pathlib import Path
 
-from dphi.bound.bench.profile import ProfileBenchmarker, BENCH_TARGETS
+from fiber.dphi.bound.bench.profile import ProfileBenchmarker, BENCH_TARGETS
 
-from kernel.bind.resolver import resolve_path
-from kernel.phase.reactor import PhaseReactor
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.phase.reactor import PhaseReactor
 
-from watcher.wasm.tester import WasmTester
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.wasm.tester import WasmTester
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("bench.entry")
 

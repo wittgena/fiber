@@ -7,14 +7,14 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from dphi.bound.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
-from arch.xor.stream.edge import LogStreamStore
-from dphi.receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
-from dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
-from agent.space.sandbox.profile import BenchProfile, VerificationError
+from fiber.dphi.bound.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
+from xphi.arch.xor.stream.edge import LogStreamStore
+from fiber.dphi.receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
+from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter
+from fiber.agent.space.sandbox.profile import BenchProfile, VerificationError
 
-from arch.contract.interface import ContractRouter
-from arch.contract.model.receptor import (
+from xphi.arch.contract.interface import ContractRouter
+from xphi.arch.contract.model.receptor import (
     EdgeState,
     AnchorProposalRequest, AnchorSealResponse,
     IntentValidationRequest, IntentValidationResponse,
@@ -25,17 +25,17 @@ from arch.contract.model.receptor import (
     ClearingReceiptRequest, ClearingReceiptResponse
 )
 
-from watcher.receptor.contract.model import (
+from xphi.watcher.receptor.contract.model import (
     BilledExecutionRequest,
     BilledExecutionResponse,
     KernelLedgerAppendRecord
 )
 
-from kernel.dphi.broker import DphiBroker, DphiMethod
-from kernel.dphi.exchange.transaction import ExchangeAdapter
-from kernel.dphi.cgroup import Tier
-from kernel.dphi.exchange.config import tier_config, billing_config
-from watcher.plane.emitter import get_emitter, flow_scope
+from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
+from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
+from xphi.kernel.dphi.cgroup import Tier
+from xphi.kernel.dphi.exchange.config import tier_config, billing_config
+from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.internal")
 

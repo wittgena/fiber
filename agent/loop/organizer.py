@@ -2,22 +2,22 @@
 from typing import Any, Callable, Awaitable
 
 # --- Messages & Events ---
-from agent.space.action.message import Message, TextContent
-from agent.llm.driver.event.message import MessageEvent
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from agent.loop.runtime.exception.types import (
+from fiber.agent.space.action.message import Message, TextContent
+from fiber.agent.llm.driver.event.message import MessageEvent
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from fiber.agent.loop.runtime.exception.types import (
     FunctionCallValidationError, 
     LLMContextWindowExceedError, 
     LLMMalformedConversationHistoryError
 )
 
-from agent.loop.conv.command import TransitionStatus
-from agent.loop.runtime.protocol.step import StepHandler, StepContext, ActivatorProtocol
-from agent.llm.driver.facade import MessageBuilder, LLMFacade
+from fiber.agent.loop.conv.command import TransitionStatus
+from fiber.agent.loop.runtime.protocol.step import StepHandler, StepContext, ActivatorProtocol
+from fiber.agent.llm.driver.facade import MessageBuilder, LLMFacade
 
-from arch.topos.context.status import ConverStatus
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.context.status import ConverStatus
+from xphi.watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)
 

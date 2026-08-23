@@ -20,7 +20,7 @@ from typing import (
     Sequence,
 )
 
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -31,9 +31,9 @@ from phase.client.ext.llm.model.types.block import (
     LLMMetadata,
     TextBlock,
 )
-from agent.llm.router.pydantic import Field, model_validator, ConfigDict
-from agent.llm.router.callback.manager import CallbackManager
-from agent.llm.router.types.schema import BaseComponent
+from fiber.agent.llm.router.pydantic import Field, model_validator, ConfigDict
+from fiber.agent.llm.router.callback.manager import CallbackManager
+from fiber.agent.llm.router.types.schema import BaseComponent
 
 
 class BaseLLM(BaseComponent):

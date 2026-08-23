@@ -7,14 +7,14 @@ import time
 from dataclasses import dataclass, asdict, field
 from typing import Dict, Any, Optional, List, Union
 
-from arch.xor.parser.block.contract import CoherenceState
-from kernel.dphi.broker import DphiBroker
-from kernel.dphi.cgroup import CgroupPolicy, Tier
-from kernel.dphi.exchange.config import billing_config, tier_config
-from kernel.dphi.sandbox.executor import SandboxExecutor, TaskContext, SandboxEnv, EffectResolver
+from xphi.arch.xor.parser.block.contract import CoherenceState
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.cgroup import CgroupPolicy, Tier
+from xphi.kernel.dphi.exchange.config import billing_config, tier_config
+from xphi.kernel.dphi.sandbox.executor import SandboxExecutor, TaskContext, SandboxEnv, EffectResolver
 
-from watcher.tracer.scope import scope_trace
-from watcher.plane.emitter import get_logger
+from xphi.watcher.tracer.scope import scope_trace
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger("sandbox.profile")
 

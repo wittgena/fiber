@@ -4,9 +4,9 @@
 ## @lineage: engine.router.inter.embedding
 from typing import List, Union
 
-from agent.anchor.llm.execution import EmbeddingContext
-from agent.llm.router.base import BaseProviderAdapter
-from agent.llm.router.embedding import EmbeddingRouter
+from fiber.agent.anchor.llm.execution import EmbeddingContext
+from fiber.agent.llm.router.base import BaseProviderAdapter
+from fiber.agent.llm.router.embedding import EmbeddingRouter
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     def __init__(self):

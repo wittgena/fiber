@@ -7,14 +7,14 @@
 import asyncio
 from typing import Dict, Any, Optional
 
-from arch.contract.discovery import discover_modules
-from arch.contract.event.psi import PsiCarrier, PsiEvent
-from kernel.bind.resolver import find_current_self
+from xphi.arch.contract.discovery import discover_modules
+from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
+from xphi.kernel.bind.resolver import find_current_self
 
-from kernel.phase.runtime.executor.dynamics import DynamicsExecutor
-from kernel.phase.runtime.node import NodeRuntime
-from kernel.phase.runtime.flow.cont import LoopCarrier
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.phase.runtime.executor.dynamics import DynamicsExecutor
+from xphi.kernel.phase.runtime.node import NodeRuntime
+from xphi.kernel.phase.runtime.flow.cont import LoopCarrier
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("sphere.attractor", phase="BOOT")
 

@@ -20,18 +20,18 @@ from typing import Any, Dict, Generic, List, Optional, Sequence, Type, TypeVar, 
 with contextlib.suppress(ImportError):
     import yaml
 
-from phase.client.ext.llm.model.funcall import FunctionCallingLLM
-from phase.client.ext.llm.model.llm import LLM, ToolSelection
-from phase.client.ext.llm.handle.template import BasePromptTemplate
-from phase.client.ext.llm.model.types.block import ChatResponse, CompletionResponse
-from agent.llm.router.pydantic import (
+from fiber.phase.client.ext.llm.model.funcall import FunctionCallingLLM
+from fiber.phase.client.ext.llm.model.llm import LLM, ToolSelection
+from fiber.phase.client.ext.llm.handle.template import BasePromptTemplate
+from fiber.phase.client.ext.llm.model.types.block import ChatResponse, CompletionResponse
+from fiber.agent.llm.router.pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     ValidationError,
     create_model,
 )
-from agent.llm.router.types.base import BasePydanticProgram, Model, PydanticProgramMode
+from fiber.agent.llm.router.types.base import BasePydanticProgram, Model, PydanticProgramMode
 
 _logger = logging.getLogger(__name__)
 
@@ -424,7 +424,7 @@ def get_program_for_llm(
 ) -> BasePydanticProgram[Model]:
     if pydantic_program_mode == PydanticProgramMode.DEFAULT:
         if llm.metadata.is_function_calling_model:
-            from agent.llm.router.parser.prog.function_program import FunctionCallingProgram
+            from fiber.agent.llm.router.parser.prog.function_program import FunctionCallingProgram
 
             return FunctionCallingProgram.from_defaults(
                 output_cls=output_cls,
@@ -433,7 +433,7 @@ def get_program_for_llm(
                 **kwargs,
             )
         else:
-            from agent.llm.router.parser.prog.llm_program import LLMTextCompletionProgram
+            from fiber.agent.llm.router.parser.prog.llm_program import LLMTextCompletionProgram
 
             return LLMTextCompletionProgram.from_defaults(
                 output_parser=PydanticOutputParser(output_cls=output_cls),
@@ -453,7 +453,7 @@ def get_program_for_llm(
         )
         
     elif pydantic_program_mode == PydanticProgramMode.FUNCTION:
-        from agent.llm.router.parser.prog.function_program import FunctionCallingProgram
+        from fiber.agent.llm.router.parser.prog.function_program import FunctionCallingProgram
 
         return FunctionCallingProgram.from_defaults(
             output_cls=output_cls,
@@ -463,7 +463,7 @@ def get_program_for_llm(
         )
 
     elif pydantic_program_mode == PydanticProgramMode.LLM:
-        from agent.llm.router.parser.prog.llm_program import LLMTextCompletionProgram
+        from fiber.agent.llm.router.parser.prog.llm_program import LLMTextCompletionProgram
 
         return LLMTextCompletionProgram.from_defaults(
             output_parser=PydanticOutputParser(output_cls=output_cls),

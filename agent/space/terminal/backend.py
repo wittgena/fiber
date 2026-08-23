@@ -23,16 +23,16 @@ import fcntl
 import pty
 import select
 
-from agent.space.terminal.session.builder import sanitized_env
-from agent.loop.runtime.protocol.terminal.interface import TerminalInterface
+from fiber.agent.space.terminal.session.builder import sanitized_env
+from fiber.agent.loop.runtime.protocol.terminal.interface import TerminalInterface
 
-from arch.xor.bridge.terminal import (
+from xphi.arch.xor.bridge.terminal import (
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,
     HISTORY_LIMIT,
 )
-from arch.xor.bridge.terminal import CmdOutputMetadata
-from watcher.plane.emitter import get_logger
+from xphi.arch.xor.bridge.terminal import CmdOutputMetadata
+from xphi.watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)
 

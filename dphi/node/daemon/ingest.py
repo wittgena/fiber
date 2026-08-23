@@ -10,11 +10,11 @@ import httpx
 import asyncio
 from typing import Dict, Any, Optional, Tuple, List
 
-from arch.contract.interface import IEventBus
-from arch.contract.event.psi import PsiEvent
-from kernel.daemon.bootstrap import AbstractDaemon
-from kernel.bind.resolver import resolve_path
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.interface import IEventBus
+from xphi.arch.contract.event.psi import PsiEvent
+from xphi.kernel.daemon.bootstrap import AbstractDaemon
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter('resolver.issue')
 

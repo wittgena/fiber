@@ -12,7 +12,7 @@ import httpx
 from aiohttp import web
 from pydantic import BaseModel, Field, ValidationError
 
-from arch.xor.stream.schema import (
+from xphi.arch.xor.stream.schema import (
     ActionIntent,
     LogicPayload,
     LogicStream,
@@ -20,9 +20,9 @@ from arch.xor.stream.schema import (
     StreamIdentity,
     StreamMetadata,
 )
-from watcher.plane.emitter import flow_scope, get_emitter
-from watcher.plane.observer.span import span_context
-from watcher.receptor.policy.gateway import ToposGateway
+from xphi.watcher.plane.emitter import flow_scope, get_emitter
+from xphi.watcher.plane.observer.span import span_context
+from xphi.watcher.receptor.policy.gateway import ToposGateway
 
 log = get_emitter("ingress.sentinel", phase="DEFENSE")
 

@@ -8,12 +8,12 @@ import hashlib
 import json
 from typing import Dict, Any
 
-from dphi.bound.config import dphi_env
-from kernel.dphi.adapter.dvm import DvmAdapter
-from kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
-from kernel.dphi.broker import DphiBroker
-from kernel.dphi.adapter.state import StateAdapter
-from watcher.plane.emitter import get_emitter
+from fiber.dphi.bound.config import dphi_env
+from xphi.kernel.dphi.adapter.dvm import DvmAdapter
+from xphi.kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.rollup")
 
@@ -106,7 +106,7 @@ class RollupAdapter:
         return rollup_hash
 
     async def process_x402_settlement(self, invoice: Any) -> Any:
-        from kernel.dphi.eco.settlement import X402SettlementReceipt
+        from xphi.kernel.dphi.eco.settlement import X402SettlementReceipt
         
         tx_hash = await self.transfer(
             to_address=invoice.pay_to,

@@ -16,21 +16,21 @@ import docker
 from docker.errors import NotFound, BuildError
 from docker.models.containers import Container
 
-from arch.topos.context.space import BaseWorkspace
-from arch.xor.bridge.git.schema import GitChange, GitDiff
-from arch.xor.bridge.git.changes import get_git_changes
-from arch.xor.bridge.git.diff import get_git_diff
-from arch.xor.bridge.command.workspace import CommandResult, FileOperationResult
+from xphi.arch.topos.context.space import BaseWorkspace
+from xphi.arch.xor.bridge.git.schema import GitChange, GitDiff
+from xphi.arch.xor.bridge.git.changes import get_git_changes
+from xphi.arch.xor.bridge.git.diff import get_git_diff
+from xphi.arch.xor.bridge.command.workspace import CommandResult, FileOperationResult
 
-from agent.space.terminal.session.builder import executor_factory, sanitized_env
+from fiber.agent.space.terminal.session.builder import executor_factory, sanitized_env
 
-from arch.topos.node.gan import Message, GanNode
-from arch.topos.node.event import WorkspaceReady
-from kernel.bind.resolver import resolve_path
+from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.arch.topos.node.event import WorkspaceReady
+from xphi.kernel.bind.resolver import resolve_path
 
-from watcher.tracer.scope import get_current_trace_path
-from phase.tracer.router import InfraRouter
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.tracer.scope import get_current_trace_path
+from fiber.phase.tracer.router import InfraRouter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

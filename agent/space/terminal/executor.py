@@ -9,22 +9,22 @@ import threading
 import time
 from typing import TYPE_CHECKING, Literal
 
-from agent.space.action.executor import ActionExecutor
-from agent.space.action.message import TextContent
-from agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
-from agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
-from agent.loop.runtime.protocol.terminal.session import TerminalSession
-from agent.loop.runtime.protocol.terminal.context import ExecutionContext, ExecutionEngine
-from agent.loop.runtime.protocol.terminal.polling import PollingExecutionEngine
+from fiber.agent.space.action.executor import ActionExecutor
+from fiber.agent.space.action.message import TextContent
+from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
+from fiber.agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
+from fiber.agent.loop.runtime.protocol.terminal.session import TerminalSession
+from fiber.agent.loop.runtime.protocol.terminal.context import ExecutionContext, ExecutionEngine
+from fiber.agent.loop.runtime.protocol.terminal.polling import PollingExecutionEngine
 
-from agent.space.terminal.session.builder import ChainBuilder
-from agent.space.terminal.session.builder import _is_tmux_available, create_terminal_session
-from agent.space.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
+from fiber.agent.space.terminal.session.builder import ChainBuilder
+from fiber.agent.space.terminal.session.builder import _is_tmux_available, create_terminal_session
+from fiber.agent.space.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from arch.xor.bridge.command.terminal import TerminalCommandStatus
-from arch.xor.bridge.terminal import CMD_OUTPUT_PS1_END
+from xphi.arch.xor.bridge.command.terminal import TerminalCommandStatus
+from xphi.arch.xor.bridge.terminal import CMD_OUTPUT_PS1_END
 
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

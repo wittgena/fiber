@@ -5,23 +5,23 @@
 import os
 import asyncio
 
-from phase.kernel.signal import PhaseSignal
+from fiber.phase.kernel.signal import PhaseSignal
 
-from arch.topos.tunnel.factory import TunnelFactory
-from arch.contract.event.bus import AsyncEventBus
-from arch.contract.executor import BaseExecutor
-from arch.contract.registry.unified import registry
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.arch.contract.event.bus import AsyncEventBus
+from xphi.arch.contract.executor import BaseExecutor
+from xphi.arch.contract.registry.unified import registry
 
-from kernel.phase.runtime.executor.swarm import SwarmExecutor
-from kernel.phase.runtime.flow.executor import FlowExecutor
-from kernel.phase.reactor import PhaseReactor
-from kernel.phase.runtime.node import NodeRuntime
+from xphi.kernel.phase.runtime.executor.swarm import SwarmExecutor
+from xphi.kernel.phase.runtime.flow.executor import FlowExecutor
+from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.kernel.phase.runtime.node import NodeRuntime
 
-from watcher.ingress.gateway import DphiGatewayServer, GatewaySettings
-from watcher.plane.regulator import default_plane
-from watcher.plane.emitter import get_emitter
-from watcher.receptor.bootstrap import receptor_bootstrap
-from watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
+from xphi.watcher.ingress.gateway import DphiGatewayServer, GatewaySettings
+from xphi.watcher.plane.regulator import default_plane
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.receptor.bootstrap import receptor_bootstrap
+from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
 
 log = get_emitter("kernel.boot")
 
@@ -44,7 +44,7 @@ class KernelGateway:
         asyncio.create_task(state_mesh.start_mesh_sync())
         
         if topology == "EXT_PROC":
-            from watcher.receptor.policy.router import ExtProcStreamHandler
+            from xphi.watcher.receptor.policy.router import ExtProcStreamHandler
             stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
             asyncio.create_task(stream_handler.serve())
         else:
@@ -88,7 +88,7 @@ class RoutingExecutor(BaseExecutor):
             return await self.swarm_executor.execute(psi)
 
 async def clear_zombie_port(port: int):
-    from phase.kernel.reaper import SystemOps
+    from fiber.phase.kernel.reaper import SystemOps
     
     reaper = SystemOps(redis_conn=None, tag="boot.reaper")
     pids = await reaper.get_pids_from_port(port)
@@ -110,7 +110,7 @@ async def start_rest_membrane():
     await clear_zombie_port(target_port)
 
     import uvicorn
-    from dphi.receptor.rest import create_app, Config
+    from fiber.dphi.receptor.rest import create_app, Config
 
     log.info(f"[Boot] Injecting runtime configurations for REST Edge on Port {target_port}...")
     resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{target_port}")
@@ -193,7 +193,7 @@ async def teardown():
 
     await TunnelFactory.close_all()
     try:
-        from kernel.dphi.ledger.consensus import KernelLedger
+        from xphi.kernel.dphi.ledger.consensus import KernelLedger
         KernelLedger().close()
     except Exception as e:
         log.warning(f"[Boot] Error while releasing KernelStore lock: {e}")

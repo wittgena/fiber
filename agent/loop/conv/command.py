@@ -5,8 +5,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from arch.model.conv.security.confirm import ConfirmationPolicyBase
-from arch.topos.context.status import ConverStatus
+from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
+from xphi.arch.topos.context.status import ConverStatus
 
 @dataclass(kw_only=True)
 class StateCommand:

@@ -11,7 +11,7 @@
 ## @lineage: runtime.engine.eco.llm.openlike
 ## @lineage: eco.llms.openlike
 from typing import Any, Optional, Sequence, Union
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -21,9 +21,9 @@ from phase.client.ext.llm.model.types.block import (
     CompletionResponseGen,
     LLMMetadata,
 )
-from agent.llm.router.pydantic import Field
-from agent.llm.router.constants import DEFAULT_CONTEXT_WINDOW
-from phase.client.ext.llm.handle.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
+from fiber.agent.llm.router.pydantic import Field
+from fiber.agent.llm.router.constants import DEFAULT_CONTEXT_WINDOW
+from fiber.phase.client.ext.llm.handle.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
 from llama_index.llms.openai.base import OpenAI, Tokenizer
 
 class OpenAILike(OpenAI):

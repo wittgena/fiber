@@ -5,8 +5,8 @@
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 
-from agent.anchor.model.types.general import EmbeddingResponse
-from agent.anchor.llm.param import ModelResponse
+from fiber.agent.anchor.model.types.general import EmbeddingResponse
+from fiber.agent.anchor.llm.param import ModelResponse
 
 @dataclass
 class ExecutionMetadata:

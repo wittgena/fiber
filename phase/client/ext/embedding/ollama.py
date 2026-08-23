@@ -9,10 +9,10 @@
 ## @lineage: engine.router.embedding.ollama
 from typing import Any, Dict, List, Optional, Union
 
-from phase.client.ext.embedding.base import BaseEmbedding
-from agent.llm.router.pydantic import Field, PrivateAttr
-from agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
-from agent.llm.router.callback.manager import CallbackManager
+from fiber.phase.client.ext.embedding.base import BaseEmbedding
+from fiber.agent.llm.router.pydantic import Field, PrivateAttr
+from fiber.agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
+from fiber.agent.llm.router.callback.manager import CallbackManager
 from ollama import Client, AsyncClient
 
 

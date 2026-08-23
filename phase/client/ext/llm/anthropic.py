@@ -30,8 +30,8 @@ from typing import (
     Union,
     cast,
 )
-from agent.llm.router.parser import parse_partial_json
-from phase.client.ext.llm.model.types.block import (
+from fiber.agent.llm.router.parser import parse_partial_json
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -41,21 +41,21 @@ from phase.client.ext.llm.model.types.block import (
     ContentBlock,
     ToolCallBlock,
 )
-from phase.client.ext.llm.model.types.block import TextBlock as LITextBlock
-from phase.client.ext.llm.model.types.block import CitationBlock as LICitationBlock
-from phase.client.ext.llm.model.types.block import ThinkingBlock as LIThinkingBlock
-from agent.llm.router.pydantic import Field, PrivateAttr
-from agent.llm.router.callback.manager import CallbackManager
-from agent.llm.router.constants import DEFAULT_TEMPERATURE
-from agent.llm.router.callback.manager import (
+from fiber.phase.client.ext.llm.model.types.block import TextBlock as LITextBlock
+from fiber.phase.client.ext.llm.model.types.block import CitationBlock as LICitationBlock
+from fiber.phase.client.ext.llm.model.types.block import ThinkingBlock as LIThinkingBlock
+from fiber.agent.llm.router.pydantic import Field, PrivateAttr
+from fiber.agent.llm.router.callback.manager import CallbackManager
+from fiber.agent.llm.router.constants import DEFAULT_TEMPERATURE
+from fiber.agent.llm.router.callback.manager import (
     llm_chat_callback,
     llm_completion_callback,
 )
-from phase.client.ext.llm.model.funcall import FunctionCallingLLM, ToolSelection
-from agent.llm.router.types.base import BaseOutputParser, PydanticProgramMode, Model
-from phase.client.ext.llm.handle.template import PromptTemplate
-from agent.llm.router.parser import Tokenizer
-from phase.client.ext.llm.handle.anthropic import (
+from fiber.phase.client.ext.llm.model.funcall import FunctionCallingLLM, ToolSelection
+from fiber.agent.llm.router.types.base import BaseOutputParser, PydanticProgramMode, Model
+from fiber.phase.client.ext.llm.handle.template import PromptTemplate
+from fiber.agent.llm.router.parser import Tokenizer
+from fiber.phase.client.ext.llm.handle.anthropic import (
     ANTHROPIC_NO_TEMP_MODELS,
     anthropic_modelname_to_contextsize,
     force_single_tool_call,
@@ -89,11 +89,11 @@ from anthropic.types import (
     TextCitation,
     SignatureDelta,
 )
-from agent.llm.router.callback.dispatcher import dispatcher
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
 
 if TYPE_CHECKING:
-    from phase.client.ext.llm.model.types.tool import BaseTool
-    from phase.client.ext.llm.model.flex import FlexibleModel
+    from fiber.phase.client.ext.llm.model.types.tool import BaseTool
+    from fiber.phase.client.ext.llm.model.flex import FlexibleModel
 
 
 logger = logging.getLogger(__name__)

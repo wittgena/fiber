@@ -10,9 +10,9 @@ from typing import Dict, Any, List
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from kernel.daemon.bootstrap import AbstractDaemon
-from kernel.bind.resolver import resolve_path
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.daemon.bootstrap import AbstractDaemon
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("observer.logtail", phase="ops")
 IO_ROOT = resolve_path("io")

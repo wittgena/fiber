@@ -8,18 +8,18 @@ import time
 import uuid
 import libtmux
 
-from agent.space.terminal.session.builder import sanitized_env
-from agent.loop.runtime.protocol.terminal.interface import TerminalInterface
+from fiber.agent.space.terminal.session.builder import sanitized_env
+from fiber.agent.loop.runtime.protocol.terminal.interface import TerminalInterface
 
-from arch.xor.bridge.terminal import (
+from xphi.arch.xor.bridge.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
     CMD_OUTPUT_PS1_END
 )
-from arch.xor.bridge.terminal import CmdOutputMetadata
-from watcher.plane.emitter import get_logger
+from xphi.arch.xor.bridge.terminal import CmdOutputMetadata
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)
 

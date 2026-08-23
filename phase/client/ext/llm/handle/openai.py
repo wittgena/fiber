@@ -32,8 +32,8 @@ from tenacity.stop import stop_base
 from tenacity.wait import wait_base
 
 import openai
-from phase.client.ext.llm.handle.converter import get_from_param_or_env
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.handle.converter import get_from_param_or_env
+from fiber.phase.client.ext.llm.model.types.block import (
     AudioBlock,
     ChatMessage,
     ContentBlock,
@@ -45,7 +45,7 @@ from phase.client.ext.llm.model.types.block import (
     ThinkingBlock,
     ToolCallBlock,
 )
-from agent.llm.router.pydantic import BaseModel
+from fiber.agent.llm.router.pydantic import BaseModel
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion_chunk import ChoiceDeltaToolCall
 from openai.types.chat.chat_completion_message import ChatCompletionMessage

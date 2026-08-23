@@ -6,17 +6,17 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-from phase.tracer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
-from phase.tracer.observer.tension import (
+from fiber.phase.tracer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
+from fiber.phase.tracer.observer.tension import (
     TensionPhase,
     RiskPolicy,
     TensionGradientObserver,
     get_source_hash
 )
 
-from arch.contract.registry.unified import contract
-from kernel.daemon.base import AbstractDaemon
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.registry.unified import contract
+from xphi.kernel.daemon.base import AbstractDaemon
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.risk")
 

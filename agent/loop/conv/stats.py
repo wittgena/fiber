@@ -5,9 +5,9 @@
 from typing import Any
 from pydantic import BaseModel, Field, PrivateAttr, model_serializer
 
-from agent.llm.driver.registry import RegistryEvent
-from agent.anchor.model.metric import Metrics
-from watcher.plane.emitter import get_logger
+from fiber.agent.llm.driver.registry import RegistryEvent
+from fiber.agent.anchor.model.metric import Metrics
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)
 

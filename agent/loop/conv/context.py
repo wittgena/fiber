@@ -6,27 +6,27 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from agent.llm.driver.registry import LLMRegistry
-from agent.space.action.types import (
+from fiber.agent.llm.driver.registry import LLMRegistry
+from fiber.agent.space.action.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
 )
-from agent.llm.driver.model import LLMModel
-from agent.space.action.message import Message
-from agent.space.action.action import Action, Observation
-from agent.loop.conv.security import SecurityAnalyzerBase
-from arch.model.conv.security.confirm import ConfirmationPolicyBase
+from fiber.agent.llm.driver.model import LLMModel
+from fiber.agent.space.action.message import Message
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.loop.conv.security import SecurityAnalyzerBase
+from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
 
-from agent.loop.runtime.protocol.conv import ProtoConv
-from agent.loop.conv.visual.context import ConversationVisualizer
-from agent.loop.conv.state import ConversationState
-from agent.space.manager import SandboxWorkspace
-from agent.space.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
+from fiber.agent.loop.runtime.protocol.conv import ProtoConv
+from fiber.agent.loop.conv.visual.context import ConversationVisualizer
+from fiber.agent.loop.conv.state import ConversationState
+from fiber.agent.space.manager import SandboxWorkspace
+from fiber.agent.space.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
 
-from arch.contract.resolver.secret import SecretValue
-from arch.xor.secret.validator import Cipher
-from arch.contract.event.next import next_id
+from xphi.arch.contract.resolver.secret import SecretValue
+from xphi.arch.xor.secret.validator import Cipher
+from xphi.arch.contract.event.next import next_id
 
 class ConvContext(ProtoConv):
     def __init__(

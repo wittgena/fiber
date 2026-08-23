@@ -3,7 +3,7 @@
 ## @lineage: eco.client.model.param
 ## @lineage: engine.client.param.model
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
-from agent.anchor.model.types.core import (
+from fiber.agent.anchor.model.types.core import (
     ChatCompletionToolParam,
     ChatCompletionToolParamFunctionChunk,
     ChatCompletionUserMessageParam,
@@ -19,5 +19,5 @@ from agent.anchor.model.types.core import (
     ChatCompletionMessageToolCall,
     OutputFunctionToolCall
 )
-from agent.anchor.model.types.param.response import GenericResponseOutputItem, DeleteResponseResult, DecodedResponseId
-from agent.anchor.model.types.stream import ModelResponseStream
+from fiber.agent.anchor.model.types.param.response import GenericResponseOutputItem, DeleteResponseResult, DecodedResponseId
+from fiber.agent.anchor.model.types.stream import ModelResponseStream

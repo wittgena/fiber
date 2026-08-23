@@ -5,10 +5,10 @@
 ## @lineage: engine.client.inter.registry
 from typing import Dict
 
-from agent.llm.router.base import BaseProviderAdapter, GenericHTTPAdapter
-from agent.llm.router.inter.llm import InterLLMAdapter
-from agent.llm.router.inter.embedding import InterEmbeddingAdapter
-from watcher.plane.emitter import get_emitter
+from fiber.agent.llm.router.base import BaseProviderAdapter, GenericHTTPAdapter
+from fiber.agent.llm.router.inter.llm import InterLLMAdapter
+from fiber.agent.llm.router.inter.embedding import InterEmbeddingAdapter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("registry.adapter")
 

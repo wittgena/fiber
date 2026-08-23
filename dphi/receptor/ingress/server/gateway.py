@@ -8,8 +8,8 @@ from typing import Literal
 from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from watcher.ingress.mcp import SecureMCPServer
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.ingress.mcp import SecureMCPServer
+from xphi.watcher.plane.emitter import get_emitter
 
 class GatewaySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GATEWAY_")

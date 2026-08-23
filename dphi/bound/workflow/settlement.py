@@ -13,15 +13,15 @@ from typing import Any, Callable, Dict, Optional, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from dphi.bound.config import dphi_env
-from arch.topos.network.bridge import RpcBridge
-from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from kernel.phase.reactor import PhaseReactor
+from fiber.dphi.bound.config import dphi_env
+from xphi.arch.topos.network.bridge import RpcBridge
+from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.phase.reactor import PhaseReactor
 
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
-from kernel.phase.inter.dvm import DvmInterpreter
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
+from xphi.kernel.phase.inter.dvm import DvmInterpreter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("workflow.settlement")
 

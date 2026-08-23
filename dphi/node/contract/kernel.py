@@ -8,8 +8,8 @@ from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
 from pydantic import BaseModel, Field
 
-from arch.contract.interface import IDynamicsKernel
-from arch.contract.registry.unified import contract
+from xphi.arch.contract.interface import IDynamicsKernel
+from xphi.arch.contract.registry.unified import contract
 
 class TransitionPolicy(BaseModel):
     """Meta-transition rule: event → state reconfiguration"""

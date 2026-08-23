@@ -8,17 +8,17 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from agent.space.action.action import Action, Observation
-from agent.space.action.tool import Tool
-from agent.loop.conv.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.space.action.tool import Tool
+from fiber.agent.loop.conv.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:
-    from agent.loop.runtime.protocol.conv import ProtoConv
-    from agent.loop.runtime.protocol.conv import ConvStateProtocol
-    from agent.loop.conv.action.builder import ActionDefinition
+    from fiber.agent.loop.runtime.protocol.conv import ProtoConv
+    from fiber.agent.loop.runtime.protocol.conv import ConvStateProtocol
+    from fiber.agent.loop.conv.action.builder import ActionDefinition
 
-from arch.xor.parser.lang.action import ActionSchemaCompiler, DEFAULT
-from watcher.plane.emitter import get_emitter
+from xphi.arch.xor.parser.lang.action import ActionSchemaCompiler, DEFAULT
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
@@ -119,8 +119,8 @@ def _bootstrap_core_actions():
 _bootstrap_core_actions()
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from arch.topos.context.status import ConverStatus
-    from agent.loop.conv.command import TransitionStatus
+    from xphi.arch.topos.context.status import ConverStatus
+    from fiber.agent.loop.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = f"Task marked as finished: {action.summary}" if getattr(action, "summary", None) else "Task marked as finished."
@@ -136,8 +136,8 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
 
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from arch.topos.context.status import ConverStatus
-    from agent.loop.conv.command import TransitionStatus
+    from xphi.arch.topos.context.status import ConverStatus
+    from fiber.agent.loop.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = "Message successfully delivered to the user."
@@ -154,10 +154,10 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
 
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from arch.topos.context.status import ConverStatus
-    from agent.llm.driver.event.observation import ObservationEvent
-    from arch.contract.event.next import next_id
-    from agent.loop.conv.command import TransitionStatus, UpdateAgentState
+    from xphi.arch.topos.context.status import ConverStatus
+    from fiber.agent.llm.driver.event.observation import ObservationEvent
+    from xphi.arch.contract.event.next import next_id
+    from fiber.agent.loop.conv.command import TransitionStatus, UpdateAgentState
 
     state = getattr(conv, "state", None) if conv else None
     msg = "Bridge initiated."
@@ -196,8 +196,8 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
 
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from arch.topos.context.status import ConverStatus
-    from agent.loop.conv.command import TransitionStatus
+    from xphi.arch.topos.context.status import ConverStatus
+    from fiber.agent.loop.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
     msg = (

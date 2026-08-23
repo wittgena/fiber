@@ -6,12 +6,12 @@ import pkgutil
 from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
-from agent.anchor.provider.registry import get_provider_for_model
-from phase.client.ext.llm.model.base import BaseLLM
-from arch.contract.resolver.ext import ExtResolver
+from fiber.agent.anchor.provider.registry import get_provider_for_model
+from fiber.phase.client.ext.llm.model.base import BaseLLM
+from xphi.arch.contract.resolver.ext import ExtResolver
 
-import phase.client.ext.llm as llm_pkg 
-from watcher.plane.emitter import get_emitter
+import fiber.phase.client.ext.llm as llm_pkg 
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.router")
 

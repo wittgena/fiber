@@ -11,19 +11,19 @@ import httpx
 
 from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Request
 
-from dphi.bound.config import dphi_env
-from dphi.bound.adapter.anchor import NotarySwarm
-from dphi.receptor.edge.depend import get_wasm_broker, get_pubsub, get_otlp_engine
+from fiber.dphi.bound.config import dphi_env
+from fiber.dphi.bound.adapter.anchor import NotarySwarm
+from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_pubsub, get_otlp_engine
 
-from arch.contract.interface import ContractRouter
-from arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from arch.topos.tunnel.subs import DistributedPubSub
-from arch.xor.parser.otlp import StrictOtlpExtractionEngine
+from xphi.arch.contract.interface import ContractRouter
+from xphi.arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
+from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
-from kernel.dphi.broker import DphiBroker, DphiMethod
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.adapter.sign import NodeSigner
-from watcher.receptor.contract.model import (
+from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.watcher.receptor.contract.model import (
     CodebotIntent, 
     AuditReceipt,
     ExportLogsServiceRequest, 
@@ -35,8 +35,8 @@ from watcher.receptor.contract.model import (
     KernelExecutionRecord,
     KernelOtlpRecord
 )
-from watcher.receptor.audit.secret import SecretAuditor, get_secret_auditor
-from watcher.plane.emitter import get_emitter, flow_scope
+from xphi.watcher.receptor.audit.secret import SecretAuditor, get_secret_auditor
+from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.public")
 

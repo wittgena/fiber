@@ -7,21 +7,21 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 from pydantic import BaseModel, Field, PrivateAttr
 
-from agent.loop.runtime.exception.eco import (
+from fiber.agent.loop.runtime.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout as Timeout,
 )
-from agent.loop.runtime.exception.types import LLMNoResponseError
-from agent.llm.driver.profile import LLMProfileStore
+from fiber.agent.loop.runtime.exception.types import LLMNoResponseError
+from fiber.agent.llm.driver.profile import LLMProfileStore
 
 if TYPE_CHECKING:
-    from agent.llm.driver.response import LLMResponse
-    from agent.anchor.model.metric import Metrics
+    from fiber.agent.llm.driver.response import LLMResponse
+    from fiber.agent.anchor.model.metric import Metrics
 
-from watcher.plane.emitter import get_logger
+from xphi.watcher.plane.emitter import get_logger
 logger = get_logger(__name__)
 
 _LLM_FALLBACK_EXCEPTIONS: Final[tuple[type[Exception], ...]] = (

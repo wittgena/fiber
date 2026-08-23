@@ -5,8 +5,8 @@
 @flow: Defines Advanced Config -> Injects into Universal Boot Engine
 """
 import asyncio
-from dphi.node.sphere.attractor import boot_sequence
-from watcher.plane.emitter import get_emitter
+from fiber.dphi.node.sphere.attractor import boot_sequence
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("sphere.nonlinear", phase="BOOT")
 

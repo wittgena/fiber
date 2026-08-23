@@ -23,8 +23,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
-from phase.client.ext.llm.model.types.block import ContentBlock, TextBlock
-from agent.llm.router.pydantic import BaseModel, PrivateAttr
+from fiber.phase.client.ext.llm.model.types.block import ContentBlock, TextBlock
+from fiber.agent.llm.router.pydantic import BaseModel, PrivateAttr
 from deprecated import deprecated
 
 

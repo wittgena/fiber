@@ -9,23 +9,23 @@ import httpx
 from typing import Any, AsyncIterator, Callable, Optional, NoReturn
 from collections import deque
 
-from agent.llm.router.constants import MAX_STREAMING_DURATION_SECONDS
+from fiber.agent.llm.router.constants import MAX_STREAMING_DURATION_SECONDS
 
-from agent.loop.runtime.exception.mapping import exception_type
-from agent.loop.runtime.exception.eco import OpenAIError
-from agent.anchor.llm.param import ModelResponseStream
-from agent.llm.stream.pipeline import (
+from fiber.agent.loop.runtime.exception.mapping import exception_type
+from fiber.agent.loop.runtime.exception.eco import OpenAIError
+from fiber.agent.anchor.llm.param import ModelResponseStream
+from fiber.agent.llm.stream.pipeline import (
     ChunkCodecHandler, 
     RuleGuardHandler, 
     StreamTelemetryHandler, 
     StreamYieldHandler
 )
-from agent.llm.stream.accumulator import StreamAccumulator
-from agent.llm.stream.rule import Rules
+from fiber.agent.llm.stream.accumulator import StreamAccumulator
+from fiber.agent.llm.stream.rule import Rules
 
-from arch.model.config import config
-from arch.topos.network.channel.pipeline import ChannelPipeline
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.config import config
+from xphi.arch.topos.network.channel.pipeline import ChannelPipeline
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.wrapper")
 
@@ -125,7 +125,7 @@ class StreamWrapper:
         self._fire_fallback_error(e)
 
     def _fire_fallback_error(self, e: Exception) -> NoReturn:
-        from agent.loop.runtime.exception.eco import MidStreamFallbackError
+        from fiber.agent.loop.runtime.exception.eco import MidStreamFallbackError
         if isinstance(e, OpenAIError): 
             mapped_exception = e
         else:

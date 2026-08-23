@@ -17,21 +17,21 @@ import functools
 import inspect
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Type, Union
 
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
     ChatResponseGen,
 )
-from phase.client.ext.llm.model.llm import LLM, ToolSelection
+from fiber.phase.client.ext.llm.model.llm import LLM, ToolSelection
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from agent.llm.router.chat_engine.types import AgentChatResponse
-    from phase.client.ext.llm.model.types.tool import BaseTool
+    from fiber.agent.llm.router.chat_engine.types import AgentChatResponse
+    from fiber.phase.client.ext.llm.model.types.tool import BaseTool
 
 
 class FunctionCallingLLM(LLM):
@@ -218,8 +218,8 @@ class FunctionCallingLLM(LLM):
         **kwargs: Any,
     ) -> "AgentChatResponse":
         """Predict and call the tool."""
-        from agent.llm.router.chat_engine.types import AgentChatResponse
-        from agent.llm.router.tools.calling import (
+        from fiber.agent.llm.router.chat_engine.types import AgentChatResponse
+        from fiber.agent.llm.router.tools.calling import (
             call_tool_with_selection,
         )
 
@@ -284,8 +284,8 @@ class FunctionCallingLLM(LLM):
         **kwargs: Any,
     ) -> "AgentChatResponse":
         """Predict and call the tool."""
-        from agent.llm.router.chat_engine.types import AgentChatResponse
-        from agent.llm.router.tools.calling import (
+        from fiber.agent.llm.router.chat_engine.types import AgentChatResponse
+        from fiber.agent.llm.router.tools.calling import (
             acall_tool_with_selection,
         )
 

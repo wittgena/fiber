@@ -18,8 +18,8 @@ from typing import Type, Optional, Callable, Any
 import httpx
 import redis
 
-from arch.local.llm import LLMEngine
-from watcher.plane.emitter import get_emitter
+from xphi.arch.local.llm import LLMEngine
+from xphi.watcher.plane.emitter import get_emitter
 
 log_local = get_emitter("surface.local")
 log_sandbox = get_emitter("surface.sandbox")

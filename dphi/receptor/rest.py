@@ -8,22 +8,22 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security, Reques
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
-from dphi.receptor.edge.public import public_edge
-from dphi.receptor.edge.internal import internal_router
-from dphi.receptor.edge.ext import ext_router
+from fiber.dphi.receptor.edge.public import public_edge
+from fiber.dphi.receptor.edge.internal import internal_router
+from fiber.dphi.receptor.edge.ext import ext_router
 
-from arch.topos.tunnel.factory import TunnelFactory
-from arch.topos.tunnel.subs import DistributedPubSub
-from arch.xor.parser.otlp import StrictOtlpRulesetParser
-from arch.xor.stream.edge import LogStreamStore
-from kernel.dphi.broker import DphiBroker
-from watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
-from watcher.ingress.middleware import (
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.arch.xor.parser.otlp import StrictOtlpRulesetParser
+from xphi.arch.xor.stream.edge import LogStreamStore
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
+from xphi.watcher.ingress.middleware import (
     AttestationMiddleware,
     LocalMiddleware,
     WasTelemetry,
 )
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

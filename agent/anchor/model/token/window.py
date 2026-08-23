@@ -4,13 +4,13 @@ import copy
 from typing import Any, Dict, List, Optional, Tuple, Union
 import tiktoken
 
-from agent.anchor.model.encoder import get_default_encoding
-from agent.anchor.provider.registry import model_cost
-from agent.anchor.model.types.openai import AllMessageValues
-from agent.llm.router.constants import DEFAULT_TRIM_RATIO
+from fiber.agent.anchor.model.encoder import get_default_encoding
+from fiber.agent.anchor.provider.registry import model_cost
+from fiber.agent.anchor.model.types.openai import AllMessageValues
+from fiber.agent.llm.router.constants import DEFAULT_TRIM_RATIO
 
-from agent.anchor.model.token.counter import token_counter
-from watcher.plane.emitter import get_emitter
+from fiber.agent.anchor.model.token.counter import token_counter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.window")
 

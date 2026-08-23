@@ -22,7 +22,7 @@ from typing import (
     Sequence,
     Union,
 )
-from phase.client.ext.llm.model.types.block import (
+from fiber.phase.client.ext.llm.model.types.block import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -33,8 +33,8 @@ from phase.client.ext.llm.model.types.block import (
     ImageBlock,
     MessageRole,
 )
-from agent.llm.router.types.schema import ImageNode
-from agent.llm.router.callback.manager import CallbackManager
+from fiber.agent.llm.router.types.schema import ImageNode
+from fiber.agent.llm.router.callback.manager import CallbackManager
 
 def parse_partial_json(s: str) -> Dict:
     try:

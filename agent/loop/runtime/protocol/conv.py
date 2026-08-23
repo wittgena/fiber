@@ -6,21 +6,21 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Protocol, Any
 
-from agent.space.action.types import ConversationID, ConversationTags, ConversationCallbackType
-from agent.llm.driver.model import LLMModel
-from agent.loop.conv.stats import ConversationStats
-from arch.model.conv.security.confirm import ConfirmationPolicyBase
-from agent.loop.conv.security import SecurityAnalyzerBase
+from fiber.agent.space.action.types import ConversationID, ConversationTags, ConversationCallbackType
+from fiber.agent.llm.driver.model import LLMModel
+from fiber.agent.loop.conv.stats import ConversationStats
+from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
+from fiber.agent.loop.conv.security import SecurityAnalyzerBase
 
-from agent.loop.conv.command import StateCommand
+from fiber.agent.loop.conv.command import StateCommand
 # from agent.loop.ator import Ator
 
-from arch.topos.context.space import BaseWorkspace
-from arch.topos.context.status import ConverStatus
-from arch.model.conv.event import Event, EventID
-from arch.xor.stream.conv import LogStore
-from arch.contract.resolver.secret import SecretRegistry
-from watcher.plane.observer.span import end_active_span, should_enable_observability, start_active_span
+from xphi.arch.topos.context.space import BaseWorkspace
+from xphi.arch.topos.context.status import ConverStatus
+from xphi.arch.model.conv.event import Event, EventID
+from xphi.arch.xor.stream.conv import LogStore
+from xphi.arch.contract.resolver.secret import SecretRegistry
+from xphi.watcher.plane.observer.span import end_active_span, should_enable_observability, start_active_span
 
 class ConvStateProtocol(Protocol):
     @property

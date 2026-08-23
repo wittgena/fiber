@@ -13,17 +13,17 @@ from abc import abstractmethod
 from collections import defaultdict
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 
-from agent.llm.router.pydantic import (
+from fiber.agent.llm.router.pydantic import (
     BaseModel,
     Field,
     ConfigDict,
     model_serializer,
 )
-from agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
-from agent.llm.router.callback.event import SparseEmbeddingEndEvent, SparseEmbeddingStartEvent
-from agent.llm.router.parser import get_tqdm_iterable
-from agent.llm.router.parser import run_jobs
-from agent.llm.router.callback.dispatcher import dispatcher
+from fiber.agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
+from fiber.agent.llm.router.callback.event import SparseEmbeddingEndEvent, SparseEmbeddingStartEvent
+from fiber.agent.llm.router.parser import get_tqdm_iterable
+from fiber.agent.llm.router.parser import run_jobs
+from fiber.agent.llm.router.callback.dispatcher import dispatcher
 
 SparseEmbedding = Dict[int, float]
 

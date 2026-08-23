@@ -6,10 +6,10 @@ import inspect
 from pathlib import Path
 from typing import Any, Dict
 
-from arch.model.phase.flow import PhaseFlow, FlowState, Align, Resonance, Transduction
-from arch.contract.registry.unified import contract
-from dphi.node.contract.runtime.ator import AtorRuntime
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.phase.flow import PhaseFlow, FlowState, Align, Resonance, Transduction
+from xphi.arch.contract.registry.unified import contract
+from fiber.dphi.node.contract.runtime.ator import AtorRuntime
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger('ator.reflector')
 

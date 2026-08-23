@@ -11,25 +11,25 @@ from typing import Any, Callable, Dict, List, Optional
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from dphi.bound.config import NetEnv, dphi_env
-from watcher.ingress.sentinel import RpcChaosInjector
+from fiber.dphi.bound.config import NetEnv, dphi_env
+from xphi.watcher.ingress.sentinel import RpcChaosInjector
 
-from arch.contract.event.next import generate_parity_triplet, next_phase_id
-from arch.model.phase.gate import uuid4
-from arch.topos.network.bridge import RpcBridge
-from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.arch.contract.event.next import generate_parity_triplet, next_phase_id
+from xphi.arch.model.phase.gate import uuid4
+from xphi.arch.topos.network.bridge import RpcBridge
+from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 
-from kernel.dphi.eco.settlement import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
-from phase.client.ext.wallet import EthWalletAdapter
-from phase.client.ext.evm import Web3Adapter
+from xphi.kernel.dphi.eco.settlement import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
+from fiber.phase.client.ext.wallet import EthWalletAdapter
+from fiber.phase.client.ext.evm import Web3Adapter
 
-from kernel.phase.inter.dvm import DvmInterpreter
-from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.broker import DphiMethod
-from kernel.phase.reactor import PhaseReactor
+from xphi.kernel.phase.inter.dvm import DvmInterpreter
+from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.broker import DphiMethod
+from xphi.kernel.phase.reactor import PhaseReactor
 
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 entry_log = get_emitter("exchange.entry")
 workflow_log = get_emitter("intent.workflow")
