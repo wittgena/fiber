@@ -1,8 +1,5 @@
 # dphi.receptor.edge.depend
-## @lineage: dphi.receptor.xe.depend
-## @lineage: receptor.xe.depend
 from typing import Any
-
 from fastapi import Request, HTTPException, status
 
 from fiber.dphi.adapter.anchor import NexusAnchor
@@ -20,11 +17,12 @@ from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
 from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
 
 from xphi.watcher.receptor.audit.secret import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("xe.depend")
+log = get_emitter("edge.depend")
 
 def _get_state_attr(request: Request, attr_name: str) -> Any:
     val = getattr(request.app.state, attr_name, None)
@@ -73,6 +71,14 @@ async def get_exchange_adapter(request: Request) -> ExchangeAdapter:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Node Signer is not configured or keys are missing."
         )
+
+async def get_utxo_adapter(request: Request) -> UtxoAdapter:
+    """
+    A2A 초미세 결제 및 잔고 조회를 위한 인메모리 UTXO 상태 관리기 주입
+    (Boot 과정에서 app.state.utxo_adapter 로 마운트되어야 함)
+    """
+    return _get_state_attr(request, "utxo_adapter")
+
 
 ## Profiling & Billing (A2A Compute 연산 전용)
 async def get_bench_profile() -> BenchProfile:
