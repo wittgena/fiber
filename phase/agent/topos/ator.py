@@ -11,13 +11,13 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from bound.config.agent import PromptContext
-from bound.space.action.tool import Tool
+from agent.anchor.config.agent import PromptContext
+from agent.space.action.tool import Tool
 from agent.llm.driver.model import LLMModel
 
-from bound.client.mcp.client import MCPClient
-from bound.client.mcp.factory import create_mcp_tools
-from bound.client.mcp.action import MCPExecutor
+from phase.client.mcp.client import MCPClient
+from phase.client.mcp.factory import create_mcp_tools
+from phase.client.mcp.action import MCPExecutor
 from agent.loop.conv.action.builder import ActionDefinition
 
 from agent.loop.conv.action.factory import CoreAction

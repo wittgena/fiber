@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from pydantic import Field, create_model
 from rich.text import Text
 
-from bound.space.action.action import Action, Observation
-from bound.space.action.executor import ActionExecutor
+from agent.space.action.action import Action, Observation
+from agent.space.action.executor import ActionExecutor
 from agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
 from agent.loop.runtime.protocol.conv import ProtoConv
 

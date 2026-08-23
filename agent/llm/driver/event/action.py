@@ -7,7 +7,7 @@ from rich.text import Text
 
 from arch.model.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
 from arch.model.conv.event import SourceType, ToolCallID
-from bound.space.action.message import (
+from agent.space.action.message import (
     Message,
     MessageToolCall,
     ReasoningItemModel,
@@ -16,7 +16,7 @@ from bound.space.action.message import (
     ThinkingBlock,
 )
 from arch.model.conv.security.eval import SecurityRisk
-from bound.space.action.action import Action
+from agent.space.action.action import Action
 
 class ActionEvent(LLMConvertibleEvent):
     source: SourceType = "agent"

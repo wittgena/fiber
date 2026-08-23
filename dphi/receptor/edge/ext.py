@@ -7,10 +7,10 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from bound.client.ext.evm import Web3Adapter
-from bound.client.ext.wallet import EthWalletAdapter
-from bound.adapter.rollup import RollupAdapter
-from bound.config.dphi import dphi_env
+from phase.client.ext.evm import Web3Adapter
+from phase.client.ext.wallet import EthWalletAdapter
+from dphi.bound.adapter.rollup import RollupAdapter
+from dphi.bound.config import dphi_env
 
 from arch.contract.interface import ContractRouter
 from kernel.dphi.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt

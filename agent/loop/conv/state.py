@@ -18,7 +18,7 @@ from arch.model.conv.event import Event
 from arch.model.conv.event import EventID
 from arch.topos.context.space import BaseWorkspace
 from arch.topos.context.status import ConverStatus
-from bound.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
+from agent.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
 
 from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
 from agent.loop.conv.stats import ConversationStats

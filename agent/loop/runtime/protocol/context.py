@@ -8,9 +8,9 @@ from typing import Protocol, Any
 
 from arch.model.conv.security.confirm import ConfirmationPolicyBase
 from agent.loop.conv.security import SecurityAnalyzerBase
-from bound.space.action.action import Action, Observation
-from bound.space.action.types import ConversationID
-from bound.space.action.message import Message
+from agent.space.action.action import Action, Observation
+from agent.space.action.types import ConversationID
+from agent.space.action.message import Message
 
 from arch.contract.resolver.secret import SecretValue
 

@@ -20,8 +20,8 @@ from agent.llm.driver.event.observation import AgentErrorEvent
 from agent.loop.conv.security import SecurityAnalyzerBase
 import arch.model.conv.security.eval as risk
 
-from bound.space.action.action import Action, Observation
-from bound.space.action.message import (
+from agent.space.action.action import Action, Observation
+from agent.space.action.message import (
     MessageToolCall,
     ReasoningItemModel,
     RedactedThinkingBlock,

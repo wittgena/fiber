@@ -2,7 +2,7 @@
 from typing import Any, Callable, Awaitable
 
 # --- Messages & Events ---
-from bound.space.action.message import Message, TextContent
+from agent.space.action.message import Message, TextContent
 from agent.llm.driver.event.message import MessageEvent
 from agent.llm.driver.event.action import ActionEvent
 from agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation

@@ -15,7 +15,7 @@ from phase.agent.topos.node.runtime import RuntimeNode
 from phase.agent.topos.scope.observer import ManifoldFolder, FlowTransition
 from phase.agent.topos.scope.surface import get_surface_class, SurfaceConfig
 
-from bound.space.manager import SpaceNode, space_provider
+from agent.space.manager import SpaceNode, space_provider
 
 from arch.model.surge.blueprint import SurgeBlueprint
 from arch.contract.model.graph import EntryNode

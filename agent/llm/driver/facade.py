@@ -22,8 +22,8 @@ from agent.anchor.llm.param import (
     ModelResponse, 
     ChatCompletionToolParam
 )
-from bound.space.action.message import Message
-from bound.space.action.types import TokenCallbackType, ConversationTokenCallbackType
+from agent.space.action.message import Message
+from agent.space.action.types import TokenCallbackType, ConversationTokenCallbackType
 from agent.llm.driver.response import LLMResponse
 from agent.llm.driver.model import LLMModel
 from agent.llm.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS

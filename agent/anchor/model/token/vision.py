@@ -7,7 +7,7 @@ import io
 import struct
 from typing import Tuple, Union
 
-from bound.client.http import get_client, SafeHttpClient
+from phase.client.http import get_client, SafeHttpClient
 from agent.llm.router.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

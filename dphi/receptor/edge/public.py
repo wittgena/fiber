@@ -11,8 +11,8 @@ import httpx
 
 from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Request
 
-from bound.config.dphi import dphi_env
-from bound.adapter.anchor import NotarySwarm
+from dphi.bound.config import dphi_env
+from dphi.bound.adapter.anchor import NotarySwarm
 from dphi.receptor.edge.depend import get_wasm_broker, get_pubsub, get_otlp_engine
 
 from arch.contract.interface import ContractRouter

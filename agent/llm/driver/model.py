@@ -23,7 +23,7 @@ from pydantic.json_schema import SkipJsonSchema
 from agent.anchor.model.info import get_features, supports_vision
 from agent.anchor.model.token.splitter import create_pretrained_tokenizer
 from agent.anchor.model.metric import Metrics
-from bound.config.cloud import VendorConfig
+from agent.anchor.config.cloud import VendorConfig
 
 from agent.llm.driver.strategy.fallback import FallbackStrategy
 

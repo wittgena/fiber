@@ -10,8 +10,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from kernel.dphi.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
-from bound.adapter.anchor import PhaseBuilder
-from bound.client.wallet import LocalWalletClient
+from dphi.bound.adapter.anchor import PhaseBuilder
+from phase.client.wallet import LocalWalletClient
 
 from kernel.dphi.runner.phase import SchemeRunner
 from kernel.dphi.adapter.state import StateAdapter

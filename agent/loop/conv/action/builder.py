@@ -14,11 +14,11 @@ from pydantic import Field, ConfigDict, computed_field, field_validator, field_s
 from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
-from bound.space.action.action import Action, Observation, Schema
+from agent.space.action.action import Action, Observation, Schema
 from arch.model.conv.security.eval import SecurityRisk
 from agent.anchor.llm.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
-from bound.space.action.tool import Tool
-from bound.space.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
+from agent.space.action.tool import Tool
+from agent.space.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
 from arch.model.surge.model import SurgeBaseModel
 from arch.model.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses

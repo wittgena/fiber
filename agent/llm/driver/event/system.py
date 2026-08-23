@@ -7,7 +7,7 @@ from rich.text import Text
 from typing import TYPE_CHECKING, Any
 from arch.model.conv.event import N_CHAR_PREVIEW, Event, LLMConvertibleEvent
 from arch.model.conv.event import SourceType
-from bound.space.action.message import Message, TextContent
+from agent.space.action.message import Message, TextContent
 from agent.loop.conv.action.builder import ActionDefinition
 
 class SystemPromptEvent(LLMConvertibleEvent):

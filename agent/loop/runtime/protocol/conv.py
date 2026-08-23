@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Protocol, Any
 
-from bound.space.action.types import ConversationID, ConversationTags, ConversationCallbackType
+from agent.space.action.types import ConversationID, ConversationTags, ConversationCallbackType
 from agent.llm.driver.model import LLMModel
 from agent.loop.conv.stats import ConversationStats
 from arch.model.conv.security.confirm import ConfirmationPolicyBase

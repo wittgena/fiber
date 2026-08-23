@@ -8,8 +8,8 @@ from threading import RLock
 from typing import TYPE_CHECKING, Any, Dict, List, Callable, Sequence, Optional
 from rich.text import Text
 
-from bound.space.action.action import Action, Observation
-from bound.space.action.tool import Tool
+from agent.space.action.action import Action, Observation
+from agent.space.action.tool import Tool
 from agent.loop.conv.action.factory import MessageIntent, TopologicalIntent, CoreAction, ActionProxy, build_action
 
 if TYPE_CHECKING:

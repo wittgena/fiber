@@ -10,7 +10,7 @@ from rich.text import Text
 
 from arch.model.conv.event import N_CHAR_PREVIEW, EventID, LLMConvertibleEvent
 from arch.model.conv.event import SourceType
-from bound.space.action.message import (
+from agent.space.action.message import (
     ImageContent,
     Message,
     RedactedThinkingBlock,

@@ -9,9 +9,9 @@ from typing import Optional, Dict, Any, List, Callable
 
 from phase.agent.runtime.prompt import BlueprintCompiler
 
-from bound.space.manager import SandboxWorkspace, SandboxProxy 
-from bound.space.context.adapter import AgentCommunicator, ExecutionController
-from bound.space.action.tool import Tool
+from agent.space.manager import SandboxWorkspace, SandboxProxy 
+from agent.space.context.adapter import AgentCommunicator, ExecutionController
+from agent.space.action.tool import Tool
 
 from agent.loop.runtime.protocol.tool.terminal import TerminalTool
 from agent.loop.activator import Activator
@@ -28,7 +28,7 @@ from arch.contract.event.next import next_id
 from arch.topos.tunnel.factory import TunnelFactory
 from arch.topos.node.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
 from kernel.bind.resolver import resolve_path
-from watcher.tracer.phase.router import InfraRouter
+from phase.tracer.router import InfraRouter
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("loop.executor")

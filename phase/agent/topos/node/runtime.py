@@ -9,8 +9,8 @@ import os
 from pydantic import SecretStr
 
 from agent.llm.driver.model import LLMModel
-from bound.config.agent import AgentConfig
-from bound.space.action.tool import Tool
+from agent.anchor.config.agent import AgentConfig
+from agent.space.action.tool import Tool
 
 from arch.topos.node.gan import Message, GanNode
 from arch.topos.node.event import AgentConfigured

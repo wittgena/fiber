@@ -5,8 +5,8 @@ from typing import Any
 
 from fastapi import Request, HTTPException, status
 
-from bound.adapter.anchor import NexusAnchor
-from bound.space.sandbox.profile import BenchProfile
+from dphi.bound.adapter.anchor import NexusAnchor
+from agent.space.sandbox.profile import BenchProfile
 from dphi.receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
