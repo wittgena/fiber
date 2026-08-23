@@ -7,7 +7,7 @@ from enum import IntEnum
 from collections import defaultdict
 
 from fiber.agent.anchor.model.metric import Metrics
-from fiber.agent.anchor.llm.param import ModelResponse
+from fiber.agent.llm.param import ModelResponse
 
 from xphi.arch.model.phase.gate import uuid4
 from xphi.watcher.plane.emitter import get_emitter, _flow_context

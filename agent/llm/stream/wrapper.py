@@ -9,11 +9,11 @@ import httpx
 from typing import Any, AsyncIterator, Callable, Optional, NoReturn
 from collections import deque
 
-from fiber.agent.llm.router.constants import MAX_STREAMING_DURATION_SECONDS
+from fiber.dphi.model.constants import MAX_STREAMING_DURATION_SECONDS
 
 from fiber.agent.loop.runtime.exception.mapping import exception_type
 from fiber.agent.loop.runtime.exception.eco import OpenAIError
-from fiber.agent.anchor.llm.param import ModelResponseStream
+from fiber.agent.llm.param import ModelResponseStream
 from fiber.agent.llm.stream.pipeline import (
     ChunkCodecHandler, 
     RuleGuardHandler, 

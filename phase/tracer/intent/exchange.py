@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.bound.config import NetEnv, dphi_env
+from fiber.dphi.adapter.config import NetEnv, dphi_env
 from xphi.watcher.ingress.sentinel import RpcChaosInjector
 
 from xphi.arch.contract.event.next import generate_parity_triplet, next_phase_id

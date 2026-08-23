@@ -19,7 +19,7 @@ from fiber.agent.llm.router.pydantic import (
     ConfigDict,
     model_serializer,
 )
-from fiber.agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
+from fiber.dphi.model.constants import DEFAULT_EMBED_BATCH_SIZE
 from fiber.agent.llm.router.callback.event import SparseEmbeddingEndEvent, SparseEmbeddingStartEvent
 from fiber.agent.llm.router.parser import get_tqdm_iterable
 from fiber.agent.llm.router.parser import run_jobs

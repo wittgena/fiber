@@ -48,7 +48,7 @@ from fiber.agent.llm.router.pydantic import (
     field_validator,
     model_validator,
 )
-from fiber.agent.llm.router.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
+from fiber.dphi.model.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
 from fiber.agent.llm.router.types.schema import ImageDocument
 from fiber.agent.llm.router.parser import get_tokenizer, resolve_binary
 

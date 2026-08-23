@@ -9,7 +9,7 @@ import time
 from typing import Optional
 
 from fiber.phase.client.ext.evm import Web3Adapter
-from fiber.dphi.bound.config import dphi_env
+from fiber.dphi.adapter.config import dphi_env
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("wallet.eth")

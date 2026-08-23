@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 
 from fiber.phase.client.ext.evm import Web3Adapter
 from fiber.phase.client.ext.wallet import EthWalletAdapter
-from fiber.dphi.bound.adapter.rollup import RollupAdapter
-from fiber.dphi.bound.config import dphi_env
+from fiber.dphi.adapter.rollup import RollupAdapter
+from fiber.dphi.adapter.config import dphi_env
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.kernel.dphi.eco.settlement import EcoAdapter, X402Invoice, X402SettlementReceipt

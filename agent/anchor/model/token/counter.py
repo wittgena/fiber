@@ -19,13 +19,13 @@ from fiber.agent.anchor.model.types.openai import (
     AllMessageValues, 
     OpenAIMessageContent
 )
-from fiber.agent.anchor.llm.param import ChatCompletionToolParam
+from fiber.agent.llm.param import ChatCompletionToolParam
 from fiber.agent.anchor.model.types.general import SelectTokenizerResponse
 from fiber.agent.anchor.model.token.vision import VisionMetadataExtractor
 from xphi.arch.model.config import config
-from fiber.agent.llm.router.constants import DEFAULT_IMAGE_TOKEN_COUNT
+from fiber.dphi.model.constants import DEFAULT_IMAGE_TOKEN_COUNT
 
-from fiber.agent.anchor.llm.param import Message
+from fiber.agent.llm.param import Message
 
 from xphi.watcher.plane.emitter import get_emitter
 

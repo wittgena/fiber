@@ -22,7 +22,7 @@ from fiber.phase.client.ext.llm.model.types.block import (
     LLMMetadata,
 )
 from fiber.agent.llm.router.pydantic import Field
-from fiber.agent.llm.router.constants import DEFAULT_CONTEXT_WINDOW
+from fiber.dphi.model.constants import DEFAULT_CONTEXT_WINDOW
 from fiber.phase.client.ext.llm.handle.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
 from llama_index.llms.openai.base import OpenAI, Tokenizer
 

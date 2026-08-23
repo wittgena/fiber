@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-from fiber.dphi.bound.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
+from fiber.dphi.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
 from fiber.dphi.receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
 from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter, get_utxo_adapter
 from fiber.agent.space.sandbox.profile import BenchProfile, VerificationError

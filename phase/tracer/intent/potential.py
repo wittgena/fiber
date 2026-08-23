@@ -8,7 +8,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from fiber.dphi.bound.config import dphi_env
+from fiber.dphi.adapter.config import dphi_env
 
 from xphi.kernel.dphi.eco.settlement import EcoAdapter
 from fiber.phase.tracer.intent.exchange import DvmRpcBridge, NodeIdentity

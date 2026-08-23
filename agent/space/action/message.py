@@ -12,7 +12,7 @@ from pydantic import ConfigDict, Field, model_validator
 from xphi.arch.xor.parser.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
 from xphi.arch.xor.parser.mark.depre import handle_deprecated_model_fields
 
-from fiber.agent.anchor.llm.param import (
+from fiber.agent.llm.param import (
     ChatCompletionMessageToolCall,
     ResponseFunctionToolCall,
     OutputFunctionToolCall,

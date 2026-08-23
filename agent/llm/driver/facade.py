@@ -15,9 +15,9 @@ from fiber.agent.anchor.model.metric import MetricsSnapshot
 
 from fiber.agent.loop.runtime.exception.mapping import map_provider_exception
 from fiber.agent.loop.runtime.exception.types import LLMNoResponseError
-from fiber.agent.anchor.llm.entry import acompletion as brane_acompletion
+from fiber.agent.llm.entry import acompletion as brane_acompletion
 from fiber.agent.llm.stream.wrapper import StreamWrapper
-from fiber.agent.anchor.llm.param import (
+from fiber.agent.llm.param import (
     ModelResponseStream, 
     ModelResponse, 
     ChatCompletionToolParam

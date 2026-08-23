@@ -8,7 +8,7 @@ from typing import Annotated
 from pydantic import BaseModel, BeforeValidator, Field
 from collections.abc import Callable
 
-from fiber.agent.anchor.llm.param import ModelResponseStream
+from fiber.agent.llm.param import ModelResponseStream
 
 from xphi.arch.model.conv.event import Event
 from xphi.arch.contract.event.next import ToposId

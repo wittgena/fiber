@@ -4,7 +4,7 @@ import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from fiber.agent.anchor.llm.param import ModelResponse
+from fiber.agent.llm.param import ModelResponse
 from fiber.agent.space.action.message import Message
 from fiber.agent.anchor.model.metric import MetricsSnapshot
 

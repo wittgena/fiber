@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate
 from typing import Optional
 
-from fiber.agent.llm.router.constants import DEFAULT_MAX_RECURSE_DEPTH
+from fiber.dphi.model.constants import DEFAULT_MAX_RECURSE_DEPTH
 from fiber.agent.loop.runtime.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
 from xphi.arch.model.config import config

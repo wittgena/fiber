@@ -4,8 +4,8 @@ import json
 from typing import AsyncGenerator, Union
 import httpx
 
-from fiber.agent.anchor.llm.param import ModelResponse
-from fiber.agent.anchor.llm.execution import CompletionContext 
+from fiber.agent.llm.param import ModelResponse
+from fiber.agent.llm.execution import CompletionContext 
 from fiber.phase.client.http import get_client
 
 from xphi.watcher.plane.emitter import get_emitter

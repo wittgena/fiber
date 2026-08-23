@@ -22,7 +22,7 @@ from fiber.agent.llm.router.pydantic import (
 )
 from fiber.agent.llm.router.callback.manager import CallbackManager
 from fiber.agent.llm.router.callback.event import CBEventType, EventPayload
-from fiber.agent.llm.router.constants import DEFAULT_EMBED_BATCH_SIZE
+from fiber.dphi.model.constants import DEFAULT_EMBED_BATCH_SIZE
 from fiber.agent.llm.router.types.schema import BaseNode, MetadataMode, TransformComponent
 from fiber.agent.llm.router.parser import get_tqdm_iterable
 from fiber.agent.llm.router.parser import run_jobs

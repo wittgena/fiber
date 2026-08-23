@@ -7,7 +7,7 @@ import tiktoken
 from fiber.agent.anchor.model.encoder import get_default_encoding
 from fiber.agent.anchor.provider.registry import model_cost
 from fiber.agent.anchor.model.types.openai import AllMessageValues
-from fiber.agent.llm.router.constants import DEFAULT_TRIM_RATIO
+from fiber.dphi.model.constants import DEFAULT_TRIM_RATIO
 
 from fiber.agent.anchor.model.token.counter import token_counter
 from xphi.watcher.plane.emitter import get_emitter

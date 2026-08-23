@@ -1,4 +1,4 @@
-## @lineage: dphi.receptor.edge.public
+# dphi.receptor.edge.public
 """
 @desc: DPHI Edge Public Gateway
 - Orchestrates WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts.
@@ -18,8 +18,8 @@ import httpx
 from fastapi import APIRouter, Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Request, Query
 from pydantic import BaseModel
 
-from fiber.dphi.bound.config import dphi_env
-from fiber.dphi.bound.adapter.anchor import NotarySwarm
+from fiber.dphi.adapter.config import dphi_env
+from fiber.dphi.adapter.anchor import NotarySwarm
 from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_pubsub, get_otlp_engine
 
 from xphi.arch.contract.interface import ContractRouter

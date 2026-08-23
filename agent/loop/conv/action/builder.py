@@ -16,7 +16,7 @@ from openai.types.responses import FunctionToolParam
 
 from fiber.agent.space.action.action import Action, Observation, Schema
 from xphi.arch.model.conv.security.eval import SecurityRisk
-from fiber.agent.anchor.llm.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from fiber.agent.llm.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
 from fiber.agent.space.action.tool import Tool
 from fiber.agent.space.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 

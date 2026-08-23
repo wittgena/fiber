@@ -1,4 +1,4 @@
-## @lineage: phase.client.dphi.usecase
+# phase.client.dphi.usecase
 """
 @desc: DPHI Public Gateway SDK & Usecase Runner
 - Provides a zero-trust computing blackbox client for autonomous systems.

@@ -42,7 +42,7 @@ from fiber.phase.client.ext.llm.model.types.block import (
 )
 from fiber.agent.llm.router.pydantic import BaseModel, Field, PrivateAttr
 from fiber.agent.llm.router.callback.manager import CallbackManager
-from fiber.agent.llm.router.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
+from fiber.dphi.model.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
 from fiber.agent.llm.router.callback.manager import llm_chat_callback, llm_completion_callback
 from fiber.phase.client.ext.llm.model.funcall import FunctionCallingLLM
 from fiber.phase.client.ext.llm.model.llm import ToolSelection, Model

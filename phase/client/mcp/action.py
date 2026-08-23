@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
 
-from fiber.agent.anchor.llm.param import ChatCompletionToolParam
+from fiber.agent.llm.param import ChatCompletionToolParam
 from fiber.agent.space.action.action import Action, Observation, Schema
 from fiber.agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
 from fiber.agent.space.action.executor import ActionExecutor
