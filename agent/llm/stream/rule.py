@@ -6,7 +6,7 @@ from jsonschema import ValidationError, validate
 from typing import Optional
 
 from agent.llm.router.constants import DEFAULT_MAX_RECURSE_DEPTH
-from agent.runtime.exception.eco import JSONSchemaValidationError, APIResponseValidationError
+from agent.loop.runtime.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
 from arch.model.config import config
 

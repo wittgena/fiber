@@ -6,7 +6,7 @@ import httpx
 
 from agent.anchor.llm.param import ModelResponse
 from agent.anchor.llm.execution import CompletionContext 
-from bound.client.http import get_client
+from phase.client.http import get_client
 
 from watcher.plane.emitter import get_emitter
 

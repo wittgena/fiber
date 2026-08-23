@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, Any
 from agent.anchor.model.info import get_features
 from agent.anchor.model.metric import MetricsSnapshot
 
-from agent.runtime.exception.mapping import map_provider_exception
-from agent.runtime.exception.types import LLMNoResponseError
+from agent.loop.runtime.exception.mapping import map_provider_exception
+from agent.loop.runtime.exception.types import LLMNoResponseError
 from agent.anchor.llm.entry import acompletion as brane_acompletion
 from agent.llm.stream.wrapper import StreamWrapper
 from agent.anchor.llm.param import (
@@ -22,14 +22,14 @@ from agent.anchor.llm.param import (
     ModelResponse, 
     ChatCompletionToolParam
 )
-from bound.space.action.message import Message
-from bound.space.action.types import TokenCallbackType, ConversationTokenCallbackType
+from agent.space.action.message import Message
+from agent.space.action.types import TokenCallbackType, ConversationTokenCallbackType
 from agent.llm.driver.response import LLMResponse
 from agent.llm.driver.model import LLMModel
 from agent.llm.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
 
-from agent.runtime.conv.action.builder import ActionDefinition
-from agent.runtime.conv.view import View
+from agent.loop.conv.action.builder import ActionDefinition
+from agent.loop.conv.view import View
 
 from arch.model.conv.event import Event, LLMConvertibleEvent
 from watcher.plane.emitter import get_emitter

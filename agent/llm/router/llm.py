@@ -7,10 +7,10 @@ from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
 from agent.anchor.provider.registry import get_provider_for_model
-from bound.client.ext.llm.model.base import BaseLLM
+from phase.client.ext.llm.model.base import BaseLLM
 from arch.contract.resolver.ext import ExtResolver
 
-import bound.client.ext.llm as llm_pkg 
+import phase.client.ext.llm as llm_pkg 
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.router")

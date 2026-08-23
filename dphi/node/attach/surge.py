@@ -5,7 +5,7 @@ import random
 import json
 from typing import Any
 
-from dphi.scene.anchor import ActorIdentity 
+from dphi.bound.scene.anchor import ActorIdentity 
 from kernel.dphi.method import DphiMethod
 from kernel.dphi.adapter.state import StateAdapter
 from watcher.plane.emitter import get_emitter

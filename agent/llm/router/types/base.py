@@ -34,7 +34,7 @@ from typing import (
     Union,
 )
 
-from bound.client.ext.llm.model.types.block import ChatMessage, MessageRole, TextBlock
+from phase.client.ext.llm.model.types.block import ChatMessage, MessageRole, TextBlock
 from agent.llm.router.pydantic import (
     BaseModel,
     GetCoreSchemaHandler,
@@ -49,7 +49,7 @@ TokenAsyncGen = AsyncGenerator[str, None]
 RESPONSE_TEXT_TYPE = Union[BaseModel, str, TokenGen, TokenAsyncGen]
 
 if TYPE_CHECKING:
-    from bound.client.ext.llm.model.flex import FlexibleModel
+    from phase.client.ext.llm.model.flex import FlexibleModel
 
 
 # TODO: move into a `core` folder

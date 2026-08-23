@@ -3,7 +3,7 @@
 import importlib
 from typing import Any
 
-import bound.client.ext.embedding as embedding_pkg
+import phase.client.ext.embedding as embedding_pkg
 from watcher.plane.emitter import get_emitter
 
 log = get_emitter("embedding.router")

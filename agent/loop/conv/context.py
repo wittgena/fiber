@@ -7,22 +7,22 @@ from pathlib import Path
 from typing import Any
 
 from agent.llm.driver.registry import LLMRegistry
-from bound.space.action.types import (
+from agent.space.action.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,
 )
 from agent.llm.driver.model import LLMModel
-from bound.space.action.message import Message
-from bound.space.action.action import Action, Observation
-from agent.runtime.conv.security import SecurityAnalyzerBase
+from agent.space.action.message import Message
+from agent.space.action.action import Action, Observation
+from agent.loop.conv.security import SecurityAnalyzerBase
 from arch.model.conv.security.confirm import ConfirmationPolicyBase
 
-from agent.runtime.protocol.conv import ProtoConv
+from agent.loop.runtime.protocol.conv import ProtoConv
 from agent.loop.conv.visual.context import ConversationVisualizer
 from agent.loop.conv.state import ConversationState
-from bound.space.manager import SandboxWorkspace
-from bound.space.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
+from agent.space.manager import SandboxWorkspace
+from agent.space.context.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
 
 from arch.contract.resolver.secret import SecretValue
 from arch.xor.secret.validator import Cipher

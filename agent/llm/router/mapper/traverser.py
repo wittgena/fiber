@@ -16,7 +16,7 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from bound.client.ext.llm.model.types.block import ChatMessage, MessageRole
+from phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
 from arch.model.phase.gate import uuid4 
 from kernel.bind.resolver import get_invoker
 from watcher.plane.emitter import get_emitter

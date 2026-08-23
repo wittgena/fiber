@@ -12,7 +12,7 @@ from agent.llm.router.llm import LLMRouter, ModuleMissingError
 
 from agent.anchor.llm.execution import CompletionContext
 from agent.anchor.provider.registry import get_llm_provider
-from agent.runtime.exception.mapping import exception_type
+from agent.loop.runtime.exception.mapping import exception_type
 
 from agent.llm.router.mapper.state import StateMapper
 
