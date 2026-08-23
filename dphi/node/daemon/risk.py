@@ -6,7 +6,7 @@ import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-from phase.tracer.observer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
+from phase.tracer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
 from phase.tracer.observer.tension import (
     TensionPhase,
     RiskPolicy,

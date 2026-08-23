@@ -17,9 +17,9 @@ from agent.loop.runtime.protocol.terminal.session import TerminalSession
 from agent.loop.runtime.protocol.terminal.context import ExecutionContext, ExecutionEngine
 from agent.loop.runtime.protocol.terminal.polling import PollingExecutionEngine
 
-from bound.psace.terminal.session.builder import ChainBuilder
-from bound.psace.terminal.session.builder import _is_tmux_available, create_terminal_session
-from bound.psace.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
+from agent.space.terminal.session.builder import ChainBuilder
+from agent.space.terminal.session.builder import _is_tmux_available, create_terminal_session
+from agent.space.terminal.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
 from arch.xor.bridge.command.terminal import TerminalCommandStatus
 from arch.xor.bridge.terminal import CMD_OUTPUT_PS1_END

@@ -24,14 +24,14 @@ from typing import Final
 import libtmux
 
 from watcher.plane.emitter import get_logger
-from bound.psace.terminal.session.builder import sanitized_env
+from agent.space.terminal.session.builder import sanitized_env
 from arch.xor.bridge.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
 )
-from bound.psace.terminal.tmux.interface import TmuxTerminal
+from agent.space.terminal.tmux.interface import TmuxTerminal
 from kernel.bind.resolver import find_current_self, get_invoker
 from watcher.plane.emitter import get_emitter
 

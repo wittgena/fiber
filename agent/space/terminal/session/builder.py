@@ -404,14 +404,14 @@ def create_terminal_session(
         if terminal_type == "tmux":
             if not _is_tmux_available():
                 raise RuntimeError("Tmux is not available on this system")
-            from bound.psace.terminal.tmux.interface import TmuxTerminal
+            from agent.space.terminal.tmux.interface import TmuxTerminal
 
             log.info("Using forced TmuxTerminal")
             terminal = TmuxTerminal(work_dir, username)
             return TerminalSession(terminal, no_change_timeout_seconds)
             
         elif terminal_type == "subprocess":
-            from bound.psace.terminal.backend import SubprocessTerminal
+            from agent.space.terminal.backend import SubprocessTerminal
 
             log.info("Using forced SubprocessTerminal")
             terminal = SubprocessTerminal(work_dir, username, shell_path)
@@ -426,13 +426,13 @@ def create_terminal_session(
     else:
         # On Unix-like systems, prefer tmux if available, otherwise use subprocess
         if _is_tmux_available():
-            from bound.psace.terminal.tmux.interface import TmuxTerminal
+            from agent.space.terminal.tmux.interface import TmuxTerminal
 
             log.info("Auto-detected: Using TmuxTerminal (tmux available)")
             terminal = TmuxTerminal(work_dir, username)
             return TerminalSession(terminal, no_change_timeout_seconds)
         else:
-            from bound.psace.terminal.backend import SubprocessTerminal
+            from agent.space.terminal.backend import SubprocessTerminal
             _tmux_warning = (
                 "tmux is not installed. Falling back to subprocess-based"
                 " terminal, which may be less stable. For best agent"

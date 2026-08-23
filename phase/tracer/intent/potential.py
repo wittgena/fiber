@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 from dphi.bound.config import dphi_env
 
 from kernel.dphi.eco.settlement import EcoAdapter
-from phase.tracer.observer.intent.exchange import DvmRpcBridge, NodeIdentity
+from phase.tracer.intent.exchange import DvmRpcBridge, NodeIdentity
 
 from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from arch.contract.event.next import generate_parity_triplet

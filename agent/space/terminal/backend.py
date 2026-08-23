@@ -23,7 +23,7 @@ import fcntl
 import pty
 import select
 
-from bound.psace.terminal.session.builder import sanitized_env
+from agent.space.terminal.session.builder import sanitized_env
 from agent.loop.runtime.protocol.terminal.interface import TerminalInterface
 
 from arch.xor.bridge.terminal import (

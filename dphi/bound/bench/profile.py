@@ -1,5 +1,4 @@
 # dphi.bound.bench.profile
-## @lineage: phase.dphi.bench.profile
 import time
 import asyncio
 import json
