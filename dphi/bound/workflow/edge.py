@@ -1,7 +1,4 @@
 # dphi.bound.workflow.edge
-## @lineage: phase.dphi.workflow.edge
-## @lineage: nexus.phase.dphi.workflow.edge
-## @lineage: meta.phase.dphi.workflow.edge
 import asyncio
 import hashlib
 import random
@@ -16,8 +13,8 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 
 from fiber.dphi.bound.config import dphi_env
-from fiber.phase.client.http import VerifiedHttpClient
 from fiber.dphi.receptor.rest import create_app, Config
+from fiber.phase.client.http import VerifiedHttpClient
 
 from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.dphi.runner.phase import WebRunner
@@ -155,7 +152,7 @@ class EdgeWorkflow(Workflow):
         try:
             self.log.info(f"  └─ 🔍 Verifying First-Party Attestation for {request_path}...")
             verifier = VerifiedHttpClient(client=self.runner.client)
-            verifier._verify_header_proof(response, request_path)
+            verifier._verify_header_proof(response)
             self.log.info("  └─ ✅ Attestation Signature Verified Successfully!")
             return None
         except Exception as e:

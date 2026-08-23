@@ -1,5 +1,4 @@
 # phase.client.http
-## @lineage: bound.client.http
 import hashlib
 import json
 import os
@@ -25,7 +24,7 @@ from xphi.kernel.dphi.adapter.sign import NodeSigner
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("transport.client")
+log = get_emitter("client.http")
 
 _DEFAULT_TIMEOUT = httpx.Timeout(
     timeout=COMPLETION_HTTP_FALLBACK_SECONDS,

@@ -1,6 +1,4 @@
 # phase.flow.align.imports
-## @lineage: phase.align.imports
-## @lineage: flow.align.imports
 import os
 import sys
 import argparse
@@ -90,7 +88,6 @@ def entry_task(args):
     return CliTaskAdapter(runner.run, **run_kwargs)
 
 
-@contract.cli(name="align.imports", recept=[])
 @contract.cli(
     name="align.imports",
     args=["--repo", "--old", "--new", "--dry-run"],
