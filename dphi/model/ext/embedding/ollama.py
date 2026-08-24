@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 from fiber.dphi.model.ext.embedding.base import BaseEmbedding
 from fiber.dphi.model.mapper.pydantic import Field, PrivateAttr
 from fiber.dphi.model.constants import DEFAULT_EMBED_BATCH_SIZE
-from fiber.dphi.model.callback.manager import CallbackManager
+from fiber.dphi.model.ext.callback.manager import CallbackManager
 from ollama import Client, AsyncClient
 
 

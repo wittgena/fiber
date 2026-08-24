@@ -34,7 +34,7 @@ from fiber.dphi.model.ext.llm.model.types.block import (
     TextBlock,
 )
 from fiber.dphi.model.mapper.pydantic import Field, model_validator, ConfigDict
-from fiber.dphi.model.callback.manager import CallbackManager
+from fiber.dphi.model.ext.callback.manager import CallbackManager
 from fiber.dphi.model.ext.types.schema import BaseComponent
 
 

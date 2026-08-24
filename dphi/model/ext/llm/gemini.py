@@ -36,9 +36,9 @@ from fiber.dphi.model.ext.llm.model.types.block import (
     ToolCallBlock,
 )
 from fiber.dphi.model.mapper.pydantic import BaseModel, Field, PrivateAttr
-from fiber.dphi.model.callback.manager import CallbackManager
+from fiber.dphi.model.ext.callback.manager import CallbackManager
 from fiber.dphi.model.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
-from fiber.dphi.model.callback.manager import llm_chat_callback, llm_completion_callback
+from fiber.dphi.model.ext.callback.manager import llm_chat_callback, llm_completion_callback
 from fiber.dphi.model.ext.llm.model.funcall import FunctionCallingLLM
 from fiber.dphi.model.ext.llm.model.llm import ToolSelection, Model
 from fiber.dphi.model.ext.llm.handle.template import PromptTemplate
@@ -58,7 +58,7 @@ from fiber.dphi.model.ext.llm.handle.gemini import (
 import google.genai
 import google.auth
 import google.genai.types as types
-from fiber.dphi.model.callback.dispatcher import dispatcher
+from fiber.dphi.model.ext.callback.dispatcher import dispatcher
 
 DEFAULT_MODEL = "gemini-3-flash-preview"
 

@@ -1,4 +1,5 @@
-# phase.client.dphi.sdk
+# phase.client.sdk.dphi
+## @lineage: phase.client.dphi.sdk
 """
 @desc: DPHI Public Gateway SDK Core
 - Provides a zero-trust computing blackbox client for autonomous systems.

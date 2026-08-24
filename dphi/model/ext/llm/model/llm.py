@@ -46,7 +46,7 @@ from fiber.dphi.model.mapper.pydantic import (
     model_validator,
     ValidationError,
 )
-from fiber.dphi.model.callback.event import CBEventType, EventPayload
+from fiber.dphi.model.ext.callback.event import CBEventType, EventPayload
 from fiber.dphi.model.ext.llm.model.base import BaseLLM
 from fiber.dphi.model.ext.llm.handle.template import default_messages_to_prompt as generic_messages_to_prompt
 from fiber.dphi.model.ext.llm.handle.template import BasePromptTemplate, PromptTemplate
@@ -57,14 +57,14 @@ from fiber.dphi.model.ext.types.base import (
     TokenGen,
     Model,
 )
-from fiber.dphi.model.callback.event import (
+from fiber.dphi.model.ext.callback.event import (
     LLMPredictEndEvent,
     LLMPredictStartEvent,
     LLMStructuredPredictInProgressEvent,
     LLMStructuredPredictEndEvent,
     LLMStructuredPredictStartEvent,
 )
-from fiber.dphi.model.callback.dispatcher import dispatcher
+from fiber.dphi.model.ext.callback.dispatcher import dispatcher
 from fiber.dphi.model.ext.llm.model.types.block import ChatMessage
 
 if TYPE_CHECKING:

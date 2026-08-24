@@ -1,4 +1,4 @@
-# phase.client.dphi.usecase
+# phase.client.sdk.usecase
 """
 @desc: DPHI Usecase Simulator
 - Demonstrates how external agents integrate with the DphiPublicClient SDK.
@@ -6,7 +6,7 @@
 import time
 import asyncio
 import logging
-from fiber.phase.client.dphi.sdk import DphiPublicClient, CodebotIntent, LLMIntent
+from fiber.phase.client.sdk.dphi import DphiPublicClient, CodebotIntent, LLMIntent
 from xphi.watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 
 """PAYLOAD BUILDERS"""
