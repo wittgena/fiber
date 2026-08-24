@@ -1,14 +1,4 @@
 # dphi.pdoc.settlement
-제시해주신 `dphi.pdoc.settlement` 문서는 결제와 청산(Settlement) 관점에서 이미 훌륭한 뼈대를 갖추고 있습니다.
-
-다만, 앞서 우리가 아키텍처 오버뷰 문서에서 합의한 1) 트로이 목마 용어의 순화(표준 호환 인터페이스, 프로토콜 협상)와 2) `edge.llm` 및 통합 연료 경제(Unified Fuel Economy)의 개념이 이 청산 문서에도 일관성 있게 반영되어야 합니다.
-
-과격한 표현들을 정제하고, DPHI가 LLM 게이트웨이로서 작동할 때의 초고빈도 계량(Metering)과 HTTP 402 협상 로직을 자연스럽게 녹여내어 가독성과 엔터프라이즈 전문성을 극대화한 개선본입니다.
-
----
-
-# dphi.pdoc.settlement
-
 > **@desc:** DPHI 범용 암호학적 계량 및 청산 아키텍처 (Universal Cryptographic Metering & Settlement Architecture)
 
 ---
