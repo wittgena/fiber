@@ -1,5 +1,4 @@
-# dphi.workflow.billing
-## @lineage: dphi.bound.workflow.billing
+# dphi.workflow.defin
 import sys
 import json
 import asyncio
@@ -26,7 +25,7 @@ from xphi.kernel.dphi.runner.phase import SchemeRunner
 from xphi.watcher.plane.emitter import get_emitter
 from fiber.phase.tracer.intent.verifier import VerificationError
 
-log = get_emitter("dvm.cosm")
+log = get_emitter("workflow.defin")
 
 
 @dataclass
@@ -143,6 +142,9 @@ class CosmBillingWorkflow(Workflow):
                 cw20_balance_key = f"balance_{wallet.address}"
                 shadow_state = {cw20_balance_key: json.dumps(current_balance)}
                 
+                # 💡 [추가] Worker 시작 알림
+                self.log.info(f"    ├─ [Worker-{worker_id}] 🚀 Started with Budget: {budget} Fuel")
+                
                 for cycle in range(1, self.config.billing_cycles + 1):
                     # 1. 한도(Circuit Breaker) 체크
                     if current_balance < self.config.cost_per_call:
@@ -176,14 +178,13 @@ class CosmBillingWorkflow(Workflow):
                     
                     result = await self.broker.execute(code=cw_payload, tier=dphi_env.wasm.tier, context={})
                     
-                    # 3. 샌드박스 결과 검증 (오류 원인 수정)
+                    # 3. 샌드박스 결과 검증
                     if not result.success:
                         err_msg = result.output if result.output else str(result.error)
                         raise RuntimeError(f"Broker Execution Reverted: {err_msg}")
                     
                     try:
                         res_data = json.loads(result.output)
-                        # 속성 참조 에러 방지: 직접 해시 산출
                         result_hash = hashlib.sha256(result.output.encode('utf-8')).hexdigest()[:16]
                     except Exception as e:
                         raise RuntimeError(f"VM Output Parse Error: {e} | Raw: {result.output[:100]}")
@@ -210,6 +211,12 @@ class CosmBillingWorkflow(Workflow):
                     current_ptr = UtxoPointer(tx_hash, 1) # 인덱스 1번이 Change
                     current_balance -= self.config.cost_per_call
                     shadow_state[cw20_balance_key] = json.dumps(current_balance)
+                    
+                    # 💡 [추가] 개별 사이클의 실행 증명 로그 (Audit Trail)
+                    self.log.info(
+                        f"    │  └─ [Worker-{worker_id} | Cycle-{cycle}] ⚙️ WASM Hash: {result_hash} | "
+                        f"💸 Paid: {self.config.cost_per_call} Fuel | 💰 Remain: {current_balance} | 🔗 Tx: {tx_hash[:10]}..."
+                    )
                     
                 return current_ptr, current_balance, worker_txs
 
@@ -266,14 +273,20 @@ class CosmBillingWorkflow(Workflow):
             self.total_fuel_consumed = self.authorized_fuel_budget - total_change_amount
             self.net_debt_usdc = self.total_fuel_consumed / 1_000_000
             
-            self.log.info(f"  └ 🧲 Merged {len(merge_inputs)} unspent UTXOs into 1 final root.")
-            self.log.info(f"  └ 🧮 Net Debt         : {self.total_fuel_consumed} Fuel used -> Converted to {self.net_debt_usdc} USDC")
-            
             # 3. [MERKLE COMPRESSION] 모든 연산 및 결제 이력을 머클 트리로 압축 (Proof 생성)
-            self.log.info(f"  └ 🌳 Computing Merkle Root over {len(self.all_tx_hashes)} cryptographic transactions...")
             merkle_root = compute_merkle_root(self.all_tx_hashes)
             self.canonical_hash = merkle_root
-            self.log.info(f"  └ 💎 Final Merkle Root: {self.canonical_hash[:16]}...")
+            
+            # 💡 [개선] 증명 가능한 정산 영수증 렌더링
+            receipt = (
+                f"\n🧾 [STATE NETTING RECEIPT]\n"
+                f" ├─ 🏦 Initial Budget    : {self.authorized_fuel_budget} Fuel\n"
+                f" ├─ 🔄 Total Change(환불) : {total_change_amount} Fuel (From {len(merge_inputs)} Workers)\n"
+                f" ├─ 💸 Net Fuel Consumed : {self.total_fuel_consumed} Fuel\n"
+                f" ├─ 💵 L1 Debt Converted : {self.net_debt_usdc:.6f} USDC\n"
+                f" └─ 🌳 Merkle Root (Tx {len(self.all_tx_hashes)}) : {self.canonical_hash[:16]}..."
+            )
+            self.log.info(receipt)
             
             if self.total_fuel_consumed > self.authorized_fuel_budget or self.net_debt_usdc < 0:
                 raise VerificationError("Fuel calculation anomaly. Missing UTXO value detected.")
@@ -358,7 +371,16 @@ class CosmRunner(SchemeRunner):
                 self._record_fail(elapsed_ms, f"Expected error '{expected_error_match}' not found. Got: {error_output}", "Error Match", title=title)
                 return False
 
-        msg_str = "Receipt mathematically sealed & EVM formatted." if success else f"Circuit Breaker correctly halted execution: {expected_error_match}"
+        # 💡 [개선] 워크플로우 상태를 참조하여 최종 검증 리포트 출력
+        if success:
+            msg_str = (
+                f"Receipt mathematically sealed & EVM formatted. "
+                f"(Workers: {agents}, Txs: {len(workflow.all_tx_hashes)}, "
+                f"Debt: {workflow.net_debt_usdc} USDC, Root: {workflow.canonical_hash[:8]}...)"
+            )
+        else:
+            msg_str = f"Circuit Breaker correctly halted execution: {expected_error_match}"
+            
         self._record_success(elapsed_ms, msg_str)
         return True
 
