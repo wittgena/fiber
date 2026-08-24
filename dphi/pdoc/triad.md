@@ -1,5 +1,4 @@
 # dphi.pdoc.triad
-@lineage: abc.dphi.arch.triad
 @desc: dphi.wasm - Distributed Zero-Trust State Engine
 
 ---

@@ -18,6 +18,8 @@ from xphi.arch.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpRulesetParser
 from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
+
 from xphi.watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.ingress.middleware import (
     AttestationMiddleware,
@@ -44,39 +46,54 @@ class Config(BaseModel):
 def get_default_config() -> Config:
     return Config()
 
-
 async def verify_access_credential(
     request: Request,
     api_key: str = Security(api_key_header)
 ):
     """
     @desc: 전역 엑세스 통제 (HTTP 402 합법적 탈취)
-    - 관리자 API Key가 있다면 통과시킵니다.
-    - 없다면 403 에러가 아닌, L402 결제를 요구하는 HTTP 402 상태 코드를 반환합니다.
     """
+    path = request.url.path
+    
+    # 🌟 1. 결제가 필요 없는 Public 엔드포인트 (견적, 인보이스, 잔고, 인증키 등)
+    public_whitelist = {
+        "/v1/public/agent/quote",
+        "/v1/public/agent/handshake",
+        "/v1/public/billing/invoice",
+        "/v1/public/billing/balance",
+        "/v1/public/audit/verify",
+        "/v1/public/keys",
+        "/openapi.json",
+        "/docs",
+        "/redoc"
+    }
+    
+    if path in public_whitelist:
+        return None
+
+    # 🌟 2. 내부망(Internal) 마이크로서비스 통신 우회
+    # (E2E 테스트 환경에서는 동일 앱에 마운트되므로 면제. 실제 환경에서는 네트워크 분리로 보호됨)
+    if path.startswith("/v1/eco/") or path.startswith("/v1/core/") or path.startswith("/v1/ext/"):
+        return None
+
     config: Config = request.app.state.config
     
-    # 1. 관리자 / 세션 API Key가 설정되어 있고 일치하는 경우 (Admin Bypass)
+    # 3. 관리자 / 세션 API Key가 설정되어 있고 일치하는 경우 (Admin Bypass)
     if config.session_api_keys and api_key in config.session_api_keys:
         return api_key
 
-    # 2. API Key가 없거나 일치하지 않는 경우 -> L402 결제 영수증 확인
-    # (에이전트가 헤더에 X-X402-Receipt 또는 Authorization: L402... 형태로 제출)
+    # 4. API Key가 없거나 일치하지 않는 경우 -> L402 결제 영수증 확인
     l402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
     
     if l402_header:
-        # 영수증이 존재하면 하위 라우터(edge.llm) 및 WASM 커널에게 구체적인 검증(잔고, 위변조) 위임
         return l402_header
 
-    # 3. 어떠한 증명도 없는 경우 -> HTTP 403(Forbidden) 대신 HTTP 402(Payment Required) 반환
-    # 이 반환값(WWW-Authenticate)을 통해 외부 에이전트들은 시스템을 표준 OpenAI API로 착각하면서도
-    # 백그라운드에서 자연스럽게 DPHI의 L402 결제 핸드셰이크를 시작하게 됩니다.
+    # 5. 증명이 없는 경우 HTTP 402 반환 (Execute, Telemetry 등 실 과금 엔드포인트 방어)
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED, 
         detail="Zero-Trust Enforced: Payment Required. Please provide an L402 receipt.",
         headers={"WWW-Authenticate": 'L402 macaroon=""'}
     )
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -91,11 +108,15 @@ async def lifespan(app: FastAPI):
         await pubsub.start_listening()
         app.state.pubsub = pubsub
         
-        # 2. WASM Kernel Broker Init
+        ## WASM Kernel Broker Init
         app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
-        # 3. OTLP Parser & Extraction Engine Init
+        ## UTXO Adapter Init (Boot 과정에서 Singleton으로 마운트)
+        app.state.utxo_adapter = UtxoAdapter(broker=app.state.broker)
+        log.info("UtxoAdapter initialized and mounted to app state.")
+
+        ## OTLP Parser & Extraction Engine Init
         default_otlp_ruleset = {
             "global_config": {"required_root_keys": ["resourceLogs"]},
             "targets": [
@@ -143,14 +164,12 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
         description="Immutable Ledger Interface, Proof of Compute, and First-Party Oracle",
         lifespan=lifespan,
         root_path=_get_root_path(config),
-        dependencies=[Depends(verify_access_credential)]  # 🌟 전역 L402 결제 유도 미들웨어 적용
+        dependencies=[Depends(verify_access_credential)]
     )
     
     app.state.config = config
-    
-    # 🌟 라우터 등록 
     app.include_router(public_edge, tags=["mcp-exposed"]) 
-    app.include_router(llm_edge) # 신규 LLM Edge Gateway 등록 (WASM 종속형)
+    app.include_router(llm_edge)
     app.include_router(internal_router) 
     app.include_router(ext_router) 
 

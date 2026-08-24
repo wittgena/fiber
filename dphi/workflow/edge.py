@@ -1,5 +1,4 @@
 # dphi.workflow.edge
-## @lineage: dphi.bound.workflow.edge
 import asyncio
 import hashlib
 import random
@@ -29,7 +28,7 @@ from xphi.watcher.wasm.builder import WasmBuilder
 
 log = get_emitter("workflow.edge")
 
-# 🌟 [신규 추가] Read & Verify 대칭성을 위한 신규 워크플로우 메시지
+# 🌟 Read & Verify 대칭성을 위한 신규 워크플로우 메시지
 class StartSceneMsg(WorkflowMessage): pass
 class AgentQuoteMsg(WorkflowMessage): pass
 class BillingInvoiceMsg(WorkflowMessage): pass
@@ -183,7 +182,6 @@ class EdgeWorkflow(Workflow):
             
         return AgentQuoteMsg() 
 
-    # 🌟 [신규 추가] 견적 시스템 테스트 (Compute)
     @step
     async def phase_agent_quote(self, msg: AgentQuoteMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 1.5] Public Agent Pre-flight Quotation (Dry-run) ---")
@@ -191,14 +189,19 @@ class EdgeWorkflow(Workflow):
         payload = self.scene_config.agent_intent_builder(self.inject_faults)
         expected_status = 422 if self.inject_faults else 200
         
+        # [정합성 맞춤] edge.public의 조건부 티어 로직에 맞추어, Negative Path 일 때 유료(Premium) 궤도를 강제하기 위해 더미 영수증 주입
+        headers = {}
+        if self.inject_faults:
+            headers = {"X-X402-Receipt": "dummy_receipt_to_trigger_premium_validation"}
+        
         self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
         try:
-            res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload)
+            res = await self.runner.client.post(f"{self.runner.base_url}{path}", json=payload, headers=headers)
             if res.status_code == expected_status:
                 self.log.info(f"  └─ ✅ Passed: Dry-run quotation handled correctly.")
                 self.runner.success_count += 1
             else:
-                self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+                self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
                 self.runner.fail_count += 1
                 return ErrorMessage(f"Quote Check Failed: Expected {expected_status}, Got {res.status_code}")
         except Exception as e:
@@ -206,7 +209,6 @@ class EdgeWorkflow(Workflow):
             
         return BillingInvoiceMsg()
 
-    # 🌟 [신규 추가] 송장 발급 시스템 테스트 (Economy)
     @step
     async def phase_billing_invoice(self, msg: BillingInvoiceMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 1.6] Public L402 Invoice Generation ---")
@@ -217,7 +219,7 @@ class EdgeWorkflow(Workflow):
             "resource_id": f"res_{uuid.uuid4().hex[:8]}"
         }
         if self.inject_faults:
-            payload.pop("amount_usdc") # 필드 누락으로 422 에러 유도
+            payload.pop("amount_usdc") 
         expected_status = 422 if self.inject_faults else 200
         
         self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
@@ -227,13 +229,12 @@ class EdgeWorkflow(Workflow):
             self.log.info(f"  └─ ✅ Passed: Invoice generation handled correctly.")
             self.runner.success_count += 1
         else:
-            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
             self.runner.fail_count += 1
             return ErrorMessage(f"Invoice Issue Check Failed: Got {res.status_code}")
             
         return BillingBalanceMsg()
 
-    # 🌟 [신규 추가] 잔고 조회 시스템 테스트 (Economy)
     @step
     async def phase_billing_balance(self, msg: BillingBalanceMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 1.7] Public UTXO Hot State Balance Read ---")
@@ -250,7 +251,7 @@ class EdgeWorkflow(Workflow):
             self.log.info(f"  └─ ✅ Passed: Balance read handled correctly.")
             self.runner.success_count += 1
         else:
-            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
             self.runner.fail_count += 1
             return ErrorMessage(f"Balance Check Failed: Got {res.status_code}")
             
@@ -281,7 +282,6 @@ class EdgeWorkflow(Workflow):
                 self.log.info(f"  └─ ✅ Passed: Received {res.status_code} as expected.")
                 self.runner.success_count += 1
                 
-                # 🌟 [신규 추가] 정상 처리 시 발급받은 영수증을 다음 Verification 단계에서 쓰기 위해 저장
                 if not self.inject_faults:
                     self.state_roots["audit_receipt"] = res.json()
             else:
@@ -296,22 +296,25 @@ class EdgeWorkflow(Workflow):
             
         return AuditVerifyMsg()
 
-    # 🌟 [신규 추가] 영수증 진위 검증 시스템 테스트 (Compliance)
     @step
     async def phase_audit_verify(self, msg: AuditVerifyMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 2.5] AuditReceipt Verification (Auditor Validation) ---")
         path = "/v1/public/audit/verify"
         
-        # 앞선 Execute 단계에서 저장한 영수증을 꺼냄
         receipt = self.state_roots.get("audit_receipt", {})
         if not receipt and not self.inject_faults:
             self.log.warning("  └─ ⚠️ No receipt found from previous step. Skipping verification.")
             return OtlpIngressMsg()
             
         if self.inject_faults:
+            # 고의로 필드를 누락시켜 WASM의 422 Rejection 유도
             receipt = {"state_root": "0x_tampered_root_hash_for_chaos", "receipt_id": "fake_123"}
-            expected_status = 422  # Parity Verification 실패 유도
+            expected_status = 422 
         else:
+            # Rust WASM 커널이 요구하는 ParityRequest 필드 명시적 주입
+            receipt["topos_id_low32"] = 1
+            receipt["phase_id"] = 2
+            receipt["nexus_id"] = 3
             expected_status = 200
             
         self.log.info(f"  └─ Sending POST to {path} (Expected: {expected_status})")
@@ -321,7 +324,7 @@ class EdgeWorkflow(Workflow):
             self.log.info(f"  └─ ✅ Passed: Cryptographic verification handled correctly.")
             self.runner.success_count += 1
         else:
-            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}.")
+            self.log.error(f"  └─ ❌ Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
             self.runner.fail_count += 1
             return ErrorMessage(f"Audit Verify Check Failed: Got {res.status_code}")
             
@@ -372,7 +375,7 @@ class EdgeWorkflow(Workflow):
             self.runner.success_count += 1
         else:
              self.runner.fail_count += 1
-             return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code}")
+             return ErrorMessage(f"D3Fi Ingress Check Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
              
         if not self.inject_faults:
             self.state_roots["exchange_root"] = res.json().get("session", {}).get("topo_id", f"d3fi_{uuid.uuid4().hex[:8]}")
@@ -393,7 +396,7 @@ class EdgeWorkflow(Workflow):
             self.runner.success_count += 1
         else:
             self.runner.fail_count += 1
-            return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code}")
+            return ErrorMessage(f"Ledger Append Failed: Expected {expected_status}, Got {res.status_code}. Body: {res.text}")
             
         if not self.inject_faults:
             self.state_roots["ledger_root"] = res.json().get("result", {}).get("hash", "0x_default_ledger_hash")

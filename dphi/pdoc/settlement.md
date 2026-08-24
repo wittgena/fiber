@@ -31,7 +31,7 @@ DPHI는 투명한 리버스 프록시(Transparent Reverse Proxy) 역할을 수�
 
 ## 3. 핵심 엔진 컴포넌트 (Core Engine Components)
 
-### 3.1. 표준 호환 LLM 게이트웨이 (`edge.llm`) [NEW]
+### 3.1. 표준 호환 LLM 게이트웨이 (`edge.llm`)
 
 세상에서 가장 널리 쓰이는 산업 표준 API(OpenAI 규격 등)를 완벽히 지원하는 보안 라우터입니다. 클라이언트의 비결정론적 LLM 요청을 WASM 커널의 결정론적 연산 의도(Compute Intent)와 결속(Binding)시킵니다. 인메모리 상계 엔진과 직접 연동되어 예산 초과 감지 시 스트림 커넥션을 즉각적으로 안전하게 차단(Physical Kill-switch)합니다.
 

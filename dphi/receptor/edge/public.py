@@ -1,4 +1,3 @@
-# dphi.receptor.edge.public
 """
 @desc: DPHI Edge Public Gateway
 - Orchestrates WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts.
@@ -72,12 +71,7 @@ class AgentHandshakeResponse(BaseModel):
     next_action: str = "POST /v1/public/agent/execute with X-X402-Receipt header"
 
 
-"""
-=============================================================================
-1. BASE INFRASTRUCTURE (TRUST ANCHOR)
-=============================================================================
-"""
-
+"""BASE INFRASTRUCTURE (TRUST ANCHOR)"""
 @public_edge.get(
     "/keys", 
     summary="Get Trusted Signer Keys (Strictly Pre-Signed)",
@@ -108,39 +102,69 @@ async def get_public_keys():
     )
 
 
-"""
-=============================================================================
-2. COMPUTE SYMMETRY (QUOTE ↔ EXECUTE)
-=============================================================================
-"""
-
+"""COMPUTE SYMMETRY (QUOTE ↔ EXECUTE)"""
 @public_edge.post(
     "/agent/quote", 
     summary="Get Pre-flight Execution Quotation (Dry-run)"
 )
 async def public_agent_quote(
     intent: CodebotIntent,
+    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="Payment proof receipt (L402/X402)"),
     internal_url: str = Depends(get_internal_edge_url)
 ):
     """
     @desc: WASM 샌드박스에서 시뮬레이션을 돌려 예상되는 연료(Fuel) 소모량과 과금액을 사전 확인합니다.
+    - 무료 티어 (영수증 없음): 서명 검증을 생략하고 기본 견적 시뮬레이션만 수행
+    - 유료 티어 (영수증 있음): 사전 인텐트 및 서명 진위 여부 엄격 검증 (실패 시 422)
     """
-    exec_req = {
-        "agent_schema": {
-            "runtime": "python3.11-wasm",
-            "files": {"main.py": intent.source_code}, 
-            "limits": {"max_fuel": intent.max_fuel}
-        },
-        "target_entry": "main.py",
-        "context_depth": 2
-    }
-    
     async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
+        # 🌟 1. 유료/프리미엄 티어: 결제 영수증이 첨부된 경우 서명 및 인텐트 엄격 검증
+        if x_x402_receipt:
+            val_req = IntentValidationRequest(
+                requester_id=intent.agent_id,
+                responder_id=intent.responder_id or "edge-gateway-01",
+                action=intent.action,
+                max_fuel_budget=intent.max_fuel,
+                signature=intent.signature,
+                payment_receipt=x_x402_receipt
+            )
+            val_res = await internal_client.post(
+                "/v1/eco/compute/intent/validate", 
+                json=val_req.model_dump(exclude_none=True)
+            )
+            if val_res.status_code != 200:
+                log.warning(f"[Quote] Premium intent verification failed: {val_res.text}")
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                    detail=f"Intent Validation Failed: {val_res.text}"
+                )
+
+        # 🌟 2. 견적 시뮬레이션 요청 조립
+        exec_req = {
+            "agent_schema": {
+                "runtime": "python3.11-wasm",
+                "files": {"main.py": intent.source_code}, 
+                "limits": {"max_fuel": intent.max_fuel}
+            },
+            "target_entry": "main.py",
+            "context_depth": 2
+        }
+        
         try:
             res = await internal_client.post("/v1/eco/profile/quote", json=exec_req)
             if res.status_code != 200:
-                raise HTTPException(res.status_code, detail=f"Quotation Failed: {res.text}")
-            return res.json()
+                raise HTTPException(status_code=res.status_code, detail=f"Quotation Failed: {res.text}")
+            
+            quote_data = res.json()
+            
+            # 🌟 3. 내부 샌드박스에서 거절(REJECTED)된 경우 422 상태코드로 방어
+            if quote_data.get("status") == "QUOTE_REJECTED":
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Quotation Rejected: {quote_data.get('reason', 'Unknown execution policy violation')}"
+                )
+                
+            return quote_data
         except httpx.RequestError as e:
             log.error(f"Internal Network Error to {internal_url}: {e}")
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"Internal Edge Network Down ({internal_url})")
@@ -234,12 +258,7 @@ async def public_agent_execute(
                 raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, f"Internal Edge Network Down ({internal_url})")
 
 
-"""
-=============================================================================
-3. ECONOMY SYMMETRY (INVOICE ↔ BALANCE & HANDSHAKE)
-=============================================================================
-"""
-
+"""ECONOMY SYMMETRY (INVOICE ↔ BALANCE & HANDSHAKE)"""
 @public_edge.post(
     "/agent/handshake", 
     summary="Agent Pre-flight Handshake (Quote & Invoice)",
@@ -338,13 +357,7 @@ async def public_get_balance(
             log.error(f"Internal Network Error to {internal_url}: {e}")
             raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Internal Edge Network Down")
 
-
-"""
-=============================================================================
-4. COMPLIANCE SYMMETRY (RECORD ↔ VERIFY)
-=============================================================================
-"""
-
+"""COMPLIANCE SYMMETRY (RECORD ↔ VERIFY)"""
 @public_edge.post(
     "/telemetry/logs", 
     tags=["Log Ingress"], 
