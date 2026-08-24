@@ -16,7 +16,7 @@ from fiber.agent.loop.conv.command import TransitionStatus
 from fiber.agent.loop.runtime.protocol.step import StepHandler, StepContext, ActivatorProtocol
 from fiber.agent.llm.driver.facade import MessageBuilder, LLMFacade
 
-from xphi.arch.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.context.status import ConverStatus
 from xphi.watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

@@ -12,8 +12,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.dphi.adapter.config import dphi_env
-from xphi.arch.topos.network.bridge import RpcBridge
-from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.phase.reactor import PhaseReactor
 
 from xphi.kernel.dphi.adapter.state import StateAdapter

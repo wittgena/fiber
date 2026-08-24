@@ -10,7 +10,7 @@ from fiber.phase.flow.imports.aligner import RelativeImportAligner
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.phase.runtime.executor.cli import CliTaskAdapter, parse_local, dispatch_cli
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("align.plane", phase="SYSTEM")

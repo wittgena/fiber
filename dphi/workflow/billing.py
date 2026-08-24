@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 from fiber.dphi.adapter.config import dphi_env
 from fiber.dphi.adapter.anchor import NotarySwarm
 
-from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.dphi.adapter.shadow import ShadowAdapter
 from xphi.kernel.dphi.adapter.utxo import (
     UtxoAdapter, UtxoPointer, UtxoInput, UtxoOutput, UtxoTransaction,

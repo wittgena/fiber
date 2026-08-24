@@ -13,8 +13,8 @@ from fiber.dphi.receptor.edge.internal import internal_router
 from fiber.dphi.receptor.edge.ext import ext_router
 from fiber.dphi.receptor.edge.llm import llm_edge
 
-from xphi.arch.topos.tunnel.factory import TunnelFactory
-from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpRulesetParser
 from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.kernel.dphi.broker import DphiBroker

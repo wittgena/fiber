@@ -7,7 +7,7 @@ import asyncio
 
 from fiber.phase.kernel.signal import PhaseSignal
 
-from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.arch.contract.event.bus import AsyncEventBus
 from xphi.arch.contract.executor import BaseExecutor
 from xphi.arch.contract.registry.unified import registry

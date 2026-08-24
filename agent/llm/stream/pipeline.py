@@ -2,7 +2,7 @@
 ## @lineage: ator.driver.llm.stream.pipeline
 import time
 from typing import Any
-from xphi.arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
+from xphi.kernel.space.topos.network.channel.pipeline import DuplexChannel, ChannelContext
 from fiber.agent.llm.stream.parser.chunk import StreamChunkParser
 from fiber.agent.llm.stream.accumulator import StreamAccumulator
 from fiber.agent.llm.stream.rule import Rules

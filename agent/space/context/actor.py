@@ -20,10 +20,10 @@ from fiber.agent.loop.runtime.exception.types import ConversationRunError
 from fiber.agent.loop.conv.command import TransitionStatus
 
 from xphi.arch.xor.stream.conv import LogStore
-from xphi.arch.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.context.status import ConverStatus
 from xphi.arch.xor.stream.store.file import LocalFileStore
 from xphi.arch.model.payload import StreamPayloadAdapter
-from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.observer.span import observe
 from xphi.watcher.plane.emitter import get_emitter
 

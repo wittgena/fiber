@@ -23,11 +23,11 @@ from fiber.phase.agent.topos.ator import Ator
 from fiber.agent.loop.runtime.protocol.step import StepHandler, StepContext
 
 from xphi.arch.model.conv.event import Event
-from xphi.arch.topos.context.status import ConverStatus
-from xphi.arch.topos.node.state.compiler import StateCompiler
-from xphi.arch.topos.node.state.projector import StateProjector
-from xphi.arch.topos.node.state.schema import FragmentSig
-from xphi.arch.topos.tunnel.factory import UniversalFacade
+from xphi.kernel.space.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.node.state.compiler import StateCompiler
+from xphi.kernel.space.topos.node.state.projector import StateProjector
+from xphi.kernel.space.topos.node.state.schema import FragmentSig
+from xphi.kernel.space.topos.tunnel.factory import UniversalFacade
 from xphi.watcher.plane.observer.span import observe, should_enable_observability
 from xphi.watcher.plane.emitter import get_emitter
 

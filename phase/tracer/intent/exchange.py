@@ -16,8 +16,8 @@ from xphi.watcher.ingress.sentinel import RpcChaosInjector
 
 from xphi.arch.contract.event.next import generate_parity_triplet, next_phase_id
 from xphi.arch.model.phase.gate import uuid4
-from xphi.arch.topos.network.bridge import RpcBridge
-from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 
 from xphi.kernel.dphi.eco.settlement import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
 from fiber.phase.client.ext.wallet import EthWalletAdapter

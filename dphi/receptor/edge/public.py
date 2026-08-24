@@ -1,3 +1,4 @@
+# dphi.receptor.edge.public
 """
 @desc: DPHI Edge Public Gateway
 - Orchestrates WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts.
@@ -23,7 +24,7 @@ from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_pubsub, get_otl
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod

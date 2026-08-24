@@ -27,7 +27,7 @@ from collections import Counter
 from typing import TypedDict, List, Dict, Any
 from dataclasses import dataclass, asdict
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 
 class LogicTransformer:
     """

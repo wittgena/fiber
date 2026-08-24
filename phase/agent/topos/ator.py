@@ -24,7 +24,7 @@ from fiber.agent.loop.conv.action.factory import CoreAction
 from fiber.agent.loop.conv.action.resolver import ActionResolver
 
 from xphi.arch.model.payload import StreamPayloadAdapter
-from xphi.arch.topos.tunnel.factory import UniversalFacade
+from xphi.kernel.space.topos.tunnel.factory import UniversalFacade
 from xphi.arch.model.surge.disc import DiscMixin
 from xphi.watcher.plane.emitter import get_emitter
 

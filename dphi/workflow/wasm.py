@@ -11,8 +11,8 @@ from xphi.watcher.wasm.builder import WasmBuilder
 import fiber.dphi.workflow.scene as scene_module
 from xphi.watcher.wasm.tester import WasmTester
 
-from xphi.arch.topos.tunnel.factory import TunnelFactory
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

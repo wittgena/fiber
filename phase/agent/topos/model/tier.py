@@ -16,7 +16,7 @@ from pathlib import Path
 from collections import deque
 from typing import Dict, List, Optional, Any
 
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("tier.registry", phase="SYSTEM")

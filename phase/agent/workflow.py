@@ -11,8 +11,8 @@ from fiber.phase.agent.topos.scope.manager import FlowTransition, ToposControlle
 from fiber.phase.agent.topos.model.tier import model_tier_registry
 
 from xphi.arch.model.surge.blueprint import SurgeBlueprint
-from xphi.arch.topos.node.gan import Message
-from xphi.arch.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
+from xphi.kernel.space.topos.node.gan import Message
+from xphi.kernel.space.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.cgroup import Tier

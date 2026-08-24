@@ -10,8 +10,8 @@ import httpx
 from typing import Optional, Any, Dict, List
 
 # Arch & Topos Imports
-from xphi.arch.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
-from xphi.arch.topos.network.channel.codec import JsonMessageCodec
+from xphi.kernel.space.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
+from xphi.kernel.space.topos.network.channel.codec import JsonMessageCodec
 
 # Watcher Imports
 from xphi.watcher.plane.metric.scale.emitter import IScaleAdapter

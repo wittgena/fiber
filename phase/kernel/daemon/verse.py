@@ -10,7 +10,7 @@ from typing import Callable, Optional, Dict, Any
 
 from xphi.arch.local.llm import LLMEngine
 
-from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.daemon.bootstrap import TOPIC_BUS_STREAM, KEY_HEARTBEAT_PATTERN
 from xphi.watcher.plane.emitter import get_emitter
 

@@ -11,7 +11,7 @@ import json
 import random
 from typing import Dict, Any, Optional, Set
 
-from xphi.arch.topos.tunnel.factory import TunnelFactory, UniversalFacade, from_url
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory, UniversalFacade, from_url
 from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier
 from xphi.arch.contract.event.next import next_id
 

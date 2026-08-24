@@ -36,9 +36,9 @@ from fiber.agent.loop.conv.command import TransitionStatus, UpdateSecurityPolicy
 from fiber.agent.space.context.actor import Actor
 from fiber.agent.llm.driver.facade import MessageBuilder, LLMFacade
 
-from xphi.arch.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.context.status import ConverStatus
 from xphi.arch.contract.resolver.secret import SecretValue
-from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

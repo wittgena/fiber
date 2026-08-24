@@ -9,8 +9,8 @@ from typing import List, Callable
 from pathlib import Path
 
 from xphi.arch.contract.registry.unified import contract
-from xphi.arch.topos.node.discovery import NodeDiscovery
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.topos.node.discovery import NodeDiscovery
+from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.phase.commit import anchor_commit, Attractor, EpochManager
 from xphi.kernel.phase.runtime.flow.executor import dispatch_flow_cli

@@ -20,7 +20,7 @@ from xphi.arch.contract.interface import IPhaseField, ICriticalDetector, ISystem
 from xphi.kernel.phase.runtime.executor.dynamics import DynamicsExecutor
 from xphi.kernel.phase.runtime.node import NodeRuntime
 from xphi.kernel.phase.runtime.flow.cont import LoopCarrier
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("ator.node")

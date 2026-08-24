@@ -13,7 +13,7 @@ from fiber.dphi.adapter.config import dphi_env
 from xphi.kernel.dphi.eco.settlement import EcoAdapter
 from fiber.phase.tracer.intent.exchange import DvmRpcBridge, NodeIdentity
 
-from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.arch.contract.event.next import generate_parity_triplet
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.broker import DphiMethod

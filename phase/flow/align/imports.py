@@ -7,7 +7,7 @@ from pathlib import Path
 from fiber.phase.flow.imports.aligner import PrefixImportAligner
 
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.phase.runtime.executor.cli import CliTaskAdapter, parse_local, dispatch_cli
 from xphi.watcher.plane.emitter import get_emitter
 

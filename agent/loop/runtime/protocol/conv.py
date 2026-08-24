@@ -15,8 +15,8 @@ from fiber.agent.loop.conv.security import SecurityAnalyzerBase
 from fiber.agent.loop.conv.command import StateCommand
 # from agent.loop.ator import Ator
 
-from xphi.arch.topos.context.space import BaseWorkspace
-from xphi.arch.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.context.space import BaseWorkspace
+from xphi.kernel.space.topos.context.status import ConverStatus
 from xphi.arch.model.conv.event import Event, EventID
 from xphi.arch.xor.stream.conv import LogStore
 from xphi.arch.contract.resolver.secret import SecretRegistry

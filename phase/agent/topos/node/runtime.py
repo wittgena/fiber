@@ -12,8 +12,8 @@ from fiber.agent.llm.driver.model import LLMModel
 from fiber.agent.anchor.config.agent import AgentConfig
 from fiber.agent.space.action.tool import Tool
 
-from xphi.arch.topos.node.gan import Message, GanNode
-from xphi.arch.topos.node.event import AgentConfigured
+from xphi.kernel.space.topos.node.gan import Message, GanNode
+from xphi.kernel.space.topos.node.event import AgentConfigured
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("runtime.node")

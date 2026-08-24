@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
-from xphi.arch.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.context.status import ConverStatus
 
 @dataclass(kw_only=True)
 class StateCommand:

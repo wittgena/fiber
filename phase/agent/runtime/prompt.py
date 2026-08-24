@@ -24,7 +24,7 @@ from xphi.arch.contract.model.graph import EntryNode
 from xphi.arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
 from xphi.arch.contract.resolver.secret import SecretSource, SecretValue
 
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("resolver.context")
