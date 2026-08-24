@@ -13,7 +13,7 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.phase.client.wallet import LocalWalletClient
+from fiber.dphi.client.wallet import LocalWalletClient
 from fiber.dphi.adapter.config import dphi_env
 from xphi.kernel.dphi.exchange.transaction import TransactionReceipt
 

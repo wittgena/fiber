@@ -1,4 +1,5 @@
-# dphi.pdoc.triad
+# phase.doc.triad
+@lineage: dphi.pdoc.triad
 @desc: dphi.wasm - Distributed Zero-Trust State Engine
 
 ---

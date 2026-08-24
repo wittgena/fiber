@@ -1,4 +1,5 @@
-# phase.client.mcp.action
+# dphi.client.mcp.action
+## @lineage: phase.client.mcp.action
 ## @lineage: bound.client.mcp.action
 ## @lineage: bound.adapter.mcp.action
 ## @lineage: agent.protocol.tool.mcp
@@ -14,7 +15,7 @@ from fiber.agent.loop.conv.action.builder import ActionAnnotations, ActionDefini
 from fiber.agent.space.action.executor import ActionExecutor
 from fiber.agent.space.action.mcp import MCPAction, MCPObservation
 
-from fiber.phase.client.mcp.client import MCPClient
+from fiber.dphi.client.mcp.client import MCPClient
 
 from xphi.arch.model.surge.disc import DiscMixin
 from xphi.watcher.plane.observer.span import observe

@@ -1,4 +1,5 @@
-# dphi.pdoc.edge.llm
+# phase.doc.edge.llm
+@lineage: dphi.pdoc.edge.llm
 **@desc:** Zero-Trust LLM Gateway, Kernel Authorization Ingress & Ecosystem Integration for DPHI
 
 ---

@@ -7,7 +7,7 @@ import io
 import struct
 from typing import Tuple, Union
 
-from fiber.phase.client.http import get_client, SafeHttpClient
+from fiber.dphi.client.http import get_client, SafeHttpClient
 from fiber.dphi.model.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,

@@ -6,7 +6,7 @@ import httpx
 
 from fiber.agent.llm.param import ModelResponse
 from fiber.agent.llm.execution import CompletionContext 
-from fiber.phase.client.http import get_client
+from fiber.dphi.client.http import get_client
 
 from xphi.watcher.plane.emitter import get_emitter
 

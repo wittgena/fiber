@@ -1,4 +1,5 @@
-# phase.client.sdk.dphi
+# dphi.client.sdk.dphi
+## @lineage: phase.client.sdk.dphi
 ## @lineage: phase.client.dphi.sdk
 """
 @desc: DPHI Public Gateway SDK Core
@@ -11,7 +12,7 @@ from dataclasses import dataclass, asdict
 from typing import Dict, Any, Optional, List
 import httpx
 
-from fiber.phase.client.http import VerifiedHttpClient
+from fiber.dphi.client.http import VerifiedHttpClient
 from xphi.watcher.receptor.contract.model import AuditLogRequest, ExportLogsServiceRequest
 
 class PublicEndpoints:

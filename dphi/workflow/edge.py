@@ -14,7 +14,7 @@ from eth_account.messages import encode_defunct
 
 from fiber.dphi.adapter.config import dphi_env
 from fiber.dphi.receptor.rest import create_app, Config
-from fiber.phase.client.http import VerifiedHttpClient
+from fiber.dphi.client.http import VerifiedHttpClient
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.dphi.runner.phase import WebRunner

@@ -1,4 +1,5 @@
-# phase.client.ext.wallet
+# dphi.client.ext.wallet
+## @lineage: phase.client.ext.wallet
 ## @lineage: bound.client.ext.wallet
 ## @lineage: ator.client.ext.wallet
 ## @lineage: bound.eco.wallet.eth
@@ -8,7 +9,7 @@ import asyncio
 import time
 from typing import Optional
 
-from fiber.phase.client.ext.evm import Web3Adapter
+from fiber.dphi.client.ext.evm import Web3Adapter
 from fiber.dphi.adapter.config import dphi_env
 from xphi.watcher.plane.emitter import get_emitter
 

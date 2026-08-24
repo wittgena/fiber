@@ -1,4 +1,5 @@
-# phase.client.mcp.exception
+# dphi.client.mcp.exception
+## @lineage: phase.client.mcp.exception
 ## @lineage: bound.client.mcp.exception
 ## @lineage: bound.adapter.mcp.exception
 ## @lineage: agent.protocol.mcp.exception

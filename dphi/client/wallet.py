@@ -1,4 +1,5 @@
-# phase.client.wallet
+# dphi.client.wallet
+## @lineage: phase.client.wallet
 ## @lineage: bound.client.wallet
 ## @lineage: ator.client.wallet
 ## @lineage: ator.client.local.wallet

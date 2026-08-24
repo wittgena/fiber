@@ -20,8 +20,8 @@ from xphi.kernel.space.topos.network.bridge import RpcBridge
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 
 from xphi.kernel.dphi.eco.settlement import Ap2MandateResult, EcoAdapter, SettlementPayload, X402SettlementReceipt
-from fiber.phase.client.ext.wallet import EthWalletAdapter
-from fiber.phase.client.ext.evm import Web3Adapter
+from fiber.dphi.client.ext.wallet import EthWalletAdapter
+from fiber.dphi.client.ext.evm import Web3Adapter
 
 from xphi.kernel.phase.inter.dvm import DvmInterpreter
 from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
