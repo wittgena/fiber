@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional, Union
 from enum import Enum
 import httpx
 import openai
-from agent.loop.runtime.exception.types import LLMContextWindowExceedError, LLMMalformedConversationHistoryError
+from fiber.agent.loop.runtime.exception.types import LLMContextWindowExceedError, LLMMalformedConversationHistoryError
 
 LONG_PROMPT_PATTERNS: list[str] = [
     "contextwindowexceedederror",

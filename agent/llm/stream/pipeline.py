@@ -2,11 +2,11 @@
 ## @lineage: ator.driver.llm.stream.pipeline
 import time
 from typing import Any
-from arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
-from agent.llm.stream.parser.chunk import StreamChunkParser
-from agent.llm.stream.accumulator import StreamAccumulator
-from agent.llm.stream.rule import Rules
-from agent.anchor.model.types.stream import ModelResponseStream
+from xphi.arch.topos.network.channel.pipeline import DuplexChannel, ChannelContext
+from fiber.agent.llm.stream.parser.chunk import StreamChunkParser
+from fiber.agent.llm.stream.accumulator import StreamAccumulator
+from fiber.agent.llm.stream.rule import Rules
+from fiber.agent.anchor.model.types.stream import ModelResponseStream
 
 class ChunkCodecHandler(DuplexChannel):
     """1단계: 원시 데이터를 파싱하고 Accumulator를 통해 ModelResponseStream 조립"""

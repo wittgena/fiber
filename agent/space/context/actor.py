@@ -7,28 +7,28 @@ from pathlib import Path
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from agent.loop.conv.state import ConversationState
+from fiber.agent.loop.conv.state import ConversationState
 
-from agent.space.action.action import Action, Observation
-from agent.llm.driver.event.message import MessageEvent
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from agent.llm.driver.event.system import SystemPromptEvent
-from agent.llm.driver.event.conv import ConversationErrorEvent, PauseEvent
-from agent.loop.conv.action.factory import CoreAction
-from agent.loop.runtime.exception.types import ConversationRunError
-from agent.loop.conv.command import TransitionStatus
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.llm.driver.event.message import MessageEvent
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from fiber.agent.llm.driver.event.system import SystemPromptEvent
+from fiber.agent.llm.driver.event.conv import ConversationErrorEvent, PauseEvent
+from fiber.agent.loop.conv.action.factory import CoreAction
+from fiber.agent.loop.runtime.exception.types import ConversationRunError
+from fiber.agent.loop.conv.command import TransitionStatus
 
-from arch.xor.stream.conv import LogStore
-from arch.topos.context.status import ConverStatus
-from arch.xor.stream.store.file import LocalFileStore
-from arch.model.payload import StreamPayloadAdapter
-from arch.topos.tunnel.factory import TunnelFactory
-from watcher.plane.observer.span import observe
-from watcher.plane.emitter import get_emitter
+from xphi.arch.xor.stream.conv import LogStore
+from xphi.arch.topos.context.status import ConverStatus
+from xphi.arch.xor.stream.store.file import LocalFileStore
+from xphi.arch.model.payload import StreamPayloadAdapter
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.watcher.plane.observer.span import observe
+from xphi.watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
-    from agent.loop.conv.context import ConvContext
+    from fiber.agent.loop.conv.context import ConvContext
     convType = ConvContext | Any
 else:
     convType = Any

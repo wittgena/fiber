@@ -10,9 +10,9 @@ import json
 from typing import Optional, Dict, Any, List, Tuple, Union
 from enum import Enum
 
-from agent.loop.conv.action.factory import CoreAction
-from arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
-from watcher.plane.emitter import get_emitter
+from fiber.agent.loop.conv.action.factory import CoreAction
+from xphi.arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("context.blueprint")
 

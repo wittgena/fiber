@@ -11,9 +11,9 @@ from typing import List, Set
 from redis.asyncio import Redis
 import psutil
 
-from kernel.phase.reactor import PhaseReactor
-from kernel.daemon.task.supervisor import TaskSupervisor
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.kernel.daemon.task.supervisor import TaskSupervisor
+from xphi.watcher.plane.emitter import get_emitter
 
 DEFAULT_TARGET_TAGS = [
     "phase.kernel",

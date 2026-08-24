@@ -11,12 +11,12 @@ from typing import Optional, Dict, Any, AsyncGenerator, List, Union
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from arch.topos.tunnel.surface import SurfaceMQ, SurfaceClient
-from arch.xor.parser.ruleset import LifecycleRegexParser, AuditRulesetParser, CompiledEngine
-from arch.xor.parser.block.contract import Contract, CoherenceState
-from kernel.bind.resolver import resolve_path
-from watcher.tracer.bound import SystemBound, log_streamer
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.tunnel.surface import SurfaceMQ, SurfaceClient
+from xphi.arch.xor.parser.ruleset import LifecycleRegexParser, AuditRulesetParser, CompiledEngine
+from xphi.arch.xor.parser.block.contract import Contract, CoherenceState
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.watcher.tracer.bound import SystemBound, log_streamer
+from xphi.watcher.plane.emitter import get_emitter
 
 log_flow = get_emitter("block.flow")
 log_phi = get_emitter("phi.flow")

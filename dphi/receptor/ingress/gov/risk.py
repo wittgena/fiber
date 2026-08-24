@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Literal, Optional, Union, Annotated
 from pydantic import BaseModel, Field, ConfigDict
 from fastapi import HTTPException, status
 
-from watcher.receptor.contract.promise import future, Promise, NotYetCrystallized
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.receptor.contract.promise import future, Promise, NotYetCrystallized
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("audit.gov")
 

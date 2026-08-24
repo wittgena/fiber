@@ -6,9 +6,9 @@ import hashlib
 from typing import Dict, Any, List, Optional, Mapping
 from dataclasses import dataclass, asdict
 
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.adapter.sign import NodeSigner
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.watcher.plane.emitter import get_emitter
 
 """@phase.1: Core Domain Entities (Immutable Data Structures)"""
 @dataclass(frozen=True)

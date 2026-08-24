@@ -14,15 +14,15 @@ from tenacity import (
     wait_exponential,
 )
 
-from agent.loop.runtime.exception.types import LLMNoResponseError
-from agent.loop.runtime.exception.eco import (
+from fiber.agent.loop.runtime.exception.types import LLMNoResponseError
+from fiber.agent.loop.runtime.exception.eco import (
     APIConnectionError,
     InternalServerError,
     RateLimitError,
     ServiceUnavailableError,
     Timeout,
 )
-from watcher.plane.emitter import get_logger
+from xphi.watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)
 

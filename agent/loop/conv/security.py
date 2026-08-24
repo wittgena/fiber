@@ -4,12 +4,12 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, Any
 
-from agent.llm.driver.event.action import ActionEvent
-from arch.model.conv.security.eval import SecurityRisk
+from fiber.agent.llm.driver.event.action import ActionEvent
+from xphi.arch.model.conv.security.eval import SecurityRisk
 
-from arch.model.conv.event import Event
-from arch.model.surge.disc import DiscMixin
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.conv.event import Event
+from xphi.arch.model.surge.disc import DiscMixin
+from xphi.watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)
 

@@ -6,8 +6,8 @@
 import os
 from abc import ABC, abstractmethod
 
-from arch.xor.bridge.terminal import NO_CHANGE_TIMEOUT_SECONDS
-from agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
+from xphi.arch.xor.bridge.terminal import NO_CHANGE_TIMEOUT_SECONDS
+from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
 
 class TerminalInterface(ABC):
     work_dir: str

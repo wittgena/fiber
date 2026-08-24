@@ -14,14 +14,14 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from phase.client.mcp.action import MCPActionDefinition
+from fiber.phase.client.mcp.action import MCPActionDefinition
 
-from agent.anchor.config.mcp import MCPConfig
-from phase.client.mcp.exception import MCPTimeoutError
-from phase.client.mcp.client import MCPClient
+from fiber.agent.anchor.config.mcp import MCPConfig
+from fiber.phase.client.mcp.exception import MCPTimeoutError
+from fiber.phase.client.mcp.client import MCPClient
 
-from arch.contract.event.next import LogEvent
-from watcher.plane.emitter import get_emitter
+from xphi.arch.contract.event.next import LogEvent
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

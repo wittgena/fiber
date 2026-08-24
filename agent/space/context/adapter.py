@@ -19,27 +19,27 @@ from jinja2 import (
     TemplateNotFound,
 )
 
-from agent.space.action.action import Action, Observation
-from agent.llm.driver.event.message import MessageEvent
-from agent.llm.driver.event.observation import UserRejectObservation
-from agent.space.action.types import ConversationID
-from agent.llm.driver.model import LLMModel
-from agent.space.action.message import Message, TextContent
-from agent.loop.conv.stats import ConversationStats
-from agent.loop.conv.security import SecurityAnalyzerBase
-from arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.llm.driver.event.message import MessageEvent
+from fiber.agent.llm.driver.event.observation import UserRejectObservation
+from fiber.agent.space.action.types import ConversationID
+from fiber.agent.llm.driver.model import LLMModel
+from fiber.agent.space.action.message import Message, TextContent
+from fiber.agent.loop.conv.stats import ConversationStats
+from fiber.agent.loop.conv.security import SecurityAnalyzerBase
+from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
 
-from agent.loop.runtime.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
-from agent.loop.runtime.protocol.conv import ProtoConv, EngineContextProtocol
-from agent.loop.runtime.protocol.conv import ConvStateProtocol
-from agent.loop.conv.command import TransitionStatus, UpdateSecurityPolicy
-from agent.space.context.actor import Actor
-from agent.llm.driver.facade import MessageBuilder, LLMFacade
+from fiber.agent.loop.runtime.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
+from fiber.agent.loop.runtime.protocol.conv import ProtoConv, EngineContextProtocol
+from fiber.agent.loop.runtime.protocol.conv import ConvStateProtocol
+from fiber.agent.loop.conv.command import TransitionStatus, UpdateSecurityPolicy
+from fiber.agent.space.context.actor import Actor
+from fiber.agent.llm.driver.facade import MessageBuilder, LLMFacade
 
-from arch.topos.context.status import ConverStatus
-from arch.contract.resolver.secret import SecretValue
-from arch.topos.tunnel.factory import TunnelFactory
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.context.status import ConverStatus
+from xphi.arch.contract.resolver.secret import SecretValue
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
@@ -263,7 +263,7 @@ class SecurityManager:
         log.info("Security analyzer updated.")
 
     def reject_pending_actions(self, reason: str = "User rejected the action") -> None:
-        from agent.loop.conv.state import ConversationState
+        from fiber.agent.loop.conv.state import ConversationState
         state = self._context.state
         pending_actions = ConversationState.get_unmatched_actions(state.events)
         

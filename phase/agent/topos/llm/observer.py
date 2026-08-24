@@ -6,11 +6,11 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from collections import defaultdict
 
-from agent.anchor.model.metric import Metrics
-from agent.anchor.llm.param import ModelResponse
+from fiber.agent.anchor.model.metric import Metrics
+from fiber.agent.llm.param import ModelResponse
 
-from arch.model.phase.gate import uuid4
-from watcher.plane.emitter import get_emitter, _flow_context
+from xphi.arch.model.phase.gate import uuid4
+from xphi.watcher.plane.emitter import get_emitter, _flow_context
 
 log = get_emitter("driver.observer")
 

@@ -4,7 +4,7 @@
 import urllib.parse
 from typing import Dict, Any, Optional
 
-from watcher.tracer.scope import get_current_trace_path
+from xphi.watcher.tracer.scope import get_current_trace_path
 
 class InfraRouter:
     def __init__(self, host_url: str, session_api_key: Optional[str] = None):

@@ -14,15 +14,15 @@ from pydantic import Field, ConfigDict, computed_field, field_validator, field_s
 from pydantic.json_schema import SkipJsonSchema
 from openai.types.responses import FunctionToolParam
 
-from agent.space.action.action import Action, Observation, Schema
-from arch.model.conv.security.eval import SecurityRisk
-from agent.anchor.llm.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
-from agent.space.action.tool import Tool
-from agent.space.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
+from fiber.agent.space.action.action import Action, Observation, Schema
+from xphi.arch.model.conv.security.eval import SecurityRisk
+from fiber.agent.llm.param import ChatCompletionToolParam, ChatCompletionToolParamFunctionChunk
+from fiber.agent.space.action.tool import Tool
+from fiber.agent.space.action.executor import ActionExecutor, ExecutableTool, ActionT, ObservationT
 
-from arch.model.surge.model import SurgeBaseModel
-from arch.model.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.surge.model import SurgeBaseModel
+from xphi.arch.model.surge.disc import DiscMixin, kind_of, get_known_concrete_subclasses
+from xphi.watcher.plane.emitter import get_logger
 
 def camel_to_snake(name: str) -> str:
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)

@@ -16,9 +16,9 @@ import difflib
 import libcst as cst
 from typing import List, Tuple
 from pathlib import Path
-from arch.model.phase.aligner import PhaseAligner, AlignRecord
-from phase.flow.imports.transformer import ImportTransformer, RelativeImportTransformer
-from watcher.plane.emitter import get_emitter, flow_scope
+from xphi.arch.model.phase.aligner import PhaseAligner, AlignRecord
+from fiber.phase.flow.imports.transformer import ImportTransformer, RelativeImportTransformer
+from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 def generate_diff(original: str, modified: str, filename: str) -> str:
     """원본 코드와 수정된 코드 간의 Unified Diff를 생성합니다."""

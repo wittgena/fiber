@@ -10,26 +10,26 @@ from typing import TYPE_CHECKING, Dict, Any, Optional
 from pathlib import Path
 from pydantic import Field, ValidationError, model_validator
 
-from agent.space.action.action import Action, Observation
-from agent.space.action.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.message import MessageEvent
-from agent.llm.driver.event.system import SystemPromptEvent, TokenEvent
-from agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
-from agent.llm.driver.response import LLMResponse
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.space.action.message import Message, MessageToolCall, ReasoningItemModel, RedactedThinkingBlock, TextContent, ThinkingBlock
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.message import MessageEvent
+from fiber.agent.llm.driver.event.system import SystemPromptEvent, TokenEvent
+from fiber.agent.llm.driver.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from fiber.agent.llm.driver.response import LLMResponse
 
-from agent.loop.conv.action.parser import format_context_exceeded_message, ActionParser
-from phase.agent.topos.ator import Ator
-from agent.loop.runtime.protocol.step import StepHandler, StepContext
+from fiber.agent.loop.conv.action.parser import format_context_exceeded_message, ActionParser
+from fiber.phase.agent.topos.ator import Ator
+from fiber.agent.loop.runtime.protocol.step import StepHandler, StepContext
 
-from arch.model.conv.event import Event
-from arch.topos.context.status import ConverStatus
-from arch.topos.node.state.compiler import StateCompiler
-from arch.topos.node.state.projector import StateProjector
-from arch.topos.node.state.schema import FragmentSig
-from arch.topos.tunnel.factory import UniversalFacade
-from watcher.plane.observer.span import observe, should_enable_observability
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.conv.event import Event
+from xphi.arch.topos.context.status import ConverStatus
+from xphi.arch.topos.node.state.compiler import StateCompiler
+from xphi.arch.topos.node.state.projector import StateProjector
+from xphi.arch.topos.node.state.schema import FragmentSig
+from xphi.arch.topos.tunnel.factory import UniversalFacade
+from xphi.watcher.plane.observer.span import observe, should_enable_observability
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 INIT_STATE_PREFIX_SCAN_WINDOW = 3
@@ -184,7 +184,7 @@ class Activator(Ator):
                 break
 
     async def _emit_event_to_gov(self, event: Any, tunnel: UniversalFacade, response_topic: str, snapshot: Optional[AgentStateSnapshot] = None) -> None:
-        from arch.model.payload import StreamPayloadAdapter 
+        from xphi.arch.model.payload import StreamPayloadAdapter 
         
         payload_raw = None
         current_topo = len(snapshot.events) if snapshot else 0

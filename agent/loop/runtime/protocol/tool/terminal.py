@@ -10,16 +10,16 @@ from pydantic import Field
 from rich.text import Text
 
 if TYPE_CHECKING:
-    from agent.loop.runtime.protocol.conv import ConvStateProtocol
+    from fiber.agent.loop.runtime.protocol.conv import ConvStateProtocol
 
-from agent.space.action.executor import ActionExecutor
-from agent.loop.conv.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
-from agent.space.action.message import ImageContent, TextContent
-from agent.space.action.action import Action, Observation
+from fiber.agent.space.action.executor import ActionExecutor
+from fiber.agent.loop.conv.action.builder import DeclaredResources, ActionAnnotations, ActionDefinition
+from fiber.agent.space.action.message import ImageContent, TextContent
+from fiber.agent.space.action.action import Action, Observation
 
-from arch.xor.parser.mark.truncate import maybe_truncate
-from arch.xor.bridge.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
-from arch.xor.bridge.terminal import CmdOutputMetadata
+from xphi.arch.xor.parser.mark.truncate import maybe_truncate
+from xphi.arch.xor.bridge.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS
+from xphi.arch.xor.bridge.terminal import CmdOutputMetadata
 
 class TerminalAction(Action):
     """Schema for bash command execution."""
@@ -196,7 +196,7 @@ class TerminalTool(ActionDefinition[TerminalAction, TerminalObservation]):
             return [tool_instance]
 
         # conv_state가 주어지면 실제 환경 바인딩 (Gov 런타임용)
-        from agent.space.terminal.executor import TerminalExecutor
+        from fiber.agent.space.terminal.executor import TerminalExecutor
 
         working_dir = conv_state.workspace.working_dir
         if not os.path.isdir(working_dir):

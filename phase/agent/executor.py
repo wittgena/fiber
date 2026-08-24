@@ -1,35 +1,31 @@
 # phase.agent.executor
-## @lineage: agent.nexus.executor
-## @lineage: nexus.agent.executor
-## @lineage: meta.agent.executor
-## @lineage: agent.loop.executor
 import asyncio
 import json
 from typing import Optional, Dict, Any, List, Callable
 
-from phase.agent.runtime.prompt import BlueprintCompiler
+from fiber.phase.agent.runtime.prompt import BlueprintCompiler
 
-from agent.space.manager import SandboxWorkspace, SandboxProxy 
-from agent.space.context.adapter import AgentCommunicator, ExecutionController
-from agent.space.action.tool import Tool
+from fiber.agent.space.manager import SandboxWorkspace, SandboxProxy 
+from fiber.agent.space.context.adapter import AgentCommunicator, ExecutionController
+from fiber.agent.space.action.tool import Tool
 
-from agent.loop.runtime.protocol.tool.terminal import TerminalTool
-from agent.loop.activator import Activator
-from agent.loop.conv.state import ConversationState
-from agent.loop.conv.visual.context import ConversationVisualizer
-from agent.loop.conv.action.factory import CoreAction
-from agent.loop.conv.action.resolver import ActionResolver
-from agent.loop.organizer import EvalReflector, TensionHandler, LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalTool
+from fiber.agent.loop.activator import Activator
+from fiber.agent.loop.conv.state import ConversationState
+from fiber.agent.loop.conv.visual.context import ConversationVisualizer
+from fiber.agent.loop.conv.action.factory import CoreAction
+from fiber.agent.loop.conv.action.resolver import ActionResolver
+from fiber.agent.loop.organizer import EvalReflector, TensionHandler, LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from fiber.phase.tracer.router import InfraRouter
 
-from arch.model.conv.event import LLMConvertibleEvent
-from arch.contract.model.graph import EntryNode
-from arch.topos.node.gan import Message, GanNode
-from arch.contract.event.next import next_id
-from arch.topos.tunnel.factory import TunnelFactory
-from arch.topos.node.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
-from kernel.bind.resolver import resolve_path
-from phase.tracer.router import InfraRouter
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.conv.event import LLMConvertibleEvent
+from xphi.arch.contract.model.graph import EntryNode
+from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.arch.contract.event.next import next_id
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.arch.topos.node.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
+from xphi.kernel.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("loop.executor")
 WORKSPACE_ROOT = resolve_path("workspace")

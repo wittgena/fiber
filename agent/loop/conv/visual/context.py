@@ -9,17 +9,17 @@ from rich.console import Console, Group
 from rich.rule import Rule
 from rich.text import Text
 
-from agent.llm.driver.event.acp import ACPToolCallEvent
-from agent.llm.driver.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.message import MessageEvent
-from agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from agent.llm.driver.event.system import SystemPromptEvent
-from agent.loop.conv.stats import ConversationStats
+from fiber.agent.llm.driver.event.acp import ACPToolCallEvent
+from fiber.agent.llm.driver.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.message import MessageEvent
+from fiber.agent.llm.driver.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from fiber.agent.llm.driver.event.system import SystemPromptEvent
+from fiber.agent.loop.conv.stats import ConversationStats
 
-from agent.loop.runtime.protocol.conv import ConvStateProtocol
+from fiber.agent.loop.runtime.protocol.conv import ConvStateProtocol
 
-from arch.model.conv.event import Event
+from xphi.arch.model.conv.event import Event
 
 logger = logging.getLogger(__name__)
 

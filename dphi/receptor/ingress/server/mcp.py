@@ -12,10 +12,10 @@ from starlette.types import Scope, Receive, Send
 
 from mcp_types import TextContent
 from mcp.server.mcpserver.server import MCPServer
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
-from watcher.ingress.sentinel import SpecValidator
-from watcher.receptor.policy.gateway import ToposGateway
+from xphi.watcher.ingress.sentinel import SpecValidator
+from xphi.watcher.receptor.policy.gateway import ToposGateway
 
 log = get_emitter("server.mcp", phase="DEFENSE")
 

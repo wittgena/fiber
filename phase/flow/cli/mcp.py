@@ -25,7 +25,7 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.server.lowlevel.server import Server as LowLevelServer
 
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 try:
     import dotenv

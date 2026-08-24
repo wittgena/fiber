@@ -6,9 +6,9 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
-    from agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
-    from agent.loop.runtime.protocol.terminal.session import TerminalSessionBase
+    from fiber.agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
+    from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalAction, TerminalObservation
+    from fiber.agent.loop.runtime.protocol.terminal.session import TerminalSessionBase
 
 
 class ExecutionContext:

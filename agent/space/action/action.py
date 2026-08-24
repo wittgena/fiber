@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 from pydantic import ConfigDict, Field, create_model
 from rich.text import Text
 
-from agent.space.action.message import ImageContent, TextContent
-from agent.space.action.message import content_to_str
+from fiber.agent.space.action.message import ImageContent, TextContent
+from fiber.agent.space.action.message import content_to_str
 
-from arch.model.surge.disc import DiscMixin
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.surge.disc import DiscMixin
+from xphi.watcher.plane.emitter import get_logger
 
 if TYPE_CHECKING:
     from typing import Self

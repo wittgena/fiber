@@ -4,8 +4,8 @@
 from __future__ import annotations
 from typing import Any
 from rich.text import Text
-from arch.model.conv.event import Event
-from arch.model.conv.event import SourceType
+from xphi.arch.model.conv.event import Event
+from xphi.arch.model.conv.event import SourceType
 
 _MAX_DISPLAY_CHARS = 500
 

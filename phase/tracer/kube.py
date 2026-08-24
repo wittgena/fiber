@@ -10,13 +10,13 @@ import httpx
 from typing import Optional, Any, Dict, List
 
 # Arch & Topos Imports
-from arch.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
-from arch.topos.network.channel.codec import JsonMessageCodec
+from xphi.arch.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
+from xphi.arch.topos.network.channel.codec import JsonMessageCodec
 
 # Watcher Imports
-from watcher.plane.metric.scale.emitter import IScaleAdapter
-from watcher.plane.emitter import get_emitter
-from watcher.tracer.bound import BaseBoundary, BaseStreamAuditor, BaseAuditor
+from xphi.watcher.plane.metric.scale.emitter import IScaleAdapter
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.tracer.bound import BaseBoundary, BaseStreamAuditor, BaseAuditor
 
 
 # =====================================================================

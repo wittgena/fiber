@@ -1,6 +1,4 @@
 # agent.llm.driver.facade
-## @lineage: ator.driver.llm.facade
-## @lineage: agent.loop.llm.facade
 from __future__ import annotations
 
 import asyncio
@@ -10,29 +8,31 @@ from collections.abc import Sequence
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
-from agent.anchor.model.info import get_features
-from agent.anchor.model.metric import MetricsSnapshot
+from fiber.agent.anchor.model.info import get_features
+from fiber.agent.anchor.model.metric import MetricsSnapshot
 
-from agent.loop.runtime.exception.mapping import map_provider_exception
-from agent.loop.runtime.exception.types import LLMNoResponseError
-from agent.anchor.llm.entry import acompletion as brane_acompletion
-from agent.llm.stream.wrapper import StreamWrapper
-from agent.anchor.llm.param import (
+from fiber.agent.loop.runtime.exception.mapping import map_provider_exception
+from fiber.agent.loop.runtime.exception.types import LLMNoResponseError
+from fiber.agent.llm.entry import acompletion as brane_acompletion
+from fiber.agent.llm.stream.wrapper import StreamWrapper
+from fiber.agent.llm.param import (
     ModelResponseStream, 
     ModelResponse, 
     ChatCompletionToolParam
 )
-from agent.space.action.message import Message
-from agent.space.action.types import TokenCallbackType, ConversationTokenCallbackType
-from agent.llm.driver.response import LLMResponse
-from agent.llm.driver.model import LLMModel
-from agent.llm.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
+from fiber.agent.space.action.message import Message
+from fiber.agent.space.action.types import TokenCallbackType, ConversationTokenCallbackType
+from fiber.agent.llm.driver.response import LLMResponse
+from fiber.agent.llm.driver.model import LLMModel
+from fiber.agent.llm.driver.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS
 
-from agent.loop.conv.action.builder import ActionDefinition
-from agent.loop.conv.view import View
+from fiber.agent.loop.conv.action.builder import ActionDefinition
+from fiber.agent.loop.conv.view import View
 
-from arch.model.conv.event import Event, LLMConvertibleEvent
-from watcher.plane.emitter import get_emitter
+# 🌟 수정 포인트: ActionEvent 임포트 추가 (기반 모델에서 이쪽으로 로직 이동)
+from xphi.arch.model.conv.event import Event, LLMConvertibleEvent
+from fiber.agent.llm.driver.event.action import ActionEvent
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.facade")
 
@@ -81,15 +81,65 @@ class MessageBuilder:
             for message in messages
         ]
 
+    # 🌟 추가됨: 병렬 액션 이벤트 압축 로직
     @staticmethod
+    def _combine_action_events(events: list[ActionEvent]) -> Message:
+        if len(events) == 1:
+            return events[0].to_llm_message()
+            
+        for e in events[1:]:
+            assert len(e.thought) == 0, (
+                "Expected empty thought for multi-action events after the first one"
+            )
+
+        return Message(
+            role="assistant",
+            content=events[0].thought,  # Shared thought content only in the first event
+            tool_calls=[event.tool_call for event in events],
+            reasoning_content=events[0].reasoning_content,  # Shared reasoning content
+            thinking_blocks=events[0].thinking_blocks,  # Shared thinking blocks
+        )
+
+    # 🌟 추가됨: 이벤트를 LLM 메시지로 변환하는 로직 (기반 모델에서 탈출!)
+    @classmethod
+    def events_to_messages(cls, events: Sequence[LLMConvertibleEvent]) -> list[Message]:
+        messages = []
+        i = 0
+
+        while i < len(events):
+            event = events[i]
+            if isinstance(event, ActionEvent):
+                batch_events: list[ActionEvent] = [event]
+                response_id = event.llm_response_id
+
+                j = i + 1
+                while j < len(events) and isinstance(events[j], ActionEvent):
+                    next_event = events[j]
+                    if next_event.llm_response_id != response_id:
+                        break
+                    batch_events.append(next_event)
+                    j += 1
+
+                messages.append(cls._combine_action_events(batch_events))
+                i = j
+            else:
+                messages.append(event.to_llm_message())
+                i += 1
+        return messages
+
+    # 🌟 수정됨: @staticmethod에서 @classmethod로 변경하여 자기 자신의 events_to_messages 호출
+    @classmethod
     def prepare_llm_messages(
+        cls,
         events: Sequence[Event],
         additional_messages: list[Message] | None = None,
         llm: LLMModel | None = None,
     ) -> list[Message]:
         log.debug("[message.builder] prepare_llm_messages")
         view = View.from_events(events)
-        messages = LLMConvertibleEvent.events_to_messages(view.events)
+        
+        # 🌟 기반 계층 호출이 아닌, MessageBuilder 자체 포맷팅 로직 호출
+        messages = cls.events_to_messages(view.events)
         
         if additional_messages:
             messages.extend(additional_messages)
@@ -232,7 +282,7 @@ class DriverIO:
                         final_response = accumulator.get_complete_response()
 
                         if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:
-                            from agent.anchor.model.token.counter import calculate_fallback_usage
+                            from fiber.agent.anchor.model.token.counter import calculate_fallback_usage
                             
                             content = final_response.choices[0].message.content or ""
                             fallback_usage = calculate_fallback_usage(

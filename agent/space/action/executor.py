@@ -8,8 +8,8 @@ from typing import (
     Protocol,
     TypeVar,
 )
-from agent.space.action.action import Action, Observation
-from agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.loop.runtime.protocol.context import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)
 ObservationT = TypeVar("ObservationT", bound=Observation)

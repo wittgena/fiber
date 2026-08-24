@@ -5,8 +5,8 @@ from types import MappingProxyType
 from typing import ClassVar, TYPE_CHECKING
 from uuid import uuid4
 from pydantic import BaseModel, ConfigDict
-from agent.llm.driver.model import LLMModel
-from watcher.plane.emitter import get_logger
+from fiber.agent.llm.driver.model import LLMModel
+from xphi.watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)
 

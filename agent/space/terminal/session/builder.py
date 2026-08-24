@@ -22,21 +22,21 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, runtime_checkable, Liter
 import anyio
 from anyio.from_thread import start_blocking_portal
 
-from agent.llm.driver.event.observation import AgentErrorEvent
-from agent.loop.runtime.protocol.tool.terminal import TerminalObservation
-from agent.loop.runtime.protocol.terminal.context import (
+from fiber.agent.llm.driver.event.observation import AgentErrorEvent
+from fiber.agent.loop.runtime.protocol.tool.terminal import TerminalObservation
+from fiber.agent.loop.runtime.protocol.terminal.context import (
     ExecutionContext,
     ExecutionEngine,
     ExecutionMiddleware,
 )
 
 if TYPE_CHECKING:
-    from agent.llm.driver.event.action import ActionEvent
-    from agent.loop.conv.action.builder import DeclaredResources, ActionDefinition
+    from fiber.agent.llm.driver.event.action import ActionEvent
+    from fiber.agent.loop.conv.action.builder import DeclaredResources, ActionDefinition
 
-from arch.model.conv.event import Event
-from arch.xor.secret.redact import redact_string
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.conv.event import Event
+from xphi.arch.xor.secret.redact import redact_string
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
@@ -397,21 +397,21 @@ def create_terminal_session(
 ): # Type hint for return 'TerminalSession' is removed locally to avoid circular import, handled dynamically
     
     # Lazy imports to avoid circular dependencies with session & terminal modules
-    from agent.loop.runtime.protocol.terminal.session import TerminalSession
+    from fiber.agent.loop.runtime.protocol.terminal.session import TerminalSession
 
     if terminal_type:
         # Force specific session type
         if terminal_type == "tmux":
             if not _is_tmux_available():
                 raise RuntimeError("Tmux is not available on this system")
-            from agent.space.terminal.tmux.interface import TmuxTerminal
+            from fiber.agent.space.terminal.tmux.interface import TmuxTerminal
 
             log.info("Using forced TmuxTerminal")
             terminal = TmuxTerminal(work_dir, username)
             return TerminalSession(terminal, no_change_timeout_seconds)
             
         elif terminal_type == "subprocess":
-            from agent.space.terminal.backend import SubprocessTerminal
+            from fiber.agent.space.terminal.backend import SubprocessTerminal
 
             log.info("Using forced SubprocessTerminal")
             terminal = SubprocessTerminal(work_dir, username, shell_path)
@@ -426,13 +426,13 @@ def create_terminal_session(
     else:
         # On Unix-like systems, prefer tmux if available, otherwise use subprocess
         if _is_tmux_available():
-            from agent.space.terminal.tmux.interface import TmuxTerminal
+            from fiber.agent.space.terminal.tmux.interface import TmuxTerminal
 
             log.info("Auto-detected: Using TmuxTerminal (tmux available)")
             terminal = TmuxTerminal(work_dir, username)
             return TerminalSession(terminal, no_change_timeout_seconds)
         else:
-            from agent.space.terminal.backend import SubprocessTerminal
+            from fiber.agent.space.terminal.backend import SubprocessTerminal
             _tmux_warning = (
                 "tmux is not installed. Falling back to subprocess-based"
                 " terminal, which may be less stable. For best agent"

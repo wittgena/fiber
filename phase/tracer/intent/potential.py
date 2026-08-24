@@ -8,16 +8,16 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from dphi.bound.config import dphi_env
+from fiber.dphi.adapter.config import dphi_env
 
-from kernel.dphi.eco.settlement import EcoAdapter
-from phase.tracer.intent.exchange import DvmRpcBridge, NodeIdentity
+from xphi.kernel.dphi.eco.settlement import EcoAdapter
+from fiber.phase.tracer.intent.exchange import DvmRpcBridge, NodeIdentity
 
-from arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from arch.contract.event.next import generate_parity_triplet
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.broker import DphiMethod
-from watcher.plane.emitter import get_emitter
+from xphi.arch.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.arch.contract.event.next import generate_parity_triplet
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.broker import DphiMethod
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("intent.potential")
 

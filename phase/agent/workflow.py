@@ -1,7 +1,4 @@
 # phase.agent.workflow
-## @lineage: agent.nexus.workflow
-## @lineage: nexus.agent.workflow
-## @lineage: meta.agent.workflow
 from __future__ import annotations
 
 import argparse
@@ -9,18 +6,18 @@ import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 
-from phase.agent.runtime.blueprint import BlueprintType, TaskResolver, BLUEPRINT_REGISTRY
-from phase.agent.topos.scope.manager import FlowTransition, ToposController, managed_scope
-from phase.agent.topos.model.tier import model_tier_registry
+from fiber.phase.agent.runtime.blueprint import BlueprintType, TaskResolver, BLUEPRINT_REGISTRY
+from fiber.phase.agent.topos.scope.manager import FlowTransition, ToposController, managed_scope
+from fiber.phase.agent.topos.model.tier import model_tier_registry
 
-from arch.model.surge.blueprint import SurgeBlueprint
-from arch.topos.node.gan import Message
-from arch.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
-from kernel.phase.reactor import PhaseReactor
-from kernel.dphi.broker import DphiBroker
-from kernel.dphi.cgroup import Tier
-from kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.surge.blueprint import SurgeBlueprint
+from xphi.arch.topos.node.gan import Message
+from xphi.arch.topos.workflow import Workflow, WorkflowMessage, StopMessage, ErrorMessage, step
+from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.cgroup import Tier
+from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("agent.workflow")
 

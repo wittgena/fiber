@@ -6,9 +6,9 @@ from typing import Annotated
 import typer
 from eth_account import Account
 
-from kernel.dphi.adapter.state import StateAdapter
-from kernel.dphi.adapter.sign import NodeSigner
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.watcher.plane.emitter import get_emitter
 
 # --- Loggers ---
 log_genkey = get_emitter("evm.genkey")

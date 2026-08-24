@@ -23,17 +23,17 @@ from typing import Final
 
 import libtmux
 
-from watcher.plane.emitter import get_logger
-from agent.space.terminal.session.builder import sanitized_env
-from arch.xor.bridge.terminal import (
+from xphi.watcher.plane.emitter import get_logger
+from fiber.agent.space.terminal.session.builder import sanitized_env
+from xphi.arch.xor.bridge.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
 )
-from agent.space.terminal.tmux.interface import TmuxTerminal
-from kernel.bind.resolver import find_current_self, get_invoker
-from watcher.plane.emitter import get_emitter
+from fiber.agent.space.terminal.tmux.interface import TmuxTerminal
+from xphi.kernel.bind.resolver import find_current_self, get_invoker
+from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")

@@ -26,8 +26,8 @@ from pathlib import Path
 from collections import Counter
 from typing import TypedDict, List, Dict, Any
 from dataclasses import dataclass, asdict
-from watcher.plane.emitter import get_emitter
-from kernel.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.kernel.bind.resolver import resolve_path
 
 class LogicTransformer:
     """

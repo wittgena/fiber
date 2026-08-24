@@ -4,26 +4,27 @@ from contextlib import asynccontextmanager
 from typing import Optional
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security, Request, status
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
-from dphi.receptor.edge.public import public_edge
-from dphi.receptor.edge.internal import internal_router
-from dphi.receptor.edge.ext import ext_router
+from fiber.dphi.receptor.edge.public import public_edge
+from fiber.dphi.receptor.edge.internal import internal_router
+from fiber.dphi.receptor.edge.ext import ext_router
+from fiber.dphi.receptor.edge.llm import llm_edge
 
-from arch.topos.tunnel.factory import TunnelFactory
-from arch.topos.tunnel.subs import DistributedPubSub
-from arch.xor.parser.otlp import StrictOtlpRulesetParser
-from arch.xor.stream.edge import LogStreamStore
-from kernel.dphi.broker import DphiBroker
-from watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
-from watcher.ingress.middleware import (
+from xphi.arch.topos.tunnel.factory import TunnelFactory
+from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.arch.xor.parser.otlp import StrictOtlpRulesetParser
+from xphi.arch.xor.stream.edge import LogStreamStore
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.watcher.ingress.mcp import SecureMCPServer, SentinelFirewallMiddleware
+from xphi.watcher.ingress.middleware import (
     AttestationMiddleware,
     LocalMiddleware,
     WasTelemetry,
 )
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
@@ -44,16 +45,37 @@ def get_default_config() -> Config:
     return Config()
 
 
-async def verify_api_key(
-    request: Request,  # 🌟 Request 객체를 통해 주입된 상태(State)에 접근
+async def verify_access_credential(
+    request: Request,
     api_key: str = Security(api_key_header)
 ):
+    """
+    @desc: 전역 엑세스 통제 (HTTP 402 합법적 탈취)
+    - 관리자 API Key가 있다면 통과시킵니다.
+    - 없다면 403 에러가 아닌, L402 결제를 요구하는 HTTP 402 상태 코드를 반환합니다.
+    """
     config: Config = request.app.state.config
-    if not config.session_api_keys:
-        return None
-    if api_key not in config.session_api_keys:
-        raise HTTPException(status_code=403, detail="Invalid or missing API Key.")
-    return api_key
+    
+    # 1. 관리자 / 세션 API Key가 설정되어 있고 일치하는 경우 (Admin Bypass)
+    if config.session_api_keys and api_key in config.session_api_keys:
+        return api_key
+
+    # 2. API Key가 없거나 일치하지 않는 경우 -> L402 결제 영수증 확인
+    # (에이전트가 헤더에 X-X402-Receipt 또는 Authorization: L402... 형태로 제출)
+    l402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
+    
+    if l402_header:
+        # 영수증이 존재하면 하위 라우터(edge.llm) 및 WASM 커널에게 구체적인 검증(잔고, 위변조) 위임
+        return l402_header
+
+    # 3. 어떠한 증명도 없는 경우 -> HTTP 403(Forbidden) 대신 HTTP 402(Payment Required) 반환
+    # 이 반환값(WWW-Authenticate)을 통해 외부 에이전트들은 시스템을 표준 OpenAI API로 착각하면서도
+    # 백그라운드에서 자연스럽게 DPHI의 L402 결제 핸드셰이크를 시작하게 됩니다.
+    raise HTTPException(
+        status_code=status.HTTP_402_PAYMENT_REQUIRED, 
+        detail="Zero-Trust Enforced: Payment Required. Please provide an L402 receipt.",
+        headers={"WWW-Authenticate": 'L402 macaroon=""'}
+    )
 
 
 @asynccontextmanager
@@ -121,11 +143,14 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
         description="Immutable Ledger Interface, Proof of Compute, and First-Party Oracle",
         lifespan=lifespan,
         root_path=_get_root_path(config),
-        dependencies=[Depends(verify_api_key)]  # 글로벌 API Key 인증 강제
+        dependencies=[Depends(verify_access_credential)]  # 🌟 전역 L402 결제 유도 미들웨어 적용
     )
     
     app.state.config = config
+    
+    # 🌟 라우터 등록 
     app.include_router(public_edge, tags=["mcp-exposed"]) 
+    app.include_router(llm_edge) # 신규 LLM Edge Gateway 등록 (WASM 종속형)
     app.include_router(internal_router) 
     app.include_router(ext_router) 
 

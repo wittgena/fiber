@@ -10,7 +10,7 @@ import inspect
 import functools
 import logging
 from typing import Dict, Any
-from phase.agent.topos.bound.transcript.spec import TranscriptSpec
+from fiber.phase.agent.topos.bound.transcript.spec import TranscriptSpec
 
 log = logging.getLogger("bind.folding")
 

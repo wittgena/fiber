@@ -1,5 +1,4 @@
 # phase.client.http
-## @lineage: bound.client.http
 import hashlib
 import json
 import os
@@ -14,18 +13,18 @@ from urllib.parse import urlparse, urlunparse
 import certifi
 import httpx
 
-from agent.llm.router.constants import (
+from fiber.dphi.model.constants import (
     AIOHTTP_CONNECTOR_LIMIT,
     AIOHTTP_KEEPALIVE_TIMEOUT,
     COMPLETION_HTTP_FALLBACK_SECONDS,
     HTTP_HANDLER_CONNECT_TIMEOUT_SECONDS,
 )
-from arch.model.config import config
-from kernel.dphi.adapter.sign import NodeSigner
-from kernel.dphi.adapter.state import StateAdapter
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.config import config
+from xphi.kernel.dphi.adapter.sign import NodeSigner
+from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("transport.client")
+log = get_emitter("client.http")
 
 _DEFAULT_TIMEOUT = httpx.Timeout(
     timeout=COMPLETION_HTTP_FALLBACK_SECONDS,

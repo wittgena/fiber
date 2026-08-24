@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Required, TypedDict
 
 if TYPE_CHECKING:
-    from agent.anchor.llm.param import ModelResponse
+    from fiber.agent.llm.param import ModelResponse
     ModelResponseType = ModelResponse
 else:
     ModelResponseType = Any

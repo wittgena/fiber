@@ -9,11 +9,11 @@ import yaml
 import os
 from typing import Any, Dict, List, Optional
 
-from arch.contract.registry.unified import contract
-from arch.xor.parser.lang.md import MdAstParser
-from arch.xor.parser.block.extractor import BlockExtractor
-from phase.agent.topos.bound.transcript.phi import TranscriptBase
-from watcher.plane.emitter import get_logger
+from xphi.arch.contract.registry.unified import contract
+from xphi.arch.xor.parser.lang.md import MdAstParser
+from xphi.arch.xor.parser.block.extractor import BlockExtractor
+from fiber.phase.agent.topos.bound.transcript.phi import TranscriptBase
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger("transcript.spec")
 

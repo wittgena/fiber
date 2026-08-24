@@ -5,13 +5,13 @@ import asyncio
 from functools import wraps
 from typing import Dict, Any, Optional, Union, Callable
 
-from arch.xor.parser.ruleset import CompiledEngine
-from arch.xor.parser.stream import LocalStreamRulesetParser
-from arch.contract.resolver.log import LogResolver
-from arch.contract.registry.tracer import TracerRegistry
+from xphi.arch.xor.parser.ruleset import CompiledEngine
+from xphi.arch.xor.parser.stream import LocalStreamRulesetParser
+from xphi.arch.contract.resolver.log import LogResolver
+from xphi.arch.contract.registry.tracer import TracerRegistry
 
-from watcher.plane.emitter import get_emitter
-from watcher.tracer.bound import (
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.tracer.bound import (
     BaseAuditor, 
     BaseStreamAuditor, 
     BaseBoundary,

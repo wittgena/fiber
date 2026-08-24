@@ -13,7 +13,7 @@ import traceback
 from typing import Any, Optional, Dict
 import httpx
 
-from agent.loop.runtime.exception.eco import (
+from fiber.agent.loop.runtime.exception.eco import (
     APIConnectionError,
     APIError,
     AuthenticationError,
@@ -33,8 +33,8 @@ from agent.loop.runtime.exception.eco import (
     looks_like_auth_error,
     looks_like_malformed_conversation_history_error
 )
-from arch.xor.secret.redact import redact_string
-from agent.loop.runtime.exception.types import (
+from xphi.arch.xor.secret.redact import redact_string
+from fiber.agent.loop.runtime.exception.types import (
     LLMAuthenticationError,
     LLMBadRequestError,
     LLMContextWindowExceedError,
@@ -43,7 +43,7 @@ from agent.loop.runtime.exception.types import (
     LLMServiceUnavailableError,
     LLMTimeoutError,
 )
-from watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("exception.mapping")
 
@@ -130,7 +130,7 @@ def exception_type(
         ## @phase: context_building, @desc: Assemble extra debug information
         extra_information = f"\nModel: {model}"
         try:
-            from agent.anchor.provider.url import get_api_base
+            from fiber.agent.anchor.provider.url import get_api_base
             _api_base = get_api_base(model=model or "", optional_params=extra_kwargs)
             if _api_base: 
                 extra_information += f"\nAPI Base: `{_api_base}`"

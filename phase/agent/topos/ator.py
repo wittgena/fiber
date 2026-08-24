@@ -11,22 +11,22 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.anchor.config.agent import PromptContext
-from agent.space.action.tool import Tool
-from agent.llm.driver.model import LLMModel
+from fiber.agent.anchor.config.agent import PromptContext
+from fiber.agent.space.action.tool import Tool
+from fiber.agent.llm.driver.model import LLMModel
 
-from phase.client.mcp.client import MCPClient
-from phase.client.mcp.factory import create_mcp_tools
-from phase.client.mcp.action import MCPExecutor
-from agent.loop.conv.action.builder import ActionDefinition
+from fiber.phase.client.mcp.client import MCPClient
+from fiber.phase.client.mcp.factory import create_mcp_tools
+from fiber.phase.client.mcp.action import MCPExecutor
+from fiber.agent.loop.conv.action.builder import ActionDefinition
 
-from agent.loop.conv.action.factory import CoreAction
-from agent.loop.conv.action.resolver import ActionResolver
+from fiber.agent.loop.conv.action.factory import CoreAction
+from fiber.agent.loop.conv.action.resolver import ActionResolver
 
-from arch.model.payload import StreamPayloadAdapter
-from arch.topos.tunnel.factory import UniversalFacade
-from arch.model.surge.disc import DiscMixin
-from watcher.plane.emitter import get_emitter
+from xphi.arch.model.payload import StreamPayloadAdapter
+from xphi.arch.topos.tunnel.factory import UniversalFacade
+from xphi.arch.model.surge.disc import DiscMixin
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

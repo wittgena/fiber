@@ -4,9 +4,9 @@ import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from agent.anchor.llm.param import ModelResponse
-from agent.space.action.message import Message
-from agent.anchor.model.metric import MetricsSnapshot
+from fiber.agent.llm.param import ModelResponse
+from fiber.agent.space.action.message import Message
+from fiber.agent.anchor.model.metric import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 

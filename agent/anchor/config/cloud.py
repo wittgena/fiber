@@ -4,7 +4,7 @@
 from pydantic import BaseModel, Field, SecretStr, field_validator, field_serializer
 from typing import Any
 import os
-from arch.xor.secret.validator import serialize_secret, validate_secret
+from xphi.arch.xor.secret.validator import serialize_secret, validate_secret
 
 class VendorConfig(BaseModel):
     """@desc: 특정 벤더(AWS, OpenRouter 등)에 종속된 환경 변수 및 인증 정보를 격리하는 설정 객체"""

@@ -9,9 +9,9 @@ import mcp_types
 from pydantic import Field
 from rich.text import Text
 
-from agent.space.action.message import ImageContent, TextContent
-from agent.space.action.action import Action, Observation
-from watcher.plane.emitter import get_emitter
+from fiber.agent.space.action.message import ImageContent, TextContent
+from fiber.agent.space.action.action import Action, Observation
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

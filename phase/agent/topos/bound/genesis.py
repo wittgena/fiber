@@ -11,12 +11,12 @@ import json
 import random
 from typing import Dict, Any, Optional, Set
 
-from arch.topos.tunnel.factory import TunnelFactory, UniversalFacade, from_url
-from arch.contract.event.psi import PsiEvent, PsiCarrier
-from arch.contract.event.next import next_id
+from xphi.arch.topos.tunnel.factory import TunnelFactory, UniversalFacade, from_url
+from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier
+from xphi.arch.contract.event.next import next_id
 
-from phase.agent.topos.bound.bridge.rhythm import RhythmBridge
-from watcher.plane.emitter import get_emitter
+from fiber.phase.agent.topos.bound.bridge.rhythm import RhythmBridge
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("bound.genesis")
 

@@ -8,17 +8,17 @@ from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
 
-from agent.anchor.llm.param import ChatCompletionToolParam
-from agent.space.action.action import Action, Observation, Schema
-from agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
-from agent.space.action.executor import ActionExecutor
-from agent.space.action.mcp import MCPAction, MCPObservation
+from fiber.agent.llm.param import ChatCompletionToolParam
+from fiber.agent.space.action.action import Action, Observation, Schema
+from fiber.agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
+from fiber.agent.space.action.executor import ActionExecutor
+from fiber.agent.space.action.mcp import MCPAction, MCPObservation
 
-from phase.client.mcp.client import MCPClient
+from fiber.phase.client.mcp.client import MCPClient
 
-from arch.model.surge.disc import DiscMixin
-from watcher.plane.observer.span import observe
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.surge.disc import DiscMixin
+from xphi.watcher.plane.observer.span import observe
+from xphi.watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)
 

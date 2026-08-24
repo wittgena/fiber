@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from pydantic import Field, create_model
 from rich.text import Text
 
-from agent.space.action.action import Action, Observation
-from agent.space.action.executor import ActionExecutor
-from agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
-from agent.loop.runtime.protocol.conv import ProtoConv
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.space.action.executor import ActionExecutor
+from fiber.agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
+from fiber.agent.loop.runtime.protocol.conv import ProtoConv
 
 class MessageIntent(str, Enum):
     REPORT = "report"

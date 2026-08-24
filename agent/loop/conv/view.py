@@ -10,12 +10,12 @@ from collections.abc import Sequence
 from typing import overload
 from pydantic import BaseModel, Field
 
-from agent.llm.driver.event.action import ActionEvent
-from agent.llm.driver.event.observation import ObservationBaseEvent
+from fiber.agent.llm.driver.event.action import ActionEvent
+from fiber.agent.llm.driver.event.observation import ObservationBaseEvent
 
-from arch.model.conv.event import Event, LLMConvertibleEvent
-from arch.model.conv.event import EventID, ToolCallID
-from watcher.plane.emitter import get_logger
+from xphi.arch.model.conv.event import Event, LLMConvertibleEvent
+from xphi.arch.model.conv.event import EventID, ToolCallID
+from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)
 

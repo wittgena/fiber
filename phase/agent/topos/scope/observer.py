@@ -18,13 +18,13 @@ from typing import Dict, Any, Optional, List
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from arch.model.phase.flow import PhaseFlow, FlowState
-from arch.topos.node.gan import Message, GanNode
-from arch.contract.event.next import next_id
-from arch.contract.event.mesh.transport import MeshP2PTransport
+from xphi.arch.model.phase.flow import PhaseFlow, FlowState
+from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.arch.contract.event.next import next_id
+from xphi.arch.contract.event.mesh.transport import MeshP2PTransport
 
-from kernel.dphi.broker import DphiBroker
-from watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("bound.flow")
 

@@ -6,13 +6,13 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol, Any
 
-from arch.model.conv.security.confirm import ConfirmationPolicyBase
-from agent.loop.conv.security import SecurityAnalyzerBase
-from agent.space.action.action import Action, Observation
-from agent.space.action.types import ConversationID
-from agent.space.action.message import Message
+from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
+from fiber.agent.loop.conv.security import SecurityAnalyzerBase
+from fiber.agent.space.action.action import Action, Observation
+from fiber.agent.space.action.types import ConversationID
+from fiber.agent.space.action.message import Message
 
-from arch.contract.resolver.secret import SecretValue
+from xphi.arch.contract.resolver.secret import SecretValue
 
 
 class SecretProviderProtocol(Protocol):
