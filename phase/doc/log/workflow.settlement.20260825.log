@@ -1,0 +1,162 @@
+wittgena@wittgenas-MacBook-Pro self % python -m fiber.dphi.workflow.settlement
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 21 aliases.
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-67046
+ LOG | SYSTEM | INFO  |  workflow.settlement: 
+=====================================================================================
+ LOG | SYSTEM | INFO  |  workflow.settlement: 🧪 [DPHI WORKFLOW SETTLEMENT] Commencing Shadow Execution Reactor
+ LOG | SYSTEM | INFO  |  workflow.settlement: =====================================================================================
+ LOG | SYSTEM | INFO  |  workflow.settlement: 
+▶️ [WALLET DOMAIN] Initiating Deferred Settlement Sequences...
+ LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | SYSTEM | INFO  |  workflow.wallet.4a5f: 
+======================================================================
+🚀 [START] Sequence: Standard Deferred Charge (Successful Pull within Allowance)
+======================================================================
+ LOG | SYSTEM | INFO  |  workflow.wallet.4a5f: --- [Phase 1] Deferred Charge Assembly & State Sync ---
+ LOG | SYSTEM | INFO  |  workflow.wallet.4a5f:   └─ 🧩 Assembled DVM Payload:
+     ├─ 🎯 Target Contract : 0x000000000000000000000000000000000000000c
+     ├─ 👤 Caller Node     : 0x0752c1279ff3021018ce0f9e7c3c1c40f8bc4d1c
+     └─ 📦 Func Signature  : 0x23b872dd
+ LOG | SYSTEM | INFO  |  workflow.wallet.4a5f: --- [Phase 2] DVM Shadow Execution (Pull) ---
+ LOG | SYSTEM | INFO  |  rpc.bridge.dvm: 🔬 [DVM Engine] Instantiating REVM sandbox for deterministic state derivation...
+ LOG | SYSTEM | INFO  |  inter.dvm: ⚙️ [AOT Compile] Compiling dvm.wasm (Only once per process)...
+ LOG | SYSTEM | INFO  |  inter.dvm: ✅ [AOT Compile] dvm.wasm cached successfully.
+ LOG | SYSTEM | INFO  |  dphi.cgroup: [multi-vm-worker-4518537136] Cgroup enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.dvm: [dvm.wasm] Routing TX to EVM on 0x000000000000000000000000000000000000000c (Gas Limit: 10000000)
+ LOG | SYSTEM | INFO  |  inter.dvm: 🔥 [DEBUG FFI PAYLOAD] Unified Input to Rust:
+{
+  "vm_target": "EVM",
+  "payload": {
+    "target_address": "0x000000000000000000000000000000000000000c",
+    "calldata": "0x23b872dd00000000000000000000000049d9d31dafcca2133fa9c032fb8728f000ad278b0000000000000000000000000752c1279ff3021018ce0f9e7c3c1c40f8bc4d1c000000000000000000000000000000000000000000000000000000003b9aca00",
+    "gas_limit": 10000000,
+    "state_snapshot": {
+      "0x0752c1279ff3021018ce0f9e7c3c1c40f8bc4d1c": {
+        "balance": "0xde0b6b3a7640000",
+        "nonce": 1
+      },
+      "0x000000000000000000000000000000000000000c": {
+        "balance": "0x0",
+        "code": "0x6000341160165760003560e01c6323b872dd14601b575b600080fd5b6000541560165700",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000000000000000000000000000000000000000000001"
+        }
+      },
+      "0x49d9d31dafcca2133fa9c032fb8728f000ad278b": {
+        "balance": "0x2540be400",
+        "nonce": 0
+      }
+    },
+    "caller_address": "0x0752c1279ff3021018ce0f9e7c3c1c40f8bc4d1c",
+    "value": "0x0"
+  }
+}
+ LOG | SYSTEM | INFO  |  rpc.bridge.dvm: ✅ [DVM Engine] State derivation completed successfully.
+ LOG | SYSTEM | INFO  |  workflow.wallet.4a5f: --- [Phase 3] Deferred Charge Ledger Sealing ---
+ LOG | SYSTEM | INFO  |  workflow.wallet.4a5f: 
+    🧾 [SHADOW SETTLEMENT RECEIPT]
+     ├─ ⛽ EVM Gas Used   : 0 Units
+     ├─ 🔄 State Mutations: 3 Storage slot(s) modified
+     └─ 💎 L2 Rollup Hash : 0x9db16178a0793bfd...
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  workflow.wallet.17ed: 
+======================================================================
+🚀 [START] Sequence: State Reversion (Insufficient Allowance / Mandate Expired)
+======================================================================
+ LOG | SYSTEM | INFO  |  workflow.wallet.17ed: --- [Phase 1] Deferred Charge Assembly & State Sync ---
+ LOG | SYSTEM | INFO  |  workflow.wallet.17ed:   └─ 🧩 Assembled DVM Payload:
+     ├─ 🎯 Target Contract : 0x000000000000000000000000000000000000000c
+     ├─ 👤 Caller Node     : 0x05c451592e4086c6c6f25e9aa30f14d44d90be18
+     └─ 📦 Func Signature  : 0x23b872dd
+ LOG | SYSTEM | INFO  |  workflow.wallet.17ed: --- [Phase 2] DVM Shadow Execution (Pull) ---
+ LOG | SYSTEM | INFO  |  rpc.bridge.dvm: 🔬 [DVM Engine] Instantiating REVM sandbox for deterministic state derivation...
+ LOG | SYSTEM | INFO  |  dphi.cgroup: [multi-vm-worker-4519072528] Cgroup enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.dvm: [dvm.wasm] Routing TX to EVM on 0x000000000000000000000000000000000000000c (Gas Limit: 10000000)
+ LOG | SYSTEM | INFO  |  inter.dvm: 🔥 [DEBUG FFI PAYLOAD] Unified Input to Rust:
+{
+  "vm_target": "EVM",
+  "payload": {
+    "target_address": "0x000000000000000000000000000000000000000c",
+    "calldata": "0x23b872dd00000000000000000000000052068147a22694ce5fb6548d44748c622348c3a500000000000000000000000005c451592e4086c6c6f25e9aa30f14d44d90be18000000000000000000000000000000000000000000000000000000003b9aca00",
+    "gas_limit": 10000000,
+    "state_snapshot": {
+      "0x05c451592e4086c6c6f25e9aa30f14d44d90be18": {
+        "balance": "0xde0b6b3a7640000",
+        "nonce": 1
+      },
+      "0x000000000000000000000000000000000000000c": {
+        "balance": "0x0",
+        "code": "0x6000341160165760003560e01c6323b872dd14601b575b600080fd5b6000541560165700",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "0x52068147a22694ce5fb6548d44748c622348c3a5": {
+        "balance": "0x2540be400",
+        "nonce": 0
+      }
+    },
+    "caller_address": "0x05c451592e4086c6c6f25e9aa30f14d44d90be18",
+    "value": "0x0"
+  }
+}
+ LOG | SYSTEM | INFO  |  workflow.wallet.17ed:   └─ 🛡️ Defense Triggered: Shadow execution correctly halted. (REVM Reverted (None))
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
+ LOG | SYSTEM | INFO  |  workflow.wallet.aead: 
+======================================================================
+🚀 [START] Sequence: VM Halt (Malformed Calldata / Invalid Opcode Injection)
+======================================================================
+ LOG | SYSTEM | INFO  |  workflow.wallet.aead: --- [Phase 1] Deferred Charge Assembly & State Sync ---
+ LOG | SYSTEM | INFO  |  workflow.wallet.aead:   └─ 🧩 Assembled DVM Payload:
+     ├─ 🎯 Target Contract : 0x000000000000000000000000000000000000000c
+     ├─ 👤 Caller Node     : 0x73294ee6614190e62639c83db239f375c3c1a5fd
+     └─ 📦 Func Signature  : 0xdeadbeef
+ LOG | SYSTEM | INFO  |  workflow.wallet.aead: --- [Phase 2] DVM Shadow Execution (Pull) ---
+ LOG | SYSTEM | INFO  |  rpc.bridge.dvm: 🔬 [DVM Engine] Instantiating REVM sandbox for deterministic state derivation...
+ LOG | SYSTEM | INFO  |  dphi.cgroup: [multi-vm-worker-4519073168] Cgroup enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.dvm: [dvm.wasm] Routing TX to EVM on 0x000000000000000000000000000000000000000c (Gas Limit: 10000000)
+ LOG | SYSTEM | INFO  |  inter.dvm: 🔥 [DEBUG FFI PAYLOAD] Unified Input to Rust:
+{
+  "vm_target": "EVM",
+  "payload": {
+    "target_address": "0x000000000000000000000000000000000000000c",
+    "calldata": "0xdeadbeef00000000000000000000000088e27570457696cf02715f4a42e3e7ce7212772c00000000000000000000000073294ee6614190e62639c83db239f375c3c1a5fd000000000000000000000000000000000000000000000000000000003b9aca00",
+    "gas_limit": 10000000,
+    "state_snapshot": {
+      "0x73294ee6614190e62639c83db239f375c3c1a5fd": {
+        "balance": "0xde0b6b3a7640000",
+        "nonce": 1
+      },
+      "0x000000000000000000000000000000000000000c": {
+        "balance": "0x0",
+        "code": "0x6000341160165760003560e01c6323b872dd14601b575b600080fd5b6000541560165700",
+        "storage": {
+          "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000000000000000000000000000000000000000000001"
+        }
+      },
+      "0x88e27570457696cf02715f4a42e3e7ce7212772c": {
+        "balance": "0x2540be400",
+        "nonce": 0
+      }
+    },
+    "caller_address": "0x73294ee6614190e62639c83db239f375c3c1a5fd",
+    "value": "0x0"
+  }
+}
+ LOG | SYSTEM | INFO  |  workflow.wallet.aead:   └─ 🛡️ Defense Triggered: Shadow execution correctly halted. (REVM Reverted (None))
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
+ LOG | SYSTEM | INFO  |  workflow.settlement: 
+=====================================================================================
+ LOG | SYSTEM | INFO  |  workflow.settlement: 📊 [DEFERRED SETTLEMENT SHADOW EXECUTION REPORT]
+ LOG | SYSTEM | INFO  |  workflow.settlement: =====================================================================================
+ LOG | SYSTEM | INFO  |  workflow.settlement: ✅ 01. [DEFERRED_CHARGE]  Standard Deferred Charge (Successful Pull within Allowance)  | Result: PASSED
+ LOG | SYSTEM | INFO  |  workflow.settlement: ✅ 02. [DEFERRED_CHARGE]  State Reversion (Insufficient Allowance / Mandate Expired)   | Result: PASSED
+ LOG | SYSTEM | INFO  |  workflow.settlement: ✅ 03. [DEFERRED_CHARGE]  VM Halt (Malformed Calldata / Invalid Opcode Injection)      | Result: PASSED
+ LOG | SYSTEM | INFO  |  workflow.settlement: -------------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  workflow.settlement: 🎉 ALL DEFERRED SETTLEMENT SCENARIOS EXECUTED AS EXPECTED.
+ LOG | SYSTEM | INFO  |  workflow.settlement: =====================================================================================
+
+[Reactor] 🏁 Lifecycle terminated cleanly.

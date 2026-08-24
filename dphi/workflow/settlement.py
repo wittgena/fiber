@@ -1,5 +1,4 @@
 # dphi.workflow.settlement
-## @lineage: dphi.bound.workflow.settlement
 import asyncio
 import hashlib
 import json
@@ -28,6 +27,7 @@ class ScenarioConfig:
     name: str
     snapshot_injector: Optional[Callable[[Dict[str, Any], str, str], Dict[str, Any]]] = None
     calldata_injector: Optional[Callable[[str], str]] = None
+    is_negative_path: bool = False
 
 @dataclass
 class TestResult:
@@ -49,21 +49,14 @@ class SwCommitMsg(WorkflowMessage): pass
 class WalletChaosInjector:
     @staticmethod
     def force_insufficient_allowance(snapshot: Dict[str, Any], agent_address: str, contract_address: str) -> Dict[str, Any]:
-        """
-        [지연 정산 룰 검증] 
-        EVM 계정 속성이 아닌, 실제 ERC20 컨트랙트의 Storage를 조작.
-        Allowance/Balance 값을 담고 있는 Storage Slot(0x0)을 0으로 덮어씌워 DVM Revert를 강제함.
-        """
         if contract_address in snapshot:
             if "storage" not in snapshot[contract_address]:
                 snapshot[contract_address]["storage"] = {}
-            # Storage Slot 0을 0x0으로 조작하여 잔고/한도 부족 상황 시뮬레이션
             snapshot[contract_address]["storage"]["0x0000000000000000000000000000000000000000000000000000000000000000"] = "0x0000000000000000000000000000000000000000000000000000000000000000" 
         return snapshot
 
     @staticmethod
     def corrupt_erc20_calldata(calldata: str) -> str:
-        # 정상적인 0x23b872dd 대신 잘못된 함수 선택자를 주입
         return "0xdeadbeef" + calldata[10:]
 
 
@@ -109,7 +102,6 @@ class DvmRollupBridge(RpcBridge):
                         self.log.info("✅ [DVM Engine] State derivation completed successfully.")
                         return {"status": 200, "data": json.loads(res.output)}
                     else:
-                        self.log.error(f"🛑 [DVM Reverted] Execution Halted: {res.error}")
                         return {"status": 200, "data": {"success": False, "revert_reason": str(res.error)}}
             except Exception as e:
                 self.log.error(f"💥 [DVM Fatality] Sandbox Engine Exception: {e}")
@@ -125,8 +117,8 @@ class ShadowWalletWorkflow(Workflow):
         self.log = get_emitter(f"workflow.wallet.{uuid.uuid4().hex[:4]}")
         
         self.rpc_bridge: Optional[DvmRollupBridge] = None
-        self.clearing_node = NodeIdentity()  # DPHI 청산소 시스템 계정
-        self.agent_node = NodeIdentity()     # 과금을 당하는 외부 에이전트 계정
+        self.clearing_node = NodeIdentity()  
+        self.agent_node = NodeIdentity()     
         self.ledger = KernelLedger()
         
         self.contract_address = "0x" + "c".rjust(40, "0")
@@ -152,22 +144,16 @@ class ShadowWalletWorkflow(Workflow):
         clean_to = self.clearing_node.evm_address.replace("0x", "").rjust(64, "0")
         clean_amount = hex(self.charge_amount).replace("0x", "").rjust(64, "0")
         
-        # 지연 정산을 위한 대리 수금 (transferFrom)
         base_calldata = f"0x23b872dd{clean_from}{clean_to}{clean_amount}" 
-        
         self.active_calldata = self.scenario.calldata_injector(base_calldata) if self.scenario.calldata_injector else base_calldata
 
-        # 🌟 개선: 0x23b872dd (transferFrom) 호출 시 Storage Slot[0] 값을 확인(SLOAD)하여 
-        # 값이 0이면 REVERT, 0보다 크면 STOP 하도록 작성된 스마트 Mock 바이트코드
         valid_mock_erc20_bytecode = "0x6000341160165760003560e01c6323b872dd14601b575b600080fd5b6000541560165700"
-
         base_snapshot = {
             self.clearing_node.evm_address: {"balance": hex(10**18), "nonce": 1},
             self.contract_address: {
                 "balance": "0x0", 
                 "code": valid_mock_erc20_bytecode,
                 "storage": {
-                    # 정상적인 위임 한도(Allowance)가 남아있다고 간주하는 기본 스토리지 상태
                     "0x0000000000000000000000000000000000000000000000000000000000000000": "0x0000000000000000000000000000000000000000000000000000000000000001"
                 }
             },
@@ -179,6 +165,13 @@ class ShadowWalletWorkflow(Workflow):
         else:
             self.active_snapshot = base_snapshot
         
+        func_sig = self.active_calldata[:10]
+        self.log.info(
+            f"  └─ 🧩 Assembled DVM Payload:\n"
+            f"     ├─ 🎯 Target Contract : {self.contract_address}\n"
+            f"     ├─ 👤 Caller Node     : {self.clearing_node.evm_address}\n"
+            f"     └─ 📦 Func Signature  : {func_sig}"
+        )
         return SwPrepareMsg()
 
     @step
@@ -188,7 +181,7 @@ class ShadowWalletWorkflow(Workflow):
         dvm_payload = {
             "vm_target": "EVM",
             "target_address": self.contract_address,
-            "caller_address": self.clearing_node.evm_address, # Caller는 DPHI 마스터
+            "caller_address": self.clearing_node.evm_address,
             "calldata": self.active_calldata,
             "gas_limit": 150000,
             "gas_price": hex(10**9), 
@@ -199,7 +192,8 @@ class ShadowWalletWorkflow(Workflow):
         data = res.get("data", {})
         
         if res.get("status") != 200 or not data.get("success"):
-            return ErrorMessage(f"REVM Reverted: {data.get('revert_reason', 'Unknown Error')}")
+            revert_reason = data.get('revert_reason', 'Unknown Error')
+            return ErrorMessage(f"REVM Reverted ({revert_reason})")
 
         self.dvm_result = data
         return SwExecuteMsg()
@@ -231,13 +225,21 @@ class ShadowWalletWorkflow(Workflow):
         )
         
         self.sealed_hash = self.ledger.save_transition(blob)
-        self.log.info(f"✨ [Sealed] Deferred Charge Rollup Hash generated: 0x{rollup_hash[:16]}...")
-        
+        receipt = (
+            f"\n    🧾 [SHADOW SETTLEMENT RECEIPT]\n"
+            f"     ├─ ⛽ EVM Gas Used   : {gas_used} Units\n"
+            f"     ├─ 🔄 State Mutations: {len(state_diff)} Storage slot(s) modified\n"
+            f"     └─ 💎 L2 Rollup Hash : 0x{rollup_hash[:16]}..."
+        )
+        self.log.info(receipt)
         return StopMessage(result=True)
 
     @step
     async def on_error(self, msg: ErrorMessage) -> WorkflowMessage:
-        self.log.error(f"❌ [HALTED] Pipeline execution terminated: {msg.msg}")
+        if self.scenario.is_negative_path:
+            self.log.info(f"  └─ 🛡️ Defense Triggered: Shadow execution correctly halted. ({msg.msg})")
+        else:
+            self.log.error(f"  └─ ❌ [HALTED] Pipeline execution terminated: {msg.msg}")
         return StopMessage(result=False)
 
 
@@ -248,13 +250,13 @@ class WalletDomainRunner:
 
     async def _run_domain_workflows(self):
         self.log.info("\n▶️ [WALLET DOMAIN] Initiating Deferred Settlement Sequences...")
-
         scenarios = [
             {
                 "config": ScenarioConfig(
                     name="Standard Deferred Charge (Successful Pull within Allowance)",
                     snapshot_injector=None,
-                    calldata_injector=None
+                    calldata_injector=None,
+                    is_negative_path=False
                 ),
                 "expected": True
             },
@@ -262,7 +264,8 @@ class WalletDomainRunner:
                 "config": ScenarioConfig(
                     name="State Reversion (Insufficient Allowance / Mandate Expired)",
                     snapshot_injector=WalletChaosInjector.force_insufficient_allowance,
-                    calldata_injector=None
+                    calldata_injector=None,
+                    is_negative_path=True
                 ),
                 "expected": False
             },
@@ -270,7 +273,8 @@ class WalletDomainRunner:
                 "config": ScenarioConfig(
                     name="VM Halt (Malformed Calldata / Invalid Opcode Injection)", 
                     snapshot_injector=None,
-                    calldata_injector=WalletChaosInjector.corrupt_erc20_calldata
+                    calldata_injector=WalletChaosInjector.corrupt_erc20_calldata,
+                    is_negative_path=True
                 ),
                 "expected": False
             }
@@ -314,7 +318,7 @@ class WalletDomainRunner:
 
     async def execute(self):
         self.log.info("\n" + "="*85)
-        self.log.info("🧪 [DPHI WALLET SUITE] Commencing Shadow Execution Reactor")
+        self.log.info("🧪 [DPHI WORKFLOW SETTLEMENT] Commencing Shadow Execution Reactor")
         self.log.info("="*85)
         
         await self._run_domain_workflows()
