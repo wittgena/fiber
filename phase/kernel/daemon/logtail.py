@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from xphi.kernel.daemon.bootstrap import AbstractDaemon
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("observer.logtail", phase="ops")

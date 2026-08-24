@@ -32,7 +32,7 @@ from xphi.arch.xor.bridge.terminal import (
     TMUX_SOCKET_NAME,
 )
 from fiber.agent.space.terminal.tmux.interface import TmuxTerminal
-from xphi.kernel.bind.resolver import find_current_self, get_invoker
+from xphi.kernel.space.bind.resolver import find_current_self, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))

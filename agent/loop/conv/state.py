@@ -16,8 +16,8 @@ from fiber.agent.llm.driver.event.observation import (
 )
 from xphi.arch.model.conv.event import Event
 from xphi.arch.model.conv.event import EventID
-from xphi.arch.topos.context.space import BaseWorkspace
-from xphi.arch.topos.context.status import ConverStatus
+from xphi.kernel.space.topos.context.space import BaseWorkspace
+from xphi.kernel.space.topos.context.status import ConverStatus
 from fiber.agent.space.action.types import ConversationCallbackType, ConversationID, ConversationTags
 
 from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm

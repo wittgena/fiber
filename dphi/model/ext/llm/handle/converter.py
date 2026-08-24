@@ -36,7 +36,7 @@ from fiber.dphi.model.ext.llm.model.types.block import (
     MessageRole,
 )
 from fiber.dphi.model.ext.types.schema import ImageNode
-from fiber.dphi.model.callback.manager import CallbackManager
+from fiber.dphi.model.ext.callback.manager import CallbackManager
 
 def parse_partial_json(s: str) -> Dict:
     try:

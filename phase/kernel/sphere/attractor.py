@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 
 from xphi.arch.contract.discovery import discover_modules
 from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.bind.resolver import find_current_self
 
 from xphi.kernel.phase.runtime.executor.dynamics import DynamicsExecutor
 from xphi.kernel.phase.runtime.node import NodeRuntime

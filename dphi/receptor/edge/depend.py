@@ -11,7 +11,7 @@ from fiber.dphi.receptor.ingress.gov.policy import (
     HealthMonitor
 )
 
-from xphi.arch.topos.tunnel.subs import DistributedPubSub
+from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.kernel.dphi.broker import DphiBroker

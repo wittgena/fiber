@@ -10,7 +10,7 @@ from fiber.dphi.model.ext.llm.model.types.block import ChatMessage, MessageRole
 from fiber.dphi.model.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
 
 from xphi.arch.model.phase.gate import uuid4 
-from xphi.kernel.bind.resolver import get_invoker
+from xphi.kernel.space.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))

@@ -35,7 +35,7 @@ from xphi.arch.xor.parser.mark.convset import SettingProminence, field_meta
 from xphi.arch.xor.parser.mark.depre import warn_deprecated
 from xphi.arch.model.config import config
 from xphi.arch.xor.secret.validator import serialize_secret, validate_secret
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.bind.resolver import find_current_self
 
 SELF_ROOT = find_current_self()
 

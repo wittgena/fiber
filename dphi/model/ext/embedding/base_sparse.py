@@ -22,10 +22,10 @@ from fiber.dphi.model.mapper.pydantic import (
     model_serializer,
 )
 from fiber.dphi.model.constants import DEFAULT_EMBED_BATCH_SIZE
-from fiber.dphi.model.callback.event import SparseEmbeddingEndEvent, SparseEmbeddingStartEvent
+from fiber.dphi.model.ext.callback.event import SparseEmbeddingEndEvent, SparseEmbeddingStartEvent
 from fiber.dphi.model.util import get_tqdm_iterable
 from fiber.dphi.model.util import run_jobs
-from fiber.dphi.model.callback.dispatcher import dispatcher
+from fiber.dphi.model.ext.callback.dispatcher import dispatcher
 
 SparseEmbedding = Dict[int, float]
 

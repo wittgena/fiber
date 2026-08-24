@@ -131,7 +131,16 @@ async def seal_state(req: AnchorProposalRequest, nexus: NexusAnchor = Depends(ge
 @core_edge.post("/ledger/verify", summary="AuditReceipt 수학적 진위 검증 (Verify Parity)")
 async def verify_receipt(receipt_payload: Dict[str, Any] = Body(...), broker: DphiBroker = Depends(get_wasm_broker)):
     try:
-        canonical_payload = StateAdapter.to_canonical_bytes(receipt_payload).decode('utf-8')
+        try:
+            parity_req = StateAdapter.build_parity_request(
+                topos_id_low32=receipt_payload.get("topos_id_low32"),
+                phase_id=receipt_payload.get("phase_id"),
+                nexus_id=receipt_payload.get("nexus_id")
+            )
+        except ValueError as ve:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Payload Format Error: {str(ve)}")
+
+        canonical_payload = StateAdapter.to_canonical_bytes(parity_req).decode('utf-8')
         res = await broker.invoke(DphiMethod.VERIFY_PARITY, canonical_payload)
         
         if not res.success:
@@ -146,13 +155,14 @@ async def verify_receipt(receipt_payload: Dict[str, Any] = Body(...), broker: Dp
             "is_valid": is_valid,
             "message": "Cryptographically verified via WASM Parity Rule" if is_valid else "Mathematical verification failed (Tampered or Invalid)"
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Verification Error: {str(e)}")
 
 
 @compute_edge.post("/intent/validate", summary="[Internal] Validate Intent", response_model=IntentValidationResponse)
 async def validate_intent(req: IntentValidationRequest):
-    # 1. 필수 경계값 검증
     if not req.requester_id or not req.action:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing Critical Boundaries (Agent ID or Action)")
 
@@ -162,11 +172,9 @@ async def validate_intent(req: IntentValidationRequest):
     if not getattr(req, 'signature', None):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Signature missing. Request must be cryptographically signed.")
 
-    # 2. Edge와 Client 간 약속된 검증용 평문 메시지 조립
     expected_msg = f"EXECUTE:{req.requester_id}:{req.action}:{req.max_fuel_budget or 1000000}"
     
     try:
-        # 3. 알고리즘 식별 및 서명 검증 로직 분기
         sig_algo = getattr(req, 'sig_algo', 'ECDSA_SECP256K1').upper()
         
         if sig_algo == "ECDSA_SECP256K1":
@@ -174,16 +182,13 @@ async def validate_intent(req: IntentValidationRequest):
             from eth_account.messages import encode_defunct
             
             msg_hash = encode_defunct(text=expected_msg)
-            # ecrecover를 통해 메시지에 서명한 주소 도출
             recovered_address = Account.recover_message(msg_hash, signature=req.signature)
             
-            # 서명자 주소와 페이로드의 요청자 ID(지갑 주소)가 일치하는지 대조
             if recovered_address.lower() != req.requester_id.lower():
                 log.warning(f"Signature mismatch: Recovered {recovered_address} != Expected {req.requester_id}")
                 raise ValueError("Address mismatch")
                 
         elif sig_algo == "ED25519":
-            # TODO: CosmWasm 등 Ed25519 체계 검증 로직 확장을 위한 Placeholder
             log.warning("Ed25519 verification is currently bypassed in mock mode.")
             pass
             
@@ -196,14 +201,12 @@ async def validate_intent(req: IntentValidationRequest):
         log.error(f"Intent validation crashed: {str(e)}")
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Malformed cryptographic signature")
 
-    # 4. 검증 통과 시 인가 데이터 생성
     clearance_data = {
         "is_valid": True,
         "verified_at": int(time.time() * 1000),
         "agent": req.requester_id,
         "fuel_authorized": req.max_fuel_budget
     }
-
     return IntentValidationResponse(status=EdgeState.INTENT_VALIDATED, clearance=clearance_data)
 
 
@@ -303,14 +306,28 @@ async def request_quotation(
             client_project_id=client_project_id, schema=req.agent_schema,
             entry=req.target_entry, depth=req.context_depth, dry_run=True 
         )
+        
+        # 🌟 [개선점 1] 상태가 정상이 아닐 경우 즉시 422 반환
+        if result.status != "COHERENCE":
+            log.warning(f"[Quote] Execution Divergence: {result.reason}")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                detail=f"Quotation Rejected: {result.reason}"
+            )
+            
     except ValueError as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except VerificationError as ve:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[Quote] Unhandled Error: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal sandbox error")
         
     estimated_cost = (result.fuel_consumed / billing_config.fuel_billing_unit) * billing_config.usd_per_billing_unit
     return QuotationResponse(
-        status="QUOTE_READY" if result.status == "COHERENCE" else "QUOTE_REJECTED", 
+        status="QUOTE_READY", 
         tier_applied=result.tier_applied, fuel_estimated=result.fuel_consumed,
         estimated_cost_usd=estimated_cost, reason=result.reason
     )
@@ -326,14 +343,28 @@ async def execute_billed_workload(
             client_project_id=client_project_id, schema=req.agent_schema,
             entry=req.target_entry, depth=req.context_depth, dry_run=False
         )
+        
+        # 🌟 [개선점 2] 상태가 정상이 아닐 경우 즉시 422 반환. (가짜 AuditReceipt 발급 원천 차단)
+        if result.status != "COHERENCE":
+            log.error(f"[Execute] Execution Failed/Diverged: {result.reason}")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                detail=f"Billed Execution Failed: {result.reason}"
+            )
+            
     except ValueError as e:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except VerificationError as ve:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=str(ve))
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[Execute] Unhandled Sandbox Error: {e}")
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Sandbox execution crashed unexpectedly")
         
     billed_cost = (result.fuel_consumed / billing_config.fuel_billing_unit) * billing_config.usd_per_billing_unit
     return BilledExecutionResponse(
-        status="BILLED_EXECUTION_SUCCESS" if result.status == "COHERENCE" else "BILLED_EXECUTION_FAILED", 
+        status="BILLED_EXECUTION_SUCCESS", 
         tier_applied=result.tier_applied, fuel_billed=result.fuel_consumed,
         billed_cost_usd=billed_cost, reason=result.reason
     )

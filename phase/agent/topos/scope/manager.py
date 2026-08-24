@@ -19,7 +19,7 @@ from fiber.agent.space.manager import SpaceNode, space_provider
 
 from xphi.arch.model.surge.blueprint import SurgeBlueprint
 from xphi.arch.contract.model.graph import EntryNode
-from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.kernel.space.topos.node.gan import Message, GanNode
 from xphi.arch.model.sealer import EpochSealer
 
 from xphi.kernel.dphi.broker import DphiBroker

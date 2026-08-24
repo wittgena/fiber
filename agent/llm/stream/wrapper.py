@@ -24,7 +24,7 @@ from fiber.agent.llm.stream.accumulator import StreamAccumulator
 from fiber.agent.llm.stream.rule import Rules
 
 from xphi.arch.model.config import config
-from xphi.arch.topos.network.channel.pipeline import ChannelPipeline
+from xphi.kernel.space.topos.network.channel.pipeline import ChannelPipeline
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.wrapper")

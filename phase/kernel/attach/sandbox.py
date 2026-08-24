@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 
 from xphi.kernel.dphi.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from fiber.dphi.adapter.anchor import PhaseBuilder
-from fiber.phase.client.wallet import LocalWalletClient
+from fiber.dphi.client.wallet import LocalWalletClient
 
 from xphi.kernel.dphi.runner.phase import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter

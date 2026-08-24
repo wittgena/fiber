@@ -16,7 +16,7 @@ import docker
 from docker.errors import NotFound, BuildError
 from docker.models.containers import Container
 
-from xphi.arch.topos.context.space import BaseWorkspace
+from xphi.kernel.space.topos.context.space import BaseWorkspace
 from xphi.arch.xor.bridge.git.schema import GitChange, GitDiff
 from xphi.arch.xor.bridge.git.changes import get_git_changes
 from xphi.arch.xor.bridge.git.diff import get_git_diff
@@ -24,9 +24,9 @@ from xphi.arch.xor.bridge.command.workspace import CommandResult, FileOperationR
 
 from fiber.agent.space.terminal.session.builder import executor_factory, sanitized_env
 
-from xphi.arch.topos.node.gan import Message, GanNode
-from xphi.arch.topos.node.event import WorkspaceReady
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.topos.node.gan import Message, GanNode
+from xphi.kernel.space.topos.node.event import WorkspaceReady
+from xphi.kernel.space.bind.resolver import resolve_path
 
 from xphi.watcher.tracer.scope import get_current_trace_path
 from fiber.phase.tracer.router import InfraRouter

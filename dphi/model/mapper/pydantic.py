@@ -1,5 +1,4 @@
 # dphi.model.mapper.pydantic
-## @lineage: phase.client.model.pydantic
 import pydantic
 from pydantic import (
     AnyUrl,

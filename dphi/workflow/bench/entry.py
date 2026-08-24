@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fiber.dphi.workflow.bench.profile import ProfileBenchmarker, BENCH_TARGETS
 
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.phase.reactor import PhaseReactor
 
 from xphi.watcher.wasm.tester import WasmTester

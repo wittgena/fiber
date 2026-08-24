@@ -30,7 +30,7 @@ from urllib.parse import urlparse
 import platformdirs
 import requests
 
-from fiber.dphi.model.callback.dispatcher import dispatcher
+from fiber.dphi.model.ext.callback.dispatcher import dispatcher
 
 if TYPE_CHECKING:
     from fiber.dphi.model.ext.llm.model.types.block import ContentBlock, TextBlock

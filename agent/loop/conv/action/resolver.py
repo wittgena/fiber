@@ -119,7 +119,7 @@ def _bootstrap_core_actions():
 _bootstrap_core_actions()
 
 def _handle_finish(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from xphi.arch.topos.context.status import ConverStatus
+    from xphi.kernel.space.topos.context.status import ConverStatus
     from fiber.agent.loop.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
@@ -136,7 +136,7 @@ def _handle_think(action: Any, conv: "ProtoConv | None", ObsClass: type[Observat
 
 
 def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from xphi.arch.topos.context.status import ConverStatus
+    from xphi.kernel.space.topos.context.status import ConverStatus
     from fiber.agent.loop.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None
@@ -154,7 +154,7 @@ def _handle_lang(action: Any, conv: "ProtoConv | None", ObsClass: type[Observati
 
 
 def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from xphi.arch.topos.context.status import ConverStatus
+    from xphi.kernel.space.topos.context.status import ConverStatus
     from fiber.agent.llm.driver.event.observation import ObservationEvent
     from xphi.arch.contract.event.next import next_id
     from fiber.agent.loop.conv.command import TransitionStatus, UpdateAgentState
@@ -196,7 +196,7 @@ def _handle_bridge(action: Any, conv: "ProtoConv | None", ObsClass: type[Observa
 
 
 def _handle_signal(action: Any, conv: "ProtoConv | None", ObsClass: type[Observation]) -> Observation:
-    from xphi.arch.topos.context.status import ConverStatus
+    from xphi.kernel.space.topos.context.status import ConverStatus
     from fiber.agent.loop.conv.command import TransitionStatus
     
     state = getattr(conv, "state", None) if conv else None

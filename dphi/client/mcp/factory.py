@@ -1,4 +1,5 @@
-# phase.client.mcp.factory
+# dphi.client.mcp.factory
+## @lineage: phase.client.mcp.factory
 ## @lineage: bound.client.mcp.factory
 ## @lineage: bound.adapter.mcp.factory
 ## @lineage: agent.protocol.mcp.factory
@@ -14,11 +15,11 @@
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 
-from fiber.phase.client.mcp.action import MCPActionDefinition
+from fiber.dphi.client.mcp.action import MCPActionDefinition
 
 from fiber.agent.anchor.config.mcp import MCPConfig
-from fiber.phase.client.mcp.exception import MCPTimeoutError
-from fiber.phase.client.mcp.client import MCPClient
+from fiber.dphi.client.mcp.exception import MCPTimeoutError
+from fiber.dphi.client.mcp.client import MCPClient
 
 from xphi.arch.contract.event.next import LogEvent
 from xphi.watcher.plane.emitter import get_emitter

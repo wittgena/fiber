@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, Tuple, List
 from xphi.arch.contract.interface import IEventBus
 from xphi.arch.contract.event.psi import PsiEvent
 from xphi.kernel.daemon.bootstrap import AbstractDaemon
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter('resolver.issue')

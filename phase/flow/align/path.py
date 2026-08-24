@@ -9,7 +9,7 @@ from pathlib import Path
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.arch.model.phase.aligner import PhaseAligner, AlignRecord
-from xphi.kernel.bind.resolver import find_current_self
+from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.phase.runtime.executor.cli import execute_cli_task, CliTaskAdapter, dispatch_cli, parse_local
 from xphi.watcher.plane.emitter import get_emitter
 

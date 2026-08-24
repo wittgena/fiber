@@ -35,9 +35,9 @@ from fiber.dphi.model.ext.llm.model.types.block import TextBlock as LITextBlock
 from fiber.dphi.model.ext.llm.model.types.block import CitationBlock as LICitationBlock
 from fiber.dphi.model.ext.llm.model.types.block import ThinkingBlock as LIThinkingBlock
 from fiber.dphi.model.mapper.pydantic import Field, PrivateAttr
-from fiber.dphi.model.callback.manager import CallbackManager
+from fiber.dphi.model.ext.callback.manager import CallbackManager
 from fiber.dphi.model.constants import DEFAULT_TEMPERATURE
-from fiber.dphi.model.callback.manager import (
+from fiber.dphi.model.ext.callback.manager import (
     llm_chat_callback,
     llm_completion_callback,
 )
@@ -79,7 +79,7 @@ from anthropic.types import (
     TextCitation,
     SignatureDelta,
 )
-from fiber.dphi.model.callback.dispatcher import dispatcher
+from fiber.dphi.model.ext.callback.dispatcher import dispatcher
 
 if TYPE_CHECKING:
     from fiber.dphi.model.ext.llm.model.types.tool import BaseTool

@@ -7,8 +7,8 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from fiber.phase.client.ext.evm import Web3Adapter
-from fiber.phase.client.ext.wallet import EthWalletAdapter
+from fiber.dphi.client.ext.evm import Web3Adapter
+from fiber.dphi.client.ext.wallet import EthWalletAdapter
 from fiber.dphi.adapter.rollup import RollupAdapter
 from fiber.dphi.adapter.config import dphi_env
 

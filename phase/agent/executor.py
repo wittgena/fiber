@@ -20,11 +20,11 @@ from fiber.phase.tracer.router import InfraRouter
 
 from xphi.arch.model.conv.event import LLMConvertibleEvent
 from xphi.arch.contract.model.graph import EntryNode
-from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.kernel.space.topos.node.gan import Message, GanNode
 from xphi.arch.contract.event.next import next_id
-from xphi.arch.topos.tunnel.factory import TunnelFactory
-from xphi.arch.topos.node.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.topos.node.event import AgentConfigured, LLMEventMessage, TaskCompletedMessage
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("loop.executor")

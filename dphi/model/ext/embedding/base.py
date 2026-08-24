@@ -22,8 +22,8 @@ from fiber.dphi.model.mapper.pydantic import (
     ConfigDict,
     model_validator,
 )
-from fiber.dphi.model.callback.manager import CallbackManager
-from fiber.dphi.model.callback.event import CBEventType, EventPayload
+from fiber.dphi.model.ext.callback.manager import CallbackManager
+from fiber.dphi.model.ext.callback.event import CBEventType, EventPayload
 from fiber.dphi.model.constants import DEFAULT_EMBED_BATCH_SIZE
 from fiber.dphi.model.ext.types.schema import BaseNode, MetadataMode, TransformComponent
 from fiber.dphi.model.util import get_tqdm_iterable
@@ -31,8 +31,8 @@ from fiber.dphi.model.util import run_jobs
 
 Embedding = List[float]
 
-from fiber.dphi.model.callback.event import EmbeddingEndEvent, EmbeddingStartEvent
-from fiber.dphi.model.callback.dispatcher import dispatcher
+from fiber.dphi.model.ext.callback.event import EmbeddingEndEvent, EmbeddingStartEvent
+from fiber.dphi.model.ext.callback.dispatcher import dispatcher
 
 class SimilarityMode(str, Enum):
     """Modes for similarity/distance."""

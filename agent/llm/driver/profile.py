@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final
 from filelock import FileLock, Timeout
 from xphi.watcher.plane.emitter import get_logger
-from xphi.kernel.bind.resolver import resolve_path
+from xphi.kernel.space.bind.resolver import resolve_path
 
 if TYPE_CHECKING:
     from fiber.agent.llm.driver.model import LLMModel

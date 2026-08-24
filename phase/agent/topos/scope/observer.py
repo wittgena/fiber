@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from xphi.arch.model.phase.flow import PhaseFlow, FlowState
-from xphi.arch.topos.node.gan import Message, GanNode
+from xphi.kernel.space.topos.node.gan import Message, GanNode
 from xphi.arch.contract.event.next import next_id
 from xphi.arch.contract.event.mesh.transport import MeshP2PTransport
 

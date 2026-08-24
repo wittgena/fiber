@@ -1,4 +1,5 @@
-# phase.client.mcp.client
+# dphi.client.mcp.client
+## @lineage: phase.client.mcp.client
 ## @lineage: bound.client.mcp.client
 ## @lineage: bound.adapter.mcp.client
 ## @lineage: agent.protocol.mcp.client
@@ -13,7 +14,7 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 
 from fiber.agent.space.terminal.session.builder import AsyncExecutorProtocol
-from fiber.phase.client.mcp.exception import MCPError
+from fiber.dphi.client.mcp.exception import MCPError
 from fiber.agent.anchor.config.mcp import MCPConfig
 
 from xphi.watcher.plane.emitter import get_logger
