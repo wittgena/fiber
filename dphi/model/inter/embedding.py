@@ -6,8 +6,8 @@
 from typing import List, Union
 
 from fiber.agent.llm.execution import EmbeddingContext
-from fiber.agent.llm.router.base import BaseProviderAdapter
-from fiber.dphi.model.router.embedding import EmbeddingRouter
+from fiber.dphi.model.inter.adapter import BaseProviderAdapter
+from fiber.dphi.model.registry.embedding import EmbeddingRouter
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     def __init__(self):

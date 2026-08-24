@@ -1,7 +1,7 @@
 # dphi.model.inter.registry
 from typing import Dict
 
-from fiber.agent.llm.router.base import BaseProviderAdapter, GenericHTTPAdapter
+from fiber.dphi.model.inter.adapter import BaseProviderAdapter, GenericHTTPAdapter
 from fiber.dphi.model.inter.llm import InterLLMAdapter
 from fiber.dphi.model.inter.embedding import InterEmbeddingAdapter
 from xphi.watcher.plane.emitter import get_emitter

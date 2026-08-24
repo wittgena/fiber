@@ -1,15 +1,4 @@
 # dphi.model.mapper.traverser
-## @lineage: agent.llm.router.mapper.traverser
-## @lineage: bound.agent.mapper.traverser
-## @lineage: bound.eco.agent.adapter.mapper.traverser
-## @lineage: eco.bound.agent.adapter.mapper.traverser
-## @lineage: bound.agent.adapter.mapper.traverser
-## @lineage: ext.router.adapter.mapper.traverser
-## @lineage: router.adapter.mapper.traverser
-## @lineage: engine.adapter.mapper.traverser
-## @lineage: bound.adapter.mapper.traverser
-## @lineage: eco.adapter.mapper.traverser
-## @lineage: phi.tenant.adapter.mapper.traverser
 import os
 import json
 import asyncio
@@ -17,7 +6,8 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List
 
-from fiber.phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
+from fiber.dphi.model.ext.llm.model.types.block import ChatMessage, MessageRole
+
 from xphi.arch.model.phase.gate import uuid4 
 from xphi.kernel.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter

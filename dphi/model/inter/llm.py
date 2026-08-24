@@ -4,8 +4,8 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any
 
-from fiber.agent.llm.router.base import BaseProviderAdapter
-from fiber.dphi.model.router.llm import LLMRouter, ModuleMissingError
+from fiber.dphi.model.inter.adapter import BaseProviderAdapter
+from fiber.dphi.model.registry.llm import LLMRouter, ModuleMissingError
 
 from fiber.agent.llm.execution import CompletionContext
 from fiber.agent.anchor.provider.registry import get_llm_provider

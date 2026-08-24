@@ -13,7 +13,7 @@ from fiber.agent.llm.param import ModelResponse
 from fiber.agent.llm.execution import ExecutionMetadata
 from fiber.agent.anchor.model.types.general import EmbeddingResponse
 from fiber.agent.loop.runtime.exception.mapping import exception_type
-from fiber.phase.client.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
+from fiber.dphi.model.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.dphi.model.inter.registry import AdapterRegistry
 
 # Arch & Watcher

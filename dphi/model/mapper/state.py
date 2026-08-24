@@ -1,14 +1,4 @@
 # dphi.model.mapper.state
-## @lineage: agent.llm.router.mapper.state
-## @lineage: bound.agent.mapper.state
-## @lineage: bound.eco.agent.adapter.mapper.state
-## @lineage: eco.bound.agent.adapter.mapper.state
-## @lineage: bound.agent.adapter.mapper.state
-## @lineage: ext.router.adapter.mapper.state
-## @lineage: router.adapter.mapper.state
-## @lineage: engine.adapter.mapper.state
-## @lineage: bound.adapter.mapper.state
-## @lineage: eco.adapter.mapper.state
 import os
 import json
 import asyncio
@@ -16,12 +6,12 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional
 
-from fiber.phase.client.ext.llm.model.types.block import ChatMessage, MessageRole
+from fiber.dphi.model.ext.llm.model.types.block import ChatMessage, MessageRole
+from fiber.dphi.model.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
+
 from xphi.arch.model.phase.gate import uuid4 
 from xphi.kernel.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter
-
-from fiber.dphi.model.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
