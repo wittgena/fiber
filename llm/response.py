@@ -4,7 +4,7 @@ import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
-from fiber.dphi.space.action.message import Message
+from fiber.llm.model.message import Message
 from fiber.llm.param import ModelResponse
 from fiber.llm.model.metric import MetricsSnapshot
 

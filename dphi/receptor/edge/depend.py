@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import Request, HTTPException, status
 
 from fiber.dphi.adapter.anchor import NexusAnchor
-from fiber.dphi.space.profile import BenchProfile
+from xphi.kernel.space.sandbox.profile import BenchProfile
 from fiber.dphi.receptor.ingress.gov.policy import (
     IngressPolicyEngine, 
     ToposSequencer, 
