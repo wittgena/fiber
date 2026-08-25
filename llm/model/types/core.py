@@ -1,5 +1,4 @@
 # llm.model.types.core
-## @lineage: agent.anchor.model.types.core
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Required, TypedDict

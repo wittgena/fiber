@@ -1,6 +1,4 @@
 # llm.stream.wrapper
-## @lineage: agent.llm.stream.wrapper
-## @lineage: ator.driver.llm.stream.wrapper
 import asyncio
 import collections.abc
 import time
@@ -22,7 +20,6 @@ from fiber.llm.stream.pipeline import (
     StreamYieldHandler
 )
 from fiber.llm.stream.accumulator import StreamAccumulator
-from fiber.llm.stream.rule import Rules
 
 from xphi.arch.model.config import config
 from xphi.kernel.space.topos.network.channel.pipeline import ChannelPipeline
@@ -35,6 +32,7 @@ class StreamWrapper:
         self,
         completion_stream: Any,
         model: str,
+        system_meta: Optional[Any] = None,
         custom_llm_provider: Optional[str] = None,
         stream_options: Optional[dict] = None,
         make_call: Optional[Callable] = None,
@@ -42,6 +40,7 @@ class StreamWrapper:
     ):
         self.completion_stream = completion_stream
         self.model = model
+        self.system_meta = system_meta
         self.custom_llm_provider = custom_llm_provider
         self.make_call = make_call
         
@@ -52,10 +51,10 @@ class StreamWrapper:
         self.pipeline.attributes = {
             "model": self.model,
             "provider": self.custom_llm_provider,
+            "system_meta": self.system_meta,
             "accumulator": StreamAccumulator(self.model, self.custom_llm_provider),
-            "rules": Rules(),
-            "outbox": deque(),  # 파이프라인 처리 결과를 꺼낼 버퍼
-            "framework_flags": {} # TTFT 측정 등을 위한 최소한의 내부 상태 저장소
+            "outbox": deque(),
+            "framework_flags": {}
         }
         self.pipeline.add_last(ChunkCodecHandler())\
                      .add_last(RuleGuardHandler())\
@@ -103,7 +102,7 @@ class StreamWrapper:
                 outbox: deque = self.pipeline.attributes["outbox"]
                 if outbox:
                     processed_chunk = outbox.popleft()
-                    if not config.disable_streaming_logging:
+                    if not config.get("disable_streaming_logging", False):
                         log.trace("Stream chunk yielded", model=self.model, chunk_id=getattr(processed_chunk, "id", None))
                     return processed_chunk
 

@@ -1,5 +1,4 @@
 # llm.response
-## @lineage: agent.llm.driver.response
 import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict

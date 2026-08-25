@@ -1,7 +1,4 @@
 # llm.provider.registry
-## @lineage: agent.anchor.provider.registry
-## @lineage: bound.xor.model.registry
-## @lineage: eco.model.registry
 from __future__ import annotations
 import json
 import os
@@ -99,10 +96,7 @@ PROVIDER_REGISTRY = {
 
 _CLAUDE_PATTERN = re.compile(r"^claude-[a-z]+-\d+-\d+(?:-\d{8})?$", re.IGNORECASE)
 
-# ==========================================
-# 1. Registry Data & Cost Mapping
-# ==========================================
-
+"""Registry Data & Cost Mapping"""
 class RegistryIO:
     """@desc: Namespace for registry file operations and network I/O."""
     

@@ -1,6 +1,4 @@
 # llm.stream.rule
-## @lineage: agent.llm.stream.rule
-## @lineage: ator.driver.llm.stream.rule
 import json
 from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate

@@ -4,7 +4,7 @@
 
 `fiber.llm` 모듈은 **LiteLLM 및 OpenAI SDK와 100% 호환되는 인터페이스**를 제공하면서, 내부적으로는 DPHI Kernel 기반의 비동기 채널 파이프라인(Channel Pipeline)을 통해 실행되는 고성능 LLM 라우터입니다.
 
-기존에 LiteLLM이나 OpenAI API를 사용하던 코드를 변경할 필요 없이 **Drop-in Replacement**로 사용할 수 있으며, 추가적으로 연료(Fuel) 기반 과금 통제, 동적 폴백(Fallback), 목업(Mocking), 프롬프트 관리 기능을 투명하게 제공합니다.
+기존에 LiteLLM이나 OpenAI API를 사용하던 코드를 변경할 필요 없이 **Drop-in Replacement**로 사용할 수 있으며, 추가적으로 연료(Fuel) 기반 과금 통제, 동적 폴백(Fallback), 목업(Mocking), 프롬프트 관리, 그리고 응답 규격 정규화 기능을 투명하게 제공합니다.
 
 ---
 
@@ -22,6 +22,7 @@ response = completion(model="gpt-4o", messages=[{"role": "user", "content": "Hel
 
 # Asynchronous
 response = await acompletion(model="gpt-4o", messages=[{"role": "user", "content": "Hello"}])
+
 ```
 
 ### Embedding (임베딩)
@@ -34,6 +35,7 @@ response = embedding(model="text-embedding-3-small", input=["Hello world"])
 
 # Asynchronous
 response = await aembedding(model="text-embedding-3-small", input=["Hello world"])
+
 ```
 
 ---
@@ -49,6 +51,11 @@ response = await aembedding(model="text-embedding-3-small", input=["Hello world"
 | `EmbeddingResponse` | 임베딩 반환 객체 | `openai.types.CreateEmbeddingResponse` |
 | `Message` | 역할 및 내용을 포함한 메시지 | `openai.types.chat.ChatCompletionMessage` |
 | `Usage` | 토큰 사용량 정보 | `openai.types.CompletionUsage` |
+
+### 3.1. Declarative State Translation (Tool Call Recovery)
+
+단순한 Pydantic 래핑을 넘어, 이기종 LLM(Gemini 등)이 `tool_calls` 객체를 누락하고 비표준 JSON 블록(`content.parts.function_call` 등)으로 응답을 반환하는 심각한 규격 위반(Leakage)을 방어합니다.
+내부의 `StateMapper`와 `StateTraverser` 미들웨어가 선언적 규칙을 통해 누수된 함수 호출을 찾아내어, 완벽한 OpenAI `tool_calls` 포맷으로 강제 복원(Normalization)하여 반환합니다.
 
 ---
 
@@ -82,7 +89,7 @@ response = completion(
 
 테스트 환경을 위해 실제 LLM 호출을 건너뛰고 가짜 응답이나 지연/타임아웃을 시뮬레이션할 수 있습니다.
 
-* `mock_response="가짜 응답 텍스트"`: API 호출 없이 즉시 응답 반환.
+* `mock_response="가짜 응답 텍스트"`: API 호출 없이 즉시 Pydantic 호환 응답 객체(`ModelResponse`) 반환.
 * `mock_delay=2.0`: 응답 전 2초간 의도적 지연.
 * `mock_timeout=True`: 강제로 `TimeoutError`를 발생시켜 폴백/예외 처리 로직 테스트.
 
@@ -95,23 +102,42 @@ response = completion(
 ### 4.5. Telemetry & Observability (`ChannelObserver`)
 
 * `session_id="sess_123"`, `trace_id="req_456"` (또는 `metadata` 내부에 포함): 분산 트레이싱을 위해 주입하면 `executor.telemetry` 로거가 자동으로 시작/종료/오류 및 소요 시간(`duration_ms`)을 트래킹합니다.
+* 파이프라인 전체를 관통하는 `system_meta`(ExecutionMetadata)로 래핑되어 스트리밍 청크 단위의 TTFT(Time To First Token)까지 일관되게 추적됩니다.
+
+### 4.6. Dynamic Guardrails (`RuleGuardHandler`)
+
+전역 설정(Global Config)에 의존하지 않고, 각 요청(Request) 단위로 독립적인 유해성 필터나 포맷 검증 룰셋을 동적으로 주입할 수 있습니다. 동기/비동기 검증 함수를 모두 완벽하게 지원합니다.
+
+```python
+async def pii_filter(text: str) -> bool:
+    return "SSN" not in text
+
+response = await acompletion(
+    model="gpt-4o",
+    messages=[...],
+    metadata={
+        "post_call_rules": [pii_filter] # 파이프라인이 런타임에 룰을 가로채어 응답/스트림을 검증
+    }
+)
+
+```
 
 ---
 
 ## 5. Implementation Architecture
 
-해당 엔트리는 단순한 함수 래퍼가 아닌, Netty 스타일의 비동기 채널 파이프라인(`ChannelPipeline`)으로 설계되었습니다. (참고: `PipelineBootstrap.execute_completion`)
+해당 엔트리는 단순한 함수 래퍼가 아닌, Netty 스타일의 비동기 채널 파이프라인(`ChannelPipeline`)으로 설계되었습니다.
 
 **실행 순서 (Head → Tail):**
 
 1. **Transport (Head)**: `CompletionTransport` / `EmbeddingTransport` - 실제 LLM 공급자 API 호출.
-2. **StreamAggregator**: 스트림 청크 누적 및 **Fuel 예산 실시간 차감**.
-3. **PayloadTranslator**: `CompletionProcessor`로 OpenAI 규격 변환.
+2. **StreamAggregator**: 스트림 청크 누적, 내부 파이프라인(RuleGuard 등) 생성 및 **Fuel 예산 실시간 차감**.
+3. **PayloadTranslator**: `StateMapper`를 호출하여 이기종 응답을 OpenAI 규격(`ModelResponse`)으로 정규화(Normalization).
 4. **FallbackHandler**: 에러 발생 시 Fallback 모델로 재귀(Retry).
 5. **PromptTransformer**: `prompt_id` 기반 텍스트 주입 및 `tools` 정규화.
 6. **MockBypass**: `mock_response` 감지 시 Transport 진입 전 루프 숏컷(Short-circuit).
 7. **ChannelObserver**: 소요 시간 계산 및 로깅 텔레메트리 부착.
-8. **ContextBinder (Tail)**: UUID 할당 및 커널 인가(`kernel_auth`) 메타데이터 등록.
+8. **ContextBinder (Tail)**: UUID 할당 및 커널 인가(`kernel_auth`), 동적 가드레일(`post_call_rules`) 메타데이터 등록.
 
 이 파이프라인 구조 덕분에, 기존 OpenAI / LiteLLM 코드와 100% 호환되면서도 거대한 엔터프라이즈급 확장 로직을 단일 호출 안에서 투명하게 처리할 수 있습니다.
 

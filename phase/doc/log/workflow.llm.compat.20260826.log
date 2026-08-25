@@ -1,0 +1,63 @@
+wittgena@wittgenas-MacBook-Pro self % python -m fiber.workflow.llm.compat
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 21 aliases.
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  tier.registry: Loaded 4 models into Registry.
+ LOG | SYSTEM | WARN  |  tier.registry: 🚨 All models exhausted or none meet cognitive requirement (Score >= 2).
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: 🚀 Igniting Launcher Workflow via KernelReactor...
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-41151
+ LOG | SYSTEM | INFO  |  conv.flow: [*] Entered Trace Path: [logical:local]
+ LOG | SYSTEM | INFO  |  surface.local: [*] Initializing Local Direct Surface...
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🚀 Igniting LLM Compat Suite (Primary Model: gemini/gemini-3.1-flash-lite)
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🔄 [Phase 1] Core Pipeline & Drop-in Replacement
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.dphi.model.ext.llm
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'system_meta', 'timeout'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+AFC is enabled with max remote calls: 10.
+ LOG | LLM_CALL | INFO  |  executor.telemetry: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ✅ Passed: Standard async completion executed successfully.
+ LOG | SYSTEM | WARN  |  workflow.llm.compat: [CompatSuiteApp] ⚠️ Audit hash mismatch: Expected audit_basic_1787687169, Got N/A
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🔄 [Phase 2] Dynamic FallbackHandler via Tier Registry
+ LOG | SYSTEM | WARN  |  tier.registry: 🚨 All models exhausted or none meet cognitive requirement (Score >= 2).
+ LOG | SYSTEM | WARN  |  tier.registry: 🚨 All models exhausted or none meet cognitive requirement (Score >= 3).
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ⚙️ Fallback Pool Configured: gemini/gemini-3.1-flash-lite, gemini/gemma-4-31b
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | SYSTEM | WARN  |  executor.handlers: Fallback attempt triggered. Retrying with model: gemini/gemini-3.1-flash-lite
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'system_meta', 'timeout'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+AFC is enabled with max remote calls: 10.
+ LOG | LLM_CALL | INFO  |  executor.telemetry: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ✅ Passed: Fallback successfully routed to ''.
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🔄 [Phase 3] MockBypass Short-circuit
+ LOG | LLM_CALL | INFO  |  executor.telemetry: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ✅ Passed: Mock response received in 2.37s (Expected >1.0s).
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🔄 [Phase 4] Kinetic Membrane (Fuel Trap) Streaming
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ⛽ Injecting artificial fuel budget: 5
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'system_meta', 'timeout'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  executor.telemetry: LLM Request Completed Successfully (Sealed)
+AFC is enabled with max remote calls: 10.
+ LOG | SYSTEM | WARN  |  executor.pipeline: [DPHI_TRAP] Fuel exhausted (5). Killing stream physically.
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ✅ Passed: Stream physically killed after 5 chunks.
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🔄 [Phase 5] Token Evaluator & Splitter
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ✅ Passed: Token math verified. (Count: 9, SafeMax: 1000, Chunks: 2)
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] 🎯 Passed: StateMapper successfully traversed and recovered tool_calls.
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'system_meta', 'timeout'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  executor.telemetry: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: [CompatSuiteApp] ✅ Passed: InterLLMAdapter E2E tool mapping executed securely.
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  conv.flow: [managed_scope] Triggering safe teardown sequence for infrastructure resources.
+ LOG | SYSTEM | INFO  |  surface.local: [*] Folding Local Surface...
+ LOG | SYSTEM | INFO  |  conv.flow: [+] Context Manager closed safely.
+[Reactor] 🧹 Executing user-defined teardown hook...
+ LOG | SYSTEM | INFO  |  workflow.llm.compat: 🧹 Reclaiming compat suite resources...
+[Reactor] 🏁 Lifecycle terminated cleanly.
+wittgena@wittgenas-MacBook-Pro self % 

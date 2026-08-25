@@ -45,7 +45,7 @@ with track_usage() as tracker:
 
 이 시스템은 DPHI의 핵심 관측 모듈(`xphi.watcher.plane.emitter`)에 강하게 결합되어 있습니다.
 
-* `llm.entry` 파이프라인에서 `ChannelObserver`가 로깅을 발사할 때, `usage_metrics`와 `model_name` 데이터를 이벤트 객체(LogEvent)에 담습니다.
+* `llm.entry` 파이프라인에서 `ChannelObserver`가 로깅을 발사할 때, 순수 `usage` 딕셔너리와 `model_name` 데이터를 이벤트 객체(LogEvent)에 담습니다.
 * `_usage_tracking_interceptor`가 이 이벤트를 낚아채서 `flow_scope` 내부에 존재하는 `UsageTracker` 객체에 데이터를 밀어 넣습니다.
 * **제약사항:** `flow_scope` 외곽에서 실행되거나 인터셉터 등록이 누락되면 사용량 추적이 조용히 실패(Silently fail)합니다.
 
@@ -92,8 +92,24 @@ if billing_result["status"] == "success":
 3. **Reasoning / Audio / Image 토큰:**
 * `o1`이나 `deepseek-r1`의 추론 토큰, 멀티모달 토큰은 `completion_tokens_details` 파싱을 시도하나, 지원되지 않는 프로바이더의 경우 0달러로 누락 처리되거나 기본 텍스트 토큰 요금으로 잘못 합산될 수 있습니다.
 
+
+
 **🛠️ 해결 / 회피 방안 (Workaround)**
 비즈니스 로직(실제 과금 결제 등)에서 이 Cost 모듈을 사용할 때는 **보수적인 접근**이 필요합니다.
 
 * 정확한 빌링이 필요한 경우, `total_usage` 값을 직접 취합한 뒤 시스템 외부의 신뢰할 수 있는 단독 빌링 서버에서 정산하는 것을 권장합니다.
 * 내부 과금용으로는 참고용 메트릭(Observability Metric)이나 DPHI Kernel(Fuel) 제어 용도로만 활용하십시오.
+
+### ⛽ 3.3. Fuel vs Token Usage (사전 통제와 사후 정산의 분리)
+
+DPHI 아키텍처는 토큰 사용량(Usage)과 커널의 연료(Fuel)를 데이터 오염 없이 완벽히 분리하여 관리합니다.
+
+* **Usage (토큰 사용량):** API 제공자(OpenAI, Anthropic 등)가 응답으로 내려주는 실제 프롬프트/컴플리션 토큰 수(`res.usage`)입니다. `TenantEco`와 `UsageTracker`를 통한 **사후 정산(Post-billing)** 및 통계 산출에만 사용됩니다.
+* **Fuel (커널 연료):** DPHI 커널(L402 경제 시스템)이 해당 요청에 대해 **사전 할당(Pre-allocation)한 토큰 예산**입니다. 파이프라인 내부(`StreamAggregator` 등)에서 실시간 차감 및 Kill-switch(물리적 스트림 절단) 용도로 사용됩니다.
+
+`llm.entry`의 `ChannelObserver`는 이 두 데이터를 명확히 분리하여 텔레메트리 이벤트로 발송합니다.
+
+* *순수 사용량:* `usage={"prompt_tokens": 10, "completion_tokens": 20}` -> `UsageTracker`가 수집하여 비용 산출.
+* *커널 상태:* `kernel_fuel={"consumed": 30, "budget": 1000}` -> 인프라 모니터링 시스템이 수집하여 예산 제어.
+
+이를 통해 과금 시스템(`TenantEco`)은 순수한 API 사용량 단가표를 기준으로 왜곡 없이 정확한 비용을 산출할 수 있으며, 시스템 통제는 독립적인 커널 예산 규칙을 안전하게 따르게 됩니다.

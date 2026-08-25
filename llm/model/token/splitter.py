@@ -4,7 +4,7 @@ from typing import Callable, List, Optional, Dict
 from tokenizers import Tokenizer
 import tiktoken
 
-from fiber.llm.model.encoder import get_default_encoding
+from fiber.llm.model.token.encoder import get_default_encoding
 from fiber.llm.model.types.general import CustomHuggingfaceTokenizer, SelectTokenizerResponse
 from fiber.dphi.model.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 from xphi.watcher.plane.emitter import get_emitter

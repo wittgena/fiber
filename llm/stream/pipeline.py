@@ -1,13 +1,14 @@
 # llm.stream.pipeline
-## @lineage: agent.llm.stream.pipeline
-## @lineage: ator.driver.llm.stream.pipeline
 import time
+import asyncio
 from typing import Any
+
 from xphi.kernel.space.topos.network.channel.pipeline import DuplexChannel, ChannelContext
+
 from fiber.llm.stream.parser.chunk import StreamChunkParser
 from fiber.llm.stream.accumulator import StreamAccumulator
-from fiber.llm.stream.rule import Rules
 from fiber.llm.model.types.stream import ModelResponseStream
+from fiber.llm.exception.eco import APIResponseValidationError
 
 class ChunkCodecHandler(DuplexChannel):
     """1단계: 원시 데이터를 파싱하고 Accumulator를 통해 ModelResponseStream 조립"""
@@ -23,18 +24,48 @@ class ChunkCodecHandler(DuplexChannel):
             await ctx.fire_channel_read(processed_chunk)
 
 class RuleGuardHandler(DuplexChannel):
-    """2단계: Guardrail / Rules 엔진 검사"""
+    """2단계: Guardrail / Rules 엔진 검사 (Self-contained Middleware)"""
     async def channel_read(self, ctx: ChannelContext, msg: ModelResponseStream):
-        rules: Rules = ctx.get_attr("rules")
         accumulator: StreamAccumulator = ctx.get_attr("accumulator")
         model = ctx.get_attr("model")
+        system_meta = ctx.get_attr("system_meta")
         
+        # 전역 config(레거시) 대신 현재 요청의 Context(metadata)에서 주입된 동적 룰 리스트를 가져옵니다.
+        # (호출자가 acompletion(..., metadata={"post_call_rules": [func1, func2]}) 형태로 주입)
+        rules = system_meta.metadata.get("post_call_rules", []) if system_meta and system_meta.metadata else []
+
         try:
-            # 유해성 및 룰셋 검증 수행
-            rules.post_call_rules(input=accumulator.response_uptil_now, model=model)
+            if rules:
+                current_text = accumulator.response_uptil_now
+                
+                # 룰 순회 및 검증 (동기/비동기 함수 모두 완벽 지원)
+                for rule in rules:
+                    if callable(rule):
+                        if asyncio.iscoroutinefunction(rule):
+                            decision = await rule(current_text)
+                        else:
+                            decision = rule(current_text)
+                            
+                        # 기존 규칙 엔진과 동일한 검증 로직 내재화
+                        if isinstance(decision, bool) and decision is False:
+                            raise APIResponseValidationError(
+                                message="LLM Response failed post-call-rule check", 
+                                llm_provider="", 
+                                model=model or "unknown"
+                            )
+                        elif isinstance(decision, dict):
+                            if decision.get("decision", True) is False:
+                                raise APIResponseValidationError(
+                                    message=decision.get("message", "LLM Response failed post-call-rule check"), 
+                                    llm_provider="", 
+                                    model=model or "unknown"
+                                )
+                                
+            # 룰셋을 무사히 통과했거나 룰이 없으면 다음 핸들러로 패스
             await ctx.fire_channel_read(msg)
+            
         except Exception as e:
-            # 룰셋 위반 시 하위로 에러 이벤트를 발송하여 스트림 전파 중단
+            # 룰셋 위반(ValidationError) 등 발생 시 하위로 에러 이벤트를 발송하여 스트림 전파 중단
             await ctx.fire_exception_caught(e)
 
 class StreamTelemetryHandler(DuplexChannel):
@@ -43,7 +74,7 @@ class StreamTelemetryHandler(DuplexChannel):
         system_meta = ctx.get_attr("system_meta")
         
         # 첫 번째 유의미한 청크가 도착했을 때 TTFT(Time To First Token) 기록
-        if "time_to_first_token" not in system_meta.framework_flags:
+        if system_meta and "time_to_first_token" not in system_meta.framework_flags:
             system_meta.framework_flags["time_to_first_token"] = time.time()
             
         await ctx.fire_channel_read(msg)

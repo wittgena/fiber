@@ -1,5 +1,4 @@
 # workflow.edge
-## @lineage: dphi.workflow.edge
 import asyncio
 import hashlib
 import random

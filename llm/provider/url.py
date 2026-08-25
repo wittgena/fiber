@@ -1,15 +1,13 @@
 # llm.provider.url
-## @lineage: agent.anchor.provider.url
-## @lineage: bound.xor.model.api.base
-## @lineage: eco.model.api.base
 from typing import Optional, Union
+
 from fiber.llm.model.types.param.legacy import LegacyParams
 from fiber.llm.provider.registry import get_llm_provider
 
 from xphi.arch.model.config import config
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("bridge.api")
+log = get_emitter("provider.url")
 
 def get_api_base(model: str, optional_params: Union[dict, LegacyParams]) -> Optional[str]:
     """@desc: Resolves the dynamic API Base URL based on the model, provider, and runtime parameters"""

@@ -1,5 +1,4 @@
 # llm.entry
-## @lineage: agent.llm.entry
 from __future__ import annotations
 
 import asyncio
@@ -36,6 +35,8 @@ class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
         if "call_id" not in msg:
             msg["call_id"] = str(uuid.uuid4())
+
+        ctx.set_attr("trace_errors", msg.get("trace_errors", False))
 
         metadata = msg.get("metadata", {})
         session_id = msg.get("session_id") or metadata.get("session_id")
@@ -103,6 +104,7 @@ class ChannelObserver(DuplexChannel):
         # --- [DPHI] Audit Hash & Fuel Sealing ---
         audit_hash = ctx.get_attr("audit_hash")
         fuel_consumed = ctx.get_attr("fuel_consumed", 0)
+        fuel_budget = ctx.get_attr("fuel_budget", float('inf'))
         
         # 비스트리밍 단일 응답의 경우 토큰 카운트를 연료로 환산
         if not is_stream and usage and hasattr(usage, "total_tokens"):
@@ -112,18 +114,24 @@ class ChannelObserver(DuplexChannel):
         if audit_hash and hasattr(msg, "system_fingerprint"):
             msg.system_fingerprint = audit_hash
 
-        # 2. DynamicSurgeModel의 extra='allow'를 악용(?)하여 Fuel 과금 내역 삽입
-        if usage:
-            usage.fuel_consumed = fuel_consumed
+        # [수정] 악의적인 usage.fuel_consumed 삽입 코드 삭제 (Usage 무결성 보존)
+        # Usage 객체는 cost.tracker를 위해 순수한 API 제공자의 데이터 상태로만 남깁니다.
         # ----------------------------------------
 
         usage_dict = usage.model_dump() if hasattr(usage, "model_dump") else (usage or {})
 
+        # [수정] 로깅 페이로드에서 Usage(사후 정산)와 Kernel Fuel(사전 예산 통제)을 명확히 분리
         self.emitter.info(
             "LLM Request Completed Successfully (Sealed)",
             model=meta.base_model, provider=req.get("custom_llm_provider"),
-            duration_ms=duration_ms, usage=usage_dict, trace_id=meta.trace_id,
-            fuel_consumed=fuel_consumed, audit_hash=audit_hash
+            duration_ms=duration_ms, 
+            usage=usage_dict,                                 # 순수 토큰 사용량 (cost.tracker 용)
+            trace_id=meta.trace_id,
+            kernel_fuel={                                     # 커널 연료 상태 분리
+                "consumed": fuel_consumed,
+                "budget": fuel_budget if fuel_budget != float('inf') else None
+            },
+            audit_hash=audit_hash
         )
         await ctx.fire_channel_read(msg)
 
@@ -132,12 +140,14 @@ class ChannelObserver(DuplexChannel):
         req: dict = ctx.get_attr("request_kwargs", {})
         duration_ms = (time.time() - ctx.get_attr("start_time", time.time())) * 1000
 
+        show_trace = ctx.get_attr("trace_errors", False)
+
         self.emitter.error(
             f"LLM Request Failed: {type(exc).__name__} - {str(exc)}",
             model=meta.base_model if meta else "unknown",
             provider=req.get("custom_llm_provider", "unknown"),
             duration_ms=duration_ms, trace_id=meta.trace_id if meta else None,
-            exc_info=True
+            exc_info=show_trace
         )
         await ctx.fire_exception_caught(exc)
 
@@ -160,7 +170,26 @@ class MockBypass(DuplexChannel):
 
         mock_response = msg.get("mock_response")
         if mock_response:
-            mock_res = {"choices": [{"message": {"content": mock_response}}]}
+            mock_res_dict = {
+                "id": f"chatcmpl-mock-{uuid.uuid4().hex[:8]}",
+                "model": msg.get("model", "mock-model"),
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": {
+                            "role": "assistant",
+                            "content": mock_response
+                        },
+                        "finish_reason": "stop"
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0
+                }
+            }
+            mock_res = ModelResponse(**mock_res_dict)
             await ctx.fire_channel_read(mock_res)
             return
 
@@ -243,7 +272,8 @@ class PayloadTranslator(DuplexChannel):
             ctx.set_attr("processed_context", processed_ctx)
             await ctx.fire_write(processed_ctx)
         except Exception as e:
-            log_handlers.error("Payload translation failed", error=str(e), exc_info=True)
+            show_trace = ctx.get_attr("trace_errors", False)
+            log_handlers.error("Payload translation failed", error=str(e), exc_info=show_trace)
             await ctx.fire_exception_caught(e)
 
 

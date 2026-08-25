@@ -1,6 +1,4 @@
 # llm.stream.accumulator
-## @lineage: agent.llm.stream.accumulator
-## @lineage: ator.driver.llm.stream.accumulator
 import time
 from typing import Any, Dict, List, Optional
 

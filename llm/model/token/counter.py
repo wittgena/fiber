@@ -319,7 +319,7 @@ def token_counter(
     """
     @desc: 외부 호출을 위한 파사드입니다. 기존 서명을 완벽하게 유지합니다.
     """
-    from fiber.llm.model.encoder import convert_list_message_to_dict
+    from fiber.llm.model.token.encoder import convert_list_message_to_dict
     from fiber.llm.model.token.encoder import encode # 정규화된 인코더 사용
     
     if text is not None and messages is not None:
@@ -362,10 +362,10 @@ def token_counter(
 def get_modified_max_tokens(
     model: str,
     base_model: str,
-    messages: Optional[List[AllMessageValues]],
-    user_max_tokens: Optional[int],
-    buffer_perc: Optional[float],
-    buffer_num: Optional[float],
+    messages: Optional[List[AllMessageValues]] = None,
+    user_max_tokens: Optional[int] = None,
+    buffer_perc: Optional[float] = None,
+    buffer_num: Optional[float] = None,
 ) -> Optional[int]:
     """
     @desc: 기존 서명을 유지하면서 리팩토링된 순수 token_counter를 활용합니다.

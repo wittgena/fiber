@@ -4,7 +4,7 @@
 
 `fiber.llm.model` 패키지는 LLM 에이전트의 컨텍스트 윈도우 관리에 필수적인 **모델 스펙 조회, 토큰 계산(Token Counting), 텍스트 슬라이싱(Splitting) 및 메시지 트림(Message Trimming)** 기능을 제공합니다.
 
-이 모듈들은 LiteLLM의 핵심 유틸리티(`get_supported_openai_params`, `token_counter`, `trim_messages`, `get_modified_max_tokens`)와 **함수 시그니처 및 동작 방식이 완벽하게 동일**하게 설계되어, 기존 LiteLLM 코드를 수정하지 않고 그대로 대체(Drop-in Replacement)할 수 있습니다.
+이 모듈들은 LiteLLM의 핵심 유틸리티(`get_supported_openai_params`, `token_counter`, `trim_messages`, `get_modified_max_tokens`)와 **함수 시그니처 및 동작 방식이 완벽하게 동일**하게 설계되어, 기존 코드를 수정하지 않고 그대로 대체(Drop-in Replacement)할 수 있습니다.
 
 동시에 DPHI 아키텍처에 맞게 Pydantic 무결성 방어와 안전한 토큰 디코딩 로직이 내장되어 있습니다.
 
@@ -17,7 +17,7 @@ LLM 모델별 지원 기능(Vision, Function Calling, Prompt Caching 등)과 지
 ### 호환되는 주요 함수 (LiteLLM Compatible)
 
 * `get_supported_openai_params(model, custom_llm_provider=None)`
-* `get_supported_regions(model)` **[NEW]**: 모델의 특정 리전(Region) 지원 여부 조회.
+* `get_supported_regions(model)`: 모델의 특정 리전(Region) 지원 여부 조회.
 * `supports_function_calling(model)` / `supports_parallel_function_calling(model)`
 * `supports_vision(model)` / `supports_audio_input(model)`
 * `supports_system_messages(model)` / `supports_prompt_caching(model)`
@@ -46,27 +46,30 @@ from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 count = token_counter(
     model="gpt-4o", 
     messages=[{"role": "user", "content": "How are you?"}],
-    tools=[{"type": "function", "function": {"name": "get_weather", ...}}]
+    tools=[{"type": "function", "function": {"name": "get_weather", "description": "..."}}]
 )
 
-# [NEW] 2. 동적 Max Tokens 조절 (OOM 방어)
+# 2. 동적 Max Tokens 조절 (OOM 방어)
 # 입력 토큰량과 버퍼(10%)를 계산하여, 모델 한계를 넘지 않는 안전한 max_tokens를 반환합니다.
 safe_max_tokens = get_modified_max_tokens(
     model="gpt-4o",
     base_model="gpt-4o",
     messages=my_messages,
     user_max_tokens=4000,
-    buffer_perc=0.1,
-    buffer_num=10.0
+    buffer_perc=0.1,  # 생략 가능 (기본값: 0.1)
+    buffer_num=10.0   # 생략 가능 (기본값: 10.0)
 )
 
 ```
 
+> **Note:** `buffer_perc`와 `buffer_num` 파라미터는 선택 사항(Optional)이며, 명시적으로 값을 넘기지 않고 생략할 경우 프레임워크가 스마트 기본값(10% 버퍼)을 자동으로 안전하게 적용합니다.
+
 ### 내부 개선점
 
+* **Universal Encoder 통합 [NEW]**: 모델 이름(e.g., `llama-3`)에 따라 `tiktoken`과 `HuggingFace Tokenizer`를 자동으로 스위칭하는 유니버설 인코딩 아키텍처가 적용되어 있어, 오픈소스 모델의 토큰 산출 시에도 100%의 정확도를 보장합니다.
 * **`TokenEvaluator` 분리**: 글로벌 상태 의존성 없이 인코더 주입(Dependency Injection) 방식으로 토큰을 평가합니다.
-* **비용없는 Vision 연산**: `type: image_url` 객체 발견 시, 이미지를 네트워크에서 다운로드하지 않고 메타데이터(가로/세로 픽셀)만으로 OpenAI의 Vision 타일 계산 공식(`calculate_tiles_needed`)을 적용하여 O(1) 속도로 토큰을 산출합니다.
-* **[NEW] 이기종 Provider 포맷 대응**: Anthropic 특화 스키마(`tool_use`, `tool_result`)나 RAG 검색 결과(`search_results`) 같은 비표준 JSON 포맷도 내부적으로 안전하게 파싱하여 토큰을 산출합니다.
+* **비용 없는 Vision 연산**: `type: image_url` 객체 발견 시, 이미지를 네트워크에서 다운로드하지 않고 메타데이터(가로/세로 픽셀)만으로 OpenAI의 Vision 타일 계산 공식(`calculate_tiles_needed`)을 적용하여 O(1) 속도로 토큰을 산출합니다.
+* **이기종 Provider 포맷 대응 [NEW]**: Anthropic 특화 스키마(`tool_use`, `tool_result`)나 RAG 검색 결과(`search_results`) 같은 비표준 JSON 포맷도 내부적으로 안전하게 파싱하여 토큰을 산출합니다.
 
 ---
 
