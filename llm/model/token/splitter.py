@@ -1,7 +1,4 @@
 # llm.model.token.splitter
-## @lineage: agent.anchor.model.token.splitter
-## @lineage: bound.xor.model.token.splitter
-## @lineage: eco.model.token.splitter
 from functools import lru_cache
 from typing import Callable, List, Optional, Dict
 from tokenizers import Tokenizer

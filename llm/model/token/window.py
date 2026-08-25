@@ -1,6 +1,4 @@
 # llm.model.token.window
-## @lineage: agent.anchor.model.token.window
-## @lineage: bound.xor.model.token.window
 import copy
 from typing import Any, Dict, List, Optional, Tuple, Union
 import tiktoken

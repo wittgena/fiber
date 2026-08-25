@@ -1,7 +1,4 @@
 # llm.model.cost.unit
-## @lineage: agent.anchor.model.cost.unit
-## @lineage: bound.xor.model.cost.unit
-## @lineage: eco.model.cost.unit
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, TypedDict, cast
 from fiber.llm.model.types.general import CacheCreationTokenDetails, CompletionTokensDetailsWrapper, ImageResponse, ModelInfo, PromptTokensDetailsWrapper, ServiceTier, DataResidency
 from fiber.llm.model.types.core import Usage
@@ -12,7 +9,6 @@ log = get_emitter("cost.unit")
 _VALID_DATA_RESIDENCIES = frozenset(r.value for r in DataResidency)
 
 class CostMetricKeys:
-    """비용 산정에 사용되는 모델 레지스트리의 키 문자열 테이블"""
     INPUT = "input_cost_per_token"
     OUTPUT = "output_cost_per_token"
     CACHE_CREATION = "cache_creation_input_token_cost"

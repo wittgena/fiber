@@ -1,6 +1,4 @@
 # llm.model.token.counter
-## @lineage: agent.anchor.model.token.counter
-## @lineage: bound.xor.model.token.evaluator
 import json
 from typing import (
     Any,

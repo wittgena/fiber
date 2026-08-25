@@ -1,7 +1,4 @@
 # llm.model.info
-## @lineage: agent.anchor.model.info
-## @lineage: bound.xor.model.info
-## @lineage: eco.model.info
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -123,9 +120,6 @@ class ModelSupport:
             log.debug(f"Failed to check supported_regions. model={model}. Error: {e}")
             return None
 
-
-# --- Model Support Helper Wrappers ---
-
 def get_supported_openai_params(
     model: str, custom_llm_provider: Optional[str] = None, request_type: str = "chat_completion", base_model: Optional[str] = None
 ) -> Optional[list]:
@@ -188,10 +182,6 @@ def supports_native_structured_output(model: str, custom_llm_provider: Optional[
 def supports_embedding_image_input(model: str, custom_llm_provider: Optional[str] = None) -> bool:
     return ModelSupport.check_capability(model, custom_llm_provider, "supports_embedding_image_input")
 
-
-# =========================================================================
-# Phase 2: Model Info (Cost, Context, Provider Meta)
-# =========================================================================
 def get_model_info(
     model: str, custom_llm_provider: Optional[str] = None, api_base: Optional[str] = None, api_key: Optional[str] = None,
 ) -> ModelInfo:
@@ -199,10 +189,6 @@ def get_model_info(
     _model_info = lookup_base_model_info(model=model, custom_llm_provider=custom_llm_provider, api_base=api_base, api_key=api_key)
     return ModelInfo(**_model_info, supported_openai_params=supported_openai_params)
 
-
-# =========================================================================
-# Phase 3: Model Prompt Specification & Features
-# =========================================================================
 class ModelPromptSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
     family: str | None = None

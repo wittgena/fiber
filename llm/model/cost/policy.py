@@ -1,7 +1,4 @@
 # llm.model.cost.policy
-## @lineage: agent.anchor.model.cost.policy
-## @lineage: bound.xor.model.cost.policy
-## @lineage: eco.model.cost.policy
 import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Optional, Tuple, Union, cast
 from pydantic import BaseModel

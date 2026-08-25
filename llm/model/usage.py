@@ -1,8 +1,4 @@
 # llm.model.usage
-## @lineage: agent.anchor.model.usage
-## @lineage: bound.xor.model.usage
-## @lineage: eco.tracker.model.usage
-## @lineage: eco.model.cost.tracker.usage
 import logging
 from typing import Any, Dict, Optional, Generator, Optional
 from pydantic import BaseModel
@@ -18,7 +14,7 @@ from fiber.llm.model.cost.policy import CostPolicy
 from xphi.arch.contract.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor
 
-logger = logging.getLogger("tracker.usage")
+logger = logging.getLogger("model.usage")
 
 class PromptTokensDetails(BaseModel):
     cached_tokens: int = 0
@@ -85,8 +81,6 @@ class UsageTracker:
             total_usage_by_lm[lm] = total_usage
         return total_usage_by_lm
 
-
-# 2. 이벤트 Interceptor 정의 및 등록
 def _usage_tracking_interceptor(event: LogEvent):
     """
     Emitter에서 발생한 이벤트를 가로채서, 
@@ -100,11 +94,9 @@ def _usage_tracking_interceptor(event: LogEvent):
         model_name = ctx.get("model_name", "default-model")
         tracker.add_usage(model_name, usage_data)
 
-# 모듈이 로드될 때 인터셉터를 Emitter 시스템에 등록
+## 모듈이 로드될 때 인터셉터를 Emitter 시스템에 등록
 register_interceptor(_usage_tracking_interceptor)
 
-
-# 3. track_usage 컨텍스트 매니저 개선 (runtime -> flow_scope)
 @contextmanager
 def track_usage() -> Generator[UsageTracker, None, None]:
     tracker = UsageTracker()

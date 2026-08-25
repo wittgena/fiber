@@ -1,8 +1,4 @@
 # llm.model.metric
-## @lineage: agent.anchor.model.metric
-## @lineage: bound.xor.model.metric
-## @lineage: eco.tracker.model.metric
-## @lineage: eco.model.cost.tracker.metric
 import copy
 import time
 from typing import final

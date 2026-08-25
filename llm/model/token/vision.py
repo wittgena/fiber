@@ -1,8 +1,4 @@
 # llm.model.token.vision
-## @lineage: agent.anchor.model.token.vision
-## @lineage: bound.xor.model.token.ext.vision
-## @lineage: eco.model.token.ext.vision
-## @lineage: engine.model.token.ext.vision
 import base64
 import io
 import struct
