@@ -1,5 +1,4 @@
 # phase.kernel.attach.sandbox
-## @lineage: dphi.node.attach.sandbox
 import os
 import time
 import json
@@ -150,8 +149,6 @@ while True:
 class SandboxRunner(SchemeRunner):
     async def _assert_script(self, script: ScriptDef, context: dict = None, validator: Callable[[str], bool] = None):
         start_time = time.time()
-        
-        # 🌟 지연 정산 섀도우 연산을 위한 context 주입 (옵션)
         _ctx = context or {}
         _ctx["sandbox_tier"] = script.tier
         

@@ -1,6 +1,4 @@
 # phase.tracer.router
-## @lineage: watcher.tracer.phase.router
-## @lineage: watcher.tracer.router
 import urllib.parse
 from typing import Dict, Any, Optional
 

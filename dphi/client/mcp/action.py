@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any
 from pydantic import Field, ValidationError
 import mcp_types
 
-from fiber.agent.llm.param import ChatCompletionToolParam
-from fiber.agent.space.action.action import Action, Observation, Schema
-from fiber.agent.loop.conv.action.builder import ActionAnnotations, ActionDefinition
-from fiber.agent.space.action.executor import ActionExecutor
-from fiber.agent.space.action.mcp import MCPAction, MCPObservation
+from fiber.llm.param import ChatCompletionToolParam
+from fiber.dphi.space.action.action import Action, Observation, Schema
+from fiber.dphi.space.action.builder import ActionAnnotations, ActionDefinition
+from fiber.dphi.space.action.executor import ActionExecutor
+from fiber.dphi.space.action.mcp import MCPAction, MCPObservation
 
 from fiber.dphi.client.mcp.client import MCPClient
 

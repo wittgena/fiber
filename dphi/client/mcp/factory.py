@@ -17,7 +17,7 @@ from mcp_types import LoggingMessageNotificationParams
 
 from fiber.dphi.client.mcp.action import MCPActionDefinition
 
-from fiber.agent.anchor.config.mcp import MCPConfig
+from fiber.llm.config.mcp import MCPConfig
 from fiber.dphi.client.mcp.exception import MCPTimeoutError
 from fiber.dphi.client.mcp.client import MCPClient
 

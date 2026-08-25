@@ -6,9 +6,9 @@ from fastapi import Body, Header, Response, status, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from fiber.agent.llm.entry import acompletion, aembedding
-from fiber.agent.llm.param import ModelResponse, EmbeddingResponse
-from fiber.agent.llm.stream.wrapper import StreamWrapper
+from fiber.llm.entry import acompletion, aembedding
+from fiber.llm.param import ModelResponse, EmbeddingResponse
+from fiber.llm.stream.wrapper import StreamWrapper
 
 from xphi.kernel.dphi.broker import DphiBroker # WASM 커널 호출용
 from xphi.watcher.plane.emitter import get_emitter, flow_scope

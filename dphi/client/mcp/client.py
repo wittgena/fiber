@@ -13,9 +13,9 @@ from mcp.client.client import Client as AnchorClient
 from mcp.client.session import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
 
-from fiber.agent.space.terminal.session.builder import AsyncExecutorProtocol
+from fiber.dphi.space.terminal.session.builder import AsyncExecutorProtocol
 from fiber.dphi.client.mcp.exception import MCPError
-from fiber.agent.anchor.config.mcp import MCPConfig
+from fiber.llm.config.mcp import MCPConfig
 
 from xphi.watcher.plane.emitter import get_logger
 
@@ -36,7 +36,7 @@ class MCPClient(AnchorClient):
     ):
         if executor is None:
             # 하위 호환성을 위해 주입되지 않은 경우에만 팩토리를 통해 가져옴
-            from fiber.agent.space.terminal.session.builder import executor_factory
+            from fiber.dphi.space.terminal.session.builder import executor_factory
             self._executor = executor_factory.get_async_executor()
         else:
             self._executor = executor
