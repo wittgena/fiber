@@ -1,5 +1,4 @@
 # workflow.wasm
-## @lineage: dphi.workflow.wasm
 import sys
 import argparse
 import importlib
@@ -15,7 +14,7 @@ from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("dphi.entry")
+log = get_emitter("workflow.wasm")
 
 MODULE_PATH = scene_module.__name__
 

@@ -1,7 +1,4 @@
 # phase.kernel.daemon.risk
-## @lineage: dphi.node.daemon.risk
-## @lineage: phase.node.daemon.risk
-"""@desc: Defines the autonomous risk daemon that monitors dynamic tension and executes safe routing based on cryptographic receipts intent"""
 import time
 import asyncio
 from typing import Dict, Any, List, Optional

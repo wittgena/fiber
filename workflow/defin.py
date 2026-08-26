@@ -1,5 +1,4 @@
 # workflow.defin
-## @lineage: dphi.workflow.defin
 import sys
 import json
 import asyncio

@@ -1,5 +1,4 @@
 # workflow.settlement
-## @lineage: dphi.workflow.settlement
 import asyncio
 import hashlib
 import json

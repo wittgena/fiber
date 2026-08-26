@@ -1,5 +1,4 @@
 # dphi.receptor.edge.ext
-## @lineage: receptor.edge.ext
 import json
 import time
 from typing import Dict, Any, Optional
