@@ -1,6 +1,4 @@
 # phase.kernel.daemon.verse
-## @lineage: dphi.node.daemon.verse
-## @lineage: phase.node.daemon.verse
 import asyncio
 import random
 import urllib.request

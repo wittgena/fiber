@@ -1,0 +1,88 @@
+wittgena@wittgenas-MacBook-Pro self % python -m fiber.dphi.workflow.defin         
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 21 aliases.
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-62278
+ LOG | SYSTEM | INFO  |  workflow.defin: 
+[CLI] 🏃‍♂️ Initiating Cross-VM DePIN Pipeline (WASM Compute + UTXO Billing)
+ LOG | SYSTEM | INFO  |  workflow.defin: 
+
+================================================================================
+🚀 [CROSS-VM SCENARIO] 1. Standard API Traffic (1 Agent, 10 calls)
+================================================================================
+ LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  workflow.defin: --- [Phase 1] REVM Intent Verification (Cross-VM Auth) ---
+ LOG | SYSTEM | INFO  |  workflow.defin:   └ Received EIP-712 Intent from EVM Wallet: 0xDD43a52B5Cf94fA2E65Cd5aC7820614C31C6c097
+ LOG | SYSTEM | INFO  |  workflow.defin:   └ Routing payload to dvm.revm for L1 State Verification...
+ LOG | SYSTEM | INFO  |  workflow.defin:   └ [REVM Confirmed] Target Escrow: 0x3333333333333333333333333333333333333333
+ LOG | SYSTEM | INFO  |  workflow.defin:   └ [REVM Confirmed] Locked Deposit: 100 USDC
+ LOG | SYSTEM | INFO  |  workflow.defin:   └ 🔐 Crypto Identity Mapped (Cosm): cosm_vUJrkgGnRwN...
+ LOG | SYSTEM | INFO  |  workflow.defin: --- [Phase 2] Virtual Pegging & Genesis UTXO Minting ---
+ LOG | SYSTEM | INFO  |  workflow.defin:   └ State Translation: 100 USDC -> 100000000 Fuel
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] workflow.defin:   └ Root UTXO Anchored: 6abc75f4313d5cc2... (Index: 0)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] workflow.defin: --- [Phase 3] WASM Execution & Parallel UTXO Billing ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] workflow.defin:   └ 🔀 Split Root into 1 UTXOs for parallel computing.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.defin' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] workflow.defin:     ├─ [Worker-0] 🚀 Started with Budget: 100000000 Fuel
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:topos.workflow'
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  phase.runner:   [PASS] Time: 185.00ms | Output: Receipt mathematically sealed & EVM formatted. (Workers: 1, Txs: 13, Debt: 0.5 USDC, Root: 673b38ba...)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.defin' (Acc: 3.52) Den: 15.50)
+[Telemetry] 🟢 System Stabilized on 'KERNEL:ledger.oracle'
+ LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.defin' (Acc: 3.64) Den: 16.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:workflow.defin'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.0] workflow.defin:     │  └─ [Worker-2 | Cycle-5] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33233333 | 🔗 Tx: ea95210942...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.1] workflow.defin:     │  └─ [Worker-0 | Cycle-5] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33233333 | 🔗 Tx: e9895623e6...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.2] workflow.defin:     │  └─ [Worker-1 | Cycle-6] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33213333 | 🔗 Tx: 83e487d45c...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.9] workflow.defin:     │  └─ [Worker-2 | Cycle-6] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33213333 | 🔗 Tx: 5c1b619c5d...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.0] workflow.defin:     │  └─ [Worker-0 | Cycle-6] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33213333 | 🔗 Tx: c72fc544f3...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.1] workflow.defin:     │  └─ [Worker-1 | Cycle-7] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33193333 | 🔗 Tx: 6369be993d...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.5] workflow.defin:     │  └─ [Worker-2 | Cycle-7] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33193333 | 🔗 Tx: aeb948c0f5...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.5] workflow.defin:     │  └─ [Worker-0 | Cycle-7] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33193333 | 🔗 Tx: 338cdeba1b...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.7] workflow.defin:     │  └─ [Worker-1 | Cycle-8] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33173333 | 🔗 Tx: 2143ba369c...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.7] workflow.defin:     │  └─ [Worker-2 | Cycle-8] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33173333 | 🔗 Tx: 2f950ff56b...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.8] workflow.defin:     │  └─ [Worker-0 | Cycle-8] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33173333 | 🔗 Tx: cc368f970d...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.9] workflow.defin:     │  └─ [Worker-1 | Cycle-9] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33153333 | 🔗 Tx: fc327664fc...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.8] workflow.defin:     │  └─ [Worker-2 | Cycle-9] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33153333 | 🔗 Tx: db649d9a0e...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.7] workflow.defin:     │  └─ [Worker-0 | Cycle-9] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33153333 | 🔗 Tx: 35145cf8a7...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.6] workflow.defin:     │  └─ [Worker-1 | Cycle-10] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33133333 | 🔗 Tx: 5f145680dd...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.8] workflow.defin:     │  └─ [Worker-2 | Cycle-10] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33133333 | 🔗 Tx: 39bde5409a...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.8] workflow.defin:     │  └─ [Worker-0 | Cycle-10] ⚙️ WASM Hash: 41e90fc63522b180 | 💸 Paid: 20000 Fuel | 💰 Remain: 33133333 | 🔗 Tx: 67e7eb1abc...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.9] workflow.defin: --- [Phase 4] UTXO Merge & Merkle Rollup Compression ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:0.9] workflow.defin: 
+🧾 [STATE NETTING RECEIPT]
+ ├─ 🏦 Initial Budget    : 100000000 Fuel
+ ├─ 🔄 Total Change(환불) : 99399999 Fuel (From 3 Workers)
+ ├─ 💸 Net Fuel Consumed : 600001 Fuel
+ ├─ 💵 L1 Debt Converted : 0.600001 USDC
+ └─ 🌳 Merkle Root (Tx 33) : eb8a3fb3013006cc...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.0] workflow.defin: --- [Phase 5] Dual-Settlement Sealing (EVM Calldata Formatting) ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.1] workflow.defin:   ✅ [SEALED] Receipt encoded for L1 Submission
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.1] workflow.defin:     └ EVM Calldata : 0x797ff38d000000000000000000000000dd43a52b... (truncated)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.2] workflow.defin:     └ Final Proof  : 78fdb3ef2916e62b...
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  phase.runner:   [PASS] Time: 463.96ms | Output: Receipt mathematically sealed & EVM formatted. (Workers: 3, Txs: 33, Debt: 0.600001 USDC, Root: eb8a3fb3...)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.3] workflow.defin: 
+
+================================================================================
+🚀 [CROSS-VM SCENARIO] 3. Fuel Exhaustion (Circuit Breaker Test)
+================================================================================
+ LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.1] workflow.defin: --- [Phase 1] REVM Intent Verification (Cross-VM Auth) ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.2] workflow.defin:   └ Received EIP-712 Intent from EVM Wallet: 0xDD43a52B5Cf94fA2E65Cd5aC7820614C31C6c097
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.3] workflow.defin:   └ Routing payload to dvm.revm for L1 State Verification...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.4] workflow.defin:   └ [REVM Confirmed] Target Escrow: 0x3333333333333333333333333333333333333333
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.defin' (Acc: 1.55) Den: 43.50)
+[Reactor] 💥 Task was destroyed but it is pending!
+    [Context] task: Task(Task-9)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:topos.workflow'
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
+ LOG | SYSTEM | INFO  |  phase.runner:   [PASS] Time: 56.92ms | Output: Circuit Breaker correctly halted execution: OOM or Fuel Exhaustion
+ LOG | SYSTEM | INFO  |  phase.runner: 
+=== [DONE] Scenarios Completed: 3 Passed, 0 Failed ===
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:3.0] workflow.defin: [workflow.defin] Bursting logs suppressed... (x59)

@@ -5,7 +5,7 @@
 ## @lineage: engine.router.inter.embedding
 from typing import List, Union
 
-from fiber.agent.llm.execution import EmbeddingContext
+from fiber.llm.execution import EmbeddingContext
 from fiber.dphi.model.inter.adapter import BaseProviderAdapter
 from fiber.dphi.model.registry.embedding import EmbeddingRouter
 

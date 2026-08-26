@@ -1,6 +1,4 @@
 # phase.doc.arch.overview
-@lineage: dphi.pdoc.arch.overview
-@lineage: abc.dphi.arch.overview
 @desc: DPHI Universal Cryptographic Compute & Metering Gateway Architecture
 
 ---

@@ -1,6 +1,4 @@
 # dphi.receptor.ingress.gov.policy
-## @lineage: receptor.ingress.gov.policy
-## @lineage: receptor.ingress.policy
 import time
 import hashlib
 import random

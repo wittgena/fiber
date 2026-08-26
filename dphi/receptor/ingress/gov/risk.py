@@ -1,6 +1,4 @@
 # dphi.receptor.ingress.gov.risk
-## @lineage: receptor.ingress.gov.risk
-## @lineage: receptor.arch.policy
 from __future__ import annotations
 import time
 from abc import ABC, abstractmethod

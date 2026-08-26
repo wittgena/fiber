@@ -18,11 +18,7 @@ from xphi.watcher.plane.metric.scale.emitter import IScaleAdapter
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.tracer.bound import BaseBoundary, BaseStreamAuditor, BaseAuditor
 
-
-# =====================================================================
-# 1. METADATA & CONFIGURATION
-# =====================================================================
-
+"""METADATA & CONFIGURATION"""
 META_INFO = {
     "VERSION": "2.0.0 (Pure Async Pipeline & httpx Edition)",
     "SYSTEM": "Kube-Self ISO Engine (Zero-Dependency Micro-SDK)"
@@ -35,11 +31,7 @@ KUBE_API_SPECS = {
 
 log = get_emitter("tracer.kube")
 
-
-# =====================================================================
-# 2. CORE CLIENT & BOUNDARY
-# =====================================================================
-
+"""CORE CLIENT & BOUNDARY"""
 class AsyncKubeClient:
     """@desc: urllib를 제거하고 httpx 기반으로 재탄생한 비동기 KubeClient"""
     def __init__(self):
@@ -47,8 +39,7 @@ class AsyncKubeClient:
         self.token = None
         self.ctx = ssl.create_default_context()
         self._load_config()
-        
-        # 재사용 가능한 비동기 HTTP 커넥션 풀 구성
+
         hdrs = {'Accept': 'application/json'}
         if self.token:
             hdrs['Authorization'] = f"Bearer {self.token}"
@@ -105,7 +96,6 @@ class AsyncKubeClient:
     async def close(self):
         await self.http.aclose()
 
-
 class KubeBound(BaseBoundary):
     """@desc: ThreadPool을 완벽히 제거하고 비동기 Pipeline과 httpx로 구동되는 새로운 KubeBound"""
     def __init__(self, base_url: str, token: str):
@@ -114,13 +104,11 @@ class KubeBound(BaseBoundary):
             "Authorization": f"Bearer {token}",
             "Accept": "application/json"
         }
-        # 네이티브 비동기 통신을 위한 통합 클라이언트
+
         self.http_client = httpx.AsyncClient(verify=False, headers=self.headers)
         
-        # 이벤트 파이프라인 조립
         self.pipeline = ChannelPipeline()
         self.pipeline.add_last(JsonMessageCodec())  # 1단계: Bytes -> JSON 변환기
-        
         self.transports: List['KubeWatchTransport'] = []
         self.log = get_emitter("tracer.kube.bound")
 
@@ -157,11 +145,7 @@ class KubeBound(BaseBoundary):
         else:
             loop.run_until_complete(self.http_client.aclose())
 
-
-# =====================================================================
-# 3. TRANSPORT & CHANNELS
-# =====================================================================
-
+"""TRANSPORT & CHANNELS"""
 class KubeWatchTransport:
     """@desc: K8s Watch API의 HTTP Chunk 스트림을 읽어 파이프라인으로 주입하는 Async Transport"""
     def __init__(self, pipeline: ChannelPipeline, client: httpx.AsyncClient, url: str):
@@ -201,11 +185,11 @@ class KubeWatchTransport:
         if self._task and not self._task.done():
             self._task.cancel()
 
-
 class IsoEngineChannel(DuplexChannel):
     """
-    @desc: Threading 무한루프를 버리고 Network Pipeline 구조에 완벽히 융합된 이벤트 라우터.
-           수신된 JSON(Watch Event)을 분석하여 선언적 데코레이터 함수로 바인딩합니다.
+    @desc: 
+    - Threading 무한루프를 버리고 Network Pipeline 구조에 완벽히 융합된 이벤트 라우터
+    - 수신된 JSON(Watch Event)을 분석하여 선언적 데코레이터 함수로 바인딩
     """
     def __init__(self, client: AsyncKubeClient):
         self.client = client
@@ -225,7 +209,6 @@ class IsoEngineChannel(DuplexChannel):
         meta = k8s_obj.get("metadata", {})
         eid = f"{meta.get('namespace')}/{meta.get('name')}/{meta.get('resourceVersion')}"
 
-        # 비동기 단일 스레드 구조이므로 Lock이 필요 없음 (메모리 파편화 방지만 수행)
         if eid in self._processed: return
         if len(self._processed) > 10000: self._processed.clear()
         self._processed.add(eid)
@@ -297,16 +280,9 @@ class IsoEngineChannel(DuplexChannel):
         except asyncio.CancelledError:
             pass
 
-
-# =====================================================================
-# 4. AUDITORS & ADAPTERS
-# =====================================================================
-
+"""AUDITORS & ADAPTERS"""
 class KubeStreamAuditor(BaseStreamAuditor, DuplexChannel):
-    """
-    @desc: Queue와 Thread 통신 방식을 버리고, 
-           자신 스스로가 파이프라인의 끝단 채널(Channel)이 되어 이벤트를 수신하는 모듈
-    """
+    """@desc: Queue와 Thread 통신 방식을 버리고, 자신 스스로가 파이프라인의 끝단 채널(Channel)이 되어 이벤트를 수신하는 모듈"""
     def __init__(self, target: str, boundary: KubeBound, watch_path: str):
         super().__init__(target, boundary, delay=0)
         self.watch_path = watch_path
@@ -346,7 +322,6 @@ class KubeStreamAuditor(BaseStreamAuditor, DuplexChannel):
         """자식 클래스에서 오버라이드하여 비즈니스 상태 변화 처리"""
         pass 
 
-
 class ApiToposAuditor(BaseAuditor):
     """@desc: 네이티브 비동기(httpx)를 적용하여 완전히 Non-blocking으로 동작하는 ToposAuditor"""
     def __init__(self, target: str, namespace: str, boundary: KubeBound):
@@ -374,7 +349,6 @@ class ApiToposAuditor(BaseAuditor):
         except asyncio.CancelledError:
             # Tracer의 collapse() 발생 시 정상 종료
             pass
-
 
 class KubeScaleAdapter(IScaleAdapter):
     """@desc: 추상화된 스케일 명령을 실제 K8s Deployment 패치(Patch) API로 변환하는 브릿지"""

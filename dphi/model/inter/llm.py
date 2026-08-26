@@ -7,9 +7,9 @@ from typing import AsyncGenerator, Generator, Any
 from fiber.dphi.model.inter.adapter import BaseProviderAdapter
 from fiber.dphi.model.registry.llm import LLMRouter, ModuleMissingError
 
-from fiber.agent.llm.execution import CompletionContext
-from fiber.agent.anchor.provider.registry import get_llm_provider
-from fiber.agent.loop.runtime.exception.mapping import exception_type
+from fiber.llm.execution import CompletionContext
+from fiber.llm.provider.registry import get_llm_provider
+from fiber.llm.exception.mapping import exception_type
 
 from fiber.dphi.model.mapper.state import StateMapper
 

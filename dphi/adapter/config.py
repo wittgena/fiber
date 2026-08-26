@@ -1,6 +1,4 @@
 # dphi.adapter.config
-## @lineage: dphi.bound.config
-## @lineage: bound.config.dphi
 import os
 from enum import Enum
 from typing import Dict, List, Union

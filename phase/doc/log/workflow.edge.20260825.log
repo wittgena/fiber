@@ -1,397 +1,417 @@
-wittgena@wittgenas-MacBook-Pro self % python -m fiber.dphi.workflow.edge
+wittgena@wittgenas-MacBook-Pro self % python -m fiber.dphi.workflow.edge 
 [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
- LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 21 aliases.
- LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 21 aliases.
+ LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
 [Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
 [Reactor] 🚀 UVLoop (epoll) Policy injected.
-[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-49730
- LOG | SYSTEM | INFO  |  workflow.edge: 
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-63876
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ================================================================================
- LOG | SYSTEM | INFO  |  workflow.edge: 🧪 [DPHI EDGE MASTER SUITE] Commencing Gateway Ingress & Security Tests
- LOG | SYSTEM | INFO  |  workflow.edge: ================================================================================
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Initializing Secure MCP Server...
- LOG | DEFENSE | INFO  |  server.mcp: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | INFO  |  workflow.edge: 🧪 [DPHI EDGE MASTER SUITE] Commencing Gateway Ingress & Security Tests
+ LOG | SYSTEM | INFO  |  workflow.edge: ================================================================================
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Initializing Secure MCP Server...
+ LOG | DEFENSE | INFO  |  server.mcp: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 === Starting Pipeline: Public Gateway & Network Isolation Trace (EDGE_INGRESS_PIPELINE) ===
- LOG | SYSTEM | INFO  |  workflow.edge: [Pipeline] Booting embedded Uvicorn REST server on http://127.0.0.1:8353...
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Starting REST Edge & Services...
+ LOG | SYSTEM | INFO  |  workflow.edge: [Pipeline] Booting embedded Uvicorn REST server on http://127.0.0.1:8353...
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Starting REST Edge & Services...
 [TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: WasmBroker initialized (timeout: 5.0s).
- LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: UtxoAdapter initialized and mounted to app state.
- LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: StrictOtlpExtractionEngine initialized and mounted to app state.
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: REST Edge & Services successfully started.
- LOG | SYSTEM | INFO  |  xphi.arch.topos.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
- LOG | SYSTEM | INFO  |  adapter.sign: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: WasmBroker initialized (timeout: 5.0s).
+ LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: UtxoAdapter initialized and mounted to app state.
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: StrictOtlpExtractionEngine initialized and mounted to app state.
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: REST Edge & Services successfully started.
+ LOG | SYSTEM | INFO  |  xphi.kernel.space.topos.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  adapter.sign: [Crypto] Node identity loaded. PubKey: d9b397e1...
 HTTP Request: GET http://127.0.0.1:8353/openapi.json "HTTP/1.1 200 OK"
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ▶️ [PHASE 1/5] Wasm Build & Pre-warm
- LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.init: Initiating Structural Trace Lifecycle
- LOG | agent  | INFO  |  tracer.wasm.builder: 
+ LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.init: Initiating Structural Trace Lifecycle
+ LOG | agent  | INFO  |  tracer.wasm.builder: 
 --- [START] Compiling WASM Artifacts (DPHI, DVM) ---
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
 info: component rust-std for target wasm32-unknown-unknown is up to date
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
- LOG | agent  | INFO  |  tracer.wasm.builder: ## @trace.teardown: Collapsing space and reclaiming resources...
- LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.exit: Field Restored.
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: ## @trace.teardown: Collapsing space and reclaiming resources...
+ LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.exit: Field Restored.
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ▶️ [PHASE 2/5] Gateway Ingress (Golden Path)
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: Initiating Structural Trace Lifecycle
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: WASM Lifecycle (AgentBot Removed)
- LOG | agent  | INFO  |  tracer.wasm.tracer: [STATUS] Cache miss/invalid. Initiating Builder...
- LOG | agent  | INFO  |  tracer.wasm.builder: 
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: Initiating Structural Trace Lifecycle
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: WASM Lifecycle (AgentBot Removed)
+ LOG | agent  | INFO  |  tracer.wasm.tracer: [STATUS] Cache miss/invalid. Initiating Builder...
+ LOG | agent  | INFO  |  tracer.wasm.builder: 
 --- [START] Compiling WASM Artifacts (DPHI, DVM) ---
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
 info: component rust-std for target wasm32-unknown-unknown is up to date
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
-SUMMARY🔥| agent  | INFO  |  [G:0.9] [Acc:0.2] tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
-SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:0.0] tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
- LOG | agent  | INFO  |  tracer.wasm.tracer: [Ledger] Registering new WASM lineage...
- LOG | SYSTEM | INFO  |  inter.wasm: ⚙️ [AOT Compile] Compiling dphi.wasm (Only once per process)...
- LOG | SYSTEM | INFO  |  inter.wasm: ✅ [AOT Compile] dphi.wasm cached successfully.
- LOG | SYSTEM | INFO  |  dphi.cgroup: [worker-4635718192] Cgroup enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
- LOG | agent  | WARN  |  tracer.wasm.tracer: [Ledger] Node is FOLLOWER. Bypassing physical disk seal and proposing to Mempool.
- LOG | agent  | INFO  |  tracer.wasm.tracer: [Ledger] New WASM lineage sealed: 9f45ea39
- LOG | agent  | INFO  |  tracer.wasm.tracer: 
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
+ LOG | agent  | INFO  |  tracer.wasm.tracer: [Ledger] Registering new WASM lineage...
+ LOG | SYSTEM | INFO  |  inter.wasm: ⚙️ [AOT Compile] Compiling dphi.wasm (Only once per process)...
+ LOG | SYSTEM | INFO  |  inter.wasm: ✅ [AOT Compile] dphi.wasm cached successfully.
+ LOG | SYSTEM | INFO  |  dphi.cgroup: [worker-4690887408] Cgroup enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | agent  | WARN  |  tracer.wasm.tracer: [Ledger] Node is FOLLOWER. Bypassing physical disk seal and proposing to Mempool.
+ LOG | agent  | INFO  |  tracer.wasm.tracer: [Ledger] New WASM lineage sealed: 9f45ea39
+ LOG | agent  | INFO  |  tracer.wasm.tracer: 
 --- [START] Delegating Orchestration to WasmTester ---
- LOG | agent  | INFO  |  tracer.wasm.tracer: [SYSTEM] Using injected WasmTester instance.
- LOG | SYSTEM | INFO  |  workflow.scene_runner: 
+ LOG | agent  | INFO  |  tracer.wasm.tracer: [SYSTEM] Using injected WasmTester instance.
+ LOG | SYSTEM | INFO  |  workflow.scene_runner: 
 === [START] E2E_SCENE_NET (Golden Path) ===
- LOG | SYSTEM | INFO  |  workflow.scene_runner: 
+ LOG | SYSTEM | INFO  |  workflow.scene_runner: 
 --- [Phase 1] API Head & MCP Connectivity Sweep ---
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/openapi.json
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/openapi.json
 HTTP Request: GET http://127.0.0.1:8353/openapi.json "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.005s
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/mcp/sse
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.002s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/mcp/sse
 HTTP Request: POST http://127.0.0.1:8353/mcp/sse "HTTP/1.1 405 Method Not Allowed"
- LOG | HTTP_RX | WARN  |  edge.tracer: [Trace:RX] 405 Method Not Allowed in 0.002s
-  └─ Body: Method Not Allowed
- LOG | SYSTEM | INFO  |  workflow.scene_runner: 
+ LOG | HTTP_RX | WARN  |  edge.tracer: [Trace:RX] 405 Method Not Allowed in 0.002s
+  └─ Body: Method Not Allowed
+ LOG | SYSTEM | INFO  |  workflow.scene_runner: 
 --- [Phase 1.5] Public Agent Pre-flight Quotation (Dry-run) ---
- LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ Sending POST to /v1/public/agent/quote (Expected: 200)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
- LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
- LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85363645076353025 | Env: deno)
- LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Dry-run complete. Estimated 0 units for Client: generative-language-client-1234
+ LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ Sending POST to /v1/public/agent/quote (Expected: 200)
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
+ LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
+ LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85521339150118913 | Env: deno)
+ LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Dry-run complete. Estimated 0 units for Client: generative-language-client-1234
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/profile/quote "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/quote "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.424s
- LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ ✅ Passed: Dry-run quotation handled correctly.
- LOG | SYSTEM | INFO  |  workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.028s
+ LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ ✅ Passed: Dry-run quotation processed correctly.
+ LOG | SYSTEM | INFO  |  workflow.scene_runner: 
 --- [Phase 1.6] Public L402 Invoice Generation ---
- LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ Sending POST to /v1/public/billing/invoice (Expected: 200)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
+ LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ Sending POST to /v1/public/billing/invoice (Expected: 200)
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/exchange/invoice/issue "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/billing/invoice "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.021s
- LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ ✅ Passed: Invoice generation handled correctly.
- LOG | SYSTEM | INFO  |  workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.010s
+ LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ ✅ Passed: L402 Invoice generation successful.
+ LOG | SYSTEM | INFO  |  workflow.scene_runner: 
 --- [Phase 1.7] Public UTXO Hot State Balance Read ---
- LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ Sending GET to /v1/public/billing/balance (Expected: 200)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0xA4B11F390c30aBD4f6247822E693c91bC1b243Fa&asset_type=fuel
-HTTP Request: GET http://127.0.0.1:8353/v1/eco/exchange/balance?agent_id=0xA4B11F390c30aBD4f6247822E693c91bC1b243Fa&asset_type=fuel "HTTP/1.1 200 OK"
-HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0xA4B11F390c30aBD4f6247822E693c91bC1b243Fa&asset_type=fuel "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.020s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.7] workflow.scene_runner:   └─ ✅ Passed: Balance read handled correctly.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.8] workflow.scene_runner: 
+ LOG | SYSTEM | INFO  |  workflow.scene_runner:   └─ Sending GET to /v1/public/billing/balance (Expected: 200)
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0xa3A798A09ABCF169D6A57d6E62333Df5BA0334e0&asset_type=fuel
+HTTP Request: GET http://127.0.0.1:8353/v1/eco/exchange/balance?agent_id=0xa3A798A09ABCF169D6A57d6E62333Df5BA0334e0&asset_type=fuel "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0xa3A798A09ABCF169D6A57d6E62333Df5BA0334e0&asset_type=fuel "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.009s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] workflow.scene_runner:   └─ ✅ Passed: Hot State Balance read successful.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] workflow.scene_runner: 
 --- [Phase 2] Public Agent Execution & Metering ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.9] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/execute (Expected: 200)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/execute (Expected: 200)
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/compute/intent/validate "HTTP/1.1 200 OK"
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
- LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
- LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85363647186087937 | Env: deno)
- LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Charged $0.0000 for 0 fuel units. Client: generative-language-client-1234
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
+ LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
+ LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85521339439525889 | Env: deno)
+ LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Charged $0.0000 for 0 fuel units. Client: generative-language-client-1234
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/profile/execute/billed "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/execute "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.437s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:-0.4] workflow.scene_runner:   └─ ✅ Passed: Received 200 as expected.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:-0.2] workflow.scene_runner:   └─ 🔍 Verifying First-Party Attestation for /v1/public/agent/execute...
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:-0.1] workflow.scene_runner:   └─ ✅ Attestation Signature Verified Successfully!
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:-0.0] workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.497s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:-0.1] workflow.scene_runner:   └─ ✅ Passed: Agent Computed Successfully.
+     ├─ 🤖 Agent ID  : 0xa3A798A0...
+     ├─ ⚙️ Action    : EXECUTE_PYTHON
+     └─ ⛽ Max Fuel  : 1000000
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:-0.0] workflow.scene_runner:   └─ 🔍 Verifying First-Party Attestation for /v1/public/agent/execute...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.1] workflow.scene_runner:   └─ ✅ Attestation Signature Verified Successfully!
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.2] workflow.scene_runner: 
 --- [Phase 2.5] AuditReceipt Verification (Auditor Validation) ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.1] workflow.scene_runner:   └─ Sending POST to /v1/public/audit/verify (Expected: 200)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/audit/verify
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.3] workflow.scene_runner:   └─ Sending POST to /v1/public/audit/verify (Expected: 200)
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/audit/verify
 [Reactor] 💥 Task was destroyed but it is pending!
-    [Context] task: Task(Task-52)
+    [Context] task: Task(Task-52)
 [Reactor] 💥 Task was destroyed but it is pending!
-    [Context] task: Task(Task-97)
+    [Context] task: Task(Task-97)
 HTTP Request: POST http://127.0.0.1:8353/v1/core/ledger/verify "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/audit/verify "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.166s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.1] workflow.scene_runner:   └─ ✅ Passed: Cryptographic verification handled correctly.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.0] workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.082s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.0] workflow.scene_runner:   └─ ✅ Passed: Cryptographic verification validated by Auditor.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.1] workflow.scene_runner: 
 --- [Phase 3] OTLP Telemetry Ingress & Strict Schema Check ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.1] workflow.scene_runner:   └─ Sending POST to /v1/public/telemetry/logs (Expected: 200)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/telemetry/logs
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.2] workflow.scene_runner:   └─ Sending POST to /v1/public/telemetry/logs (Expected: 200)
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/telemetry/logs
 HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.205s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.4] workflow.scene_runner:   └─ 🔍 Verifying First-Party Attestation for /v1/public/telemetry/logs...
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.2] workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.084s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.3] workflow.scene_runner:   └─ ✅ Passed: OTLP Log ingested successfully.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.4] workflow.scene_runner:   └─ 🔍 Verifying First-Party Attestation for /v1/public/telemetry/logs...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.6] workflow.scene_runner: 
 --- [Phase 4] D3Fi P2P Trade & Settlement (ExchangeNet) ---
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/eco/exchange/order/ingress
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/eco/exchange/order/ingress
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/exchange/order/ingress "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.022s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.3] workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.084s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.2] workflow.scene_runner:   └─ ✅ Passed: D3Fi trade order accurately routed to ExchangeNet.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.6] workflow.scene_runner: 
 --- [Phase 5] Immutable Ledger Stream Append ---
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/core/ledger/stream/append
- LOG | KERNEL | INFO  |  mesh.gateway: [Gateway] PROPOSED: Stream 5cef98a2-8408-4647-a181-55cf77437341 delegated to Mempool (FOLLOWER mode).
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/core/ledger/stream/append
+ LOG | KERNEL | INFO  |  mesh.gateway: [Gateway] PROPOSED: Stream ca566a09-a265-4f32-aec6-10748ef2c8d0 delegated to Mempool (FOLLOWER mode).
 HTTP Request: POST http://127.0.0.1:8353/v1/core/ledger/stream/append "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.179s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.6] workflow.scene_runner: 
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.085s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.7] workflow.scene_runner:   └─ ✅ Passed: Ledger Appended. [Root: d356109b4697f066...]
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.6] workflow.scene_runner: 
 --- [Phase 6] DVM Ledger Clearing & Settlement (Internal L2) ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.5] workflow.scene_runner:   └─ Sending POST to /v1/ext/wallet/pay/x402 with use_ledger=True (Expected: 200)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.9] [Acc:-0.1] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402
- LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing Web3Adapter (Async RPC Connection)...
- LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing Native EthWalletAdapter (Agent)...
- LOG | SYSTEM | INFO  |  wallet.eth: [Wallet] Native Wallet initialized for alpha: 0x4331626df4B45B695ef5F56670c2e2f2C6A02e3B (Simulate: False)
- LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing DVM RollupAdapter for System Clearing...
- LOG | SYSTEM | INFO  |  adapter.rollup: [RollupAdapter] Initialized for system_clearing: 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (Simulate: False)
- LOG | X402_PAYMENT | INFO  |  edge.ext: Processing X402 payment via [DVM Ledger]: 10.0 USDC to 0x000000000000000000000000000000000000dEaD
- LOG | X402_PAYMENT | INFO  |  adapter.rollup: [RollupAdapter] Initiating DVM Deferred Charge for 10.0 USDC from 0x4331626df4B45B695ef5F56670c2e2f2C6A02e3B...
- LOG | X402_PAYMENT | INFO  |  adapter.rollup: ✨ [RollupAdapter] Local Rollup Hash generated for Charge: 0x0adc15b94c5ab3b8...
- LOG | X402_PAYMENT | INFO  |  edge.ext: [DVM Ledger] Payment successful. Tx/Rollup Hash: 0x0adc15b94c5ab3b8ffdf2253a1c99f9e767ec557ca7416b0d0be6ed631118c3c
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.5] workflow.scene_runner:   └─ Sending POST to /v1/ext/wallet/pay/x402 with use_ledger=True (Expected: 200)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.9] [Acc:-0.2] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402
+ LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing Web3Adapter (Async RPC Connection)...
+ LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing Native EthWalletAdapter (Agent)...
+ LOG | SYSTEM | INFO  |  wallet.eth: [Wallet] Native Wallet initialized for alpha: 0x4331626df4B45B695ef5F56670c2e2f2C6A02e3B (Simulate: False)
+ LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing DVM RollupAdapter for System Clearing...
+ LOG | SYSTEM | INFO  |  adapter.rollup: [RollupAdapter] Initialized for system_clearing: 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (Simulate: False)
+ LOG | X402_PAYMENT | INFO  |  edge.ext: Processing X402 payment via [DVM Ledger]: 10.0 USDC to 0x000000000000000000000000000000000000dEaD
+ LOG | X402_PAYMENT | INFO  |  adapter.rollup: [RollupAdapter] Initiating DVM Deferred Charge for 10.0 USDC from 0x4331626df4B45B695ef5F56670c2e2f2C6A02e3B...
+ LOG | X402_PAYMENT | INFO  |  adapter.rollup: ✨ [RollupAdapter] Local Rollup Hash generated for Charge: 0x40225e9ebbd5a5dd...
+ LOG | X402_PAYMENT | INFO  |  edge.ext: [DVM Ledger] Payment successful. Tx/Rollup Hash: 0x40225e9ebbd5a5dd0539bebef68dc1fa7fa50a079e88ee15f6b7b858ae743f66
 HTTP Request: POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402 "HTTP/1.1 200 OK"
-SUMMARY🔥| HTTP_RX | INFO  |  [G:0.9] [Acc:0.1] edge.tracer: [Trace:RX] 200 OK in 0.305s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.4] workflow.scene_runner: 
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.9] [Acc:-0.2] edge.tracer: [Trace:RX] 200 OK in 0.131s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.8] workflow.scene_runner: 
+    🧾 [X402 DEFERRED SETTLEMENT RECEIPT]
+     ├─ 👤 Payee      : 0x00000000...dEaD
+     ├─ 💸 Settled    : 10.0 USDC
+     ├─ 📦 Resource   : res_8691471f
+     └─ ⛓️ L2 Tx Hash : 0x0adc15b94c5ab3...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.7] workflow.scene_runner: 
 [SUCCESS] E2E_SCENE_NET Completed successfully.
- LOG | SYSTEM | INFO  |  phase.runner: 
+ LOG | SYSTEM | INFO  |  phase.runner: 
 === [DONE] Scenarios Completed: 11 Passed, 0 Failed ===
- LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.error: Framework Fault Detected: cannot unpack non-iterable NoneType object
- LOG | agent  | INFO  |  tracer.wasm.tracer: ## @trace.teardown: Collapsing space and reclaiming resources...
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.exit: Field Restored.
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.error: Framework Fault Detected: cannot unpack non-iterable NoneType object
+ LOG | agent  | INFO  |  tracer.wasm.tracer: ## @trace.teardown: Collapsing space and reclaiming resources...
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.exit: Field Restored.
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ▶️ [PHASE 3/5] Gateway Ingress (Negative Path)
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: Initiating Structural Trace Lifecycle
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: WASM Lifecycle (AgentBot Removed)
- LOG | agent  | INFO  |  tracer.wasm.tracer: [STATUS] Cache miss/invalid. Initiating Builder...
- LOG | agent  | INFO  |  tracer.wasm.builder: 
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: Initiating Structural Trace Lifecycle
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: WASM Lifecycle (AgentBot Removed)
+SUMMARY🔥| agent  | INFO  |  [G:0.9] [Acc:0.6] tracer.wasm.tracer: [STATUS] Cache miss/invalid. Initiating Builder...
+ LOG | agent  | INFO  |  tracer.wasm.builder: 
 --- [START] Compiling WASM Artifacts (DPHI, DVM) ---
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
 info: component rust-std for target wasm32-unknown-unknown is up to date
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
- LOG | agent  | INFO  |  tracer.wasm.tracer: [Ledger] Registering new WASM lineage...
- LOG | SYSTEM | INFO  |  dphi.cgroup: [worker-4636391888] Cgroup enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
- LOG | agent  | WARN  |  tracer.wasm.tracer: [Ledger] Node is FOLLOWER. Bypassing physical disk seal and proposing to Mempool.
- LOG | agent  | INFO  |  tracer.wasm.tracer: [Ledger] New WASM lineage sealed: 9f45ea39
- LOG | agent  | INFO  |  tracer.wasm.tracer: 
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
+SUMMARY🔥| agent  | INFO  |  [G:0.9] [Acc:0.2] tracer.wasm.tracer: [Ledger] Registering new WASM lineage...
+ LOG | SYSTEM | INFO  |  dphi.cgroup: [worker-4691557456] Cgroup enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| agent  | WARN  |  [G:0.8] [Acc:0.3] tracer.wasm.tracer: [Ledger] Node is FOLLOWER. Bypassing physical disk seal and proposing to Mempool.
+SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:0.4] tracer.wasm.tracer: [Ledger] New WASM lineage sealed: 9f45ea39
+SUMMARY🔥| agent  | INFO  |  [G:0.7] [Acc:0.5] tracer.wasm.tracer: 
 --- [START] Delegating Orchestration to WasmTester ---
-SUMMARY🔥| agent  | INFO  |  [G:0.9] [Acc:0.2] tracer.wasm.tracer: [SYSTEM] Using injected WasmTester instance.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.4] workflow.scene_runner: 
+SUMMARY🔥| agent  | INFO  |  [G:0.7] [Acc:0.6] tracer.wasm.tracer: [SYSTEM] Using injected WasmTester instance.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.6] workflow.scene_runner: 
 === [START] E2E_SCENE_NET (Negative/Faults) ===
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.4] workflow.scene_runner: 
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.5] workflow.scene_runner: 
 --- [Phase 1] API Head & MCP Connectivity Sweep ---
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/openapi.json
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.8] [Acc:0.0] edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/openapi.json
 HTTP Request: GET http://127.0.0.1:8353/openapi.json "HTTP/1.1 200 OK"
- LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.004s
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/mcp/sse
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.8] [Acc:-0.1] edge.tracer: [Trace:RX] 200 OK in 0.002s
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.8] [Acc:0.1] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/mcp/sse
 HTTP Request: POST http://127.0.0.1:8353/mcp/sse "HTTP/1.1 405 Method Not Allowed"
- LOG | HTTP_RX | WARN  |  edge.tracer: [Trace:RX] 405 Method Not Allowed in 0.002s
-  └─ Body: Method Not Allowed
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.5] workflow.scene_runner: 
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.8] [Acc:0.0] edge.tracer: [Trace:RX] 405 Method Not Allowed in 0.001s
+  └─ Body: Method Not Allowed
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.4] workflow.scene_runner: 
 --- [Phase 1.5] Public Agent Pre-flight Quotation (Dry-run) ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.4] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/quote (Expected: 422)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.3] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/quote (Expected: 422)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:0.2] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/compute/intent/validate "HTTP/1.1 401 Unauthorized"
- LOG | SYSTEM | WARN  |  edge.public: [Quote] Premium intent verification failed: {"detail":"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH"}
+ LOG | SYSTEM | WARN  |  edge.public: [Quote] Premium intent verification failed: {"detail":"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH"}
 /Users/wittgena/.pyenv/versions/self/lib/python3.13/site-packages/fastapi/routing.py:344: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
-  return await dependant.call(**values)
+  return await dependant.call(**values)
 HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/quote "HTTP/1.1 422 Unprocessable Content"
- LOG | HTTP_RX | WARN  |  edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.024s
-  └─ Body: {"detail":"Intent Validation Failed: {\"detail\":\"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH\"}"}
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.1] workflow.scene_runner:   └─ ✅ Passed: Dry-run quotation handled correctly.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.0] workflow.scene_runner: 
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.7] [Acc:0.2] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.011s
+  └─ Body: {"detail":"Intent Validation Failed: {\"detail\":\"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH\"}"}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.2] workflow.scene_runner:   └─ 🛡️ Defense Triggered: Invalid intent rejected (422).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.1] workflow.scene_runner: 
 --- [Phase 1.6] Public L402 Invoice Generation ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.1] workflow.scene_runner:   └─ Sending POST to /v1/public/billing/invoice (Expected: 422)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:0.0] workflow.scene_runner:   └─ Sending POST to /v1/public/billing/invoice (Expected: 422)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:0.3] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
 HTTP Request: POST http://127.0.0.1:8353/v1/public/billing/invoice "HTTP/1.1 422 Unprocessable Content"
- LOG | HTTP_RX | WARN  |  edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.003s
-  └─ Body: {"detail":[{"type":"missing","loc":["body","amount_usdc"],"msg":"Field required","input":{"payee_address":"0x000000000000000000000000000000000000dEaD","resource_id":"res_973e34dd"}}]}
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.4] workflow.scene_runner:   └─ ✅ Passed: Invoice generation handled correctly.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.6] workflow.scene_runner: 
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.7] [Acc:0.3] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.001s
+  └─ Body: {"detail":[{"type":"missing","loc":["body","amount_usdc"],"msg":"Field required","input":{"payee_address":"0x000000000000000000000000000000000000dEaD","resource_id":"res_9262e4dd"}}]}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.2] workflow.scene_runner:   └─ 🛡️ Defense Triggered: Missing invoice params rejected (422).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.3] workflow.scene_runner: 
 --- [Phase 1.7] Public UTXO Hot State Balance Read ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.8] workflow.scene_runner:   └─ Sending GET to /v1/public/billing/balance (Expected: 422)
- LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?asset_type=fuel
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.4] workflow.scene_runner:   └─ Sending GET to /v1/public/billing/balance (Expected: 422)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:0.5] edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?asset_type=fuel
 HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?asset_type=fuel "HTTP/1.1 422 Unprocessable Content"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.9] [Acc:0.3] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.003s
-  └─ Body: {"detail":[{"type":"missing","loc":["query","agent_id"],"msg":"Field required","input":null}]}
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:1.1] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/execute (Expected: 401)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.9] [Acc:0.5] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.6] [Acc:0.4] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.001s
+  └─ Body: {"detail":[{"type":"missing","loc":["query","agent_id"],"msg":"Field required","input":null}]}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.5] workflow.scene_runner:   └─ 🛡️ Defense Triggered: Missing agent_id rejected (422).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.7] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/execute (Expected: 401)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:0.6] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/compute/intent/validate "HTTP/1.1 401 Unauthorized"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/execute "HTTP/1.1 401 Unauthorized"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.8] [Acc:0.5] edge.tracer: [Trace:RX] 401 Unauthorized in 0.017s
-  └─ Body: {"detail":"Intent Rejected: {\"detail\":\"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH\"}"}
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:1.2] workflow.scene_runner:   └─ ✅ Passed: Received 401 as expected.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:1.5] workflow.scene_runner:   └─ Sending POST to /v1/public/audit/verify (Expected: 422)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.8] [Acc:0.6] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/audit/verify
- LOG | SYSTEM | WARN  |  edge.internal: Receipt verification crashed in WASM: At least two identification IDs are required for parity recovery and correction
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.6] [Acc:0.5] edge.tracer: [Trace:RX] 401 Unauthorized in 0.008s
+  └─ Body: {"detail":"Intent Rejected: {\"detail\":\"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH\"}"}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.8] workflow.scene_runner:   └─ 🛡️ Defense Triggered: Malformed intent safely rejected (401).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.1] workflow.scene_runner:   └─ Sending POST to /v1/public/audit/verify (Expected: 422)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:0.7] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/audit/verify
+ LOG | SYSTEM | WARN  |  edge.internal: Receipt verification crashed in WASM: At least two identification IDs are required for parity recovery and correction
 HTTP Request: POST http://127.0.0.1:8353/v1/core/ledger/verify "HTTP/1.1 422 Unprocessable Content"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/audit/verify "HTTP/1.1 422 Unprocessable Content"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.8] [Acc:0.5] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.075s
-  └─ Body: {"detail":"Verification Failed: {\"detail\":\"Verification execution failed: At least two identification IDs are required for parity recovery and correction\"}"}
-[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 1.55) Den: 16.50)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] workflow.scene_runner:   └─ ✅ Passed: Cryptographic verification handled correctly.
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.6] [Acc:0.6] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.015s
+  └─ Body: {"detail":"Verification Failed: {\"detail\":\"Verification execution failed: At least two identification IDs are required for parity recovery and correction\"}"}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.4] workflow.scene_runner:   └─ 🛡️ Defense Triggered: Tampered receipt verification blocked (422).
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 1.53) Den: 25.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.5] workflow.scene_runner: 
+--- [Phase 3] OTLP Telemetry Ingress & Strict Schema Check ---
 [Telemetry] 🟢 System Stabilized on 'HTTP_TX:edge.tracer'
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.8] [Acc:0.7] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/telemetry/logs
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:0.9] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/telemetry/logs
 HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 422 Unprocessable Content"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.7] [Acc:0.7] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.003s
-  └─ Body: {"detail":[{"type":"missing","loc":["body","resourceLogs"],"msg":"Field required","input":{"garbage_field_missing_required_keys":true}}]}
-[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 1.89) Den: 18.00)
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.5] [Acc:0.8] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.001s
+  └─ Body: {"detail":[{"type":"missing","loc":["body","resourceLogs"],"msg":"Field required","input":{"garbage_field_missing_required_keys":true}}]}
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 1.76) Den: 26.00)
 [Telemetry] 🟢 System Stabilized on 'HTTP_TX:edge.tracer'
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:0.9] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/eco/exchange/order/ingress
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:1.0] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/eco/exchange/order/ingress
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/exchange/order/ingress "HTTP/1.1 422 Unprocessable Content"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.7] [Acc:0.8] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.003s
-  └─ Body: {"detail":[{"type":"missing","loc":["body","action"],"msg":"Field required","input":{"agent_id":"0xBeffCE732fF9F11fAEfE4BD8BC5e1F203F17e647"}}]}
-[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 2.12) Den: 19.00)
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.5] [Acc:0.9] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.001s
+  └─ Body: {"detail":[{"type":"missing","loc":["body","action"],"msg":"Field required","input":{"agent_id":"0x7453bDd01Ef97ddBa57AEc9c2299cd9b0283AaAD"}}]}
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 1.99) Den: 27.00)
 [Telemetry] 🟢 System Stabilized on 'HTTP_TX:edge.tracer'
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:1.0] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/core/ledger/stream/append
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:1.1] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/core/ledger/stream/append
 HTTP Request: POST http://127.0.0.1:8353/v1/core/ledger/stream/append "HTTP/1.1 422 Unprocessable Content"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.6] [Acc:0.9] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.003s
-  └─ Body: {"detail":[{"type":"missing","loc":["body","events"],"msg":"Field required","input":{"stream_name":"audit_stream"}}]}
-[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 2.23) Den: 19.50)
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.5] [Acc:1.0] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.001s
+  └─ Body: {"detail":[{"type":"missing","loc":["body","events"],"msg":"Field required","input":{"stream_name":"audit_stream"}}]}
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 2.22) Den: 28.00)
 [Telemetry] 🟢 System Stabilized on 'HTTP_TX:edge.tracer'
 HTTP Request: POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402 "HTTP/1.1 422 Unprocessable Content"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.6] [Acc:1.0] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.005s
-  └─ Body: {"detail":[{"type":"missing","loc":["body","amount_usdc"],"msg":"Field required","input":{"payee_address":"0x000000000000000000000000000000000000dEaD","resource_id":"res_876836a7","use_ledger":true}}]
-[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 2.46) Den: 20.50)
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.5] [Acc:1.2] edge.tracer: [Trace:RX] 422 Unprocessable Content in 0.003s
+  └─ Body: {"detail":[{"type":"missing","loc":["body","amount_usdc"],"msg":"Field required","input":{"payee_address":"0x000000000000000000000000000000000000dEaD","resource_id":"res_37b7e942","use_ledger":true}}]
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:workflow.scene_runner' (Acc: 2.56) Den: 29.50)
 [Telemetry] 🟢 System Stabilized on 'SYSTEM:phase.runner'
- LOG | SYSTEM | INFO  |  phase.runner: 
+ LOG | SYSTEM | INFO  |  phase.runner: 
 === [DONE] Scenarios Completed: 11 Passed, 0 Failed ===
- LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.error: Framework Fault Detected: cannot unpack non-iterable NoneType object
-SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:0.2] tracer.wasm.tracer: ## @trace.teardown: Collapsing space and reclaiming resources...
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.exit: Field Restored.
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.error: Framework Fault Detected: cannot unpack non-iterable NoneType object
+SUMMARY🔥| agent  | INFO  |  [G:0.6] [Acc:1.1] tracer.wasm.tracer: ## @trace.teardown: Collapsing space and reclaiming resources...
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.exit: Field Restored.
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ▶️ [PHASE 4/5] Gateway Ingress (Tampered Attestation)
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: Initiating Structural Trace Lifecycle
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: WASM Lifecycle (AgentBot Removed)
-SUMMARY🔥| agent  | INFO  |  [G:0.6] [Acc:0.4] tracer.wasm.tracer: [STATUS] Cache miss/invalid. Initiating Builder...
- LOG | agent  | INFO  |  tracer.wasm.builder: 
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: Initiating Structural Trace Lifecycle
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.init: WASM Lifecycle (AgentBot Removed)
+[Telemetry] 🚨 Burst Alert Triggered on 'agent:tracer.wasm.tracer' (Acc: 1.59) Den: 10.50)
+SUMMARY🔥| agent  | INFO  |  [G:0.1] [Acc:1.6] tracer.wasm.tracer: [STATUS] Cache miss/invalid. Initiating Builder...
+[Telemetry] 🟢 System Stabilized on 'agent:tracer.wasm.builder'
+ LOG | agent  | INFO  |  tracer.wasm.builder: 
 --- [START] Compiling WASM Artifacts (DPHI, DVM) ---
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
- LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (15 methods).
 info: component rust-std for target wasm32-unknown-unknown is up to date
-SUMMARY🔥| agent  | INFO  |  [G:0.9] [Acc:-0.1] tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
-SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:-0.2] tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
-SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:-0.1] tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
-SUMMARY🔥| agent  | INFO  |  [G:0.7] [Acc:-0.1] tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
-SUMMARY🔥| agent  | INFO  |  [G:0.6] [Acc:-0.7] tracer.wasm.tracer: [Ledger] Registering new WASM lineage...
- LOG | SYSTEM | INFO  |  dphi.cgroup: [worker-4636390928] Cgroup enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
-SUMMARY🔥| agent  | WARN  |  [G:0.5] [Acc:-0.6] tracer.wasm.tracer: [Ledger] Node is FOLLOWER. Bypassing physical disk seal and proposing to Mempool.
-SUMMARY🔥| agent  | INFO  |  [G:0.5] [Acc:-0.5] tracer.wasm.tracer: [Ledger] New WASM lineage sealed: 9f45ea39
-SUMMARY🔥| agent  | INFO  |  [G:0.5] [Acc:-0.4] tracer.wasm.tracer: 
---- [START] Delegating Orchestration to WasmTester ---
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-1.2] workflow.scene_runner: 
+SUMMARY🔥| agent  | INFO  |  [G:0.9] [Acc:0.1] tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
+SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:0.1] tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
+SUMMARY🔥| agent  | INFO  |  [G:0.8] [Acc:0.2] tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
+SUMMARY🔥| agent  | INFO  |  [G:0.7] [Acc:0.1] tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
+ LOG | SYSTEM | INFO  |  dphi.cgroup: [worker-4691557456] Cgroup enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.6] workflow.scene_runner: 
 === [START] E2E_SCENE_NET (Attestation Rejection (Tampered Headers)) ===
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:-0.4] edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/openapi.json
 HTTP Request: GET http://127.0.0.1:8353/openapi.json "HTTP/1.1 200 OK"
-SUMMARY🔥| HTTP_RX | INFO  |  [G:0.7] [Acc:-0.5] edge.tracer: [Trace:RX] 200 OK in 0.005s
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:-0.4] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/mcp/sse
 HTTP Request: POST http://127.0.0.1:8353/mcp/sse "HTTP/1.1 405 Method Not Allowed"
-SUMMARY🔥| HTTP_RX | WARN  |  [G:0.7] [Acc:-0.4] edge.tracer: [Trace:RX] 405 Method Not Allowed in 0.001s
-  └─ Body: Method Not Allowed
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-1.0] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/quote (Expected: 200)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.7] [Acc:-0.3] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
- LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
- LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85363659127271426 | Env: deno)
- LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Dry-run complete. Estimated 0 units for Client: generative-language-client-1234
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.2] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/quote (Expected: 200)
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
+ LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
+ LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85521348729909251 | Env: deno)
+ LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Dry-run complete. Estimated 0 units for Client: generative-language-client-1234
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/profile/quote "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/quote "HTTP/1.1 200 OK"
-SUMMARY🔥| HTTP_RX | INFO  |  [G:0.6] [Acc:-0.3] edge.tracer: [Trace:RX] 200 OK in 0.041s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.7] workflow.scene_runner:   └─ Sending POST to /v1/public/billing/invoice (Expected: 200)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:-0.2] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.5] [Acc:0.0] edge.tracer: [Trace:RX] 200 OK in 0.015s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.1] workflow.scene_runner:   └─ ✅ Passed: Dry-run quotation processed correctly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.1] workflow.scene_runner:   └─ Sending POST to /v1/public/billing/invoice (Expected: 200)
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/exchange/invoice/issue "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/billing/invoice "HTTP/1.1 200 OK"
-SUMMARY🔥| HTTP_RX | INFO  |  [G:0.6] [Acc:-0.2] edge.tracer: [Trace:RX] 200 OK in 0.016s
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.4] workflow.scene_runner:   └─ Sending GET to /v1/public/billing/balance (Expected: 200)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:-0.1] edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0x1045cB638d4b2eF1d6e5892F9655110e2ca01224&asset_type=fuel
-HTTP Request: GET http://127.0.0.1:8353/v1/eco/exchange/balance?agent_id=0x1045cB638d4b2eF1d6e5892F9655110e2ca01224&asset_type=fuel "HTTP/1.1 200 OK"
-HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0x1045cB638d4b2eF1d6e5892F9655110e2ca01224&asset_type=fuel "HTTP/1.1 200 OK"
-SUMMARY🔥| HTTP_RX | INFO  |  [G:0.6] [Acc:-0.0] edge.tracer: [Trace:RX] 200 OK in 0.018s
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.5] [Acc:0.2] edge.tracer: [Trace:RX] 200 OK in 0.008s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.2] workflow.scene_runner:   └─ ✅ Passed: L402 Invoice generation successful.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.4] workflow.scene_runner:   └─ Sending GET to /v1/public/billing/balance (Expected: 200)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:0.3] edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0x8903a0B89d0C2E7f1DE8d09E8d863d9156654179&asset_type=fuel
+HTTP Request: GET http://127.0.0.1:8353/v1/eco/exchange/balance?agent_id=0x8903a0B89d0C2E7f1DE8d09E8d863d9156654179&asset_type=fuel "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0x8903a0B89d0C2E7f1DE8d09E8d863d9156654179&asset_type=fuel "HTTP/1.1 200 OK"
 [Reactor] 💥 Task was destroyed but it is pending!
-    [Context] task: Task(Task-273)
+    [Context] task: Task(Task-273)
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/compute/intent/validate "HTTP/1.1 200 OK"
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
- LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
- LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
- LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85363659605422081 | Env: deno)
- LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Charged $0.0000 for 0 fuel units. Client: generative-language-client-1234
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Requesting Native billing verification for project: generative-language-client-1234
+ LOG | LEGACY | INFO  |  sandbox.profile: [Profile] Verification Successful. Assigning SYSTEM (PREMIUM) Policy.
+ LOG | LEGACY | INFO  |  sandbox.profile: [generative-language-client-1234] Target Execution Tier mapped to: SYSTEM
+ LOG | SYSTEM | INFO  |  sandbox.executor: [sandbox_executor] Injecting task (ToposID: 85521348931235842 | Env: deno)
+ LOG | LEGACY | INFO  |  sandbox.profile: [Billing] Charged $0.0000 for 0 fuel units. Client: generative-language-client-1234
 HTTP Request: POST http://127.0.0.1:8353/v1/eco/profile/execute/billed "HTTP/1.1 200 OK"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/execute "HTTP/1.1 200 OK"
-SUMMARY🔥| HTTP_RX | INFO  |  [G:0.6] [Acc:-0.4] edge.tracer: [Trace:RX] 200 OK in 0.257s
-SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:-1.0] workflow.scene_runner:   └─ 👾 Injecting Chaos: Tampering Attestation Headers for /v1/public/agent/execute
- LOG | SYSTEM | CRIT  |  client.http: [VerifiedHttpClient] 🚨 Signature mismatch! Path: /v1/public/agent/execute
-SUMMARY🔥| SYSTEM | ERROR |  [G:0.2] [Acc:-0.8] workflow.scene_runner:   └─ 🚨 Attestation Failed: 서명 검증 실패: 데이터가 변조되었거나 잘못된 서명자입니다.
-SUMMARY🔥| SYSTEM | ERROR |  [G:0.2] [Acc:-0.6] workflow.scene_runner: 
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.4] [Acc:0.2] edge.tracer: [Trace:RX] 200 OK in 0.030s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.5] workflow.scene_runner:   └─ ✅ Passed: Agent Computed Successfully.
+     ├─ 🤖 Agent ID  : 0x8903a0B8...
+     ├─ ⚙️ Action    : EXECUTE_PYTHON
+     └─ ⛽ Max Fuel  : 1000000
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:0.6] workflow.scene_runner:   └─ 👾 Injecting Chaos: Tampering Attestation Headers for /v1/public/agent/execute
+ LOG | SYSTEM | CRIT  |  client.http: [VerifiedHttpClient] 🚨 Signature mismatch! Path: /v1/public/agent/execute
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.2] [Acc:0.9] workflow.scene_runner:   └─ 🚨 Attestation Failed: 서명 검증 실패: 데이터가 변조되었거나 잘못된 서명자입니다.
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.2] [Acc:1.0] workflow.scene_runner: 
 [HALTED] E2E_SCENE_NET aborted during execution: Attestation Proof Verification Failed: 서명 검증 실패: 데이터가 변조되었거나 잘못된 서명자입니다.
- LOG | SYSTEM | INFO  |  phase.runner: 
+ LOG | SYSTEM | INFO  |  phase.runner: 
 === [DONE] Scenarios Completed: 6 Passed, 1 Failed ===
- LOG | SYSTEM | WARN  |  phase.runner: Review the following failed contexts:
- LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.error: Framework Fault Detected: cannot unpack non-iterable NoneType object
- LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.exit: Field Restored.
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | WARN  |  phase.runner: Review the following failed contexts:
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.error: Framework Fault Detected: cannot unpack non-iterable NoneType object
+ LOG | agent  | CRIT  |  tracer.wasm.tracer: ## @trace.exit: Field Restored.
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ▶️ [PHASE 5/5] Sentinel Security (Chaos WAF Check)
 HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
 HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 [Pipeline] Shutting down embedded Uvicorn REST server...
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Shutting down receptor.rest safely...
- LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Teardown complete. Goodbye.
- LOG | SYSTEM | INFO  |  workflow.edge: 
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Shutting down receptor.rest safely...
+ LOG | SYSTEM | INFO  |  fiber.dphi.receptor.rest: Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  workflow.edge: 
 ================================================================================
- LOG | SYSTEM | INFO  |  workflow.edge: 🛡️ [EDGE GATEWAY TEST SUITE REPORT]
- LOG | SYSTEM | INFO  |  workflow.edge: ================================================================================
- LOG | SYSTEM | INFO  |  workflow.edge: ✅ 01. [EDGE_GATEWAY]  Wasm Build & Pre-warm                         | Result: PASSED
- LOG | SYSTEM | INFO  |  workflow.edge: ✅ 02. [EDGE_GATEWAY]  Gateway Ingress (Golden Path)                 | Result: PASSED
- LOG | SYSTEM | INFO  |  workflow.edge: ✅ 03. [EDGE_GATEWAY]  Gateway Ingress (Negative Path)               | Result: PASSED
- LOG | SYSTEM | INFO  |  workflow.edge: ✅ 04. [EDGE_GATEWAY]  Gateway Ingress (Tampered Attestation)        | Result: PASSED
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.1] workflow.edge: ✅ 05. [EDGE_GATEWAY]  Sentinel Security (Chaos WAF Check)           | Result: PASSED
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.2] workflow.edge: --------------------------------------------------------------------------------
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.3] workflow.edge: 🎉 ALL EDGE INGRESS & ISOLATION TESTS EXECUTED SUCCESSFULLY.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.4] workflow.edge: ================================================================================
+ LOG | SYSTEM | INFO  |  workflow.edge: 🛡️ [EDGE GATEWAY TEST SUITE REPORT]
+ LOG | SYSTEM | INFO  |  workflow.edge: ================================================================================
+ LOG | SYSTEM | INFO  |  workflow.edge: ✅ 01. [EDGE_GATEWAY]  Wasm Build & Pre-warm                         | Result: PASSED
+ LOG | SYSTEM | INFO  |  workflow.edge: ✅ 02. [EDGE_GATEWAY]  Gateway Ingress (Golden Path)                 | Result: PASSED
+ LOG | SYSTEM | INFO  |  workflow.edge: ✅ 03. [EDGE_GATEWAY]  Gateway Ingress (Negative Path)               | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.9] workflow.edge: ✅ 04. [EDGE_GATEWAY]  Gateway Ingress (Tampered Attestation)        | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.0] workflow.edge: ✅ 05. [EDGE_GATEWAY]  Sentinel Security (Chaos WAF Check)           | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.1] workflow.edge: --------------------------------------------------------------------------------
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.3] workflow.edge: 🎉 ALL EDGE INGRESS & ISOLATION TESTS EXECUTED SUCCESSFULLY.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.4] workflow.edge: ================================================================================
 
 [Reactor] 🏁 Lifecycle terminated cleanly.
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.2] workflow.scene_runner:   └─ ✅ Passed: Balance read handled correctly. (x3)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.1] workflow.scene_runner: 
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.5] workflow.scene_runner:   └─ ✅ Passed: Hot State Balance read successful. (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.6] workflow.scene_runner: 
 --- [Phase 2] Public Agent Execution & Metering --- (x3)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.0] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/execute (Expected: 200) (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-1.1] workflow.scene_runner:   └─ ✅ Passed: Received 200 as expected. (x3)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.9] workflow.scene_runner:   └─ 🔍 Verifying First-Party Attestation for /v1/public/agent/execute... (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:-0.3] workflow.scene_runner:   └─ ✅ Attestation Signature Verified Successfully! (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:1.3] workflow.scene_runner: 
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.6] workflow.scene_runner:   └─ Sending POST to /v1/public/agent/execute (Expected: 200) (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.7] workflow.scene_runner:   └─ 🔍 Verifying First-Party Attestation for /v1/public/agent/execute... (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.5] workflow.scene_runner:   └─ ✅ Attestation Signature Verified Successfully! (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.9] workflow.scene_runner: 
 --- [Phase 2.5] AuditReceipt Verification (Auditor Validation) --- (x2)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:1.1] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402 (x2)
-SUMMARY🔥| agent  | INFO  |  [G:0.5] [Acc:-0.3] tracer.wasm.tracer: [SYSTEM] Using injected WasmTester instance. (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-1.1] workflow.scene_runner: 
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:1.3] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402 (x2)
+SUMMARY🔥| agent  | INFO  |  [G:0.6] [Acc:-0.5] tracer.wasm.tracer: [Ledger] Registering new WASM lineage... (x2)
+SUMMARY🔥| agent  | WARN  |  [G:0.5] [Acc:-0.4] tracer.wasm.tracer: [Ledger] Node is FOLLOWER. Bypassing physical disk seal and proposing to Mempool. (x2)
+SUMMARY🔥| agent  | INFO  |  [G:0.5] [Acc:-0.3] tracer.wasm.tracer: [Ledger] New WASM lineage sealed: 9f45ea39 (x2)
+SUMMARY🔥| agent  | INFO  |  [G:0.5] [Acc:-0.2] tracer.wasm.tracer: 
+--- [START] Delegating Orchestration to WasmTester --- (x2)
+SUMMARY🔥| agent  | INFO  |  [G:0.5] [Acc:-0.1] tracer.wasm.tracer: [SYSTEM] Using injected WasmTester instance. (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.5] workflow.scene_runner: 
 --- [Phase 1] API Head & MCP Connectivity Sweep --- (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-1.1] workflow.scene_runner: 
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:-0.2] edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/openapi.json (x2)
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.6] [Acc:-0.2] edge.tracer: [Trace:RX] 200 OK in 0.002s (x2)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:-0.1] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/mcp/sse (x2)
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.5] [Acc:-0.1] edge.tracer: [Trace:RX] 405 Method Not Allowed in 0.001s
+  └─ Body: Method Not Allowed (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.4] workflow.scene_runner: 
 --- [Phase 1.5] Public Agent Pre-flight Quotation (Dry-run) --- (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.9] workflow.scene_runner:   └─ ✅ Passed: Dry-run quotation handled correctly. (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.8] workflow.scene_runner: 
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:0.1] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.0] workflow.scene_runner: 
 --- [Phase 1.6] Public L402 Invoice Generation --- (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.6] workflow.scene_runner:   └─ ✅ Passed: Invoice generation handled correctly. (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.5] workflow.scene_runner: 
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:0.2] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.3] workflow.scene_runner: 
 --- [Phase 1.7] Public UTXO Hot State Balance Read --- (x2)
-SUMMARY🔥| HTTP_TX | INFO  |  [G:0.6] [Acc:0.0] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute (x2)
-SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.5] workflow.scene_runner: [workflow.scene_runner] Bursting logs suppressed... (x9)
-SUMMARY🔥| agent  | INFO  |  [G:0.4] [Acc:0.4] tracer.wasm.tracer: ## @trace.teardown: Collapsing space and reclaiming resources... (x2)
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.5] [Acc:0.3] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.7] workflow.scene_runner: [workflow.scene_runner] Bursting logs suppressed... (x11)
+SUMMARY🔥| agent  | INFO  |  [G:0.4] [Acc:-0.1] tracer.wasm.tracer: ## @trace.teardown: Collapsing space and reclaiming resources... (x2)
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.5] [Acc:0.3] edge.tracer: [Trace:RX] 200 OK in 0.008s (x2)

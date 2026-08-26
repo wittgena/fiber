@@ -8,13 +8,13 @@
 
 `edge.llm`은 DPHI(Deterministic Poly-Harmonic Infrastructure) 네트워크로 진입하는 모든 AI 에이전트의 LLM 요청을 통제하는 **Zero-Trust 기반의 API 인그레스(Ingress) 계층**입니다.
 
-기존의 단순한 리버스 프록시나 로드 밸런서와 달리, 이 게이트웨이는 외부의 비결정론적 요청이 시스템 내부로 유입되기 전에 암호학적 지불 증명(L402/X402 Receipt)을 검증하고, WASM 커널로부터 물리적 연산 예산(Fuel Budget)을 인가받는 문지기 역할을 수행합니다. 동시에 `agent.llm.param` 모듈을 통해 **OpenAI API 스펙과 100% 하위 호환**되도록 설계되어, 에이전트들은 기존 코드의 수정 없이 DPHI 인프라의 강력한 통제 및 경제 시스템에 온보딩할 수 있습니다.
+기존의 단순한 리버스 프록시나 로드 밸런서와 달리, 이 게이트웨이는 외부의 비결정론적 요청이 시스템 내부로 유입되기 전에 암호학적 지불 증명(L402/X402 Receipt)을 검증하고, WASM 커널로부터 물리적 연산 예산(Fuel Budget)을 인가받는 문지기 역할을 수행합니다. 동시에 `llm.param` 모듈을 통해 **OpenAI API 스펙과 100% 하위 호환**되도록 설계되어, 에이전트들은 기존 코드의 수정 없이 DPHI 인프라의 강력한 통제 및 경제 시스템에 온보딩할 수 있습니다.
 
 ---
 
 ## 2. Core Architecture & Request Lifecycle
 
-`edge.llm`은 FastAPI 기반의 `ContractRouter`로 구현되었으며, 모든 요청은 내부 파이프라인(`agent.llm.entry`)으로 넘어가기 전 다음 4단계의 라이프사이클을 거칩니다.
+`edge.llm`은 FastAPI 기반의 `ContractRouter`로 구현되었으며, 모든 요청은 내부 파이프라인(`llm.entry`)으로 넘어가기 전 다음 4단계의 라이프사이클을 거칩니다.
 
 ```text
 [ Client Agent ]                    [ edge.llm (Gateway) ]                   [ WASM Kernel & Executor ]
@@ -77,7 +77,7 @@
 
 ## 5. Type Compatibility & Ecosystem Integration (하위 호환성 및 무마찰 마이그레이션)
 
-DPHI 인프라가 제공하는 '암호학적 씰링'과 '물리적 자원 통제'라는 강력한 기능에도 불구하고, 기존 AI 에이전트 생태계가 이를 수용하기 위해 별도의 SDK를 학습하거나 시스템을 재작성할 필요는 없습니다. `agent.llm.param` 모듈은 내부 커널 데이터 구조와 외부 클라이언트 사이의 **완벽한 타입 브릿지(Type Bridge)** 역할을 수행합니다.
+DPHI 인프라가 제공하는 '암호학적 씰링'과 '물리적 자원 통제'라는 강력한 기능에도 불구하고, 기존 AI 에이전트 생태계가 이를 수용하기 위해 별도의 SDK를 학습하거나 시스템을 재작성할 필요는 없습니다. `llm.param` 모듈은 내부 커널 데이터 구조와 외부 클라이언트 사이의 **완벽한 타입 브릿지(Type Bridge)** 역할을 수행합니다.
 
 ### 5.1. Native OpenAI Type Inheritance (표준 스펙 네이티브 상속)
 

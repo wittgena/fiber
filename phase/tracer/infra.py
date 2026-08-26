@@ -1,5 +1,4 @@
 # phase.tracer.infra
-## @lineage: watcher.tracer.phase.infra
 import sys
 import asyncio
 from functools import wraps

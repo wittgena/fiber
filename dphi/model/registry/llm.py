@@ -5,7 +5,7 @@ import pkgutil
 from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
-from fiber.agent.anchor.provider.registry import get_provider_for_model
+from fiber.llm.provider.registry import get_provider_for_model
 from fiber.dphi.model.ext.llm.model.base import BaseLLM
 
 import fiber.dphi.model.ext.llm as llm_pkg 

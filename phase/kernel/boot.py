@@ -1,7 +1,4 @@
 # phase.kernel.boot
-## @lineage: nexus.phase.kernel.boot
-## @lineage: meta.phase.kernel.boot
-## @lineage: phase.node.boot
 import os
 import asyncio
 

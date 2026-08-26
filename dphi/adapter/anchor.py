@@ -1,5 +1,4 @@
 # dphi.adapter.anchor
-## @lineage: dphi.bound.adapter.anchor
 import json
 import time
 import uuid
