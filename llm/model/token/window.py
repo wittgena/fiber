@@ -1,10 +1,11 @@
-# llm.model.token.window
+# fiber.llm.model.token.window
+## @lineage: llm.model.token.window
 import copy
 from typing import Any, Dict, List, Optional, Tuple, Union
 import tiktoken
 
 from fiber.llm.model.token.encoder import get_default_encoding
-from fiber.llm.provider.registry import model_cost
+from fiber.llm.model.provider.registry import model_cost
 from fiber.llm.model.types.openai import AllMessageValues
 from fiber.dphi.model.constants import DEFAULT_TRIM_RATIO
 

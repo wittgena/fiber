@@ -1,4 +1,5 @@
-# workflow.eco.flow
+# fiber.workflow.eco.flow
+## @lineage: workflow.eco.flow
 import time
 import json
 import asyncio
@@ -9,7 +10,7 @@ from fiber.workflow.eco.infra import (
     EcosystemActor, 
     GrantResource
 )
-from fiber.phase.kernel.attach.sandbox import TestScripts
+from fiber.kernel.attach.sandbox import TestScripts
 
 from xphi.arch.eco.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step

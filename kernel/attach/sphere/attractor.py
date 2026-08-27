@@ -1,17 +1,11 @@
-# phase.kernel.sphere.attractor
-## @lineage: dphi.node.sphere.attractor
-## @lineage: phase.node.sphere.attractor
-"""
-@desc: Native Dual Resonance Attractor & Universal Boot Engine
-@flow: Config Validation -> Topology Assembly -> Pulse Injection -> Autonomous Simulation
-"""
+# fiber.kernel.attach.sphere.attractor
+## @lineage: phase.kernel.sphere.attractor
 import asyncio
 from typing import Dict, Any, Optional
 
 from xphi.arch.contract.discovery import discover_modules
 from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
 from xphi.kernel.space.bind.resolver import find_current_self
-
 from xphi.kernel.phase.runtime.executor.dynamics import DynamicsExecutor
 from xphi.kernel.phase.runtime.node import NodeRuntime
 from xphi.kernel.phase.runtime.flow.cont import LoopCarrier

@@ -1,4 +1,5 @@
-# phase.scope.manager
+# fiber.phase.flow.scope.manager
+## @lineage: phase.scope.manager
 ## @lineage: agent.scope.manager
 import os
 import asyncio
@@ -15,8 +16,8 @@ from xphi.arch.model.conv.tool import Tool
 
 # Base execution and scope components
 from surgent.agent.executor import LoopExecutor
-from fiber.phase.scope.observer import ManifoldFolder, FlowTransition
-from fiber.phase.scope.surface import get_surface_class, SurfaceConfig
+from fiber.phase.flow.scope.observer import ManifoldFolder, FlowTransition
+from fiber.phase.flow.scope.surface import get_surface_class, SurfaceConfig
 from surgent.space.manager import SpaceNode, space_provider
 
 # Architectures and Kernel Topos components

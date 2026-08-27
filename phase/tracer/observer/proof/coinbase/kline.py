@@ -1,4 +1,5 @@
-# phase.tracer.observer.proof.coinbase.kline
+# fiber.phase.tracer.observer.proof.coinbase.kline
+## @lineage: phase.tracer.observer.proof.coinbase.kline
 ## @lineage: bound.observer.proof.coinbase.kline
 ## @lineage: dphi.observer.proof.coinbase.kline
 ## @lineage: eco.observer.proof.coinbase.kline

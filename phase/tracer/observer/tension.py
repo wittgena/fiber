@@ -1,4 +1,5 @@
-# phase.tracer.observer.tension
+# fiber.phase.tracer.observer.tension
+## @lineage: phase.tracer.observer.tension
 ## @lineage: bound.observer.tension
 ## @lineage: dphi.observer.tension
 import os

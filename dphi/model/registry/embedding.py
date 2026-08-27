@@ -1,4 +1,5 @@
-# dphi.model.registry.embedding
+# fiber.dphi.model.registry.embedding
+## @lineage: dphi.model.registry.embedding
 ## @lineage: dphi.model.router.embedding
 import importlib
 from typing import Any

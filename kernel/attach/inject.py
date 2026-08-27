@@ -1,4 +1,5 @@
-# phase.kernel.attach.inject
+# fiber.kernel.attach.inject
+## @lineage: phase.kernel.attach.inject
 ## @lineage: dphi.node.attach.inject
 ## @lineage: phase.node.attach.inject
 import json

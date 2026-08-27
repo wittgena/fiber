@@ -1,4 +1,5 @@
-# llm.stream.accumulator
+# fiber.llm.stream.accumulator
+## @lineage: llm.stream.accumulator
 import time
 from typing import Any, Dict, List, Optional
 

@@ -1,4 +1,5 @@
-# llm.model.types.param.embedding
+# fiber.llm.model.types.param.embedding
+## @lineage: llm.model.types.param.embedding
 ## @lineage: agent.anchor.model.types.param.embedding
 ## @lineage: bound.xor.model.types.param.embedding
 ## @lineage: eco.model.types.param.embedding

@@ -1,4 +1,5 @@
-# phase.kernel.attach.debug
+# fiber.kernel.attach.debug
+## @lineage: phase.kernel.attach.debug
 ## @lineage: dphi.node.attach.debug
 import sys
 import asyncio
@@ -15,8 +16,8 @@ from xphi.kernel.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.phase.kernel.attach.surge import MarketSurge, LedgerSurge, EcoSurge
-from fiber.phase.kernel.attach.inject import PhysicsInjector
+from fiber.kernel.attach.surge import MarketSurge, LedgerSurge, EcoSurge
+from fiber.kernel.attach.inject import PhysicsInjector
 
 log = get_emitter("attach.debug")
 

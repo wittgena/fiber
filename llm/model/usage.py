@@ -1,4 +1,5 @@
-# llm.model.usage
+# fiber.llm.model.usage
+## @lineage: llm.model.usage
 import logging
 from typing import Any, Dict, Optional, Generator, Optional
 from pydantic import BaseModel
@@ -7,7 +8,7 @@ from contextlib import contextmanager
 
 from fiber.llm.model.types.general import ModelInfo
 from fiber.llm.model.types.core import Usage
-from fiber.llm.provider.registry import ModelCostRegistry 
+from fiber.llm.model.provider.registry import ModelCostRegistry 
 from fiber.llm.model.cost.unit import UnitCostCalculator
 from fiber.llm.model.cost.policy import CostPolicy
 

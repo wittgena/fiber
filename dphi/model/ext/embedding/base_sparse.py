@@ -1,4 +1,5 @@
-# dphi.model.ext.embedding.base_sparse
+# fiber.dphi.model.ext.embedding.base_sparse
+## @lineage: dphi.model.ext.embedding.base_sparse
 ## @lineage: phase.client.model.embedding.base_sparse
 ## @lineage: phase.client.ext.embedding.base_sparse
 ## @lineage: bound.client.ext.embedding.base_sparse

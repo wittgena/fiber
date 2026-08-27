@@ -1,4 +1,5 @@
-# dphi.model.inter.registry
+# fiber.dphi.model.inter.registry
+## @lineage: dphi.model.inter.registry
 from typing import Dict
 
 from fiber.dphi.model.inter.adapter import BaseProviderAdapter, GenericHTTPAdapter

@@ -1,4 +1,5 @@
-# phase.tracer.intent.potential
+# fiber.phase.tracer.intent.potential
+## @lineage: phase.tracer.intent.potential
 ## @lineage: bound.observer.intent.potential
 ## @lineage: dphi.observer.intent.potential
 ## @lineage: eco.observer.intent.potential

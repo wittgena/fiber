@@ -1,7 +1,5 @@
-# phase.kernel.contract.kernel
-## @lineage: dphi.node.contract.kernel
-## @lineage: phase.contract.kernel
-## @lineage: phase.anchor.contract.kernel
+# fiber.kernel.contract.sensor
+## @lineage: phase.kernel.contract.kernel
 import math
 import random
 import json
@@ -77,10 +75,6 @@ class SystemConfig(BaseModel):
     def to_json(self) -> str:
         return json.dumps(self.model_dump(), indent=2)
 
-
-# =========================================================================
-# STANDARD KERNELS (Legacy)
-# =========================================================================
 @contract.ator("sensor.ator", role="kernel")
 class SensorAtor(IDynamicsKernel):
     """Φ-evolution kernel: Multi-Ator Cognitive Consensus & Clustering"""

@@ -1,4 +1,5 @@
-# llm.config.mcp
+# fiber.llm.config.mcp
+## @lineage: llm.config.mcp
 ## @lineage: agent.anchor.config.mcp
 ## @lineage: bound.config.mcp
 ## @lineage: ator.conv.protocol.mcp.config

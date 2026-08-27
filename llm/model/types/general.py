@@ -1,4 +1,5 @@
-# llm.model.types.general
+# fiber.llm.model.types.general
+## @lineage: llm.model.types.general
 ## @lineage: agent.anchor.model.types.general
 ## @lineage: bound.xor.model.types.general
 ## @lineage: eco.model.types.general
@@ -23,7 +24,7 @@ from openai.types.images_response import Image as OpenAIImage
 from openai.types.images_response import ImagesResponse as OpenAIImageResponse
 
 from fiber.llm.model.types.param.legacy import PricingParams
-from fiber.llm.provider.protype import ProviderSpecificModelInfo, ProviderTypes
+from fiber.llm.model.provider.protype import ProviderSpecificModelInfo, ProviderTypes
 from fiber.llm.model.types.core import Usage
 from fiber.llm.model.types.openai import ChatCompletionToolCallChunk, ChatCompletionUsageBlock
 from fiber.llm.model.types.openai import OpenAIChatCompletionFinishReason

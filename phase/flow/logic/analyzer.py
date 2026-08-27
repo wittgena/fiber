@@ -1,4 +1,5 @@
-# phase.flow.logic.analyzer
+# fiber.phase.flow.logic.analyzer
+## @lineage: phase.flow.logic.analyzer
 ## @lineage: nexus.flow.logic.analyzer
 ## @lineage: meta.flow.logic.analyzer
 ## @lineage: meta.flow.trans.logic.analyzer

@@ -1,11 +1,12 @@
-# workflow.scene.flare
+# fiber.workflow.scene.flare
+## @lineage: workflow.scene.flare
 import time
 import asyncio
 import json
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from fiber.phase.kernel.attach.sandbox import SandboxRunner, TestScripts
+from fiber.kernel.attach.sandbox import SandboxRunner, TestScripts
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter

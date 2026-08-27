@@ -1,4 +1,5 @@
-# workflow.bench.profile
+# fiber.workflow.wasm.bench.profile
+## @lineage: workflow.bench.profile
 import time
 import asyncio
 import json
@@ -7,7 +8,7 @@ import operator
 from typing import Any, List, Dict, Callable
 
 from fiber.workflow.scene.anchor import ActorIdentity
-from fiber.phase.kernel.attach.sandbox import TestScripts
+from fiber.kernel.attach.sandbox import TestScripts
 
 from xphi.kernel.dphi.runner.phase import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter

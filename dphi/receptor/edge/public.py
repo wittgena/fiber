@@ -1,4 +1,5 @@
-# dphi.receptor.edge.public
+# fiber.dphi.receptor.edge.public
+## @lineage: dphi.receptor.edge.public
 """
 @desc: DPHI Edge Public Gateway
 - Orchestrates WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts.

@@ -1,4 +1,5 @@
-# workflow.bench.entry
+# fiber.workflow.wasm.bench.entry
+## @lineage: workflow.bench.entry
 import sys
 import argparse
 from pathlib import Path

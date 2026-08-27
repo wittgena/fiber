@@ -1,4 +1,5 @@
-# llm.exception.eco
+# fiber.llm.exception.eco
+## @lineage: llm.exception.eco
 ## @lineage: agent.loop.runtime.exception.eco
 ## @lineage: agent.runtime.exception.eco
 from __future__ import annotations

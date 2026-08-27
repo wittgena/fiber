@@ -1,4 +1,5 @@
-# dphi.model.ext.llm.openai
+# fiber.dphi.model.ext.llm.openai
+## @lineage: dphi.model.ext.llm.openai
 ## @lineage: phase.client.model.llm.openai
 ## @lineage: phase.client.ext.llm.openai
 import functools

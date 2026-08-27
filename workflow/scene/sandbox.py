@@ -1,9 +1,10 @@
-# workflow.scene.sandbox
+# fiber.workflow.scene.sandbox
+## @lineage: workflow.scene.sandbox
 ## @lineage: dphi.workflow.scene.sandbox
 import time
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict, List
-from fiber.phase.kernel.attach.sandbox import SandboxRunner, ScriptDef, TestScripts
+from fiber.kernel.attach.sandbox import SandboxRunner, ScriptDef, TestScripts
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")

@@ -1,8 +1,9 @@
-# llm.provider.url
+# fiber.llm.model.provider.url
+## @lineage: llm.provider.url
 from typing import Optional, Union
 
 from fiber.llm.model.types.param.legacy import LegacyParams
-from fiber.llm.provider.registry import get_llm_provider
+from fiber.llm.model.provider.registry import get_llm_provider
 
 from xphi.arch.model.config import config
 from xphi.watcher.plane.emitter import get_emitter

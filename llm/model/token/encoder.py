@@ -1,4 +1,5 @@
-# llm.model.token.encoder
+# fiber.llm.model.token.encoder
+## @lineage: llm.model.token.encoder
 from typing import Dict, List, Type, Union, cast, Optional
 from pydantic import BaseModel
 import tiktoken

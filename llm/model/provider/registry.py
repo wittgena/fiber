@@ -1,4 +1,5 @@
-# llm.provider.registry
+# fiber.llm.model.provider.registry
+## @lineage: llm.provider.registry
 from __future__ import annotations
 import json
 import os
@@ -11,7 +12,7 @@ from email.utils import formatdate
 from typing import Dict, List, Tuple, Optional, Callable, Union
 
 from fiber.dphi.model.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
-from fiber.llm.provider.protype import ProviderTypes
+from fiber.llm.model.provider.protype import ProviderTypes
 from fiber.llm.model.types.param.legacy import LegacyParams
 
 from xphi.arch.model.config import config

@@ -1,12 +1,7 @@
-# phase.kernel.sphere.nonlinear
-## @lineage: dphi.node.sphere.nonlinear
-## @lineage: phase.node.sphere.nonlinear
-"""
-@desc: Nonlinear Tail Risk Prediction Attractor Boot Sequence
-@flow: Defines Advanced Config -> Injects into Universal Boot Engine
-"""
+# fiber.kernel.attach.sphere.nonlinear
+## @lineage: phase.kernel.sphere.nonlinear
 import asyncio
-from fiber.phase.kernel.sphere.attractor import boot_sequence
+from fiber.kernel.attach.sphere.attractor import boot_sequence
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("sphere.nonlinear", phase="BOOT")

@@ -1,31 +1,98 @@
-# phase.kernel.boot
+# fiber.kernel.boot
 import os
 import asyncio
+from typing import Optional
 
-from fiber.phase.kernel.signal import PhaseSignal
-
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+# --- Events & Bus ---
+from xphi.arch.contract.event.next import LogEvent
+from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType
 from xphi.arch.contract.event.bus import AsyncEventBus
+
+# --- Executors & Registry ---
 from xphi.arch.contract.executor import BaseExecutor
 from xphi.arch.contract.registry.unified import registry
 
+# --- Watcher & Emitter ---
+from xphi.watcher.plane.observer.event import EventObserver
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.regulator import default_plane
+from xphi.watcher.ingress.gateway import DphiGatewayServer, GatewaySettings
+from xphi.watcher.receptor.bootstrap import receptor_bootstrap
+from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
+
+# --- Kernel & Phase ---
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.phase.runtime.executor.swarm import SwarmExecutor
 from xphi.kernel.phase.runtime.flow.executor import FlowExecutor
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.phase.runtime.node import NodeRuntime
 
-from xphi.watcher.ingress.gateway import DphiGatewayServer, GatewaySettings
-from xphi.watcher.plane.regulator import default_plane
-from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.receptor.bootstrap import receptor_bootstrap
-from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
-
+# ==========================================
+# Globals
+# ==========================================
 log = get_emitter("kernel.boot")
 
 _node_instance = None
 _rest_server_instance = None
 _gateway_instance = None
 
+# ==========================================
+# Phase Signal Component
+# ==========================================
+class PhaseSignal(EventObserver):
+    def __init__(self, event_bus: AsyncEventBus):
+        self.bus = event_bus
+        self.log = get_emitter("anchor.bridge", phase="BRANE")
+
+    def update(self, event: LogEvent) -> None:
+        if event.level != "SIGNAL":
+            return
+            
+        event_message = str(event.message).strip()
+        payload = event.context.copy() if event.context else {}
+        payload.update({
+            "bridged_from": "Surface.LogEvent",
+            "original_source": getattr(event, 'source_id', 'unknown'),
+            "boundary": "brane_to_kernel"
+        })
+
+        carrier = PsiCarrier(
+            kind="SIGNAL",          
+            tag=event_message,      
+            payload=payload,
+            carrier_type=CarrierType.FIXED
+        )
+
+        psi_event = PsiEvent(
+            event_id=event.event_id,
+            parent_id=getattr(event, 'parent_id', None),
+            source_id="anchor.phase.bridge", 
+            scope=getattr(event, 'scope', 'GLOBAL'),
+            tick=getattr(event, 'tick', 0) or 0,
+            phase_id=getattr(event, 'phase_id', 0), # 상위 계층의 phase_id가 있다면 승계
+            carrier=carrier,
+            context={"domain": "boundary.crossing"}
+        )
+
+        try:
+            loop = asyncio.get_running_loop()
+            if loop.is_closed():
+                raise RuntimeError("Event loop is closed")
+            loop.create_task(self._async_dispatch(psi_event, event_message))
+        except RuntimeError as e:
+            self.log.error(f"[PhaseBridge] Cannot dispatch SIGNAL. Event loop unavailable: {e}")
+
+    async def _async_dispatch(self, psi_event: PsiEvent, original_msg: str):
+        try:
+            symbol = getattr(psi_event, 'symbol', original_msg)
+            self.log.trace(f"[PhaseBridge] Elevating SIGNAL -> Psi: {symbol}")
+            await self.bus.publish(psi_event)
+        except Exception as e:
+            self.log.error(f"[PhaseBridge] Dispatch failed for {original_msg}: {e}", exc_info=True)
+
+# ==========================================
+# Kernel Components
+# ==========================================
 class KernelGateway:
     @classmethod
     async def assemble(cls, node) -> None:
@@ -84,8 +151,11 @@ class RoutingExecutor(BaseExecutor):
         else:
             return await self.swarm_executor.execute(psi)
 
+# ==========================================
+# Boot Sequences & Services
+# ==========================================
 async def clear_zombie_port(port: int):
-    from fiber.phase.kernel.reaper import SystemOps
+    from fiber.kernel.reaper import SystemOps
     
     reaper = SystemOps(redis_conn=None, tag="boot.reaper")
     pids = await reaper.get_pids_from_port(port)
@@ -99,7 +169,6 @@ async def clear_zombie_port(port: int):
         
     if pids:
         await asyncio.sleep(0.5)
-
 
 async def start_rest_membrane():
     global _rest_server_instance
@@ -127,7 +196,6 @@ async def start_rest_membrane():
     
     log.info(f"[Boot] Internal REST Edge listening safely on http://127.0.0.1:{target_port}")
     log.info(f"[Boot] Routing internal traffic to: {resolved_internal_url}")
-
 
 async def start_public_gateway():
     global _gateway_instance
@@ -170,7 +238,6 @@ async def main_async():
     log.info("[Boot] Control Plane, Embedded Node, REST Backend & Public Gateway fully operational.")
     log.info("[Boot] Entering observation mode...")
     await _node_instance.wait_until_stopped()
-
 
 async def teardown():
     global _node_instance, _rest_server_instance, _gateway_instance

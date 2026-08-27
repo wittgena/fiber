@@ -1,4 +1,5 @@
-# phase.kernel.contract.runtime.reflector
+# fiber.kernel.contract.runtime.reflector
+## @lineage: phase.kernel.contract.runtime.reflector
 ## @lineage: dphi.node.contract.runtime.reflector
 ## @lineage: phase.contract.runtime.reflector
 import ast
@@ -9,7 +10,7 @@ from typing import Any, Dict
 
 from xphi.arch.model.phase.flow import PhaseFlow, FlowState, Align, Resonance, Transduction
 from xphi.arch.contract.registry.unified import contract
-from fiber.phase.kernel.contract.runtime.ator import AtorRuntime
+from fiber.kernel.contract.runtime.ator import AtorRuntime
 from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger('ator.reflector')

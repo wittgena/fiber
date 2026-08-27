@@ -1,4 +1,5 @@
-# dphi.model.ext.embedding.base
+# fiber.dphi.model.ext.embedding.base
+## @lineage: dphi.model.ext.embedding.base
 ## @lineage: phase.client.model.embedding.base
 ## @lineage: phase.client.ext.embedding.base
 ## @lineage: bound.client.ext.embedding.base

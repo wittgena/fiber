@@ -1,4 +1,5 @@
-# phase.doc.llm.edge
+# fiber.phase.doc.llm.edge
+@lineage: phase.doc.llm.edge
 **@desc:** Zero-Trust LLM Gateway, Kernel Authorization Ingress & Ecosystem Integration for DPHI
 
 ---
