@@ -1,26 +1,100 @@
-# fiber.phase.tracer.intent.potential
-## @lineage: phase.tracer.intent.potential
-## @lineage: bound.observer.intent.potential
-## @lineage: dphi.observer.intent.potential
-## @lineage: eco.observer.intent.potential
+# fiber.dphi.observer.intent.potential
 import asyncio
 import time
 import json
+import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
+
 from fiber.dphi.adapter.config import dphi_env
-
 from xphi.kernel.dphi.eco.settlement import EcoAdapter
-from fiber.phase.tracer.intent.exchange import DvmRpcBridge, NodeIdentity
-
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.arch.contract.event.next import generate_parity_triplet
+from xphi.arch.contract.event.next import generate_parity_triplet, next_phase_id
+from xphi.arch.model.phase.gate import uuid4
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.broker import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
+from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.phase.inter.dvm import DvmInterpreter
 
 log = get_emitter("intent.potential")
+
+
+# =========================================================================
+# 1. CORE ENTITIES & BRIDGES (Ported from intent.exchange)
+# =========================================================================
+
+class NodeIdentity:
+    """Pure consensus participant entity in the protocol core (Ed25519-based)."""
+    def __init__(self):
+        self.key = ed25519.Ed25519PrivateKey.generate()
+        self.pub_hex = self.key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw
+        ).hex()
+        # [FIX] 워크플로우에서 EVM 호환 주소 참조를 위해 Dummy EVM Address 생성 로직 추가
+        self.evm_address = "0x" + self.pub_hex[:40]
+
+    def sign(self, canonical_bytes: bytes) -> str:
+        return self.key.sign(hashlib.sha256(canonical_bytes).digest()).hex()
+
+
+class DvmRpcBridge(RpcBridge):
+    """Orchestrates the DVM (revm/cosmwasm) for deterministic state derivation and validation."""
+    def __init__(self):
+        super().__init__()
+        self.log = get_emitter("dvm.bridge")
+
+    async def request(self, payload: Dict[str, Any], timeout: float = 5.0) -> Dict[str, Any]:
+        action = payload.get("action")
+        await asyncio.sleep(0.05)
+
+        if action == DphiMethod.INIT_EPOCH.value:
+            mandate_result = payload.get("mandate", {})
+            actual_mandate = mandate_result.get("mandate", {})
+            constraints = actual_mandate.get("constraints", {})
+            
+            if constraints.get("expiration_ts", 0) < int(time.time() * 1000):
+                self.log.warning("🛑 [REJECTED] Ingress Validation Failed: AP2 Mandate Expired")
+                return {"status": 401, "error": "Unauthorized: AP2 Mandate Expired"}
+                
+            topo = payload.get("topo", 0)
+            press = payload.get("press", 0)
+            return {"status": 200, "data": {"phase_id": next_phase_id(topo=topo, press=press)}}
+            
+        elif action == "simulate_vm":
+            self.log.info("🔬 [DVM Engine] Initiating sandbox execution for state derivation...")
+            vm_args = payload.get("payload", {})
+            try:
+                with DvmInterpreter(wasm_module_name="dvm.wasm") as dvm:
+                    res = dvm.execute(
+                        vm_target=vm_args.get("vm_target", "EVM"),
+                        target_address=vm_args.get("target_address", "0x00"),
+                        calldata=vm_args.get("calldata", "0x"),
+                        state_snapshot=vm_args.get("state_snapshot", {}),
+                        context={"caller": vm_args.get("caller_address"), "gas_price": hex(10**9), "value": "0x0"}
+                    )
+                    if res.success:
+                        self.log.info("✅ [DVM Engine] State derivation successful.")
+                        return {"status": 200, "data": json.loads(res.output)}
+                    else:
+                        self.log.error(f"🛑 [DVM Reverted] Execution Halted: {res.error}")
+                        return {"status": 200, "data": {"success": False, "revert_reason": str(res.error)}}
+            except Exception as e:
+                self.log.error(f"💥 [DVM Fatality] Wasmtime Engine Exception: {e}")
+                return {"status": 500, "error": str(e)}
+            
+        elif action == DphiMethod.SEAL_EPOCH.value:
+            return {"status": 200, "data": {"hash": f"sealed_{uuid4().hex[:16]}", "receipt_id": f"nexus_receipt_{uuid4().hex[:8]}"}}
+            
+        return {"status": 404, "error": f"Unknown action: {action}"}
+
+
+# =========================================================================
+# 2. INTENT DOMAIN ENTITIES
+# =========================================================================
 
 @dataclass
 class PsiArtifact:
@@ -32,7 +106,7 @@ class PsiArtifact:
     suggested_calldata: str     
 
 @dataclass
-class TopologicalIntent:
+class ToposIntent:
     """
     [Invariant State Transition Vector] 
     Defines the pure objective manifold of the state transition.
@@ -44,6 +118,11 @@ class TopologicalIntent:
     expected_spread: int       
     artifact: PsiArtifact      
 
+
+# =========================================================================
+# 3. WORKFLOW MESSAGES & ORCHESTRATION
+# =========================================================================
+
 class IntentIngressMsg(WorkflowMessage): pass
 class ShadowSyncMsg(WorkflowMessage): pass
 class DvmObservationMsg(WorkflowMessage): pass
@@ -51,7 +130,7 @@ class EpochSealMsg(WorkflowMessage): pass
 class IntentRecalibrateMsg(WorkflowMessage): pass
 
 class TopologicalIntentWorkflow(Workflow):
-    def __init__(self, intent: TopologicalIntent):
+    def __init__(self, intent: ToposIntent):
         super().__init__(name=f"TOPO_INTENT [{intent.event_id[:8]}]")
         self.log = log
         self.intent = intent
@@ -85,7 +164,7 @@ class TopologicalIntentWorkflow(Workflow):
             signer_key=self.field_node.key
         )
         
-        # DPHI RPC(또는 Edge API)에 Mandate 제출 (INIT_EPOCH로 추상화되어 있음)
+        # DPHI RPC(또는 Edge API)에 Mandate 제출
         init_payload = {
             "action": DphiMethod.INIT_EPOCH.value,
             "topo": 120, "press": 85,
@@ -96,7 +175,6 @@ class TopologicalIntentWorkflow(Workflow):
         if res.get("status") != 200:
             return ErrorMessage(f"Mandate Rejected. Insufficient clearance: {res.get('error')}")
             
-        # DPHI가 허가한 오프체인 역량 영수증 ID 획득 (향후 HTTP 헤더에 담길 값)
         self.capability_receipt_id = res.get("data", {}).get("phase_id", "mock_receipt_123")
         self.log.info(f"  └─ Capability Token Acquired: {self.capability_receipt_id}")
         
@@ -110,8 +188,6 @@ class TopologicalIntentWorkflow(Workflow):
             self.intent.artifact.suggested_target: { "balance": "0x_latest_pool_balance", "nonce": 0 },
             self.field_node.pub_hex: { "balance": "0x_mock_jit_liquidity", "nonce": 1 }
         }
-        
-        # 실제 환경에서는 이 단계에서 self.capability_receipt_id 를 X-X402-Receipt 헤더로 래핑하여 통신함.
         return DvmObservationMsg()
 
     @step
@@ -180,7 +256,7 @@ class TopologicalIntentWorkflow(Workflow):
                 "intent_id": self.intent.event_id,
                 "heuristic_artifact": self.intent.artifact.__dict__,
                 "deterministic_vector": self.optimal_calldata,
-                "billing_receipt_used": self.capability_receipt_id # 🌟 커널에 영수증 사용 내역 씰링
+                "billing_receipt_used": self.capability_receipt_id 
             }, 
             cached_states={"state_differential": self.dvm_state_diff},
             timestamp=time.time(), 
@@ -212,8 +288,6 @@ class TopologicalIntentWorkflow(Workflow):
         }
         
         self.log.info("[RELAY] Dispatching hardened topological payload to isolated consensus network.")
-        # await self.rpc_bridge.request({"action": "submit_private_bundle", "payload": relay_payload})
-        
         self.log.info("[FINALITY] Topological phase transition complete. State differential matrix materialized.")
         return StopMessage(result=True)
 

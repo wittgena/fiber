@@ -1,7 +1,4 @@
-# fiber.phase.tracer.observer.tension
-## @lineage: phase.tracer.observer.tension
-## @lineage: bound.observer.tension
-## @lineage: dphi.observer.tension
+# fiber.dphi.observer.tension
 import os
 import math
 import hashlib

@@ -1,4 +1,5 @@
-# fiber.phase.tracer.observer.proof.coinbase.funding
+# fiber.dphi.observer.proof.coinbase.funding
+## @lineage: fiber.phase.tracer.observer.proof.coinbase.funding
 ## @lineage: phase.tracer.observer.proof.coinbase.funding
 ## @lineage: bound.observer.proof.coinbase.funding
 ## @lineage: dphi.observer.proof.coinbase.funding

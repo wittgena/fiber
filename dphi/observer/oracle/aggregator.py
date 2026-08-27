@@ -1,4 +1,5 @@
-# fiber.phase.tracer.observer.oracle.aggregator
+# fiber.dphi.observer.oracle.aggregator
+## @lineage: fiber.phase.tracer.observer.oracle.aggregator
 ## @lineage: phase.tracer.observer.oracle.aggregator
 ## @lineage: bound.observer.oracle.aggregator
 ## @lineage: dphi.observer.oracle.aggregator
@@ -16,8 +17,8 @@ from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.sign import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.phase.tracer.observer.proof.binance import kline as binance_kline
-from fiber.phase.tracer.observer.proof.coinbase import kline as coinbase_kline
+from fiber.dphi.observer.proof.binance import kline as binance_kline
+from fiber.dphi.observer.proof.coinbase import kline as coinbase_kline
 
 class ProvableOracleAggregator:
     # ARN 기반 모듈 레지스트리

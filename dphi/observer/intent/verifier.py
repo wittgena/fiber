@@ -1,6 +1,4 @@
-# fiber.phase.tracer.intent.verifier
-## @lineage: phase.tracer.intent.verifier
-## @lineage: bound.observer.intent.verifier
+# fiber.dphi.observer.intent.verifier
 import json
 from typing import Dict, Any, Tuple
 from xphi.kernel.phase.inter.protocol import ExecutionResult

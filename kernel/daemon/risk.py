@@ -1,67 +1,83 @@
 # fiber.kernel.daemon.risk
-## @lineage: phase.kernel.daemon.risk
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
-from fiber.phase.tracer.intent.trajectory import TrajectoryOracleReceptor, ArbitrageIntent
-from fiber.phase.tracer.observer.tension import (
+from fiber.dphi.observer.intent.trajectory import (
+    TrajectoryOracleReceptor, 
+    ArbitrageIntent,
     TensionPhase,
     RiskPolicy,
-    TensionGradientObserver,
-    get_source_hash
+    _get_module_source_hash
 )
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.daemon.base import AbstractDaemon
+from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.risk")
 
-"""@phase.1: Core Risk Data Structures intent"""
+# =========================================================================
+# @phase.1: Core Risk Data Structures
+# =========================================================================
 @dataclass(frozen=True)
 class RiskAssessment:
-    """@desc: Immutable evaluation result determining whether the captured intent is safe to execute intent"""
     is_safe: bool
     executable_size: float
     net_yield: float
     reason: str
 
 
-"""@phase.2: Trajectory Monitoring and Alert Subsystem intent"""
+# =========================================================================
+# @phase.2: Trajectory Monitoring and Alert Subsystem
+# =========================================================================
 class DormantTrajectorySentinel:
-    """@desc: Continuously monitors market states and wakes up the resource vault only when critical systemic tension is detected intent"""
-    def __init__(self, observer: TensionGradientObserver):
-        self.receptor = TrajectoryOracleReceptor()
-        self.observer = observer
+    """
+    WASM 커널 기반의 동역학 평가 엔진을 백그라운드에서 주기적으로 호출하여
+    시장의 비선형적 발작(Spiking) 및 위상장 텐션을 모니터링하는 센티널.
+    """
+    def __init__(self, broker: DphiBroker):
+        self.receptor = TrajectoryOracleReceptor(broker=broker)
         self.alert_emitter = get_emitter("sentinel.awakening")
 
     async def run_dormant_loop_async(self, symbol: str, target_arns: List[str], base_interval: int = 3600):
-        self.alert_emitter.info(f"[{symbol}] Sentinel engaged. Operating on Dynamic Tension Gradient.")
+        self.alert_emitter.info(f"[{symbol}] Sentinel engaged. Operating on WASM Dynamics Kernel.")
         current_interval = base_interval
         
         while True:
             try:
-                eval_result = self.receptor.engine.execute_flow(symbol, target_arns, current_interval, int(time.time()))
-                current_spread = eval_result.intent.expected_yield
-                current_stress = eval_result.dynamics.accumulated_stress
-                phase, z_score = self.observer.evaluate_tension(current_spread, current_stress)
+                # 1. 비동기 동역학 엔진 호출
+                eval_result = await self.receptor.engine.execute_flow_async(
+                    symbol, target_arns, current_interval, int(time.time())
+                )
+                
+                # 2. 통계적 Z-Score 대신 구조적 텐션(Tension) 및 발작 여부 추출
+                phase_name = eval_result.dynamics.tension_phase
+                tension = eval_result.dynamics.system_tension
+                is_spiking = eval_result.dynamics.is_spiking
 
-                if phase == TensionPhase.NORMAL:
+                # 3. Phase에 따른 주기 조정 및 볼트 트리거
+                if phase_name == TensionPhase.NORMAL.name:
                     current_interval = base_interval  
-                elif phase == TensionPhase.PRE_HEATING:
-                    self.alert_emitter.info(f"[{symbol}] ⚠️ Pre-heating engaged. Z-Score: {z_score:.2f}. Preparing resources.")
-                    current_interval = int(base_interval / 6)  
-                elif phase == TensionPhase.RUPTURE:
-                    self.alert_emitter.critical(f"[{symbol}] 🚨 RUPTURE DETECTED. Z-Score: {z_score:.2f}. Initiating Capture.")
-                    if asyncio.iscoroutinefunction(self._trigger_awakening):
-                        await self._trigger_awakening(symbol, target_arns, current_interval, z_score)
-                    else:
-                        self._trigger_awakening(symbol, target_arns, current_interval, z_score)
                     
+                elif phase_name == TensionPhase.PRE_HEATING.name:
+                    self.alert_emitter.info(f"[{symbol}] ⚠️ Pre-heating engaged. Tension: {tension:.2f}. Preparing resources.")
+                    current_interval = int(base_interval / 6)  
+                    
+                elif phase_name == TensionPhase.RUPTURE.name or is_spiking:
+                    self.alert_emitter.critical(f"[{symbol}] 🚨 RUPTURE DETECTED. Tension: {tension:.2f} | Spiking: {is_spiking}. Initiating Capture.")
+                    
+                    if asyncio.iscoroutinefunction(self._trigger_awakening):
+                        await self._trigger_awakening(symbol, target_arns, current_interval, tension)
+                    else:
+                        self._trigger_awakening(symbol, target_arns, current_interval, tension)
+                    
+                    # 캡처 완료 후 쿨다운
                     await asyncio.sleep(base_interval * 24) 
                     current_interval = base_interval
+                    
             except asyncio.CancelledError:
                 raise
             except Exception as e:
@@ -69,33 +85,33 @@ class DormantTrajectorySentinel:
                 
             await asyncio.sleep(current_interval)
 
-    def _trigger_awakening(self, symbol: str, target_arns: List[str], interval_sec: int, z_score: float):
-        """@desc: Overridden dynamically by Vault injection to decouple monitoring from execution intent"""
+    async def _trigger_awakening(self, symbol: str, target_arns: List[str], interval_sec: int, tension: float):
+        """ResourceVault에 의해 오버라이드 됨"""
         pass
 
 
-"""@phase.3: Dynamic Risk and Execution Handlers intent"""
+# =========================================================================
+# @phase.3: Dynamic Risk and Execution Handlers
+# =========================================================================
 class DynamicRiskManager:
-    """@desc: Calculates dynamic friction and sizing allocation based on tension Z-Scores to protect the vault capital intent"""
     def __init__(self, policy: RiskPolicy):
         self.policy = policy
 
-    async def verify_execution_safety(self, intent: ArbitrageIntent, tvl: float, z_score: float) -> RiskAssessment:
-        ## @step.1: Calculate dynamic friction based on current systemic stress intent
-        dynamic_friction_rate = (self.policy.base_friction_bps / 10000.0) * (1.0 + (z_score / 10.0))
+    async def verify_execution_safety(self, intent: ArbitrageIntent, tvl: float, tension: float) -> RiskAssessment:
+        # 시스템 텐션에 비례하여 동적 마찰 비용(Friction)을 증가시켜 보수적인 리스크 엣지 확보
+        dynamic_friction_rate = (self.policy.base_friction_bps / 10000.0) * (1.0 + (tension / 10.0))
         effective_yield = intent.expected_yield - dynamic_friction_rate
         
-        ## @step.2: Verify execution feasibility intent
         is_safe = intent.is_actionable and (effective_yield > 0)
         
-        ## @step.3: Determine capital allocation multiplier intent
-        confidence_multiplier = min(1.0, (z_score - self.policy.sigma_preheat_threshold) / 2.0)
-        allocated_pct = self.policy.max_allocation_pct * confidence_multiplier
+        # 텐션이 예열(Preheat) 구간을 초과한 정도에 따라 투입 자본 비중(Allocation) 확대
+        confidence_multiplier = min(1.0, (tension - self.policy.tension_preheat_threshold) / 5.0)
+        allocated_pct = self.policy.max_allocation_pct * max(0.0, confidence_multiplier)
         executable_size = tvl * max(0.01, allocated_pct)
 
         log.info(
             f"[RiskEngine] Effective Yield: {effective_yield*100:.4f}% (Dynamic Friction: {dynamic_friction_rate*100:.4f}% deducted) | "
-            f"Z-Score: {z_score:.2f} -> Allocation: {allocated_pct*100:.1f}% | Passed: {'✔️' if is_safe else '❌'}"
+            f"Sys-Tension: {tension:.2f} -> Allocation: {allocated_pct*100:.1f}% | Passed: {'✔️' if is_safe else '❌'}"
         )
 
         return RiskAssessment(
@@ -106,23 +122,24 @@ class DynamicRiskManager:
         )
 
 class SmartExecutionRouter:
-    """@desc: Actuator interface representing the physical state routing between venues intent"""
     async def execute_routing(self, source_arn: str, target_arn: str, size: float) -> bool:
         log.info(f"[Actuator] ⚡ Executing State Routing: {source_arn} -> {target_arn} | Volume: {size:,.2f}")
+        # 실제 체인 상호작용 또는 CEX API 라우팅 대기 모의
         await asyncio.sleep(0.2) 
         return True
 
 
-"""@phase.4: Vault Management and Execution Orchestration intent"""
+# =========================================================================
+# @phase.4: Vault Management and Execution Orchestration
+# =========================================================================
 class ResourceVault:
-    """@desc: Manages capital, coordinates risk assessment, and securely triggers state routing based on cryptographic proofs intent"""
     def __init__(
         self, 
         base_capacity: float,
-        observer: TensionGradientObserver,
         logic_hash: str,
         router: SmartExecutionRouter,
-        risk_manager: DynamicRiskManager
+        risk_manager: DynamicRiskManager,
+        broker: DphiBroker
     ):
         self.tvl = base_capacity
         self.log = get_emitter("system.vault")
@@ -131,7 +148,8 @@ class ResourceVault:
         self.router = router
         self.risk = risk_manager
         
-        self.sentinel = DormantTrajectorySentinel(observer)
+        # DphiBroker 의존성 주입
+        self.sentinel = DormantTrajectorySentinel(broker)
         self.sentinel._trigger_awakening = self._capture_anomaly
 
     async def deploy_daemon(self, target_symbol: str, target_arns: List[str]):
@@ -139,18 +157,16 @@ class ResourceVault:
         if hasattr(self.sentinel, "run_dormant_loop_async"):
             await self.sentinel.run_dormant_loop_async(target_symbol, target_arns, base_interval=3600)
 
-    async def _capture_anomaly(self, symbol: str, target_arns: List[str], interval_sec: int, z_score: float):
+    async def _capture_anomaly(self, symbol: str, target_arns: List[str], interval_sec: int, tension: float):
         self.log.critical(f"[Vault] Structural anomaly validated. Logic Hash: {self.logic_hash[:16]}...")
         
-        ## @step.1: Retrieve the cryptographically sealed receipt (SealedTrajectoryReceipt) intent
-        receipt = self.sentinel.receptor.fetch_and_seal(symbol, target_arns, interval_sec)
+        # 비동기 봉인(Seal) 호출
+        receipt = await self.sentinel.receptor.fetch_and_seal_async(symbol, target_arns, interval_sec)
         
-        ## @step.2: Extract the intent and cryptographic root safely via dataclass properties intent
         target_intent = receipt.observation.intent
         proof_hash = receipt.attestation.canonical_root
-
-        ## @step.3: Request dynamic sizing and safety assessment from Risk Manager intent
-        risk_report = await self.risk.verify_execution_safety(target_intent, self.tvl, z_score)
+        
+        risk_report = await self.risk.verify_execution_safety(target_intent, self.tvl, tension)
         if not risk_report.is_safe:
             self.log.warning(f"[Vault] Action aborted by Risk Manager: {risk_report.reason}")
             return
@@ -158,7 +174,6 @@ class ResourceVault:
         execute_size = risk_report.executable_size
         net_yield = risk_report.net_yield
 
-        ## @step.4: Execute state routing relying on the evaluated target intent intent
         if target_intent.is_actionable:
             source = target_intent.optimal_long_venue
             target = target_intent.optimal_short_venue
@@ -184,26 +199,27 @@ class ResourceVault:
         self.log.info("[Vault] Execution cycle terminated. Returning to monitoring state.")
 
 
-"""@phase.5: Top-Level Application Daemon intent"""
+# =========================================================================
+# @phase.5: Top-Level Application Daemon
+# =========================================================================
 @contract.daemon("risk_vault")
 class RiskVaultDaemon(AbstractDaemon):
-    """@desc: Root lifecycle manager binding the internal vault components to the overarching DPHI node context intent"""
     def __init__(self, ctx):
         super().__init__("RiskVaultDaemon")
         self.ctx = ctx  
         
-        ## @step.1: Instantiate private policies and observers intent
+        # [NEW] 최상위 컨텍스트에서 DphiBroker 인스턴스 획득 (SYSTEM 티어 FFI 통신용)
+        self.broker = DphiBroker.get_instance()
+        
+        # 정책을 동역학 텐션 모델에 맞게 재정의
         self.policy = RiskPolicy(
             base_friction_bps=15.0, 
             max_allocation_pct=0.20,
-            sigma_preheat_threshold=2.0, 
-            sigma_rupture_threshold=3.5 
+            tension_preheat_threshold=5.0,  
+            tension_rupture_threshold=15.0  
         )
-        self.observer = TensionGradientObserver(self.policy)
         
-        ## @step.2: Extract raw source code byte hash for integrity proofing intent
-        self.logic_hash = get_source_hash()
-        
+        self.logic_hash = _get_module_source_hash(__file__)
         self.risk_engine = DynamicRiskManager(self.policy)
         self.router = SmartExecutionRouter()
         
@@ -213,13 +229,13 @@ class RiskVaultDaemon(AbstractDaemon):
         ]
         self.target_symbol = "BTCUSDT"
         
-        ## @step.3: Bind dependencies and logic hashes to the Vault assembly intent
+        # 리소스 볼트에 Broker 의존성 주입
         self.vault = ResourceVault(
             base_capacity=1_000_000.0,
-            observer=self.observer,
             logic_hash=self.logic_hash,
             router=self.router,
-            risk_manager=self.risk_engine
+            risk_manager=self.risk_engine,
+            broker=self.broker
         )
 
     async def run(self):

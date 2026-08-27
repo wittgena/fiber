@@ -24,7 +24,7 @@ from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.dphi.runner.phase import SchemeRunner
 from xphi.watcher.plane.emitter import get_emitter
-from fiber.phase.tracer.intent.verifier import VerificationError
+from fiber.dphi.observer.intent.verifier import VerificationError
 
 log = get_emitter("workflow.defin")
 

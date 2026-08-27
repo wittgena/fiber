@@ -1,5 +1,4 @@
 # fiber.workflow.wasm.entry
-## @lineage: workflow.wasm.dphi
 import sys
 import argparse
 import importlib
@@ -26,12 +25,14 @@ class PipelineConfig:
         "eco": f"{MODULE_PATH}.anchor:EcoScene",
         "anchor": f"{MODULE_PATH}.anchor:AnchorScene",
         "cert": f"{MODULE_PATH}.cert:CertProofScene",
+        "dynamics": f"{MODULE_PATH}.dynamics:DynamicsScene", 
     })
     
     default_suites: List[str] = field(default_factory=lambda: [
         "sandbox",     # 1. 런타임 보안 및 단일 샌드박스 격리 검증 (L1)
         "anchor",      # 2. 영지식 증명, 다중 서명, 탈중앙 합의 로직 검증 (L3)
         "cert",        # 3. 극한 환경 엣지 케이스 방어 및 무결성 최종 인증 (L4)
+        "dynamics",    # 4. [NEW] O(N^2) 수학 연산 무결성 및 성능, 위상 변이 검증 (L2)
     ])
     wasm_filename: str = "dphi.wasm"
 
@@ -155,10 +156,9 @@ class DphiFlow:
         target_action = command_map.get(self.command, self.pipeline)
         await target_action()
 
-
 def main():
     parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI (Isolated CI)")
-    parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor, cert)")
+    parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor, cert, dynamics)")
     subparsers = parser.add_subparsers(dest="command", help="Execution modes")
     subparsers.add_parser("build", help="Compile the Rust WASM artifact only.")
     subparsers.add_parser("test", help="Run the Isolated Test scenarios only.")
@@ -169,7 +169,6 @@ def main():
     config = PipelineConfig()
     app = DphiFlow(command=command, suites=args.suites, config=config)
     
-    # 커스텀 리액터를 통한 실행
     PhaseReactor.ignite(app.run)
 
 if __name__ == "__main__":

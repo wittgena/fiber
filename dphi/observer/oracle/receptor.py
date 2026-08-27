@@ -1,4 +1,5 @@
-# fiber.phase.tracer.observer.oracle.receptor
+# fiber.dphi.observer.oracle.receptor
+## @lineage: fiber.phase.tracer.observer.oracle.receptor
 ## @lineage: phase.tracer.observer.oracle.receptor
 ## @lineage: bound.observer.oracle.receptor
 ## @lineage: dphi.observer.oracle.receptor
@@ -9,7 +10,7 @@ import time
 import hashlib
 from typing import Dict, Any, List, Optional
 
-from fiber.phase.tracer.observer.oracle.aggregator import ProvableOracleAggregator
+from fiber.dphi.observer.oracle.aggregator import ProvableOracleAggregator
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.sign import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
