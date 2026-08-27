@@ -1,6 +1,4 @@
 # phase.kernel.reaper
-## @lineage: nexus.phase.kernel.reaper
-## @lineage: meta.phase.kernel.reaper
 import asyncio
 import json
 import urllib.parse
@@ -19,6 +17,7 @@ DEFAULT_TARGET_TAGS = [
     "phase.kernel",
     "dphi",
     "deno",
+    "workerd",
     "multiprocessing.spawn",           # OS 멀티프로세싱 워커 노드
     "multiprocessing.resource_tracker" # 자원 추적 데몬
 ]
@@ -40,7 +39,7 @@ class SystemOps:
         self.log.error(f" [Supervisor] Task {task.get_name()} failed: {exc}")
 
     async def get_pids_from_port(self, port: int) -> List[str]:
-        """@action: 포트를 점유 중인 프로세스 ID 반환"""
+        """@action: 포트를 점유 중인 프로세스 ID 반환 (lsof 기반)"""
         try:
             proc = await asyncio.create_subprocess_exec(
                 "lsof", "-t", f"-i:{port}",
@@ -55,7 +54,7 @@ class SystemOps:
             return []
 
     async def _discover_active_pids(self, wait_time: float = 2.0) -> Set[str]:
-        """@flow: PubSub Ping-Pong을 통해 현재 살아있는 활성 프로세스들의 PID를 수집하는 공통 모듈"""
+        """@flow: PubSub Ping-Pong을 통해 현재 살아있는 활성 프로세스들의 PID를 수집"""
         self.log.info(f"🦇 Broadcasting system:ping to locate [{self.tag}] nodes...")
         pubsub = self.redis.pubsub()
         await pubsub.subscribe("system:echo")
@@ -107,7 +106,6 @@ class SystemOps:
         """@action: Process Tree 추적을 통한 고아/좀비 프로세스 완벽 청소"""
         self.log.warning(f"🔥 Initiating Scorched Earth for [{self.tag}]...")
         
-        # [Phase 1] psutil 기반의 정밀한 Process Tree 수거 (Master 잡아서 Worker까지 싹쓸이)
         my_pid = os.getpid()
         killed_count = 0
         try:
@@ -116,16 +114,13 @@ class SystemOps:
                     cmdline = proc.info.get('cmdline') or []
                     cmd_str = " ".join(cmdline)
                     
-                    # 자기 자신(Reaper)은 자살하지 않도록 방어
                     if self.tag in cmd_str and "phase.node.reaper" not in cmd_str and proc.pid != my_pid:
-                        # 1. 해당 프로세스의 모든 자식 프로세스(multiprocessing.spawn 등) 찾기
                         children = proc.children(recursive=True)
-                        # 2. 자식들부터 먼저 죽이고, 마지막에 부모(Master)를 죽임 (좀비 방지)
                         procs_to_kill = children + [proc]
                         
                         for p in procs_to_kill:
                             try:
-                                p.kill()  # SIGKILL (-9)
+                                p.kill()  
                                 killed_count += 1
                                 self.log.info(f"   [Phase 1] 💀 Terminated PID {p.pid} (Command: {' '.join(p.cmdline()[:2])}...)")
                             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -140,7 +135,6 @@ class SystemOps:
         except Exception as e:
             self.log.error(f"   [Phase 1] psutil sweep failed: {e}")
 
-        # [Phase 2] Redis Registry에 남아있는 잔여 PID 강제 처리
         try:
             pids = await self.redis.smembers(self.registry_key)
             if pids:
@@ -154,13 +148,31 @@ class SystemOps:
             self.log.error(f"   [Phase 2/3] Registry cleanup failed: {e}")
 
     async def nuke_redis_state(self):
-        """@action: 현재 사용 중인 Redis Database의 모든 Key, Stream, PubSub 잔여물을 완전히 삭제"""
+        """@action: 현재 사용 중인 Redis Database의 모든 잔여물 완벽 삭제"""
         self.log.warning(f"🧨 NUKING REDIS STATE: Executing FLUSHDB...")
         try:
             await self.redis.flushdb(asynchronous=True)
             self.log.info(f"   └─ Redis database perfectly wiped clean.")
         except Exception as e:
             self.log.error(f"   └─ Redis FLUSHDB failed: {e}")
+
+    async def nuke_flare(self, target_port: int = 8787):
+        """
+        @action: Cloudflare Wrangler (Node.js) 좀비 프로세스 완벽 사냥
+        @desc: 지정된 포트(주로 8787)를 강제로 해방하여 Edge Hologram 부팅 충돌을 방지합니다.
+        """
+        self.log.warning(f"☄️  Initiating Tactical Flare Nuke on Port {target_port}...")
+        pids = await self.get_pids_from_port(target_port)
+        
+        if not pids:
+            self.log.info(f"   └─ Port {target_port} is already clean. No zombies found.")
+            return 0
+            
+        self.log.warning(f"   └─ Detected {len(pids)} zombie process(es) holding Port {target_port}. Engaging...")
+        for pid in pids:
+            self.supervisor.create(self._execute_kill(pid, force=True), name=f"FlareNuke-{pid}")
+        
+        return len(pids)
 
     # =========================================================================
     # [2] PROBE/AUDITOR MODULE: 비파괴적 아키텍처 감사 (Audit)
@@ -216,7 +228,6 @@ class SystemOps:
             self.log.error(f" ❌ [VIOLATION] Node {pid} failed compliance checks.")
 
     async def audit_system(self):
-        """@action: 활성 노드를 찾아 커널 최적화 상태를 병렬로 검증"""
         pids = await self._discover_active_pids()
         for pid in pids:
             self.supervisor.create(self._audit_node(pid), name=f"Audit-{pid}")
@@ -240,6 +251,8 @@ class SystemOps:
                 await self.nuke_redis_state()
             elif task_type == "audit":
                 count = await self.audit_system()
+            elif task_type == "flare":
+                count = await self.nuke_flare(target_port=8787)
             return count
         finally:
             self.log.info(f"Awaiting resolution of all {task_type} tasks for [{self.tag}]...")
@@ -253,11 +266,16 @@ class CommandCLI:
     async def run(self):
         parser = argparse.ArgumentParser(description="System Operations Commander (Reaper & Auditor)")
         parser.add_argument("--tag", type=str, default=None, help="Target component tag (e.g. kernel.phase.runtime.node)")
-        parser.add_argument("--task", type=str, default="clean", choices=["strike", "force", "clean", "nuke", "audit"], help="Task to run")
+        parser.add_argument("--task", type=str, default="clean", choices=["strike", "force", "clean", "nuke", "audit", "flare"], help="Task to run")
         args = parser.parse_args()
 
         self.redis_conn = Redis(host=os.getenv("REDIS_HOST", "localhost"), decode_responses=True)
-        target_tags = [args.tag] if args.tag else DEFAULT_TARGET_TAGS
+        
+        # [ALIGNMENT] --task flare일 경우 다른 태그들을 다 뒤지지 않고 오직 포트 청소만 수행
+        if args.task == "flare":
+            target_tags = ["flare.edge"]
+        else:
+            target_tags = [args.tag] if args.tag else DEFAULT_TARGET_TAGS
         
         log.info(f"Executing Commander [{args.task.upper()}] Sequence. Targets: {target_tags}")
         
@@ -269,7 +287,7 @@ class CommandCLI:
             count = await commander.execute_task(task_type=args.task)
             total_nodes_processed += count
                 
-        log.info(f"Commander execution finished. Total nodes processed: {total_nodes_processed}")
+        log.info(f"Commander execution finished. Total targets processed: {total_nodes_processed}")
 
     async def teardown(self):
         if self.redis_conn:

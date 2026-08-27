@@ -371,7 +371,6 @@ class CosmRunner(SchemeRunner):
                 self._record_fail(elapsed_ms, f"Expected error '{expected_error_match}' not found. Got: {error_output}", "Error Match", title=title)
                 return False
 
-        # 💡 [개선] 워크플로우 상태를 참조하여 최종 검증 리포트 출력
         if success:
             msg_str = (
                 f"Receipt mathematically sealed & EVM formatted. "

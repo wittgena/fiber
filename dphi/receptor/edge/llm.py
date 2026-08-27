@@ -10,14 +10,15 @@ from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.param import ModelResponse, EmbeddingResponse
 from fiber.llm.stream.wrapper import StreamWrapper
 
-from xphi.kernel.dphi.broker import DphiBroker # WASM 커널 호출용
-from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.arch.contract.interface import ContractRouter
+from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.dphi.schema import DphiKey, DphiAction, KernelAuthPayload
+from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.llm")
 
 llm_edge = ContractRouter(
-    namespace="llm",  # ContractRouter 요구 파라미터 추가
+    namespace="llm",  
     prefix="/v1", 
     tags=["LLM Gateway"],
     description="OpenAI-Compatible Zero-Trust LLM Gateway"
@@ -32,7 +33,7 @@ class ChatCompletionRequest(BaseModel):
     tools: Optional[List[Dict[str, Any]]] = None
 
     model_config = {
-        "extra": "allow" # custom_llm_provider, fallbacks 등 추가 파라미터 허용
+        "extra": "allow" 
     }
 
 @llm_edge.post(
@@ -53,7 +54,7 @@ async def public_chat_completions(
             
             # --- [DPHI] 1. Kernel Authorization (Intent Submission) ---
             intent_payload = {
-                "action": "LLM_COMPUTE",
+                "action": DphiAction.LLM_COMPUTE.value,  # [개선] 매직 스트링 제거
                 "model": payload.model,
                 "max_tokens_requested": payload.max_tokens,
                 "receipt": x_x402_receipt
@@ -68,26 +69,21 @@ async def public_chat_completions(
                     headers={"WWW-Authenticate": 'L402 macaroon=""'}
                 )
             
-            kernel_auth = orjson.loads(auth_res.output)
-            # ------------------------------------------------------------
-            
-            # --- [DPHI] 2. Pipeline Binding ---
+            kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
             kwargs = payload.model_dump(exclude={"model", "messages"}, exclude_none=True)
-            
             metadata = kwargs.get("metadata", {})
-            metadata["x402_receipt"] = x_x402_receipt
-            metadata["client_host"] = request.client.host if request.client else "unknown"
-            metadata["kernel_auth"] = kernel_auth
+            
+            metadata[DphiKey.X402_RECEIPT.value] = x_x402_receipt
+            metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
+            metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()  # Dictionary로 변환하여 주입
             kwargs["metadata"] = metadata
 
-            # --- [DPHI] 3. Controlled Execution ---
             response = await acompletion(
                 model=payload.model,
                 messages=payload.messages,
                 **kwargs
             )
 
-            # 스트리밍 래퍼 처리
             if payload.stream and isinstance(response, StreamWrapper):
                 async def sse_generator():
                     async for chunk in response:
@@ -98,9 +94,7 @@ async def public_chat_completions(
                     yield "data: [DONE]\n\n"
                 
                 return StreamingResponse(sse_generator(), media_type="text/event-stream")
-
             return response
-
         except HTTPException:
             raise
         except Exception as e:
@@ -122,32 +116,29 @@ async def public_embeddings(
 ):
     try:
         broker: DphiBroker = request.app.state.broker
-        
         intent_payload = {
-            "action": "LLM_EMBEDDING",
+            "action": DphiAction.LLM_EMBEDDING.value,
             "model": model,
             "receipt": x_x402_receipt
         }
         
         auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
-        
         if not auth_res.success:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED, 
                 detail=f"Kernel Authorization Rejected: {auth_res.error}",
                 headers={"WWW-Authenticate": 'L402 macaroon=""'}
             )
-            
-        kernel_auth = orjson.loads(auth_res.output)
+        kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
         
         metadata = kwargs.get("metadata", {})
-        metadata["x402_receipt"] = x_x402_receipt
-        metadata["kernel_auth"] = kernel_auth
+        metadata[DphiKey.X402_RECEIPT.value] = x_x402_receipt
+        metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown" # Completion과 동일하게 추적 강화
+        metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
         kwargs["metadata"] = metadata
-        
+
         response = await aembedding(model=model, input=input, **kwargs)
         return response
-        
     except HTTPException:
         raise
     except Exception as e:

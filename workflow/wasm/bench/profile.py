@@ -1,6 +1,4 @@
 # workflow.bench.profile
-## @lineage: dphi.workflow.bench.profile
-## @lineage: dphi.bound.bench.profile
 import time
 import asyncio
 import json
