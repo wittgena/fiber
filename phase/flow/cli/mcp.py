@@ -1,4 +1,5 @@
-# phase.flow.cli.mcp
+# fiber.phase.flow.cli.mcp
+## @lineage: phase.flow.cli.mcp
 import importlib.metadata
 import importlib.util
 import json

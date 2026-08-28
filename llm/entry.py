@@ -1,4 +1,4 @@
-# llm.entry
+# fiber.llm.entry
 from __future__ import annotations
 
 import asyncio
@@ -13,16 +13,16 @@ from fiber.llm.param import ModelResponse
 from fiber.llm.execution import ExecutionMetadata
 from fiber.llm.model.types.general import EmbeddingResponse
 from fiber.llm.exception.mapping import exception_type
+from fiber.llm.stream.wrapper import StreamWrapper
+
 from fiber.dphi.model.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.dphi.model.inter.registry import AdapterRegistry
 
 # Arch & Watcher
+from xphi.kernel.dphi.llm.auth import DphiKey, KernelAuthPayload
 from xphi.kernel.space.topos.network.bridge import RpcBridge
 from xphi.kernel.space.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
-
-# Phase LLM Components
-from fiber.llm.stream.wrapper import StreamWrapper
 
 # Loggers
 log = get_emitter("runtime.entry")
@@ -30,57 +30,94 @@ log_handlers = get_emitter("executor.handlers")
 log_pipeline = get_emitter("executor.pipeline")
 
 """Pipeline Middlewares (Handlers & Observers)"""
+class DphiFuelInterceptor(DuplexChannel):
+    """[DPHI] Kernel 인가 정보 관리, 연료(Fuel) 측정 및 물리적 트랩(Kill-switch)을 전담하는 핸들러"""
+    
+    async def write(self, ctx: ChannelContext, msg: Any):
+        # [🛠️ 핵심 개선] PayloadTranslator에 의해 객체화된 msg 대신, ContextBinder가 저장해둔 원시 딕셔너리 사용
+        req_kwargs = ctx.get_attr("request_kwargs", {})
+        metadata = req_kwargs.get("metadata", {})
+        
+        ## 공통 키 상수를 통해 접근 및 Pydantic 객체화로 타입 안정성 확보
+        raw_auth = metadata.get(DphiKey.KERNEL_AUTH.value, {})
+        kernel_auth = KernelAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or KernelAuthPayload())
+        
+        ctx.set_attr(DphiKey.FUEL_BUDGET.value, kernel_auth.fuel_budget)
+        ctx.set_attr(DphiKey.FUEL_CONSUMED.value, 0)
+        ctx.set_attr(DphiKey.AUDIT_HASH.value, kernel_auth.audit_hash)
+
+        await ctx.fire_write(msg)
+
+    async def channel_read(self, ctx: ChannelContext, msg: Any):
+        req: dict = ctx.get_attr("request_kwargs", {})
+        is_stream = req.get("stream", False) or "stream" in req.get("call_type", "")
+        
+        fuel_budget = ctx.get_attr(DphiKey.FUEL_BUDGET.value, float('inf'))
+        audit_hash = ctx.get_attr(DphiKey.AUDIT_HASH.value)
+
+        ## 1. 비스트리밍 단일 응답: 토큰 카운트를 연료로 환산 & Audit Hash 은닉 탈취
+        if not is_stream and not hasattr(msg, "__aiter__"):
+            usage = getattr(msg, "usage", None)
+            if usage and hasattr(usage, "total_tokens"):
+                ctx.set_attr(DphiKey.FUEL_CONSUMED.value, getattr(usage, "total_tokens", 0))
+
+            if audit_hash and hasattr(msg, "system_fingerprint"):
+                msg.system_fingerprint = audit_hash
+
+        ## 2. 스트리밍 응답: Kinetic Membrane 가동 (물리적 차단)
+        elif hasattr(msg, "__aiter__") and fuel_budget < float('inf'):
+            msg = self._fuel_trap_generator(msg, fuel_budget, ctx)
+
+        await ctx.fire_channel_read(msg)
+
+    async def _fuel_trap_generator(self, raw_stream, budget, context):
+        """스트림 청크를 가로채어 연료를 차감하고, 파산 시 물리적으로 커넥션을 절단합니다."""
+        consumed = 0
+        try:
+            async for raw_chunk in raw_stream:
+                # 간소화된 연료 계산: 1 Chunk = 1 Fuel
+                consumed += 1 
+                context.set_attr(DphiKey.FUEL_CONSUMED.value, consumed)
+                
+                if consumed > budget:
+                    log_pipeline.warning(f"[DPHI_TRAP] Fuel exhausted ({budget}). Killing stream physically.")
+                    break
+                yield raw_chunk
+        except Exception as e:
+            log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
+            raise
+
 class ContextBinder(DuplexChannel):
-    """최초 요청 진입 시 컨텍스트(ExecutionMetadata)를 세팅하고 고유 ID를 부여하는 핸들러"""
+    """최초 요청 진입 시 순수 실행 컨텍스트(ExecutionMetadata)만 세팅하는 핸들러 (SRP 준수)"""
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
         if "call_id" not in msg:
             msg["call_id"] = str(uuid.uuid4())
 
         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
-
         metadata = msg.get("metadata", {})
-        session_id = msg.get("session_id") or metadata.get("session_id")
-        trace_id = msg.get("trace_id") or metadata.get("trace_id")
-        model = msg.get("model", "unknown")
-
-        # --- [DPHI] WASM Kernel Auth Extraction ---
-        # 상위 게이트웨이(edge.llm)에서 주입한 커널 인가 정보 추출
-        kernel_auth = metadata.get("kernel_auth", {})
-        fuel_budget = kernel_auth.get("fuel_budget", float('inf'))
-        audit_hash = kernel_auth.get("audit_hash", None)
         
-        ctx.set_attr("fuel_budget", fuel_budget)
-        ctx.set_attr("fuel_consumed", 0)
-        ctx.set_attr("audit_hash", audit_hash)
-        # ------------------------------------------
-
         system_meta = ExecutionMetadata(
-            session_id=session_id,
-            trace_id=trace_id,
+            session_id=msg.get("session_id") or metadata.get("session_id"),
+            trace_id=msg.get("trace_id") or metadata.get("trace_id"),
             call_id=msg["call_id"],
             metadata=metadata,
-            base_model=model
+            base_model=msg.get("model", "unknown")
         )
         
-        # 파이프라인 전역 AttributeMap에 저장하여 하위 핸들러가 접근할 수 있게 함
         ctx.set_attr("system_meta", system_meta)
         ctx.set_attr("request_kwargs", msg)
-        
-        # 원본 msg에도 심어 하위 호환성 유지
         msg["system_meta"] = system_meta
-
+        
         await ctx.fire_write(msg)
 
-
 class ChannelObserver(DuplexChannel):
-    """로깅, Trace, 소요 시간 기록 및 영수증 앵커링을 담당하는 텔레메트리 핸들러"""
+    """텔레메트리 및 로깅 전담 핸들러"""
     def __init__(self):
         self.emitter = get_emitter("executor.telemetry", phase="LLM_CALL")
 
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
         ctx.set_attr("start_time", time.time())
         meta: ExecutionMetadata = ctx.get_attr("system_meta")
-        
         model = msg.get("model", "unknown")
         provider = msg.get("custom_llm_provider", "unknown")
 
@@ -99,35 +136,20 @@ class ChannelObserver(DuplexChannel):
         meta.framework_flags["duration_ms"] = duration_ms
 
         usage = getattr(msg, "usage", None)
-        is_stream = req.get("stream", False) or "stream" in req.get("call_type", "")
-
-        # --- [DPHI] Audit Hash & Fuel Sealing ---
-        audit_hash = ctx.get_attr("audit_hash")
-        fuel_consumed = ctx.get_attr("fuel_consumed", 0)
-        fuel_budget = ctx.get_attr("fuel_budget", float('inf'))
-        
-        # 비스트리밍 단일 응답의 경우 토큰 카운트를 연료로 환산
-        if not is_stream and usage and hasattr(usage, "total_tokens"):
-            fuel_consumed = getattr(usage, "total_tokens", 0)
-            
-        # 1. Audit Hash를 OpenAI 스펙의 system_fingerprint로 은닉 탈취
-        if audit_hash and hasattr(msg, "system_fingerprint"):
-            msg.system_fingerprint = audit_hash
-
-        # [수정] 악의적인 usage.fuel_consumed 삽입 코드 삭제 (Usage 무결성 보존)
-        # Usage 객체는 cost.tracker를 위해 순수한 API 제공자의 데이터 상태로만 남깁니다.
-        # ----------------------------------------
-
         usage_dict = usage.model_dump() if hasattr(usage, "model_dump") else (usage or {})
 
-        # [수정] 로깅 페이로드에서 Usage(사후 정산)와 Kernel Fuel(사전 예산 통제)을 명확히 분리
+        ## DphiFuelInterceptor가 갱신해둔 상태를 키 상수로 조회만 수행
+        fuel_consumed = ctx.get_attr(DphiKey.FUEL_CONSUMED.value, 0)
+        fuel_budget = ctx.get_attr(DphiKey.FUEL_BUDGET.value, float('inf'))
+        audit_hash = ctx.get_attr(DphiKey.AUDIT_HASH.value)
+
         self.emitter.info(
             "LLM Request Completed Successfully (Sealed)",
             model=meta.base_model, provider=req.get("custom_llm_provider"),
             duration_ms=duration_ms, 
-            usage=usage_dict,                                 # 순수 토큰 사용량 (cost.tracker 용)
+            usage=usage_dict,                                 
             trace_id=meta.trace_id,
-            kernel_fuel={                                     # 커널 연료 상태 분리
+            kernel_fuel={                                     
                 "consumed": fuel_consumed,
                 "budget": fuel_budget if fuel_budget != float('inf') else None
             },
@@ -139,7 +161,6 @@ class ChannelObserver(DuplexChannel):
         meta: ExecutionMetadata = ctx.get_attr("system_meta")
         req: dict = ctx.get_attr("request_kwargs", {})
         duration_ms = (time.time() - ctx.get_attr("start_time", time.time())) * 1000
-
         show_trace = ctx.get_attr("trace_errors", False)
 
         self.emitter.error(
@@ -150,7 +171,6 @@ class ChannelObserver(DuplexChannel):
             exc_info=show_trace
         )
         await ctx.fire_exception_caught(exc)
-
 
 class MockBypass(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
@@ -195,7 +215,6 @@ class MockBypass(DuplexChannel):
 
         await ctx.fire_write(msg)
 
-
 class PromptTransformer(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
         prompt_id = msg.get("prompt_id")
@@ -214,7 +233,6 @@ class PromptTransformer(DuplexChannel):
             else:
                 log_handlers.debug(f"[DEBUG-PROMPT-TRANSFORMER] {len(msg.get('tools'))}개의 tool이 감지되었습니다.")
         await ctx.fire_write(msg)
-
 
 class FallbackHandler(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
@@ -242,7 +260,6 @@ class FallbackHandler(DuplexChannel):
 
         log_handlers.warning(f"Fallback attempt triggered. Retrying with model: {retry_msg['model']}", error=str(exc))
         await ctx.fire_write(retry_msg)
-
 
 class PayloadTranslator(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
@@ -276,9 +293,8 @@ class PayloadTranslator(DuplexChannel):
             log_handlers.error("Payload translation failed", error=str(e), exc_info=show_trace)
             await ctx.fire_exception_caught(e)
 
-
 class StreamAggregator(DuplexChannel):
-    """스트리밍 응답 래핑(StreamWrapper), 연료 차감 및 물리적 트랩(Kill-switch)을 담당하는 핸들러"""
+    """스트리밍 응답 래핑(StreamWrapper) 전담 핸들러"""
     def _is_streaming(self, req: Dict[str, Any]) -> bool:
         call_type = req.get("call_type", "")
         if req.get("stream") is True:
@@ -288,37 +304,10 @@ class StreamAggregator(DuplexChannel):
     async def channel_read(self, ctx: ChannelContext, msg: Any):
         req: dict = ctx.get_attr("request_kwargs", {})
         
-        # 스트리밍 요청에 대한 처리
         if self._is_streaming(req):
             meta: ExecutionMetadata = ctx.get_attr("system_meta")
             
-            # --- [DPHI] Kinetic Membrane: Fuel Trap Generator ---
-            fuel_budget = ctx.get_attr("fuel_budget", float('inf'))
-            
-            async def fuel_trap_generator(raw_stream, budget, context):
-                """스트림 청크를 가로채어 연료를 차감하고, 파산 시 물리적으로 커넥션을 절단합니다."""
-                consumed = 0
-                try:
-                    async for raw_chunk in raw_stream:
-                        # 간소화된 연료 계산: 1 Chunk = 1 Fuel (상황에 따라 tiktoken 등 정밀 계산으로 교체 가능)
-                        consumed += 1 
-                        context.set_attr("fuel_consumed", consumed)
-                        
-                        if consumed > budget:
-                            log_pipeline.warning(f"[DPHI_TRAP] Fuel exhausted ({budget}). Killing stream physically.")
-                            # 파이프라인의 물리적 트랩: 더 이상 청크를 yield하지 않고 즉시 루프를 파괴
-                            break
-                        yield raw_chunk
-                except Exception as e:
-                    log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
-                    raise
-
-            # CompletionTransport에서 올라온 순수 비동기 제너레이터를 래핑
-            if fuel_budget < float('inf') and hasattr(msg, "__aiter__"):
-                msg = fuel_trap_generator(msg, fuel_budget, ctx)
-            # ----------------------------------------------------
-
-            # 1. StreamWrapper 바인딩
+            ## CompletionTransport (혹은 DphiFuelInterceptor)에서 올라온 스트림을 래핑
             stream_wrapper = msg if isinstance(msg, StreamWrapper) else StreamWrapper(
                 completion_stream=msg,
                 model=meta.base_model,
@@ -327,7 +316,6 @@ class StreamAggregator(DuplexChannel):
                 stream_options=req.get("stream_options"),
             )
 
-            # 2. Complete Response 요구 시 스트림 조기 소진 (Exhaust)
             if req.get("complete_response") is True:
                 async for _ in stream_wrapper:
                     pass
@@ -338,11 +326,6 @@ class StreamAggregator(DuplexChannel):
             await ctx.fire_channel_read(stream_wrapper)
         else:
             await ctx.fire_channel_read(msg)
-
-
-# =========================================================================
-# 2. Pipeline Transports (Head Endpoints)
-# =========================================================================
 
 class CompletionTransport(DuplexChannel):
     """LLM 텍스트 생성(Completion) 파이프라인의 종단점"""
@@ -368,7 +351,6 @@ class CompletionTransport(DuplexChannel):
             )
             await ctx.fire_exception_caught(mapped_exc)
 
-
 class EmbeddingTransport(DuplexChannel):
     """텍스트 임베딩(Embedding) 파이프라인의 종단점"""
     async def write(self, ctx: ChannelContext, msg: Any):
@@ -381,7 +363,6 @@ class EmbeddingTransport(DuplexChannel):
             else:
                 response = adapter.execute(msg)
                 
-            # 내부 파라미터 은닉 처리 (LiteLLM 호환성 유지)
             if isinstance(response, EmbeddingResponse) and hasattr(response, "_hidden_params"):
                 response._hidden_params["custom_llm_provider"] = msg.custom_llm_provider
                 
@@ -399,30 +380,27 @@ class EmbeddingTransport(DuplexChannel):
             )
             await ctx.fire_exception_caught(mapped_exc)
 
-
-# =========================================================================
-# 3. Bootstrap (Factory) & Sync Helper
-# =========================================================================
-
 class PipelineBootstrap:
     """동시성 충돌 방지를 위해 요청당 독립된 파이프라인을 생성 및 실행하는 Factory"""
-
     @classmethod
     async def execute_completion(cls, model: str, messages: List, **kwargs) -> Union[ModelResponse, StreamWrapper, Any]:
         pipeline = ChannelPipeline()
         bridge = RpcBridge()
         
-        # --- [Head] ---
+        ## Head
         pipeline.add_last(CompletionTransport())
-        # --- [Middle] ---
-        pipeline.add_last(StreamAggregator())       # Completion 특화 (스트림 누적 및 DPHI 트랩)
+        pipeline.add_last(DphiFuelInterceptor())
+
+        ## Middle
+        pipeline.add_last(StreamAggregator())       
         pipeline.add_last(PayloadTranslator())
         pipeline.add_last(FallbackHandler())
-        pipeline.add_last(PromptTransformer())      # Completion 특화 (프롬프트 변환)
+        pipeline.add_last(PromptTransformer())      
         pipeline.add_last(MockBypass())
-        pipeline.add_last(ChannelObserver())        # 텔레메트리 및 DPHI 영수증 봉합
-        pipeline.add_last(ContextBinder())          # 메타데이터 및 Fuel 예산 바인딩
-        # --- [Tail] ---
+        pipeline.add_last(ChannelObserver())        
+        pipeline.add_last(ContextBinder())          
+
+        ## Tail
         pipeline.add_last(bridge)
 
         await pipeline.fire_channel_active()
@@ -434,15 +412,18 @@ class PipelineBootstrap:
         pipeline = ChannelPipeline()
         bridge = RpcBridge()
         
-        # --- [Head] ---
+        ## Head
         pipeline.add_last(EmbeddingTransport())
-        # --- [Middle] (Embedding은 Stream과 Prompt 변환이 불필요) ---
+        pipeline.add_last(DphiFuelInterceptor())
+        
+        ## Middle
         pipeline.add_last(PayloadTranslator())
         pipeline.add_last(FallbackHandler())
         pipeline.add_last(MockBypass())
         pipeline.add_last(ChannelObserver())
         pipeline.add_last(ContextBinder())
-        # --- [Tail] ---
+
+        ## Tail
         pipeline.add_last(bridge)
 
         await pipeline.fire_channel_active()
@@ -467,11 +448,7 @@ def _run_sync(coro: Any) -> Any:
     else:
         return asyncio.run(coro)
 
-
-# =========================================================================
-# 4. Global Entrypoints
-# =========================================================================
-
+"""Global Entrypoints"""
 async def acompletion(model: str, messages: List = None, **kwargs) -> Any:
     """비동기 LLM 호출 진입점 (DPHI Kernel 종속)"""
     messages = messages or []

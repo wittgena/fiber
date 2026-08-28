@@ -1,22 +1,22 @@
-# workflow.eco.flow
+# fiber.workflow.eco.flow
+## @lineage: workflow.eco.flow
 import time
 import json
 import asyncio
 
 from fiber.workflow.scene.anchor import ActorIdentity
-from fiber.phase.kernel.attach.sandbox import TestScripts
-
-from xphi.arch.eco.protocol import TriadAxis
-from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.phase.reactor import PhaseReactor
-from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.dphi.adapter.state import StateAdapter
-
-from xphi.workflow.eco.infra import (
+from fiber.workflow.eco.infra import (
     EcoProtocolInterface, 
     EcosystemActor, 
     GrantResource
 )
+from fiber.kernel.attach.sandbox import TestScripts
+
+from xphi.eco.protocol import TriadAxis
+from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.watcher.plane.emitter import get_emitter
+from xphi.kernel.dphi.adapter.state import StateAdapter
 
 log = get_emitter("workflow.eco.flow")
 

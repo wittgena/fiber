@@ -1,5 +1,4 @@
-# phase.flow.align.path
-## @lineage: phase.align.path
+# fiber.phase.flow.align.path
 import os
 import sys
 import argparse
@@ -100,18 +99,14 @@ class PathAligner(PhaseAligner):
                     fmt = FILE_FORMATS.get(ext, FILE_FORMATS[".md"])
                     title_prefix = fmt["title"]
 
-                    relative_path = file_path.relative_to(repo_dir)
-                    expected = (
-                        relative_path.with_suffix("")
-                        .as_posix()
-                        .replace("/", ".")
-                    )
+                    # [MODIFIED] root_dir을 기준으로 추출하여 repo명이 포함되도록 일치화
                     namespace = (
                         file_path.relative_to(root_dir)
                         .with_suffix("")
                         .as_posix()
                         .replace("/", ".")
                     )
+                    expected = namespace 
 
                     ## 파일이 해당 매질의 주석 기호로 시작하지 않음
                     if not first_line.startswith(title_prefix):
@@ -162,7 +157,8 @@ class PathAligner(PhaseAligner):
         results = []
         for item in mismatches:
             namespace = item["namespace"]
-            fixable = any(namespace.startswith(p) for p in prefixes)
+            # [MODIFIED] prefixes가 비어있을 경우(전체 대상)의 무조건적인 False 반환 방어
+            fixable = not prefixes or any(namespace.startswith(p) for p in prefixes)
             status = "mismatch"
             
             if fixable:

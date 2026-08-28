@@ -1,4 +1,5 @@
-# dphi.model.ext.embedding.ollama
+# fiber.dphi.model.ext.embedding.ollama
+## @lineage: dphi.model.ext.embedding.ollama
 ## @lineage: phase.client.model.embedding.ollama
 ## @lineage: phase.client.ext.embedding.ollama
 ## @lineage: bound.client.ext.embedding.ollama

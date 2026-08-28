@@ -1,4 +1,5 @@
-# workflow.scene.anchor
+# fiber.workflow.scene.anchor
+## @lineage: workflow.scene.anchor
 ## @lineage: dphi.workflow.scene.anchor
 import time
 import json
@@ -7,10 +8,10 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.phase.kernel.attach.sandbox import EpochBase
-from xphi.kernel.dphi.runner.phase import SchemeRunner
+from fiber.kernel.attach.sandbox import EpochBase
+from xphi.kernel.space.runner.phase import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
+from xphi.eco.dphi.transaction import ExchangeAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

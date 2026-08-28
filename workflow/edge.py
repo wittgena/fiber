@@ -1,4 +1,5 @@
-# workflow.edge
+# fiber.workflow.edge
+## @lineage: workflow.edge
 import asyncio
 import hashlib
 import random
@@ -17,14 +18,14 @@ from fiber.dphi.receptor.rest import create_app, Config
 from fiber.dphi.client.http import VerifiedHttpClient
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.dphi.runner.phase import WebRunner
+from xphi.kernel.space.runner.phase import WebRunner
 from xphi.kernel.phase.reactor import PhaseReactor
 
 from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 from xphi.watcher.tracer.dphi import DphiTracer
-from xphi.watcher.wasm.builder import WasmBuilder
+from xphi.kernel.wasm.builder import WasmBuilder
 
 log = get_emitter("workflow.edge")
 

@@ -1,4 +1,5 @@
-# dphi.adapter.rollup
+# fiber.dphi.adapter.rollup
+## @lineage: dphi.adapter.rollup
 ## @lineage: dphi.bound.adapter.rollup
 ## @lineage: bound.adapter.rollup
 ## @lineage: phase.dphi.adapter.rollup
@@ -106,7 +107,7 @@ class RollupAdapter:
         return rollup_hash
 
     async def process_x402_settlement(self, invoice: Any) -> Any:
-        from xphi.kernel.dphi.eco.settlement import X402SettlementReceipt
+        from xphi.eco.dphi.settlement import X402SettlementReceipt
         
         tx_hash = await self.transfer(
             to_address=invoice.pay_to,

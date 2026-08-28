@@ -1,4 +1,4 @@
-# dphi.receptor.ingress.gov.risk
+# fiber.dphi.receptor.ingress.gov.risk
 from __future__ import annotations
 import time
 from abc import ABC, abstractmethod
@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Literal, Optional, Union, Annotated
 from pydantic import BaseModel, Field, ConfigDict
 from fastapi import HTTPException, status
 
-from xphi.watcher.receptor.contract.promise import future, Promise, NotYetCrystallized
+from xphi.arch.contract.promise import future, Promise, NotYetCrystallized
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("audit.gov")

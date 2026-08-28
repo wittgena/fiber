@@ -1,4 +1,5 @@
-# dphi.receptor.edge.depend
+# fiber.dphi.receptor.edge.depend
+## @lineage: dphi.receptor.edge.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 
@@ -15,7 +16,7 @@ from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.kernel.dphi.broker import DphiBroker
-from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
+from xphi.eco.dphi.transaction import ExchangeAdapter
 from xphi.kernel.dphi.adapter.sign import NodeSigner
 from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
 

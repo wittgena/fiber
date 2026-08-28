@@ -1,4 +1,5 @@
-# dphi.model.ext.types.schema
+# fiber.dphi.model.ext.types.schema
+## @lineage: dphi.model.ext.types.schema
 ## @lineage: phase.client.model.types.schema
 ## @lineage: agent.llm.router.types.schema
 ## @lineage: bound.agent.types.schema

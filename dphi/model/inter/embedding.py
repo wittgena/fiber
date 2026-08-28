@@ -1,4 +1,5 @@
-# dphi.model.inter.embedding
+# fiber.dphi.model.inter.embedding
+## @lineage: dphi.model.inter.embedding
 ## @lineage: agent.llm.router.inter.embedding
 ## @lineage: bound.xor.model.router.inter.embedding
 ## @lineage: eco.model.router.inter.embedding

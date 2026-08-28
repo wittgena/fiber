@@ -1,4 +1,5 @@
-# llm.exception.types
+# fiber.llm.exception.types
+## @lineage: llm.exception.types
 ## @lineage: agent.loop.runtime.exception.types
 ## @lineage: agent.runtime.exception.types
 ## @lineage: ator.runtime.exception.types

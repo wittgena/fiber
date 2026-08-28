@@ -1,4 +1,5 @@
-# phase.doc.baseqa
+# fiber.phase.doc.baseqa
+@lineage: phase.doc.baseqa
 @desc: DPHI Technical Proof & Audit Matrix
 
 본 문서는 DPHI 아키텍처가 제안하는 기술적 내러티브(Zero-Trust, Micro-billing, Rollup Sequencer, Deterministic Sandbox)가 단순한 백서 상의 개념(Theory)이 아닌, 물리적으로 동작하는 실체(Working Software)임을 터미널 실행 로그를 통해 객관적으로 증명합니다.

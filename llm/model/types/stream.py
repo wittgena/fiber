@@ -1,4 +1,5 @@
-# llm.model.types.stream
+# fiber.llm.model.types.stream
+## @lineage: llm.model.types.stream
 ## @lineage: agent.anchor.model.types.stream
 ## @lineage: bound.xor.model.types.stream
 ## @lineage: eco.model.types.stream

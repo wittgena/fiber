@@ -1,4 +1,5 @@
-# llm.driver.factory
+# fiber.llm.driver.factory
+## @lineage: llm.driver.factory
 ## @lineage: agent.llm.driver.factory
 ## @lineage: ator.driver.llm.factory
 import json
@@ -7,7 +8,7 @@ import warnings
 from typing import Any, get_args, get_origin, TYPE_CHECKING
 from pydantic import BaseModel, SecretStr
 
-from fiber.llm.provider.registry import get_llm_provider
+from fiber.llm.model.provider.registry import get_llm_provider
 if TYPE_CHECKING:
     from fiber.llm.driver.model import LLMModel
     DriverType = LLMModel | Any
