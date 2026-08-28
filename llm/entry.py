@@ -19,7 +19,7 @@ from fiber.dphi.model.ext.llm.param.processor import CompletionProcessor, Embedd
 from fiber.dphi.model.inter.registry import AdapterRegistry
 
 # Arch & Watcher
-from xphi.kernel.dphi.schema import DphiKey, KernelAuthPayload
+from xphi.kernel.dphi.llm.auth import DphiKey, KernelAuthPayload
 from xphi.kernel.space.topos.network.bridge import RpcBridge
 from xphi.kernel.space.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter

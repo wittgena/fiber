@@ -6,6 +6,8 @@ import math
 import random
 from typing import Optional, List, Dict, Any
 
+from fiber.kernel.ator.config import KernelConfig
+
 from xphi.arch.contract.registry.unified import contract 
 from xphi.arch.contract.event.bus import AsyncEventBus
 from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
@@ -16,7 +18,6 @@ from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.ator import AtorAdapter, NodeState, KernelDelta, NodeRole
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.method import DphiMethod
-from fiber.kernel.ator.config import KernelConfig
 from xphi.watcher.plane.emitter import get_emitter
 
 log_node = get_emitter("contract.node")

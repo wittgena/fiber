@@ -1,7 +1,7 @@
 # fiber.dphi.observer.intent.verifier
 import json
 from typing import Dict, Any, Tuple
-from xphi.kernel.phase.inter.protocol import ExecutionResult
+from arch.contract.interpreter import ExecutionResult
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.verifier")

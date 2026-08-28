@@ -10,11 +10,11 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from xphi.kernel.dphi.eco.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from xphi.eco.dphi.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
 from fiber.dphi.adapter.anchor import PhaseBuilder
 from fiber.dphi.client.wallet import LocalWalletClient
 
-from xphi.kernel.dphi.runner.phase import SchemeRunner
+from xphi.kernel.space.runner.phase import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter

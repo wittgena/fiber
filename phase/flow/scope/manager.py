@@ -30,7 +30,7 @@ from xphi.kernel.space.topos.node.event import AgentConfigured
 # Broker, Ledger, and Observability
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.cgroup import Tier
-from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter, TransactionReceipt
+from xphi.eco.dphi.transaction import ExchangeAdapter, TransactionReceipt
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.tracer.scope import scope_trace, get_current_trace_path
 

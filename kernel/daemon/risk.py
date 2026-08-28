@@ -207,11 +207,7 @@ class RiskVaultDaemon(AbstractDaemon):
     def __init__(self, ctx):
         super().__init__("RiskVaultDaemon")
         self.ctx = ctx  
-        
-        # [NEW] 최상위 컨텍스트에서 DphiBroker 인스턴스 획득 (SYSTEM 티어 FFI 통신용)
         self.broker = DphiBroker.get_instance()
-        
-        # 정책을 동역학 텐션 모델에 맞게 재정의
         self.policy = RiskPolicy(
             base_friction_bps=15.0, 
             max_allocation_pct=0.20,
@@ -222,14 +218,11 @@ class RiskVaultDaemon(AbstractDaemon):
         self.logic_hash = _get_module_source_hash(__file__)
         self.risk_engine = DynamicRiskManager(self.policy)
         self.router = SmartExecutionRouter()
-        
         self.target_nodes = [
             "arn:bound:oracle:binance:funding:v1.0.0",
             "arn:bound:oracle:coinbase:funding:v1.0.0"
         ]
         self.target_symbol = "BTCUSDT"
-        
-        # 리소스 볼트에 Broker 의존성 주입
         self.vault = ResourceVault(
             base_capacity=1_000_000.0,
             logic_hash=self.logic_hash,

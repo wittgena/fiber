@@ -15,14 +15,14 @@ from fiber.dphi.adapter.config import dphi_env
 from fiber.dphi.adapter.anchor import NotarySwarm
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.dphi.adapter.shadow import ShadowAdapter
+from xphi.eco.adapter.shadow import ShadowAdapter
 from xphi.kernel.dphi.adapter.utxo import (
     UtxoAdapter, UtxoPointer, UtxoInput, UtxoOutput, UtxoTransaction,
     AgentWallet, compute_merkle_root
 )
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.phase.reactor import PhaseReactor
-from xphi.kernel.dphi.runner.phase import SchemeRunner
+from xphi.kernel.space.runner.phase import SchemeRunner
 from xphi.watcher.plane.emitter import get_emitter
 from fiber.dphi.observer.intent.verifier import VerificationError
 

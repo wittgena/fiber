@@ -11,7 +11,7 @@ from xphi.kernel.space.topos.tunnel.flare import FlareTunnelFactory
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.phase.reactor import PhaseReactor
 
-from xphi.watcher.flare.controller import FlareController
+from xphi.watcher.plane.flare.controller import FlareController
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("workflow.flare")

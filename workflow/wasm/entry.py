@@ -5,9 +5,9 @@ import importlib
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-from xphi.watcher.wasm.builder import WasmBuilder
+from xphi.kernel.wasm.builder import WasmBuilder
 import fiber.workflow.scene as scene_module
-from xphi.watcher.wasm.tester import WasmTester
+from xphi.kernel.wasm.tester import WasmTester
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.space.bind.resolver import resolve_path

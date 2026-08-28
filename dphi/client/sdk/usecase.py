@@ -9,7 +9,7 @@ import time
 import asyncio
 import logging
 from fiber.dphi.client.sdk.dphi import DphiPublicClient, CodebotIntent, LLMIntent
-from xphi.watcher.receptor.contract.model import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
+from xphi.watcher.receptor.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 
 """PAYLOAD BUILDERS"""
 class UsecasePayloadBuilder:

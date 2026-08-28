@@ -31,7 +31,7 @@ from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.sign import NodeSigner
-from xphi.watcher.receptor.contract.model import (
+from xphi.watcher.receptor.edge.receipt import (
     CodebotIntent, 
     AuditReceipt,
     ExportLogsServiceRequest, 

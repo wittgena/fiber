@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.dphi.client.wallet import LocalWalletClient
 from fiber.dphi.adapter.config import dphi_env
-from xphi.kernel.dphi.exchange.transaction import TransactionReceipt
+from xphi.eco.dphi.transaction import TransactionReceipt
 
 from xphi.arch.contract.model.receptor import (
     TradeIngressRequest,
@@ -24,7 +24,7 @@ from xphi.arch.contract.model.receptor import (
 )
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.watcher.receptor.contract.model import ExportLogsServiceRequest
+from xphi.watcher.receptor.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.anchor")

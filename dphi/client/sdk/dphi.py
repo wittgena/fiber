@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, List
 import httpx
 
 from fiber.dphi.client.http import VerifiedHttpClient
-from xphi.watcher.receptor.contract.model import AuditLogRequest, ExportLogsServiceRequest
+from xphi.watcher.receptor.edge.receipt import AuditLogRequest, ExportLogsServiceRequest
 
 class PublicEndpoints:
     AGENT_QUOTE     = "/v1/public/agent/quote"

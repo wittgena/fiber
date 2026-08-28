@@ -26,16 +26,16 @@ from xphi.arch.contract.model.receptor import (
     ClearingReceiptRequest, ClearingReceiptResponse
 )
 
-from xphi.watcher.receptor.contract.model import (
+from xphi.watcher.receptor.edge.receipt import (
     BilledExecutionRequest,
     BilledExecutionResponse,
     KernelLedgerAppendRecord
 )
 
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
-from xphi.kernel.dphi.exchange.transaction import ExchangeAdapter
+from xphi.eco.dphi.transaction import ExchangeAdapter
 from xphi.kernel.dphi.cgroup import Tier
-from xphi.kernel.dphi.exchange.config import tier_config, billing_config
+from xphi.eco.dphi.config import tier_config, billing_config
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
@@ -259,7 +259,7 @@ async def generate_external_receipt(req: ClearingReceiptRequest, exchange: Excha
 @exchange_edge.post("/invoice/issue", summary="L402 청구서 발급 (Issue Payment Invoice)")
 async def issue_invoice(req: InvoiceIssueRequest):
     try:
-        from xphi.kernel.dphi.eco.settlement import EcoAdapter
+        from xphi.eco.dphi.settlement import EcoAdapter
         invoice = EcoAdapter.build_x402_invoice(
             payee_address=req.payee_address,
             amount_usdc=req.amount_usdc,

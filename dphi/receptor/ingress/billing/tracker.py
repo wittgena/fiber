@@ -7,7 +7,7 @@ import asyncio
 from typing import Dict, Any
 
 from xphi.kernel.space.topos.network.bridge import RpcBridge
-from xphi.kernel.dphi.exchange.config import billing_config, treasury_config
+from xphi.eco.dphi.config import billing_config, treasury_config
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 
