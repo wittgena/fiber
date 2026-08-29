@@ -1,5 +1,4 @@
 # fiber.dphi.adapter.anchor
-## @lineage: dphi.adapter.anchor
 import json
 import time
 import uuid
@@ -143,11 +142,6 @@ class NexusAnchor:
             commit_hash=commit_hash,
             receipt=receipt
         )
-
-
-# =====================================================================
-# 3. SWARM & BUILDERS (Test & Payload Generators)
-# =====================================================================
 
 class NotarySwarm:
     def __init__(self, size: int = 3):
