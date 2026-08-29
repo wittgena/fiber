@@ -1,24 +1,13 @@
 # fiber.phase.flow.imports.aligner
-## @lineage: phase.flow.imports.aligner
-## @lineage: nexus.flow.imports.aligner
-## @lineage: meta.flow.imports.aligner
-## @lineage: meta.flow.trans.imports.aligner
-## @lineage: meta.trans.imports.aligner
-## @lineage: meta.model.trans.imports.aligner
-## @lineage: arch.model.trans.imports.aligner
-## @lineage: arch.contract.trans.imports.aligner
-## @lineage: arch.gov.trans.imports.aligner
-## @lineage: arch.topos.trans.imports.aligner
-## @lineage: arch.topos.node.trans.imports.aligner
-## @lineage: arch.topos.bound.trans.imports.aligner
-## @lineage: arch.bound.trans.imports.aligner
 import os
 import difflib
 import libcst as cst
 from typing import List, Tuple
 from pathlib import Path
-from xphi.arch.model.phase.aligner import PhaseAligner, AlignRecord
+
 from fiber.phase.flow.imports.transformer import ImportTransformer, RelativeImportTransformer
+
+from xphi.arch.contract.phase.aligner import PhaseAligner, AlignRecord
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 def generate_diff(original: str, modified: str, filename: str) -> str:

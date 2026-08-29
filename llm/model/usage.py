@@ -12,7 +12,7 @@ from fiber.llm.model.provider.registry import ModelCostRegistry
 from fiber.llm.model.cost.unit import UnitCostCalculator
 from fiber.llm.model.cost.policy import CostPolicy
 
-from xphi.arch.contract.event.next import LogEvent
+from xphi.arch.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor
 
 logger = logging.getLogger("model.usage")

@@ -1,6 +1,4 @@
 # fiber.kernel.daemon.verse
-## @lineage: fiber.receptor.daemon.verse
-## @lineage: phase.kernel.daemon.verse
 import os
 import asyncio
 import random
@@ -9,7 +7,7 @@ import re
 import textwrap
 from typing import Callable, Optional, Dict, Any
 
-from xphi.arch.local.llm import LLMEngine
+from fiber.llm.driver.local.engine import LLMEngine
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.daemon.base import AbstractDaemon
 

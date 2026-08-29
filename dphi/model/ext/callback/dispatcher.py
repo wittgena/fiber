@@ -13,7 +13,7 @@ from contextvars import ContextVar
 
 from pydantic import BaseModel, ConfigDict, Field
 from deprecated import deprecated
-from xphi.arch.model.phase.gate import uuid4
+from xphi.arch.event.next import uuid4
 
 DISPATCHER_SPAN_DECORATED_ATTR = "__dispatcher_span_decorated__"
 

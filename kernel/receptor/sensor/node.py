@@ -9,10 +9,10 @@ from typing import Optional, List, Dict, Any
 from fiber.kernel.receptor.sensor.config import SensorConfig
 
 from xphi.arch.contract.registry.unified import contract 
-from xphi.arch.contract.event.bus import AsyncEventBus
-from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
+from xphi.arch.event.bus import AsyncEventBus
+from xphi.arch.event.psi import PsiCarrier, PsiEvent
 from xphi.arch.contract.interface import IPhaseField, ICriticalDetector, ISystemRegime, IPhaseAtor, IDynamicsKernel
-from xphi.arch.model.phase.flow import PhaseFlow, Transduction
+from xphi.arch.contract.phase.flow import PhaseFlow, Transduction
 
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.ator import AtorAdapter, NodeState, KernelDelta, NodeRole

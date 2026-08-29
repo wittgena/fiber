@@ -8,9 +8,9 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, model_validator, field_validator
 
 from xphi.arch.contract.discovery import discover_modules
-from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
+from xphi.arch.event.psi import PsiCarrier, PsiEvent
 from xphi.arch.contract.registry.unified import contract, registry
-from xphi.arch.contract.executor import BaseExecutor
+from xphi.kernel.phase.runtime.executor.base import BaseExecutor
 
 from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.phase.runtime.node import NodeRuntime

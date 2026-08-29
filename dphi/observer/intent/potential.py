@@ -12,8 +12,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from fiber.dphi.adapter.config import dphi_env
 from xphi.eco.dphi.settlement import EcoAdapter
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.arch.contract.event.next import generate_parity_triplet, next_phase_id
-from xphi.arch.model.phase.gate import uuid4
+from xphi.arch.event.next import generate_parity_triplet, next_phase_id
+from xphi.arch.event.next import uuid4
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.broker import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter

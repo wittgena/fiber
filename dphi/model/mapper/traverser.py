@@ -9,7 +9,7 @@ from typing import AsyncGenerator, Generator, Any, List
 
 from fiber.dphi.model.ext.llm.model.types.block import ChatMessage, MessageRole
 
-from xphi.arch.model.phase.gate import uuid4 
+from xphi.arch.event.next import uuid4 
 from xphi.kernel.space.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 

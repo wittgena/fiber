@@ -1,6 +1,4 @@
 # fiber.phase.flow.scope.observer
-## @lineage: phase.scope.observer
-## @lineage: agent.scope.observer
 import asyncio
 import json
 import time
@@ -11,9 +9,9 @@ from typing import Dict, Any, Optional, List
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from xphi.arch.model.phase.flow import PhaseFlow, FlowState
-from xphi.arch.contract.event.next import next_id
-from xphi.arch.contract.event.mesh.transport import MeshP2PTransport
+from xphi.arch.contract.phase.flow import PhaseFlow, FlowState
+from xphi.arch.event.next import next_id
+from xphi.arch.event.mesh.transport import MeshP2PTransport
 from xphi.kernel.space.topos.node.gan import Message, GanNode
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
