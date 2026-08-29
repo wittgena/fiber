@@ -1,5 +1,4 @@
 # fiber.kernel.daemon.rpc
-## @lineage: fiber.receptor.daemon.rpc
 import os
 import json
 import asyncio
@@ -16,10 +15,6 @@ log = get_emitter("daemon.rpc")
 
 @contract.daemon("rpc_worker")
 class RpcWorkerDaemon(AbstractDaemon):
-    """
-    Message Bus(Redis/NATS/Flare)에 연결하여 `internal.rpc.queue`의 
-    작업을 소비(Consume)하고 비즈니스 로직을 처리하는 Headless Daemon.
-    """
     def __init__(self, ctx):
         super().__init__("RpcWorkerDaemon")
         self.app_ctx = ctx  # Global daemon context (or Mock context for testing)
@@ -39,24 +34,23 @@ class RpcWorkerDaemon(AbstractDaemon):
         Worker 구동에 필요한 무거운 의존성들을 초기화합니다.
         순환 참조 방지를 위해 함수 내부에 Import 배치.
         """
-        from xphi.kernel.dphi.broker import DphiBroker
-        from xphi.arch.xor.stream.edge import LogStreamStore
         from fiber.dphi.adapter.anchor import NexusAnchor
+        from fiber.kernel.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
+
+        from xphi.kernel.dphi.broker import DphiBroker
+        from xphi.xor.stream.edge import LogStreamStore
         from xphi.eco.dphi.transaction import ExchangeAdapter
         from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
-        from fiber.kernel.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
         from xphi.kernel.space.sandbox.profile import BenchProfile
         from xphi.kernel.dphi.adapter.sign import NodeSigner
 
         log.info(f"[{self.name}] Initializing Headless Worker Dependencies...")
         
-        # [IMPROVED] 외부(E2E Test 등)에서 주입된 컨텍스트 객체가 있으면 최우선으로 재사용
         broker = getattr(self.app_ctx, "broker", None) or DphiBroker()
         store = getattr(self.app_ctx, "store", None) or LogStreamStore()
         
         # TODO: 운영(Production) 환경에서는 실제 위원회 키와 노드 키를 주입해야 합니다.
         nexus = NexusAnchor(broker=broker, consensus_threshold=1, allowed_committee=[])
-        
         node_pubkey = NodeSigner.get_instance().pubkey_hex if hasattr(NodeSigner, 'get_instance') else "mock_pubkey"
         exchange_adapter = ExchangeAdapter(clearing_house_pub_key=node_pubkey)
         utxo_adapter = UtxoAdapter(broker=broker)

@@ -17,7 +17,7 @@ from fiber.kernel.receptor.dphi.edge.llm import llm_edge
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
-from xphi.arch.xor.parser.otlp import StrictOtlpRulesetParser
+from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
 from xphi.kernel.dphi.broker import DphiBroker
 
 from xphi.watcher.mcp.server import SecureMCPServer, SentinelFirewallMiddleware

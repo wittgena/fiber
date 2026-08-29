@@ -16,7 +16,7 @@ from fiber.llm.model.provider.protype import ProviderTypes
 from fiber.llm.model.types.param.legacy import LegacyParams
 
 from xphi.arch.model.config import config
-from xphi.arch.xor.secret.manager import get_secret_str, get_secret
+from xphi.xor.secret.manager import get_secret_str, get_secret
 from xphi.kernel.space.bind.resolver import resolve_path 
 from xphi.watcher.plane.emitter import get_emitter 
 

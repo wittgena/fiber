@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, field
 
 from fiber.dphi.adapter.config import dphi_env
-from fiber.dphi.adapter.anchor import NotarySwarm
+from fiber.dphi.adapter.builder import NotarySwarm
 from fiber.dphi.adapter.dvm import DvmAdapter
 from fiber.dphi.observer.intent.verifier import VerificationError
 

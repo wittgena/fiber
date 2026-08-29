@@ -1,5 +1,4 @@
 # fiber.kernel.attach.sandbox
-## @lineage: phase.kernel.attach.sandbox
 import os
 import time
 import json
@@ -11,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from xphi.eco.dphi.settlement import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
-from fiber.dphi.adapter.anchor import PhaseBuilder
+from fiber.dphi.adapter.builder import PhaseBuilder
 from fiber.dphi.client.wallet import LocalWalletClient
 
 from xphi.kernel.space.runner.phase import SchemeRunner

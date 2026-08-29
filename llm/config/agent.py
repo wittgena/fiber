@@ -22,7 +22,7 @@ from xphi.arch.contract.resolver.secret import SecretSource, SecretValue
 from xphi.arch.model.conv.tool import Tool
 from xphi.arch.model.surge.blueprint import SurgeBlueprint, SurgeNode
 from xphi.arch.model.surge.disc import SurgeBaseModel
-from xphi.arch.xor.parser.mark.depre import warn_deprecated
+from xphi.xor.parser.mark.depre import warn_deprecated
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 

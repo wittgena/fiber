@@ -45,7 +45,7 @@ class ManagedTestServer(uvicorn.Server):
 # ==========================================
 
 def create_otlp_payload(inject_faults: bool) -> dict:
-    from fiber.dphi.adapter.anchor import PhaseBuilder
+    from fiber.dphi.adapter.builder import PhaseBuilder
     if inject_faults:
         return {"garbage_field_missing_required_keys": True}
     return PhaseBuilder.otlp_payload(is_malformed=False)

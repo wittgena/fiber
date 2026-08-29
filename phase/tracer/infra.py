@@ -5,8 +5,8 @@ import asyncio
 from functools import wraps
 from typing import Dict, Any, Optional, Union, Callable
 
-from xphi.arch.xor.parser.ruleset import CompiledEngine
-from xphi.arch.xor.parser.stream import LocalStreamRulesetParser
+from xphi.xor.parser.ruleset.engine import CompiledEngine
+from xphi.xor.parser.ruleset.stream import LocalStreamRulesetParser
 from xphi.arch.contract.resolver.log import LogResolver
 from xphi.arch.contract.registry.tracer import TracerRegistry
 

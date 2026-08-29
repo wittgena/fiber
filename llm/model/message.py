@@ -12,8 +12,8 @@ from openai.types.responses.response_output_message import ResponseOutputMessage
 from openai.types.responses.response_reasoning_item import ResponseReasoningItem
 from pydantic import ConfigDict, Field, model_validator
 
-from xphi.arch.xor.parser.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
-from xphi.arch.xor.parser.mark.depre import handle_deprecated_model_fields
+from xphi.xor.parser.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
+from xphi.xor.parser.mark.depre import handle_deprecated_model_fields
 
 from fiber.llm.param import (
     ChatCompletionMessageToolCall,

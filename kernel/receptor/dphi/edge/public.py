@@ -11,16 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 
-from fiber.dphi.adapter.anchor import NotarySwarm
-from xphi.arch.contract.interface import ContractRouter
-from xphi.arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
-
-from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
-from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
-from xphi.kernel.dphi.adapter.state import StateAdapter
-
-# [NEW] 정렬된 의존성 주입
+from fiber.dphi.adapter.builder import NotarySwarm
 from fiber.kernel.receptor.dphi.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -30,6 +21,13 @@ from fiber.kernel.receptor.dphi.depend import (
 )
 from fiber.dphi.rpc.client import InternalRpcClient
 
+from xphi.arch.contract.interface import ContractRouter
+from xphi.arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
+from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
+
+from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
+from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
+from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.receptor.edge.receipt import (
     CodebotIntent, 
     AuditReceipt,
