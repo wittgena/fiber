@@ -1,17 +1,11 @@
-# fiber.dphi.receptor.edge.depend
-## @lineage: dphi.receptor.edge.depend
+# fiber.receptor.dphi.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 
 from fiber.dphi.adapter.anchor import NexusAnchor
-from xphi.kernel.space.sandbox.profile import BenchProfile
-from fiber.dphi.receptor.ingress.gov.policy import (
-    IngressPolicyEngine, 
-    ToposSequencer, 
-    FuelAllocator, 
-    HealthMonitor
-)
+from fiber.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
 
+from xphi.kernel.space.sandbox.profile import BenchProfile
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 from xphi.arch.xor.stream.edge import LogStreamStore

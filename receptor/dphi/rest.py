@@ -1,4 +1,5 @@
-# fiber.dphi.receptor.rest
+# fiber.receptor.dphi.rest
+## @lineage: fiber.dphi.receptor.rest
 import os
 from contextlib import asynccontextmanager
 from typing import Optional
@@ -10,10 +11,10 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
-from fiber.dphi.receptor.edge.public import public_edge
-from fiber.dphi.receptor.edge.internal import internal_router
-from fiber.dphi.receptor.edge.ext import ext_router
-from fiber.dphi.receptor.edge.llm import llm_edge
+from fiber.receptor.dphi.edge.public import public_edge
+from fiber.receptor.dphi.edge.internal import internal_router
+from fiber.receptor.dphi.edge.ext import ext_router
+from fiber.receptor.dphi.edge.llm import llm_edge
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub

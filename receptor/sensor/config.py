@@ -1,4 +1,5 @@
-# fiber.kernel.ator.config
+# fiber.receptor.sensor.config
+## @lineage: fiber.kernel.ator.config
 import math
 import json
 from typing import Dict, Any, List
@@ -8,7 +9,7 @@ class TransitionPolicy(BaseModel):
     rupture_to: str = "ATTRACTOR"
     reset_tension: bool = True
 
-class KernelConfig(BaseModel):
+class SensorConfig(BaseModel):
     type: str = "kuramoto"
     global_coupling: float = 0.8
     dissipation_rate: float = 0.95
@@ -37,7 +38,7 @@ class RuntimeConfig(BaseModel):
     seed: int = 42 
 
 class SystemConfig(BaseModel):
-    kernel: KernelConfig = Field(default_factory=KernelConfig)
+    kernel: SensorConfig = Field(default_factory=SensorConfig)
     ator: AtorConfig = Field(default_factory=AtorConfig)
     field: FieldConfig = Field(default_factory=FieldConfig)
     watcher: WatcherConfig = Field(default_factory=WatcherConfig)
@@ -51,7 +52,7 @@ class SystemConfig(BaseModel):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'SystemConfig':
         return cls(
-            kernel=KernelConfig(**data.get("kernel", {})),
+            kernel=SensorConfig(**data.get("kernel", {})),
             ator=AtorConfig(**data.get("ator", {})),
             field=FieldConfig(**data.get("field", {})),
             watcher=WatcherConfig(**data.get("watcher", {})),

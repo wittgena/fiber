@@ -1,5 +1,5 @@
-# fiber.dphi.receptor.edge.internal
-## @lineage: dphi.receptor.edge.internal
+# fiber.receptor.dphi.edge.internal
+## @lineage: fiber.dphi.receptor.edge.internal
 import json
 import time
 import uuid
@@ -9,10 +9,10 @@ from fastapi import APIRouter, Body, status, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from fiber.dphi.adapter.anchor import NexusAnchor, AnchorProposal, StreamAppendRequest, LedgerEventSchema
-from fiber.dphi.receptor.ingress.gov.policy import IngressPolicyEngine, get_ingress_policy
-from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter, get_utxo_adapter
-from xphi.kernel.space.sandbox.profile import BenchProfile, VerificationError
+from fiber.receptor.dphi.depend import get_wasm_broker, get_logstream_store, get_nexus_anchor, get_exchange_adapter, get_utxo_adapter
+from fiber.receptor.gov.policy import IngressPolicyEngine, get_ingress_policy
 
+from xphi.kernel.space.sandbox.profile import BenchProfile, VerificationError
 from xphi.arch.xor.stream.edge import LogStreamStore
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.contract.model.receptor import (

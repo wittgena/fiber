@@ -1,5 +1,7 @@
-# fiber.kernel.daemon.verse
+# fiber.receptor.daemon.verse
+## @lineage: fiber.kernel.daemon.verse
 ## @lineage: phase.kernel.daemon.verse
+import os
 import asyncio
 import random
 import urllib.request
@@ -8,8 +10,9 @@ import textwrap
 from typing import Callable, Optional, Dict, Any
 
 from xphi.arch.local.llm import LLMEngine
+from xphi.arch.contract.registry.unified import contract
+from xphi.kernel.daemon.base import AbstractDaemon
 
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.daemon.bootstrap import TOPIC_BUS_STREAM, KEY_HEARTBEAT_PATTERN
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -17,7 +20,8 @@ log = get_emitter('verse.daemon')
 
 class ContextSensor:
     """[1] 외부 환경 및 내부 시스템 메트릭을 감지하여 상황(Context)을 수집하는 클래스"""
-    def __init__(self, location: str = "Seoul"):
+    def __init__(self, tunnel, location: str = "Seoul"):
+        self.tunnel = tunnel  # [개선] DI 주입을 통해 TunnelFactory 직접 호출 제거
         self.location = location
 
     async def fetch_weather(self) -> str:
@@ -29,15 +33,14 @@ class ContextSensor:
             return "Void"
 
     async def sense_environment(self, cause: str) -> Dict[str, Any]:
-        tunnel = await TunnelFactory.get_default()
         try:
-            # [개선] 레거시 node:* 대신 활성 상태를 나타내는 Heartbeat 기반 노드 카운트
-            keys = await tunnel.keys(KEY_HEARTBEAT_PATTERN)
+            # 활성 상태를 나타내는 Heartbeat 기반 노드 카운트
+            keys = await self.tunnel.keys(KEY_HEARTBEAT_PATTERN)
             node_count = len(keys)
             
-            # [개선] 레거시 queue(llen) 대신 통합 Stream(xlen)의 부하를 측정
+            # 통합 Stream(xlen)의 부하를 측정
             try:
-                stream_len = await tunnel.state_store.xlen(TOPIC_BUS_STREAM)
+                stream_len = await self.tunnel.state_store.xlen(TOPIC_BUS_STREAM)
             except Exception:
                 stream_len = 0
                 
@@ -73,7 +76,6 @@ class CognitiveEngine:
         "Worker": {
             "identity": "You are a diligent 'Worker' who carries data.",
             "normal": "Use a tired but calm, everyday polite tone. Show relief that the system is running safely.",
-            # [개선] 메타포 변경: overflowing queues -> overflowing streams of data
             "crisis": "Use an urgent and clearly panicked polite tone due to the overflowing streams of data.",
             "color": "\033[93m" # Yellow
         }
@@ -125,27 +127,42 @@ class CognitiveEngine:
             log.info(f" {color_code}❖ The {persona}{reset} : {indented_text}\n")
 
 
-class VerseDaemon:
-    """[3] 센서와 엔진을 묶어 주기적으로 생태계를 구동하는 라이프사이클 컨트롤러"""
-    def __init__(self, resolved_model: str):
-        self._running = False
-        self.sensor = ContextSensor()
+# =========================================================================
+# 3. Verse Daemon (Top-Level Controller)
+# =========================================================================
+@contract.daemon("verse")
+class VerseDaemon(AbstractDaemon):
+    """센서와 엔진을 묶어 주기적으로 생태계를 구동하는 자율(Autonomous) 데몬"""
+    
+    def __init__(self, ctx):
+        super().__init__("VerseDaemon")
+        self.ctx = ctx
+        
+        # [개선] 런타임 컨텍스트(ctx)에서 터널 추출 주입
+        tunnel = getattr(self.ctx, 'tunnel', None)
+        if not tunnel:
+            raise RuntimeError(f"[{self.name}] Tunnel dependency is missing in RuntimeContext.")
+            
+        self.sensor = ContextSensor(tunnel=tunnel)
+        
+        # 환경변수 기반 유연한 모델/주기 설정 지원
+        resolved_model = os.getenv("VERSE_LLM_MODEL", "local-cognitive-engine")
+        self.interval_seconds = float(os.getenv("VERSE_TICK_INTERVAL", "30.0"))
         self.engine = CognitiveEngine(resolved_model=resolved_model)
 
-    async def start(self, interval_seconds: float = 30.0):
-        log.info(f"🌌 Starting Verse Daemon (Interval: {interval_seconds}s)")
-        self._running = True
+    async def run(self):
+        log.info(f"🌌 [{self.name}] Initiating Cognitive Ecosystem (Interval: {self.interval_seconds}s)")
         
         try:
-            while self._running:
+            # AbstractDaemon의 self.running 속성을 활용하여 통일된 생명주기 관리
+            while self.running:
                 signals = await self.sensor.sense_environment(cause="periodic_tick")
                 await self.engine.process_signals(signals)
-                await asyncio.sleep(interval_seconds)
+                await asyncio.sleep(self.interval_seconds)
+                
         except asyncio.CancelledError:
-            log.info("Verse Daemon interrupted.")
+            log.info(f"[{self.name}] Cancel signal received. Suspending cognitive loop.")
         except Exception as e:
-            log.error(f"Fatal error in Verse Daemon: {e}")
-
-    def stop(self):
-        self._running = False
-        log.info("💤 Verse Daemon shutdown initiated.")
+            log.error(f"[{self.name}] Fatal anomaly detected in Verse loop: {e}", exc_info=True)
+        finally:
+            log.info(f"[{self.name}] Verse Daemon safely evaporated.")

@@ -1,4 +1,6 @@
-# fiber.dphi.receptor.ingress.gov.policy
+# fiber.receptor.gov.policy
+## @lineage: fiber.receptor.dphi.gov.policy
+## @lineage: fiber.dphi.receptor.ingress.gov.policy
 ## @lineage: dphi.receptor.ingress.gov.policy
 import time
 import hashlib

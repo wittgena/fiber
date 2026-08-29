@@ -1,4 +1,5 @@
-# fiber.kernel.ator.node
+# fiber.receptor.sensor.node
+## @lineage: fiber.kernel.ator.node
 from __future__ import annotations
 import ast
 import json
@@ -6,7 +7,7 @@ import math
 import random
 from typing import Optional, List, Dict, Any
 
-from fiber.kernel.ator.config import KernelConfig
+from receptor.sensor.config import SensorConfig
 
 from xphi.arch.contract.registry.unified import contract 
 from xphi.arch.contract.event.bus import AsyncEventBus
@@ -238,7 +239,7 @@ class AtorReflector(Transduction):
 
 class BaseWasmKernel(IDynamicsKernel):
     """모든 물리/수학 커널이 공유하는 FFI 통신 파이프라인. 커널별 파라미터만 분리하여 WASM에 전달합니다."""
-    def __init__(self, kernel_type: str, config: KernelConfig, extra_params: Dict[str, Any] = None):
+    def __init__(self, kernel_type: str, config: SensorConfig, extra_params: Dict[str, Any] = None):
         self.kernel_type = kernel_type
         self.config = config
         self.params = self.config.model_dump(exclude={"type"})
@@ -268,7 +269,7 @@ class BaseWasmKernel(IDynamicsKernel):
 @contract.ator("sensor.ator", role="kernel")
 class SensorAtor(BaseWasmKernel):
     def __init__(self, **kwargs):
-        config = kwargs.get("config") or KernelConfig(**kwargs)
+        config = kwargs.get("config") or SensorConfig(**kwargs)
         extra = {
             "trust_radius": kwargs.get("trust_radius", 1.0),
             "repulsion_factor": kwargs.get("repulsion_factor", 0.2)
@@ -278,7 +279,7 @@ class SensorAtor(BaseWasmKernel):
 @contract.ator("sensor.kuramoto", role="kernel")
 class SensorKuramoto(BaseWasmKernel):
     def __init__(self, **kwargs):
-        config = kwargs.get("config") or KernelConfig(**kwargs)
+        config = kwargs.get("config") or SensorConfig(**kwargs)
         super().__init__("kernel.kuramoto", config)
 
     def render_state(self, states: Dict[str, NodeState]) -> str:
@@ -290,20 +291,20 @@ class SensorKuramoto(BaseWasmKernel):
 @contract.ator("sensor.kuramoto_inertia", role="kernel")
 class SensorKuramotoInertia(BaseWasmKernel):
     def __init__(self, **kwargs):
-        config = kwargs.get("config") or KernelConfig(**kwargs)
+        config = kwargs.get("config") or SensorConfig(**kwargs)
         super().__init__("kernel.kuramoto_inertia", config)
 
 @contract.ator("sensor.fitzhugh", role="kernel")
 class SensorFitzHughNagumo(BaseWasmKernel):
     def __init__(self, **kwargs):
-        config = kwargs.get("config") or KernelConfig(**kwargs)
+        config = kwargs.get("config") or SensorConfig(**kwargs)
         extra = {"a": 0.7, "b": 0.8} # 하드코딩 파라미터 유지
         super().__init__("kernel.fitzhugh", config, extra)
 
 @contract.ator("sensor.sakaguchi", role="kernel")
 class SensorSakaguchi(BaseWasmKernel):
     def __init__(self, **kwargs):
-        config = kwargs.get("config") or KernelConfig(**kwargs)
+        config = kwargs.get("config") or SensorConfig(**kwargs)
         super().__init__("kernel.sakaguchi", config)
 
 

@@ -1,11 +1,10 @@
-# fiber.dphi.receptor.edge.public
-## @lineage: dphi.receptor.edge.public
+# fiber.receptor.dphi.edge.public
+## @lineage: fiber.dphi.receptor.edge.public
 """
 @desc: DPHI Edge Public Gateway
 - Orchestrates WASM kernels and internal nodes for intent validation, metered execution, and immutable cryptographic receipts.
 - Exposes a symmetric Zero-Trust interface for Autonomous AI Agents.
 """
-
 import os
 import json
 import time
@@ -21,13 +20,13 @@ from pydantic import BaseModel
 
 from fiber.dphi.adapter.config import dphi_env
 from fiber.dphi.adapter.anchor import NotarySwarm
-from fiber.dphi.receptor.edge.depend import get_wasm_broker, get_pubsub, get_otlp_engine
+from fiber.receptor.dphi.depend import get_wasm_broker, get_pubsub, get_otlp_engine
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.arch.xor.parser.otlp import StrictOtlpExtractionEngine
 
+from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.sign import NodeSigner
@@ -120,7 +119,6 @@ async def public_agent_quote(
     - 유료 티어 (영수증 있음): 사전 인텐트 및 서명 진위 여부 엄격 검증 (실패 시 422)
     """
     async with httpx.AsyncClient(base_url=internal_url, timeout=15.0) as internal_client:
-        # 🌟 1. 유료/프리미엄 티어: 결제 영수증이 첨부된 경우 서명 및 인텐트 엄격 검증
         if x_x402_receipt:
             val_req = IntentValidationRequest(
                 requester_id=intent.agent_id,
@@ -141,7 +139,6 @@ async def public_agent_quote(
                     detail=f"Intent Validation Failed: {val_res.text}"
                 )
 
-        # 🌟 2. 견적 시뮬레이션 요청 조립
         exec_req = {
             "agent_schema": {
                 "runtime": "python3.11-wasm",
@@ -158,8 +155,6 @@ async def public_agent_quote(
                 raise HTTPException(status_code=res.status_code, detail=f"Quotation Failed: {res.text}")
             
             quote_data = res.json()
-            
-            # 🌟 3. 내부 샌드박스에서 거절(REJECTED)된 경우 422 상태코드로 방어
             if quote_data.get("status") == "QUOTE_REJECTED":
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

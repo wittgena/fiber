@@ -1,4 +1,5 @@
-# fiber.kernel.ator.runtime
+# fiber.receptor.sensor.runtime
+## @lineage: fiber.kernel.ator.runtime
 from __future__ import annotations
 import asyncio
 import json
@@ -7,9 +8,10 @@ from pydantic import BaseModel, Field, model_validator, field_validator
 
 from xphi.arch.contract.discovery import discover_modules
 from xphi.arch.contract.event.psi import PsiCarrier, PsiEvent
-from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.arch.contract.registry.unified import contract, registry
 from xphi.arch.contract.executor import BaseExecutor
+
+from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.phase.runtime.node import NodeRuntime
 from xphi.kernel.phase.runtime.flow.cont import LoopCarrier, XeCont
 from xphi.kernel.daemon.base import AbstractDaemon
@@ -19,7 +21,7 @@ from xphi.kernel.dphi.adapter.sign import LedgerAuthAdapter
 from xphi.kernel.dphi.adapter.ator import AtorAdapter, ToposSignal, ManifoldState, NodeRole, ToposActionType
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("ator.daemon")
+log = get_emitter("ator.runtime")
 
 
 # =========================================================================

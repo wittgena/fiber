@@ -1,4 +1,4 @@
-# fiber.dphi.receptor.edge.llm
+# fiber.receptor.dphi.edge.llm
 import time
 import orjson
 from typing import Dict, Any, List, Optional, Union
@@ -14,13 +14,10 @@ from xphi.arch.contract.interface import ContractRouter
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.llm.auth import DphiKey, DphiAction, KernelAuthPayload
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
-
-# [통합] 엔터프라이즈 구조로 업그레이드된 MCP Gateway 의존성
 from xphi.watcher.mcp.adapter.state import AgentIdentity, EventMetadata, MCPStateAdapter
 
 log = get_emitter("edge.llm")
 
-# 단일 라우터로 통합 (Prefix: /v1)
 llm_edge = ContractRouter(
     namespace="llm",  
     prefix="/v1", 
