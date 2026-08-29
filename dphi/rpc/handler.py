@@ -1,5 +1,4 @@
 # fiber.dphi.rpc.handler
-## @lineage: fiber.receptor.rpc.handler
 import json
 import time
 import uuid
@@ -26,9 +25,8 @@ from xphi.arch.eco.edge.receipt import (
 
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.cgroup import Tier
-from xphi.arch.eco.dphi.config import tier_config, billing_config
+from xphi.arch.eco.dphi.config import tier_config, fuel_config
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.kernel.space.sandbox.profile import VerificationError
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("dphi.handler")
@@ -60,11 +58,6 @@ class WorkerContext:
 def _build_error(code: int, message: str) -> dict:
     """RPC 표준 에러 응답 빌더"""
     return {"error": True, "code": code, "message": message}
-
-
-# ==========================================
-# [Core Internal] Ledger & Anchor Handlers
-# ==========================================
 
 async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
     try:
@@ -285,7 +278,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from xphi.arch.eco.dphi.settlement import EcoAdapter
+        from xphi.arch.eco.adapter.settlment import EcoAdapter
         invoice = EcoAdapter.build_x402_invoice(
             payee_address=payee_address,
             amount_usdc=amount_usdc,
@@ -324,14 +317,17 @@ async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    client_project_id = params.get("client_project_id", "generative-language-client-1234")
+    # 동적 에이전트 식별자 추출 (Gateway 또는 클라이언트에서 주입)
+    agent_id = params.get("agent_id", getattr(req, "agent_id", "anonymous_agent"))
+    target_tier = Tier.STANDARD
     
     try:
         result = await ctx.profile_service.execute(
-            client_project_id=client_project_id, 
+            agent_id=agent_id, 
             schema=req.agent_schema,
             entry=req.target_entry, 
             depth=req.context_depth, 
+            tier=target_tier,
             dry_run=True 
         )
         
@@ -339,13 +335,11 @@ async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
             log.warning(f"[Quote] Execution Divergence: {result.reason}")
             return _build_error(422, f"Quotation Rejected: {result.reason}")
             
-    except VerificationError as ve:
-        return _build_error(401, str(ve))
     except Exception as e:
         log.error(f"[Quote] Unhandled Error: {e}")
         return _build_error(500, "Internal sandbox error")
         
-    estimated_cost = (result.fuel_consumed / billing_config.fuel_billing_unit) * billing_config.usd_per_billing_unit
+    estimated_cost = (result.fuel_consumed / fuel_config.fuel_unit) * fuel_config.usd_per_fuel_unit
     return {
         "status": "QUOTE_READY", 
         "tier_applied": result.tier_applied, 
@@ -361,14 +355,18 @@ async def handle_profile_execute_billed(params: dict, ctx: WorkerContext) -> dic
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    client_project_id = params.get("client_project_id", "generative-language-client-1234")
+    # 동적 에이전트 식별자 추출
+    agent_id = params.get("agent_id", getattr(req, "agent_id", "anonymous_agent"))
+    # 결제(Intent Validation)가 통과된 요청이므로 SYSTEM Tier 할당
+    target_tier = Tier.SYSTEM 
     
     try:
         result = await ctx.profile_service.execute(
-            client_project_id=client_project_id, 
+            agent_id=agent_id, 
             schema=req.agent_schema,
             entry=req.target_entry, 
             depth=req.context_depth, 
+            tier=target_tier,
             dry_run=False
         )
         
@@ -376,13 +374,11 @@ async def handle_profile_execute_billed(params: dict, ctx: WorkerContext) -> dic
             log.error(f"[Execute] Execution Failed/Diverged: {result.reason}")
             return _build_error(422, f"Billed Execution Failed: {result.reason}")
             
-    except VerificationError as ve:
-        return _build_error(401, str(ve))
     except Exception as e:
         log.error(f"[Execute] Unhandled Sandbox Error: {e}")
         return _build_error(500, "Sandbox execution crashed unexpectedly")
         
-    billed_cost = (result.fuel_consumed / billing_config.fuel_billing_unit) * billing_config.usd_per_billing_unit
+    billed_cost = (result.fuel_consumed / fuel_config.fuel_unit) * fuel_config.usd_per_fuel_unit
     return {
         "status": "BILLED_EXECUTION_SUCCESS", 
         "tier_applied": result.tier_applied, 

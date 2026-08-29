@@ -7,7 +7,7 @@ import tiktoken
 
 from fiber.llm.model.token.encoder import get_default_encoding
 from fiber.llm.model.types.general import CustomHuggingfaceTokenizer, SelectTokenizerResponse
-from fiber.dphi.model.constants import DEFAULT_MAX_LRU_CACHE_SIZE
+from fiber.llm.router.constants import DEFAULT_MAX_LRU_CACHE_SIZE
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.splitter")

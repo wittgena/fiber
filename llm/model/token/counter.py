@@ -23,7 +23,7 @@ from fiber.llm.param import ChatCompletionToolParam
 from fiber.llm.model.types.general import SelectTokenizerResponse
 from fiber.llm.model.token.vision import VisionMetadataExtractor
 from xphi.arch.model.config import config
-from fiber.dphi.model.constants import DEFAULT_IMAGE_TOKEN_COUNT
+from fiber.llm.router.constants import DEFAULT_IMAGE_TOKEN_COUNT
 
 from fiber.llm.param import Message
 

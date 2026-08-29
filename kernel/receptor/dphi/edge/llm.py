@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.param import ModelResponse, EmbeddingResponse
-from fiber.llm.stream.wrapper import StreamWrapper
+from fiber.llm.router.stream.wrapper import StreamWrapper
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.kernel.dphi.broker import DphiBroker

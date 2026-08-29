@@ -13,10 +13,10 @@ from fiber.llm.param import ModelResponse
 from fiber.llm.execution import ExecutionMetadata
 from fiber.llm.model.types.general import EmbeddingResponse
 from fiber.llm.exception.mapping import exception_type
-from fiber.llm.stream.wrapper import StreamWrapper
+from fiber.llm.router.stream.wrapper import StreamWrapper
 
-from fiber.dphi.model.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
-from fiber.dphi.model.inter.registry import AdapterRegistry
+from fiber.llm.router.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
+from fiber.llm.router.inter.registry import AdapterRegistry
 
 # Arch & Watcher
 from xphi.kernel.dphi.llm.auth import DphiKey, KernelAuthPayload

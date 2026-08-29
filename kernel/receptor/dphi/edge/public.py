@@ -143,8 +143,6 @@ async def public_agent_execute(
 ):
     request_id = f"cbot_{uuid.uuid4().hex[:8]}"
     with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
-        
-        # 1. 의도(Intent) 및 결제 검증
         val_req = IntentValidationRequest(
             requester_id=intent.agent_id,
             responder_id=intent.responder_id or "edge-gateway-01",
@@ -153,7 +151,7 @@ async def public_agent_execute(
             signature=intent.signature,
             payment_receipt=x_x402_receipt
         )
-        # [IMPROVED] Agent Execute 에서는 401을 그대로 리턴하여 "Intent Rejected" 메시지 생성
+
         try:
             await rpc.call("eco.compute.intent.validate", val_req.model_dump(exclude_none=True))
         except HTTPException as e:

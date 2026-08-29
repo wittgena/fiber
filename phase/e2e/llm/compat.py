@@ -222,7 +222,7 @@ class LlmCompatWorkflow(Workflow):
         self.log.info(f"[{self.name}] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification")
         try:
             # 1. StateMapper & Traverser 규칙 직접 검증 (Gemini Tool Leak 시뮬레이션)
-            from fiber.dphi.model.mapper.state import StateMapper
+            from fiber.llm.router.mapper.state import StateMapper
             mapper = StateMapper()
             
             mock_raw_resp = {

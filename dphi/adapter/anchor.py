@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
-from xphi.arch.eco.dphi.transaction import TransactionReceipt
+from xphi.arch.eco.adapter.transaction import TransactionReceipt
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
