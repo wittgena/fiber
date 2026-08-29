@@ -12,7 +12,7 @@ from fiber.dphi.adapter.builder import NotarySwarm
 from fiber.dphi.adapter.dvm import DvmAdapter
 from fiber.dphi.observer.intent.verifier import VerificationError
 
-from xphi.eco.adapter.shadow import ShadowAdapter
+from xphi.arch.eco.adapter.shadow import ShadowAdapter
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.space.topos.network.bridge import RpcBridge
 from xphi.watcher.plane.emitter import get_emitter

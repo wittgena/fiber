@@ -12,7 +12,7 @@ from fiber.dphi.workflow.eco.infra import (
 )
 from fiber.kernel.attach.sandbox import TestScripts
 
-from xphi.eco.protocol import TriadAxis
+from xphi.arch.eco.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter

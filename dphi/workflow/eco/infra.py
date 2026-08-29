@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List
 from fiber.dphi.adapter.config import dphi_env
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.eco.protocol import (
+from xphi.arch.eco.protocol import (
     TriadAxis, ProtocolValidator, D3Protocol,
     MsgIngressPledge, MsgDelegateTrust, MsgWasmExecution, 
     MsgExecutionReceipt, MsgSettlementSeal

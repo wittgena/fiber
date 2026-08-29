@@ -26,7 +26,7 @@ from xphi.watcher.receptor.edge.receipt import (
 
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.cgroup import Tier
-from xphi.eco.dphi.config import tier_config, billing_config
+from xphi.arch.eco.dphi.config import tier_config, billing_config
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.space.sandbox.profile import VerificationError
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
@@ -285,7 +285,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from xphi.eco.dphi.settlement import EcoAdapter
+        from xphi.arch.eco.dphi.settlement import EcoAdapter
         invoice = EcoAdapter.build_x402_invoice(
             payee_address=payee_address,
             amount_usdc=amount_usdc,

@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from fiber.dphi.client.wallet import LocalWalletClient
 from fiber.dphi.adapter.config import dphi_env
 from fiber.dphi.adapter.anchor import LedgerEventSchema, StreamAppendRequest
-from xphi.eco.dphi.transaction import TransactionReceipt
+from xphi.arch.eco.dphi.transaction import TransactionReceipt
 
 from xphi.arch.contract.model.receptor import (
     TradeIngressRequest,
