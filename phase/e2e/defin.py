@@ -16,10 +16,10 @@ from fiber.dphi.workflow.defin import (
 )
 from fiber.dphi.adapter.dvm import DvmAdapter
 
-from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.phase.network.bridge import RpcBridge
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.phase.inter.dvm import DvmInterpreter
-from xphi.kernel.space.runner.phase import SchemeRunner
+from xphi.kernel.space.runner import SchemeRunner
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 

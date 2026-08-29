@@ -13,7 +13,7 @@ from xphi.arch.eco.protocol import (
     MsgExecutionReceipt, MsgSettlementSeal
 )
 from xphi.kernel.dphi.broker import DphiBroker
-from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.phase.network.bridge import RpcBridge
 from xphi.kernel.dphi.adapter.utxo import (
     UtxoAdapter, UtxoPointer, UtxoInput, UtxoOutput, UtxoTransaction,
     AgentWallet, compute_merkle_root

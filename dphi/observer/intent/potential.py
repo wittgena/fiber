@@ -17,7 +17,7 @@ from xphi.arch.event.next import uuid4
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.broker import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.phase.network.bridge import RpcBridge
 from xphi.kernel.phase.inter.dvm import DvmInterpreter
 
 log = get_emitter("intent.potential")

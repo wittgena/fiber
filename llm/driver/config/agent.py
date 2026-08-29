@@ -1,4 +1,5 @@
-# fiber.llm.config.agent
+# fiber.llm.driver.config.agent
+## @lineage: fiber.llm.config.agent
 ## @lineage: llm.config.agent
 ## @lineage: agent.config
 from __future__ import annotations
@@ -15,7 +16,7 @@ from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from fiber.llm.model.message import Message, TextContent
 from fiber.llm.driver.model import LLMModel
-from fiber.llm.config.mcp import MCPConfig
+from fiber.llm.driver.config.mcp import MCPConfig
 
 from xphi.arch.contract.model.graph import EntryNode
 from xphi.arch.contract.resolver.secret import SecretSource, SecretValue

@@ -11,7 +11,7 @@ from fiber.dphi.client.http import VerifiedHttpClient
 from fiber.dphi.rpc.client import InternalRpcClient
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.space.runner.phase import WebRunner
+from xphi.kernel.space.runner import WebRunner
 from xphi.arch.eco.edge.tracer import E2EConfig, SceneConfig
 from xphi.watcher.plane.emitter import get_emitter
 

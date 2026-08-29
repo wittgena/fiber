@@ -14,7 +14,7 @@ from fiber.dphi.observer.intent.verifier import VerificationError
 
 from xphi.arch.eco.adapter.shadow import ShadowAdapter
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.space.topos.network.bridge import RpcBridge
+from xphi.kernel.phase.network.bridge import RpcBridge
 from xphi.watcher.plane.emitter import get_emitter
 
 from xphi.kernel.dphi.adapter.utxo import (

@@ -11,7 +11,7 @@ from pydantic import SecretStr
 
 # LLM & Agent Config (from runtime)
 from fiber.llm.driver.model import LLMModel
-from fiber.llm.config.agent import AgentConfig
+from fiber.llm.driver.config.agent import AgentConfig
 from xphi.arch.model.conv.tool import Tool
 
 # Base execution and scope components

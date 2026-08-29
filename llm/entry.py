@@ -20,8 +20,8 @@ from fiber.llm.router.inter.registry import AdapterRegistry
 
 # Arch & Watcher
 from xphi.kernel.dphi.llm.auth import DphiKey, KernelAuthPayload
-from xphi.kernel.space.topos.network.bridge import RpcBridge
-from xphi.kernel.space.topos.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
+from xphi.kernel.phase.network.bridge import RpcBridge
+from xphi.kernel.phase.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
 
 # Loggers

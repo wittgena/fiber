@@ -5,7 +5,7 @@ import time
 import asyncio
 from typing import Any
 
-from xphi.kernel.space.topos.network.channel.pipeline import DuplexChannel, ChannelContext
+from xphi.kernel.phase.network.channel.pipeline import DuplexChannel, ChannelContext
 
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 from fiber.llm.router.stream.accumulator import StreamAccumulator
