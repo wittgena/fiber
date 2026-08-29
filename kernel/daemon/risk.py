@@ -1,8 +1,10 @@
 # fiber.kernel.daemon.risk
+## @lineage: fiber.receptor.daemon.risk
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+from contextlib import suppress
 
 from fiber.dphi.observer.intent.trajectory import (
     TrajectoryOracleReceptor, 
@@ -33,13 +35,33 @@ class RiskAssessment:
 # =========================================================================
 # @phase.2: Trajectory Monitoring and Alert Subsystem
 # =========================================================================
+class _LocalBrokerAdapter:
+    """
+    코어 커널(DphiBroker)을 수정하지 않기 위해 데몬 내부에 배치한 어댑터.
+    TrajectoryOracleReceptor가 과거 규격인 'method=' 키워드로 invoke를 호출하더라도,
+    데몬 내부에서 가로채어 현재 커널 규격인 'target_func='로 치환하여 전달합니다.
+    """
+    def __init__(self, original_broker: DphiBroker):
+        self._original = original_broker
+
+    def __getattr__(self, name):
+        return getattr(self._original, name)
+
+    async def invoke(self, *args, **kwargs):
+        if 'method' in kwargs and 'target_func' not in kwargs:
+            kwargs['target_func'] = kwargs.pop('method')
+        return await self._original.invoke(*args, **kwargs)
+
+
 class DormantTrajectorySentinel:
     """
     WASM 커널 기반의 동역학 평가 엔진을 백그라운드에서 주기적으로 호출하여
     시장의 비선형적 발작(Spiking) 및 위상장 텐션을 모니터링하는 센티널.
     """
     def __init__(self, broker: DphiBroker):
-        self.receptor = TrajectoryOracleReceptor(broker=broker)
+        # 코어 수정을 피하기 위해 로컬 어댑터로 브로커를 래핑하여 주입
+        safe_broker = _LocalBrokerAdapter(broker)
+        self.receptor = TrajectoryOracleReceptor(broker=safe_broker)
         self.alert_emitter = get_emitter("sentinel.awakening")
 
     async def run_dormant_loop_async(self, symbol: str, target_arns: List[str], base_interval: int = 3600):
@@ -69,10 +91,13 @@ class DormantTrajectorySentinel:
                 elif phase_name == TensionPhase.RUPTURE.name or is_spiking:
                     self.alert_emitter.critical(f"[{symbol}] 🚨 RUPTURE DETECTED. Tension: {tension:.2f} | Spiking: {is_spiking}. Initiating Capture.")
                     
-                    if asyncio.iscoroutinefunction(self._trigger_awakening):
-                        await self._trigger_awakening(symbol, target_arns, current_interval, tension)
-                    else:
-                        self._trigger_awakening(symbol, target_arns, current_interval, tension)
+                    try:
+                        if asyncio.iscoroutinefunction(self._trigger_awakening):
+                            await self._trigger_awakening(symbol, target_arns, current_interval, tension)
+                        else:
+                            self._trigger_awakening(symbol, target_arns, current_interval, tension)
+                    except Exception as alert_exc:
+                        self.alert_emitter.error(f"[{symbol}] Awakening trigger failed: {alert_exc}", exc_info=True)
                     
                     # 캡처 완료 후 쿨다운
                     await asyncio.sleep(base_interval * 24) 
@@ -82,6 +107,9 @@ class DormantTrajectorySentinel:
                 raise
             except Exception as e:
                 self.alert_emitter.warning(f"Sentinel evaluation error: {e}")
+                # 지속적 에러 발생 시 CPU 폭주를 막기 위한 백오프 대기
+                await asyncio.sleep(10)
+                continue
                 
             await asyncio.sleep(current_interval)
 
@@ -148,7 +176,6 @@ class ResourceVault:
         self.router = router
         self.risk = risk_manager
         
-        # DphiBroker 의존성 주입
         self.sentinel = DormantTrajectorySentinel(broker)
         self.sentinel._trigger_awakening = self._capture_anomaly
 
@@ -207,7 +234,11 @@ class RiskVaultDaemon(AbstractDaemon):
     def __init__(self, ctx):
         super().__init__("RiskVaultDaemon")
         self.ctx = ctx  
-        self.broker = DphiBroker.get_instance()
+        
+        self.broker = getattr(self.ctx, 'broker', None)
+        if not self.broker:
+            raise RuntimeError("DphiBroker has not been injected into RuntimeContext.")
+            
         self.policy = RiskPolicy(
             base_friction_bps=15.0, 
             max_allocation_pct=0.20,
@@ -232,7 +263,8 @@ class RiskVaultDaemon(AbstractDaemon):
         )
 
     async def run(self):
-        log.info(f"[{self.name}] Autonomous State Daemon Started. (Node ID: {self.ctx.node_id})")
+        node_id = getattr(self.ctx, 'node_id', 'unknown')
+        log.info(f"[{self.name}] Autonomous State Daemon Started. (Node ID: {node_id})")
         log.info(f"[{self.name}] Bound Logic Hash: {self.logic_hash[:16]}... (Proprietary execution locked)")
         
         vault_task = asyncio.create_task(self.vault.deploy_daemon(self.target_symbol, self.target_nodes))
@@ -241,12 +273,18 @@ class RiskVaultDaemon(AbstractDaemon):
             while self.running:
                 await asyncio.sleep(1.0)
                 if vault_task.done():
-                    log.error(f"[{self.name}] Vault Task exited unexpectedly.")
+                    exc = vault_task.exception()
+                    if exc:
+                        log.error(f"[{self.name}] Vault Task crashed with exception: {exc}", exc_info=exc)
+                    else:
+                        log.error(f"[{self.name}] Vault Task exited unexpectedly without raising an exception.")
                     break
         except asyncio.CancelledError:
             log.info(f"[{self.name}] Cancellation signal received from Node Supervisor.")
         finally:
             if not vault_task.done():
                 vault_task.cancel()
-                log.info(f"[{self.name}] Sub-task (Vault Daemon) safely cancelled.")
+                with suppress(asyncio.CancelledError):
+                    await vault_task
+                log.info(f"[{self.name}] Sub-task (Vault Daemon) safely cancelled and awaited.")
             log.info(f"[{self.name}] Daemon evaporated cleanly.")

@@ -7,7 +7,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from fiber.phase.flow.imports.aligner import RelativeImportAligner
+from xphi.arch.contract.phase.transformer import RelativeImportAligner
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.phase.runtime.executor.cli import CliTaskAdapter, parse_local, dispatch_cli

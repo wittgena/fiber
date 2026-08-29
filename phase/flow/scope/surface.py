@@ -1,6 +1,4 @@
 # fiber.phase.flow.scope.surface
-## @lineage: phase.scope.surface
-## @lineage: agent.scope.surface
 import os
 import sys
 import time
@@ -14,7 +12,7 @@ from typing import Type, Optional, Callable, Any
 import httpx
 import redis
 
-from xphi.arch.local.llm import LLMEngine
+from fiber.llm.driver.local.engine import LLMEngine
 from xphi.watcher.plane.emitter import get_emitter
 
 log_local = get_emitter("surface.local")

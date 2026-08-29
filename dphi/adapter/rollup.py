@@ -1,8 +1,4 @@
 # fiber.dphi.adapter.rollup
-## @lineage: dphi.adapter.rollup
-## @lineage: dphi.bound.adapter.rollup
-## @lineage: bound.adapter.rollup
-## @lineage: phase.dphi.adapter.rollup
 import os
 import time
 import hashlib
@@ -10,7 +6,7 @@ import json
 from typing import Dict, Any
 
 from fiber.dphi.adapter.config import dphi_env
-from xphi.kernel.dphi.adapter.dvm import DvmAdapter
+from fiber.dphi.adapter.dvm import DvmAdapter
 from xphi.kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.adapter.state import StateAdapter
@@ -107,7 +103,7 @@ class RollupAdapter:
         return rollup_hash
 
     async def process_x402_settlement(self, invoice: Any) -> Any:
-        from xphi.eco.dphi.settlement import X402SettlementReceipt
+        from xphi.arch.eco.dphi.settlement import X402SettlementReceipt
         
         tx_hash = await self.transfer(
             to_address=invoice.pay_to,

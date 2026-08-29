@@ -7,7 +7,7 @@ import random
 import json
 from typing import Any
 
-from fiber.workflow.scene.anchor import ActorIdentity 
+from dphi.workflow.scene.anchor import ActorIdentity 
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter

@@ -8,10 +8,10 @@ import uuid
 from dataclasses import asdict
 from typing import Optional
 
-from xphi.kernel.wasm.builder import WasmBuilder
+from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.arch.contract.event.psi import PsiEvent, PsiCarrier, CarrierType
-from xphi.arch.contract.event.next import next_id
+from xphi.arch.event.psi import PsiEvent, PsiCarrier, CarrierType
+from xphi.arch.event.next import next_id
 from xphi.kernel.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_STREAM
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter

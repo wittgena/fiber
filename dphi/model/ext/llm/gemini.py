@@ -66,7 +66,7 @@ DEFAULT_MODEL = "gemini-3-flash-preview"
 if TYPE_CHECKING:
     from fiber.dphi.model.ext.llm.model.types.tool import BaseTool
 
-from xphi.arch.model.phase.gate import uuid4 
+from xphi.arch.event.next import uuid4 
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

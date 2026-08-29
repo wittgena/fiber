@@ -11,7 +11,7 @@ from collections import defaultdict
 from fiber.llm.model.metric import Metrics
 from fiber.llm.param import ModelResponse
 
-from xphi.arch.model.phase.gate import uuid4
+from xphi.arch.event.next import uuid4
 from xphi.watcher.plane.emitter import get_emitter, _flow_context
 
 log = get_emitter("driver.observer")

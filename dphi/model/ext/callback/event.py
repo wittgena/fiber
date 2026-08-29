@@ -16,7 +16,7 @@ from fiber.dphi.model.ext.llm.model.types.block import (
 )
 from fiber.dphi.model.mapper.pydantic import ConfigDict, Field
 from fiber.dphi.model.ext.llm.handle.template import BasePromptTemplate
-from xphi.arch.model.phase.gate import uuid4
+from xphi.arch.event.next import uuid4
 
 class BaseEvent(BaseModel):
     model_config = ConfigDict(

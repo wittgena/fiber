@@ -32,10 +32,10 @@ from fiber.llm.config.cloud import VendorConfig
 from fiber.llm.exception.types import LLMContextWindowTooSmallError
 from fiber.llm.driver.factory import DriverFactory
 
-from xphi.arch.xor.parser.mark.convset import SettingProminence, field_meta
-from xphi.arch.xor.parser.mark.depre import warn_deprecated
+from xphi.xor.parser.mark.convset import SettingProminence, field_meta
+from xphi.xor.parser.mark.depre import warn_deprecated
 from xphi.arch.model.config import config
-from xphi.arch.xor.secret.validator import serialize_secret, validate_secret
+from xphi.xor.secret.validator import serialize_secret, validate_secret
 from xphi.kernel.space.bind.resolver import find_current_self
 
 SELF_ROOT = find_current_self()
