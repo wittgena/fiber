@@ -6,9 +6,9 @@ import importlib
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-from xphi.kernel.wasm.builder import WasmBuilder
+from xphi.arch.wasm.builder import WasmBuilder
 import dphi.workflow.scene as scene_module
-from xphi.kernel.wasm.tester import WasmTester
+from xphi.arch.wasm.tester import WasmTester
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.space.bind.resolver import resolve_path

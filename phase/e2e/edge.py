@@ -12,10 +12,10 @@ from fiber.kernel.daemon.rpc import RpcWorkerDaemon
 
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
-from xphi.watcher.receptor.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
+from xphi.arch.eco.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.tracer.dphi import DphiTracer
-from xphi.kernel.wasm.builder import WasmBuilder
+from xphi.arch.wasm.builder import WasmBuilder
 
 log = get_emitter("e2e.edge")
 

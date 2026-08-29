@@ -12,7 +12,7 @@ from fiber.dphi.rpc.client import InternalRpcClient
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.space.runner.phase import WebRunner
-from xphi.watcher.receptor.edge.tracer import E2EConfig, SceneConfig
+from xphi.arch.eco.edge.tracer import E2EConfig, SceneConfig
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.workflow.edge")

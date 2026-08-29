@@ -8,7 +8,7 @@ from fiber.dphi.workflow.wasm.bench.profile import ProfileBenchmarker, BENCH_TAR
 
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.phase.reactor import PhaseReactor
-from xphi.kernel.wasm.tester import WasmTester
+from xphi.arch.wasm.tester import WasmTester
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("bench.entry")

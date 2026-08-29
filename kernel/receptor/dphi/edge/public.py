@@ -28,7 +28,7 @@ from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.watcher.receptor.edge.receipt import (
+from xphi.arch.eco.edge.receipt import (
     CodebotIntent, 
     AuditReceipt,
     ExportLogsServiceRequest, 
@@ -40,7 +40,7 @@ from xphi.watcher.receptor.edge.receipt import (
     KernelExecutionRecord,
     KernelOtlpRecord
 )
-from xphi.watcher.receptor.audit.secret import SecretAuditor
+from fiber.kernel.receptor.audit.secret import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.public")

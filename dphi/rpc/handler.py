@@ -19,7 +19,7 @@ from xphi.arch.contract.model.receptor import (
     EpochInitPayload,
     ClearingReceiptRequest
 )
-from xphi.watcher.receptor.edge.receipt import (
+from xphi.arch.eco.edge.receipt import (
     BilledExecutionRequest,
     KernelLedgerAppendRecord
 )

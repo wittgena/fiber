@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional, List
 import httpx
 
 from fiber.dphi.client.http import VerifiedHttpClient
-from xphi.watcher.receptor.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
+from xphi.arch.eco.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
 
 
 # =========================================================================

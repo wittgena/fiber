@@ -1,15 +1,13 @@
 # fiber.kernel.receptor.dphi.depend
-## @lineage: fiber.receptor.dphi.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 
 from fiber.dphi.rpc.client import InternalRpcClient
+from fiber.kernel.receptor.audit.secret import SecretAuditor
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
-from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.kernel.dphi.broker import DphiBroker
-
-from xphi.watcher.receptor.audit.secret import SecretAuditor
+from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.depend")

@@ -8,7 +8,7 @@ import uuid
 from dataclasses import asdict
 from typing import Optional
 
-from xphi.kernel.wasm.builder import WasmBuilder
+from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.arch.event.psi import PsiEvent, PsiCarrier, CarrierType
 from xphi.arch.event.next import next_id

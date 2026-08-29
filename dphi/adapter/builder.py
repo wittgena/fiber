@@ -25,7 +25,7 @@ from xphi.arch.contract.model.receptor import (
 )
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.watcher.receptor.edge.receipt import ExportLogsServiceRequest
+from xphi.arch.eco.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.builder")
