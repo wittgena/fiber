@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # ---------------------------------------------------------
 # Unified Imports
 # ---------------------------------------------------------
-from fiber.kernel.receptor.dphi.rest import create_app, Config
+from fiber.kernel.receptor.edge.rest.api import create_app, Config
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps

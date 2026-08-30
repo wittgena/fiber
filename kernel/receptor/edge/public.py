@@ -1,4 +1,5 @@
-# fiber.kernel.receptor.dphi.edge.public
+# fiber.kernel.receptor.edge.public
+## @lineage: fiber.kernel.receptor.dphi.edge.public
 import os
 import json
 import time
@@ -12,7 +13,7 @@ from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HT
 from pydantic import BaseModel
 
 from fiber.dphi.infra.builder import NotarySwarm
-from fiber.kernel.receptor.dphi.depend import (
+from fiber.kernel.receptor.edge.rest.depend import (
     get_wasm_broker, 
     get_pubsub, 
     get_otlp_engine, 
@@ -111,7 +112,6 @@ async def public_agent_quote(
             signature=intent.signature,
             payment_receipt=x_x402_receipt
         )
-        # [IMPROVED] RPC 에러(401)를 잡아서 외부 API 스펙에 맞게 422로 변환
         try:
             await rpc.call("eco.compute.intent.validate", val_req.model_dump(exclude_none=True))
         except HTTPException as e:
@@ -157,7 +157,6 @@ async def public_agent_execute(
         except HTTPException as e:
             raise HTTPException(status_code=401, detail=f"Intent Rejected: {{\"detail\":\"{e.detail}\"}}")
 
-        # 2. 과금 연산 실행 (RPC)
         exec_req = BilledExecutionRequest(
             agent_schema={
                 "runtime": "python3.11-wasm",
@@ -167,13 +166,12 @@ async def public_agent_execute(
             target_entry="main.py",
             context_depth=2
         )
-        # [IMPROVED] Compute Failed 에러는 422 래핑 유지
+
         try:
             exec_data = await rpc.call("eco.profile.execute.billed", exec_req.model_dump())
         except HTTPException as e:
             raise HTTPException(status_code=422, detail=f"Compute Failed: {{\"detail\":\"{e.detail}\"}}")
         
-        # 3. 암호학적 영수증(AuditReceipt) 발행 
         fuel_metered = exec_data.get("fuel_billed", 0)
         cost_usd = exec_data.get("billed_cost_usd", 0.0)
         exec_hash = hashlib.sha256(json.dumps(exec_data).encode()).hexdigest()
@@ -227,7 +225,6 @@ async def public_agent_handshake(
     intent: CodebotIntent,
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
-    # 1. 견적 조회 (Quote)
     quote_req = {
         "agent_schema": {
             "runtime": "python3.11-wasm",
@@ -246,7 +243,6 @@ async def public_agent_handshake(
     cost_usd = quote_data.get("estimated_cost_usd", 0.0)
     fuel = quote_data.get("fuel_estimated", 0)
 
-    # 2. 인보이스 발급 (Invoice)
     invoice_req = {
         "payee_address": "0x000000000000000000000000000000000000dEaD",
         "amount_usdc": str(cost_usd),
@@ -278,7 +274,6 @@ async def public_issue_invoice(
     try:
         return await rpc.call("eco.exchange.invoice.issue", req.model_dump())
     except HTTPException as e:
-        # 워커에서 올라온 에러를 그대로 패스스루
         raise
 
 
@@ -415,10 +410,17 @@ async def public_audit_log(
     summary="Verify AuditReceipt Authenticity"
 )
 async def public_audit_verify(
-    receipt: Dict[str, Any] = Body(...),
+    # [IMPROVED] 무의미한 Dict 대신 AuditReceipt 모델을 통해 타입 안전성과 필수 필드 검증을 강제합니다.
+    receipt: AuditReceipt = Body(...),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        return await rpc.call("core.ledger.verify", receipt)
+        # Pydantic 모델을 통해 안전하게 검증된 데이터만 추출하여 RPC 핸들러로 전달합니다.
+        rpc_payload = {
+            "receipt_id": receipt.receipt_id,
+            "state_root": receipt.state_root,
+            "full_receipt": receipt.model_dump(exclude_none=True)
+        }
+        return await rpc.call("core.ledger.verify", rpc_payload)
     except HTTPException as e:
         raise HTTPException(status_code=e.status_code, detail=f"Verification Failed: {{\"detail\":\"{e.detail}\"}}")

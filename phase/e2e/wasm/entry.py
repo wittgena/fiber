@@ -1,4 +1,5 @@
-# fiber.dphi.workflow.wasm.entry
+# fiber.phase.e2e.wasm.entry
+## @lineage: fiber.dphi.workflow.wasm.entry
 ## @lineage: fiber.workflow.wasm.entry
 import sys
 import argparse

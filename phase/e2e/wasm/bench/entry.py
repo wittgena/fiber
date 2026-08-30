@@ -1,10 +1,10 @@
-# fiber.dphi.workflow.wasm.bench.entry
-## @lineage: fiber.workflow.wasm.bench.entry
+# fiber.phase.e2e.wasm.bench.entry
+## @lineage: fiber.dphi.workflow.wasm.bench.entry
 import sys
 import argparse
 from pathlib import Path
 
-from fiber.dphi.workflow.wasm.bench.profile import ProfileBenchmarker, BENCH_TARGETS
+from fiber.phase.e2e.wasm.bench.profile import ProfileBenchmarker, BENCH_TARGETS
 
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.phase.reactor import PhaseReactor

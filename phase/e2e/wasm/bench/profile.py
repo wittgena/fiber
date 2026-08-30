@@ -1,4 +1,5 @@
-# fiber.dphi.workflow.wasm.bench.profile
+# fiber.phase.e2e.wasm.bench.profile
+## @lineage: fiber.dphi.workflow.wasm.bench.profile
 ## @lineage: fiber.workflow.wasm.bench.profile
 ## @lineage: workflow.bench.profile
 import time

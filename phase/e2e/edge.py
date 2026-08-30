@@ -6,8 +6,13 @@ from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, List, Optional
 
 import httpx
+from eth_account import Account
+from eth_account.messages import encode_defunct
+
+from fiber.dphi.workflow.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from fiber.dphi.workflow.edge import EdgeWorkflow
-from fiber.kernel.receptor.dphi.rest import create_app, Config
+from fiber.dphi.client.http import VerifiedHttpClient
+from fiber.kernel.receptor.edge.rest.api import create_app, Config
 from fiber.kernel.daemon.rpc import RpcWorkerDaemon
 
 from xphi.arch.wasm.builder import WasmBuilder
@@ -15,7 +20,6 @@ from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.tracer.edge import E2EConfig, SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.tracer.dphi import DphiTracer
 
 log = get_emitter("e2e.edge")
 
@@ -40,58 +44,6 @@ class ManagedTestServer(uvicorn.Server):
     def install_signal_handlers(self):
         pass
 
-# ==========================================
-# Payload Builders (테스트용 데이터 생성기)
-# ==========================================
-
-def create_otlp_payload(inject_faults: bool) -> dict:
-    from fiber.dphi.infra.builder import EcoBuilder
-    if inject_faults:
-        return {"garbage_field_missing_required_keys": True}
-    return EcoBuilder.otlp_payload(is_malformed=False)
-
-def create_agent_intent_payload(inject_faults: bool) -> dict:
-    return {
-        "agent_id": "test-agent-01",
-        "responder_id": "target-node-01", 
-        "action": "EXECUTE_PYTHON",
-        "source_code": "print('Hello from Edge E2E Test')",
-        "max_fuel": 1000000,
-        "signature": "0x_bad_signature_for_testing_faults" if inject_faults else "0x_valid_dummy_signature",
-        "sig_algo": "ECDSA_SECP256K1" 
-    }
-
-def create_trade_payload(inject_faults: bool) -> dict:
-    if inject_faults:
-        return {"agent_id": "test-agent-01"} 
-    return {
-        "agent_id": "test-agent-01", 
-        "action": "TRADE", 
-        "parameters": {"target_pair": "ETH/USDC", "amount": 100}
-    }
-
-def create_ledger_payload(exchange_root: str, inject_faults: bool) -> dict:
-    if inject_faults:
-        return {"stream_name": "audit_stream"} 
-    return {
-        "stream_name": "system_audit",
-        "events": [
-            {
-                "action": "D3FI_SETTLEMENT",
-                "user_id": "agent-01",
-                "details": f"Trade Executed. State Root: {exchange_root}"
-            }
-        ],
-        "verbose": False
-    }
-
-def get_edge_scene_config() -> SceneConfig:
-    return SceneConfig(
-        otlp_builder=create_otlp_payload,
-        agent_intent_builder=create_agent_intent_payload,
-        trade_builder=create_trade_payload,
-        ledger_builder=create_ledger_payload
-    )
 
 # ==========================================
 # Test Pipeline Runners
@@ -115,7 +67,6 @@ class GatewayTracerPipeline(PipelineRunner):
         super().__init__(name="Public Gateway & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")
         self.config = config
         self.tracer = HttpFlowTracer()
-        self.scene_config = get_edge_scene_config()
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
         
         self.test_config = Config(wasm_timeout=5.0)
@@ -193,20 +144,73 @@ class GatewayTracerPipeline(PipelineRunner):
         if getattr(builder, 'rupture_confirmed', False): raise RuntimeError("WasmBuilder failed")
 
     async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
-        async with httpx.AsyncClient(base_url=self.config.base_url, event_hooks={'request': [self.tracer.trace_request], 'response': [self.tracer.trace_response]}, timeout=15.0) as client:
-            runner = EdgeWorkflow(config=self.config, scene_config=self.scene_config, client=client, inject_faults=inject_faults, attestation_injector=attestation_injector)
-            tracer = DphiTracer(tester=runner)
-            await tracer.trace() 
+        """
+        [정합성이 회복된 E2E 시나리오 러너]
+        - 클라이언트(E2E)가 직접 진짜 지갑과 서명을 생성하여 시스템에 진입합니다.
+        - HTTP 통신 계층에서 응답 서명(Attestation)을 직접 검증합니다.
+        - FSM의 최종 종단 상태(Terminal State)를 통해 비즈니스 흐름 전체의 완결성을 검증합니다.
+        """
+        async with httpx.AsyncClient(base_url=self.config.base_url, timeout=15.0) as client:
             
-            has_rupture = getattr(tracer, 'rupture_confirmed', False)
+            # [개선] HTTP 이벤트 훅 조립 (통신 계층 방어선)
+            response_hooks = [self.tracer.trace_response]
             
+            if attestation_injector:
+                async def apply_tamper(response: httpx.Response):
+                    attestation_injector(response)
+                response_hooks.append(apply_tamper)
+                
+            async def verify_signature(response: httpx.Response):
+                # 서버가 200 OK를 반환했을 때만 응답 헤더의 Attestation 증명을 검증
+                if response.status_code == 200:
+                    verifier = VerifiedHttpClient(client=client)
+                    verifier._verify_header_proof(response)
+            response_hooks.append(verify_signature)
+            
+            client.event_hooks['request'] = [self.tracer.trace_request]
+            client.event_hooks['response'] = response_hooks
+
+            # 1. 클라이언트 자격 증명(지갑) 생성
+            wallet = Account.create()
+            agent_id = wallet.address
+            action = "EXECUTE_PYTHON"
+            max_fuel = 1000000
+            source_code = "print('Hello from Edge E2E Test')"
+
+            # 2. 암호학적 서명 생성 (결함 주입 시 고의로 위조 서명 사용)
+            if inject_faults:
+                signature = "0x_tampered_invalid_signature_for_chaos_testing"
+            else:
+                sig_text = f"EXECUTE:{agent_id}:{action}:{max_fuel}"
+                msg = encode_defunct(text=sig_text)
+                signature = wallet.sign_message(msg).signature.hex()
+
+            # 3. 완벽한 도메인 이벤트 조립
+            start_event = StartIntentEvent(
+                agent_id=agent_id,
+                action=action,
+                max_fuel=max_fuel,
+                source_code=source_code,
+                signature=signature
+            )
+            
+            # 4. 순수 FSM 및 Workflow 인스턴스화 후 실행
+            fsm = EdgePhaseFSM()
+            workflow = EdgeWorkflow(fsm=fsm, client=client, base_url=self.config.base_url)
+            
+            await workflow.execute(start_event) 
+            
+            # 5. FSM 거시 상태(Macro State)를 통한 엄격한 E2E 결과 검증
             if attestation_injector is not None:
-                if runner.runner.fail_count == 0:
+                if fsm.state != EdgePhaseState.FAILED:
                     raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")
                 return 
 
-            if has_rupture or runner.runner.fail_count > 0:
-                raise RuntimeError(f"Gateway Ingress Phase failed (Fault Inject: {inject_faults}).")
+            if not inject_faults and fsm.state != EdgePhaseState.COMPLETED:
+                raise RuntimeError(f"Golden Path Failed! Final FSM state: {fsm.state.name}")
+            
+            if inject_faults and fsm.state != EdgePhaseState.FAILED:
+                raise RuntimeError(f"Negative Path Failed! Expected FAILED, got: {fsm.state.name}")
 
     async def phase_ingress_e2e_golden(self): await self._run_scene(False)
     async def phase_ingress_e2e_negative(self): await self._run_scene(True)

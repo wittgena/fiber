@@ -1,6 +1,5 @@
-# fiber.phase.doc.settlement
-@lineage: phase.doc.settlement
-@lineage: dphi.pdoc.settlement
+# fiber.phase.doc.arch.settlement
+@lineage: fiber.phase.doc.settlement
 > **@desc:** DPHI 범용 암호학적 계량 및 청산 아키텍처 (Universal Cryptographic Metering & Settlement Architecture)
 
 ---
