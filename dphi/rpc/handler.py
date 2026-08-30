@@ -8,6 +8,8 @@ from typing import Dict, Any
 from pydantic import ValidationError
 
 from fiber.dphi.adapter.anchor import AnchorProposal, StreamAppendRequest
+
+from xphi.arch.eco.config import tier_config, fuel_config
 from xphi.arch.contract.model.receptor import (
     EdgeState,
     AnchorProposalRequest,
@@ -25,7 +27,6 @@ from xphi.arch.eco.edge.receipt import (
 
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.cgroup import Tier
-from xphi.arch.eco.dphi.config import tier_config, fuel_config
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 

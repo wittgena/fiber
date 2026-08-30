@@ -9,8 +9,8 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from xphi.arch.eco.adapter.settlment import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
-from fiber.dphi.adapter.builder import PhaseBuilder
+from fiber.dphi.eco.transaction import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
+from fiber.dphi.eco.builder import EcoBuilder
 from fiber.dphi.client.wallet import LocalWalletClient
 
 from xphi.kernel.space.runner import SchemeRunner
@@ -188,7 +188,7 @@ class EpochBase(SchemeRunner):
             ).hex() for k in self.committee_keys
         ]
         
-        self.wallet_client: LocalWalletClient = PhaseBuilder.get_testnet_wallet()
+        self.wallet_client: LocalWalletClient = EcoBuilder.get_testnet_wallet()
         self.wallet_client.simulate = simulate_wallet
 
     def _sign_multisig(self, signers: List[ed25519.Ed25519PrivateKey], commit_dict: Dict[str, Any]) -> List[str]:

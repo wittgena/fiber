@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.adapter.config import dphi_env
+from fiber.dphi.eco.config import dphi_env
 from xphi.arch.eco.adapter.settlment import EcoAdapter
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.arch.event.next import generate_parity_triplet, next_phase_id

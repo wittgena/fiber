@@ -39,7 +39,7 @@ class RpcWorkerDaemon(AbstractDaemon):
 
         from xphi.kernel.dphi.broker import DphiBroker
         from xphi.xor.stream.edge import LogStreamStore
-        from xphi.arch.eco.adapter.transaction import ExchangeAdapter
+        from fiber.dphi.eco.transaction import ExchangeAdapter
         from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
         from xphi.kernel.space.sandbox import BenchProfile
         from xphi.kernel.dphi.adapter.sign import NodeSigner

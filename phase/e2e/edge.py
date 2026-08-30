@@ -10,12 +10,12 @@ from fiber.dphi.workflow.edge import EdgeWorkflow
 from fiber.kernel.receptor.dphi.rest import create_app, Config
 from fiber.kernel.daemon.rpc import RpcWorkerDaemon
 
+from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
-from xphi.arch.eco.edge.tracer import E2EConfig, SceneConfig, HttpFlowTracer
+from xphi.watcher.tracer.edge import E2EConfig, SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.tracer.dphi import DphiTracer
-from xphi.arch.wasm.builder import WasmBuilder
 
 log = get_emitter("e2e.edge")
 
@@ -45,10 +45,10 @@ class ManagedTestServer(uvicorn.Server):
 # ==========================================
 
 def create_otlp_payload(inject_faults: bool) -> dict:
-    from fiber.dphi.adapter.builder import PhaseBuilder
+    from fiber.dphi.eco.builder import EcoBuilder
     if inject_faults:
         return {"garbage_field_missing_required_keys": True}
-    return PhaseBuilder.otlp_payload(is_malformed=False)
+    return EcoBuilder.otlp_payload(is_malformed=False)
 
 def create_agent_intent_payload(inject_faults: bool) -> dict:
     return {

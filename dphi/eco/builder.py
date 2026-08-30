@@ -1,5 +1,4 @@
-# fiber.dphi.adapter.builder
-## @lineage: fiber.dphi.adapter.anchor
+# fiber.dphi.eco.builder
 import json
 import time
 import uuid
@@ -14,9 +13,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.dphi.client.wallet import LocalWalletClient
-from fiber.dphi.adapter.config import dphi_env
+from fiber.dphi.eco.config import dphi_env
 from fiber.dphi.adapter.anchor import LedgerEventSchema, StreamAppendRequest
-from xphi.arch.eco.adapter.transaction import TransactionReceipt
+from fiber.dphi.eco.transaction import TransactionReceipt
 
 from xphi.arch.contract.model.receptor import (
     TradeIngressRequest,
@@ -28,7 +27,7 @@ from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.arch.eco.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("adapter.builder")
+log = get_emitter("eco.builder")
 
 class NotarySwarm:
     def __init__(self, size: int = 3):
@@ -50,7 +49,7 @@ class NotarySwarm:
     def attest_payload(self, canonical_hash: bytes) -> List[str]:
         return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
 
-class PhaseBuilder:
+class EcoBuilder:
     __domain_metadata__ = {
         "otlp_payload": "OTel + Datadog/LangSmith. Tracks LLM GenAI metrics (tokens/latency) for billing.",
         "trade_intent": "W3C DID + UniswapX/Fetch.ai. Intent-centric A2A (Agent-to-Agent) resource swap with slippage.",

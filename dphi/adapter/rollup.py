@@ -5,7 +5,7 @@ import hashlib
 import json
 from typing import Dict, Any
 
-from fiber.dphi.adapter.config import dphi_env
+from fiber.dphi.eco.config import dphi_env
 from fiber.dphi.adapter.dvm import DvmAdapter
 from xphi.kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
 from xphi.kernel.dphi.broker import DphiBroker
