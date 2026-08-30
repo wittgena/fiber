@@ -13,7 +13,7 @@ from urllib.parse import urlparse, urlunparse
 import certifi
 import httpx
 
-from fiber.dphi.model.constants import (
+from fiber.llm.router.constants import (
     AIOHTTP_CONNECTOR_LIMIT,
     AIOHTTP_KEEPALIVE_TIMEOUT,
     COMPLETION_HTTP_FALLBACK_SECONDS,

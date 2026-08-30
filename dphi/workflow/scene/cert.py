@@ -8,7 +8,7 @@ import json
 import math
 from typing import Any, List
 
-from fiber.kernel.attach.sandbox import SandboxRunner
+from fiber.kernel.debug.sandbox import SandboxRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter

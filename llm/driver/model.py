@@ -28,7 +28,7 @@ from fiber.llm.driver.observer import DriverObserver
 from fiber.llm.model.info import get_features, supports_vision
 from fiber.llm.model.token.splitter import create_pretrained_tokenizer
 from fiber.llm.model.metric import Metrics
-from fiber.llm.config.cloud import VendorConfig
+from fiber.llm.driver.config.cloud import VendorConfig
 from fiber.llm.exception.types import LLMContextWindowTooSmallError
 from fiber.llm.driver.factory import DriverFactory
 

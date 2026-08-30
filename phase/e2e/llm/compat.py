@@ -13,7 +13,7 @@ from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.llm.model.tier import model_tier_registry
-from fiber.phase.flow.scope.manager import managed_scope
+from fiber.phase.scope.manager import managed_scope
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.phase.reactor import PhaseReactor
@@ -222,7 +222,7 @@ class LlmCompatWorkflow(Workflow):
         self.log.info(f"[{self.name}] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification")
         try:
             # 1. StateMapper & Traverser 규칙 직접 검증 (Gemini Tool Leak 시뮬레이션)
-            from fiber.dphi.model.mapper.state import StateMapper
+            from fiber.llm.router.mapper.state import StateMapper
             mapper = StateMapper()
             
             mock_raw_resp = {
