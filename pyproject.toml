@@ -22,7 +22,7 @@ dev = ["pytest", "pytest-asyncio"]
 all = ["fiber[readers,dev]"]
 
 [tool.hatch.build.hooks.custom]
-path = "phase/flow/hatch.py"
+path = "phase/hatch.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["fiber"]

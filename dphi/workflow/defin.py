@@ -7,12 +7,12 @@ import uuid
 from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass, field
 
-from fiber.dphi.eco.config import dphi_env
-from fiber.dphi.eco.builder import NotarySwarm
-from fiber.dphi.adapter.dvm import DvmAdapter
+from fiber.dphi.infra.config import dphi_env
+from fiber.dphi.infra.builder import NotarySwarm
+from fiber.dphi.infra.adapter.dvm import DvmAdapter
 
-from fiber.dphi.eco.shadow import ShadowAdapter
-from fiber.dphi.observer.intent.verifier import VerificationError
+from fiber.dphi.infra.shadow import ShadowAdapter
+from fiber.dphi.infra.observer.intent.verifier import VerificationError
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.phase.network.bridge import RpcBridge

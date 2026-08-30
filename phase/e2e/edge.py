@@ -45,7 +45,7 @@ class ManagedTestServer(uvicorn.Server):
 # ==========================================
 
 def create_otlp_payload(inject_faults: bool) -> dict:
-    from fiber.dphi.eco.builder import EcoBuilder
+    from fiber.dphi.infra.builder import EcoBuilder
     if inject_faults:
         return {"garbage_field_missing_required_keys": True}
     return EcoBuilder.otlp_payload(is_malformed=False)

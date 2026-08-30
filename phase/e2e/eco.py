@@ -4,13 +4,13 @@ import json
 import asyncio
 
 from fiber.dphi.workflow.scene.anchor import ActorIdentity
-from fiber.dphi.eco.infra import (
+from fiber.dphi.infra.eco.actor import (
     EcoProtocolInterface, 
     EcosystemActor, 
     GrantResource,
     SettlementVerifier
 )
-from fiber.kernel.attach.sandbox import TestScripts
+from fiber.kernel.debug.sandbox import TestScripts
 
 from xphi.arch.eco.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step

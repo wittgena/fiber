@@ -34,12 +34,12 @@ class RpcWorkerDaemon(AbstractDaemon):
         Worker 구동에 필요한 무거운 의존성들을 초기화합니다.
         순환 참조 방지를 위해 함수 내부에 Import 배치.
         """
-        from fiber.dphi.adapter.anchor import NexusAnchor
+        from fiber.dphi.infra.adapter.anchor import NexusAnchor
         from fiber.kernel.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
 
         from xphi.kernel.dphi.broker import DphiBroker
         from xphi.xor.stream.edge import LogStreamStore
-        from fiber.dphi.eco.transaction import ExchangeAdapter
+        from fiber.dphi.infra.transaction import ExchangeAdapter
         from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
         from xphi.kernel.space.sandbox import BenchProfile
         from xphi.kernel.dphi.adapter.sign import NodeSigner

@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from fiber.kernel.attach.sandbox import SandboxRunner
+from fiber.kernel.debug.sandbox import SandboxRunner
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

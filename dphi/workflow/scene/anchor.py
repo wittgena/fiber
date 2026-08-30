@@ -6,10 +6,10 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.kernel.attach.sandbox import EpochBase
+from fiber.kernel.debug.sandbox import EpochBase
 from xphi.kernel.space.runner import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from fiber.dphi.eco.transaction import ExchangeAdapter
+from fiber.dphi.infra.transaction import ExchangeAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

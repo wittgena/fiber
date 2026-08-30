@@ -10,11 +10,11 @@ from pydantic import BaseModel, Field
 
 from fiber.dphi.client.ext.evm import Web3Adapter
 from fiber.dphi.client.ext.wallet import EthWalletAdapter
-from fiber.dphi.adapter.rollup import RollupAdapter
-from fiber.dphi.eco.config import dphi_env
+from fiber.dphi.infra.adapter.rollup import RollupAdapter
+from fiber.dphi.infra.config import dphi_env
 
 from xphi.arch.contract.interface import ContractRouter
-from xphi.arch.eco.adapter.settlment import EcoAdapter, X402Invoice, X402SettlementReceipt
+from fiber.dphi.infra.transaction import EcoAdapter, X402Invoice, X402SettlementReceipt
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")

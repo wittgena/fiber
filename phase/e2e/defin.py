@@ -14,7 +14,7 @@ from fiber.dphi.workflow.defin import (
     VmComputeConfig, CrossVmBillingWorkflow, 
     SettlementConfig, ShadowWalletWorkflow
 )
-from fiber.dphi.adapter.dvm import DvmAdapter
+from fiber.dphi.infra.adapter.dvm import DvmAdapter
 
 from xphi.kernel.phase.network.bridge import RpcBridge
 from xphi.kernel.phase.reactor import PhaseReactor

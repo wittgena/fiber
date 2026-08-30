@@ -9,7 +9,7 @@ import operator
 from typing import Any, List, Dict, Callable
 
 from dphi.workflow.scene.anchor import ActorIdentity
-from fiber.kernel.attach.sandbox import TestScripts
+from fiber.kernel.debug.sandbox import TestScripts
 
 from xphi.kernel.space.runner import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
