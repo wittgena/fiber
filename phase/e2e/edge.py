@@ -9,11 +9,11 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from fiber.dphi.workflow.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
-from fiber.dphi.workflow.edge import EdgeWorkflow
+from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from fiber.dphi.edge.workflow import EdgeWorkflow
 from fiber.dphi.client.http import VerifiedHttpClient
-from fiber.kernel.receptor.edge.rest.api import create_app, Config
-from fiber.kernel.daemon.rpc import RpcWorkerDaemon
+from fiber.dphi.edge.rest.api import create_app, Config
+from fiber.phase.kernel.daemon.rpc import RpcWorkerDaemon
 
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.phase.reactor import PhaseReactor

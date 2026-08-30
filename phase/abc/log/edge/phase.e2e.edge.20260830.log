@@ -1,0 +1,176 @@
+wittgena@wittgenas-MacBook-Pro self % python -m phase.e2e.edge 
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 22 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-50246
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+================================================================================
+ LOG | SYSTEM | INFO  |  e2e.edge: 🧪 [DPHI EDGE MASTER SUITE] Commencing Gateway Ingress & Security Tests
+ LOG | SYSTEM | INFO  |  e2e.edge: ================================================================================
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: Initializing Secure MCP Server (Native 2.0 Gateway)...
+ LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | DEFENSE | INFO  |  server.mcp: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+=== Starting Pipeline: Public Gateway & Network Isolation Trace (EDGE_INGRESS_PIPELINE) ===
+ LOG | SYSTEM | INFO  |  e2e.edge: [Pipeline] Booting embedded Uvicorn REST server on http://127.0.0.1:8353...
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: Starting DPHI REST Edge Gateway...
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: Lock-Free MCP State Adapter initialized (Redis: redis://localhost:6379).
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: REST Edge Gateway successfully started.
+ LOG | SYSTEM | INFO  |  xphi.kernel.space.topos.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  adapter.sign: [Crypto] Node identity loaded. PubKey: d9b397e1...
+HTTP Request: GET http://127.0.0.1:8353/openapi.json "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  e2e.edge: [Pipeline] Igniting RpcWorkerDaemon lifecycle with shared Mock Context...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-50246] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+▶️ [PHASE 1/5] Wasm Build & Pre-warm
+ LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.init: Initiating Structural Trace Lifecycle
+ LOG | agent  | INFO  |  tracer.wasm.builder: 
+--- [START] Compiling WASM Artifacts (DPHI, DVM) ---
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Extracting JSON Schema using Standard Binary...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Standard Schema Extraction Complete (16 methods).
+info: component rust-std for target wasm32-unknown-unknown is up to date
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Applying custom env for dphi: {'RUSTFLAGS': '-C target-feature=+simd128 -C opt-level=3'}
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dphi to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dphi.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling dvm to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> dvm.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: ## @trace.teardown: Collapsing space and reclaiming resources...
+ LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.exit: Field Restored.
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+▶️ [PHASE 2/5] Gateway Ingress (Golden Path)
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: 
+=== [START] EDGE_MACRO_WORKFLOW ===
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [Workflow] Executing Phase: RunComputePhaseCmd
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
+ LOG | SYSTEM | INFO  |  space.sandbox: [anonymous_agent] Target Execution Tier mapped to: STANDARD
+ LOG | SYSTEM | INFO  |  space.sandbox: [sandbox_executor] Injecting task (ToposID: 87674802013351937 | Env: deno)
+ LOG | SYSTEM | INFO  |  space.sandbox: [Billing] Dry-run complete. Estimated 0 units for Agent: anonymous_agent
+HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/quote "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.013s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
+HTTP Request: POST http://127.0.0.1:8353/v1/public/billing/invoice "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.006s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0x65F5Ed6633c6Ef9d1986520983745780B31f7210&asset_type=fuel
+HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0x65F5Ed6633c6Ef9d1986520983745780B31f7210&asset_type=fuel "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.003s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute
+ LOG | SYSTEM | INFO  |  space.sandbox: [anonymous_agent] Target Execution Tier mapped to: SYSTEM
+ LOG | SYSTEM | INFO  |  space.sandbox: [sandbox_executor] Injecting task (ToposID: 87674802147569667 | Env: deno)
+ LOG | SYSTEM | INFO  |  space.sandbox: [Billing] Charged $0.0000 for 0 fuel units. Agent: anonymous_agent
+HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/execute "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.102s
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [Workflow] Executing Phase: RunCompliancePhaseCmd
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/audit/verify
+[Reactor] 💥 Task was destroyed but it is pending!
+    [Context] task: Task(Task-31)
+[Reactor] 💥 Task was destroyed but it is pending!
+    [Context] task: Task(Task-61)
+ LOG | KERNEL | WARN  |  adapter.utxo: [UtxoAdapter] UTXO Lineage verification failed for 5437136c
+ LOG | SYSTEM | INFO  |  dphi.handler: [LedgerVerify] Off-chain receipt cbot_a35512e5 verified via cryptographic fingerprint.
+HTTP Request: POST http://127.0.0.1:8353/v1/public/audit/verify "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.007s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/telemetry/logs
+HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.014s
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [Workflow] Executing Phase: RunSettlementPhaseCmd
+ LOG | KERNEL | INFO  |  mesh.gateway: [Gateway] PROPOSED: Stream 3e15f854-0a8e-43ea-8478-4bd36191d1e4 delegated to Mempool (FOLLOWER mode).
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402
+ LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing Web3Adapter (Async RPC Connection)...
+ LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing Native EthWalletAdapter (Agent)...
+ LOG | SYSTEM | INFO  |  wallet.eth: [Wallet] Native Wallet initialized for alpha: 0x4331626df4B45B695ef5F56670c2e2f2C6A02e3B (Simulate: False)
+ LOG | SYSTEM | INFO  |  edge.ext: [Edge Ext] Initializing DVM RollupAdapter for System Clearing...
+ LOG | SYSTEM | INFO  |  adapter.rollup: [RollupAdapter] Initialized for system_clearing: 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (Simulate: False)
+ LOG | X402_PAYMENT | INFO  |  edge.ext: Processing X402 payment via [DVM Ledger]: 0.0 USDC to 0x000000000000000000000000000000000000dEaD
+ LOG | X402_PAYMENT | INFO  |  adapter.rollup: [RollupAdapter] Initiating DVM Deferred Charge for 0.0 USDC from 0x4331626df4B45B695ef5F56670c2e2f2C6A02e3B...
+ LOG | X402_PAYMENT | INFO  |  adapter.rollup: ✨ [RollupAdapter] Local Rollup Hash generated for Charge: 0x404e53e0d94ff3ce...
+ LOG | X402_PAYMENT | INFO  |  edge.ext: [DVM Ledger] Payment successful. Tx/Rollup Hash: 0x404e53e0d94ff3ce359de19b1a1737ba02a1235c55d4a339a9276ebdd18f995a
+HTTP Request: POST http://127.0.0.1:8353/v1/ext/wallet/pay/x402 "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.142s
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [Workflow] Executing Phase: FinishWorkflowCmd
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [SUCCESS] Workflow Finished. Final TX Hash: 0x_cleared
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+▶️ [PHASE 3/5] Gateway Ingress (Negative Path)
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: 
+=== [START] EDGE_MACRO_WORKFLOW ===
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [Workflow] Executing Phase: RunComputePhaseCmd
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
+ LOG | SYSTEM | INFO  |  space.sandbox: [anonymous_agent] Target Execution Tier mapped to: STANDARD
+ LOG | SYSTEM | INFO  |  space.sandbox: [sandbox_executor] Injecting task (ToposID: 87674803804319745 | Env: deno)
+ LOG | SYSTEM | INFO  |  space.sandbox: [Billing] Dry-run complete. Estimated 0 units for Agent: anonymous_agent
+HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/quote "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.008s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/billing/invoice
+HTTP Request: POST http://127.0.0.1:8353/v1/public/billing/invoice "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.003s
+ LOG | HTTP_TX | INFO  |  edge.tracer: [Trace:TX] GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0xad0c70150336A56fD9dEdDFA22958C583dF27983&asset_type=fuel
+HTTP Request: GET http://127.0.0.1:8353/v1/public/billing/balance?agent_id=0xad0c70150336A56fD9dEdDFA22958C583dF27983&asset_type=fuel "HTTP/1.1 200 OK"
+ LOG | HTTP_RX | INFO  |  edge.tracer: [Trace:RX] 200 OK in 0.003s
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.9] [Acc:0.6] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/execute
+ LOG | GATEWAY_ORCHESTRATION | WARN  |  rpc.client: [RPC Error] eco.compute.intent.validate failed: WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH
+HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/execute "HTTP/1.1 401 Unauthorized"
+SUMMARY🔥| HTTP_RX | WARN  |  [G:0.9] [Acc:0.6] edge.tracer: [Trace:RX] 401 Unauthorized in 0.005s
+  └─ Body: {"detail":"Intent Rejected: {\"detail\":\"WASM Rejected Intent: CRYPTOGRAPHIC_SIGNATURE_MISMATCH\"}"}
+ LOG | SYSTEM | ERROR |  dphi.workflow.edge: [Workflow] Phase Execution Failed: Client error '401 Unauthorized' for url 'http://127.0.0.1:8353/v1/public/agent/execute'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+ LOG | SYSTEM | INFO  |  dphi.workflow.edge: [Workflow] Executing Phase: HaltWorkflowCmd
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.9] [Acc:0.8] dphi.workflow.edge: 
+[HALTED] EDGE_MACRO_WORKFLOW aborted: Client error '401 Unauthorized' for url 'http://127.0.0.1:8353/v1/public/agent/execute'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+▶️ [PHASE 4/5] Gateway Ingress (Tampered Attestation)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.9] dphi.workflow.edge: 
+=== [START] EDGE_MACRO_WORKFLOW ===
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.0] dphi.workflow.edge: [Workflow] Executing Phase: RunComputePhaseCmd
+SUMMARY🔥| HTTP_TX | INFO  |  [G:0.8] [Acc:0.6] edge.tracer: [Trace:TX] POST http://127.0.0.1:8353/v1/public/agent/quote
+[Reactor] 💥 Task was destroyed but it is pending!
+    [Context] task: Task(Task-105)
+ LOG | SYSTEM | INFO  |  space.sandbox: [anonymous_agent] Target Execution Tier mapped to: STANDARD
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.5] space.sandbox: [sandbox_executor] Injecting task (ToposID: 87674803976286209 | Env: deno)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.6] space.sandbox: [Billing] Dry-run complete. Estimated 0 units for Agent: anonymous_agent
+HTTP Request: POST http://127.0.0.1:8353/v1/public/agent/quote "HTTP/1.1 200 OK"
+SUMMARY🔥| HTTP_RX | INFO  |  [G:0.8] [Acc:0.7] edge.tracer: [Trace:RX] 200 OK in 0.008s
+ LOG | SYSTEM | CRIT  |  client.http: [VerifiedHttpClient] 🚨 Signature mismatch! Path: /v1/public/agent/quote
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.7] [Acc:1.1] dphi.workflow.edge: [Workflow] Phase Execution Failed: 서명 검증 실패: 데이터가 변조되었거나 잘못된 서명자입니다.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.2] dphi.workflow.edge: [Workflow] Executing Phase: HaltWorkflowCmd
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.6] [Acc:1.3] dphi.workflow.edge: 
+[HALTED] EDGE_MACRO_WORKFLOW aborted: 서명 검증 실패: 데이터가 변조되었거나 잘못된 서명자입니다.
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: False
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+▶️ [PHASE 5/5] Sentinel Security (Chaos WAF Check)
+HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
+HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
+HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
+HTTP Request: POST http://127.0.0.1:8353/v1/public/telemetry/logs "HTTP/1.1 402 Payment Required"
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+[Pipeline] Triggering teardown sequence...
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: Shutting down receptor.rest safely...
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: MCP Cache Redis connection closed.
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.rest.api: Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  e2e.edge: [Pipeline] All daemons and servers evaporated safely.
+ LOG | SYSTEM | INFO  |  e2e.edge: 
+================================================================================
+ LOG | SYSTEM | INFO  |  e2e.edge: 🛡️ [EDGE GATEWAY TEST SUITE REPORT]
+ LOG | SYSTEM | INFO  |  e2e.edge: ================================================================================
+ LOG | SYSTEM | INFO  |  e2e.edge: ✅ 01. [EDGE_GATEWAY]  Wasm Build & Pre-warm                         | Result: PASSED
+ LOG | SYSTEM | INFO  |  e2e.edge: ✅ 02. [EDGE_GATEWAY]  Gateway Ingress (Golden Path)                 | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] e2e.edge: ✅ 03. [EDGE_GATEWAY]  Gateway Ingress (Negative Path)               | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] e2e.edge: ✅ 04. [EDGE_GATEWAY]  Gateway Ingress (Tampered Attestation)        | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] e2e.edge: ✅ 05. [EDGE_GATEWAY]  Sentinel Security (Chaos WAF Check)           | Result: PASSED
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.edge' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] e2e.edge: --------------------------------------------------------------------------------
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.8] e2e.edge: [e2e.edge] Bursting logs suppressed... (x3)
