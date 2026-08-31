@@ -1,7 +1,4 @@
 # fiber.phase.scope.manager
-## @lineage: fiber.phase.flow.scope.manager
-## @lineage: phase.scope.manager
-## @lineage: agent.scope.manager
 import os
 import asyncio
 import json
@@ -10,28 +7,23 @@ from contextlib import asynccontextmanager, AsyncExitStack
 
 from pydantic import SecretStr
 
-# LLM & Agent Config (from runtime)
-from fiber.llm.driver.model import LLMModel
-from fiber.llm.driver.config.agent import AgentConfig
-from xphi.arch.model.conv.tool import Tool
-
-# Base execution and scope components
-from surgent.agent.executor import LoopExecutor
-from fiber.phase.scope.observer import ManifoldFolder, FlowTransition
-from fiber.phase.scope.surface import get_surface_class, SurfaceConfig
+from surgent.agent.executor.loop import LoopExecutor
 from surgent.space.manager import SpaceNode, space_provider
 
-# Architectures and Kernel Topos components
+from fiber.llm.driver.model import LLMModel
+from fiber.llm.driver.config.agent import AgentConfig
+from fiber.phase.scope.observer import ManifoldFolder, FlowTransition
+from fiber.phase.scope.surface import get_surface_class, SurfaceConfig
+from fiber.dphi.infra.transaction import ExchangeAdapter, TransactionReceipt
+
+from xphi.arch.model.conv.tool import Tool
 from xphi.arch.model.surge.blueprint import SurgeBlueprint
 from xphi.arch.contract.model.graph import EntryNode
 from xphi.arch.model.sealer import EpochSealer
 from xphi.kernel.space.topos.node.gan import Message, GanNode
 from xphi.kernel.space.topos.node.event import AgentConfigured
-
-# Broker, Ledger, and Observability
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.cgroup import Tier
-from fiber.dphi.infra.transaction import ExchangeAdapter, TransactionReceipt
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.tracer.scope import scope_trace, get_current_trace_path
 

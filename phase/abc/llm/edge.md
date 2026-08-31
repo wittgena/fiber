@@ -1,8 +1,4 @@
 # fiber.phase.abc.llm.edge
-다음은 요청하신 문서에서 불필요한 수식어와 과장된 서사를 배제하고, 모든 기술적 내용을 누락 없이 스펙(Specification) 관점에서 객관적이고 엄밀하게 재작성한 아키텍처 명세서입니다.
-
-# Specification: fiber.phase.abc.llm.edge
-
 **@desc:** Zero-Trust LLM Gateway, Kernel Authorization Ingress & Ecosystem Integration for DPHI
 
 ---

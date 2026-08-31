@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-import dphi.workflow.scene as scene_module
+import fiber.phase.e2e.scene as scene_module
 
 from xphi.kernel.space.topos.tunnel.flare import FlareTunnelFactory
 from xphi.kernel.dphi.broker import DphiBroker
@@ -16,7 +16,7 @@ from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.flare.controller import FlareController
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("workflow.flare")
+log = get_emitter("e2e.flare")
 MODULE_PATH = scene_module.__name__
 
 @dataclass
