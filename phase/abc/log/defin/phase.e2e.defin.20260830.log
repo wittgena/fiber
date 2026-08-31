@@ -1,0 +1,91 @@
+wittgena@wittgenas-MacBook-Pro self % python -m phase.e2e.defin             
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 22 aliases.
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-49842
+ LOG | SYSTEM | INFO  |  e2e.defin: 
+==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.defin: 🧪 [MASTER SUITE] Commencing Decoupled E2E Integration Tests
+ LOG | SYSTEM | INFO  |  e2e.defin: ==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.defin.compute: 
+[CLI] 🏃‍♂️ Initiating Pipeline-driven Cross-VM DePIN Tests
+ LOG | SYSTEM | INFO  |  e2e.defin.compute: 
+
+================================================================================
+🚀 [DEPIN SCENARIO] 1. Golden Path Compute (3 Agents)
+================================================================================
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🔐 [Security] 암호학적 신원 검증 통과 (Caller: 0x4f7c01c0...)
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🧠 [FSM Bridge] 이벤트 인입: FsmStartIntent
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🧠 [FSM Bridge] 커맨드 발산: MintGenesisUtxoCmd
+ LOG | SYSTEM | INFO  |  pipeline.defin: ⚡ [Infra] FSM 명령 수신: UTXO 제네시스 발행 (100000000 Fuel)
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🧠 [FSM Bridge] 이벤트 인입: UtxoAnchoredEvent
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🧠 [FSM Bridge] 커맨드 발산: ExecuteParallelWasmCmd
+ LOG | SYSTEM | INFO  |  pipeline.defin: ⚡ [Infra] FSM 명령 수신: WASM 병렬 실행 (3 노드)
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🧠 [FSM Bridge] 이벤트 인입: WasmExecutedEvent
+ LOG | SYSTEM | INFO  |  pipeline.defin: 🧠 [FSM Bridge] 커맨드 발산: SealSettlementCmd
+ LOG | SYSTEM | INFO  |  pipeline.defin: ⚡ [Infra] FSM 명령 수신: L1 정산 증명 Seal (Debt: 0.050001 USDC)
+ LOG | SYSTEM | INFO  |  e2e.defin.compute: 
+
+================================================================================
+🚀 [DEPIN SCENARIO] 2. Negative Balance Halted by FSM
+================================================================================
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] pipeline.defin: 🔐 [Security] 암호학적 신원 검증 통과 (Caller: 0x06d13975...)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] pipeline.defin: 🧠 [FSM Bridge] 이벤트 인입: FsmStartIntent
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] pipeline.defin: 🧠 [FSM Bridge] 커맨드 발산: FsmHaltCmd
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:pipeline.defin' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:1.6] pipeline.defin: 🛑 [Infra] FSM 정지 명령 수신: Initial deposit must be greater than 0
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.defin.compute'
+ LOG | SYSTEM | INFO  |  e2e.defin.compute: ✅ 방어 로직 정상 작동 (응답: {'status': 'error', 'reason': 'Initial deposit must be greater than 0'})
+ LOG | SYSTEM | INFO  |  e2e.defin.compute: 
+
+================================================================================
+🚀 [DEPIN SCENARIO] 3. Invalid EIP-712 Signature (Blocked at Edge)
+================================================================================
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:pipeline.defin' (Acc: 1.70) Den: 7.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.defin.compute'
+ LOG | SYSTEM | INFO  |  e2e.defin.compute: ✅ 방어 로직 정상 작동 (응답: {'status': 'error', 'reason': 'EIP-712 서명 검증 실패. 인가되지 않은 접근입니다.'})
+ LOG | SYSTEM | INFO  |  e2e.defin.settlement: 
+[CLI] 🏃‍♂️ Initiating Pipeline-driven Settlement Sequences...
+ LOG | SYSTEM | INFO  |  e2e.defin.settlement: 
+▶️ [WALLET DOMAIN] Scenario: 1. Standard Deferred Charge (Chaos: NORMAL)
+ LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | SYSTEM | INFO  |  pipeline.transaction: 🧠 [FSM Bridge] 이벤트 수신 및 상태 전이 시작: StartTransactionIntent
+ LOG | SYSTEM | INFO  |  pipeline.transaction: 🧠 [FSM Bridge] 커맨드 발산: ExecuteDvmCmd
+ LOG | SYSTEM | INFO  |  pipeline.transaction: ⚡ [Infra] DVM Payload 조립 및 실행 요청 (Target: 0x0000000000000000000000000000000000000000)
+ LOG | SYSTEM | INFO  |  pipeline.transaction: 🧠 [FSM Bridge] 이벤트 수신 및 상태 전이 시작: DvmResultEvent
+ LOG | SYSTEM | INFO  |  pipeline.transaction: 🧠 [FSM Bridge] 커맨드 발산: LedgerSealCmd
+ LOG | SYSTEM | INFO  |  pipeline.transaction: ⚡ [Infra] Deferred Charge Ledger Sealing (Gas: 21000)
+ LOG | SYSTEM | INFO  |  pipeline.transaction: ✅ [Infra] L2 원장 기록 완료. Rollup Hash: 0xcaff84965d3e5f3d...
+ LOG | SYSTEM | INFO  |  e2e.defin.settlement: 
+▶️ [WALLET DOMAIN] Scenario: 2. State Reversion (Insufficient Allowance) (Chaos: FORCE_INSUFFICIENT_ALLOWANCE)
+ LOG | SYSTEM | WARN  |  pipeline.transaction: 👾 [Chaos] 스토리지 스냅샷 변조: Allowance를 강제로 0으로 덮어씁니다.
+ LOG | SYSTEM | INFO  |  pipeline.transaction: 🧠 [FSM Bridge] 이벤트 수신 및 상태 전이 시작: StartTransactionIntent
+ LOG | SYSTEM | INFO  |  pipeline.transaction: 🧠 [FSM Bridge] 커맨드 발산: ExecuteDvmCmd
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] pipeline.transaction: ⚡ [Infra] DVM Payload 조립 및 실행 요청 (Target: 0x0000000000000000000000000000000000000000)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] pipeline.transaction: 🧠 [FSM Bridge] 이벤트 수신 및 상태 전이 시작: DvmResultEvent
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] pipeline.transaction: 🧠 [FSM Bridge] 커맨드 발산: HaltFsmCmd
+ LOG | SYSTEM | INFO  |  e2e.defin.settlement: ✅ 방어 로직 정상 작동 (응답: {'status': 'error', 'reason': 'REVM Execution Reverted: ERC20: insufficient allowance'})
+ LOG | SYSTEM | INFO  |  e2e.defin.settlement: 
+▶️ [WALLET DOMAIN] Scenario: 3. VM Halt (Corrupted Calldata) (Chaos: CORRUPT_CALLDATA)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:pipeline.transaction' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:1.6] pipeline.transaction: 👾 [Chaos] 패킷 오염: 트랜잭션 Calldata 훼손 중...
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.defin.settlement'
+ LOG | SYSTEM | INFO  |  e2e.defin.settlement: ✅ 방어 로직 정상 작동 (응답: {'status': 'error', 'reason': 'REVM Execution Reverted: Invalid Opcode'})
+ LOG | SYSTEM | INFO  |  e2e.defin: 
+==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.defin: 📊 [DPHI E2E INTEGRATION REPORT: PIPELINE ARCHITECTURE]
+ LOG | SYSTEM | INFO  |  e2e.defin: ==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.defin: ✅ 01. [VM_BILLING_PIPELINE]     1. Golden Path Compute (3 Agents)                  | Result: PASSED
+ LOG | SYSTEM | INFO  |  e2e.defin: ✅ 02. [VM_BILLING_PIPELINE]     2. Negative Balance Halted by FSM                  | Result: PASSED
+ LOG | SYSTEM | INFO  |  e2e.defin: ✅ 03. [VM_BILLING_PIPELINE]     3. Invalid EIP-712 Signature (Blocked at Edge)     | Result: PASSED
+ LOG | SYSTEM | INFO  |  e2e.defin: ✅ 04. [SETTLEMENT_PIPELINE]     1. Standard Deferred Charge                        | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] e2e.defin: ✅ 05. [SETTLEMENT_PIPELINE]     2. State Reversion (Insufficient Allowance)        | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] e2e.defin: ✅ 06. [SETTLEMENT_PIPELINE]     3. VM Halt (Corrupted Calldata)                    | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] e2e.defin: ------------------------------------------------------------------------------------------
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.defin' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] e2e.defin: 🎉 ALL PIPELINE & FSM SCENARIOS EXECUTED SUCCESSFULLY.
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:1.8] pipeline.defin: [pipeline.defin] Bursting logs suppressed... (x3)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:2.2] pipeline.transaction: [pipeline.transaction] Bursting logs suppressed... (x6)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.7] e2e.defin: [e2e.defin] Bursting logs suppressed... (x2)

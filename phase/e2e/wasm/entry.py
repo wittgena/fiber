@@ -7,16 +7,16 @@ import importlib
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-from xphi.arch.wasm.builder import WasmBuilder
-import dphi.workflow.scene as scene_module
-from xphi.arch.wasm.tester import WasmTester
+import fiber.dphi.workflow.scene as scene_module
 
+from xphi.arch.wasm.builder import WasmBuilder
+from xphi.arch.wasm.tester import WasmTester
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("workflow.wasm.dphi")
+log = get_emitter("wasm.entry")
 
 MODULE_PATH = scene_module.__name__
 
@@ -24,10 +24,10 @@ MODULE_PATH = scene_module.__name__
 class PipelineConfig:
     suites_registry: Dict[str, str] = field(default_factory=lambda: {
         "sandbox": f"{MODULE_PATH}.sandbox:SandboxScene",
-        "eco": f"{MODULE_PATH}.anchor:EcoScene",
-        "anchor": f"{MODULE_PATH}.anchor:AnchorScene",
-        "cert": f"{MODULE_PATH}.cert:CertProofScene",
-        "dynamics": f"{MODULE_PATH}.dynamics:DynamicsScene", 
+        "anchor": f"{MODULE_PATH}.eco:AnchorScene",
+        "eco": f"{MODULE_PATH}.eco:EcoScene",
+        "cert": f"{MODULE_PATH}.sandbox:CertProofScene",
+        "dynamics": f"{MODULE_PATH}.sandbox:DynamicsScene", 
     })
     
     default_suites: List[str] = field(default_factory=lambda: [
