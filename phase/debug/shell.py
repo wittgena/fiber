@@ -1,5 +1,4 @@
 # fiber.phase.debug.shell
-## @lineage: fiber.kernel.debug.shell
 import sys
 import asyncio
 import json

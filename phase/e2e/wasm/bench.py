@@ -1,20 +1,26 @@
-# fiber.phase.e2e.wasm.bench.profile
+# fiber.phase.e2e.wasm.bench
+import sys
+import argparse
 import time
 import asyncio
 import json
 import statistics
 import operator
+from pathlib import Path
 from typing import Any, List, Dict, Callable
 
 from fiber.phase.debug.sandbox import TestScripts
 from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.space.runner import SchemeRunner
+from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
+from xphi.arch.wasm.tester import WasmTester
 from xphi.watcher.plane.emitter import get_emitter, set_log_level
 
-log = get_emitter("bench.profile")
+log = get_emitter("wasm.bench")
 
 # =========================================================================
 # 🎯 BENCHMARK TARGET CONFIGURATION
@@ -32,6 +38,10 @@ BENCH_TARGETS = {
 
 OP_MAP = {"<": operator.lt, ">": operator.gt, "==": operator.eq, "<=": operator.le, ">=": operator.ge}
 
+
+# =========================================================================
+# [Profile Core] Micro-Benchmark Suite 
+# =========================================================================
 class ProfileContext:
     def __init__(self):
         self.system = ActorIdentity("System_Core")
@@ -101,8 +111,6 @@ class ProfileBenchmarker(SchemeRunner):
             
         self._print_final_report()
 
-    # (이하 _measure_latency, _evaluate_and_log 로직은 기존과 거의 동일하나, 
-    #  verbose 옵션에 따라 log.info 출력을 제어하도록 수정)
     async def _measure_latency(self, iterations: int, task: Callable, *args, **kwargs) -> Dict[str, float]:
         latencies_us = []
         for _ in range(iterations):
@@ -143,7 +151,7 @@ class ProfileBenchmarker(SchemeRunner):
         if is_passed: self.success_count += 1
         else: self.fail_count += 1
 
-    # --- 프로파일링 실제 동작부 (파라미터로 iters를 받도록 서명 변경) ---
+    # --- 프로파일링 실제 동작부 ---
     async def _profile_wasm_cold_boot(self, iters: int):
         res = await self._measure_latency(iters, self.broker.execute, code="pass")
         self._evaluate_and_log("cold_boot", res["avg_us"], res)
@@ -217,3 +225,57 @@ class ProfileBenchmarker(SchemeRunner):
         else:
             log.warning("⚠️ SOME BENCHMARK TARGETS FAILED TO MEET THRESHOLDS.")
         log.info("="*75 + "\n")
+
+
+# =========================================================================
+# [Entry] Runner & CLI Flow 
+# =========================================================================
+class DphiBenchFlow:
+    def __init__(self, targets: list, scale: float, verbose: bool):
+        self.targets = targets
+        self.scale = scale
+        self.verbose = verbose
+        self.time_root = resolve_path("time")
+        self.dest_wasm_file = self.time_root / "dphi.wasm"
+
+    async def run_benchmark(self):
+        if not self.dest_wasm_file.exists():
+            log.error(f"❌ [Bench] Missing WASM binary at {self.dest_wasm_file}. Run build first.")
+            sys.exit(1)
+
+        ProfileBenchmarker.bench_config = {
+            "targets": self.targets,
+            "scale": self.scale,
+            "verbose": self.verbose
+        }
+
+        suite_map = {
+            "profile": ProfileBenchmarker
+        }
+
+        log.info("\n[Bench] Initializing WasmTester Environment for Profiling...")
+        tester = WasmTester(
+            wasm_module_path=str(self.dest_wasm_file),
+            sandbox_root=str(self.time_root),
+            suites=suite_map
+        )
+        
+        success, err_msg = await tester.execute()
+        if not success:
+            log.warning("[Bench] Profiling completed, but some targets missed the performance thresholds.")
+        else:
+            log.info("🟢 [Bench] Profiling completed successfully. All targets met.")
+
+def main():
+    parser = argparse.ArgumentParser(description="DPHI Core Micro-Benchmark & Profiling Tool")
+    available_targets = list(BENCH_TARGETS.keys()) + ["all"]
+    parser.add_argument("--targets", nargs="+", default=["all"], choices=available_targets, help="Specific benchmark targets to run (e.g., cold_boot, core_throughput)")
+    parser.add_argument("--scale", type=float, default=1.0, help="Multiplier for the number of iterations (default: 1.0)")
+    parser.add_argument("--verbose", action="store_true", help="Enable intermediate logs (disables silent mode during profiling)")
+
+    args = parser.parse_args()
+    app = DphiBenchFlow(targets=args.targets, scale=args.scale, verbose=args.verbose)
+    PhaseReactor.ignite(app.run_benchmark)
+
+if __name__ == "__main__":
+    main()

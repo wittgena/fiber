@@ -1,6 +1,4 @@
 # fiber.phase.debug.sandbox
-## @lineage: fiber.kernel.debug.sandbox
-## @lineage: fiber.kernel.attach.sandbox
 import os
 import time
 import json
@@ -31,7 +29,6 @@ class ScriptDef:
     tier: str = "SYSTEM"
 
 class TestScripts:
-    # (기존 TestScripts 내부 내용은 완벽하므로 그대로 유지합니다)
     LEGACY_NORMAL = ScriptDef(
         title="Integrity: Light Compute (Simple Math)",
         code="print(sum([x**2 for x in range(1000)]))",
