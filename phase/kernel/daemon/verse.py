@@ -10,9 +10,9 @@ from typing import Callable, Optional, Dict, Any
 
 from fiber.llm.driver.local.engine import LLMEngine
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.daemon.base import AbstractDaemon
+from xphi.kernel.ops.daemon.base import AbstractDaemon
 
-from xphi.kernel.daemon.bootstrap import TOPIC_BUS_STREAM, KEY_HEARTBEAT_PATTERN
+from xphi.kernel.ops.daemon.bootstrap import TOPIC_BUS_STREAM, KEY_HEARTBEAT_PATTERN
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter('verse.daemon')

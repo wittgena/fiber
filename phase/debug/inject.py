@@ -7,7 +7,7 @@ from typing import Any
 
 from xphi.arch.event.psi import PsiEvent, PsiCarrier
 from xphi.arch.event.next import next_id
-from xphi.kernel.daemon.bootstrap import TOPIC_BUS_STREAM
+from xphi.kernel.ops.daemon.bootstrap import TOPIC_BUS_STREAM
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("attach.inject")

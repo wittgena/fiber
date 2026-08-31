@@ -8,7 +8,7 @@ from typing import Optional, Dict, Callable
 
 from fiber.dphi.rpc.handler import INTERNAL_HANDLERS_REGISTRY, WorkerContext
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.daemon.base import AbstractDaemon
+from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 

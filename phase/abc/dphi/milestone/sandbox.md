@@ -1,4 +1,4 @@
-# fiber.phase.abc.dphi.sandbox.milestone
+# fiber.phase.abc.dphi.milestone.sandbox
 @desc: DPHI Sandbox Architecture & Multi-Tier Execution
 
 ## 1. System Architecture Principles
