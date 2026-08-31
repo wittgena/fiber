@@ -16,7 +16,7 @@ from fiber.dphi.infra.observer.intent.trajectory import (
 )
 
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.daemon.base import AbstractDaemon
+from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 

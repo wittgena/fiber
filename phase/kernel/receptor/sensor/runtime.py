@@ -16,7 +16,7 @@ from xphi.kernel.phase.runtime.executor.base import BaseExecutor
 from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.phase.runtime.node import NodeRuntime
 from xphi.kernel.phase.runtime.flow.cont import LoopCarrier, XeCont
-from xphi.kernel.daemon.base import AbstractDaemon
+from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.adapter.sign import LedgerAuthAdapter

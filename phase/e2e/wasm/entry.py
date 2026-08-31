@@ -1,13 +1,11 @@
 # fiber.phase.e2e.wasm.entry
-## @lineage: fiber.dphi.workflow.wasm.entry
-## @lineage: fiber.workflow.wasm.entry
 import sys
 import argparse
 import importlib
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-import fiber.dphi.workflow.scene as scene_module
+import fiber.phase.e2e.scene as scene_module
 
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.arch.wasm.tester import WasmTester

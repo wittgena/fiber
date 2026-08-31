@@ -1,9 +1,5 @@
 # fiber.phase.abc.dphi.overview
-다음은 기존에 작성된 핵심 아키텍처 명세서(1~6항목)에 새롭게 도출한 청산 엔진 특화 스펙(7항목)을 추가하여, 과장된 서사 없이 기술 스펙(Technical Specification) 관점에서 엄밀하게 재정렬 및 통합한 최종 Markdown 문서입니다.
-
----
-
-# Specification: DPHI Universal Cryptographic Compute & Metering Gateway Architecture
+@desc: DPHI Universal Cryptographic Compute & Metering Gateway Architecture
 
 ## 1. 개요 (Abstract)
 
