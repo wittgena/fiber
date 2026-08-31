@@ -1,7 +1,4 @@
 # fiber.phase.e2e.scene.flare
-## @lineage: fiber.dphi.workflow.scene.flare
-## @lineage: fiber.workflow.scene.flare
-## @lineage: workflow.scene.flare
 import time
 import asyncio
 import json
@@ -9,10 +6,11 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 from fiber.phase.debug.sandbox import SandboxRunner, TestScripts
+from fiber.dphi.infra.adapter.anchor import ActorIdentity
+
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
-from dphi.workflow.scene.anchor import ActorIdentity
 
 log = get_emitter("scene.flare")
 

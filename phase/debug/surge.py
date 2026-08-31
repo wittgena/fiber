@@ -1,15 +1,12 @@
 # fiber.phase.debug.surge
-## @lineage: fiber.kernel.debug.surge
-## @lineage: fiber.kernel.attach.surge
-## @lineage: phase.kernel.attach.surge
-## @lineage: dphi.node.attach.surge
 import time
 import asyncio
 import random
 import json
 from typing import Any
 
-from dphi.workflow.scene.anchor import ActorIdentity 
+from fiber.dphi.infra.adapter.anchor import ActorIdentity
+
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter

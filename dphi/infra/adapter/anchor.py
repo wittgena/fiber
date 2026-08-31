@@ -1,10 +1,12 @@
 # fiber.dphi.infra.adapter.anchor
-## @lineage: fiber.dphi.adapter.anchor
 import json
 import time
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
+import hashlib
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
 
 from fiber.dphi.infra.transaction import TransactionReceipt
 from xphi.kernel.dphi.broker import DphiBroker
@@ -12,6 +14,23 @@ from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.anchor")
+
+class ActorIdentity:
+    def __init__(self, name: str = "Anonymous"):
+        self.name = name
+        self.private_key = ed25519.Ed25519PrivateKey.generate()
+        self.pubkey_hex = self._generate_pub_hex()
+
+    def _generate_pub_hex(self) -> str:
+        return self.private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw, 
+            format=serialization.PublicFormat.Raw
+        ).hex()
+
+    def sign(self, commit_dict: dict) -> str:
+        canonical_bytes = StateAdapter.to_canonical_bytes(commit_dict)
+        commit_hash = hashlib.sha256(canonical_bytes).hexdigest()
+        return self.private_key.sign(commit_hash.encode('utf-8')).hex()
 
 """CORE DOMAIN STRUCTURES"""
 @dataclass

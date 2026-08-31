@@ -1,8 +1,4 @@
 # fiber.phase.e2e.scene.cert
-## @lineage: fiber.dphi.workflow.scene.cert
-## @lineage: fiber.workflow.scene.cert
-## @lineage: workflow.scene.cert
-## @lineage: dphi.workflow.scene.cert
 import time
 import asyncio
 import json
@@ -10,10 +6,11 @@ import math
 from typing import Any, List
 
 from fiber.phase.debug.sandbox import SandboxRunner
+from fiber.dphi.infra.adapter.anchor import ActorIdentity
+
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
-from dphi.workflow.scene.anchor import ActorIdentity
 
 log = get_emitter("scene.cert")
 

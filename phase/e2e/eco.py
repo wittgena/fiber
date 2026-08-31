@@ -3,7 +3,7 @@ import time
 import json
 import asyncio
 
-from fiber.phase.e2e.scene.anchor import ActorIdentity
+from fiber.dphi.infra.adapter.anchor import ActorIdentity
 from fiber.dphi.infra.eco.actor import (
     EcoProtocolInterface, 
     EcosystemActor, 

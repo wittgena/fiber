@@ -1,7 +1,4 @@
 # fiber.phase.e2e.wasm.bench.profile
-## @lineage: fiber.dphi.workflow.wasm.bench.profile
-## @lineage: fiber.workflow.wasm.bench.profile
-## @lineage: workflow.bench.profile
 import time
 import asyncio
 import json
@@ -9,8 +6,8 @@ import statistics
 import operator
 from typing import Any, List, Dict, Callable
 
-from dphi.workflow.scene.anchor import ActorIdentity
 from fiber.phase.debug.sandbox import TestScripts
+from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
 from xphi.kernel.space.runner import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
