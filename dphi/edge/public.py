@@ -24,7 +24,7 @@ from fiber.dphi.edge.rest.depend import (
 from fiber.dphi.rpc.client import InternalRpcClient
 
 from xphi.arch.contract.interface import ContractRouter
-from xphi.arch.contract.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
+from fiber.dphi.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub

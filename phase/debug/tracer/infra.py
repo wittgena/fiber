@@ -1,6 +1,4 @@
 # fiber.phase.debug.tracer.infra
-## @lineage: fiber.phase.tracer.infra
-## @lineage: phase.tracer.infra
 import sys
 import asyncio
 from functools import wraps
@@ -8,7 +6,7 @@ from typing import Dict, Any, Optional, Union, Callable
 
 from xphi.xor.parser.ruleset.engine import CompiledEngine
 from xphi.xor.parser.ruleset.stream import LocalStreamRulesetParser
-from xphi.arch.contract.resolver.log import LogResolver
+from fiber.phase.scope.resolver.log import LogResolver
 from xphi.arch.contract.registry.tracer import TracerRegistry
 
 from xphi.watcher.plane.emitter import get_emitter
