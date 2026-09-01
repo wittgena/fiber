@@ -1,13 +1,11 @@
 # fiber.llm.router.registry.llm
-## @lineage: fiber.dphi.model.registry.llm
-## @lineage: dphi.model.registry.llm
 import importlib
 import inspect
 import pkgutil
 from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
-from fiber.llm.model.provider.registry import get_provider_for_model
+from fiber.llm.model.provider.registry import get_model_cost_registry
 from fiber.llm.router.ext.llm.model.base import BaseLLM
 
 import fiber.llm.router.ext.llm as llm_pkg 
@@ -196,7 +194,7 @@ class LLMRouter:
     def route_and_load(self, model_name: str, custom_llm_provider: Optional[str] = None, **kwargs) -> Any:
         provider = custom_llm_provider
         if not provider:
-            provider = get_provider_for_model(model_name)
+            provider = get_model_cost_registry(model_name)
             
         if not provider:
             provider = self._fallback_provider_match(model_name)

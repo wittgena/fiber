@@ -1,4 +1,5 @@
-# README
+# fiber.README
+@lineage: README
 @desc: Fiber Project - Agent Deterministic Infrastructure
 
 The Fiber project is a **cryptographic metering proxy architecture** that physically and logically separates execution from settlement processes. Through deterministic state transitions and a Zero-Trust sandbox, it securely proxies external LLMs and computing resources while processing gas-free, real-time micro-transactions via an in-memory UTXO model.

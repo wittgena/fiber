@@ -1,14 +1,4 @@
 # fiber.llm.model.types.general
-## @lineage: llm.model.types.general
-## @lineage: agent.anchor.model.types.general
-## @lineage: bound.xor.model.types.general
-## @lineage: eco.model.types.general
-## @lineage: engine.model.types.general
-## @lineage: bound.model.types.general
-## @lineage: llm.types.general
-## @lineage: eco.mesh.model.types.general
-## @lineage: runtime.mesh.model.types.general
-## @lineage: mesh.model.types.general
 import json
 import time
 from enum import Enum
@@ -24,7 +14,7 @@ from openai.types.images_response import Image as OpenAIImage
 from openai.types.images_response import ImagesResponse as OpenAIImageResponse
 
 from fiber.llm.model.types.param.legacy import PricingParams
-from fiber.llm.model.provider.protype import ProviderSpecificModelInfo, ProviderTypes
+from fiber.llm.model.types.support import ProviderSupportInfo, ProviderTypes
 from fiber.llm.model.types.core import Usage
 from fiber.llm.model.types.openai import ChatCompletionToolCallChunk, ChatCompletionUsageBlock
 from fiber.llm.model.types.openai import OpenAIChatCompletionFinishReason
@@ -262,14 +252,14 @@ class SearchContextCostPerQuery(TypedDict, total=False):
     search_context_size_medium: float
     search_context_size_high: float
 
-class ModelInfoBase(ProviderSpecificModelInfo, total=False):
+class ModelInfoBase(ProviderSupportInfo, total=False):
     key: Required[str]
     max_tokens: Required[Optional[int]]
     max_input_tokens: Required[Optional[int]]
     max_output_tokens: Required[Optional[int]]
     input_cost_per_token: Required[Optional[float]]
     output_cost_per_token: Required[Optional[float]]
-    litellm_provider: Required[str]
+    model_provider: Required[str]
     mode: Required[Literal["completion", "embedding", "image_generation", "chat", "audio_transcription", "responses", "ocr"]]
     
     # Optional Pricing / Multipliers
@@ -473,7 +463,7 @@ class StandardCallbackDynamicParams(TypedDict, total=False):
     turn_off_message_logging: Optional[bool]
     litellm_disabled_callbacks: Optional[List[str]]
 
-all_litellm_params = (
+all_model_params = (
     [
         "metadata", "litellm_metadata", "litellm_trace_id", "litellm_request_debug",
         "guardrails", "tags", "acompletion", "aimg_generation", "atext_completion",
