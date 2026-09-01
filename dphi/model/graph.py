@@ -1,4 +1,5 @@
-# xphi.arch.contract.model.graph
+# fiber.dphi.model.graph
+## @lineage: xphi.arch.contract.model.graph
 ## @lineage: arch.contract.model.graph
 from typing import TypedDict, List, Dict, Any
 from dataclasses import dataclass, asdict, field

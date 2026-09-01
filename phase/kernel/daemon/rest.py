@@ -21,7 +21,7 @@ from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.mcp.server import SecureMCPServer
+from xphi.watcher.server.mcp import SecureMCPServer
 from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
 
 log = get_emitter("daemon.edge")

@@ -1,4 +1,5 @@
-# xphi.arch.contract.resolver.log
+# fiber.phase.scope.resolver.log
+## @lineage: xphi.arch.contract.resolver.log
 import json
 from typing import List, Tuple, Dict, Any, Optional, Generic, TypeVar
 from xphi.xor.parser.ruleset.stream import ElasticDSLRulesetParser

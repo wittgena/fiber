@@ -17,7 +17,7 @@ from fiber.phase.kernel.daemon.rpc import RpcWorkerDaemon
 
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.phase.reactor import PhaseReactor
-from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
+from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.tracer.edge import E2EConfig, SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
 

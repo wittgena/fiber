@@ -30,7 +30,7 @@ from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.arch.eco.edge.receipt import (
+from xphi.arch.model.edge.receipt import (
     CodebotIntent, 
     AuditReceipt,
     ExportLogsServiceRequest, 

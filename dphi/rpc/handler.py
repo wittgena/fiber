@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from fiber.dphi.infra.adapter.anchor import AnchorProposal, StreamAppendRequest
 
-from xphi.arch.eco.config import tier_config, fuel_config
+from xphi.xor.space.sandbox.config import tier_config, fuel_config
 from fiber.dphi.model.receptor import (
     EdgeState,
     AnchorProposalRequest,
@@ -20,7 +20,7 @@ from fiber.dphi.model.receptor import (
     EpochInitPayload,
     ClearingReceiptRequest
 )
-from xphi.arch.eco.edge.receipt import (
+from xphi.arch.model.edge.receipt import (
     BilledExecutionRequest,
     KernelLedgerAppendRecord
 )

@@ -13,7 +13,7 @@ from fiber.phase.debug.sandbox import TestScripts
 from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
 from xphi.kernel.space.bind.resolver import resolve_path
-from xphi.xor.space.runner import SchemeRunner
+from xphi.xor.space.sandbox.runner import SchemeRunner
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod

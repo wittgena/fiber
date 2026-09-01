@@ -22,14 +22,14 @@ from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
 from xphi.kernel.dphi.broker import DphiBroker
 
-from xphi.watcher.mcp.server import SecureMCPServer, SentinelFirewallMiddleware
-from xphi.watcher.ingress.middleware import (
+from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
+from xphi.watcher.server.middleware import (
     AttestationMiddleware,
     LocalMiddleware,
     WasTelemetry,
 )
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.mcp.adapter.state import RedisAppendOnlyCache, MCPStateAdapter
+from xphi.watcher.server.adapter.state import RedisAppendOnlyCache, MCPStateAdapter
 
 log = get_emitter(__name__)
 
