@@ -1,6 +1,4 @@
 # fiber.llm.router.ext.llm.param.processor
-## @lineage: fiber.dphi.model.ext.llm.param.processor
-## @lineage: dphi.model.ext.llm.param.processor
 from __future__ import annotations
 import copy
 import re
@@ -13,7 +11,7 @@ from openai.lib import _parsing, _pydantic
 
 from fiber.llm.router.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
 
-from fiber.llm.model.provider.registry import get_llm_provider
+from fiber.llm.model.provider.resolver import get_llm_provider
 from fiber.llm.model.types.core import Usage
 from fiber.llm.model.info import get_features, supports_httpx_timeout, supports_function_calling, get_supported_openai_params
 from fiber.llm.exception.eco import UnsupportedParamsError

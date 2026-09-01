@@ -1,6 +1,4 @@
 # fiber.llm.router.inter.llm
-## @lineage: fiber.dphi.model.inter.llm
-## @lineage: dphi.model.inter.llm
 import asyncio
 import functools
 from pathlib import Path
@@ -10,7 +8,7 @@ from fiber.llm.router.inter.adapter import BaseProviderAdapter
 from fiber.llm.router.registry.llm import LLMRouter, ModuleMissingError
 
 from fiber.llm.execution import CompletionContext
-from fiber.llm.model.provider.registry import get_llm_provider
+from fiber.llm.model.provider.resolver import get_llm_provider
 from fiber.llm.exception.mapping import exception_type
 
 from fiber.llm.router.mapper.state import StateMapper

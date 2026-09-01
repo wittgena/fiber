@@ -18,7 +18,7 @@ from fiber.dphi.infra.config import dphi_env
 from fiber.dphi.infra.adapter.anchor import LedgerEventSchema, StreamAppendRequest
 from fiber.dphi.infra.transaction import TransactionReceipt
 
-from xphi.arch.contract.model.receptor import (
+from fiber.dphi.model.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
     ParityTripletSchema

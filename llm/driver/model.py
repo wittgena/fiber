@@ -35,7 +35,7 @@ from fiber.llm.driver.factory import DriverFactory
 from xphi.xor.parser.mark.convset import SettingProminence, field_meta
 from xphi.xor.parser.mark.depre import warn_deprecated
 from xphi.arch.model.config import config
-from xphi.xor.secret.validator import serialize_secret, validate_secret
+from fiber.llm.model.provider.secret import serialize_secret, validate_secret
 from xphi.kernel.space.bind.resolver import find_current_self
 
 SELF_ROOT = find_current_self()

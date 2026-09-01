@@ -1,12 +1,12 @@
 # fiber.llm.model.info
-## @lineage: llm.model.info
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Optional, ClassVar, Literal, List, Dict
 from pydantic import BaseModel, ConfigDict
 
-from fiber.llm.model.provider.registry import model_cost, lookup_base_model_info, get_llm_provider
+from fiber.llm.model.provider.registry import model_cost, lookup_base_model_info
+from fiber.llm.model.provider.resolver import get_llm_provider
 from fiber.llm.model.types.general import ModelInfo
 from fiber.llm.exception.eco import BadRequestError
 

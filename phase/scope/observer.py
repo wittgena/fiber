@@ -1,5 +1,4 @@
 # fiber.phase.scope.observer
-## @lineage: fiber.phase.flow.scope.observer
 import asyncio
 import json
 import time

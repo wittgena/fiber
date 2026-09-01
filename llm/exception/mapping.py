@@ -1,13 +1,4 @@
 # fiber.llm.exception.mapping
-## @lineage: llm.exception.mapping
-## @lineage: agent.loop.runtime.exception.mapping
-## @lineage: agent.runtime.exception.mapping
-## @lineage: ator.runtime.exception.mapping
-## @lineage: bound.eco.exception.mapping
-## @lineage: eco.bound.exception.mapping
-## @lineage: bound.agent.exception.mapping
-## @lineage: ext.router.exception.mapping
-## @lineage: engine.exception.mapping
 from __future__ import annotations
 import json
 import re
@@ -132,7 +123,7 @@ def exception_type(
         ## @phase: context_building, @desc: Assemble extra debug information
         extra_information = f"\nModel: {model}"
         try:
-            from fiber.llm.model.provider.url import get_api_base
+            from fiber.llm.model.provider.resolver import get_api_base
             _api_base = get_api_base(model=model or "", optional_params=extra_kwargs)
             if _api_base: 
                 extra_information += f"\nAPI Base: `{_api_base}`"

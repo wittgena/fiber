@@ -1,12 +1,10 @@
-# fiber.llm.model.provider.protype
-## @lineage: llm.provider.protype
-## @lineage: agent.anchor.provider.protype
-## @lineage: bound.xor.model.protype
+# fiber.llm.model.types.support
+## @lineage: fiber.llm.model.provider.protype
 from enum import Enum
 from typing import Optional, Literal, List, Dict
 from typing_extensions import TypedDict
 
-class ProviderSpecificModelInfo(TypedDict, total=False):
+class ProviderSupportInfo(TypedDict, total=False):
     supports_system_messages: Optional[bool]
     supports_response_schema: Optional[bool]
     supports_vision: Optional[bool]

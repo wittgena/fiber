@@ -8,7 +8,7 @@ import subprocess
 import requests
 import json
 
-from xphi.arch.contract.model.resonance import BridgeEvent
+from fiber.dphi.model.resonance import BridgeEvent
 from xphi.arch.event.next import uuid4
 from xphi.watcher.plane.emitter import get_emitter
 
