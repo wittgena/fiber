@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager, AsyncExitStack
 from pydantic import SecretStr
 
 from surgent.agent.executor.loop import LoopExecutor
-from surgent.space.manager import SpaceNode, space_provider
+from surgent.conv.space.manager import SpaceNode, space_provider
 
 from fiber.llm.driver.model import LLMModel
 from fiber.llm.driver.config.agent import AgentConfig
