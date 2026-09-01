@@ -1,9 +1,4 @@
 # fiber.llm.model.message
-## @lineage: llm.model.message
-## @lineage: dphi.space.action.message
-## @lineage: agent.space.action.message
-## @lineage: bound.space.action.message
-## @lineage: bound.adapter.schema.message
 import json
 from collections.abc import Sequence
 from typing import Any, ClassVar
@@ -12,8 +7,7 @@ from openai.types.responses.response_output_message import ResponseOutputMessage
 from openai.types.responses.response_reasoning_item import ResponseReasoningItem
 from pydantic import ConfigDict, Field, model_validator
 
-from xphi.xor.parser.mark.truncate import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate
-from xphi.xor.parser.mark.depre import handle_deprecated_model_fields
+from xphi.xor.parser.mark import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate, handle_deprecated_model_fields
 
 from fiber.llm.param import (
     ChatCompletionMessageToolCall,

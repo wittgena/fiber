@@ -1,13 +1,11 @@
 # fiber.llm.driver.model
-## @lineage: llm.driver.model
-## @lineage: agent.llm.driver.model
-## @lineage: ator.driver.llm.model
 from __future__ import annotations
 
 import os
 import warnings
 from collections.abc import Callable
 from contextlib import contextmanager
+from enum import Enum
 from typing import Any, Literal, Final
 
 from pydantic import (
@@ -20,23 +18,48 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.config import JsonDict
 from pydantic.json_schema import SkipJsonSchema
 
 from fiber.llm.driver.strategy.fallback import FallbackStrategy
 from fiber.llm.driver.observer import DriverObserver
-
 from fiber.llm.model.info import get_features, supports_vision
 from fiber.llm.model.token.splitter import create_pretrained_tokenizer
 from fiber.llm.model.metric import Metrics
 from fiber.llm.driver.config.cloud import VendorConfig
 from fiber.llm.exception.types import LLMContextWindowTooSmallError
 from fiber.llm.driver.factory import DriverFactory
-
-from xphi.xor.parser.mark.convset import SettingProminence, field_meta
-from xphi.xor.parser.mark.depre import warn_deprecated
-from xphi.arch.model.config import config
 from fiber.llm.model.provider.secret import serialize_secret, validate_secret
+
+from xphi.xor.parser.mark import warn_deprecated
+from xphi.arch.model.config import config
 from xphi.kernel.space.bind.resolver import find_current_self
+
+SETTINGS_METADATA_KEY = "meta_settings"
+SETTINGS_SECTION_METADATA_KEY = "meta_settings_section"
+
+class SettingProminence(str, Enum):
+    CRITICAL = "critical"
+    MAJOR = "major"
+    MINOR = "minor"
+
+class SettingsSectionMetadata(BaseModel):
+    key: str
+    label: str | None = None
+
+class SettingsFieldMetadata(BaseModel):
+    label: str | None = None
+    prominence: SettingProminence = SettingProminence.MINOR
+    depends_on: tuple[str, ...] = ()
+
+def field_meta(
+    prominence: SettingProminence = SettingProminence.MINOR,
+    *,
+    label: str | None = None,
+    depends_on: tuple[str, ...] = (),
+) -> JsonDict:
+    metadata: JsonDict = SettingsFieldMetadata(label=label, prominence=prominence, depends_on=depends_on).model_dump(mode="json")
+    return {SETTINGS_METADATA_KEY: metadata}
 
 SELF_ROOT = find_current_self()
 
