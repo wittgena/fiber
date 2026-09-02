@@ -20,20 +20,17 @@ class CustomBuildHook(BuildHookInterface):
                 
         ## [CASE 2] 외부 빌드 / 배포 시 (Fiber 버전과 xphi 버전을 1:1로 락(Lock) 매칭)
         else:
-            # tag 포맷이 'v1.1.0' 이라 가정 (버전 정책에 따라 'version' 그대로 사용 가능)
             target_tag = version if version.startswith("v") else f"v{version}"
             print(f"[JIT Assembly] Fetching 'xphi' (Tag: {target_tag}) to match Fiber version {version}...")
             
             with tempfile.TemporaryDirectory() as temp_dir:
                 try:
-                    # Fiber의 버전과 완벽히 동일한 xphi의 태그를 가져와 융합
                     subprocess.run(
                         ["git", "clone", "--branch", target_tag, "--depth", "1", 
                          "https://github.com/wittgena/xphi.git", temp_dir],
                         check=True, capture_output=True
                     )
                     self._inject_modules(Path(temp_dir), target_modules, build_data)
-                        
                 except subprocess.CalledProcessError as e:
                     print(f"[FATAL] Failed to fetch xphi tag {target_tag}. Ensure repos are version-synced.")
                     raise
