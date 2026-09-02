@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import socket
 import time
 from types import SimpleNamespace
@@ -212,7 +213,6 @@ class LlmCompatWorkflow(Workflow):
             self.fail_count += 1
             return ErrorMessage(f"Token Utils Failed: {e}")
 
-        # [수정] 바로 종료하지 않고 Adapter 검증 단계로 트랜지션
         return AdapterMappingTestMsg()
 
     @step
@@ -334,7 +334,9 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
             return False
 
     is_online = check_online()
-    resolved_model = args.model
+    resolved_model = getattr(args, 'model', None) or os.environ.get("LLM_COMPAT_MODEL")
+    use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
+    test_fallback = getattr(args, 'test_fallback', False) or os.environ.get("LLM_COMPAT_FALLBACK_ONLY", "false").lower() == "true"
     
     if not is_online:
         log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
@@ -343,21 +345,21 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
         optimal = model_tier_registry.get_optimal_model(requires_tools=False, min_cognitive_score=2)
         resolved_model = f"{optimal[0]}/{optimal[1]}" if isinstance(optimal, tuple) else (f"gemini/{optimal}" if optimal else "gemini/gemini-3.1-flash-lite")
 
-    scope_kwargs = {"use_proxy": args.proxy if is_online else False, "show_logs": True}
+    scope_kwargs = {"use_proxy": use_proxy if is_online else False, "show_logs": True}
     run_context = {
         "use_proxy": scope_kwargs["use_proxy"], 
         "target_model": resolved_model,
-        "test_fallback_only": args.test_fallback
+        "test_fallback_only": test_fallback
     }
     return scope_kwargs, run_context
 
-def main():
+def main(args: list[str] = None):
     parser = argparse.ArgumentParser(description="LLM Compat E2E Suite Runner")
     parser.add_argument("-m", "--model", type=str, help="Target LLM model to use.")
     parser.add_argument("--proxy", action="store_true", help="Enable remote proxy extension layout.")
     parser.add_argument("--test-fallback", action="store_true", help="Run ONLY the fallback routing scenario.")
-    args = parser.parse_args()
-
+    
+    args, _ = parser.parse_known_args(args)
     scope_kwargs, run_context = get_environment_context(args)
     app = LlmCompatApplication(
         scope_kwargs=scope_kwargs,

@@ -157,7 +157,6 @@ class SettlementTestSuite:
         
         clearing_node = NodeIdentity()
         
-        # ✅ [수정됨] 카오스 인젝터가 타겟 컨트랙트를 정확히 찾을 수 있도록 키값을 일치시킴
         target_contract_address = "0x0000000000000000000000000000000000000000"
         raw_payload = {
             "action": "DEFERRED_CHARGE",
@@ -232,7 +231,7 @@ class MasterDefinSuite:
 
         self._print_report()
 
-def main():
+def main(args_list: list[str] = None):
     app = MasterDefinSuite()
     PhaseReactor.ignite(main_coro_func=app.execute)
 

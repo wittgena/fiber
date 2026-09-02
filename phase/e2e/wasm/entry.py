@@ -156,7 +156,7 @@ class DphiFlow:
         target_action = command_map.get(self.command, self.pipeline)
         await target_action()
 
-def main():
+def main(args: list[str] = None):
     parser = argparse.ArgumentParser(description="WASM Distributed Sandbox & Autonomous Agent CLI (Isolated CI)")
     parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g. sandbox, anchor, cert, dynamics)")
     subparsers = parser.add_subparsers(dest="command", help="Execution modes")
@@ -164,11 +164,12 @@ def main():
     subparsers.add_parser("test", help="Run the Isolated Test scenarios only.")
     subparsers.add_parser("all", help="Run the full pipeline (Build -> Isolated Test).")
 
-    args = parser.parse_args()
-    command = args.command or "all"
-    config = PipelineConfig()
-    app = DphiFlow(command=command, suites=args.suites, config=config)
+    args, _ = parser.parse_known_args(args)
+    command = getattr(args, "command", None) or "all"
+    suites = getattr(args, "suites", ["all"])
     
+    config = PipelineConfig()
+    app = DphiFlow(command=command, suites=suites, config=config)
     PhaseReactor.ignite(app.run)
 
 if __name__ == "__main__":

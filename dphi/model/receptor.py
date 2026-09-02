@@ -1,4 +1,5 @@
-# xphi.arch.contract.model.receptor
+# fiber.dphi.model.receptor
+## @lineage: xphi.arch.contract.model.receptor
 ## @lineage: arch.contract.model.receptor
 from enum import Enum
 from pydantic import BaseModel, Field

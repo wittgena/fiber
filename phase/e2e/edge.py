@@ -12,12 +12,12 @@ from eth_account.messages import encode_defunct
 from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from fiber.dphi.edge.workflow import EdgeWorkflow
 from fiber.dphi.client.http import VerifiedHttpClient
-from fiber.dphi.edge.rest.api import create_app, Config
+from fiber.dphi.edge.payload import create_app, Config
 from fiber.phase.kernel.daemon.rpc import RpcWorkerDaemon
 
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.phase.reactor import PhaseReactor
-from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
+from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.tracer.edge import E2EConfig, SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -151,17 +151,13 @@ class GatewayTracerPipeline(PipelineRunner):
         - FSM의 최종 종단 상태(Terminal State)를 통해 비즈니스 흐름 전체의 완결성을 검증합니다.
         """
         async with httpx.AsyncClient(base_url=self.config.base_url, timeout=15.0) as client:
-            
-            # [개선] HTTP 이벤트 훅 조립 (통신 계층 방어선)
             response_hooks = [self.tracer.trace_response]
-            
             if attestation_injector:
                 async def apply_tamper(response: httpx.Response):
                     attestation_injector(response)
                 response_hooks.append(apply_tamper)
                 
             async def verify_signature(response: httpx.Response):
-                # 서버가 200 OK를 반환했을 때만 응답 헤더의 Attestation 증명을 검증
                 if response.status_code == 200:
                     verifier = VerifiedHttpClient(client=client)
                     verifier._verify_header_proof(response)
@@ -257,5 +253,9 @@ class EdgeSuiteRunner:
         await self._run_gateway_pipeline()
         self._print_report()
 
+def main(args_list: list[str] = None):
+    app = EdgeSuiteRunner()
+    PhaseReactor.ignite(main_coro_func=app.execute)
+
 if __name__ == "__main__":
-    PhaseReactor.ignite(main_coro_func=EdgeSuiteRunner().execute)
+    main()

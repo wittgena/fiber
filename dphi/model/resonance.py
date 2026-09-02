@@ -1,4 +1,5 @@
-# xphi.arch.contract.model.resonance
+# fiber.dphi.model.resonance
+## @lineage: xphi.arch.contract.model.resonance
 ## @lineage: arch.contract.model.resonance
 from dataclasses import dataclass, field, asdict
 from typing import List, Dict, Set, Optional

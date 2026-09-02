@@ -7,11 +7,11 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.phase.debug.sandbox import EpochBase
+from fiber.phase.kernel.shell.sandbox import EpochBase
 from fiber.dphi.infra.transaction import ExchangeAdapter
 from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
-from xphi.xor.space.runner import SchemeRunner
+from xphi.xor.space.sandbox.runner import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter

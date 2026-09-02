@@ -1,4 +1,5 @@
-# xphi.arch.contract.resolver.ext
+# fiber.phase.scope.resolver.ext
+## @lineage: xphi.arch.contract.resolver.ext
 ## @lineage: arch.contract.resolver.ext
 ## @lineage: arch.topos.resolver.ext
 ## @lineage: topos.resolver.ext

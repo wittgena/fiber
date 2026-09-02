@@ -1,4 +1,5 @@
-# xphi.arch.contract.model.repo
+# fiber.dphi.model.repo
+## @lineage: xphi.arch.contract.model.repo
 ## @lineage: arch.contract.model.repo
 ## @lineage: arch.model.contract.repo
 ## @lineage: arch.contract.schema.repo

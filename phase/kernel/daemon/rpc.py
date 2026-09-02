@@ -39,7 +39,7 @@ class RpcWorkerDaemon(AbstractDaemon):
         from fiber.phase.kernel.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
 
         from xphi.kernel.dphi.broker import DphiBroker
-        from xphi.watcher.ingress.stream.edge import LogStreamStore
+        from xphi.watcher.server.stream.edge import LogStreamStore
         from fiber.dphi.infra.transaction import ExchangeAdapter
         from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
         from xphi.xor.space.sandbox import BenchProfile

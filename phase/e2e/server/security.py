@@ -9,11 +9,11 @@ from typing import Any, Callable, Dict, List, Optional
 import httpx
 import uvicorn
 
-from fiber.dphi.edge.rest.api import create_app, Config
+from fiber.dphi.edge.payload import create_app, Config
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.phase.reactor import PhaseReactor
 
-from xphi.watcher.ingress.sentinel import ChaosPayloadLibrary, RpcChaosInjector
+from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("server.security")

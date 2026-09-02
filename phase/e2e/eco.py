@@ -10,9 +10,9 @@ from fiber.dphi.infra.eco.actor import (
     GrantResource,
     SettlementVerifier
 )
-from fiber.phase.debug.sandbox import TestScripts
+from fiber.phase.kernel.shell.sandbox import TestScripts
 
-from xphi.arch.eco.protocol import TriadAxis
+from xphi.xor.space.sandbox.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
@@ -163,7 +163,7 @@ class EcoIntegrationWorkflow(Workflow):
         self.log.error(f"❌ [WORKFLOW HALTED] Verification failure: {msg.msg}")
         return StopMessage(result=False)
 
-def main():
+def main(args_list: list[str] = None):
     app = EcoIntegrationWorkflow()
     PhaseReactor.ignite(main_coro_func=app.start)
 

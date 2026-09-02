@@ -1,4 +1,5 @@
-# fiber.phase.debug.inject
+# fiber.phase.kernel.shell.inject
+## @lineage: fiber.phase.debug.inject
 ## @lineage: fiber.kernel.debug.inject
 import json
 import random

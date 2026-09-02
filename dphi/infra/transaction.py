@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 from cryptography.exceptions import InvalidSignature
 
-from xphi.arch.eco.config import fuel_config
+from xphi.xor.space.sandbox.config import fuel_config
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.kernel.dphi.cgroup import Tier
 from xphi.watcher.plane.emitter import get_emitter

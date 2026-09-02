@@ -1,6 +1,4 @@
-# fiber.dphi.edge.public
-## @lineage: fiber.kernel.receptor.edge.public
-## @lineage: fiber.kernel.receptor.dphi.edge.public
+# fiber.dphi.edge.serv.public
 import os
 import json
 import time
@@ -14,7 +12,7 @@ from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HT
 from pydantic import BaseModel
 
 from fiber.dphi.infra.builder import NotarySwarm
-from fiber.dphi.edge.rest.depend import (
+from fiber.dphi.edge.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
     get_otlp_engine, 
@@ -30,7 +28,7 @@ from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.arch.eco.edge.receipt import (
+from xphi.arch.model.edge.receipt import (
     CodebotIntent, 
     AuditReceipt,
     ExportLogsServiceRequest, 

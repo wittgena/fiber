@@ -1,7 +1,5 @@
-# fiber.phase.debug.tracer.kube
-## @lineage: fiber.phase.tracer.kube
-## @lineage: phase.tracer.kube
-## @lineage: watcher.tracer.phase.kube
+# fiber.phase.kernel.tracer.kube
+## @lineage: fiber.phase.debug.tracer.kube
 import os
 import json
 import yaml

@@ -1,4 +1,5 @@
-# xphi.arch.contract.resolver.secret
+# fiber.phase.scope.resolver.secret
+## @lineage: xphi.arch.contract.resolver.secret
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from pydantic import Field, PrivateAttr, SecretStr

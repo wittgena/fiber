@@ -9,11 +9,11 @@ import operator
 from pathlib import Path
 from typing import Any, List, Dict, Callable
 
-from fiber.phase.debug.sandbox import TestScripts
+from fiber.phase.kernel.shell.sandbox import TestScripts
 from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
 from xphi.kernel.space.bind.resolver import resolve_path
-from xphi.xor.space.runner import SchemeRunner
+from xphi.xor.space.sandbox.runner import SchemeRunner
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod
@@ -266,16 +266,16 @@ class DphiBenchFlow:
         else:
             log.info("🟢 [Bench] Profiling completed successfully. All targets met.")
 
-def main():
+def main(args: list[str] = None):
     parser = argparse.ArgumentParser(description="DPHI Core Micro-Benchmark & Profiling Tool")
     available_targets = list(BENCH_TARGETS.keys()) + ["all"]
     parser.add_argument("--targets", nargs="+", default=["all"], choices=available_targets, help="Specific benchmark targets to run (e.g., cold_boot, core_throughput)")
     parser.add_argument("--scale", type=float, default=1.0, help="Multiplier for the number of iterations (default: 1.0)")
     parser.add_argument("--verbose", action="store_true", help="Enable intermediate logs (disables silent mode during profiling)")
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args(args)
     app = DphiBenchFlow(targets=args.targets, scale=args.scale, verbose=args.verbose)
-    PhaseReactor.ignite(app.run_benchmark)
+    PhaseReactor.ignite(main_coro_func=app.run_benchmark)
 
 if __name__ == "__main__":
     main()

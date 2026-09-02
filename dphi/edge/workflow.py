@@ -111,8 +111,6 @@ class EdgeWorkflow(Workflow):
 
     async def _run_compliance_phase(self, cmd: RunCompliancePhaseCmd) -> CompliancePhaseCompletedEvent:
         """2단계: 영수증 검증, OTLP 로깅을 하나로 묶어 처리"""
-        # 앞선 정밀 개선을 통해 Gateway가 AuditReceipt 모델 맵핑을 강제하므로,
-        # 1단계에서 응답받은 순수 영수증(JSON)을 그대로 전달하여 서명 무결성 검증을 거칩니다.
         res = await self.client.post(f"{self.base_url}/v1/public/audit/verify", json=cmd.audit_receipt)
         res.raise_for_status()
 
