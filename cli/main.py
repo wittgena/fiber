@@ -65,6 +65,20 @@ def run_daemon(
     _load_env(env_file)
     os.environ["KERNEL_DAEMONS"] = start
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
+    
+    # [정밀 정렬] 쉼표로 분리하여 정확한 데몬 매칭 수행
+    daemons = [d.strip() for d in start.split(",")]
+    
+    if all(d in ["gateway_edge", "rest_edge"] for d in daemons):
+        # 순수 네트워크/프록시 엣지인 경우에만 무거운 WASM 워커를 띄우지 않는 EDGE 프로파일 적용
+        os.environ["NODE_PROFILE"] = "EDGE"
+    elif "risk_vault" in daemons or "rpc_worker" in daemons:
+        # 연산 및 자율 에이전트가 포함된 경우 COMPUTE 프로파일 강제 (네트워크 데몬 무시)
+        os.environ["NODE_PROFILE"] = "COMPUTE"
+    else:
+        # 그 외의 복합 구성일 경우 기본 풀노드(ALL)로 동작
+        os.environ["NODE_PROFILE"] = "ALL"
+
     boot_kernel("Subordinate Daemon")
 
 
@@ -74,12 +88,20 @@ def run_daemon(
 @app.command("trace")
 def run_trace(
     target: Annotated[str, typer.Option("--target", "-t", help="Target tracer to execute (e.g., repro_worker, oom_tracer)")],
+    config: Annotated[Optional[str], typer.Option("--config", "-c", help="Optional path to custom trace manifest")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     """Run the Flare Controller & Sandboxed infrastructure testing."""
     _load_env(env_file)
-    os.environ["KERNEL_DAEMONS"] = "tracer_controller,verse"
+    
+    # [정밀 정렬] verse 분리 및 순수 트레이서 컨트롤러만 격리 구동
+    os.environ["KERNEL_DAEMONS"] = "tracer_controller"
     os.environ["TRACE_TARGET"] = target
+    os.environ["NODE_PROFILE"] = "CONTROL" # 제어 및 관측 전용 경량 프로파일 적용
+    
+    if config:
+        os.environ["TRACE_CONFIG_PATH"] = config
+
     boot_kernel("Master Hypervisor")
 
 
@@ -95,6 +117,7 @@ def run_deploy(
     _load_env(env_file)
     os.environ["KERNEL_DAEMONS"] = "topology_manager"
     os.environ["DEPLOY_TOPOLOGY"] = topology
+    os.environ["NODE_PROFILE"] = "CONTROL"
     boot_kernel("Deployment Manager")
 
 
@@ -137,10 +160,7 @@ def run_e2e(
 ):
     """Run End-to-End integration tests for specific domains."""
     _load_env(env_file)
-    
-    # 캡처된 미지(Unknown)의 추가 인자들 (예: ['--model', 'gemini', '--proxy'])
     extra_args = ctx.args 
-    
     KNOWN_SUITES = ["defin", "eco", "edge", "flare", "wasm.entry", "llm.compat"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
@@ -152,23 +172,16 @@ def run_e2e(
         module_path = f"fiber.phase.e2e.{t}"
         try:
             test_module = importlib.import_module(module_path)
-            
-            # [아키텍처 개선] 파이썬 표준 진입점(main)만 호출하며, 커널 구동(PhaseReactor)은 하위 모듈에 위임합니다.
             if hasattr(test_module, "main"):
                 log.info(f"\n{'='*60}\n▶️ Launching Suite: {module_path}\n{'='*60}")
-                
                 sig = inspect.signature(test_module.main)
-                # 하위 모듈이 main(args=None) 형태로 미지 인자를 받을 수 있는지 확인
                 if len(sig.parameters) > 0:
                     test_module.main(extra_args)
                 else:
-                    # 인자를 받지 않는 구형(Legacy) 모듈 대응
                     test_module.main()
-                    
             else:
                 log.error(f"[Fiber] ❌ Module {module_path} lacks a standard 'main' entrypoint. Skipping.")
                 continue
-                
         except ImportError:
             log.error(f"[Fiber] ❌ Test module not found: {module_path}")
             if target != "all":
@@ -176,7 +189,6 @@ def run_e2e(
         except Exception as e:
             log.error(f"[Fiber] 💥 E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
-
 
 def main():
     app()

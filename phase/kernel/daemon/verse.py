@@ -1,5 +1,4 @@
 # fiber.phase.kernel.daemon.verse
-## @lineage: fiber.kernel.daemon.verse
 import os
 import asyncio
 import random
@@ -20,7 +19,7 @@ log = get_emitter('verse.daemon')
 class ContextSensor:
     """[1] 외부 환경 및 내부 시스템 메트릭을 감지하여 상황(Context)을 수집하는 클래스"""
     def __init__(self, tunnel, location: str = "Seoul"):
-        self.tunnel = tunnel  # [개선] DI 주입을 통해 TunnelFactory 직접 호출 제거
+        self.tunnel = tunnel
         self.location = location
 
     async def fetch_weather(self) -> str:

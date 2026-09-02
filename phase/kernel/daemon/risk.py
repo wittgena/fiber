@@ -1,6 +1,4 @@
 # fiber.phase.kernel.daemon.risk
-## @lineage: fiber.kernel.daemon.risk
-## @lineage: fiber.receptor.daemon.risk
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
