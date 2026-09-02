@@ -151,17 +151,13 @@ class GatewayTracerPipeline(PipelineRunner):
         - FSM의 최종 종단 상태(Terminal State)를 통해 비즈니스 흐름 전체의 완결성을 검증합니다.
         """
         async with httpx.AsyncClient(base_url=self.config.base_url, timeout=15.0) as client:
-            
-            # [개선] HTTP 이벤트 훅 조립 (통신 계층 방어선)
             response_hooks = [self.tracer.trace_response]
-            
             if attestation_injector:
                 async def apply_tamper(response: httpx.Response):
                     attestation_injector(response)
                 response_hooks.append(apply_tamper)
                 
             async def verify_signature(response: httpx.Response):
-                # 서버가 200 OK를 반환했을 때만 응답 헤더의 Attestation 증명을 검증
                 if response.status_code == 200:
                     verifier = VerifiedHttpClient(client=client)
                     verifier._verify_header_proof(response)

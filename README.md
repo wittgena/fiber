@@ -21,13 +21,58 @@ A universal compute and metering proxy architecture agnostic to specific runtime
 
 ---
 
-## 2. LLM Compatibility & Edge Gateway
+## 2. Fiber CLI Tool
+
+The `fiber` CLI is the single entry point for bootstrapping the DPHI ecosystem. Rather than acting as a heavy, monolithic controller, it functions as a **Topological Router**. It delegates execution, argument parsing, and lifecycle management directly to the target modules while dynamically assigning the appropriate node profile to prevent resource overkill.
+
+### 2.1. Execution & Local Usage
+
+If the `fiber` package is installed globally (e.g., via `pip install -e .`), you can use the `fiber` command directly. For local development or environments without a global installation, you can execute the module directly using Python's standard `-m` flag:
+
+```bash
+# Global execution
+fiber [OPTIONS] COMMAND [ARGS]...
+
+# Local / Development execution
+python -m fiber.cli.main [OPTIONS] COMMAND [ARGS]...
+
+```
+
+### 2.2. E2E Testing & Dynamic Argument Forwarding (Core Feature)
+
+The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`defin`, `eco`, `edge`, `flare`, `wasm.entry`, `llm.compat`).
+
+Instead of hardcoding every possible test parameter into the root CLI, `fiber` captures unknown arguments and transparently **forwards them to the target module's standard `main(args)` entrypoint**. This ensures zero-friction scalability as new domains and parameters are added.
+
+**Example:**
+
+```bash
+# Run the LLM Compatibility suite with suite-specific arguments
+fiber e2e llm.compat --model gemini/gemini-3.1-flash-lite --proxy
+
+```
+
+> *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `llm.compat` suite's internal `argparse`.*
+
+### 2.3. Ecosystem Operational Modes
+
+Beyond testing, the CLI routes the system into specific operational contexts, automatically segregating topologies (e.g., `EDGE` vs. `COMPUTE`) based on the requested workload:
+
+| Mode | Description | Example |
+| --- | --- | --- |
+| **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker). It performs **Topological Segregation** by analyzing the requested daemons. For example, requesting only `gateway_edge` dynamically sets the `EDGE` profile, safely bypassing heavy WASM worker pools to prevent resource overkill. | `fiber daemon -s rest_edge,gateway_edge` |
+| **`trace`** | **[Experimental / Chaos Sandbox]** An experimental structure dedicated to **Chaos Engineering and Deep Diagnostics**. It ignites a specialized hypervisor (`tracer_controller`) to inject structural anomalies (e.g., OOM traps, Byzantine faults) into isolated containers and observe the kernel's resilience. Supports custom YAML manifests via `--config`. | `fiber trace -t oom_tracer -c fault.yml` |
+| **`shell`** | **[Client Observatory]** Launches an interactive God-Mode console. It connects directly to the asynchronous message tunnel (Redis PubSub/Stream) to monitor cluster capacity or inject out-of-band signals without booting a full local kernel reactor. | `fiber shell --env-file .env.local` |
+
+---
+
+## 3. LLM Compatibility & Edge Gateway
 
 🔗 **[Read the Full Documents: Compat Entry](./phase/abc/llm/compat/entry.md) | [Edge Gateway](./phase/abc/llm/edge.md) | [Token Utilities**](./phase/abc/llm/compat/token.md)
 
-The `fiber.llm` module is a high-performance LLM router and gateway that provides a **100% Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features—Fuel metering, fault-tolerance, and state normalizations—without requiring rewrites to your existing agent architectures.
+The `fiber.llm` module is a high-performance LLM router and gateway that provides a **Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features—Fuel metering, fault-tolerance, and state normalizations—without requiring rewrites to your existing agent architectures.
 
-### 2.1. Zero-Friction Migration (Drop-in Replacement)
+### 3.1. Zero-Friction Migration (Drop-in Replacement)
 
 You can integrate your existing LLM pipelines into the DPHI ecosystem simply by changing the import path. All return objects follow the standard Pydantic models (e.g., `openai.types.chat.ChatCompletion`), ensuring full compatibility with your existing type hints and downstream logic.
 
@@ -44,7 +89,7 @@ response = await acompletion(
 )
 ```
 
-### 2.2. Advanced Pipeline & Dynamic Control
+### 3.2. Advanced Pipeline & Dynamic Control
 
 Beyond basic compatibility, `fiber.llm` exposes a powerful asynchronous channel pipeline via the `metadata` and `kwargs` fields.
 
@@ -65,7 +110,7 @@ response = completion(
 metadata={"post_call_rules": [async_pii_filter_function]}
 ```
 
-### 2.3. Edge Gateway & Zero-Trust Integration
+### 3.3. Edge Gateway & Zero-Trust Integration
 
 For decentralized agents, the FastAPI-based REST Gateway (`edge.llm`) provides a standard HTTP interface (`/v1/chat/completions`). Clients simply point their Base URL to the DPHI Gateway and inject the L402 payment proof.
 
@@ -78,7 +123,7 @@ X-X402-Receipt: <l402_macaroon_proof>
 
 The gateway extracts the receipt, invokes the `AUTHORIZE_INTENT` via the WASM Kernel, and delegates the approved Fuel budget to the underlying pipeline. Invalid or depleted receipts immediately trigger an `HTTP 402 Payment Required` to initiate a transparent retry.
 
-### 2.4. Native Token Utilities
+### 3.4. Native Token Utilities
 
 The `fiber.llm.model.token` package provides exact equivalents to LiteLLM’s token management utilities, augmented with universal encoding support.
 
@@ -94,7 +139,7 @@ safe_limit = get_modified_max_tokens(model="gpt-4o", messages=msgs, user_max_tok
 
 ---
 
-## 3. DPHI Sandbox Architecture
+## 4. DPHI Sandbox Architecture
 
 🔗 **[Read the Full Document: Sandbox Architecture](./phase/abc/dphi/milestone/sandbox.md)**
 
@@ -110,13 +155,13 @@ Defines the core sandbox engine principles for executing deterministic state tra
 
 ---
 
-## 4. System Certification & Security Validation
+## 5. System Certification & Security Validation
 
 🔗 **[Execution Logs: View Pipeline Reports](./phase/abc/log/)**
 
 The DPHI infrastructure validates its cryptographic integrity, execution determinism, and perimeter security through end-to-end integration tests upon every build.
 
-### 4.1. Core WASM Engine & Instruction-Level Determinism
+### 5.1. Core WASM Engine & Instruction-Level Determinism
 
 🔗 **[View Log: workflow.wasm.log](./phase/abc/log/workflow.wasm.20260825.log)**
 
@@ -126,7 +171,7 @@ The core execution engine compiles native Rust modules, leveraging **AOT compila
 * **Resource Limit Enforcement:** Hardware limits are strictly governed per tier. The hypervisor intercepts and safely halts execution upon fuel exhaustion, memory spikes, or excessive call-stack depths (infinite loops).
 * **State Recovery & Sealing:** Generates cryptographic parity triplets. If network fragmentation occurs, missing topology frames are recovered via built-in XOR Parity before sealing the state into a canonical `AuditReceipt`.
 
-### 4.2. Edge V8 Isolate & Ingress Defense
+### 5.2. Edge V8 Isolate & Ingress Defense
 
 🔗 **[View Log: workflow.flare.log](./phase/abc/log/workflow.flare.20260827.log)**
 
@@ -136,7 +181,7 @@ Orchestrates dual V8 isolates within a simulated Cloudflare Worker environment t
 * **Consensus & Fault Tolerance:** Enforces a 2-of-3 threshold consensus to reject invalid signatures (Sybil attacks) and recover state frames.
 * **Side-Channel Mitigation:** Reduces timer resolution to mitigate Spectre-style attacks and strictly clears memory between execution contexts.
 
-### 4.3. EVM Simulated Settlement & Ledger Validation
+### 5.3. EVM Simulated Settlement & Ledger Validation
 
 🔗 **[View Log: workflow.settlement.log](./phase/abc/log/workflow.settlement.20260825.log)**
 
@@ -146,7 +191,7 @@ Embeds **REVM (Rust EVM)** within the WASM sandbox to deterministically simulate
 * **Rollback Handling:** Halts execution and triggers rollbacks when encountering insufficient balances, malformed calldata, or invalid opcode injections.
 * **L2 Readiness:** Validated transactions emit exact storage slot mutation proofs alongside an L2 Rollup Hash.
 
-### 4.4. End-to-End DePIN Orchestration & Fault Injection
+### 5.4. End-to-End DePIN Orchestration & Fault Injection
 
 🔗 **[View Log: phase.e2e.defin.log](./phase/abc/log/defin/phase.e2e.defin.20260830.log)**
 
@@ -156,7 +201,7 @@ The infrastructure utilizes an event-driven **Finite State Machine (FSM)** to de
 * **FSM-Driven Validation:** Halts invalid transaction workflows before execution begins, rejecting zero-balance requests and unverified callers.
 * **Fault Injection Resilience:** The state machine intercepts in-flight anomalies—such as forced allowance zeroing or corrupted calldata—triggering safe halts to maintain network stability.
 
-### 4.5. API Gateway & L402 Ingress Validation
+### 5.5. API Gateway & L402 Ingress Validation
 
 🔗 **[View Log: phase.e2e.edge.log](./phase/abc/log/edge/phase.e2e.edge.20260830.log)**
 
@@ -165,48 +210,3 @@ The FastAPI-based REST Gateway serves as the entry point, ensuring compute resou
 * **L402 Payment & Tier Routing:** Handles incoming requests through a quoting phase, mapping intents to execution tiers and clearing charges via Web3 wallets and Rollup Adapters.
 * **Signature Verification:** Ingress traffic is strictly inspected. If a payload's cryptographic signature is invalid, the edge immediately terminates the workflow.
 * **Rate Limiting & WAF:** Deflects unauthorized or unfunded request spikes at the API perimeter to preserve internal execution capacity for valid intents.
-
----
-
-## 5. Universal CLI Tool (`fiber`)
-
-The `fiber` CLI is the single entry point for bootstrapping the DPHI ecosystem. Rather than acting as a heavy, monolithic controller, it functions as a **Topological Router**. It delegates execution, argument parsing, and lifecycle management directly to the target modules while dynamically assigning the appropriate node profile to prevent resource overkill.
-
-### 5.1. Execution & Local Usage
-
-If the `fiber` package is installed globally (e.g., via `pip install -e .`), you can use the `fiber` command directly. For local development or environments without a global installation, you can execute the module directly using Python's standard `-m` flag:
-
-```bash
-# Global execution
-fiber [OPTIONS] COMMAND [ARGS]...
-
-# Local / Development execution
-python -m fiber.cli.main [OPTIONS] COMMAND [ARGS]...
-
-```
-
-### 5.2. E2E Testing & Dynamic Argument Forwarding (Core Feature)
-
-The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`defin`, `eco`, `edge`, `flare`, `wasm.entry`, `llm.compat`).
-
-Instead of hardcoding every possible test parameter into the root CLI, `fiber` captures unknown arguments and transparently **forwards them to the target module's standard `main(args)` entrypoint**. This ensures zero-friction scalability as new domains and parameters are added.
-
-**Example:**
-
-```bash
-# Run the LLM Compatibility suite with suite-specific arguments
-fiber e2e llm.compat --model gemini/gemini-3.1-flash-lite --proxy
-
-```
-
-> *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `llm.compat` suite's internal `argparse`.*
-
-### 5.3. Ecosystem Operational Modes
-
-Beyond testing, the CLI routes the system into specific operational contexts, automatically segregating topologies (e.g., `EDGE` vs. `COMPUTE`) based on the requested workload:
-
-| Mode | Description | Example |
-| --- | --- | --- |
-| **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker). It performs **Topological Segregation** by analyzing the requested daemons. For example, requesting only `gateway_edge` dynamically sets the `EDGE` profile, safely bypassing heavy WASM worker pools to prevent resource overkill. | `fiber daemon -s rest_edge,gateway_edge` |
-| **`trace`** | **[Experimental / Chaos Sandbox]** An experimental structure dedicated to **Chaos Engineering and Deep Diagnostics**. It ignites a specialized hypervisor (`tracer_controller`) to inject structural anomalies (e.g., OOM traps, Byzantine faults) into isolated containers and observe the kernel's resilience. Supports custom YAML manifests via `--config`. | `fiber trace -t oom_tracer -c fault.yml` |
-| **`shell`** | **[Client Observatory]** Launches an interactive God-Mode console. It connects directly to the asynchronous message tunnel (Redis PubSub/Stream) to monitor cluster capacity or inject out-of-band signals without booting a full local kernel reactor. | `fiber shell --env-file .env.local` |

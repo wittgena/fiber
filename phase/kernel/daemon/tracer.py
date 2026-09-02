@@ -63,7 +63,7 @@ class TracerControllerDaemon(AbstractDaemon):
         # [개선] 지연 로딩을 통해 평상시 다른 노드(EDGE/COMPUTE)가 뜰 때
         # 무거운 Tracer 인프라(Docker/Kube SDK 등)가 불필요하게 임포트되는 것을 방지합니다.
         try:
-            from fiber.phase.debug.tracer.infra import OOMTracer, ReproTracer
+            from fiber.phase.kernel.tracer.infra import OOMTracer, ReproTracer
         except ImportError as e:
             log.error(f"[{self.name}] Failed to load tracer infra dependencies: {e}")
             return

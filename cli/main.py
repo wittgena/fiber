@@ -12,7 +12,7 @@ try:
 except ImportError:
     dotenv = None
 
-from fiber.phase.debug.shell import EcosystemShell
+from fiber.phase.kernel.shell.entry import EcosystemShell
 
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.kernel.ops.boot import main_async, teardown

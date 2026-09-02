@@ -1,10 +1,13 @@
-# fiber.phase.debug.shell
+# fiber.phase.kernel.shell.entry
 import sys
 import asyncio
 import json
 import uuid
 from dataclasses import asdict
 from typing import Optional
+
+from fiber.phase.kernel.shell.surge import MarketSurge, LedgerSurge, EcoSurge
+from fiber.phase.kernel.shell.inject import PhysicsInjector
 
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
@@ -14,10 +17,7 @@ from xphi.kernel.ops.daemon.bootstrap import KEY_HEARTBEAT_PATTERN, TOPIC_BUS_ST
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.phase.debug.surge import MarketSurge, LedgerSurge, EcoSurge
-from fiber.phase.debug.inject import PhysicsInjector
-
-log = get_emitter("debug.shell")
+log = get_emitter("shell.entry")
 
 class LiveManifold:
     """통합 콘솔의 엔진: 터널, 브로커, 클러스터 상태를 캡슐화"""

@@ -1,5 +1,4 @@
 # fiber.dphi.edge.serv.public
-## @lineage: fiber.dphi.edge.public
 import os
 import json
 import time

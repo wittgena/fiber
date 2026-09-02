@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from fiber.phase.debug.sandbox import SandboxRunner, TestScripts
+from fiber.phase.kernel.shell.sandbox import SandboxRunner, TestScripts
 from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
 from xphi.kernel.dphi.adapter.state import StateAdapter

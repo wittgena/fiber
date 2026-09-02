@@ -7,7 +7,7 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.phase.debug.sandbox import EpochBase
+from fiber.phase.kernel.shell.sandbox import EpochBase
 from fiber.dphi.infra.transaction import ExchangeAdapter
 from fiber.dphi.infra.adapter.anchor import ActorIdentity
 
