@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fiber"
-version = "1.0.1"
+version = "1.1.0"  # xphi의 1.1.0 태그와 완벽히 동기화(Lockstep)되는 버전
 description = "The Universal Integration Boundary for heterogeneous AI ecosystems"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,6 +15,9 @@ dependencies = [
     "datamodel-code-generator", "acp", "mcp==2.0.0a3", "tyro", "web3",
     "pydantic", "httpx"
 ]
+
+[project.scripts]
+fiber = "fiber.cli.main:app"
 
 [project.optional-dependencies]
 readers = ["PyJWT", "pypdf", "python-docx"]

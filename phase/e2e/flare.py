@@ -1,6 +1,6 @@
 # fiber.phase.e2e.flare
-## @lineage: fiber.e2e.flare
 import sys
+import os
 import argparse
 import importlib
 import logging
@@ -133,16 +133,26 @@ class FlareFlow:
     async def run(self):
         await self.test()
 
-def main():
+
+# =========================================================================
+# [구조적 정렬] Standard Entrypoint
+# =========================================================================
+
+def main(args_list: list[str] = None):
+    """
+    [Standard Entrypoint]
+    args_list가 None이면 python -m 실행으로 간주되어 sys.argv를 파싱하고,
+    fiber e2e CLI 로부터 인자가 넘어오면 해당 인자(extra_args)를 파싱합니다.
+    """
     parser = argparse.ArgumentParser(description="DPHI Cloudflare Edge Orchestrator")
     parser.add_argument("--mode", choices=["dev", "deploy"], default="dev", help="Run locally (dev) or on Global Edge (deploy)")
     parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run")
     parser.add_argument("--debug", action="store_true", help="Enable DEBUG log level to capture underlying Edge/Wrangler streams.")
     parser.add_argument("--keep-workspace", action="store_true", help="Prevent teardown of the workspace on failure for post-mortem analysis.")
     
-    args = parser.parse_args()
-    config = FlarePipelineConfig()
-    
+    # args_list가 주입되면 해당 리스트를 파싱하고, 아니면 기본 sys.argv를 파싱합니다.
+    args, _ = parser.parse_known_args(args_list)
+
     if args.debug:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
@@ -151,7 +161,8 @@ def main():
         
         logging.getLogger("auditor.flare.dev").setLevel(logging.DEBUG)
         log.info("🐛 [DEBUG MODE] Internal stream logging is ENABLED.")
-    
+
+    config = FlarePipelineConfig()
     app = FlareFlow(
         mode=args.mode, 
         command="test", 
@@ -159,7 +170,7 @@ def main():
         config=config,
         keep_workspace=args.keep_workspace
     )
-    PhaseReactor.ignite(app.run)
+    PhaseReactor.ignite(main_coro_func=app.run)
 
 if __name__ == "__main__":
     main()

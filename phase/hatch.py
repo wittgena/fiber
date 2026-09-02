@@ -1,8 +1,5 @@
 # fiber.phase.hatch
-## @lineage: fiber.phase.flow.hatch
-## @lineage: phase.flow.hatch
-import os
-import shutil
+import tempfile
 import subprocess
 from pathlib import Path
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
@@ -11,46 +8,39 @@ class CustomBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         workspace_root = Path(self.root).parent
         local_xphi = workspace_root / "xphi"
-        
-        # 통합할 xphi 측 타겟 모듈들
         target_modules = ["arch", "kernel", "watcher"]
         
         if "force_include" not in build_data:
             build_data["force_include"] = {}
 
-        # [CASE 1] 로컬 (self) 환경: 상위 디렉토리에 xphi가 존재하는 경우
+        ## [CASE 1] 로컬 개발 시 (버전 무관하게 실시간 변경사항 동기화)
         if local_xphi.exists():
-            print("[Build Hook] Local 'xphi' workspace detected.")
-            for mod in target_modules:
-                src = str(local_xphi / mod)
-                # 최종 패키지 내부에 xphi/arch, xphi/kernel 형태로 주입
-                dst = f"xphi/{mod}"
-                build_data["force_include"][src] = dst
+            print("[JIT Assembly] Sibling 'xphi' workspace detected. Using bleeding-edge local source.")
+            self._inject_modules(local_xphi, target_modules, build_data)
                 
-        # [CASE 2] 사용자 환경: 패키지 설치 시 xphi가 없어 GitHub에서 Fetch
+        ## [CASE 2] 외부 빌드 / 배포 시 (Fiber 버전과 xphi 버전을 1:1로 락(Lock) 매칭)
         else:
-            print("[Build Hook] Fetching 'xphi' from GitHub...")
-            cache_dir = Path(self.root) / "phase" / "cache" / "xphi"
+            # tag 포맷이 'v1.1.0' 이라 가정 (버전 정책에 따라 'version' 그대로 사용 가능)
+            target_tag = version if version.startswith("v") else f"v{version}"
+            print(f"[JIT Assembly] Fetching 'xphi' (Tag: {target_tag}) to match Fiber version {version}...")
             
-            if cache_dir.exists():
-                shutil.rmtree(cache_dir)
-                
-            try:
-                subprocess.run(
-                    ["git", "clone", "--depth", "1", "https://github.com/wittgena/xphi.git", str(cache_dir)],
-                    check=True,
-                    capture_output=True
-                )
-                print("[Build Hook] Successfully fetched 'xphi'.")
-                
-                for mod in target_modules:
-                    src = str(cache_dir / mod)
-                    # 다운로드한 코드 역시 xphi/ 네임스페이스 하위로 매핑
-                    dst = f"xphi/{mod}"
-                    if Path(src).exists():
-                        build_data["force_include"][src] = dst
+            with tempfile.TemporaryDirectory() as temp_dir:
+                try:
+                    # Fiber의 버전과 완벽히 동일한 xphi의 태그를 가져와 융합
+                    subprocess.run(
+                        ["git", "clone", "--branch", target_tag, "--depth", "1", 
+                         "https://github.com/wittgena/xphi.git", temp_dir],
+                        check=True, capture_output=True
+                    )
+                    self._inject_modules(Path(temp_dir), target_modules, build_data)
                         
-            except subprocess.CalledProcessError as e:
-                error_msg = e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
-                print(f"[Error] Failed to clone 'xphi': {error_msg}")
-                raise
+                except subprocess.CalledProcessError as e:
+                    print(f"[FATAL] Failed to fetch xphi tag {target_tag}. Ensure repos are version-synced.")
+                    raise
+
+    def _inject_modules(self, source_root: Path, target_modules: list, build_data: dict):
+        for mod in target_modules:
+            src = str(source_root / mod)
+            dst = f"xphi/{mod}"
+            if Path(src).exists():
+                build_data["force_include"][src] = dst

@@ -1,8 +1,5 @@
-# fiber.dphi.edge.ext
-## @lineage: fiber.kernel.receptor.edge.ext
-## @lineage: fiber.kernel.receptor.dphi.edge.ext
-## @lineage: fiber.receptor.dphi.edge.ext
-## @lineage: fiber.dphi.receptor.edge.ext
+# fiber.dphi.edge.serv.ext
+## @lineage: fiber.dphi.edge.ext
 import json
 import time
 from typing import Dict, Any, Optional

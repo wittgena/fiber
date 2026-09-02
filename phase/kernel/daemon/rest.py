@@ -1,6 +1,4 @@
 # fiber.phase.kernel.daemon.rest
-## @lineage: fiber.kernel.daemon.rest
-## @lineage: fiber.receptor.daemon.rest
 import os
 import asyncio
 import json
@@ -13,16 +11,17 @@ from contextlib import suppress
 from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# ---------------------------------------------------------
-# Unified Imports
-# ---------------------------------------------------------
-from fiber.dphi.edge.rest.api import create_app, Config
+import redis.asyncio as aioredis
+
+from fiber.dphi.edge.payload import create_app, Config
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.server.mcp import SecureMCPServer
 from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.dphi.ledger.consensus import KernelLedger  # [추가] 로컬 붓스트래핑을 위한 임포트
 
 log = get_emitter("daemon.edge")
 
@@ -36,7 +35,7 @@ async def clear_zombie_ports(ports: List[int], tag: str):
     is_root = os.geteuid() == 0 if hasattr(os, 'geteuid') else False
     
     for port in set(ports):
-        # [개선] 특권 포트(443 등)에 대한 무의미한 OS 시스템 프로세스 킬링 방지
+        # 특권 포트(443 등)에 대한 무의미한 OS 시스템 프로세스 킬링 방지
         if port < 1024 and not is_root:
             log.warning(f"[{tag}] Port {port} is a privileged port. Reaper bypassed due to non-root execution.")
             continue
@@ -64,7 +63,7 @@ async def clear_zombie_ports(ports: List[int], tag: str):
 class GatewaySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GATEWAY_")
     host: str = "0.0.0.0"
-    # [개선] 시스템 환경변수가 없으면 권한 제약이 없는 8443을 기본값으로 사용하여 충돌 차단
+    # 시스템 환경변수가 없으면 권한 제약이 없는 8443을 기본값으로 사용하여 충돌 차단
     proxy_port: int = int(os.getenv("GATEWAY_PROXY_PORT", 8443)) 
     mcp_port: int = int(os.getenv("GATEWAY_MCP_PORT", 8084))
     upstream_url: str = "http://127.0.0.1:8000"
@@ -154,7 +153,6 @@ class DphiGatewayServer:
         proxy_site = web.TCPSite(proxy_runner, self.settings.host, self.settings.proxy_port)
         mcp_site = web.TCPSite(mcp_runner, self.settings.host, self.settings.mcp_port)
         
-        # aiohttp 서버 기동 중 에러 발생 시 명확히 던지도록 수정
         try:
             await asyncio.gather(proxy_site.start(), mcp_site.start())
         except OSError as e:
@@ -254,15 +252,54 @@ class RestEdgeDaemon(AbstractDaemon):
         self.target_port = int(os.getenv("REST_PORT", 8000))
         self.server: Optional[uvicorn.Server] = None
         self._server_task: Optional[asyncio.Task] = None
+        
+        # [구조 개선] API가 소유하던 인프라 자원의 소유권을 데몬으로 이관
+        self._redis_client = None
+        self._tunnel = None
 
     async def run(self):
         log.info(f"[{self.name}] Initiating Autonomous REST Edge Daemon...")
         try:
             await clear_zombie_ports([self.target_port], tag=self.name)
             
+            # ---------------------------------------------------------
+            # 1. 리소스 선점 (데몬 주도 인프라 초기화)
+            # ---------------------------------------------------------
+            # TunnelFactory: 노드 전체 터널 객체를 데몬이 확보
+            self._tunnel = await TunnelFactory.get_default()
+            
+            # Redis Client: 상위 커널 Context에 없다면 데몬이 직접 연결 생성 후 소유
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+            self._redis_client = getattr(self.ctx, "redis_client", None) or aioredis.from_url(redis_url, decode_responses=True)
+            
+            # [개선] Ledger: 커널에서 주입받거나, 없을 경우 로컬 인스턴스로 자동 초기화 (Auto-Role)
+            ledger = getattr(self.ctx, "ledger", None)
+            if ledger is None:
+                log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger (Auto-Role).")
+                ledger = KernelLedger()
+
+            # ---------------------------------------------------------
+            # 2. 환경변수 캡슐화 및 하향식 Config 구성
+            # ---------------------------------------------------------
             resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
-            runtime_config = Config(internal_edge_url=resolved_internal_url)
-            injected_app = create_app(runtime_config)
+            runtime_config = Config(
+                internal_edge_url=resolved_internal_url,
+                redis_url=redis_url,
+                max_payload_size=int(os.getenv("MAX_PAYLOAD_SIZE", 1024 * 1024 * 10)),
+                wasm_timeout=float(os.getenv("WASM_TIMEOUT", 10.0)),
+                pubsub_channel=os.getenv("PUBSUB_CHANNEL", "audit_channel")
+            )
+
+            # ---------------------------------------------------------
+            # 3. 의존성 주입 (DI) 기반 API 애플리케이션 생성
+            # ---------------------------------------------------------
+            # rest.api의 create_app은 주입된 객체만 사용하여 상태 비저장 형태로 기동됨
+            injected_app = create_app(
+                config=runtime_config,
+                tunnel=self._tunnel,
+                redis_client=self._redis_client,
+                ledger=ledger
+            )
 
             config = uvicorn.Config(
                 app=injected_app,
@@ -297,13 +334,36 @@ class RestEdgeDaemon(AbstractDaemon):
 
     async def _teardown(self):
         log.info(f"[{self.name}] Releasing REST Edge resources...")
+        
+        # 1. API 어플리케이션(Uvicorn)에 안전 종료 시그널 전달
         if self.server:
             self.server.should_exit = True
+            
+        # 2. Race Condition 방지: API의 Graceful Shutdown을 위한 충분한 타임아웃 보장
+        shutdown_timeout = float(os.getenv("SHUTDOWN_TIMEOUT", 15.0))
+        
         if self._server_task and not self._server_task.done():
             try:
-                await asyncio.wait_for(self._server_task, timeout=5.0)
+                log.info(f"[{self.name}] Waiting up to {shutdown_timeout}s for API graceful shutdown...")
+                await asyncio.wait_for(self._server_task, timeout=shutdown_timeout)
             except asyncio.TimeoutError:
+                log.warning(f"[{self.name}] Shutdown timeout exceeded. Forcing task cancellation.")
                 self._server_task.cancel()
                 with suppress(asyncio.CancelledError):
                     await self._server_task
+
+        # 3. 글로벌 자원 명시적 회수 (API의 월권 행위를 데몬이 정상 회수 처리)
+        log.info(f"[{self.name}] Reaping injected global resources...")
+        
+        if self._redis_client and not getattr(self.ctx, "redis_client", None):
+            with suppress(Exception):
+                await self._redis_client.close()
+                log.info(f"[{self.name}] Redis connection cleanly closed by daemon.")
+
+        try:
+            await TunnelFactory.close_all()
+            log.info(f"[{self.name}] TunnelFactory closed securely at daemon level.")
+        except Exception as e:
+            log.error(f"[{self.name}] Error closing TunnelFactory: {e}")
+
         log.info(f"[{self.name}] Resource cleanup complete.")

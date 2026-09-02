@@ -163,7 +163,7 @@ class EcoIntegrationWorkflow(Workflow):
         self.log.error(f"❌ [WORKFLOW HALTED] Verification failure: {msg.msg}")
         return StopMessage(result=False)
 
-def main():
+def main(args_list: list[str] = None):
     app = EcoIntegrationWorkflow()
     PhaseReactor.ignite(main_coro_func=app.start)
 

@@ -1,6 +1,5 @@
-# fiber.dphi.edge.rest.depend
-## @lineage: fiber.kernel.receptor.edge.rest.depend
-## @lineage: fiber.kernel.receptor.dphi.depend
+# fiber.dphi.edge.serv.depend
+## @lineage: fiber.dphi.edge.rest.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 

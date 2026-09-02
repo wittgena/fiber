@@ -1,6 +1,5 @@
-# fiber.dphi.edge.public
-## @lineage: fiber.kernel.receptor.edge.public
-## @lineage: fiber.kernel.receptor.dphi.edge.public
+# fiber.dphi.edge.serv.public
+## @lineage: fiber.dphi.edge.public
 import os
 import json
 import time
@@ -14,7 +13,7 @@ from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HT
 from pydantic import BaseModel
 
 from fiber.dphi.infra.builder import NotarySwarm
-from fiber.dphi.edge.rest.depend import (
+from fiber.dphi.edge.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
     get_otlp_engine, 

@@ -12,7 +12,7 @@ from eth_account.messages import encode_defunct
 from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from fiber.dphi.edge.workflow import EdgeWorkflow
 from fiber.dphi.client.http import VerifiedHttpClient
-from fiber.dphi.edge.rest.api import create_app, Config
+from fiber.dphi.edge.payload import create_app, Config
 from fiber.phase.kernel.daemon.rpc import RpcWorkerDaemon
 
 from xphi.arch.wasm.builder import WasmBuilder
@@ -257,5 +257,9 @@ class EdgeSuiteRunner:
         await self._run_gateway_pipeline()
         self._print_report()
 
+def main(args_list: list[str] = None):
+    app = EdgeSuiteRunner()
+    PhaseReactor.ignite(main_coro_func=app.execute)
+
 if __name__ == "__main__":
-    PhaseReactor.ignite(main_coro_func=EdgeSuiteRunner().execute)
+    main()

@@ -59,7 +59,7 @@ Defines the core sandbox engine principles for executing deterministic state tra
 
 🔗 **[Execution Logs: View Pipeline Reports](./phase/abc/log/)**
 
-The DPHI infrastructure validates its cryptographic integrity, execution determinism, and perimeter security across the compute stack through a rigorous CI/CD test harness executed upon every build.
+The DPHI infrastructure validates its cryptographic integrity, execution determinism, and perimeter security across the compute stack through a rigorous CI/CD test executed upon every build.
 
 ### 4.1. Core WASM Engine & Instruction-Level Determinism
 

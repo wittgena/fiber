@@ -1,26 +1,22 @@
-# fiber.dphi.edge.rest.api
-## @lineage: fiber.kernel.receptor.edge.rest.api
-## @lineage: fiber.kernel.receptor.dphi.rest
-## @lineage: fiber.receptor.dphi.rest
-import os
+# fiber.dphi.edge.payload
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Optional, Any
 from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, HTTPException, Security, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from fiber.dphi.edge.public import public_edge
-from fiber.dphi.edge.ext import ext_router
-from fiber.dphi.edge.llm import llm_edge
+from fiber.dphi.edge.transition.bridge import NonceReplayProtector, TransitionBridge
+from fiber.dphi.edge.serv.public import public_edge
+from fiber.dphi.edge.serv.ext import ext_router
+from fiber.dphi.edge.serv.llm import llm_edge
 
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
-from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
 from xphi.kernel.dphi.broker import DphiBroker
+from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
 
 from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.server.middleware import (
@@ -29,7 +25,6 @@ from xphi.watcher.server.middleware import (
     WasTelemetry,
 )
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.server.adapter.state import RedisAppendOnlyCache, MCPStateAdapter
 
 log = get_emitter(__name__)
 
@@ -38,15 +33,15 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 class Config(BaseModel):
     web_url: str = ""
+    internal_edge_url: str = ""
     allow_cors_origins: list[str] = ["http://localhost:3000"] 
     session_api_keys: list[str] = []
     pubsub_channel: str = "audit_channel"
     wasm_timeout: float = 10.0
     committee_pubs: list[str] = []
     
-    # [CHANGED] internal_edge_url 제거 (이제 Message Bus RPC 통신)
-    redis_url: str = Field(default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379"))
-    max_payload_size: int = Field(default_factory=lambda: int(os.getenv("MAX_PAYLOAD_SIZE", 1024 * 1024 * 10)))
+    redis_url: str = "redis://localhost:6379"
+    max_payload_size: int = 10485760  # 10MB
 
 def get_default_config() -> Config:
     return Config()
@@ -65,13 +60,13 @@ async def verify_access_credential(
         "/v1/public/keys",
         "/openapi.json",
         "/docs",
-        "/redoc"
+        "/redoc",
+        "/_health"
     }
     
     if path in public_whitelist:
         return None
 
-    # [CHANGED] /v1/eco/ 및 /v1/core/ 는 더이상 HTTP로 노출되지 않으므로 조건에서 삭제
     if path.startswith("/v1/ext/"):
         return None
 
@@ -95,23 +90,26 @@ async def verify_access_credential(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("Starting DPHI REST Edge Gateway...")
+    log.info("Starting DPHI REST Edge API Payload (Stateless Mode)...")
     config: Config = getattr(app.state, "config", get_default_config())
     
     try:
-        # 1. Tunnel & PubSub Init (For RPC and Global Streaming)
-        tunnel = await TunnelFactory.get_default() 
+        tunnel = app.state.tunnel
+        redis_client = app.state.redis_client
+        ledger = app.state.ledger
+
+        if not all([tunnel, redis_client, ledger]):
+            log.warning("Some infrastructure dependencies (tunnel, redis, ledger) are missing from injection.")
+
         pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
         await pubsub.start_listening()
         app.state.pubsub = pubsub
         
-        # 2. WASM Kernel Broker Init (For Local Attestation / Seals)
+        # WASM Broker 초기화 (비즈니스 도메인 바인딩)
         app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
-        # [CHANGED] UtxoAdapter & LogStreamStore 초기화 제거 (Worker 영역으로 이관)
-
-        # 3. OTLP Parser & Extraction Engine Init
+        # 2. OTLP Parser & Extraction Engine Init (순수 로직)
         default_otlp_ruleset = {
             "global_config": {"required_root_keys": ["resourceLogs"]},
             "targets": [
@@ -125,35 +123,47 @@ async def lifespan(app: FastAPI):
         app.state.otlp_engine = otlp_parser.parse_ruleset(default_otlp_ruleset)
         log.info("StrictOtlpExtractionEngine initialized.")
 
-        # 4. MCP State Adapter Init
-        app.state.mcp_cache = RedisAppendOnlyCache(redis_url=config.redis_url)
-        app.state.mcp_state_adapter = MCPStateAdapter(cache=app.state.mcp_cache)
-        log.info(f"Lock-Free MCP State Adapter initialized (Redis: {config.redis_url}).")
+        # 3. 주입받은 인프라 자원을 활용한 Transition Bridge 생성
+        nonce_protector = NonceReplayProtector(redis_client=redis_client)
+        app.state.mcp_transition_adapter = TransitionBridge(
+            ledger=ledger,
+            nonce_protector=nonce_protector
+        )
+        log.info(f"MCP 1.0 <-> 2.0 Transition Bridge initialized (Using injected Redis Client).")
         
-        log.info("REST Edge Gateway successfully started.")
+        app.state.is_ready = True
+        log.info("REST Edge API Payload is fully READY.")
         yield
+        
     except Exception as e:
         log.error(f"Failed to initialize REST Edge services: {e}", exc_info=True)
         raise
+        
     finally:
-        log.info("Shutting down receptor.rest safely...")
+        # 상태를 즉시 False로 전환하여 추가 인입 방지
+        app.state.is_ready = False
+        log.info("Shutting down receptor.rest payload safely...")
+        
+        # API가 스스로 생성(소유)한 어플리케이션 레벨 자원만 정리
         if hasattr(app.state, "pubsub"):
-            await app.state.pubsub.close()
-            
-        if hasattr(app.state, "mcp_cache"):
-            if hasattr(app.state.mcp_cache.redis, "close"):
-                await app.state.mcp_cache.redis.close()
-                log.info("MCP Cache Redis connection closed.")
-                
-        await TunnelFactory.close_all()
-        log.info("Teardown complete. Goodbye.")
+            try:
+                await app.state.pubsub.close()
+            except Exception as e:
+                log.error(f"Error closing PubSub: {e}")
+        
+        log.info("API Payload Teardown complete. Goodbye.")
 
 def _get_root_path(config: Config) -> str:
     if config.web_url:
         return urlparse(config.web_url).path.rstrip("/")
     return ""
 
-def create_app(config: Optional[Config] = None) -> FastAPI:
+def create_app(
+    config: Optional[Config] = None,
+    tunnel: Optional[Any] = None,
+    redis_client: Optional[Any] = None,
+    ledger: Optional[Any] = None
+) -> FastAPI:
     config = config or get_default_config()
     app = FastAPI(
         title="DPHI Edge Gateway",
@@ -163,14 +173,23 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
         dependencies=[Depends(verify_access_credential)]
     )
     
+    # 전달받은 글로벌 리소스를 어플리케이션 상태에 바인딩
     app.state.config = config
+    app.state.tunnel = tunnel
+    app.state.redis_client = redis_client
+    app.state.ledger = ledger
+    app.state.is_ready = False  # 초기 상태
     
-    # [CHANGED] internal_router 제거
     app.include_router(public_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
     app.include_router(ext_router) 
 
-    # [핵심 패치] 바이너리 스머글링(Smuggling) 및 디코딩 에러(500) 자멸 방어
+    @app.get("/_health", tags=["system"], include_in_schema=False)
+    async def readiness_probe():
+        if getattr(app.state, "is_ready", False):
+            return {"status": "ok", "message": "API Payload is ready"}
+        raise HTTPException(status_code=503, detail="Service Not Ready")
+
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         log.warning(f"[Security] Rejected malformed payload from {request.client.host if request.client else 'unknown'}")
@@ -190,4 +209,5 @@ def create_app(config: Optional[Config] = None) -> FastAPI:
     
     mcp_asgi_app = mcp.sse_app()
     app.mount("/mcp", mcp_asgi_app)
+    
     return app
