@@ -1,5 +1,4 @@
 # fiber.phase.kernel.daemon.rpc
-## @lineage: fiber.kernel.daemon.rpc
 import os
 import json
 import asyncio

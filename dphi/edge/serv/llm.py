@@ -2,11 +2,10 @@
 import time
 import orjson
 from typing import Dict, Any, List, Optional, Union
-from fastapi import Body, Header, Response, status, Request, HTTPException
+from fastapi import Body, Header, status, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from fiber.dphi.edge.transition.bridge import AgentIdentity, EventMetadata, TransitionBridge, TransitionResult
 from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.param import ModelResponse, EmbeddingResponse
 from fiber.llm.router.stream.wrapper import StreamWrapper
@@ -22,7 +21,7 @@ llm_edge = ContractRouter(
     namespace="llm",  
     prefix="/v1", 
     tags=["LLM Gateway"],
-    description="OpenAI-Compatible Zero-Trust LLM Gateway & Enterprise MCP Gateway"
+    description="OpenAI-Compatible Zero-Trust LLM Gateway"
 )
 
 class ChatCompletionRequest(BaseModel):
@@ -145,90 +144,4 @@ async def public_embeddings(
         raise
     except Exception as e:
         log.error(f"[LLM Gateway] Embedding Failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))                
-
-"""Enterprise MCP Gateway Endpoints"""
-@llm_edge.post(
-    "/mcp-gateway/state",
-    summary="Enterprise MCP 1.0 <-> 2.0 Transition Bridge",
-    tags=["Enterprise MCP Gateway"],
-    response_model=Dict[str, Any]
-)
-async def process_mcp_state(
-    request: Request,
-    response: Response, 
-    action: str = Body(..., description="INITIALIZE, MUTATE, COMMIT, QUERY"),
-    handle_id: Optional[str] = Body(None, description="Opaque Handle ID"),
-    payload: Dict[str, Any] = Body(default_factory=dict),
-    
-    x_spiffe_id: str = Header(..., description="Agent SPIFFE URI"),
-    x_dpop_proof: str = Header(..., alias="DPoP", description="Cryptographic DPoP Signature (RFC 9449)"),
-    x_nonce: str = Header(..., description="Replay Attack 방지용 난수 (필수)"),
-    
-    x_tenant_id: str = Header(..., description="B2B 고객사 고유 식별자 (필수)"),
-    x_idempotency_key: str = Header(..., description="중복 트랜잭션 방지용 멱등성 키 (필수)"),
-    x_trace_id: Optional[str] = Header(None, description="OTLP 분산 추적 ID (선택)")
-):
-    client_ip = request.client.host if request.client else "0.0.0.0"
-    try:
-        identity = AgentIdentity(
-            tenant_id=x_tenant_id,
-            principal_id="enterprise_orchestrator",
-            agent_uri=x_spiffe_id,
-            proof_of_possession=x_dpop_proof,
-            client_ip=client_ip,
-            nonce=x_nonce,
-            scopes=["mcp:state:write"]
-        )
-        
-        meta_kwargs = {"idempotency_key": x_idempotency_key}
-        if x_trace_id:
-            meta_kwargs["trace_id"] = x_trace_id
-            
-        meta = EventMetadata(**meta_kwargs)
-    except ValueError as ve:
-        raise HTTPException(status_code=422, detail=f"Invalid Enterprise Context: {ve}")
-
-    try:
-        adapter: TransitionBridge = request.app.state.mcp_transition_adapter
-        res: TransitionResult = await adapter.process_transition_intent(
-            identity=identity,
-            meta=meta,
-            handle_id=handle_id or "",
-            action=action,
-            payload=payload
-        )
-        
-        if not res.success:
-            err_code = res.code
-            err_msg = res.error
-            
-            if err_code == -32001: 
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, 
-                    detail="Invalid or missing DPoP proof.",
-                    headers={
-                        "WWW-Authenticate": f'Bearer resource_metadata="https://{request.url.hostname}/.well-known/oauth-protected-resource"'
-                    }
-                )
-            elif err_code == -32008: 
-                raise HTTPException(status_code=status.HTTP_410_GONE, detail=err_msg) 
-            elif err_code == -32009: 
-                raise HTTPException(status_code=status.HTTP_423_LOCKED, detail=err_msg) 
-            elif err_msg == "LEGACY_FLUSH_FAILED": 
-                detail_msg = res.data.get("details", "Bad Gateway") if res.data else "Bad Gateway"
-                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail_msg)
-                
-            else:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err_msg)
-
-        if res.status == "commit_accepted":
-            response.status_code = status.HTTP_202_ACCEPTED
-
-        return res.model_dump(exclude_none=True)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f"[MCP Gateway] Internal Fracture: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Edge Failure")
+        raise HTTPException(status_code=500, detail=str(e))

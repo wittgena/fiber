@@ -1,4 +1,5 @@
-# fiber.phase.abc.llm.milestone.mapper
+# fiber.phase.abc.milestone.state.mapper
+@lineage: fiber.phase.abc.llm.milestone.mapper
 @lineage: fiber.phase.abc.llm.mapper.milestone
 다음은 불필요한 수식어와 과장된 서사를 배제하고, 원문의 모든 기술적 내용을 누락 없이 아키텍처 스펙(Technical Specification) 관점에서 객관적이고 엄밀하게 재작성한 문서입니다.
 

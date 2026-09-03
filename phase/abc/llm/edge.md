@@ -1,6 +1,5 @@
-설계자님의 날카로운 현실 인식을 반영하여, "외부의 무책임한 복잡성(Stateless Chaos)을 삼켜 결정론적 질서(Deterministic Order)로 승화시키는 구조"라는 철학이 코드 레벨의 아키텍처 다이어그램과 함께 서술되도록 `edge.llm` 문서를 정밀하게 재정렬했습니다.
-
-2장(Transition Bridge)에 추가된 ASCII 다이어그램은 기존의 3장(LLM 요청 라이프사이클)과 시각적 통일성을 유지하면서도, 브릿지가 수행하는 '상태 앵커(State Anchor)'로서의 본질을 명확히 시각화합니다. (6장의 마크다운 오타도 함께 교정했습니다.)
+# fiber.phase.abc.llm.edge
+합의된 개선 지점(스테이블코인/M2M 결제 기반 포장 및 2026-07-28 무상태 스펙 명칭 통일)을 완벽하게 반영하여 재작성된 `abc.llm.edge` 문서 전문입니다.
 
 ---
 
@@ -12,19 +11,19 @@
 
 `edge.llm`은 DPHI(Deterministic Poly-Harmonic Infrastructure) 네트워크로 진입하는 LLM 추론 및 MCP(Model Context Protocol) 도구 호출을 제어하는 Zero-Trust 기반의 API 인그레스(Ingress) 계층이다.
 
-외부 요청이 호스트 시스템 내부로 유입되기 전에 암호학적 지불 증명(L402)과 DPoP(Proof-of-Possession) 서명을 검증하여, 에이전트 런타임을 둘러싼 권한 탈취 및 예산 초과(Runaway cost)를 물리적으로 차단한다. 특히, 현대 에이전트 프로토콜들이 클라이언트에게 외주화(Externalize)해버린 분산 환경의 구조적 복잡성을 엣지(Edge) 단에서 온전히 흡수함으로써, 클라이언트는 기존 코드 수정 없이 DPHI의 하드웨어 수준 격리 인프라와 결합할 수 있다.
+외부 요청이 호스트 시스템 내부로 유입되기 전에 사전 할당된 M2M 초소액 결제 증명(L402/스테이블코인 정산)과 DPoP(Proof-of-Possession) 서명을 검증하여, 에이전트 런타임을 둘러싼 권한 탈취 및 예산 초과(Runaway cost)를 물리적으로 차단한다. 특히, 현대 에이전트 프로토콜들이 클라이언트에게 외주화(Externalize)해버린 분산 환경의 구조적 복잡성을 엣지(Edge) 단에서 온전히 흡수함으로써, 클라이언트는 기존 코드 수정 없이 DPHI의 하드웨어 수준 격리 인프라와 결합할 수 있다.
 
 ---
 
-## 2. Enterprise MCP 1.0 ↔ 2.0 Transition Bridge (Stateless Complexity Anchor)
+## 2. Enterprise MCP Transition Bridge (Stateful ↔ 2026-07-28 Stateless Anchor)
 
-MCP 2.0이 상태 비저장(Stateless) 아키텍처로 전환되면서 프로토콜 자체는 가벼워졌으나, 매 요청에 대한 암호학적 인증, 동시성 제어(Race condition), 트랜잭션 멱등성 보장이라는 거대한 분산 시스템의 복잡성은 오롯이 엔터프라이즈 클라이언트에게 전가되었다.
+**2026-07-28 스펙 도입으로 MCP가 상태 비저장(Stateless) 아키텍처로 전면 전환되면서** 프로토콜 자체는 가벼워졌으나, 매 요청에 대한 암호학적 인증, 동시성 제어(Race condition), 트랜잭션 멱등성 보장이라는 거대한 분산 시스템의 복잡성은 오롯이 엔터프라이즈 클라이언트에게 전가되었다.
 
 게이트웨이 내의 `TransitionBridge`는 이러한 책임 회피적 구조가 낳은 파편화된 Stateless 요청들을 흡수(Complexity Sink)하여, 안전한 결정론적 상태 전이(Deterministic State Transition)로 승화시키는 상태 앵커(State Anchor) 역할을 수행한다.
 
 ```text
 [ Stateless Chaos (External) ]         [ Transition Bridge (Complexity Sink) ]       [ Deterministic Order ]
-                                                                             
+                                                                                     
 Agent A (MUTATE) + DPoP ──┐           ┌─────────────────────────────────────┐       ┌──────────────────────┐
                           │           │ 1. Cryptographic Ingress            │       │ WASM Kernel Ledger   │
 Agent B (MUTATE) + DPoP ──┼─(REST)──▶ │    - Validate SPIFFE & DPoP 서명    │──┐    │ ┌──────────────────┐ │
@@ -36,6 +35,7 @@ Agent C (Replay Attack) ──┘           ├───────────
                                       │ 3. Asynchronous Consensus           │◀─┘    └───────────┼──────────┘
 <── HTTP 202 Accepted (Non-blocking) ─┤    - Acknowledge & Queueing         │                   ▼
                                       └─────────────────────────────────────┘         [ State Sublimation ]
+
 
 ```
 
@@ -67,10 +67,11 @@ Agent C (Replay Attack) ──┘           ├───────────
        │ 5. Return Response (or SSE Stream)   │                                          │ (Execute with Kinetic Trap)
        ◀─────────────────────────────────────┼─────────────────────────────────────────┤
 
+
 ```
 
 * **Phase 1: Request Interception & Cryptographic Validation**
-클라이언트 요청 페이로드와 함께 `X-X402-Receipt` (결제 증명) 또는 `DPoP` (권한 증명) 헤더를 추출하여 인그레스 유효성을 검사한다.
+클라이언트 요청 페이로드와 함께 `X-X402-Receipt` **(스테이블코인 기반 종량제 결제 영수증)** 또는 `DPoP` (권한 증명) 헤더를 추출하여 인그레스 유효성을 검사한다.
 * **Phase 2: Kernel Intent Authorization**
 `DphiBroker`를 통해 WASM 커널에 `AUTHORIZE_INTENT`를 호출한다. 커널은 증명 내역을 검증하고 할당할 연산 예산(Fuel Budget)과 상태 씰링을 위한 감사 해시(Audit Hash)를 반환한다.
 * **Phase 3: Context Binding & Pipeline Execution**
@@ -84,7 +85,7 @@ Agent C (Replay Attack) ──┘           ├───────────
 
 ### 4.1. Enterprise MCP State (`/mcp-gateway/state`)
 
-MCP 1.0 페이로드를 DPHI WASM 생태계(2.0)로 브릿징하는 엔드포인트이다.
+**세션 기반의 기존 MCP 인텐트를 완전 무상태(Stateless, 2026-07-28) 생태계로 브릿징하는 FSM 엔드포인트이다.**
 
 * **Action Routing:** `INITIALIZE`, `MUTATE`, `COMMIT`, `QUERY` 등의 MCP 인텐트를 파싱하여 `TransitionBridge`를 통해 커널의 상태 전이 요청으로 매핑한다.
 * **Asynchronous Consensus:** 멤풀에 인텐트가 큐잉되면 `202 Accepted`를 즉시 반환하여 외부 에이전트의 I/O 블로킹을 최소화한다.
@@ -94,7 +95,7 @@ MCP 1.0 페이로드를 DPHI WASM 생태계(2.0)로 브릿징하는 엔드포인
 대화형 모델 호출을 위한 OpenAI 호환 엔드포인트이다.
 
 * **Routing Mechanism:** Pydantic의 `extra="allow"` 설정을 통해 LiteLLM 확장 파라미터(custom_llm_provider, fallbacks 등)를 패스스루(Pass-through) 처리한다.
-* **Streaming Handler:** `stream=True` 요청 시, 반환된 `StreamWrapper`를 FastAPI의 `StreamingResponse`에 매핑하여 Server-Sent Events (SSE) 규격으로 반환하되, Fuel 고갈 시 안전한 `[DONE]` 시그널과 함께 스트림을 종료한다.
+* **Streaming Handler:** `stream=True` 요청 시, 반환된 `StreamWrapper`를 FastAPI의 `StreamingResponse`에 매핑하여 Server-Sent Events (SSE) 규격으로 반환하되, Fuel 고갈 시 안전한 `[DONE]` 시그널과 함께 스트림 종료를 보장한다.
 
 ### 4.3. Embeddings (`/embeddings`)
 
@@ -123,7 +124,7 @@ MCP 1.0 페이로드를 DPHI WASM 생태계(2.0)로 브릿징하는 엔드포인
 
 검증된 코어 타입(`fiber.agent.anchor.model.types.core`)을 상속하여 표준 규격을 완벽히 준수한다.
 
-* **`ModelResponse` & `EmbeddingResponse**`: 게이트웨이 최종 반환 객체는 OpenAI SDK 규격(Choices, Message, Content)과 동일한 구조를 갖는다.
+* `ModelResponse` & `EmbeddingResponse**`: 게이트웨이 최종 반환 객체는 OpenAI SDK 규격(Choices, Message, Content)과 동일한 구조를 갖는다.
 * **`Usage`**: 차감된 연산 연료(Fuel) 내역은 표준 `Usage` 객체 내 확장 필드로 포함되어 클라이언트 파서 호환성을 유지한다.
 
 ### 6.2. Tool Calling 및 Streaming 지원
@@ -131,4 +132,4 @@ MCP 1.0 페이로드를 DPHI WASM 생태계(2.0)로 브릿징하는 엔드포인
 WASM 샌드박스에서 처리된 함수 호출 결과와 스트리밍 출력을 규격에 맞게 패스스루 처리한다.
 
 * **`ChatCompletionMessageToolCall`**: WASM 내부 IPC 결과물이나 도구 사용 내역은 표준 ToolCall 스키마로 직렬화되어 반환된다.
-* **`StreamingChoices` & `Delta**`: SSE 청크는 표준 Delta 객체 규격을 따르며, 예산 초과로 인한 Kinetic Trap 발생 시 파서 오류를 방지하기 위해 엣지 단에서 포맷을 정리(Graceful shutdown)하여 전송한다.
+* `StreamingChoices` & `Delta**`: SSE 청크는 표준 Delta 객체 규격을 따르며, 예산 초과로 인한 Kinetic Trap 발생 시 파서 오류를 방지하기 위해 엣지 단에서 포맷을 정리(Graceful shutdown)하여 전송한다.
