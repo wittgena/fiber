@@ -6,7 +6,7 @@ import random
 import json
 from typing import Any
 
-from fiber.dphi.infra.adapter.anchor import ActorIdentity
+from fiber.dphi.adapter.anchor import ActorIdentity
 
 from xphi.kernel.dphi.method import DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter

@@ -10,8 +10,8 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.infra.transaction import EcoAdapter, Ap2MandateResult, X402SettlementReceipt
-from fiber.dphi.infra.builder import EcoBuilder
+from fiber.infra.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
+from fiber.infra.builder import EcoBuilder
 from fiber.dphi.client.wallet import LocalWalletClient
 
 from xphi.xor.space.sandbox.runner import SchemeRunner
@@ -219,7 +219,7 @@ class EpochBase(SchemeRunner):
             
             log.info("--- [Flow 1.5] Economy: AP2 Mandate Validation ---")
             ap2_mandate = await self.hook_validate_mandate()
-            if ap2_mandate and not EcoAdapter.verify_mandate_signature(ap2_mandate):
+            if ap2_mandate and not MandateAdapter.verify_mandate_signature(ap2_mandate):
                 raise RuntimeError("Invalid Mandate Signature detected in Sandbox Validation")
             
             log.info("--- [Flow 2] Inscription: Gathering Local Node States ---")
@@ -227,7 +227,7 @@ class EpochBase(SchemeRunner):
 
             log.info("--- [Flow 2.5] Economy: Off-chain Capability Token Issuance / Metering ---")
             x402_receipt = await self.hook_process_payment(ap2_mandate)
-            economy_state = EcoAdapter.embed_economy_state({}, ap2_mandate, x402_receipt)
+            economy_state = MandateAdapter.embed_economy_state({}, ap2_mandate, x402_receipt)
             
             log.info("--- [Flow 3] Sealing: Cryptographic Epoch Alignment ---")
             seal_payload_dict = await self.hook_seal_epoch(parity_triplet, repos, economy_state, current_ts)
@@ -290,7 +290,7 @@ class EpochBase(SchemeRunner):
         """
         if mandate:
             log.info(f"  └─ Issuing Capability Receipt based on Mandate: {mandate.mandate.constraints.max_spend_usdc} USDC")
-            return EcoAdapter.issue_deferred_receipt(mandate)
+            return MandateAdapter.issue_deferred_receipt(mandate)
             
         # Mandate가 없는 레거시 또는 Mock 상황
         mock_amount = "0.01"

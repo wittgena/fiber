@@ -34,12 +34,12 @@ class RpcWorkerDaemon(AbstractDaemon):
         Worker 구동에 필요한 무거운 의존성들을 초기화합니다.
         순환 참조 방지를 위해 함수 내부에 Import 배치.
         """
-        from fiber.dphi.infra.adapter.anchor import NexusAnchor
+        from fiber.dphi.adapter.anchor import NexusAnchor
         from fiber.phase.kernel.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
 
         from xphi.kernel.dphi.broker import DphiBroker
         from xphi.watcher.server.stream.edge import LogStreamStore
-        from fiber.dphi.infra.transaction import ExchangeAdapter
+        from fiber.infra.adapter.settlement import ClearingAdapter
         from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
         from xphi.xor.space.sandbox import BenchProfile
         from xphi.kernel.dphi.adapter.sign import NodeSigner
@@ -52,7 +52,7 @@ class RpcWorkerDaemon(AbstractDaemon):
         # TODO: 운영(Production) 환경에서는 실제 위원회 키와 노드 키를 주입해야 합니다.
         nexus = NexusAnchor(broker=broker, consensus_threshold=1, allowed_committee=[])
         node_pubkey = NodeSigner.get_instance().pubkey_hex if hasattr(NodeSigner, 'get_instance') else "mock_pubkey"
-        exchange_adapter = ExchangeAdapter(clearing_house_pub_key=node_pubkey)
+        exchange_adapter = ClearingAdapter(clearing_house_pub_key=node_pubkey)
         utxo_adapter = UtxoAdapter(broker=broker)
         
         policy_engine = IngressPolicyEngine(

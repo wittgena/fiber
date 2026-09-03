@@ -7,10 +7,10 @@ from typing import Dict, Any
 
 from pydantic import ValidationError
 
-from fiber.dphi.infra.adapter.anchor import AnchorProposal, StreamAppendRequest
+from fiber.dphi.adapter.anchor import AnchorProposal, StreamAppendRequest
 
 from xphi.xor.space.sandbox.config import tier_config, fuel_config
-from fiber.dphi.model.receptor import (
+from xphi.arch.model.dphi.receptor import (
     EdgeState,
     AnchorProposalRequest,
     IntentValidationRequest,
@@ -336,8 +336,8 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from fiber.dphi.infra.transaction import EcoAdapter
-        invoice = EcoAdapter.build_x402_invoice(
+        from fiber.infra.adapter.settlement import MandateAdapter
+        invoice = MandateAdapter.build_x402_invoice(
             payee_address=payee_address,
             amount_usdc=amount_usdc,
             resource_id=resource_id

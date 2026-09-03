@@ -9,10 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-# 1. MCP Transition Bridge (새로 통합된 단일 스크립트 모듈 임포트)
-from fiber.dphi.edge.mcp.bridge import NonceReplayProtector, TransitionBridge, mcp_bridge
-
-# 2. Existing Routers
+from fiber.dphi.edge.mcp.bridge import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.dphi.edge.serv.public import public_edge
 from fiber.dphi.edge.serv.ext import ext_router
 from fiber.dphi.edge.serv.llm import llm_edge
@@ -20,7 +17,6 @@ from fiber.dphi.edge.serv.llm import llm_edge
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
-
 from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.server.middleware import (
     AttestationMiddleware,
@@ -93,6 +89,9 @@ async def verify_access_credential(
     )
 
 
+# =====================================================================
+# Application Lifecycle (Lifespan)
+# =====================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Starting DPHI REST Edge API Payload (Stateless Mode)...")
@@ -130,8 +129,11 @@ async def lifespan(app: FastAPI):
 
         # 3. Stateless Transition Bridge 인스턴스 마운트 (2026-07-28 규격)
         nonce_protector = NonceReplayProtector(redis_client=redis_client)
+        mapper = IdempotencyMapper(redis_client=redis_client)  # [FIX] Mapper 인스턴스화
+
         app.state.mcp_transition_adapter = TransitionBridge(
             ledger=ledger,
+            mapper=mapper,                           # [FIX] Mapper 주입
             nonce_protector=nonce_protector
         )
         log.info("Stateless MCP Transition Bridge (2026-07-28) initialized and mounted to app.state.")
@@ -156,6 +158,10 @@ async def lifespan(app: FastAPI):
         
         log.info("API Payload Teardown complete. Goodbye.")
 
+
+# =====================================================================
+# App Factory
+# =====================================================================
 def _get_root_path(config: Config) -> str:
     if config.web_url:
         return urlparse(config.web_url).path.rstrip("/")
@@ -176,6 +182,7 @@ def create_app(
         dependencies=[Depends(verify_access_credential)]
     )
     
+    # State Injection
     app.state.config = config
     app.state.tunnel = tunnel
     app.state.redis_client = redis_client
@@ -188,15 +195,18 @@ def create_app(
     app.include_router(mcp_bridge)  # 분리된 Enterprise MCP 브릿지 라우터 마운트
     app.include_router(ext_router) 
 
+    # Readiness Probe
     @app.get("/_health", tags=["system"], include_in_schema=False)
     async def readiness_probe():
         if getattr(app.state, "is_ready", False):
             return {"status": "ok", "message": "API Payload is ready"}
         raise HTTPException(status_code=503, detail="Service Not Ready")
 
+    # Exception Handlers
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        log.warning(f"[Security] Rejected malformed payload from {request.client.host if request.client else 'unknown'}")
+        client_host = request.client.host if request.client else 'unknown'
+        log.warning(f"[Security] Rejected malformed payload from {client_host}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": "Payload validation failed (Invalid encoding or format)"}

@@ -9,8 +9,8 @@ from typing import Any, Dict, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.infra.pipeline.defin import DefinPipelineFactory
-from fiber.dphi.infra.pipeline.transaction import TransactionPipelineFactory
+from fiber.infra.pipeline.defin import DefinPipelineFactory
+from fiber.infra.pipeline.transaction import TransactionPipelineFactory
 
 from xphi.kernel.phase.network.channel.pipeline import DuplexChannel, ChannelContext
 from xphi.kernel.phase.reactor import PhaseReactor

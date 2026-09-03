@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 from fiber.phase.kernel.shell.sandbox import SandboxRunner, TestScripts
-from fiber.dphi.infra.adapter.anchor import ActorIdentity
+from fiber.dphi.adapter.anchor import ActorIdentity
 
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.kernel.dphi.method import DphiMethod

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field, asdict
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from fiber.dphi.infra.config import dphi_env
+from fiber.infra.config import dphi_env
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("web3.adapter")

@@ -190,6 +190,41 @@ def run_e2e(
             log.error(f"[Fiber] 💥 E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
 
+
+# =========================================================
+# 6. The Egress Sidecar (MCP A2A Connector)
+# =========================================================
+@app.command("connect")
+def run_connector(
+    target: Annotated[str, typer.Option("--target", "-t", help="Target ID registered in the Gateway (e.g., my-db-01)")],
+    exec_cmd: Annotated[str, typer.Option("--exec", "-e", help="Legacy MCP server execution command")],
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+):
+    """
+    Launch the Egress Sidecar daemon. 
+    Sublimates a legacy MCP server into a DPHI A2A Node via stdio bridging.
+    """
+    _load_env(env_file)
+    
+    async def _launch_connector():
+        # [Lazy Import] 불필요한 무거운 코어 엔진을 호스트 메모리에 올리지 않고,
+        # 오직 Connector 실행 시점에만 가벼운 통신 모듈을 동적 임포트합니다.
+        from fiber.infra.worker.connector import McpConnectorDaemon
+        
+        log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
+        daemon = McpConnectorDaemon(target_id=target, legacy_command=exec_cmd)
+        
+        try:
+            await daemon.run()
+        finally:
+            log.info("[Fiber] Disconnected from A2A Network.")
+
+    try:
+        asyncio.run(_launch_connector())
+    except KeyboardInterrupt:
+        log.info("\n[Fiber] 👋 Connector shutting down...")
+
+
 def main():
     app()
 

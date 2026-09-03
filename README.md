@@ -107,7 +107,6 @@ fiber [OPTIONS] COMMAND [ARGS]...
 
 # Local / Development execution
 python -m fiber.cli.main [OPTIONS] COMMAND [ARGS]...
-
 ```
 
 ### 2.2. E2E Testing & Dynamic Argument Forwarding (Core Feature)
@@ -132,9 +131,19 @@ Beyond testing, the CLI routes the system into specific operational contexts, au
 
 | Mode | Description | Example |
 | --- | --- | --- |
-| **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker). It performs **Topological Segregation** by analyzing the requested daemons. For example, requesting only `gateway_edge` dynamically sets the `EDGE` profile, safely bypassing heavy WASM worker pools to prevent resource overkill. | `fiber daemon -s rest_edge,gateway_edge` |
-| **`trace`** | **[Experimental / Chaos Sandbox]** An experimental structure dedicated to **Chaos Engineering and Deep Diagnostics**. It ignites a specialized hypervisor (`tracer_controller`) to inject structural anomalies (e.g., OOM traps, Byzantine faults) into isolated containers and observe the kernel's resilience. Supports custom YAML manifests via `--config`. | `fiber trace -t oom_tracer -c fault.yml` |
-| **`shell`** | **[Client Observatory]** Launches an interactive God-Mode console. It connects directly to the asynchronous message tunnel (Redis PubSub/Stream) to monitor cluster capacity or inject out-of-band signals without booting a full local kernel reactor. | `fiber shell --env-file .env.local` |
+| **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker). Analyzes requested daemons and dynamically applies topology profiles (e.g., bypassing heavy WASM pools if only acting as an `EDGE` proxy). | `fiber daemon -s rest_edge,gateway_edge` |
+| **`trace`** | **[Experimental / Chaos Sandbox]** Ignites a specialized hypervisor (`tracer_controller`) to inject structural anomalies (e.g., OOM traps, Byzantine faults) into isolated containers to observe kernel resilience. | `fiber trace -t oom_tracer -c fault.yml` |
+| **`deploy`** | **[Deployment Manager]** Manages multi-node orchestration and cluster scaling logic. | `fiber deploy -t master` |
+| **`shell`** | **[Client Observatory]** Launches an interactive God-Mode console. Connects directly to the asynchronous message tunnel without booting a full local kernel reactor. | `fiber shell --env-file .env` |
+| **`connect`** | **[Egress Sidecar / A2A Bridge]** Sublimates any legacy 3rd-party MCP server into a DPHI autonomous node. Acts as a lightweight proxy wrapping standard I/O to the distributed FSM bus. | `fiber connect -t my-db -e "node index.js"` |
+
+### 2.4. Egress Sidecar & A2A Sublimation (The `connect` Mode)
+
+The `fiber connect` command represents the ecosystem's most potent adoption vector. It enables enterprise providers and indie developers alike to integrate existing Web2 servers into the deterministic A2A (Agent-to-Agent) economy with **absolutely zero code modifications**.
+
+* **Zero-Trust NAT Traversal:** Operating purely via outbound subscription (Pull-based), the connector requires **zero inbound firewall configurations**. Organizations can safely expose internal DB or ERP tools to global AI agents while remaining deeply concealed behind strict corporate VPCs.
+* **Instant L402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex L402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits enterprise-grade monetization and idempotency.
+* **The Pathway to WASM:** By isolating physical execution within this Sidecar boundary, Fiber establishes a seamless migration path. Providers can effortlessly swap their legacy subprocesses with deterministic WASM sandboxes in the future—transitioning from rudimentary APIs into fully autonomous, instruction-metered smart contracts without disrupting client agents.
 
 ---
 
