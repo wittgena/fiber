@@ -20,6 +20,9 @@ class InternalRpcClient:
         self.queue_name = queue_name
 
     async def call(self, method: str, params: Dict[str, Any], timeout: float = 15.0) -> Dict[str, Any]:
+        """
+        Request-Reply 패턴의 비동기 RPC 호출 (응답을 기다림)
+        """
         tunnel = await TunnelFactory.get_default()
         job_id = f"rpc_{uuid.uuid4().hex[:12]}"
         reply_channel = f"reply.{job_id}"
@@ -46,8 +49,7 @@ class InternalRpcClient:
                     if msg and msg["type"] == "message":
                         response = json.loads(msg["data"])
                         
-                        # [FIX] Worker에서 반환한 RPC 에러를 표준 HTTP Exception으로 자동 변환
-                        # 응답의 'error' 필드가 딕셔너리일 경우 그 내부에서 code와 message를 추출
+                        # Worker에서 반환한 RPC 에러를 표준 HTTP Exception으로 자동 변환
                         err_data = response.get("error")
                         if err_data:
                             code = err_data.get("code", 500)
@@ -73,6 +75,19 @@ class InternalRpcClient:
             await pubsub.unsubscribe(reply_channel)
             await pubsub.close()
 
+    async def publish_intent(self, channel: str, payload: Dict[str, Any]):
+        """
+        응답을 기다리지 않고, 특정 타겟(예: Connector Sidecar)의 구독 채널로 
+        비동기 이벤트를 쏘고 즉시 리턴하는 Fire-and-forget 큐잉 메서드.
+        """
+        tunnel = await TunnelFactory.get_default()
+        try:
+            # Pub/Sub 브로드캐스트로 전송
+            await tunnel.publish(channel, json.dumps(payload))
+            log.debug(f"[RPC Broadcast] Sent intent to {channel}")
+        except Exception as e:
+            log.error(f"[RPC Broadcast Error] Failed to publish to {channel}: {e}")
+            raise
 
 # FastAPI 의존성 주입용 프로바이더
 async def get_rpc_client() -> InternalRpcClient:

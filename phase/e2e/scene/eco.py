@@ -8,8 +8,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.phase.kernel.shell.sandbox import EpochBase
-from fiber.dphi.infra.transaction import ExchangeAdapter
-from fiber.dphi.infra.adapter.anchor import ActorIdentity
+from fiber.infra.adapter.settlement import ClearingAdapter
+from fiber.dphi.adapter.anchor import ActorIdentity
 
 from xphi.xor.space.sandbox.runner import SchemeRunner
 from xphi.kernel.dphi.adapter.state import StateAdapter
@@ -24,7 +24,7 @@ class EcoContext:
         self.agent_a = ActorIdentity("Agent_A")
         self.agent_b = ActorIdentity("Agent_B")
         self.field = ActorIdentity("Clearing_Field")
-        self.exchange_adapter = ExchangeAdapter(clearing_house_pub_key=self.field.pubkey_hex)
+        self.exchange_adapter = ClearingAdapter(clearing_house_pub_key=self.field.pubkey_hex)
 
 
 # =========================================================================

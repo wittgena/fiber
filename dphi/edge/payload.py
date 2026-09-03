@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from fiber.dphi.edge.transition.bridge import NonceReplayProtector, TransitionBridge
+from fiber.dphi.edge.mcp.bridge import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.dphi.edge.serv.public import public_edge
 from fiber.dphi.edge.serv.ext import ext_router
 from fiber.dphi.edge.serv.llm import llm_edge
@@ -17,7 +17,6 @@ from fiber.dphi.edge.serv.llm import llm_edge
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker
 from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
-
 from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.server.middleware import (
     AttestationMiddleware,
@@ -70,24 +69,29 @@ async def verify_access_credential(
     if path.startswith("/v1/ext/"):
         return None
 
-    if path.startswith("/v1/mcp-gateway"):
+    # MCP Gateway 라우터 우회: 내부 브릿지가 DPoP / L402(Track A/B)를 직접 자체 검증함
+    if path.startswith("/v1/mcp-gateway/"):
         return None
 
     config: Config = request.app.state.config
     if config.session_api_keys and api_key in config.session_api_keys:
         return api_key
 
+    # 글로벌 LLM Gateway 결제 검증
     l402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
     if l402_header:
         return l402_header
 
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED, 
-        detail="Zero-Trust Enforced: Payment Required. Please provide an L402 receipt.",
+        detail="Zero-Trust Enforced: Payment Required. Please provide a stablecoin/L402 receipt.",
         headers={"WWW-Authenticate": 'L402 macaroon=""'}
     )
 
 
+# =====================================================================
+# Application Lifecycle (Lifespan)
+# =====================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Starting DPHI REST Edge API Payload (Stateless Mode)...")
@@ -105,11 +109,11 @@ async def lifespan(app: FastAPI):
         await pubsub.start_listening()
         app.state.pubsub = pubsub
         
-        # WASM Broker 초기화 (비즈니스 도메인 바인딩)
+        # 1. WASM Broker 초기화
         app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
-        # 2. OTLP Parser & Extraction Engine Init (순수 로직)
+        # 2. OTLP Parser & Extraction Engine Init
         default_otlp_ruleset = {
             "global_config": {"required_root_keys": ["resourceLogs"]},
             "targets": [
@@ -123,13 +127,16 @@ async def lifespan(app: FastAPI):
         app.state.otlp_engine = otlp_parser.parse_ruleset(default_otlp_ruleset)
         log.info("StrictOtlpExtractionEngine initialized.")
 
-        # 3. 주입받은 인프라 자원을 활용한 Transition Bridge 생성
+        # 3. Stateless Transition Bridge 인스턴스 마운트 (2026-07-28 규격)
         nonce_protector = NonceReplayProtector(redis_client=redis_client)
+        mapper = IdempotencyMapper(redis_client=redis_client)  # [FIX] Mapper 인스턴스화
+
         app.state.mcp_transition_adapter = TransitionBridge(
             ledger=ledger,
+            mapper=mapper,                           # [FIX] Mapper 주입
             nonce_protector=nonce_protector
         )
-        log.info(f"MCP 1.0 <-> 2.0 Transition Bridge initialized (Using injected Redis Client).")
+        log.info("Stateless MCP Transition Bridge (2026-07-28) initialized and mounted to app.state.")
         
         app.state.is_ready = True
         log.info("REST Edge API Payload is fully READY.")
@@ -140,11 +147,9 @@ async def lifespan(app: FastAPI):
         raise
         
     finally:
-        # 상태를 즉시 False로 전환하여 추가 인입 방지
         app.state.is_ready = False
         log.info("Shutting down receptor.rest payload safely...")
         
-        # API가 스스로 생성(소유)한 어플리케이션 레벨 자원만 정리
         if hasattr(app.state, "pubsub"):
             try:
                 await app.state.pubsub.close()
@@ -153,6 +158,10 @@ async def lifespan(app: FastAPI):
         
         log.info("API Payload Teardown complete. Goodbye.")
 
+
+# =====================================================================
+# App Factory
+# =====================================================================
 def _get_root_path(config: Config) -> str:
     if config.web_url:
         return urlparse(config.web_url).path.rstrip("/")
@@ -173,37 +182,44 @@ def create_app(
         dependencies=[Depends(verify_access_credential)]
     )
     
-    # 전달받은 글로벌 리소스를 어플리케이션 상태에 바인딩
+    # State Injection
     app.state.config = config
     app.state.tunnel = tunnel
     app.state.redis_client = redis_client
     app.state.ledger = ledger
-    app.state.is_ready = False  # 초기 상태
+    app.state.is_ready = False  
     
+    # Routers Binding
     app.include_router(public_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
+    app.include_router(mcp_bridge)  # 분리된 Enterprise MCP 브릿지 라우터 마운트
     app.include_router(ext_router) 
 
+    # Readiness Probe
     @app.get("/_health", tags=["system"], include_in_schema=False)
     async def readiness_probe():
         if getattr(app.state, "is_ready", False):
             return {"status": "ok", "message": "API Payload is ready"}
         raise HTTPException(status_code=503, detail="Service Not Ready")
 
+    # Exception Handlers
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        log.warning(f"[Security] Rejected malformed payload from {request.client.host if request.client else 'unknown'}")
+        client_host = request.client.host if request.client else 'unknown'
+        log.warning(f"[Security] Rejected malformed payload from {client_host}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": "Payload validation failed (Invalid encoding or format)"}
         )
 
+    # Middlewares
     app.add_middleware(SentinelFirewallMiddleware, max_body_size=config.max_payload_size)
     app.add_middleware(LocalMiddleware, allow_origins=config.allow_cors_origins)
     app.add_middleware(AttestationMiddleware)
     app.add_middleware(WasTelemetry)
 
-    log.info("Initializing Secure MCP Server (Native 2.0 Gateway)...")
+    # Legacy Secure MCP Server Mount
+    log.info("Initializing Secure MCP Server (Native Gateway)...")
     mcp = SecureMCPServer(name="MCP-Server", version="1.0.0")
     mcp.bind_fastapi(app, allowed_tags=["mcp-exposed"])
     

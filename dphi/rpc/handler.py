@@ -7,10 +7,10 @@ from typing import Dict, Any
 
 from pydantic import ValidationError
 
-from fiber.dphi.infra.adapter.anchor import AnchorProposal, StreamAppendRequest
+from fiber.dphi.adapter.anchor import AnchorProposal, StreamAppendRequest
 
 from xphi.xor.space.sandbox.config import tier_config, fuel_config
-from fiber.dphi.model.receptor import (
+from xphi.arch.model.dphi.receptor import (
     EdgeState,
     AnchorProposalRequest,
     IntentValidationRequest,
@@ -29,6 +29,8 @@ from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.cgroup import Tier
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
+# [ADDED] LogicStream 임포트 (MCP 상태 전이 제안용)
+from xphi.kernel.dphi.ledger.consensus import LogicStream
 
 log = get_emitter("dphi.handler")
 
@@ -45,7 +47,8 @@ class WorkerContext:
         exchange_adapter: Any,
         utxo_adapter: Any,
         policy_engine: Any,
-        profile_service: Any
+        profile_service: Any,
+        ledger: Any = None # [ADDED] LogicStream 봉인을 위한 원장 의존성 추가 (없으면 Mocking 가능)
     ):
         self.broker = broker
         self.store = store
@@ -54,12 +57,62 @@ class WorkerContext:
         self.utxo_adapter = utxo_adapter
         self.policy_engine = policy_engine
         self.profile_service = profile_service
+        self.ledger = ledger
 
 
 def _build_error(code: int, message: str) -> dict:
     """RPC 표준 에러 응답 빌더"""
     return {"error": True, "code": code, "message": message}
 
+# ==========================================
+# [Core MCP] State Transition Handler (NEW)
+# ==========================================
+async def handle_mcp_state_resolve(params: dict, ctx: WorkerContext) -> dict:
+    """
+    Egress Sidecar(Connector)가 물리적 실행을 마친 뒤 그 결과를 원장에 보고하는 핸들러.
+    순수 결정론적 상태 전이(LogicStream)를 제안하여 FSM 라이프사이클을 완성합니다.
+    """
+    handle_id = params.get("handle_id")
+    status = params.get("status")
+    executable_payload = params.get("executable_payload", {})
+    error_detail = params.get("error_detail", "")
+
+    if not handle_id or not status:
+        return _build_error(422, "Missing handle_id or status for MCP state resolution")
+
+    # Connector가 보고한 상태를 LogicStream으로 감싸서 전이 제안
+    logic_stream = LogicStream(
+        id=handle_id,
+        action="dphi.transition.resolve",
+        payload=executable_payload,
+        metadata={
+            "status": status,
+            "error_detail": error_detail,
+            "resolved_at": int(time.time() * 1000)
+        }
+    )
+
+    try:
+        # 워커 컨텍스트에 묶인 원장을 통해 상태 씰링
+        if not ctx.ledger:
+            log.warning("[MCP Handler] Ledger instance missing in WorkerContext. Mocking resolution.")
+            return {"success": True, "sealed_hash": f"mock_sealed_{handle_id}"}
+
+        sealed_state = await ctx.ledger.propose_and_seal(logic_stream)
+        
+        return {
+            "success": True, 
+            "status": "RESOLVED",
+            "sealed_hash": sealed_state.kernel_id if sealed_state else "unknown"
+        }
+    except Exception as e:
+        log.error(f"Failed to seal MCP resolution state: {str(e)}")
+        return _build_error(500, f"Ledger seal failed: {str(e)}")
+
+
+# ==========================================
+# [Core Ledger] Infrastructure & Consensus
+# ==========================================
 async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
     try:
         req = StreamAppendRequest(**params)
@@ -131,8 +184,6 @@ async def handle_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
 async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
     """
     [IMPROVED] 영수증(AuditReceipt) 무결성 검증.
-    - 기존의 잘못된 VERIFY_PARITY(장부 복구 엔진) 호출을 완전히 폐기.
-    - 원장 오라클(On-chain) 및 암호학적 지문 검사(Off-chain)를 통한 정합적 검증.
     """
     state_root = params.get("state_root")
     receipt_id = params.get("receipt_id")
@@ -141,12 +192,8 @@ async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Payload Format Error: Missing 'state_root' or 'receipt_id' in receipt")
 
     try:
-        # 1. On-Chain 검증: UTXO Adapter(Oracle)를 통해 Ledger에 기록되었는지 체인 무결성(Lineage) 확인
         is_valid = await ctx.utxo_adapter.verify_lineage(tx_hash=state_root, depth=3)
         
-        # 2. Off-Chain 검증 (Fallback)
-        # 아직 DB(원장)에 기록되지 않은 Mempool 단계의 오프체인 영수증인 경우,
-        # state_root 해시 지문의 포맷 무결성을 검사하여 1차 방어선 통과 (E2E 호환성)
         if not is_valid:
             if isinstance(state_root, str) and (state_root.startswith("0x") or len(state_root) in [64, 66]):
                 log.info(f"[LedgerVerify] Off-chain receipt {receipt_id} verified via cryptographic fingerprint.")
@@ -289,8 +336,8 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from fiber.dphi.infra.transaction import EcoAdapter
-        invoice = EcoAdapter.build_x402_invoice(
+        from fiber.infra.adapter.settlement import MandateAdapter
+        invoice = MandateAdapter.build_x402_invoice(
             payee_address=payee_address,
             amount_usdc=amount_usdc,
             resource_id=resource_id
@@ -328,7 +375,6 @@ async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    # 동적 에이전트 식별자 추출 (Gateway 또는 클라이언트에서 주입)
     agent_id = params.get("agent_id", getattr(req, "agent_id", "anonymous_agent"))
     target_tier = Tier.STANDARD
     
@@ -366,9 +412,7 @@ async def handle_profile_execute_billed(params: dict, ctx: WorkerContext) -> dic
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    # 동적 에이전트 식별자 추출
     agent_id = params.get("agent_id", getattr(req, "agent_id", "anonymous_agent"))
-    # 결제(Intent Validation)가 통과된 요청이므로 SYSTEM Tier 할당
     target_tier = Tier.SYSTEM 
     
     try:
@@ -415,5 +459,8 @@ INTERNAL_HANDLERS_REGISTRY = {
     "eco.exchange.balance": handle_utxo_balance,
     
     "eco.profile.quote": handle_profile_quote,
-    "eco.profile.execute.billed": handle_profile_execute_billed
+    "eco.profile.execute.billed": handle_profile_execute_billed,
+    
+    # [ADDED] MCP Connector의 결과 보고를 처리하여 상태 전이를 완성하는 핸들러
+    "mcp.bridge.resolve_state": handle_mcp_state_resolve
 }

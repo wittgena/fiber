@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, List, Dict, Callable
 
 from fiber.phase.kernel.shell.sandbox import TestScripts
-from fiber.dphi.infra.adapter.anchor import ActorIdentity
+from fiber.dphi.adapter.anchor import ActorIdentity
 
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.xor.space.sandbox.runner import SchemeRunner

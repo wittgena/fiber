@@ -1,6 +1,4 @@
 # fiber.phase.kernel.receptor.audit.secret
-## @lineage: fiber.kernel.receptor.audit.secret
-## @lineage: xphi.watcher.receptor.audit.secret
 import os
 import asyncio
 import hashlib

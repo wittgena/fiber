@@ -15,7 +15,7 @@ from fiber.llm.model.message import Message, TextContent
 from fiber.llm.driver.model import LLMModel
 from fiber.llm.driver.config.mcp import MCPConfig
 
-from fiber.dphi.model.graph import EntryNode
+from xphi.arch.model.dphi.graph import EntryNode
 from fiber.phase.scope.resolver.secret import SecretSource, SecretValue
 from xphi.arch.model.conv.tool import Tool
 from xphi.arch.model.surge.blueprint import SurgeBlueprint, SurgeNode

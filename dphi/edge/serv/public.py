@@ -11,7 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
 
-from fiber.dphi.infra.builder import NotarySwarm
+from fiber.infra.builder import NotarySwarm
 from fiber.dphi.edge.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -22,7 +22,7 @@ from fiber.dphi.edge.serv.depend import (
 from fiber.dphi.rpc.client import InternalRpcClient
 
 from xphi.arch.contract.interface import ContractRouter
-from fiber.dphi.model.receptor import EdgeState, EdgeHeader, IntentValidationRequest
+from xphi.arch.model.dphi.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
