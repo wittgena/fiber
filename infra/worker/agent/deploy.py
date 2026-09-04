@@ -1,5 +1,4 @@
 # fiber.infra.worker.agent.deploy
-## fiber.dphi.infra.worker.agent.deploy
 import sys
 import json
 import duckdb

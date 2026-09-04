@@ -14,9 +14,6 @@ from fiber.dphi.edge.mcp.adapter import AgentIdentity, IdempotencyMapper, NonceR
 
 log = get_emitter("mcp.bridge")
 
-# ---------------------------------------------------------
-# The Facade: Pure MCP Translator & Event-Driven Orchestrator
-# ---------------------------------------------------------
 class TransitionBridge:
     def __init__(self, mapper: IdempotencyMapper, nonce_protector: NonceReplayProtector):
         self.mapper = mapper
@@ -35,11 +32,7 @@ class TransitionBridge:
             identity.target_server_id, identity.idempotency_key
         )
 
-        # ---------------------------------------------------------
-        # 2. Idempotency Fast-Path (RPC 기반 원장 디커플링)
-        # ---------------------------------------------------------
         if not is_new:
-            # 브릿지가 DB를 직접 읽지 않고, 코어망(rpc.handler)에 상태를 질의합니다.
             state_res = await rpc.call("mcp.state.query", {"handle_id": handle_id})
             if state_res.get("exists"):
                 status = state_res.get("status")
@@ -52,11 +45,7 @@ class TransitionBridge:
                     
             return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
 
-        # ---------------------------------------------------------
-        # 3. Cryptographic Binding & L402 Billing (무임승차 차단)
-        # ---------------------------------------------------------
         is_authenticated = False
-
         if identity.proof_of_possession:
             if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
                 raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
@@ -76,32 +65,24 @@ class TransitionBridge:
         if not is_authenticated:
             raise HTTPException(status_code=401, detail="Authentication (DPoP) or Payment Receipt (X402) missing.")
 
-        # ---------------------------------------------------------
-        # 4. State Reservation & Zero-Latency Execution
-        # ---------------------------------------------------------
-        
-        # A. 작업 시작 전, 코어망에 Pending 상태 씰링을 지시 (마찬가지로 원장 DB 직접 접근 아님)
         await rpc.call("mcp.state.pending.seal", {
             "handle_id": handle_id,
             "payload": payload,
             "target_server_id": identity.target_server_id
         })
 
-        # B. [정렬 3] 로컬 메모리 대신 분산 Pub/Sub 채널을 이용한 글로벌 콜백 리스닝
         tunnel = await TunnelFactory.get_default()
         reply_channel = f"mcp.intent.reply.{handle_id}"
         pubsub = tunnel.pubsub()
         await pubsub.subscribe(reply_channel)
 
         try:
-            # C. Connector(Sidecar)가 리스닝하는 큐로 작업 지시서 발송 (Fire-and-forget)
             await rpc.publish_intent(
                 channel=f"mcp.intent.queue.{identity.target_server_id}",
                 payload={"handle_id": handle_id, "action": "EXECUTE", "payload": payload}
             )
             log.debug(f"[Bridge] Intent {handle_id} published. Listening on {reply_channel}...")
 
-            # D. 코어망(rpc.handler)이 원장 기록을 마치고 채널에 브로드캐스트 해줄 때까지 대기
             async with asyncio.timeout(30.0):
                 async for msg in pubsub.listen():
                     if msg and msg["type"] == "message":
@@ -120,14 +101,9 @@ class TransitionBridge:
             log.warning(f"[Bridge] Timeout waiting for backend resolution of {handle_id}")
             raise HTTPException(status_code=504, detail="Transaction suspended or upstream timeout.")
         finally:
-            # 연결 해제: 자원 및 소켓 안전 회수
             await pubsub.unsubscribe(reply_channel)
             await pubsub.close()
 
-
-# ---------------------------------------------------------
-# HTTP Ingress Route (MCP 2026-07-28 Spec)
-# ---------------------------------------------------------
 mcp_bridge = APIRouter(prefix="/v1/mcp-gateway", tags=["Enterprise MCP Bridge"])
 
 @mcp_bridge.post("/{target_server_id}/invoke")

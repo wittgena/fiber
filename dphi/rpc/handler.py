@@ -30,8 +30,6 @@ from xphi.kernel.dphi.cgroup import Tier
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.kernel.dphi.ledger.consensus import LogicStream
-
-# [추가됨] 브릿지 Zero-Latency 콜백을 위한 TunnelFactory 임포트
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
 log = get_emitter("dphi.handler")
@@ -357,7 +355,7 @@ async def handle_trade_ingress(params: dict, ctx: WorkerContext) -> dict:
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    context = await ctx.policy_engine.resolve_context(agent_id=req.agent_id, action=req.action)
+    context = await ctx.policy_engine.resolve_context(client_id=req.client_id, action=req.action)
     if context.is_ruptured:
         return _build_error(503, f"Topology Ruptured: {context.reason}")
 
@@ -416,21 +414,21 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
 
 
 async def handle_utxo_balance(params: dict, ctx: WorkerContext) -> dict:
-    agent_id = params.get("agent_id")
+    client_id = params.get("client_id")
     asset_type = params.get("asset_type", "fuel")
     
-    if not agent_id:
-        return _build_error(422, "Missing 'agent_id' parameter")
+    if not client_id:
+        return _build_error(422, "Missing 'client_id' parameter")
 
     try:
-        balance = await ctx.utxo_adapter.get_balance(owner_address=agent_id, asset_type=asset_type)
+        balance = await ctx.utxo_adapter.get_balance(owner_address=client_id, asset_type=asset_type)
         return {
-            "agent_id": agent_id,
+            "client_id": client_id,
             "asset_type": asset_type,
             "balance": balance
         }
     except Exception as e:
-        log.error(f"UTXO Balance check failed for {agent_id}: {str(e)}")
+        log.error(f"UTXO Balance check failed for {client_id}: {str(e)}")
         return _build_error(500, "Failed to read hot state balance.")
 
 
@@ -440,12 +438,12 @@ async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    agent_id = params.get("agent_id", getattr(req, "agent_id", "anonymous_agent"))
+    client_id = params.get("client_id", getattr(req, "client_id", "anonymous_agent"))
     target_tier = Tier.STANDARD
     
     try:
         result = await ctx.profile_service.execute(
-            agent_id=agent_id, 
+            client_id=client_id, 
             schema=req.agent_schema,
             entry=req.target_entry, 
             depth=req.context_depth, 
@@ -477,12 +475,12 @@ async def handle_profile_execute_billed(params: dict, ctx: WorkerContext) -> dic
     except ValidationError as e:
         return _build_error(422, f"Payload Error: {e.errors()}")
 
-    agent_id = params.get("agent_id", getattr(req, "agent_id", "anonymous_agent"))
+    client_id = params.get("client_id", getattr(req, "client_id", "anonymous_agent"))
     target_tier = Tier.SYSTEM 
     
     try:
         result = await ctx.profile_service.execute(
-            agent_id=agent_id, 
+            client_id=client_id, 
             schema=req.agent_schema,
             entry=req.target_entry, 
             depth=req.context_depth, 

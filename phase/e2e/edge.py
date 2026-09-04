@@ -168,7 +168,7 @@ class GatewayTracerPipeline(PipelineRunner):
 
             # 1. 클라이언트 자격 증명(지갑) 생성
             wallet = Account.create()
-            agent_id = wallet.address
+            client_id = wallet.address
             action = "EXECUTE_PYTHON"
             max_fuel = 1000000
             source_code = "print('Hello from Edge E2E Test')"
@@ -177,13 +177,13 @@ class GatewayTracerPipeline(PipelineRunner):
             if inject_faults:
                 signature = "0x_tampered_invalid_signature_for_chaos_testing"
             else:
-                sig_text = f"EXECUTE:{agent_id}:{action}:{max_fuel}"
+                sig_text = f"EXECUTE:{client_id}:{action}:{max_fuel}"
                 msg = encode_defunct(text=sig_text)
                 signature = wallet.sign_message(msg).signature.hex()
 
             # 3. 완벽한 도메인 이벤트 조립
             start_event = StartIntentEvent(
-                agent_id=agent_id,
+                client_id=client_id,
                 action=action,
                 max_fuel=max_fuel,
                 source_code=source_code,

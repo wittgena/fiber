@@ -95,7 +95,7 @@ class EcoBuilder:
             slippage = 5000 
             
         req = TradeIngressRequest(
-            agent_id=dphi_env.agents.alpha.did,
+            cilent_id=dphi_env.agents.alpha.did,
             action=action,
             parameters={
                 "target_service": dphi_env.agents.beta.did,

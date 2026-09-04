@@ -19,14 +19,7 @@ logging.basicConfig(
 log = logging.getLogger("agent.finlib")
 
 class FinLib:
-    """
-    [Deterministic Compute Oracle]
-    A2A 생태계에서 순수 수학 및 금융 공학 연산을 담당하는 무상태(Stateless) 데몬입니다.
-    과금(Fuel/L402) 및 상태 합의(Consensus)는 모두 상위 코어망(dphi.broker)에 위임하며,
-    오직 C/C++ 바인딩(TA-Lib, QuantLib)의 연산 오버헤드를 제로(0)로 만드는 것에 집중합니다.
-    """
     def __init__(self):
-        # [정렬 포인트 1] 물리적 메모리 초기화 1회 한정 (Init Tax 제거)
         self.tick_sizes = {"BTCUSD": 0.5, "ETHUSD": 0.01, "SOLUSD": 0.001}
         self.lot_sizes = {"BTCUSD": 0.001, "ETHUSD": 0.01, "SOLUSD": 0.1}
         

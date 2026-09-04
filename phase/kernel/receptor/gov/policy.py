@@ -1,9 +1,4 @@
 # fiber.phase.kernel.receptor.gov.policy
-## @lineage: fiber.kernel.receptor.gov.policy
-## @lineage: fiber.receptor.gov.policy
-## @lineage: fiber.receptor.dphi.gov.policy
-## @lineage: fiber.dphi.receptor.ingress.gov.policy
-## @lineage: dphi.receptor.ingress.gov.policy
 import time
 import hashlib
 import random
@@ -17,14 +12,14 @@ class IngressContext:
     reason: str = ""
 
 class ToposSequencer:
-    async def get_next_sequence(self, agent_id: str) -> int:
+    async def get_next_sequence(self, client_id: str) -> int:
         ts = int(time.time() * 1000)
-        hash_val = int(hashlib.sha256(agent_id.encode()).hexdigest()[:8], 16)
+        hash_val = int(hashlib.sha256(client_id.encode()).hexdigest()[:8], 16)
         return (ts % 100000000) + (hash_val % 1000)
 
 class FuelAllocator:
-    async def calculate_press_limit(self, agent_id: str, action_type: str) -> int:
-        seed_str = f"{agent_id}:{action_type}"
+    async def calculate_press_limit(self, client_id: str, action_type: str) -> int:
+        seed_str = f"{client_id}:{action_type}"
         # 해시값을 정수로 변환하여 10~100 사이의 Press값 산출
         base_press = int(hashlib.md5(seed_str.encode()).hexdigest()[:4], 16) % 90
         return max(10, base_press)
@@ -44,10 +39,10 @@ class IngressPolicyEngine:
         self.allocator = allocator
         self.monitor = monitor
 
-    async def resolve_context(self, agent_id: str, action: str) -> IngressContext:
+    async def resolve_context(self, client_id: str, action: str) -> IngressContext:
         ruptured, reason = await self.monitor.is_ruptured()
-        topo_id = await self.sequencer.get_next_sequence(agent_id)
-        press_limit = await self.allocator.calculate_press_limit(agent_id, action)
+        topo_id = await self.sequencer.get_next_sequence(client_id)
+        press_limit = await self.allocator.calculate_press_limit(client_id, action)
 
         return IngressContext(
             topo_id=topo_id,

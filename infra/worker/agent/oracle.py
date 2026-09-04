@@ -17,11 +17,6 @@ logging.basicConfig(
 log = logging.getLogger("agent.oracle")
 
 class OracleMcpServer:
-    """
-    [A2A Node Wrapper - Deterministic Oracle]
-    외부 데이터를 페치하고 암호학적 서명을 수행하는 코어 모듈(Receptor)의 래퍼입니다.
-    초고동시성 환경에서 외부 API 비용을 방어하기 위해 'Sealed Payload' 스마트 캐싱을 수행합니다.
-    """
     def __init__(self):
         log.info("Initializing Deterministic Oracle Receptor...")
         try:
@@ -100,10 +95,6 @@ class OracleMcpServer:
             self._send_error(req_id, code=-32601, message=f"Method not found: {method}")
 
     def _execute_kline_fetch(self, req_id: Any, arguments: Dict[str, Any]):
-        """
-        [핵심 정렬 로직] 오라클 비즈니스 로직 실행 및 응답
-        외부 I/O를 최소화하면서도, 합의 가능한 완벽한 무결성 객체(Attestation)를 반환합니다.
-        """
         symbol = arguments.get("symbol", "BTCUSDT")
         strategy = arguments.get("strategy", "mean")
         
@@ -142,9 +133,6 @@ class OracleMcpServer:
             log.error(f"Oracle Execution Failed for {symbol}: {str(e)}", exc_info=True)
             self._send_error(req_id, code=-32000, message=f"Oracle Tool Execution Failed: {str(e)}")
 
-    # =====================================================================
-    # IPC Communicators (Stdout Writers)
-    # =====================================================================
     def _send_response(self, req_id: Any, result: Dict[str, Any]):
         """Connector로 성공 결과 전송. flush()를 통해 파이프라인 버퍼링으로 인한 교착 상태 방지."""
         response = {

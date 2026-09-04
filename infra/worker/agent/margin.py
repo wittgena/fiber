@@ -2,157 +2,156 @@
 import sys
 import json
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 import numpy as np
 from pydantic import BaseModel, Field, ValidationError
+from fiber.infra.observer.intent.trajectory import (
+    FundingRateComparator,
+    RiskPolicy,
+    SpreadSnapshot,
+    ArbitrageIntent
+)
 
 logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(asctime)s [%(levelname)s] [agent.margin] %(message)s")
 log = logging.getLogger("agent.margin")
 
-# =====================================================================
-# 1. Pydantic Input Schemas (엄격한 파라미터 검증 및 스키마 자동 생성)
-# =====================================================================
-class PricingModel(BaseModel):
-    base_fee_usd: float = Field(..., description="L402 base charge per API call")
-    dynamic_multiplier: float = Field(1.0, description="Multiplier for surge pricing")
+class ExecutionPricingModel(BaseModel):
+    base_l402_fee_usd: float = Field(0.002, description="Base L402 invocation fee")
+    profit_share_ratio: float = Field(0.05, ge=0.0, le=1.0, description="Take-rate on net arbitrage profit")
 
-class InfraModel(BaseModel):
-    monthly_fixed_cost_usd: float = Field(..., description="Server/DB base cost (e.g., $30)")
-    cost_per_compute_ms_usd: float = Field(..., description="Variable cost per ms of execution")
-    avg_compute_time_ms: float = Field(..., description="Average processing time in ms")
+class ExecutionInfraModel(BaseModel):
+    monthly_fixed_cost_usd: float = Field(30.0, description="Fixed infrastructure cost")
+    compute_cost_per_sec_usd: float = Field(0.00001667, description="Compute cost rate")
+    avg_latency_sec: float = Field(0.05, description="Average execution latency")
 
-class TrafficScenarios(BaseModel):
-    min_tps: float = Field(..., description="Minimum Transactions Per Second")
-    max_tps: float = Field(..., description="Maximum Transactions Per Second")
-    cache_hit_ratio: float = Field(0.0, ge=0.0, le=1.0, description="0.0 to 1.0 cache success rate")
+class RealtimeMarginRequest(BaseModel):
+    symbol: str = Field(..., description="Target asset pair (e.g. BTC-USDT)")
+    observations: Dict[str, Dict[str, Any]] = Field(
+        ..., 
+        description="Raw funding rates from distinct venues: {arn: {'rate': float, 'time': int}}"
+    )
+    trade_size_usd: float = Field(10000.0, description="Hypothetical trade size for margin sizing")
+    pricing: ExecutionPricingModel = Field(default_factory=ExecutionPricingModel)
+    infra: ExecutionInfraModel = Field(default_factory=ExecutionInfraModel)
+    tps_range: List[float] = Field(default=[1.0, 10.0, 50.0, 100.0], description="TPS evaluation points")
 
-class MarginSimulationRequest(BaseModel):
-    pricing_model: PricingModel
-    infra_model: InfraModel
-    traffic_scenarios: TrafficScenarios
-
-# =====================================================================
-# 2. Core Agent Logic (순수 결정론적 연산 데몬)
-# =====================================================================
 class MarginCalcAgent:
-    """
-    [Unit Economics & Margin Simulator]
-    A2A 생태계 참여자들이 자신의 에이전트를 배포하기 전, 최적의 L402 단가를 계산하는 BI 도구입니다.
-    과금 영수증(Receipt) 생성은 코어망에 위임하고, 오직 Numpy 벡터 연산 최적화에만 집중합니다.
-    """
     def __init__(self):
-        self.MONTHLY_SECONDS = 30 * 24 * 60 * 60  # 2,592,000초
+        self.MONTHLY_SECONDS = 30 * 24 * 60 * 60
+        self.risk_policy = RiskPolicy()
 
     def serve_forever(self):
-        log.info("Margin Simulator Ignited (Daemon Mode). Listening on stdin.")
+        log.info("Production MarginCalcAgent online. Listening on stdin.")
         for line in sys.stdin:
-            if not line.strip(): continue
+            if not line.strip(): 
+                continue
             try:
                 self._dispatch(json.loads(line))
             except json.JSONDecodeError:
                 self._send_error(None, -32700, "Parse error: Invalid JSON")
             except Exception as e:
-                log.error(f"Daemon Loop Fracture: {e}", exc_info=True)
-                self._send_error(None, -32603, f"Internal Server Error: {e}")
+                log.error(f"Daemon fatal error: {e}", exc_info=True)
+                self._send_error(None, -32603, f"Internal error: {e}")
 
     def _dispatch(self, req: Dict[str, Any]):
         req_id = req.get("id")
         method = req.get("method")
         params = req.get("params", {})
-        
+
         if method == "initialize":
             self._send_response(req_id, {"protocolVersion": "2026-09-04", "capabilities": {}})
             
         elif method == "tools/list":
             tools = [{
-                "name": "simulate_unit_economics",
-                "description": "Calculates break-even points and revenue matrices for L402 API pricing.",
-                "inputSchema": MarginSimulationRequest.model_json_schema()
+                "name": "calculate_trajectory_margin",
+                "description": "Calculates real unit economics and breakeven matrices by binding live market spread to risk policy.",
+                "inputSchema": RealtimeMarginRequest.model_json_schema()
             }]
             self._send_response(req_id, {"tools": tools})
-            
-        elif method == "tools/call" and params.get("name") == "simulate_unit_economics":
+
+        elif method == "tools/call" and params.get("name") == "calculate_trajectory_margin":
             try:
-                # 1. Pydantic을 이용한 스키마 검증 및 파싱 (입력 무결성 보장)
-                req_data = MarginSimulationRequest(**params.get("arguments", {}))
-                
-                # 2. 핵심 연산 (Numpy Vectorization) 실행
-                result = self._simulate(req_data)
-                
-                # 3. 순수 결과 반환 (MCP 규격 준수, 과금 로직 배제)
+                req_data = RealtimeMarginRequest(**params.get("arguments", {}))
+                result = self._execute_margin_analysis(req_data)
                 self._send_response(req_id, {
                     "content": [{"type": "text", "text": json.dumps(result)}],
                     "isError": False
                 })
-                
             except ValidationError as ve:
-                # 사용자/LLM의 스키마 입력 오류는 명확하게 Invalid Params(-32602)로 반환
-                log.warning(f"Validation Error: {ve.errors()}")
-                self._send_error(req_id, -32602, f"Invalid params: {ve.json()}")
+                self._send_error(req_id, -32602, f"Validation failed: {ve.json()}")
             except Exception as e:
-                log.error(f"Simulation Execution Failed: {e}", exc_info=True)
                 self._send_error(req_id, -32000, str(e))
         else:
-            self._send_error(req_id, -32601, f"Unknown method/tool: {method}")
+            self._send_error(req_id, -32601, f"Method not found: {method}")
 
-    def _simulate(self, data: MarginSimulationRequest) -> Dict[str, Any]:
-        """
-        Numpy 벡터 연산을 활용하여 최소/평균/최대 트래픽에 대한 재무 매트릭스를 단일 연산으로 도출합니다.
-        """
-        # 단위 변수 추출
-        rev_per_call = data.pricing_model.base_fee_usd * data.pricing_model.dynamic_multiplier
-        # 캐시 적중률을 반영한 실질 호출 원가 계산
-        var_cost_per_call = (data.infra_model.avg_compute_time_ms * data.infra_model.cost_per_compute_ms_usd) * (1.0 - data.traffic_scenarios.cache_hit_ratio)
-        fixed_cost = data.infra_model.monthly_fixed_cost_usd
-        
-        profit_per_call = rev_per_call - var_cost_per_call
-        
-        if profit_per_call <= 0:
-            return {"error": "Structural Deficit: Variable cost exceeds revenue per call. Increase base_fee or optimize compute."}
+    def _execute_margin_analysis(self, req: RealtimeMarginRequest) -> Dict[str, Any]:
+        # 1. trajectory.py의 핵심 도메인 로직 직접 호출 (스프레드 평가)
+        snapshot, intent = FundingRateComparator.evaluate(req.symbol, req.observations)
 
-        # 1. 손익 분기점 (BEP) 계산
-        bep_calls_per_month = fixed_cost / profit_per_call
-        bep_tps = bep_calls_per_month / self.MONTHLY_SECONDS
-
-        # 2. 다중 시나리오 매트릭스 생성 (Numpy Array Vectorization)
-        tps_scenarios = np.array([
-            data.traffic_scenarios.min_tps,
-            (data.traffic_scenarios.min_tps + data.traffic_scenarios.max_tps) / 2.0,
-            data.traffic_scenarios.max_tps
-        ])
+        # 2. 거래 마찰 및 순익 산출 (RiskPolicy 적용)
+        friction_rate = self.risk_policy.base_friction_bps / 10000.0
+        gross_spread_yield = intent.expected_yield
+        net_spread_yield = max(0.0, gross_spread_yield - friction_rate)
         
-        # 행렬(Matrix) 기반 고속 재무 연산
-        monthly_calls_matrix = tps_scenarios * self.MONTHLY_SECONDS
-        revenue_matrix = monthly_calls_matrix * rev_per_call
-        cost_matrix = fixed_cost + (monthly_calls_matrix * var_cost_per_call)
-        profit_matrix = revenue_matrix - cost_matrix
-        margin_rate_matrix = (profit_matrix / revenue_matrix) * 100.0
+        projected_gross_profit = req.trade_size_usd * net_spread_yield
+        
+        # 3. L402 수취 모델 결정
+        effective_l402_fee = max(
+            req.pricing.base_l402_fee_usd,
+            projected_gross_profit * req.pricing.profit_share_ratio
+        )
+        
+        # 4. 연산 인프라 원가
+        var_cost_per_call = req.infra.avg_latency_sec * req.infra.compute_cost_per_sec_usd
+        marginal_profit = effective_l402_fee - var_cost_per_call
+
+        if marginal_profit <= 0:
+            return {
+                "actionable": False,
+                "reason": "Negative marginal profit under current compute cost and spread.",
+                "net_spread": net_spread_yield
+            }
+
+        # 5. Numpy 고속 벡터화 (손익 매트릭스)
+        tps_arr = np.array(req.tps_range, dtype=np.float64)
+        monthly_volume = tps_arr * self.MONTHLY_SECONDS
+        
+        revenue_vec = monthly_volume * effective_l402_fee
+        cost_vec = req.infra.monthly_fixed_cost_usd + (monthly_volume * var_cost_per_call)
+        profit_vec = revenue_vec - cost_vec
+        margin_pct_vec = (profit_vec / revenue_vec) * 100.0
+
+        bep_calls = req.infra.monthly_fixed_cost_usd / marginal_profit
+        bep_tps = bep_calls / self.MONTHLY_SECONDS
 
         return {
+            "market_state": {
+                "symbol": snapshot.symbol,
+                "net_spread": round(snapshot.net_spread, 6),
+                "is_actionable": intent.is_actionable,
+                "long_venue": intent.optimal_long_venue,
+                "short_venue": intent.optimal_short_venue
+            },
             "unit_economics": {
-                "revenue_per_call_usd": round(rev_per_call, 6),
-                "variable_cost_per_call_usd": round(var_cost_per_call, 6),
-                "marginal_profit_per_call_usd": round(profit_per_call, 6)
+                "projected_trade_profit_usd": round(projected_gross_profit, 4),
+                "effective_fee_usd": round(effective_l402_fee, 6),
+                "compute_cost_usd": round(var_cost_per_call, 8),
+                "marginal_profit_usd": round(marginal_profit, 6)
             },
-            "break_even_point": {
+            "break_even": {
                 "bep_tps": round(bep_tps, 4),
-                "bep_monthly_calls": int(bep_calls_per_month)
+                "bep_monthly_calls": int(bep_calls)
             },
-            "monthly_scenarios": {
-                "labels": ["MIN_TRAFFIC", "AVG_TRAFFIC", "MAX_TRAFFIC"],
-                "tps": np.round(tps_scenarios, 2).tolist(),
-                "revenue_usd": np.round(revenue_matrix, 2).tolist(),
-                "total_cost_usd": np.round(cost_matrix, 2).tolist(),
-                "net_profit_usd": np.round(profit_matrix, 2).tolist(),
-                "margin_rate_percent": np.round(margin_rate_matrix, 2).tolist()
-            },
-            "recommendation": "Highly Profitable" if profit_matrix[1] > (fixed_cost * 3) else "Marginal. Increase cache hit ratio or base fee."
+            "matrix": {
+                "tps": tps_arr.tolist(),
+                "monthly_revenue": np.round(revenue_vec, 2).tolist(),
+                "monthly_cost": np.round(cost_vec, 2).tolist(),
+                "monthly_net_profit": np.round(profit_vec, 2).tolist(),
+                "margin_percent": np.round(margin_pct_vec, 2).tolist()
+            }
         }
 
-    # =====================================================================
-    # 4. IPC Communicators (Stdout Writers)
-    # =====================================================================
     def _send_response(self, req_id: Any, result: Dict[str, Any]):
         sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": result}) + "\n")
         sys.stdout.flush()

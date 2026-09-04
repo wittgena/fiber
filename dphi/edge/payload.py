@@ -51,8 +51,8 @@ async def verify_access_credential(
 ):
     path = request.url.path
     public_whitelist = {
-        "/v1/public/agent/quote",
-        "/v1/public/agent/handshake",
+        "/v1/public/sandbox/quote",
+        "/v1/public/sandbox/handshake",
         "/v1/public/billing/invoice",
         "/v1/public/billing/balance",
         "/v1/public/audit/verify",
@@ -88,10 +88,6 @@ async def verify_access_credential(
         headers={"WWW-Authenticate": 'L402 macaroon=""'}
     )
 
-
-# =====================================================================
-# Application Lifecycle (Lifespan)
-# =====================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("Starting DPHI REST Edge API Payload (Stateless Mode)...")
@@ -132,8 +128,7 @@ async def lifespan(app: FastAPI):
         mapper = IdempotencyMapper(redis_client=redis_client)  # [FIX] Mapper 인스턴스화
 
         app.state.mcp_transition_adapter = TransitionBridge(
-            ledger=ledger,
-            mapper=mapper,                           # [FIX] Mapper 주입
+            mapper=mapper,                           # [FIX] Mapper 주입, ledger 제거 완료
             nonce_protector=nonce_protector
         )
         log.info("Stateless MCP Transition Bridge (2026-07-28) initialized and mounted to app.state.")

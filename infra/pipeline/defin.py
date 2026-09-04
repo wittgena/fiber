@@ -39,7 +39,7 @@ class DefinFlowPropagator(DuplexChannel):
     async def channel_active(self, ctx: ChannelContext):
         flow_id = f"dphi_{uuid.uuid4().hex[:8]}"
         ctx.set_attr("flow_id", flow_id)
-        with flow_scope(flow_id=flow_id, phase="EDGE_ACTIVE", agent_id="GATEWAY"):
+        with flow_scope(flow_id=flow_id, phase="EDGE_ACTIVE", client_id="GATEWAY"):
             log.info("🌐 [Pipeline] 신규 Billing 세션 연결")
             await ctx.fire_channel_active()
 

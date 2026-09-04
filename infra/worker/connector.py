@@ -7,8 +7,8 @@ import logging
 import argparse
 from typing import Dict, Any, Optional
 
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from fiber.dphi.rpc.client import InternalRpcClient
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("worker.connector")
@@ -121,7 +121,7 @@ class WorkerConnector:
                 await transport.close()
 
     async def _daemon_stdout_listener(self):
-        """[Daemon Mode 전용] 백그라운드에서 끊임없이 stdout을 읽어 Future(결과)를 매핑합니다."""
+        """[Daemon Mode 전용] 백그라운드에서 끊임없이 stdout을 읽어 Future(결과)를 매핑하거나 RPC 역호출 처리"""
         while self.running and self.daemon_transport and self.daemon_transport.process:
             try:
                 raw_output = await self.daemon_transport.process.stdout.readline()
@@ -130,6 +130,26 @@ class WorkerConnector:
                 
                 response = json.loads(raw_output.decode('utf-8').strip())
                 req_id = response.get("id")
+
+                # =====================================================================
+                # [개선] 에이전트가 코어 RPC 질의를 역으로 요청한 경우 (Interception)
+                # 규격: {"method": "rpc_delegate", "params": {"target_method": "...", "data": {...}}, "id": "..."}
+                # =====================================================================
+                if response.get("method") == "rpc_delegate":
+                    asyncio.create_task(self._handle_agent_rpc_delegation(response))
+                    continue
+
+                # =====================================================================
+                # [개선] 에이전트가 데이터 결핍(Elicitation / Yield)을 선언한 경우
+                # =====================================================================
+                if response.get("method") and "elicitation" in response.get("method", ""):
+                    log.warning(f"[Connector] ⏸️ Daemon TRAP: Elicitation detected for {req_id}")
+                    await self.rpc.call("mcp.bridge.resolve_state", {
+                        "handle_id": req_id,
+                        "status": "YIELD",
+                        "executable_payload": response
+                    })
+                    continue
                 
                 # 매핑된 Future 객체를 찾아 결과를 반환 (resolve)
                 future = self.pending_requests.pop(req_id, None)
@@ -139,6 +159,32 @@ class WorkerConnector:
             except Exception as e:
                 log.error(f"[Connector] Daemon Listener Fracture: {e}", exc_info=True)
                 await asyncio.sleep(0.1)
+
+    async def _handle_agent_rpc_delegation(self, rpc_req: Dict[str, Any]):
+        """에이전트의 역호출을 수신하여 InternalRpcClient로 전달하고, 그 결과를 에이전트 stdin으로 재주입"""
+        call_id = rpc_req.get("id")
+        params = rpc_req.get("params", {})
+        target_method = params.get("target_method")
+        payload = params.get("data", {})
+
+        try:
+            # 코어 RPC 호출 (예: 텐션 관측값, 원장 조회 등)
+            core_res = await self.rpc.call(target_method, payload)
+            # 에이전트 stdin으로 결과 피드백
+            feedback_payload = {
+                "jsonrpc": "2.0",
+                "id": call_id,
+                "result": core_res
+            }
+            await self.daemon_transport.send_payload(feedback_payload)
+        except Exception as e:
+            log.error(f"[Connector] Failed to delegate agent RPC: {e}")
+            error_payload = {
+                "jsonrpc": "2.0",
+                "id": call_id,
+                "error": {"code": -32000, "message": f"Core delegation failure: {str(e)}"}
+            }
+            await self.daemon_transport.send_payload(error_payload)
 
     async def process_intent(self, intent_data: Dict[str, Any]):
         handle_id = intent_data.get("handle_id")
@@ -235,6 +281,24 @@ class WorkerConnector:
         try:
             await transport.send_payload(payload)
             response = await transport.receive_response()
+
+            # =====================================================================
+            # [개선] Ephemeral 모드에서도 rpc_delegate 지원 (1회성 역호출 후 응답 대기)
+            # =====================================================================
+            while response.get("method") == "rpc_delegate":
+                target_method = response["params"].get("target_method")
+                req_data = response["params"].get("data", {})
+                call_id = response.get("id")
+                
+                try:
+                    core_res = await self.rpc.call(target_method, req_data)
+                    await transport.send_payload({"jsonrpc": "2.0", "id": call_id, "result": core_res})
+                except Exception as e:
+                    await transport.send_payload({
+                        "jsonrpc": "2.0", "id": call_id, 
+                        "error": {"code": -32000, "message": f"Core delegation failure: {e}"}
+                    })
+                response = await transport.receive_response() # 다음 응답(최종 or 추가요청) 대기
 
             ## TRAP & YIELD (Stateful)
             if response.get("method") and "elicitation" in response.get("method", ""):

@@ -21,7 +21,7 @@ from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.server.mcp import SecureMCPServer
 from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.kernel.dphi.ledger.consensus import KernelLedger  # [추가] 로컬 붓스트래핑을 위한 임포트
+from xphi.kernel.dphi.ledger.consensus import KernelLedger
 
 log = get_emitter("daemon.edge")
 
