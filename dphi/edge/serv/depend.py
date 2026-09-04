@@ -1,5 +1,4 @@
 # fiber.dphi.edge.serv.depend
-## @lineage: fiber.dphi.edge.rest.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 
@@ -51,7 +50,3 @@ async def get_secret_auditor(request: Request) -> SecretAuditor:
         log.warning("[DI Warning] 'secret_auditor' not found in app.state. Using ephemeral fallback.")
         return SecretAuditor()
     return auditor
-
-# [REMOVED] get_logstream_store, get_nexus_anchor, get_exchange_adapter, 
-# get_utxo_adapter, get_bench_profile, get_ingress_policy
-# -> 이들은 이제 Worker 데몬의 WorkerContext에서 직접 생성/관리됩니다.

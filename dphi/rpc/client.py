@@ -88,7 +88,3 @@ class InternalRpcClient:
         except Exception as e:
             log.error(f"[RPC Broadcast Error] Failed to publish to {channel}: {e}")
             raise
-
-# FastAPI 의존성 주입용 프로바이더
-async def get_rpc_client() -> InternalRpcClient:
-    return InternalRpcClient()
