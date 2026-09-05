@@ -1,6 +1,4 @@
 # fiber.infra.observer.intent.verifier
-## @lineage: fiber.dphi.infra.observer.intent.verifier
-## @lineage: fiber.dphi.observer.intent.verifier
 import json
 from typing import Dict, Any, Tuple
 from arch.contract.interpreter import ExecutionResult

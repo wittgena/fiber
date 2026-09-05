@@ -21,7 +21,6 @@ from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
 log = get_emitter("fiber.cli")
 
-# --- Typer App Setup ---
 app = typer.Typer(
     help="Fiber: The Universal Integration Boundary & OS Kernel",
     no_args_is_help=True,
@@ -52,10 +51,6 @@ def boot_kernel(mode_name: str):
         log.error(f"[Fiber] FATAL Kernel panic: {e}", exc_info=True)
         sys.exit(1)
 
-
-# =========================================================
-# 1. The Subordinate (Kube/Edge 종속 데몬 모드)
-# =========================================================
 @app.command("daemon")
 def run_daemon(
     start: Annotated[str, typer.Option("--start", "-s", help="Comma separated daemons to start (e.g., rest_edge,gateway_edge)")],
@@ -66,25 +61,16 @@ def run_daemon(
     os.environ["KERNEL_DAEMONS"] = start
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
     
-    # [정밀 정렬] 쉼표로 분리하여 정확한 데몬 매칭 수행
     daemons = [d.strip() for d in start.split(",")]
     
     if all(d in ["gateway_edge", "rest_edge"] for d in daemons):
-        # 순수 네트워크/프록시 엣지인 경우에만 무거운 WASM 워커를 띄우지 않는 EDGE 프로파일 적용
         os.environ["NODE_PROFILE"] = "EDGE"
     elif "risk_vault" in daemons or "rpc_worker" in daemons:
-        # 연산 및 자율 에이전트가 포함된 경우 COMPUTE 프로파일 강제 (네트워크 데몬 무시)
         os.environ["NODE_PROFILE"] = "COMPUTE"
     else:
-        # 그 외의 복합 구성일 경우 기본 풀노드(ALL)로 동작
         os.environ["NODE_PROFILE"] = "ALL"
-
     boot_kernel("Subordinate Daemon")
 
-
-# =========================================================
-# 2. The Master Hypervisor (통제 및 관측 샌드박스)
-# =========================================================
 @app.command("trace")
 def run_trace(
     target: Annotated[str, typer.Option("--target", "-t", help="Target tracer to execute (e.g., repro_worker, oom_tracer)")],
@@ -93,46 +79,31 @@ def run_trace(
 ):
     """Run the Flare Controller & Sandboxed infrastructure testing."""
     _load_env(env_file)
-    
-    # [정밀 정렬] verse 분리 및 순수 트레이서 컨트롤러만 격리 구동
     os.environ["KERNEL_DAEMONS"] = "tracer_controller"
     os.environ["TRACE_TARGET"] = target
-    os.environ["NODE_PROFILE"] = "CONTROL" # 제어 및 관측 전용 경량 프로파일 적용
-    
+    os.environ["NODE_PROFILE"] = "CONTROL"
     if config:
         os.environ["TRACE_CONFIG_PATH"] = config
 
     boot_kernel("Master Hypervisor")
 
-
-# =========================================================
-# 3. The Deployment Manager (인프라 제어/오케스트레이션)
-# =========================================================
 @app.command("deploy")
 def run_deploy(
     topology: Annotated[str, typer.Option("--topology", "-t", help="Target cluster topology")] = "master",
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """Manage multi-node orchestration and Kube/Edge scaling."""
     _load_env(env_file)
     os.environ["KERNEL_DAEMONS"] = "topology_manager"
     os.environ["DEPLOY_TOPOLOGY"] = topology
     os.environ["NODE_PROFILE"] = "CONTROL"
     boot_kernel("Deployment Manager")
 
-
-# =========================================================
-# 4. The Client Console (God-Mode 접속용 쉘)
-# =========================================================
 @app.command("shell")
 def run_shell(
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """Launch the Interactive Ecosystem Observatory (Connect to existing Kernel)."""
     _load_env(env_file)
-    
     async def _launch_console():
-        # PhaseReactor 부팅 없이, 순수하게 Tunnel(분산망)에만 클라이언트로 접속
         tunnel = await TunnelFactory.get_default()
         shell = EcosystemShell(tunnel)
         
@@ -148,17 +119,12 @@ def run_shell(
     except KeyboardInterrupt:
         log.info("\n[Fiber] 👋 Exiting Console...")
 
-
-# =========================================================
-# 5. The Integration Tester (E2E Test Runner)
-# =========================================================
 @app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_e2e(
-    ctx: typer.Context,  # Typer 컨텍스트 (수집된 extra_args 포함)
+    ctx: typer.Context,
     target: Annotated[str, typer.Argument(help="Target test suite (e.g., defin, eco, edge, flare, llm.compat, all)")],
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """Run End-to-End integration tests for specific domains."""
     _load_env(env_file)
     extra_args = ctx.args 
     KNOWN_SUITES = ["defin", "eco", "edge", "flare", "wasm.entry", "llm.compat"]
@@ -183,47 +149,44 @@ def run_e2e(
                 log.error(f"[Fiber] ❌ Module {module_path} lacks a standard 'main' entrypoint. Skipping.")
                 continue
         except ImportError:
-            log.error(f"[Fiber] ❌ Test module not found: {module_path}")
+            log.error(f"[Fiber] ❌ Test module not found: {module_path} (Reason: {e})")
             if target != "all":
                 sys.exit(1)
         except Exception as e:
             log.error(f"[Fiber] 💥 E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
 
-
-# =========================================================
-# 6. The Egress Sidecar (MCP A2A Connector)
-# =========================================================
 @app.command("connect")
 def run_connector(
     target: Annotated[str, typer.Option("--target", "-t", help="Target ID registered in the Gateway (e.g., my-db-01)")],
     exec_cmd: Annotated[str, typer.Option("--exec", "-e", help="Legacy MCP server execution command")],
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """
-    Launch the Egress Sidecar daemon. 
-    Sublimates a legacy MCP server into a DPHI A2A Node via stdio bridging.
-    """
     _load_env(env_file)
-    
+
+    import fiber.infra.worker.agent.deploy as agent_deploy
+    import fiber.infra.worker.agent.oracle as agent_oracle
+
+    KNOWN_AGENTS = {
+        "agent.deploy": f"{sys.executable} -m {agent_deploy.__name__}",
+        "agent.oracle": f"{sys.executable} -m {agent_oracle.__name__}"
+    }
+
+    resolved_cmd = KNOWN_AGENTS.get(exec_cmd, exec_cmd)
+
     async def _launch_connector():
-        # [Lazy Import] 불필요한 무거운 코어 엔진을 호스트 메모리에 올리지 않고,
-        # 오직 Connector 실행 시점에만 가벼운 통신 모듈을 동적 임포트합니다.
-        from fiber.infra.worker.connector import McpConnectorDaemon
-        
+        from fiber.infra.worker.connector import WorkerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
-        daemon = McpConnectorDaemon(target_id=target, legacy_command=exec_cmd)
+        daemon = WorkerConnector(target_id=target, legacy_command=resolved_cmd)
         
         try:
             await daemon.run()
         finally:
             log.info("[Fiber] Disconnected from A2A Network.")
-
     try:
         asyncio.run(_launch_connector())
     except KeyboardInterrupt:
         log.info("\n[Fiber] 👋 Connector shutting down...")
-
 
 def main():
     app()

@@ -1,5 +1,4 @@
 # fiber.infra.observer.intent.potential
-## @lineage: fiber.dphi.infra.observer.intent.potential
 import asyncio
 import time
 import json

@@ -42,7 +42,7 @@ class ToposDistributedScene:
         async with httpx.AsyncClient(base_url=self.base_url, timeout=20.0, headers=headers) as client:
             ## 클라이언트(테스터) 자격 증명 생성
             wallet = Account.create()
-            agent_id = wallet.address
+            client_id = wallet.address
             action = "EXECUTE_PYTHON_DISTRIBUTED"
             max_fuel = 2000000
             source_code = "print('Hello from Distributed Topos Resonance Test')"
@@ -51,12 +51,12 @@ class ToposDistributedScene:
             if tamper_signature:
                 signature = "0x_tampered_invalid_signature_for_topos_testing"
             else:
-                sig_text = f"EXECUTE:{agent_id}:{action}:{max_fuel}"
+                sig_text = f"EXECUTE:{client_id}:{action}:{max_fuel}"
                 msg = encode_defunct(text=sig_text)
                 signature = wallet.sign_message(msg).signature.hex()
 
             start_event = StartIntentEvent(
-                agent_id=agent_id,
+                client_id=client_id,
                 action=action,
                 max_fuel=max_fuel,
                 source_code=source_code,

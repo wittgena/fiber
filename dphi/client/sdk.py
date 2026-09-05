@@ -1,7 +1,7 @@
 # fiber.dphi.client.sdk
 """
 @desc: DPHI Public Gateway SDK Core & Integration Scenario Runner
-- Provides a zero-trust computing blackbox client for autonomous systems.
+- Provides a zero-trust computing blackbox client for isolated sandbox workloads.
 - Integrates LLM edge and Enterprise MCP interfaces.
 """
 
@@ -17,21 +17,21 @@ from xphi.arch.model.edge.receipt import AuditLogRequest, AuditEvent, ExportLogs
 
 
 # =========================================================================
-# @phase.1: SDK Models & Endpoints (정밀 검토 및 정렬 완료)
+# @phase.1: SDK Models & Endpoints (Sandbox/Client 규격으로 정밀 정렬 완료)
 # =========================================================================
 class Endpoints:
     """백엔드의 실제 라우터 Prefix에 맞게 엔드포인트를 분리 및 정렬했습니다."""
     
     # --- edge.public (prefix: /v1/public) ---
-    KEYS            = "/v1/public/keys"
-    AGENT_QUOTE     = "/v1/public/agent/quote"
-    AGENT_HANDSHAKE = "/v1/public/agent/handshake"
-    AGENT_EXECUTE   = "/v1/public/agent/execute"
-    BILLING_INVOICE = "/v1/public/billing/invoice"
-    BILLING_BALANCE = "/v1/public/billing/balance"
-    TELEMETRY_LOGS  = "/v1/public/telemetry/logs"
-    AUDIT_EVENT     = "/v1/public/audit/event"
-    AUDIT_VERIFY    = "/v1/public/audit/verify"
+    KEYS              = "/v1/public/keys"
+    SANDBOX_QUOTE     = "/v1/public/sandbox/quote"
+    SANDBOX_HANDSHAKE = "/v1/public/sandbox/handshake"
+    SANDBOX_EXECUTE   = "/v1/public/sandbox/execute"
+    BILLING_INVOICE   = "/v1/public/billing/invoice"
+    BILLING_BALANCE   = "/v1/public/billing/balance"
+    TELEMETRY_LOGS    = "/v1/public/telemetry/logs"
+    AUDIT_EVENT       = "/v1/public/audit/event"
+    AUDIT_VERIFY      = "/v1/public/audit/verify"
 
     # --- edge.llm (prefix: /v1) ---
     LLM_CHAT        = "/v1/chat/completions"
@@ -40,8 +40,8 @@ class Endpoints:
 
 
 @dataclass
-class CodebotIntent:
-    agent_id: str
+class SandboxIntent:
+    client_id: str
     action: str
     source_code: str
     max_fuel: int
@@ -49,7 +49,7 @@ class CodebotIntent:
 
 @dataclass
 class LLMIntent:
-    agent_id: str
+    client_id: str
     model: str
     messages: List[Dict[str, str]]
     max_tokens: int = 512
@@ -93,11 +93,11 @@ class DphiPublicClient:
     # -------------------------------------------------------------------------
     # Public Edge Methods
     # -------------------------------------------------------------------------
-    async def request_handshake(self, intent: CodebotIntent) -> Dict[str, Any]:
-        self.log.info(f"\n🤝 [Economy] Negotiating execution budget for {intent.agent_id}...")
+    async def request_handshake(self, intent: SandboxIntent) -> Dict[str, Any]:
+        self.log.info(f"\n🤝 [Economy] Negotiating execution budget for {intent.client_id}...")
         verifier = self._get_verified_client()
         try:
-            response = await verifier.async_post_verified(Endpoints.AGENT_HANDSHAKE, json=asdict(intent))
+            response = await verifier.async_post_verified(Endpoints.SANDBOX_HANDSHAKE, json=asdict(intent))
             data = response.json()
             self.log.info(f"  └─ ✅ Handshake Ready. Estimated Cost: ${data.get('estimated_cost_usd', 0):.4f}")
             return data
@@ -107,11 +107,11 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def get_fuel_balance(self, agent_id: str, asset_type: str = "fuel") -> Dict[str, Any]:
-        self.log.info(f"\n💰 [Economy] Checking UTXO hot state for {agent_id}...")
+    async def get_fuel_balance(self, client_id: str, asset_type: str = "fuel") -> Dict[str, Any]:
+        self.log.info(f"\n💰 [Economy] Checking UTXO hot state for {client_id}...")
         verifier = self._get_verified_client()
         try:
-            response = await verifier.async_get_verified(Endpoints.BILLING_BALANCE, params={"agent_id": agent_id, "asset_type": asset_type})
+            response = await verifier.async_get_verified(Endpoints.BILLING_BALANCE, params={"client_id": client_id, "asset_type": asset_type})
             data = response.json()
             self.log.info(f"  └─ ✅ Balance: {data.get('balance')} {asset_type}")
             return data
@@ -121,13 +121,13 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def execute_agent_intent(self, intent: CodebotIntent, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
-        self.log.info(f"\n🚀 [Compute] Requesting isolated execution for {intent.agent_id}...")
+    async def execute_sandbox_intent(self, intent: SandboxIntent, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
+        self.log.info(f"\n🚀 [Compute] Requesting isolated execution for {intent.client_id}...")
         verifier = self._get_verified_client()
         headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
             
         try:
-            response = await verifier.async_post_verified(Endpoints.AGENT_EXECUTE, json=asdict(intent), headers=headers)
+            response = await verifier.async_post_verified(Endpoints.SANDBOX_EXECUTE, json=asdict(intent), headers=headers)
             receipt = response.json()
             self.log.info(f"  └─ ✅ Success! Billed: ${receipt.get('metered_cost_usd', 0):.4f}")
             self.log.info(f"  └─ 📜 State Root: {receipt.get('state_root')}")
@@ -155,9 +155,9 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def run_autonomous_intent(self, intent: CodebotIntent) -> Dict[str, Any]:
+    async def run_sandbox_intent(self, intent: SandboxIntent) -> Dict[str, Any]:
         self.log.info("\n" + "="*65)
-        self.log.info(f"🤖 [Auto-Orchestration] Initiating Zero-Trust Autonomous Run")
+        self.log.info(f"🤖 [Auto-Orchestration] Initiating Zero-Trust Sandbox Run")
         self.log.info("="*65)
         
         hs_res = await self.request_handshake(intent)
@@ -165,9 +165,9 @@ class DphiPublicClient:
             return {"error": "Handshake sequence failed", "details": hs_res}
             
         macaroon = hs_res.get("macaroon", "dummy_macaroon_for_internal_auth")
-        await self.get_fuel_balance(intent.agent_id)
+        await self.get_fuel_balance(intent.client_id)
         
-        exec_res = await self.execute_agent_intent(intent, payment_receipt=macaroon)
+        exec_res = await self.execute_sandbox_intent(intent, payment_receipt=macaroon)
         if "error" in exec_res:
             return {"error": "Execution sequence failed", "details": exec_res}
             
@@ -176,7 +176,7 @@ class DphiPublicClient:
             self.log.critical("🚨 Execution succeeded but receipt verification failed.")
             return {"error": "Receipt tampered during transit"}
             
-        self.log.info("\n🎉 [Autonomous Run] All sequences completed securely.")
+        self.log.info("\n🎉 [Sandbox Run] All sequences completed securely.")
         return exec_res
 
     async def push_telemetry(self, request: ExportLogsServiceRequest) -> Dict[str, Any]:
@@ -204,7 +204,7 @@ class DphiPublicClient:
     # LLM Edge Methods
     # -------------------------------------------------------------------------
     async def execute_secure_llm_intent(self, intent: LLMIntent) -> Dict[str, Any]:
-        self.log.info(f"\n🧠 [Intelligence] Requesting Zero-Trust LLM Compute for {intent.agent_id}...")
+        self.log.info(f"\n🧠 [Intelligence] Requesting Zero-Trust LLM Compute for {intent.client_id}...")
         verifier = self._get_verified_client()
         url = Endpoints.LLM_CHAT
         
@@ -212,7 +212,7 @@ class DphiPublicClient:
             "model": intent.model,
             "messages": intent.messages,
             "max_tokens": intent.max_tokens,
-            "metadata": {"agent_id": intent.agent_id}
+            "metadata": {"client_id": intent.client_id} # 메타데이터 키도 client_id로 일치
         }
 
         try:
@@ -222,8 +222,9 @@ class DphiPublicClient:
             if response.status_code == 402:
                 self.log.warning("  ├─ 🛑 402 Payment Required intercepted. Initiating auto L402 Handshake...")
                 
-                hs_res = await self.request_handshake(CodebotIntent(
-                    agent_id=intent.agent_id, action="LLM_COMPUTE", source_code="", max_fuel=intent.max_tokens, signature="sig"
+                # 핸드셰이크 요청도 SandboxIntent 규격 사용
+                hs_res = await self.request_handshake(SandboxIntent(
+                    client_id=intent.client_id, action="LLM_COMPUTE", source_code="", max_fuel=intent.max_tokens, signature="sig"
                 ))
                 macaroon = hs_res.get("macaroon")
                 if not macaroon:
@@ -250,7 +251,7 @@ class DphiPublicClient:
             await verifier._client.aclose()
 
     # -------------------------------------------------------------------------
-    # Enterprise MCP Edge Method (신규 통합)
+    # Enterprise MCP Edge Method
     # -------------------------------------------------------------------------
     async def process_mcp_state(self, intent: MCPStateIntent) -> Dict[str, Any]:
         self.log.info(f"\n🏢 [Enterprise] Processing MCP State for Tenant {intent.x_tenant_id}...")
@@ -294,9 +295,9 @@ class DphiPublicClient:
 # =========================================================================
 class UsecasePayloadBuilder:
     @staticmethod
-    def build_intent() -> CodebotIntent:
-        return CodebotIntent(
-            agent_id="codebot-alpha-99", action="EXECUTE_PYTHON",
+    def build_intent() -> SandboxIntent:
+        return SandboxIntent(
+            client_id="sandbox-client-99", action="EXECUTE_PYTHON",
             source_code="print('Verified Execution!')", max_fuel=1_500_000, signature="0xab1234567890_mock_signature"
         )
 
@@ -308,12 +309,12 @@ class UsecasePayloadBuilder:
 
     @staticmethod
     def build_audit() -> AuditLogRequest:
-        return AuditLogRequest(event=AuditEvent(message="Accessed Sensitive Record", actor="health-agent-01", action="READ", target="P-88910"), verbose=True)
+        return AuditLogRequest(event=AuditEvent(message="Accessed Sensitive Record", actor="health-client-01", action="READ", target="P-88910"), verbose=True)
 
     @staticmethod
     def build_llm_intent() -> LLMIntent:
         return LLMIntent(
-            agent_id="analyst-agent-01", model="inter/claude-3-opus",
+            client_id="analyst-client-01", model="inter/claude-3-opus",
             messages=[{"role": "system", "content": "You are a cyber security expert."}, {"role": "user", "content": "Explain Topological Sealing."}], max_tokens=1024
         )
 
@@ -321,7 +322,7 @@ class UsecasePayloadBuilder:
     def build_mcp_intent() -> MCPStateIntent:
         return MCPStateIntent(
             action="COMMIT", handle_id="hdl-123", payload={"record": "data"},
-            x_spiffe_id="spiffe://trust.domain/agent/1", x_dpop_proof="proof-123",
+            x_spiffe_id="spiffe://trust.domain/client/1", x_dpop_proof="proof-123",
             x_nonce="nonce-abc", x_tenant_id="tenant-corp-xyz", x_idempotency_key="idemp-key-1"
         )
 
@@ -334,9 +335,9 @@ class UsecaseRunner:
         self.log.info("\n=== [START] DPHI Public Usecase Scenarios ===")
         self.log.info(f"📍 Target Edge URL: {self.client.base_url}")
 
-        ## 1. Autonomous Agent Execution
+        ## 1. Isolated Sandbox Execution
         intent_req = UsecasePayloadBuilder.build_intent()
-        await self.client.run_autonomous_intent(intent_req)
+        await self.client.run_sandbox_intent(intent_req)
         await asyncio.sleep(0.5)
         
         ## 2. OTLP Telemetry Ingress
@@ -359,10 +360,9 @@ class UsecaseRunner:
                 verify_payload = {"receipt_id": "llm_chat_verification", "state_root": fingerprint, "receipt_type": "Proof-of-Compute"}
                 await self.client.verify_audit_receipt(verify_payload)
 
-        ## 5. Enterprise MCP State Sync (New)
+        ## 5. Enterprise MCP State Sync 
         mcp_intent = UsecasePayloadBuilder.build_mcp_intent()
         await self.client.process_mcp_state(mcp_intent)
-
         self.log.info("\n=== [SUCCESS] All Usecase Scenarios Completed ===")
 
 if __name__ == "__main__":

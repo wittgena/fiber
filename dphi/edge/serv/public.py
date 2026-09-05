@@ -29,7 +29,7 @@ from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
 from xphi.kernel.dphi.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (
-    CodebotIntent, 
+    SandboxIntent,
     AuditReceipt,
     ExportLogsServiceRequest, 
     AuditLogRequest, 
@@ -49,7 +49,7 @@ public_edge = ContractRouter(
     namespace="public", 
     prefix="/v1/public", 
     tags=["Public Gateway"],
-    description="Deterministic Zero-Trust Gateway for Agentic Workloads"
+    description="Deterministic Zero-Trust Gateway for Isolated Sandbox Workloads"
 )
 
 """DATA TRANSFER OBJECTS (DTO)"""
@@ -58,14 +58,13 @@ class InvoiceIssueRequest(BaseModel):
     amount_usdc: str
     resource_id: str
 
-class AgentHandshakeResponse(BaseModel):
+class SandboxHandshakeResponse(BaseModel):
     status: str
     estimated_fuel: int
     estimated_cost_usd: float
     invoice: Dict[str, Any]
     macaroon: Optional[str] = None
-    next_action: str = "POST /v1/public/agent/execute with X-X402-Receipt header"
-
+    next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
 
 """BASE INFRASTRUCTURE (TRUST ANCHOR)"""
 @public_edge.get(
@@ -94,17 +93,17 @@ async def get_public_keys():
 
 """COMPUTE SYMMETRY (QUOTE ↔ EXECUTE)"""
 @public_edge.post(
-    "/agent/quote", 
+    "/sandbox/quote", 
     summary="Get Pre-flight Execution Quotation (Dry-run)"
 )
-async def public_agent_quote(
-    intent: CodebotIntent,
+async def public_sandbox_quote(
+    intent: SandboxIntent,
     x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     if x_x402_receipt:
         val_req = IntentValidationRequest(
-            requester_id=intent.agent_id,
+            requester_id=intent.client_id,
             responder_id=intent.responder_id or "edge-gateway-01",
             action=intent.action,
             max_fuel_budget=intent.max_fuel,
@@ -117,7 +116,7 @@ async def public_agent_quote(
             raise HTTPException(status_code=422, detail=f"Intent Validation Failed: {{\"detail\":\"{e.detail}\"}}")
 
     exec_req = {
-        "agent_schema": {
+        "sandbox_schema": {
             "runtime": "python3.11-wasm",
             "files": {"main.py": intent.source_code}, 
             "limits": {"max_fuel": intent.max_fuel}
@@ -130,20 +129,20 @@ async def public_agent_quote(
 
 
 @public_edge.post(
-    "/agent/execute", 
-    summary="Execute Billed AI Agent Intent & Issue Cryptographic Proof-of-Action",
+    "/sandbox/execute", 
+    summary="Execute Billed AI Sandbox Intent & Issue Cryptographic Proof-of-Action",
     response_model=AuditReceipt
 )
-async def public_agent_execute(
-    intent: CodebotIntent,
+async def public_sandbox_execute(
+    intent: SandboxIntent,
     x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     rpc: InternalRpcClient = Depends(get_rpc_client),
     broker: DphiBroker = Depends(get_wasm_broker)
 ):
-    request_id = f"cbot_{uuid.uuid4().hex[:8]}"
+    request_id = f"sandbox_{uuid.uuid4().hex[:8]}"  # cbot_ -> sandbox_ 로 식별자 일치
     with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
         val_req = IntentValidationRequest(
-            requester_id=intent.agent_id,
+            requester_id=intent.client_id,
             responder_id=intent.responder_id or "edge-gateway-01",
             action=intent.action,
             max_fuel_budget=intent.max_fuel,
@@ -157,7 +156,7 @@ async def public_agent_execute(
             raise HTTPException(status_code=401, detail=f"Intent Rejected: {{\"detail\":\"{e.detail}\"}}")
 
         exec_req = BilledExecutionRequest(
-            agent_schema={
+            sandbox_schema={  # [CRITICAL FIX] agent_schema -> sandbox_schema
                 "runtime": "python3.11-wasm",
                 "files": {"main.py": intent.source_code}, 
                 "limits": {"max_fuel": intent.max_fuel}
@@ -190,7 +189,7 @@ async def public_agent_execute(
         
         evo_ctx = StateAdapter.build_evolution_context(phase_root={})
         transition_payload = StateAdapter.build_transition_payload(
-            intent_action="record_agent_execution",
+            intent_action="record_sandbox_execution",  # [CRITICAL FIX] 커널 상태 전이 액션명 변경
             intent_payload=kernel_req_dict,
             evolution_ctx=evo_ctx
         )
@@ -205,7 +204,7 @@ async def public_agent_execute(
         
         return AuditReceipt(
             receipt_id=request_id,
-            receipt_type="Proof-of-Agent-Action",
+            receipt_type="Proof-of-Sandbox-Action",  # [CRITICAL FIX] 영수증 타입명 변경
             status="SUCCESS",
             fuel_consumed=fuel_metered,
             metered_cost_usd=cost_usd,
@@ -216,16 +215,16 @@ async def public_agent_execute(
 
 """ECONOMY SYMMETRY (INVOICE ↔ BALANCE & HANDSHAKE)"""
 @public_edge.post(
-    "/agent/handshake", 
-    summary="Agent Pre-flight Handshake (Quote & Invoice)",
-    response_model=AgentHandshakeResponse
+    "/sandbox/handshake", 
+    summary="Client Pre-flight Handshake (Quote & Invoice)",
+    response_model=SandboxHandshakeResponse
 )
-async def public_agent_handshake(
-    intent: CodebotIntent,
+async def public_sandbox_handshake(
+    intent: SandboxIntent,
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     quote_req = {
-        "agent_schema": {
+        "sandbox_schema": {
             "runtime": "python3.11-wasm",
             "files": {"main.py": intent.source_code}, 
             "limits": {"max_fuel": intent.max_fuel}
@@ -241,7 +240,6 @@ async def public_agent_handshake(
     
     cost_usd = quote_data.get("estimated_cost_usd", 0.0)
     fuel = quote_data.get("fuel_estimated", 0)
-
     invoice_req = {
         "payee_address": "0x000000000000000000000000000000000000dEaD",
         "amount_usdc": str(cost_usd),
@@ -253,7 +251,7 @@ async def public_agent_handshake(
     except HTTPException as e:
         raise HTTPException(status_code=500, detail=f"Invoice Issue Failed: {e.detail}")
 
-    return AgentHandshakeResponse(
+    return SandboxHandshakeResponse(
         status="HANDSHAKE_READY",
         estimated_fuel=fuel,
         estimated_cost_usd=cost_usd,
@@ -281,12 +279,12 @@ async def public_issue_invoice(
     summary="Check UTXO Fuel Balance"
 )
 async def public_get_balance(
-    agent_id: str = Query(..., description="조회할 에이전트 주소"),
+    client_id: str = Query(..., description="조회할 클라이언트 주소"),
     asset_type: str = Query("fuel", description="조회할 자산 타입"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        return await rpc.call("eco.exchange.balance", {"agent_id": agent_id, "asset_type": asset_type})
+        return await rpc.call("eco.exchange.balance", {"client_id": client_id, "asset_type": asset_type})
     except HTTPException as e:
         raise
 
@@ -409,12 +407,10 @@ async def public_audit_log(
     summary="Verify AuditReceipt Authenticity"
 )
 async def public_audit_verify(
-    # [IMPROVED] 무의미한 Dict 대신 AuditReceipt 모델을 통해 타입 안전성과 필수 필드 검증을 강제합니다.
     receipt: AuditReceipt = Body(...),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        # Pydantic 모델을 통해 안전하게 검증된 데이터만 추출하여 RPC 핸들러로 전달합니다.
         rpc_payload = {
             "receipt_id": receipt.receipt_id,
             "state_root": receipt.state_root,

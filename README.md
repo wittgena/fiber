@@ -5,7 +5,7 @@ While autonomous AI agents offer unprecedented capabilities, deploying them in p
 
 1. **Unpredictable Billing Runaways:** Software-level guardrails are easily bypassed by agentic infinite loops or malicious prompt injections, transforming API compute budgets into uncontained financial risks.
 2. **Application-Layer Permissiveness:** Trusting standard application wrappers to execute complex tool calls leaves underlying host systems chronically exposed to command injections and supply-chain compromises.
-3. **The Burden of Statelessness:** Modern agent protocols (e.g., MCP 2.0) have adopted stateless architectures for protocol-level scalability, effectively externalizing the heavy complexities of distributed state management. Because tool calls are fundamentally irreversible state transitions—not simple RPCs—this shift forces enterprise clients to independently manage race conditions, cryptographic replay attacks, and idempotency. This burden is further compounded by the fragmented coexistence of legacy stateful models.
+3. **The Burden of Statelessness:** Modern agent protocols (e.g., MCP 2.0) have adopted stateless architectures for protocol-level scalability, effectively externalizing the heavy complexities of distributed state management. Because tool calls are fundamentally irreversible state transitions—not simple RPCs—this shift forces clients to independently manage race conditions, cryptographic replay attacks, and idempotency. This burden is further compounded by the fragmented coexistence of legacy stateful models.
 
 The Fiber project is designed to quietly but definitively resolve these bottlenecks. 
 
@@ -15,7 +15,7 @@ It is a zero-trust cryptographic metering proxy that logically separates executi
 
 ## 1. LLM Compatibility & Edge Gateway
 
-🔗 **[Read the Full Documents: Compat Entry](./phase/abc/llm/compat/entry.md) | [Edge Gateway](./phase/abc/llm/edge.md) | [Token Utilities**](./phase/abc/llm/compat/token.md)
+🔗 **[Read the Full Documents: Compat Entry](./phase/abc/llm/compat/entry.md) | [Edge Gateway](./phase/abc/edge/llm.md) | [Token Utilities**](./phase/abc/llm/compat/token.md)
 
 The `fiber.llm` module is a high-performance LLM router and gateway that provides a **Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features—Fuel metering, fault-tolerance, and state normalizations—protecting your underlying infrastructure from runaway AI costs and application-layer vulnerabilities without requiring rewrites to your existing agent architectures.
 
@@ -83,7 +83,7 @@ The `fiber.llm.model.token` package provides exact equivalents to LiteLLM’s to
 * **Safe Context Trimming:** `trim_messages()` safely evicts older messages while strictly preserving `system` prompts and critical `tool_result` contexts.
 * **Token-Safe Splitter:** A native `TokenSplitter` slices documents by Token IDs rather than string length, completely preventing multi-byte character corruption across chunk boundaries during RAG workloads.
 
-### 1.5. Enterprise MCP Transition Bridge (Stateless Complexity Anchor)
+### 1.5. MCP Transition Bridge (Stateless Complexity Anchor)
 
 As agent protocols evolve toward stateless architectures, they push the critical responsibilities of concurrency control, idempotency, and cryptographic authentication entirely onto the enterprise implementation. The gateway's `TransitionBridge` is engineered to absorb this externalized complexity. It acts as a definitive state anchor, sublimating fragmented, stateless requests into secure and ordered **deterministic state transitions** without requiring clients to build complex distributed locks.
 
@@ -139,10 +139,10 @@ Beyond testing, the CLI routes the system into specific operational contexts, au
 
 ### 2.4. Egress Sidecar & A2A Sublimation (The `connect` Mode)
 
-The `fiber connect` command represents the ecosystem's most potent adoption vector. It enables enterprise providers and indie developers alike to integrate existing Web2 servers into the deterministic A2A (Agent-to-Agent) economy with **absolutely zero code modifications**.
+The `fiber connect` command represents the ecosystem's most potent adoption vector. It enables providers and indie developers alike to integrate existing Web2 servers into the deterministic A2A (Agent-to-Agent) economy with **absolutely zero code modifications**.
 
 * **Zero-Trust NAT Traversal:** Operating purely via outbound subscription (Pull-based), the connector requires **zero inbound firewall configurations**. Organizations can safely expose internal DB or ERP tools to global AI agents while remaining deeply concealed behind strict corporate VPCs.
-* **Instant L402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex L402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits enterprise-grade monetization and idempotency.
+* **Instant L402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex L402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits monetization and idempotency.
 * **The Pathway to WASM:** By isolating physical execution within this Sidecar boundary, Fiber establishes a seamless migration path. Providers can effortlessly swap their legacy subprocesses with deterministic WASM sandboxes in the future—transitioning from rudimentary APIs into fully autonomous, instruction-metered smart contracts without disrupting client agents.
 
 ---

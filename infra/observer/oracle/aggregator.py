@@ -1,5 +1,4 @@
 # fiber.infra.observer.oracle.aggregator
-## @lineage: fiber.dphi.infra.observer.oracle.aggregator
 import os
 import time
 import hashlib

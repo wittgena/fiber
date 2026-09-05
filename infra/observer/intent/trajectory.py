@@ -1,6 +1,4 @@
 # fiber.infra.observer.intent.trajectory
-## @lineage: fiber.dphi.infra.observer.intent.trajectory
-## @lineage: fiber.dphi.observer.intent.trajectory
 import os
 import time
 import math

@@ -146,7 +146,7 @@ class EcoScene(SchemeRunner):
 
     async def _step1_gateway_ingress(self, agent_pub, intent_action):
         log.info(f"\n--- [Gateway Ingress] Validating trade intent from {agent_pub[:8]}... ---")
-        raw_intent = {"agent_id": agent_pub, "action": intent_action, "timestamp": int(time.time() * 1000)}
+        raw_intent = {"client_id": agent_pub, "action": intent_action, "timestamp": int(time.time() * 1000)}
         
         ingress_payload = {
             "ts": raw_intent["timestamp"], 
