@@ -4,7 +4,7 @@ import uuid
 import asyncio
 from typing import Any, Dict, Optional, List
 
-from fiber.infra.adapter.shadow import ShadowAdapter
+from fiber.dphi.adapter.shadow import ShadowAdapter
 from xphi.kernel.dphi.fsm.defin import (
     DefinFSM, 
     FsmStartIntent, UtxoAnchoredEvent, WasmExecutedEvent, 

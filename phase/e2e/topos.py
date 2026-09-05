@@ -10,7 +10,7 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 
 from fiber.dphi.edge.workflow import EdgeWorkflow
-from fiber.phase.kernel.plane.topos import ToposOrchestrator, ToposContext
+from fiber.phase.plane.topos import ToposOrchestrator, ToposContext
 
 from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.kernel.phase.reactor import PhaseReactor

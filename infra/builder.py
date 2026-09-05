@@ -14,10 +14,10 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.client.wallet import LocalWalletClient
+from fiber.infra.client.wallet import LocalWalletClient
 from fiber.infra.config import dphi_env
 from fiber.dphi.adapter.anchor import LedgerEventSchema, StreamAppendRequest
-from fiber.infra.adapter.settlement import TransactionReceipt
+from fiber.dphi.adapter.settlement import TransactionReceipt
 
 from xphi.arch.model.dphi.receptor import (
     TradeIngressRequest,
