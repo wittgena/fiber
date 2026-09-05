@@ -10,7 +10,7 @@ from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from fiber.dphi.rpc.client import InternalRpcClient
 from fiber.dphi.edge.serv.depend import get_rpc_client
-from fiber.dphi.edge.mcp.adapter import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
+from fiber.infra.agent.bridge.adapter import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 
 log = get_emitter("mcp.bridge")
 

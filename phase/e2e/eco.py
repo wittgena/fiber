@@ -4,7 +4,7 @@ import json
 import asyncio
 
 from fiber.dphi.adapter.anchor import ActorIdentity
-from fiber.infra.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
+from fiber.infra.notary.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.phase.kernel.shell.sandbox import TestScripts
 
 from xphi.xor.space.sandbox.protocol import TriadAxis

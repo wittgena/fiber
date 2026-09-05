@@ -399,7 +399,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from fiber.infra.adapter.settlement import MandateAdapter
+        from fiber.dphi.adapter.settlement import MandateAdapter
         invoice = MandateAdapter.build_x402_invoice(
             payee_address=payee_address,
             amount_usdc=amount_usdc,

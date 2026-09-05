@@ -104,7 +104,7 @@ class RollupAdapter:
         return rollup_hash
 
     async def process_x402_settlement(self, invoice: Any) -> Any:
-        from fiber.infra.adapter.settlement import X402SettlementReceipt
+        from fiber.dphi.adapter.settlement import X402SettlementReceipt
         
         tx_hash = await self.transfer(
             to_address=invoice.pay_to,

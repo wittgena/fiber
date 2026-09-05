@@ -8,7 +8,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.phase.kernel.shell.sandbox import EpochBase
-from fiber.infra.adapter.settlement import ClearingAdapter
+from fiber.dphi.adapter.settlement import ClearingAdapter
 from fiber.dphi.adapter.anchor import ActorIdentity
 
 from xphi.xor.space.sandbox.runner import SchemeRunner

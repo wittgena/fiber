@@ -11,7 +11,7 @@ from eth_account.messages import encode_defunct
 
 from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from fiber.dphi.edge.workflow import EdgeWorkflow
-from fiber.dphi.client.http import VerifiedHttpClient
+from fiber.infra.client.http import VerifiedHttpClient
 from fiber.dphi.edge.payload import create_app, Config
 from fiber.phase.kernel.daemon.rpc import RpcWorkerDaemon
 
