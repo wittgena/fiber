@@ -1,11 +1,7 @@
 # fiber.dphi.adapter.proof.binance.funding
-## @lineage: fiber.infra.adapter.proof.binance.funding
-## @lineage: fiber.dphi.infra.observer.proof.binance.funding
 """
 @arn: arn:bound:oracle:binance:funding:v1.0.0
 @desc: Deterministic adapter and validator for Binance USD(S)-M Futures Funding Rates
-@security: The raw bytes of this source file are cryptographically hashed for execution integrity
-@constraint: Do not modify whitespace, comments, or logic after network deployment
 """
 from typing import Dict, Any, List, TypedDict
 

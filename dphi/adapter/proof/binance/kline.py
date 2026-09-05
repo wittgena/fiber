@@ -1,11 +1,7 @@
 # fiber.dphi.adapter.proof.binance.kline
-## @lineage: fiber.infra.adapter.proof.binance.kline
-## @lineage: fiber.dphi.infra.observer.proof.binance.kline
 """
 @arn: arn:bound:oracle:binance:kline:v1.0.0
 @desc: Deterministic data adapter and validator for Binance K-line data
-@security: The raw bytes of this source file are cryptographically hashed for execution integrity
-@constraint: Do not modify whitespace, comments, or logic after network deployment
 """
 from typing import Dict, Any, List, TypedDict
 

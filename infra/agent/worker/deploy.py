@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.exceptions import InvalidSignature
 
 from fiber.infra.agent.bridge.protocol import AgentProtocol
-from fiber.dphi.rpc.client import InternalRpcClient
+from fiber.infra.client.rpc import InternalRpcClient
 
 log = logging.getLogger("agent.deploy")
 

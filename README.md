@@ -106,12 +106,12 @@ If the `fiber` package is installed globally (e.g., via `pip install -e .`), you
 fiber [OPTIONS] COMMAND [ARGS]...
 
 # Local / Development execution
-python -m fiber.cli.main [OPTIONS] COMMAND [ARGS]...
+python -m fiber.phase.cli.main [OPTIONS] COMMAND [ARGS]...
 ```
 
 ### 2.2. E2E Testing & Dynamic Argument Forwarding (Core Feature)
 
-The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`defin`, `eco`, `edge`, `flare`, `wasm.entry`, `llm.compat`).
+The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`dphi.defin`, `dphi.eco`, `dphi.edge`, `flare`, `dphi.wasm.entry`, `llm.compat`).
 
 Instead of hardcoding every possible test parameter into the root CLI, `fiber` captures unknown arguments and transparently **forwards them to the target module's standard `main(args)` entrypoint**. This ensures zero-friction scalability as new domains and parameters are added.
 

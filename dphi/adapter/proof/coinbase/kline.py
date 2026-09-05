@@ -1,18 +1,7 @@
 # fiber.dphi.adapter.proof.coinbase.kline
-## @lineage: fiber.infra.adapter.proof.coinbase.kline
-## @lineage: fiber.dphi.infra.observer.proof.coinbase.kline
-## @lineage: fiber.dphi.observer.proof.coinbase.kline
-## @lineage: fiber.phase.tracer.observer.proof.coinbase.kline
-## @lineage: phase.tracer.observer.proof.coinbase.kline
-## @lineage: bound.observer.proof.coinbase.kline
-## @lineage: dphi.observer.proof.coinbase.kline
-## @lineage: eco.observer.proof.coinbase.kline
-## @lineage: bound.proof.coinbase.kline
 """
 @arn: arn:bound:oracle:coinbase:kline:v1.0.0
 @desc: Deterministic data adapter and validator for Coinbase Advanced Trade K-line data
-@security: The raw bytes of this source file are cryptographically hashed for execution integrity
-@constraint: Do not modify whitespace, comments, or logic after network deployment
 """
 import datetime
 from typing import Dict, Any, List, TypedDict

@@ -14,21 +14,21 @@ import uvicorn
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.rpc.client import InternalRpcClient
+from fiber.infra.client.rpc import InternalRpcClient
 from fiber.infra.agent.bridge.connector import WorkerConnector
-from fiber.phase.e2e.edge import (
+from fiber.infra.e2e import (
     PipelineRunner, 
     ManagedTestServer, 
     TestResult, 
-    Phase, 
     E2EConfig
 )
 
 from fiber.dphi.rpc.handler import INTERNAL_HANDLERS_REGISTRY
-from fiber.phase.kernel.daemon.rpc import RpcWorkerDaemon
+from fiber.dphi.daemon.rpc import RpcWorkerDaemon
+from fiber.dphi.edge.payload import create_app, Config
 
 import fiber.infra.agent.worker.deploy as agent_deploy
-import fiber.infra.agent.worker.validator as agent_validator  # [추가] 신규 Validator 에이전트
+import fiber.infra.agent.worker.validator as agent_validator
 import fiber.infra.agent.worker.oracle as agent_oracle
 import fiber.infra.agent.worker.sentinel as agent_sentinel
 import fiber.infra.agent.worker.finlib as agent_finlib
@@ -37,7 +37,6 @@ import fiber.infra.agent.worker.margin as agent_margin
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.kernel.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from fiber.dphi.edge.payload import create_app, Config
 
 log = get_emitter("e2e.bridge.mcp")
 

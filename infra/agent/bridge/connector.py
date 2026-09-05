@@ -9,7 +9,7 @@ import logging
 import argparse
 from typing import Dict, Any, Optional
 
-from fiber.dphi.rpc.client import InternalRpcClient
+from fiber.infra.client.rpc import InternalRpcClient
 from fiber.infra.agent.bridge.quarantine import QuarantineRegistry
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter

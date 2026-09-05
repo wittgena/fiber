@@ -1,18 +1,7 @@
 # fiber.dphi.adapter.proof.coinbase.funding
-## @lineage: fiber.infra.adapter.proof.coinbase.funding
-## @lineage: fiber.dphi.infra.observer.proof.coinbase.funding
-## @lineage: fiber.dphi.observer.proof.coinbase.funding
-## @lineage: fiber.phase.tracer.observer.proof.coinbase.funding
-## @lineage: phase.tracer.observer.proof.coinbase.funding
-## @lineage: bound.observer.proof.coinbase.funding
-## @lineage: dphi.observer.proof.coinbase.funding
-## @lineage: eco.observer.proof.coinbase.funding
-## @lineage: bound.proof.coinbase.funding
 """
 @arn: arn:bound:oracle:coinbase:funding:v1.0.0
 @desc: Deterministic adapter and validator for Coinbase International Perpetual Funding Rates
-@security: The raw bytes of this source file are cryptographically hashed for execution integrity
-@constraint: Do not modify whitespace, comments, or logic after network deployment
 """
 from typing import Dict, Any, List, TypedDict
 

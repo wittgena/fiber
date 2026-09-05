@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from fiber.dphi.rpc.client import InternalRpcClient
+from fiber.infra.client.rpc import InternalRpcClient
 from fiber.dphi.edge.serv.depend import get_rpc_client
 from fiber.infra.agent.bridge.adapter import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 

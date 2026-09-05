@@ -19,7 +19,7 @@ from fiber.dphi.edge.serv.depend import (
     get_secret_auditor, 
     get_rpc_client
 )
-from fiber.dphi.rpc.client import InternalRpcClient
+from fiber.infra.client.rpc import InternalRpcClient
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.model.dphi.receptor import EdgeState, EdgeHeader, IntentValidationRequest
@@ -40,7 +40,7 @@ from xphi.arch.model.edge.receipt import (
     KernelExecutionRecord,
     KernelOtlpRecord
 )
-from fiber.phase.kernel.receptor.audit.secret import SecretAuditor
+from fiber.phase.plane.receptor.audit.secret import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.public")

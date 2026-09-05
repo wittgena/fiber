@@ -2,8 +2,8 @@
 from typing import Any
 from fastapi import Request, HTTPException, status
 
-from fiber.dphi.rpc.client import InternalRpcClient
-from fiber.phase.kernel.receptor.audit.secret import SecretAuditor
+from fiber.infra.client.rpc import InternalRpcClient
+from fiber.phase.plane.receptor.audit.secret import SecretAuditor
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.dphi.broker import DphiBroker

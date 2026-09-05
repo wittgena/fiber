@@ -9,7 +9,7 @@ from fiber.llm.model.provider.registry import get_model_cost_registry
 from fiber.llm.router.ext.llm.model.base import BaseLLM
 
 import fiber.llm.router.ext.llm as llm_pkg 
-from fiber.phase.scope.resolver.ext import ExtResolver
+from fiber.phase.plane.resolver.ext import ExtResolver
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("registry.llm")
