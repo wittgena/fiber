@@ -149,7 +149,7 @@ def run_e2e(
                 log.error(f"[Fiber] ❌ Module {module_path} lacks a standard 'main' entrypoint. Skipping.")
                 continue
         except ImportError:
-            log.error(f"[Fiber] ❌ Test module not found: {module_path}")
+            log.error(f"[Fiber] ❌ Test module not found: {module_path} (Reason: {e})")
             if target != "all":
                 sys.exit(1)
         except Exception as e:

@@ -2,98 +2,65 @@
 import sys
 import json
 import time
-import logging
-import traceback
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from fiber.infra.observer.oracle.receptor import OracleReceptor
-from xphi.watcher.plane.emitter import get_emitter
 
-logging.basicConfig(
-    stream=sys.stderr, 
-    level=logging.INFO, 
-    format="%(asctime)s [%(levelname)s] oracle.server - %(message)s"
-)
-log = logging.getLogger("agent.oracle")
+# [핵심] STDOUT 오염 방지 및 JSON-RPC 표준 루프를 담당하는 베이스 프로토콜 임포트
+from fiber.infra.worker.protocol import AgentProtocol
 
-class OracleMcpServer:
+class OracleMcpServer(AgentProtocol):
     def __init__(self):
-        log.info("Initializing Deterministic Oracle Receptor...")
+        # [적용] 부모 클래스 초기화 - 자동으로 stdout 격리 및 로깅 설정이 적용됩니다.
+        super().__init__(agent_name="agent.oracle")
+        
+        self.log.info("Initializing Deterministic Oracle Receptor...")
         try:
             # 외부 API 페치, 교차 검증, 서명(Sealing)을 담당하는 코어 모듈
             self.receptor = OracleReceptor()
-            log.info("Oracle Receptor successfully mounted. Ready for A2A Intents.")
+            self.log.info("Oracle Receptor successfully mounted. Ready for A2A Intents.")
         except Exception as e:
-            log.critical(f"Failed to mount Oracle Receptor: {e}", exc_info=True)
+            self.log.critical(f"Failed to mount Oracle Receptor: {e}", exc_info=True)
             sys.exit(1)
 
-        # [정렬 됨] 코어 엔진이 씰링(Sealed)한 최종 증명 객체 자체를 캐싱하는 메모리
+        # 코어 엔진이 씰링(Sealed)한 최종 증명 객체 자체를 캐싱하는 메모리
         # 동일한 1초 내에 쏟아지는 수백 개의 에이전트 요청을 단 1회의 외부 API 호출로 방어합니다.
         self._sealed_cache: Dict[str, Dict[str, Any]] = {}
         self._cache_ttl = 1.0  # 1.0초의 국지적 합의 윈도우 (Local Consensus Window)
 
-    def serve_forever(self):
-        """커넥터(Sidecar)로부터 전달되는 JSON-RPC 인텐트를 무한 루프(Event Loop)로 대기합니다."""
-        log.info("Listening for JSON-RPC payloads on stdin (Daemon Mode)...")
-        
-        for line in sys.stdin:
-            line = line.strip()
-            if not line:
-                continue
-                
-            try:
-                request = json.loads(line)
-                self._handle_request(request)
-            except json.JSONDecodeError:
-                log.error(f"Malformed JSON payload received: {line}")
-                self._send_error(req_id=None, code=-32700, message="Parse error: Invalid JSON")
-            except Exception as e:
-                log.error(f"Unhandled server fracture: {e}", exc_info=True)
-                self._send_error(
-                    req_id=request.get("id") if 'request' in locals() else None, 
-                    code=-32603, 
-                    message="Internal Server Error"
-                )
+    # [삭제됨] 지저분했던 serve_forever, _handle_request 메서드는 모두 부모 클래스(AgentProtocol)로 이관되었습니다.
 
-    def _handle_request(self, request: Dict[str, Any]):
-        """JSON-RPC 메서드 라우터"""
-        req_id = request.get("id")
-        method = request.get("method")
-        params = request.get("params", {})
+    # =====================================================================
+    # AgentProtocol 추상 메서드 구현
+    # =====================================================================
+    def handle_tools_list(self, req_id: Any):
+        """MCP 2026 규격의 tools/list 요청 처리"""
+        tools = [{
+            "name": "fetch_aggregated_kline",
+            "description": "Fetch and cryptographically seal multi-exchange (Binance, Coinbase) Kline data.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "symbol": {"type": "string", "description": "Trading pair (e.g., BTCUSDT)"},
+                    "strategy": {"type": "string", "description": "Aggregation strategy (mean, median)", "default": "mean"}
+                },
+                "required": ["symbol"]
+            }
+        }]
+        self.send_response(req_id, {"tools": tools})
 
-        # MCP 2026-07-28 Spec: tools/list
-        if method == "tools/list":
-            self._send_response(req_id, {
-                "tools": [{
-                    "name": "fetch_aggregated_kline",
-                    "description": "Fetch and cryptographically seal multi-exchange (Binance, Coinbase) Kline data.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "symbol": {"type": "string", "description": "Trading pair (e.g., BTCUSDT)"},
-                            "strategy": {"type": "string", "description": "Aggregation strategy (mean, median)", "default": "mean"}
-                        },
-                        "required": ["symbol"]
-                    }
-                }]
-            })
-
-        # MCP 2026-07-28 Spec: tools/call
-        elif method == "tools/call":
-            tool_name = params.get("name")
-            arguments = params.get("arguments", {})
-            
-            if tool_name == "fetch_aggregated_kline":
-                self._execute_kline_fetch(req_id, arguments)
-            else:
-                self._send_error(req_id, code=-32601, message=f"Method not found: Unknown tool '{tool_name}'")
-                
-        elif method == "initialize":
-            self._send_response(req_id, {"protocolVersion": "2026-09-04", "capabilities": {}})
-            
+    def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
+        """
+        MCP 2026 규격의 tools/call 요청 처리
+        """
+        if tool_name == "fetch_aggregated_kline":
+            self._execute_kline_fetch(req_id, arguments)
         else:
-            self._send_error(req_id, code=-32601, message=f"Method not found: {method}")
+            self.send_error(req_id, code=-32601, message=f"Method not found: Unknown tool '{tool_name}'")
 
+    # =====================================================================
+    # 순수 비즈니스 로직 (Oracle Sealing & Caching)
+    # =====================================================================
     def _execute_kline_fetch(self, req_id: Any, arguments: Dict[str, Any]):
         symbol = arguments.get("symbol", "BTCUSDT")
         strategy = arguments.get("strategy", "mean")
@@ -107,10 +74,10 @@ class OracleMcpServer:
             cached_item = self._sealed_cache.get(cache_key)
             if cached_item and (now - cached_item['ts']) < self._cache_ttl:
                 sealed_payload = cached_item['payload']
-                log.debug(f"[Oracle] Cache Hit for {cache_key}. Reusing attestation payload.")
+                self.log.debug(f"[Oracle] Cache Hit for {cache_key}. Reusing attestation payload.")
             else:
                 # 2. 캐시 미스 시에만 하부 코어 망을 통해 외부 데이터 페치 및 암호학적 씰링(Sealing) 수행
-                log.info(f"Executing Oracle Policy -> Symbol: {symbol}, Strategy: {strategy}")
+                self.log.info(f"Executing Oracle Policy -> Symbol: {symbol}, Strategy: {strategy}")
                 target_arns = [
                     "arn:bound:oracle:binance:kline:v1.0.0",
                     "arn:bound:oracle:coinbase:kline:v1.0.0"
@@ -124,45 +91,23 @@ class OracleMcpServer:
 
             # 3. 에이전트는 어떠한 가짜 영수증도 만들지 않고, 순수하게 증명된 데이터만 반환합니다.
             # 이 페이로드에 대한 과금(UTXO) 및 검증은 rpc.handler가 담당합니다.
-            self._send_response(req_id, {
+            self.send_response(req_id, {
                 "content": [{"type": "text", "text": json.dumps(sealed_payload)}],
                 "isError": False
             })
             
         except Exception as e:
-            log.error(f"Oracle Execution Failed for {symbol}: {str(e)}", exc_info=True)
-            self._send_error(req_id, code=-32000, message=f"Oracle Tool Execution Failed: {str(e)}")
-
-    def _send_response(self, req_id: Any, result: Dict[str, Any]):
-        """Connector로 성공 결과 전송. flush()를 통해 파이프라인 버퍼링으로 인한 교착 상태 방지."""
-        response = {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": result
-        }
-        sys.stdout.write(json.dumps(response) + "\n")
-        sys.stdout.flush() 
-
-    def _send_error(self, req_id: Any, code: int, message: str):
-        """Connector로 에러 결과 전송."""
-        response = {
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "error": {
-                "code": code,
-                "message": message
-            }
-        }
-        sys.stdout.write(json.dumps(response) + "\n")
-        sys.stdout.flush()
+            self.log.error(f"Oracle Execution Failed for {symbol}: {str(e)}", exc_info=True)
+            self.send_error(req_id, code=-32000, message=f"Oracle Tool Execution Failed: {str(e)}")
 
 
 def main():
     server = OracleMcpServer()
     try:
+        # [적용] 베이스 클래스(AgentProtocol)의 견고한 I/O 무한 루프 실행
         server.serve_forever()
     except KeyboardInterrupt:
-        log.info("Server shutting down by interrupt.")
+        server.log.info("Server shutting down by interrupt.")
         sys.exit(0)
 
 if __name__ == "__main__":

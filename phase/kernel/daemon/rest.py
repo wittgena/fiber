@@ -2,7 +2,6 @@
 import os
 import asyncio
 import json
-import re
 import sys
 import datetime
 from typing import Optional, List, Literal
@@ -10,8 +9,6 @@ import uvicorn
 from contextlib import suppress
 from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-import redis.asyncio as aioredis
 
 from fiber.dphi.edge.payload import create_app, Config
 from xphi.arch.contract.registry.unified import contract
@@ -253,8 +250,7 @@ class RestEdgeDaemon(AbstractDaemon):
         self.server: Optional[uvicorn.Server] = None
         self._server_task: Optional[asyncio.Task] = None
         
-        # [구조 개선] API가 소유하던 인프라 자원의 소유권을 데몬으로 이관
-        self._redis_client = None
+        # 인프라 자원 상태 변수
         self._tunnel = None
 
     async def run(self):
@@ -268,11 +264,7 @@ class RestEdgeDaemon(AbstractDaemon):
             # TunnelFactory: 노드 전체 터널 객체를 데몬이 확보
             self._tunnel = await TunnelFactory.get_default()
             
-            # Redis Client: 상위 커널 Context에 없다면 데몬이 직접 연결 생성 후 소유
-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
-            self._redis_client = getattr(self.ctx, "redis_client", None) or aioredis.from_url(redis_url, decode_responses=True)
-            
-            # [개선] Ledger: 커널에서 주입받거나, 없을 경우 로컬 인스턴스로 자동 초기화 (Auto-Role)
+            # Ledger: 커널에서 주입받거나, 없을 경우 로컬 인스턴스로 자동 초기화 (Auto-Role)
             ledger = getattr(self.ctx, "ledger", None)
             if ledger is None:
                 log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger (Auto-Role).")
@@ -284,7 +276,7 @@ class RestEdgeDaemon(AbstractDaemon):
             resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
                 internal_edge_url=resolved_internal_url,
-                redis_url=redis_url,
+                redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"), # Config 내 설정값으로만 전달
                 max_payload_size=int(os.getenv("MAX_PAYLOAD_SIZE", 1024 * 1024 * 10)),
                 wasm_timeout=float(os.getenv("WASM_TIMEOUT", 10.0)),
                 pubsub_channel=os.getenv("PUBSUB_CHANNEL", "audit_channel")
@@ -297,7 +289,6 @@ class RestEdgeDaemon(AbstractDaemon):
             injected_app = create_app(
                 config=runtime_config,
                 tunnel=self._tunnel,
-                redis_client=self._redis_client,
                 ledger=ledger
             )
 
@@ -354,11 +345,6 @@ class RestEdgeDaemon(AbstractDaemon):
 
         # 3. 글로벌 자원 명시적 회수 (API의 월권 행위를 데몬이 정상 회수 처리)
         log.info(f"[{self.name}] Reaping injected global resources...")
-        
-        if self._redis_client and not getattr(self.ctx, "redis_client", None):
-            with suppress(Exception):
-                await self._redis_client.close()
-                log.info(f"[{self.name}] Redis connection cleanly closed by daemon.")
 
         try:
             await TunnelFactory.close_all()

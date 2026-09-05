@@ -6,25 +6,44 @@ import ast
 import operator
 import math
 import hashlib
-import numpy as np
-import talib
-import QuantLib as ql
 from typing import Dict, Any, List
 
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [finlib] %(message)s"
-)
+# [핵심] STDOUT 오염 방지 및 JSON-RPC 표준 루프를 담당하는 베이스 프로토콜 임포트
+from fiber.infra.worker.protocol import AgentProtocol
+
 log = logging.getLogger("agent.finlib")
 
-class FinLib:
+# =====================================================================
+# [선택적 의존성 로딩 구조]
+# 무거운 C-binding 패키지(talib, QuantLib)가 없어도 데몬이 실행되도록 처리
+# =====================================================================
+try:
+    import numpy as np
+    import talib
+    HAS_TALIB = True
+except ImportError:
+    HAS_TALIB = False
+    log.warning("Optional dependency 'talib' or 'numpy' not found. 'calc_indicators_batch' will use MOCK mode.")
+
+try:
+    import QuantLib as ql
+    HAS_QL = True
+except ImportError:
+    HAS_QL = False
+    log.warning("Optional dependency 'QuantLib' not found. 'resolve_dates' will use MOCK mode.")
+# =====================================================================
+
+
+class FinLib(AgentProtocol):
     def __init__(self):
+        # [적용] 부모 클래스 초기화 - 자동으로 stdout이 격리(Barrier)되고 로깅 환경이 설정됩니다.
+        super().__init__(agent_name="agent.finlib")
+        
         self.tick_sizes = {"BTCUSD": 0.5, "ETHUSD": 0.01, "SOLUSD": 0.001}
         self.lot_sizes = {"BTCUSD": 0.001, "ETHUSD": 0.01, "SOLUSD": 0.1}
         
-        # QuantLib 캘린더 엔진 캐싱 (호출 시마다 재생성되는 병목 제거)
-        self.target_calendar = ql.TARGET() 
+        # QuantLib 캘린더 엔진 캐싱
+        self.target_calendar = ql.TARGET() if HAS_QL else None
         
         # 금융 공학 연산을 위한 AST 화이트리스트 (Injection 방어)
         self.allowed_math_funcs = {
@@ -34,36 +53,11 @@ class FinLib:
             "pow": math.pow
         }
 
-    def serve_forever(self):
-        """다중화(Multiplexing)를 지원하는 표준 입출력 이벤트 루프"""
-        log.info("Unified FinStdLib Oracle Ignited (Daemon Mode). Listening on stdin.")
-        for line in sys.stdin:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                self._dispatch(json.loads(line))
-            except json.JSONDecodeError:
-                self._send_error(None, -32700, "Parse error: Invalid JSON payload")
-            except Exception as e:
-                log.error(f"Daemon Loop Fracture: {e}", exc_info=True)
-                self._send_error(None, -32603, "Internal Server Error")
-
-    def _dispatch(self, req: Dict[str, Any]):
-        req_id = req.get("id")
-        method = req.get("method")
-        params = req.get("params", {})
-
-        if method == "initialize":
-            self._send_response(req_id, {"protocolVersion": "2026-09-04", "capabilities": {}})
-        elif method == "tools/list":
-            self._handle_tools_list(req_id)
-        elif method == "tools/call":
-            self._handle_tools_call(req_id, params)
-        else:
-            self._send_error(req_id, -32601, f"Unknown method: {method}")
-
-    def _handle_tools_list(self, req_id: Any):
+    # =====================================================================
+    # AgentProtocol 추상 메서드 구현 (도구 목록 및 실행 라우팅)
+    # =====================================================================
+    def handle_tools_list(self, req_id: Any):
+        """MCP 2026 규격의 tools/list 요청 처리"""
         tools = [
             {
                 "name": "resolve_dates",
@@ -89,7 +83,6 @@ class FinLib:
                 }
             },
             {
-                # 다차원 배열(Matrix) 지원을 통한 IPC 직렬화/역직렬화 비용 상각(Amortization)
                 "name": "calc_indicators_batch",
                 "inputSchema": {
                     "type": "object",
@@ -126,45 +119,47 @@ class FinLib:
                 }
             }
         ]
-        self._send_response(req_id, {"tools": tools})
+        self.send_response(req_id, {"tools": tools})
 
-    def _handle_tools_call(self, req_id: Any, params: Dict[str, Any]):
-        tool_name = params.get("name")
-        args = params.get("arguments", {})
-        
+    def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
+        """
+        MCP 2026 규격의 tools/call 요청 처리
+        코어에서 주입한 _meta와 레거시가 필요한 arguments가 분리되어 전달됩니다.
+        """
         try:
             if tool_name == "resolve_dates":
-                res = self._tool_resolve_dates(args)
+                res = self._tool_resolve_dates(arguments)
             elif tool_name == "normalize_order":
-                res = self._tool_normalize_order(args)
+                res = self._tool_normalize_order(arguments)
             elif tool_name == "calc_indicators_batch":
-                res = self._tool_calc_indicators_batch(args)
+                res = self._tool_calc_indicators_batch(arguments)
             elif tool_name == "eval_math":
-                res = self._tool_eval_math(args)
+                res = self._tool_eval_math(arguments)
             elif tool_name == "generate_fingerprint":
-                res = self._tool_generate_fingerprint(args)
+                res = self._tool_generate_fingerprint(arguments)
             else:
-                self._send_error(req_id, -32601, f"Unknown tool: {tool_name}")
+                self.send_error(req_id, -32601, f"Unknown tool: {tool_name}")
                 return
             
-            # [정렬 포인트 2] MCP Spec 준수. 순수 결과값만을 반환.
-            # 이 결과물을 바탕으로 영수증을 발행하고 서명하는 것은 상위 레이어의 몫.
-            self._send_response(req_id, {
+            # 정상 결과 전송 (AgentProtocol의 메서드 활용)
+            self.send_response(req_id, {
                 "content": [{"type": "text", "text": json.dumps(res)}], 
                 "isError": False
             })
             
         except (ValueError, TypeError, KeyError) as e:
-            # 사용자/LLM 파라미터 오류: -32602 (Invalid Params) 매핑 -> 상위 에이전트 자가 복구 유도
-            log.warning(f"Invalid Parameters for {tool_name}: {e}")
-            self._send_error(req_id, -32602, f"Invalid params: {str(e)}")
-        except Exception as e:
-            # C-엔진 충돌 및 메모리 에러: -32000 (Execution Fault) 매핑 -> Sentinel 강제 롤백 대상
-            log.error(f"Execution Fault in {tool_name}: {e}", exc_info=True)
-            self._send_error(req_id, -32000, f"Execution Fault: {str(e)}")
+            self.log.warning(f"Invalid Parameters for {tool_name}: {e}")
+            # [고의적 에러 테스트 라우팅] (Phase 5: Precise Error Routing 연동)
+            self.send_error(req_id, -32602, f"Invalid params: {str(e)}")
 
+    # =====================================================================
+    # 순수 비즈니스 로직 (도구 구현체들)
+    # =====================================================================
     def _tool_resolve_dates(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """QuantLib C++ 엔진을 활용한 초고속 휴일/영업일 계산"""
+        """QuantLib C++ 엔진을 활용한 초고속 휴일/영업일 계산 (또는 Mock)"""
+        if not HAS_QL:
+            return {"resolved_date": "2026-09-10", "mode": "mocked"}
+
         try:
             base_date = ql.DateParser.parseFormatted(args["base_date"], "%Y-%m-%d")
         except Exception:
@@ -188,9 +183,15 @@ class FinLib:
         return {"symbol": sym, "normalized_price": norm_p, "normalized_amount": norm_a}
 
     def _tool_calc_indicators_batch(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """다차원 배열 처리를 통한 O(1) IPC 통신 달성"""
+        """다차원 배열 처리를 통한 O(1) IPC 통신 달성 (또는 Mock)"""
         prices_matrix = args.get("prices_matrix", [])
         period = int(args.get("period", 14))
+
+        if not isinstance(prices_matrix, list):
+            raise ValueError("prices_matrix must be a list of arrays")
+        
+        if not HAS_TALIB:
+            return {"indicator": "SMA", "values": [999.99] * len(prices_matrix), "mode": "mocked"}
         
         results: List[Any] = []
         for prices in prices_matrix:
@@ -200,7 +201,6 @@ class FinLib:
                 continue
             
             sma = talib.SMA(arr, timeperiod=period)
-            # numpy float64를 순수 Python float로 캐스팅하여 JSON 직렬화 에러 방지
             results.append(round(float(sma[-1]), 8))
             
         return {"indicator": "SMA", "values": results}
@@ -239,21 +239,11 @@ class FinLib:
         fingerprint = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
         return {"fingerprint": fingerprint, "status": "DETERMINISTIC"}
 
-    # =====================================================================
-    # IPC Communicators (Stdout Writers)
-    # =====================================================================
-    def _send_response(self, req_id: Any, result: Dict[str, Any]):
-        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "result": result}) + "\n")
-        sys.stdout.flush()
-
-    def _send_error(self, req_id: Any, code: int, message: str):
-        sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}}) + "\n")
-        sys.stdout.flush()
-
 
 def main():
     server = FinLib()
     try:
+        # [적용] 부모 클래스(AgentProtocol)의 강력한 루프 실행
         server.serve_forever()
     except KeyboardInterrupt:
         log.info("FinLib Oracle Terminated by Interrupt.")

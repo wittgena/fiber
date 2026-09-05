@@ -1,6 +1,4 @@
 # fiber.llm.router.mapper.traverser
-## @lineage: fiber.dphi.model.mapper.traverser
-## @lineage: dphi.model.mapper.traverser
 import os
 import json
 import asyncio

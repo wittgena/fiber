@@ -94,12 +94,12 @@ async def lifespan(app: FastAPI):
     config: Config = getattr(app.state, "config", get_default_config())
     
     try:
+        # [개선] 더 이상 redis_client를 앱 상태에서 찾지 않음. 통신망은 tunnel 단일화.
         tunnel = app.state.tunnel
-        redis_client = app.state.redis_client
         ledger = app.state.ledger
 
-        if not all([tunnel, redis_client, ledger]):
-            log.warning("Some infrastructure dependencies (tunnel, redis, ledger) are missing from injection.")
+        if not all([tunnel, ledger]):
+            log.warning("Some infrastructure dependencies (tunnel, ledger) are missing from injection.")
 
         pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
         await pubsub.start_listening()
@@ -124,11 +124,12 @@ async def lifespan(app: FastAPI):
         log.info("StrictOtlpExtractionEngine initialized.")
 
         # 3. Stateless Transition Bridge 인스턴스 마운트 (2026-07-28 규격)
-        nonce_protector = NonceReplayProtector(redis_client=redis_client)
-        mapper = IdempotencyMapper(redis_client=redis_client)  # [FIX] Mapper 인스턴스화
+        # [개선] redis_client 파라미터를 완전히 제거하고 추상화된 tunnel 주입
+        nonce_protector = NonceReplayProtector(tunnel=tunnel)
+        mapper = IdempotencyMapper(tunnel=tunnel)
 
         app.state.mcp_transition_adapter = TransitionBridge(
-            mapper=mapper,                           # [FIX] Mapper 주입, ledger 제거 완료
+            mapper=mapper,                           
             nonce_protector=nonce_protector
         )
         log.info("Stateless MCP Transition Bridge (2026-07-28) initialized and mounted to app.state.")
@@ -165,8 +166,7 @@ def _get_root_path(config: Config) -> str:
 def create_app(
     config: Optional[Config] = None,
     tunnel: Optional[Any] = None,
-    redis_client: Optional[Any] = None,
-    ledger: Optional[Any] = None
+    ledger: Optional[Any] = None  # [개선] 파라미터에서 redis_client 완전 제거
 ) -> FastAPI:
     config = config or get_default_config()
     app = FastAPI(
@@ -180,8 +180,7 @@ def create_app(
     # State Injection
     app.state.config = config
     app.state.tunnel = tunnel
-    app.state.redis_client = redis_client
-    app.state.ledger = ledger
+    app.state.ledger = ledger  # [개선] 앱 상태(app.state)에서도 redis_client 삭제
     app.state.is_ready = False  
     
     # Routers Binding
@@ -197,13 +196,12 @@ def create_app(
             return {"status": "ok", "message": "API Payload is ready"}
         raise HTTPException(status_code=503, detail="Service Not Ready")
 
-    # Exception Handlers
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         client_host = request.client.host if request.client else 'unknown'
         log.warning(f"[Security] Rejected malformed payload from {client_host}")
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, 
             content={"detail": "Payload validation failed (Invalid encoding or format)"}
         )
 

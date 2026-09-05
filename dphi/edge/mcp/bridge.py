@@ -1,7 +1,7 @@
 # fiber.dphi.edge.mcp.bridge
 import json
 import asyncio
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
@@ -22,12 +22,20 @@ class TransitionBridge:
 
     async def invoke_mcp_sync(
         self, identity: AgentIdentity, payload: Dict[str, Any], target_uri: str, target_method: str, rpc: InternalRpcClient
-    ) -> Dict[str, Any]:
+    ) -> Union[Dict[str, Any], JSONResponse]:
         
         # 1. 외곽 망 보안 (Replay Attack 원천 차단)
         if not await self.nonce_protector.validate_and_lock_nonce(identity.nonce):
             raise HTTPException(status_code=423, detail="REPLAY_ATTACK_DETECTED")
 
+        # 2. [클린 아키텍처] 레거시 스키마(arguments) 배려 제거. 오직 MCP 표준 _meta에만 신원 기록.
+        # 이 데이터가 특정 레거시에 맞게 변형되는 것은 WorkerConnector 측의 Quarantine 영역이 전담함.
+        if "params" not in payload: payload["params"] = {}
+        if "_meta" not in payload["params"]: payload["params"]["_meta"] = {}
+        
+        payload["params"]["_meta"]["user_id"] = str(identity.agent_uri)
+
+        # 3. 멱등성 매핑 (Idempotency Handling)
         handle_id, is_new = await self.mapper.get_or_create_handle(
             identity.target_server_id, identity.idempotency_key
         )
@@ -36,8 +44,25 @@ class TransitionBridge:
             state_res = await rpc.call("mcp.state.query", {"handle_id": handle_id})
             if state_res.get("exists"):
                 status = state_res.get("status")
+                
                 if status == "YIELD":
+                    input_responses = payload.get("params", {}).get("_meta", {}).get("inputResponses")
+                    
+                    if input_responses:
+                        log.info(f"[Bridge] TOTP Input detected for {handle_id}. Resuming parked sandbox...")
+                        await rpc.publish_intent(
+                            channel=f"mcp.intent.queue.{identity.target_server_id}",
+                            payload={
+                                "handle_id": handle_id, 
+                                "action": "RESUME", 
+                                "payload": input_responses
+                            }
+                        )
+                        return await self._wait_for_resolution(handle_id)
+                        
+                    log.debug(f"[Bridge] {handle_id} is YIELDED. Returning existing prompt.")
                     return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}))
+                    
                 elif status == "FAULTED":
                     raise HTTPException(status_code=502, detail=state_res.get("error_detail", "Execution Fault"))
                 elif status == "RESOLVED":
@@ -45,7 +70,9 @@ class TransitionBridge:
                     
             return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
 
+        # 4. 보안 및 결제 검증 (DPoP & L402)
         is_authenticated = False
+
         if identity.proof_of_possession:
             if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
                 raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
@@ -53,7 +80,6 @@ class TransitionBridge:
 
         if identity.receipt:
             try:
-                # [정렬 2] 외부망에서 들어온 결제 영수증을 코어망 정책 엔진에 선제적으로 검증받습니다.
                 await rpc.call("eco.billing.receipt.validate", {
                     "action": payload.get("name", "unknown_tool"),
                     "payment_receipt": identity.receipt
@@ -65,36 +91,43 @@ class TransitionBridge:
         if not is_authenticated:
             raise HTTPException(status_code=401, detail="Authentication (DPoP) or Payment Receipt (X402) missing.")
 
+        # 5. 상태 씰링 및 실행 지시 (EXECUTE Intent)
         await rpc.call("mcp.state.pending.seal", {
             "handle_id": handle_id,
             "payload": payload,
             "target_server_id": identity.target_server_id
         })
 
+        await rpc.publish_intent(
+            channel=f"mcp.intent.queue.{identity.target_server_id}",
+            payload={"handle_id": handle_id, "action": "EXECUTE", "payload": payload}
+        )
+        log.debug(f"[Bridge] Intent {handle_id} published (EXECUTE).")
+
+        return await self._wait_for_resolution(handle_id)
+
+    async def _wait_for_resolution(self, handle_id: str) -> Union[Dict[str, Any], JSONResponse]:
         tunnel = await TunnelFactory.get_default()
         reply_channel = f"mcp.intent.reply.{handle_id}"
         pubsub = tunnel.pubsub()
         await pubsub.subscribe(reply_channel)
+        
+        log.debug(f"[Bridge] Listening on {reply_channel} for backend resolution...")
 
         try:
-            await rpc.publish_intent(
-                channel=f"mcp.intent.queue.{identity.target_server_id}",
-                payload={"handle_id": handle_id, "action": "EXECUTE", "payload": payload}
-            )
-            log.debug(f"[Bridge] Intent {handle_id} published. Listening on {reply_channel}...")
-
             async with asyncio.timeout(30.0):
                 async for msg in pubsub.listen():
                     if msg and msg["type"] == "message":
                         state_data = json.loads(msg["data"])
-                        
                         status = state_data.get("status")
+                        
                         if status == "YIELD":
                             log.info(f"[Bridge] {handle_id} YIELDED. Prompting Agent.")
                             return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}))
                         elif status == "FAULTED":
                             raise HTTPException(status_code=502, detail=state_data.get("error_detail", "Execution Fault"))
                         elif status == "RESOLVED":
+                            log.info(f"[Bridge] {handle_id} RESOLVED successfully.")
                             return state_data.get("executable_payload", {})
                             
         except asyncio.TimeoutError:
@@ -104,6 +137,9 @@ class TransitionBridge:
             await pubsub.unsubscribe(reply_channel)
             await pubsub.close()
 
+# ---------------------------------------------------------
+# HTTP Ingress Route (MCP 2026-07-28 Spec)
+# ---------------------------------------------------------
 mcp_bridge = APIRouter(prefix="/v1/mcp-gateway", tags=["Enterprise MCP Bridge"])
 
 @mcp_bridge.post("/{target_server_id}/invoke")
@@ -111,11 +147,11 @@ async def invoke_mcp_stateless(
     request: Request,
     target_server_id: str,
     payload: Dict[str, Any] = Body(...),
-    x_idempotency_key: str = Header(...),
-    x_nonce: str = Header(...),
+    x_idempotency_key: str = Header(..., alias="x-idempotency-key"),
+    x_nonce: str = Header(..., alias="x-nonce"),
     x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),
-    x_spiffe_id: Optional[str] = Header(None),
+    x_spiffe_id: Optional[str] = Header(None, alias="x-spiffe-id"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
@@ -129,16 +165,12 @@ async def invoke_mcp_stateless(
             idempotency_key=x_idempotency_key
         )
         
-        # FastAPI Application State에 마운트된 브릿지 어댑터 호출
         adapter: TransitionBridge = request.app.state.mcp_transition_adapter
         target_uri = str(request.url)
         target_method = request.method
         
         result = await adapter.invoke_mcp_sync(identity, payload, target_uri, target_method, rpc)
         
-        # YIELD 전이의 경우 HTTP 202를 반환하기 위해 JSONResponse 객체가 내려옴
-        if isinstance(result, JSONResponse):
-            return result
         return result
         
     except HTTPException:

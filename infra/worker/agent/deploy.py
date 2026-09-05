@@ -1,183 +1,117 @@
 # fiber.infra.worker.agent.deploy
+import os
 import sys
 import json
-import duckdb
 import logging
-import time
-import hmac
 import hashlib
-import base64
-import struct
 from typing import Dict, Any
 
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [agent.deploy] %(message)s"
-)
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.exceptions import InvalidSignature
+
+from fiber.infra.worker.protocol import AgentProtocol
+from fiber.dphi.rpc.client import InternalRpcClient
+
 log = logging.getLogger("agent.deploy")
 
-class TotpValidator:
-    def __init__(self, base32_secret: str):
-        self.secret = base32_secret
-
-    def _get_totp_token(self, intervals_no: int) -> str:
-        key = base64.b32decode(self.secret, True)
-        msg = struct.pack(">Q", intervals_no)
-        h = hmac.new(key, msg, hashlib.sha1).digest()
-        o = h[19] & 15
-        h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
-        return f"{h:06d}"
-
-    def verify(self, token: str, window: int = 1) -> bool:
-        """현재 시간을 기준으로 앞뒤 1개의 윈도우(±30초)까지 허용하여 검증"""
-        intervals = int(time.time()) // 30
-        for i in range(-window, window + 1):
-            if self._get_totp_token(intervals + i) == str(token).zfill(6):
-                return True
-        return False
-
-
-class LegacyDeployer:
+class ExecutionDeployer(AgentProtocol):
+    """
+    [PEP: Policy Enforcement Point] 
+    DB 접속 권한이나 마스터 키가 없습니다. Validator의 서명을 검증한 후 쿼리를 실행합니다.
+    """
     def __init__(self):
-        self.dba_totp = TotpValidator("JBSWY3DPEHPK3PXP") 
+        super().__init__(agent_name="agent.deploy")
         
-        self.conn = duckdb.connect("deploy_audit.duckdb")
-        self._init_db()
-        log.info("Enterprise Legacy Deploy Server Ignite. (DB: deploy_audit.duckdb)")
-
-    def _init_db(self):
-        self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_deploy_tx_id")
-        self.conn.execute("""
-            CREATE TABLE IF NOT EXISTS deployment_logs (
-                tx_id INTEGER DEFAULT nextval('seq_deploy_tx_id') PRIMARY KEY,
-                service_name VARCHAR,
-                target_env VARCHAR,
-                status VARCHAR,
-                otp_prompt_id VARCHAR,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-    def serve_forever(self):
-        log.info("Listening for JSON-RPC payloads on stdin...")
-        for line in sys.stdin:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                payload = json.loads(line)
-                self._dispatch(payload)
-            except json.JSONDecodeError:
-                self._send_error(None, -32700, "Parse error")
-            except Exception as e:
-                log.error(f"Internal Fracture: {e}", exc_info=True)
-                self._send_error(None, -32603, f"Internal Server Error")
-
-    def _dispatch(self, req: Dict[str, Any]):
-        req_id = req.get("id")
-        method = req.get("method")
-        params = req.get("params", {})
-
-        if method == "initialize":
-            self._send_response(req_id, {"protocolVersion": "2024-11-05", "capabilities": {}})
-        elif method == "tools/list":
-            self._send_response(req_id, {
-                "tools": [{
-                    "name": "execute_db_migration",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "service_name": {"type": "string"},
-                            "target_env": {"type": "string", "enum": ["staging", "production"]},
-                            "sql_script": {"type": "string"}
-                        },
-                        "required": ["service_name", "target_env", "sql_script"]
-                    }
-                }]
-            })
-        elif method == "tools/call" and params.get("name") == "execute_db_migration":
-            self._handle_migration(req_id, params.get("arguments", {}))
+        # Validator의 Public Key만 보유 (서명 검증용)
+        pub_key_hex = os.environ.get("DPHI_VALIDATOR_PUBLIC_KEY")
+        if not pub_key_hex:
+            self.log.error("⚠️ DPHI_VALIDATOR_PUBLIC_KEY is missing. Execution will fail.")
         else:
-            self._send_error(req_id, -32601, f"Unknown method/tool: {method}")
+            self.validator_pub_key = ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(pub_key_hex))
+            
+        # A2A 통신을 위한 내부 RPC 클라이언트
+        self.rpc_client = InternalRpcClient()
 
-    def _handle_migration(self, req_id: Any, args: Dict[str, Any]):
+    def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
+        if tool_name == "execute_db_migration":
+            user_id = meta.get("user_id") or arguments.get("user_id", "UNKNOWN_USER")
+            self._handle_migration(req_id, arguments, user_id)
+        else:
+            self.send_error(req_id, -32601, f"Unknown tool: {tool_name}")
+
+    def _handle_migration(self, req_id: Any, args: Dict[str, Any], user_id: str):
         service = args.get("service_name")
         env = args.get("target_env")
         sql = args.get("sql_script", "").upper()
-
-        log.info(f"Migration Request -> {service} [{env}]")
+        
+        self.log.info(f"Migration Request -> {service} [{env}] by {user_id}")
 
         is_destructive = "DROP" in sql or "TRUNCATE" in sql
         if is_destructive and env == "production":
-            log.warning("⚠️ DESTRUCTIVE PAYLOAD DETECTED. Locking transaction & demanding OTP.")
+            self.log.warning(f"⚠️ DESTRUCTIVE PAYLOAD. Halting execution and delegating validation.")
             
-            result = self.conn.execute(
-                "INSERT INTO deployment_logs (service_name, target_env, status) VALUES (?, ?, ?) RETURNING tx_id",
-                [service, env, "PENDING_OTP"]
-            ).fetchone()
-            tx_id = result[0]
+            # 1. Payload 고유 해시 생성 (무결성 보장)
+            canonical_payload = json.dumps({"service": service, "env": env, "sql": sql}, sort_keys=True).encode()
+            payload_hash = hashlib.sha256(canonical_payload).digest()
 
-            otp_approved = self._request_user_otp_blocking(req_id, service)
-            if not otp_approved:
-                self.conn.execute("UPDATE deployment_logs SET status = 'REJECTED_OTP' WHERE tx_id = ?", [tx_id])
-                log.error(f"Transaction {tx_id} aborted due to invalid OTP.")
-                self._send_error(req_id, -32000, "Security Violation: Invalid or Expired TOTP token.")
-                return
+            # 2. 사용자에게 OTP 입력 요청 (YIELD)
+            otp_code = self._request_user_otp_blocking(req_id, service)
+            if not otp_code:
+                return self.send_error(req_id, -32000, "OTP Input Cancelled.")
 
-            self.conn.execute("UPDATE deployment_logs SET status = 'DEPLOYED' WHERE tx_id = ?", [tx_id])
+            # 3. [A2A 통신] Validator Agent에게 검증 및 서명 요청
+            try:
+                # 동기적 환경을 가정하여 RPC 처리 (프레임워크에 맞게 비동기/이벤트 구조로 조정 가능)
+                rpc_response = self.rpc_client.call_sync(
+                    target="agent.validator",
+                    method="request_attestation",
+                    params={
+                        "user_id": user_id,
+                        "otp_code": otp_code,
+                        "payload_hash": payload_hash.hex()
+                    }
+                )
+                signature_hex = rpc_response.get("signature")
+                if not signature_hex:
+                    return self.send_error(req_id, -32000, "Validation Rejected by Validator Agent.")
+            except Exception as e:
+                return self.send_error(req_id, -502, f"Failed to reach Validator Agent: {e}")
 
-        log.info(f"✅ Transaction successful for {service}")
-        self._send_response(req_id, {"content": [{"type": "text", "text": "Migration executed successfully."}], "isError": False})
+            # 4. 서명(Attestation) 로컬 검증
+            try:
+                self.validator_pub_key.verify(bytes.fromhex(signature_hex), payload_hash)
+                self.log.info("🛡️ Cryptographic Attestation Verified. Authorization Granted.")
+            except InvalidSignature:
+                self.log.critical("🚨 SECURITY BREACH: Invalid Attestation Signature!")
+                return self.send_error(req_id, -32000, "Invalid Cryptographic Signature.")
+            except Exception:
+                return self.send_error(req_id, -500, "Missing Validator Public Key.")
 
-    def _request_user_otp_blocking(self, parent_req_id: Any, service: str) -> bool:
+        # 5. 최종 실행 (PEP 역할)
+        self.log.info(f"✅ Executing migration for {service}")
+        self.send_response(req_id, {"content": [{"type": "text", "text": "Migration executed successfully."}], "isError": False})
+
+    def _request_user_otp_blocking(self, parent_req_id: Any, service: str) -> str:
         prompt_req_id = f"prompt_{parent_req_id}"
-        elicitation_msg = {
-            "jsonrpc": "2.0",
-            "id": prompt_req_id,
-            "method": "elicitation/createMessage",
-            "params": {
-                "message": f"DANGER: Destructive migration on '{service}'. Enter 6-digit TOTP token:"
-            }
-        }
-        
-        sys.stdout.write(json.dumps(elicitation_msg) + "\n")
-        sys.stdout.flush()
-
-        log.info(f"[BLOCKED] Waiting for TOTP input on stdin for prompt_id: {prompt_req_id}...")
+        self.send_request(
+            req_id=prompt_req_id,
+            method="elicitation/createMessage",
+            params={"message": f"DANGER: Destructive migration on '{service}'. Enter TOTP token:"}
+        )
+        self.log.info(f"[BLOCKED] Waiting for TOTP input...")
         
         response_line = sys.stdin.readline()
         if not response_line:
-            return False
+            return ""
 
         try:
             client_res = json.loads(response_line.strip())
-            
-            if client_res.get("id") != prompt_req_id:
-                log.error("JSON-RPC ID mismatch in OTP response.")
-                return False
-
-            otp_code = client_res.get("result", {}).get("value", "")
-            log.info(f"TOTP received. Verifying...")
-            
-            return self.dba_totp.verify(otp_code)
-            
-        except Exception as e:
-            log.error(f"Failed to parse or verify TOTP: {e}")
-            return False
-
-    def _send_response(self, req_id: Any, result: Dict[str, Any]):
-        resp = {"jsonrpc": "2.0", "id": req_id, "result": result}
-        sys.stdout.write(json.dumps(resp) + "\n")
-        sys.stdout.flush()
-
-    def _send_error(self, req_id: Any, code: int, message: str):
-        resp = {"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}}
-        sys.stdout.write(json.dumps(resp) + "\n")
-        sys.stdout.flush()
+            return client_res.get("result", {}).get("value", "")
+        except json.JSONDecodeError:
+            return ""
 
 def main():
-    server = LegacyDeployer()
+    server = ExecutionDeployer()
     try:
         server.serve_forever()
     except KeyboardInterrupt:

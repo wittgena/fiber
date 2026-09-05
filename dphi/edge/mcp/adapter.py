@@ -3,11 +3,10 @@ import time
 import json
 import base64
 import uuid
-import hashlib
 from functools import lru_cache
 from typing import Dict, Any, Tuple, Optional
 
-import redis.asyncio as aioredis
+from xphi.kernel.space.topos.tunnel.factory import UniversalFacade
 from pydantic import BaseModel, AnyUrl, IPvAnyAddress
 
 from cryptography.hazmat.primitives.asymmetric import ed25519, ec, rsa
@@ -36,8 +35,8 @@ class AgentIdentity(BaseModel):
 # Cryptographic & Idempotency Adapters
 # ---------------------------------------------------------
 class IdempotencyMapper:
-    def __init__(self, redis_client: aioredis.Redis):
-        self.redis = redis_client
+    def __init__(self, tunnel: UniversalFacade):
+        self.tunnel = tunnel
 
     async def get_or_create_handle(self, target_id: str, idempotency_key: str) -> Tuple[str, bool]:
         """
@@ -45,20 +44,19 @@ class IdempotencyMapper:
         UUIDv4 기반의 고유 식별자를 사용하여 초고동시성(Multiplexing) 환경에서의 무결성을 보장합니다.
         """
         redis_key = f"mcp:idem:{target_id}:{idempotency_key}"
-        
         try:
-            existing_handle = await self.redis.get(redis_key)
+            existing_handle = await self.tunnel.get(redis_key)
             if existing_handle:
-                return existing_handle.decode('utf-8'), False
+                # [FIX] Tunnel 객체는 이미 디코딩된 문자열을 반환하므로 .decode() 호출을 제거하고 안전하게 캐스팅
+                return str(existing_handle), False
                 
-            # [개선] 절대 충돌하지 않는 트랜잭션 핸들 생성
             entropy = uuid.uuid4().hex[:12]
             new_handle = f"txn_{int(time.time())}_{entropy}"
             
-            await self.redis.set(redis_key, new_handle, ex=86400, nx=True)
+            await self.tunnel.set(redis_key, new_handle, ex=86400, nx=True)
             return new_handle, True
         except Exception as e:
-            log.critical(f"Redis Idempotency Check Failed: {e}")
+            log.critical(f"Tunnel Idempotency Check Failed: {e}")
             raise RuntimeError("Distributed state storage unavailable")
 
 class JwkAdapter:
@@ -143,15 +141,13 @@ class DPoPValidator:
             return False
 
 class NonceReplayProtector:
-    def __init__(self, redis_client: aioredis.Redis):
-        self.redis = redis_client
+    def __init__(self, tunnel: UniversalFacade):
+        self.tunnel = tunnel
         
     async def validate_and_lock_nonce(self, nonce: str, ttl: int = 300) -> bool:
-        """
-        일회성 논스(Nonce)를 Redis에 Lock 처리하여 A2A 트랜잭션의 Replay Attack을 차단합니다.
-        """
+        """일회성 논스(Nonce)를 Tunnel에 Lock 처리하여 A2A 트랜잭션의 Replay Attack을 차단"""
         try:
-            return bool(await self.redis.set(f"sec:nonce:{nonce}", "1", ex=ttl, nx=True))
+            return bool(await self.tunnel.set(f"sec:nonce:{nonce}", "1", ex=ttl, nx=True))
         except Exception as e:
-            log.critical(f"Redis Nonce Verification Failed: {e}")
+            log.critical(f"Tunnel Nonce Verification Failed: {e}")
             return False

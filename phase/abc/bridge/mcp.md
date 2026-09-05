@@ -1,4 +1,4 @@
-# fiber.phase.abc.edge.mcp.bridge
+# fiber.phase.abc.bridge.mcp
 @desc: Fiber MCP Transition Bridge & A2A Egress Connector Specification
 
 ## 0. Executive Summary
