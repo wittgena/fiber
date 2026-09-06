@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.infra.client.rpc import InternalRpcClient
-from fiber.infra.agent.bridge.connector import WorkerConnector
+from fiber.agent.infra.bridge.connector import WorkerConnector
 from fiber.infra.e2e import (
     PipelineRunner, 
     ManagedTestServer, 
@@ -27,12 +27,12 @@ from fiber.dphi.rpc.handler import INTERNAL_HANDLERS_REGISTRY
 from fiber.dphi.daemon.rpc import RpcWorkerDaemon
 from fiber.dphi.edge.payload import create_app, Config
 
-import fiber.infra.agent.worker.deploy as agent_deploy
-import fiber.infra.agent.worker.validator as agent_validator
-import fiber.infra.agent.worker.oracle as agent_oracle
-import fiber.infra.agent.worker.sentinel as agent_sentinel
-import fiber.infra.agent.worker.finlib as agent_finlib
-import fiber.infra.agent.worker.margin as agent_margin
+import fiber.agent.infra.worker.deploy as agent_deploy
+import fiber.agent.infra.worker.validator as agent_validator
+import fiber.agent.infra.worker.oracle as agent_oracle
+import fiber.agent.infra.worker.sentinel as agent_sentinel
+import fiber.agent.infra.worker.finlib as agent_finlib
+import fiber.agent.infra.worker.margin as agent_margin
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor

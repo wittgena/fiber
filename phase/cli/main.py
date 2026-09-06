@@ -165,8 +165,8 @@ def run_connector(
 ):
     _load_env(env_file)
 
-    import fiber.infra.agent.worker.deploy as agent_deploy
-    import fiber.infra.agent.worker.oracle as agent_oracle
+    import fiber.agent.infra.worker.deploy as agent_deploy
+    import fiber.agent.infra.worker.oracle as agent_oracle
 
     KNOWN_AGENTS = {
         "agent.deploy": f"{sys.executable} -m {agent_deploy.__name__}",
@@ -176,7 +176,7 @@ def run_connector(
     resolved_cmd = KNOWN_AGENTS.get(exec_cmd, exec_cmd)
 
     async def _launch_connector():
-        from fiber.infra.agent.bridge.connector import WorkerConnector
+        from fiber.agent.infra.bridge.connector import WorkerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
         daemon = WorkerConnector(target_id=target, legacy_command=resolved_cmd)
         
