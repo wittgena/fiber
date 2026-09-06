@@ -15,7 +15,7 @@ except ImportError:
 
 from fiber.phase.plane.shell.entry import EcosystemShell
 
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory

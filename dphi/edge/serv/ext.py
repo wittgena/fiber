@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field
 
 from fiber.infra.client.ext.evm import Web3Adapter
 from fiber.infra.client.ext.wallet import EthWalletAdapter
-from fiber.dphi.adapter.rollup import RollupAdapter
+from fiber.dphi.adapter.transaction.rollup import RollupAdapter
 from fiber.infra.config import dphi_env
 
 from xphi.arch.contract.interface import ContractRouter
-from fiber.dphi.adapter.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt
+from fiber.dphi.adapter.transaction.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")
@@ -172,7 +172,6 @@ async def process_x402_payment(
                     settled_at=int(time.time() * 1000)
                 )
             else:
-                # 🌟 외부망(EVM) 로직: 기존대로 EcoAdapter에 위임하여 즉시 전송
                 receipt = await MandateAdapter.process_instant_settlement(
                     invoice=invoice,
                     agent_wallet_address=eth_wallet.wallet_address,

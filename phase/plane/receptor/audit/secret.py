@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 from pydantic import SecretStr
 
-from xphi.xor.secret.cipher import Cipher
+from xphi.bound.secret.cipher import Cipher
 from xphi.watcher.receptor.policy.gateway import ToposGateway
 from xphi.watcher.receptor.audit.warden import AuditWarden
 from xphi.arch.model.edge.receipt import AuditLogResponse

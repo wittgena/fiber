@@ -4,15 +4,15 @@ import uuid
 import asyncio
 from typing import Any, Dict, Optional, List
 
-from fiber.dphi.adapter.shadow import ShadowAdapter
-from xphi.kernel.dphi.fsm.defin import (
+from fiber.dphi.adapter.transaction.rollup import ShadowAdapter
+from xphi.state.phase.fsm.defin import (
     DefinFSM, 
     FsmStartIntent, UtxoAnchoredEvent, WasmExecutedEvent, 
     MintGenesisUtxoCmd, ExecuteParallelWasmCmd, SealSettlementCmd, FsmHaltCmd
 )
 
-from xphi.kernel.phase.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
-from xphi.kernel.dphi.adapter.utxo import UtxoAdapter, UtxoTransaction, UtxoOutput
+from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
+from xphi.kernel.wasm.adapter.utxo import UtxoAdapter, UtxoTransaction, UtxoOutput
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 
 log = get_emitter("pipeline.defin")

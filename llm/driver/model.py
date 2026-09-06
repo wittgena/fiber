@@ -31,7 +31,7 @@ from fiber.llm.exception.types import LLMContextWindowTooSmallError
 from fiber.llm.driver.factory import DriverFactory
 from fiber.llm.model.provider.secret import serialize_secret, validate_secret
 
-from xphi.xor.parser.mark import warn_deprecated
+from xphi.bound.parser.mark import warn_deprecated
 from xphi.arch.model.config import config
 from xphi.kernel.space.bind.resolver import find_current_self
 

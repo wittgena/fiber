@@ -35,7 +35,7 @@ import fiber.infra.agent.worker.finlib as agent_finlib
 import fiber.infra.agent.worker.margin as agent_margin
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.bridge.mcp")

@@ -6,8 +6,8 @@ from fiber.infra.client.rpc import InternalRpcClient
 from fiber.phase.plane.receptor.audit.secret import SecretAuditor
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
-from xphi.kernel.dphi.broker import DphiBroker
-from xphi.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.bound.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.depend")

@@ -1,5 +1,4 @@
 # fiber.dphi.adapter.dvm
-## @lineage: fiber.dphi.infra.adapter.dvm
 import time
 import json
 import hashlib
@@ -10,10 +9,6 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("adapter.dvm")
 
 class DvmAdapter:
-    """
-    [Multi-VM Facade]
-    - EVM과 CosmWasm의 파편화된 규격(ABI 인코딩, JSON Schema 등)을 DPhi Broker 및 DVM 엔진이 실행할 수 있는 표준 페이로드로 번역
-    """
     @staticmethod
     def build_erc20_transfer_calldata(to_address: str, amount_wei: int) -> str:
         """ERC20 transfer(address,uint256) Calldata 생성"""

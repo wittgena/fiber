@@ -1,6 +1,4 @@
 # fiber.infra.eco.actor
-## @lineage: fiber.infra.notary.actor
-## @lineage: fiber.infra.actor
 import json
 from enum import Enum
 from dataclasses import dataclass
@@ -9,24 +7,21 @@ from typing import Dict, Any, Optional, List, Protocol
 from fiber.infra.config import dphi_env
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.xor.space.sandbox.protocol import (
+from xphi.bound.space.sandbox.protocol import (
     TriadAxis, ProtocolValidator, D3Protocol,
     MsgIngressPledge, MsgDelegateTrust, MsgWasmExecution, 
     MsgExecutionReceipt, MsgSettlementSeal
 )
-from xphi.kernel.dphi.broker import DphiBroker
-from xphi.kernel.dphi.adapter.utxo import (
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.kernel.wasm.adapter.utxo import (
     UtxoAdapter, UtxoPointer, UtxoInput, UtxoOutput, UtxoTransaction,
     AgentWallet, compute_merkle_root
 )
-from xphi.kernel.dphi.ledger.consensus import KernelLedger, SealedKernel, ToposBlob
-from xphi.kernel.dphi.ledger.oracle import LedgerOracle
+from xphi.state.ledger.consensus import KernelLedger, SealedKernel, ToposBlob
+from xphi.state.ledger.oracle import LedgerOracle
 
 log = get_emitter("notary.actor")
 
-# =====================================================================
-# [1] Domain Models & Ports
-# =====================================================================
 class GrantResource(str, Enum):
     INTENT_QUOTA = "Intent_Quota"               
     SUBSTRATE_BANDWIDTH = "Substrate_Bandwidth" 
@@ -57,10 +52,6 @@ class LocalMockVerifier:
             raise RuntimeError("Consensus Failed: Signature verification rejected (Signer mismatch)")
         return True
 
-
-# =====================================================================
-# [2] Generic Actuators 
-# =====================================================================
 class GenericExecutionActuator:
     def __init__(self, broker: DphiBroker, validator: ProtocolValidator):
         self.broker = broker

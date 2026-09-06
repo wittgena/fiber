@@ -1,4 +1,5 @@
-# fiber.dphi.adapter.anchor
+# fiber.infra.eco.anchor
+## @lineage: fiber.dphi.adapter.anchor
 ## @lineage: fiber.dphi.infra.adapter.anchor
 import json
 import time
@@ -9,9 +10,9 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.adapter.settlement import TransactionReceipt
-from xphi.kernel.dphi.broker import DphiBroker
-from xphi.kernel.dphi.adapter.state import StateAdapter
+from fiber.dphi.adapter.transaction.settlement import TransactionReceipt
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.kernel.wasm.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.anchor")

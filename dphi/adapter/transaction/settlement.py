@@ -1,8 +1,5 @@
-# fiber.dphi.adapter.settlement
-## @lineage: fiber.infra.adapter.settlement
-## @lineage: fiber.infra.adapter.settlment
-## @lineage: fiber.dphi.infra.transaction
-## @lineage: fiber.dphi.eco.transaction
+# fiber.dphi.adapter.transaction.settlement
+## @lineage: fiber.dphi.adapter.settlement
 import os
 import time
 import json
@@ -13,9 +10,9 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 from cryptography.exceptions import InvalidSignature
 
-from xphi.xor.space.sandbox.config import fuel_config
+from xphi.bound.space.sandbox.config import fuel_config
 from xphi.arch.model.surge.model import DynamicSurgeModel
-from xphi.kernel.dphi.cgroup import Tier
+from xphi.kernel.wasm.cgroup import Tier
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.transaction")

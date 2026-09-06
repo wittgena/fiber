@@ -7,14 +7,14 @@ import asyncio
 from typing import Any, Dict, Optional
 
 from fiber.dphi.adapter.dvm import DvmAdapter
-from xphi.kernel.dphi.fsm.transaction import (
+from xphi.state.phase.fsm.transaction import (
     TransactionFSM,
     StartTransactionIntent, DvmResultEvent,
     ExecuteDvmCmd, LedgerSealCmd, HaltFsmCmd
 )
 
-from xphi.kernel.dphi.ledger.consensus import KernelLedger, ToposBlob
-from xphi.kernel.phase.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
+from xphi.state.ledger.consensus import KernelLedger, ToposBlob
+from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("pipeline.transaction")

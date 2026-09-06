@@ -11,15 +11,15 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.infra.config import dphi_env
-from fiber.dphi.adapter.settlement import MandateAdapter
+from fiber.dphi.adapter.transaction.settlement import MandateAdapter
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.arch.event.next import generate_parity_triplet, next_phase_id
 from xphi.arch.event.next import uuid4
-from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.kernel.dphi.broker import DphiMethod
+from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.wasm.broker import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.phase.network.bridge import RpcBridge
-from xphi.kernel.phase.inter.dvm import DvmInterpreter
+from xphi.state.phase.network.bridge import RpcBridge
+from xphi.state.inter.dvm import DvmInterpreter
 
 log = get_emitter("intent.potential")
 

@@ -31,15 +31,15 @@ class RpcWorkerDaemon(AbstractDaemon):
         self._tasks = set()
 
     async def _init_context(self):
-        from fiber.dphi.adapter.anchor import NexusAnchor
+        from fiber.infra.eco.anchor import NexusAnchor
         from fiber.phase.plane.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
-        from fiber.dphi.adapter.settlement import ClearingAdapter
+        from fiber.dphi.adapter.transaction.settlement import ClearingAdapter
 
-        from xphi.kernel.dphi.broker import DphiBroker
+        from xphi.kernel.wasm.broker import DphiBroker
         from xphi.watcher.server.stream.edge import LogStreamStore
-        from xphi.kernel.dphi.adapter.utxo import UtxoAdapter
-        from xphi.kernel.dphi.adapter.sign import NodeSigner
-        from xphi.xor.space.sandbox.resolver import BenchProfile
+        from xphi.kernel.wasm.adapter.utxo import UtxoAdapter
+        from xphi.kernel.wasm.adapter.sign import NodeSigner
+        from xphi.bound.space.sandbox.resolver import BenchProfile
 
         log.info(f"[{self.name}] Initializing Headless Worker Dependencies...")
         

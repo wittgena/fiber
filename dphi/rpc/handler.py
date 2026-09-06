@@ -7,9 +7,9 @@ from typing import Dict, Any
 
 from pydantic import ValidationError
 
-from fiber.dphi.adapter.anchor import AnchorProposal, StreamAppendRequest
+from fiber.infra.eco.anchor import AnchorProposal, StreamAppendRequest
 
-from xphi.xor.space.sandbox.config import tier_config, fuel_config
+from xphi.bound.space.sandbox.config import tier_config, fuel_config
 from xphi.arch.model.dphi.receptor import (
     EdgeState,
     AnchorProposalRequest,
@@ -25,11 +25,11 @@ from xphi.arch.model.edge.receipt import (
     KernelLedgerAppendRecord
 )
 
-from xphi.kernel.dphi.broker import DphiBroker, DphiMethod
-from xphi.kernel.dphi.cgroup import Tier
-from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
+from xphi.kernel.wasm.cgroup import Tier
+from xphi.kernel.wasm.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
-from xphi.kernel.dphi.ledger.consensus import LogicStream
+from xphi.state.ledger.consensus import LogicStream
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
 log = get_emitter("dphi.handler")
@@ -399,7 +399,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from fiber.dphi.adapter.settlement import MandateAdapter
+        from fiber.dphi.adapter.transaction.settlement import MandateAdapter
         invoice = MandateAdapter.build_x402_invoice(
             payee_address=payee_address,
             amount_usdc=amount_usdc,

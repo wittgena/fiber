@@ -15,16 +15,16 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.infra.client.wallet import LocalWalletClient
 from fiber.infra.config import dphi_env
-from fiber.dphi.adapter.anchor import LedgerEventSchema, StreamAppendRequest
-from fiber.dphi.adapter.settlement import TransactionReceipt
+from fiber.infra.eco.anchor import LedgerEventSchema, StreamAppendRequest
+from fiber.dphi.adapter.transaction.settlement import TransactionReceipt
 
 from xphi.arch.model.dphi.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
     ParityTripletSchema
 )
-from xphi.kernel.dphi.broker import DphiBroker
-from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.kernel.wasm.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 

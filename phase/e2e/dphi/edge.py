@@ -15,8 +15,8 @@ from fiber.infra.e2e import PipelineRunner, ManagedTestServer, TestResult, E2ECo
 from fiber.infra.client.http import VerifiedHttpClient
 
 from xphi.arch.wasm.builder import WasmBuilder
-from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.tracer.edge import SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter

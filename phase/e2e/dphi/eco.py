@@ -3,15 +3,15 @@ import time
 import json
 import asyncio
 
-from fiber.dphi.adapter.anchor import ActorIdentity
+from fiber.infra.eco.anchor import ActorIdentity
 from fiber.infra.eco.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.phase.plane.shell.sandbox import TestScripts
 
-from xphi.xor.space.sandbox.protocol import TriadAxis
+from xphi.bound.space.sandbox.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.dphi.adapter.state import StateAdapter
+from xphi.kernel.wasm.adapter.state import StateAdapter
 
 log = get_emitter("e2e.eco")
 

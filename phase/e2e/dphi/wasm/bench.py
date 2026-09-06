@@ -11,13 +11,13 @@ from pathlib import Path
 from typing import Any, List, Dict, Callable
 
 from fiber.phase.plane.shell.sandbox import TestScripts
-from fiber.dphi.adapter.anchor import ActorIdentity
+from fiber.infra.eco.anchor import ActorIdentity
 
 from xphi.kernel.space.bind.resolver import resolve_path
-from xphi.xor.space.sandbox.runner import SchemeRunner
-from xphi.kernel.phase.reactor import PhaseReactor
-from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.kernel.dphi.method import DphiMethod
+from xphi.bound.space.sandbox.runner import SchemeRunner
+from xphi.state.phase.reactor import PhaseReactor
+from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.wasm.method import DphiMethod
 from xphi.arch.wasm.tester import WasmTester
 from xphi.watcher.plane.emitter import get_emitter, set_log_level
 

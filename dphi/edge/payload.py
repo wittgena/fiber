@@ -15,8 +15,8 @@ from fiber.dphi.edge.serv.ext import ext_router
 from fiber.dphi.edge.serv.llm import llm_edge
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
-from xphi.kernel.dphi.broker import DphiBroker
-from xphi.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.bound.parser.ruleset.otlp import StrictOtlpRulesetParser
 from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.server.middleware import (
     AttestationMiddleware,

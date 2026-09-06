@@ -14,8 +14,8 @@ from pydantic import BaseModel, SecretStr
 from cryptography.fernet import Fernet
 
 from xphi.arch.model.config import config
-from xphi.xor.secret.client import get_secret_from_vendor
-from xphi.xor.secret.cipher import Cipher
+from xphi.bound.secret.client import get_secret_from_vendor
+from xphi.bound.secret.cipher import Cipher
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("provider.secret")

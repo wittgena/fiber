@@ -13,8 +13,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from fiber.infra.pipeline.defin import DefinPipelineFactory
 from fiber.infra.pipeline.transaction import TransactionPipelineFactory
 
-from xphi.kernel.phase.network.channel.pipeline import DuplexChannel, ChannelContext
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.defin")
