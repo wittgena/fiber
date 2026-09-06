@@ -1,5 +1,4 @@
 # fiber.phase.e2e.dphi.wasm.entry
-## @lineage: fiber.phase.e2e.wasm.entry
 import sys
 import argparse
 import importlib

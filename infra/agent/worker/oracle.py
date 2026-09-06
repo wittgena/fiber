@@ -1,24 +1,18 @@
 # fiber.infra.agent.worker.oracle
-## @lineage: fiber.a2a.worker.oracle
-## @lineage: fiber.infra.worker.agent.oracle
 import sys
 import json
 import time
 from typing import Dict, Any
 
 from fiber.infra.agent.observer.oracle.receptor import OracleReceptor
-
-# [핵심] STDOUT 오염 방지 및 JSON-RPC 표준 루프를 담당하는 베이스 프로토콜 임포트
 from fiber.infra.agent.bridge.protocol import AgentProtocol
 
 class OracleMcpServer(AgentProtocol):
     def __init__(self):
-        # [적용] 부모 클래스 초기화 - 자동으로 stdout 격리 및 로깅 설정이 적용됩니다.
         super().__init__(agent_name="agent.oracle")
         
         self.log.info("Initializing Deterministic Oracle Receptor...")
         try:
-            # 외부 API 페치, 교차 검증, 서명(Sealing)을 담당하는 코어 모듈
             self.receptor = OracleReceptor()
             self.log.info("Oracle Receptor successfully mounted. Ready for A2A Intents.")
         except Exception as e:

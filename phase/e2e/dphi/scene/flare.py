@@ -1,5 +1,4 @@
 # fiber.phase.e2e.dphi.scene.flare
-## @lineage: fiber.phase.e2e.scene.flare
 import time
 import asyncio
 import json
@@ -314,8 +313,6 @@ class FlareUnifiedScene(SandboxRunner):
             self._record_fail(0, "Kinetic Trap failed! Blocking payload bypassed without intervention.", "Kinetic Trap")
         except asyncio.TimeoutError:
             self._record_success(0, "Broker timed out. Kinetic Trap neutralized via Timeout cutoff.")
-            # [핵심] 클라이언트 5초 타임아웃 발생 직후, 엣지 내부의 7초 루프가 끝날 때까지 2.5초간 숨을 고릅니다.
-            # 이 대기가 없으면 바로 Controller가 Ledger를 요청했다가 엔진 락에 막혀 실패하게 됩니다.
             log.info("⏳ Allowing Edge Thread to breathe and recover State Ledger (2.5s)...")
             await asyncio.sleep(2.5)
         except Exception as e:

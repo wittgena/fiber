@@ -1,6 +1,4 @@
 # fiber.infra.agent.worker.validator
-## @lineage: fiber.a2a.worker.validator
-## @lineage: fiber.infra.worker.agent.validator
 import os
 import sqlite3
 import logging

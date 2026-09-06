@@ -1,6 +1,4 @@
 # fiber.infra.agent.worker.finlib
-## @lineage: fiber.a2a.worker.finlib
-## @lineage: fiber.infra.worker.agent.finlib
 import sys
 import json
 import logging
@@ -10,15 +8,10 @@ import math
 import hashlib
 from typing import Dict, Any, List
 
-# [핵심] STDOUT 오염 방지 및 JSON-RPC 표준 루프를 담당하는 베이스 프로토콜 임포트
 from fiber.infra.agent.bridge.protocol import AgentProtocol
 
 log = logging.getLogger("agent.finlib")
 
-# =====================================================================
-# [선택적 의존성 로딩 구조]
-# 무거운 C-binding 패키지(talib, QuantLib)가 없어도 데몬이 실행되도록 처리
-# =====================================================================
 try:
     import numpy as np
     import talib

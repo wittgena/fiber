@@ -1,6 +1,4 @@
 # fiber.infra.agent.worker.deploy
-## @lineage: fiber.a2a.worker.deploy
-## @lineage: fiber.infra.worker.agent.deploy
 import os
 import sys
 import json

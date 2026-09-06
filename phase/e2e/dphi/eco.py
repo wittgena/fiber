@@ -1,11 +1,10 @@
 # fiber.phase.e2e.dphi.eco
-## @lineage: fiber.phase.e2e.eco
 import time
 import json
 import asyncio
 
 from fiber.dphi.adapter.anchor import ActorIdentity
-from fiber.infra.notary.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
+from fiber.infra.eco.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.phase.plane.shell.sandbox import TestScripts
 
 from xphi.xor.space.sandbox.protocol import TriadAxis

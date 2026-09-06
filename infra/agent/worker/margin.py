@@ -1,6 +1,4 @@
 # fiber.infra.agent.worker.margin
-## @lineage: fiber.a2a.worker.margin
-## @lineage: fiber.infra.worker.agent.margin
 import sys
 import json
 import logging
@@ -17,9 +15,6 @@ from fiber.infra.agent.observer.intent.trajectory import (
 )
 from fiber.infra.agent.bridge.protocol import AgentProtocol
 
-# ---------------------------------------------------------
-# Pydantic Schemas (도메인 데이터 검증)
-# ---------------------------------------------------------
 class ExecutionPricingModel(BaseModel):
     base_l402_fee_usd: float = Field(0.002, description="Base L402 invocation fee")
     profit_share_ratio: float = Field(0.05, ge=0.0, le=1.0, description="Take-rate on net arbitrage profit")
@@ -53,13 +48,7 @@ class MarginCalcAgent(AgentProtocol):
         self.risk_policy = RiskPolicy()
         self.log.info("Production MarginCalcAgent online. Awaiting margin computation requests...")
 
-    # [삭제됨] 지저분했던 serve_forever, _dispatch 메서드는 모두 부모 클래스(AgentProtocol)로 이관되었습니다.
-
-    # =====================================================================
-    # AgentProtocol 추상 메서드 구현
-    # =====================================================================
     def handle_tools_list(self, req_id: Any):
-        """MCP 2026 규격의 tools/list 요청 처리"""
         tools = [{
             "name": "calculate_trajectory_margin",
             "description": "Calculates real unit economics and breakeven matrices by binding live market spread to risk policy.",
@@ -68,11 +57,6 @@ class MarginCalcAgent(AgentProtocol):
         self.send_response(req_id, {"tools": tools})
 
     def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
-        """
-        MCP 2026 규격의 tools/call 요청 처리
-        [적용] 코어망이 주입한 _meta는 파라미터에서 완전히 분리되어 전달되므로 
-        Pydantic의 엄격한 스키마 검증(ValidationError)을 우회할 수 있습니다.
-        """
         if tool_name == "calculate_trajectory_margin":
             try:
                 # 1. 강력한 Pydantic 파라미터 검증

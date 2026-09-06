@@ -1,6 +1,4 @@
 # fiber.infra.agent.bridge.connector
-## @lineage: fiber.a2a.bridge.connector
-## @lineage: fiber.infra.worker.connector
 import os
 import sys
 import json

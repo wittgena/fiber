@@ -1,6 +1,4 @@
 # fiber.phase.plane.shell.sandbox
-## @lineage: fiber.phase.kernel.shell.sandbox
-## @lineage: fiber.phase.debug.sandbox
 import os
 import time
 import json
@@ -12,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.dphi.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
-from fiber.infra.builder import EcoBuilder
+from fiber.infra.eco.builder import EcoBuilder
 from fiber.infra.client.wallet import LocalWalletClient
 
 from xphi.xor.space.sandbox.runner import SchemeRunner
