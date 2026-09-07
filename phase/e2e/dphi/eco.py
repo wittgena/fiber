@@ -11,7 +11,7 @@ from xphi.bound.space.sandbox.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 
 log = get_emitter("e2e.eco")
 

@@ -27,7 +27,7 @@ from xphi.arch.model.edge.receipt import (
 
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.kernel.wasm.cgroup import Tier
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.state.ledger.consensus import LogicStream
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
@@ -45,7 +45,7 @@ class WorkerContext:
         store: Any, # LogStreamStore
         nexus: Any, # NexusAnchor
         exchange_adapter: Any,
-        dta_adapter: Any,
+        pta_adapter: Any,
         policy_engine: Any,
         profile_service: Any,
         ledger: Any = None 
@@ -54,7 +54,7 @@ class WorkerContext:
         self.store = store
         self.nexus = nexus
         self.exchange_adapter = exchange_adapter
-        self.dta_adapter = dta_adapter
+        self.pta_adapter = pta_adapter
         self.policy_engine = policy_engine
         self.profile_service = profile_service
         self.ledger = ledger
@@ -229,7 +229,7 @@ async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Payload Format Error: Missing 'state_root' or 'receipt_id' in receipt")
 
     try:
-        is_valid = await ctx.dta_adapter.verify_lineage(tx_hash=state_root, depth=3)
+        is_valid = await ctx.pta_adapter.verify_lineage(tx_hash=state_root, depth=3)
         
         if not is_valid:
             if isinstance(state_root, str) and (state_root.startswith("0x") or len(state_root) in [64, 66]):
@@ -413,7 +413,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(500, f"Invoice Issue Failed: {str(e)}")
 
 
-async def handle_dta_balance(params: dict, ctx: WorkerContext) -> dict:
+async def handle_pta_balance(params: dict, ctx: WorkerContext) -> dict:
     client_id = params.get("client_id")
     asset_type = params.get("asset_type", "fuel")
     
@@ -421,14 +421,14 @@ async def handle_dta_balance(params: dict, ctx: WorkerContext) -> dict:
         return _build_error(422, "Missing 'client_id' parameter")
 
     try:
-        balance = await ctx.dta_adapter.get_balance(owner_address=client_id, asset_type=asset_type)
+        balance = await ctx.pta_adapter.get_balance(owner_address=client_id, asset_type=asset_type)
         return {
             "client_id": client_id,
             "asset_type": asset_type,
             "balance": balance
         }
     except Exception as e:
-        log.error(f"DTA Balance check failed for {client_id}: {str(e)}")
+        log.error(f"PTA Balance check failed for {client_id}: {str(e)}")
         return _build_error(500, "Failed to read hot state balance.")
 
 
@@ -528,7 +528,7 @@ INTERNAL_HANDLERS_REGISTRY = {
     "eco.exchange.order.ingress": handle_trade_ingress,
     "eco.exchange.clearing.receipt.generate": handle_clearing_receipt_generate,
     "eco.exchange.invoice.issue": handle_invoice_issue,
-    "eco.exchange.balance": handle_dta_balance,
+    "eco.exchange.balance": handle_pta_balance,
     
     # Benchmarking
     "eco.profile.quote": handle_profile_quote,

@@ -27,7 +27,7 @@ from xphi.bound.parser.ruleset.otlp import StrictOtlpExtractionEngine
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (
     SandboxIntent,
     AuditReceipt,

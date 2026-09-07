@@ -15,8 +15,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from xphi.kernel.wasm.adapter.state import StateAdapter
-from xphi.kernel.wasm.adapter.sign import NodeSigner
+from xphi.kernel.adapter.state import StateAdapter
+from xphi.kernel.adapter.sign import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
 

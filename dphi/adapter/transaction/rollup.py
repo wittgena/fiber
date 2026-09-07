@@ -12,7 +12,7 @@ from fiber.infra.config import dphi_env
 from fiber.dphi.adapter.dvm import DvmAdapter
 from xphi.state.ledger.consensus import KernelLedger, ToposBlob
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.watcher.plane.emitter import get_emitter
 

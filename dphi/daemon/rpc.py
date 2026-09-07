@@ -36,8 +36,8 @@ class RpcWorkerDaemon(AbstractDaemon):
 
         from xphi.kernel.wasm.broker import DphiBroker
         from xphi.watcher.server.stream.edge import LogStreamStore
-        from xphi.kernel.wasm.adapter.dta import DtaAdapter
-        from xphi.kernel.wasm.adapter.sign import NodeSigner
+        from xphi.kernel.adapter.pta import PtaAdapter
+        from xphi.kernel.adapter.sign import NodeSigner
         from xphi.bound.space.sandbox.resolver import BenchProfile
 
         log.info(f"[{self.name}] Initializing Headless Worker Dependencies...")
@@ -49,7 +49,7 @@ class RpcWorkerDaemon(AbstractDaemon):
         nexus = NexusAnchor(broker=broker, consensus_threshold=1, allowed_committee=[])
         node_pubkey = NodeSigner.get_instance().pubkey_hex if hasattr(NodeSigner, 'get_instance') else "mock_pubkey"
         exchange_adapter = ClearingAdapter(clearing_house_pub_key=node_pubkey)
-        dta_adapter = DtaAdapter(broker=broker)
+        pta_adapter = PtaAdapter(broker=broker)
         
         policy_engine = IngressPolicyEngine(
             sequencer=ToposSequencer(), allocator=FuelAllocator(), monitor=HealthMonitor()
@@ -62,7 +62,7 @@ class RpcWorkerDaemon(AbstractDaemon):
             store=store,
             nexus=nexus,
             exchange_adapter=exchange_adapter,
-            dta_adapter=dta_adapter,
+            pta_adapter=pta_adapter,
             policy_engine=policy_engine,
             profile_service=profile_service
         )

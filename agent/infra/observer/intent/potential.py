@@ -16,7 +16,7 @@ from fiber.dphi.adapter.transaction.settlement import MandateAdapter
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.arch.event.next import generate_parity_triplet, next_phase_id
 from xphi.arch.event.next import uuid4
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.kernel.wasm.broker import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.state.phase.network.bridge import RpcBridge
