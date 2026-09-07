@@ -11,8 +11,8 @@ from fiber.llm.param import ModelResponse, EmbeddingResponse
 from fiber.llm.router.stream.wrapper import StreamWrapper
 
 from xphi.arch.contract.interface import ContractRouter
-from xphi.kernel.dphi.broker import DphiBroker
-from xphi.kernel.dphi.llm.auth import DphiKey, DphiAction, KernelAuthPayload
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.kernel.wasm.llm.auth import DphiKey, DphiAction, KernelAuthPayload
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.llm")

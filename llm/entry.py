@@ -19,9 +19,9 @@ from fiber.llm.router.ext.llm.param.processor import CompletionProcessor, Embedd
 from fiber.llm.router.inter.registry import AdapterRegistry
 
 # Arch & Watcher
-from xphi.kernel.dphi.llm.auth import DphiKey, KernelAuthPayload
-from xphi.kernel.phase.network.bridge import RpcBridge
-from xphi.kernel.phase.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
+from xphi.kernel.wasm.llm.auth import DphiKey, KernelAuthPayload
+from xphi.state.phase.network.bridge import RpcBridge
+from xphi.state.phase.network.channel.pipeline import ChannelPipeline, ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
 
 # Loggers

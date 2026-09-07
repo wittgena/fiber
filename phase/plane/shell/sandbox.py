@@ -1,6 +1,4 @@
 # fiber.phase.plane.shell.sandbox
-## @lineage: fiber.phase.kernel.shell.sandbox
-## @lineage: fiber.phase.debug.sandbox
 import os
 import time
 import json
@@ -11,13 +9,13 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
-from fiber.infra.builder import EcoBuilder
+from fiber.dphi.adapter.transaction.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
+from fiber.infra.eco.builder import EcoBuilder
 from fiber.infra.client.wallet import LocalWalletClient
 
-from xphi.xor.space.sandbox.runner import SchemeRunner
-from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.kernel.dphi.method import DphiMethod
+from xphi.bound.space.sandbox.runner import SchemeRunner
+from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("sandbox.runner")

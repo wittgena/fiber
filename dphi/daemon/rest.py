@@ -19,7 +19,7 @@ from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.server.mcp import SecureMCPServer
 from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.kernel.dphi.ledger.consensus import KernelLedger
+from xphi.state.ledger.consensus import KernelLedger
 
 log = get_emitter("daemon.edge")
 

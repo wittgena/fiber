@@ -8,10 +8,10 @@ from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
 from fiber.phase.plane.shell.sandbox import SandboxRunner, ScriptDef, TestScripts
-from fiber.dphi.adapter.anchor import ActorIdentity
+from fiber.infra.eco.anchor import ActorIdentity
 
-from xphi.kernel.dphi.adapter.state import StateAdapter
-from xphi.kernel.dphi.method import DphiMethod
+from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")

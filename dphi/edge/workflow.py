@@ -4,7 +4,7 @@ import httpx
 from typing import Any
 
 from fiber.infra.client.rpc import InternalRpcClient
-from xphi.kernel.dphi.fsm.edge import (
+from xphi.state.phase.fsm.edge import (
     EdgePhaseFSM, StartIntentEvent, PhaseFailedEvent,
     ComputePhaseCompletedEvent, CompliancePhaseCompletedEvent, SettlementPhaseCompletedEvent,
     RunComputePhaseCmd, RunCompliancePhaseCmd, RunSettlementPhaseCmd,

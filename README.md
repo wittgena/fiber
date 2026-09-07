@@ -111,7 +111,7 @@ python -m fiber.phase.cli.main [OPTIONS] COMMAND [ARGS]...
 
 ### 2.2. E2E Testing & Dynamic Argument Forwarding (Core Feature)
 
-The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`dphi.defin`, `dphi.eco`, `dphi.edge`, `flare`, `dphi.wasm.entry`, `llm.compat`).
+The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`dphi.defin`, `dphi.eco`, `dphi.edge`, `flare`, `dphi.wasm.entry`, `bridge.llm.compat`).
 
 Instead of hardcoding every possible test parameter into the root CLI, `fiber` captures unknown arguments and transparently **forwards them to the target module's standard `main(args)` entrypoint**. This ensures zero-friction scalability as new domains and parameters are added.
 
@@ -119,11 +119,11 @@ Instead of hardcoding every possible test parameter into the root CLI, `fiber` c
 
 ```bash
 # Run the LLM Compatibility suite with suite-specific arguments
-fiber e2e llm.compat --model gemini/gemini-3.1-flash-lite --proxy
+fiber e2e bridge.llm.compat --model gemini/gemini-3.1-flash-lite --proxy
 
 ```
 
-> *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `llm.compat` suite's internal `argparse`.*
+> *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `bridge.llm.compat` suite's internal `argparse`.*
 
 ### 2.3. Ecosystem Operational Modes
 

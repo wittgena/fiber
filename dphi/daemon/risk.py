@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from contextlib import suppress
 
-from fiber.infra.agent.observer.intent.trajectory import (
+from fiber.agent.infra.observer.intent.trajectory import (
     TrajectoryOracleReceptor, 
     ArbitrageIntent,
     TensionPhase,
@@ -16,7 +16,7 @@ from fiber.infra.agent.observer.intent.trajectory import (
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.risk")

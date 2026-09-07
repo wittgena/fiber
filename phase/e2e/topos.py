@@ -12,8 +12,8 @@ from eth_account.messages import encode_defunct
 from fiber.dphi.edge.workflow import EdgeWorkflow
 from fiber.phase.plane.topos import ToposOrchestrator, ToposContext
 
-from xphi.kernel.dphi.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.topos")

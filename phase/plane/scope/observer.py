@@ -14,7 +14,7 @@ from xphi.arch.contract.phase.flow import PhaseFlow, FlowState
 from xphi.arch.event.next import next_id
 from xphi.arch.event.mesh.transport import MeshP2PTransport
 from xphi.kernel.space.topos.node.gan import Message, GanNode
-from xphi.kernel.dphi.broker import DphiBroker
+from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scope.observer")

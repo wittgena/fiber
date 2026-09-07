@@ -1,5 +1,4 @@
 # fiber.phase.e2e.dphi.defin
-## @lineage: fiber.phase.e2e.defin
 import asyncio
 import json
 import uuid
@@ -13,8 +12,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from fiber.infra.pipeline.defin import DefinPipelineFactory
 from fiber.infra.pipeline.transaction import TransactionPipelineFactory
 
-from xphi.kernel.phase.network.channel.pipeline import DuplexChannel, ChannelContext
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext
+from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.defin")
@@ -56,9 +55,9 @@ class E2ETestSinkHandler(DuplexChannel):
         return 
 
 class MockE2EInfrastructure:
-    class MockUtxoAdapter:
+    class MockDTAAdapter:
         async def execute_transaction(self, tx) -> str:
-            return f"0x_mock_utxo_{uuid.uuid4().hex[:8]}"
+            return f"0x_mock_dta_{uuid.uuid4().hex[:8]}"
 
     class MockBroker:
         async def execute(self, code, tier) -> Any:
@@ -94,7 +93,7 @@ class VmComputeTestSuite:
         
         pipeline = DefinPipelineFactory.build(
             broker=MockE2EInfrastructure.MockBroker(),
-            utxo_adapter=MockE2EInfrastructure.MockUtxoAdapter(),
+            dta_adapter=MockE2EInfrastructure.MockDTAAdapter(),
             notary_keys=["mock_key_1"],
             chaos_mode=chaos_mode,
             concurrent_agents=agents

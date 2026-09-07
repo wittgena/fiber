@@ -12,7 +12,7 @@ import uvicorn
 
 from fiber.dphi.edge.payload import create_app, Config
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
-from xphi.kernel.phase.reactor import PhaseReactor
+from xphi.state.phase.reactor import PhaseReactor
 
 from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.plane.emitter import get_emitter
