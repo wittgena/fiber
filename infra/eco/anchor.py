@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives import serialization
 
 from fiber.dphi.adapter.transaction.settlement import TransactionReceipt
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.anchor")

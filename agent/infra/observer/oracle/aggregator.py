@@ -8,8 +8,8 @@ import statistics
 import requests
 from typing import List, Dict, Any, Optional
 
-from xphi.kernel.wasm.adapter.state import StateAdapter
-from xphi.kernel.wasm.adapter.sign import NodeSigner
+from xphi.kernel.adapter.state import StateAdapter
+from xphi.kernel.adapter.sign import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.dphi.adapter.proof.binance import kline as binance_kline

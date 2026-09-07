@@ -11,7 +11,7 @@ from fiber.dphi.adapter.transaction.settlement import ClearingAdapter
 from fiber.infra.eco.anchor import ActorIdentity
 
 from xphi.bound.space.sandbox.runner import SchemeRunner
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

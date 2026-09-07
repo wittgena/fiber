@@ -55,9 +55,9 @@ class E2ETestSinkHandler(DuplexChannel):
         return 
 
 class MockE2EInfrastructure:
-    class MockDTAAdapter:
+    class MockPTAAdapter:
         async def execute_transaction(self, tx) -> str:
-            return f"0x_mock_dta_{uuid.uuid4().hex[:8]}"
+            return f"0x_mock_pta_{uuid.uuid4().hex[:8]}"
 
     class MockBroker:
         async def execute(self, code, tier) -> Any:
@@ -93,7 +93,7 @@ class VmComputeTestSuite:
         
         pipeline = DefinPipelineFactory.build(
             broker=MockE2EInfrastructure.MockBroker(),
-            dta_adapter=MockE2EInfrastructure.MockDTAAdapter(),
+            pta_adapter=MockE2EInfrastructure.MockPTAAdapter(),
             notary_keys=["mock_key_1"],
             chaos_mode=chaos_mode,
             concurrent_agents=agents

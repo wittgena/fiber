@@ -10,9 +10,9 @@ from enum import Enum
 from typing import Dict, Any, List, Optional, Mapping
 from dataclasses import dataclass, asdict
 
-from xphi.kernel.wasm.adapter.state import StateAdapter
-from xphi.kernel.wasm.adapter.sign import NodeSigner
-from xphi.kernel.wasm.adapter.ator import AtorAdapter, NodeState, KernelDelta
+from xphi.kernel.adapter.state import StateAdapter
+from xphi.kernel.adapter.sign import NodeSigner
+from xphi.kernel.adapter.ator import AtorAdapter, NodeState, KernelDelta
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter

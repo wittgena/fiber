@@ -24,7 +24,7 @@ from xphi.arch.model.dphi.receptor import (
     ParityTripletSchema
 )
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.kernel.wasm.adapter.state import StateAdapter
+from xphi.kernel.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 

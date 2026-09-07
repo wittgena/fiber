@@ -7,12 +7,12 @@ from typing import Any, Dict, Optional, List
 from fiber.dphi.adapter.transaction.rollup import ShadowAdapter
 from xphi.state.phase.fsm.defin import (
     DefinFSM, 
-    FsmStartIntent, DtaAnchoredEvent, WasmExecutedEvent, 
-    MintGenesisDtaCmd, ExecuteParallelWasmCmd, SealSettlementCmd, FsmHaltCmd
+    FsmStartIntent, PtaAnchoredEvent, WasmExecutedEvent, 
+    MintGenesisPtaCmd, ExecuteParallelWasmCmd, SealSettlementCmd, FsmHaltCmd
 )
 
 from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
-from xphi.kernel.wasm.adapter.dta import DtaAdapter, DtaTransaction, DtaOutput
+from xphi.kernel.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 
 log = get_emitter("pipeline.defin")
@@ -77,22 +77,22 @@ class Eip712Authenticator(DuplexChannel):
             await ctx.fire_channel_read(msg)
 
 class InfrastructureAdapterHandler(DuplexChannel):
-    def __init__(self, broker: Any, dta_adapter: Any, notary_keys: List[str]):
+    def __init__(self, broker: Any, pta_adapter: Any, notary_keys: List[str]):
         self.broker = broker
-        self.dta = dta_adapter
+        self.pta = pta_adapter
         self.notary_keys = notary_keys
 
     async def write(self, ctx: ChannelContext, command: Any):
         try:
-            if isinstance(command, MintGenesisDtaCmd):
-                log.info(f"⚡ [Infra] FSM 명령 수신: DTA 제네시스 발행 ({command.budget} Fuel)")
-                tx = DtaTransaction(
+            if isinstance(command, MintGenesisPtaCmd):
+                log.info(f"⚡ [Infra] FSM 명령 수신: PTA 제네시스 발행 ({command.budget} Fuel)")
+                tx = PtaTransaction(
                     inputs=[], 
-                    outputs=[DtaOutput(amount=command.budget, owner=command.owner)],
+                    outputs=[PtaOutput(amount=command.budget, owner=command.owner)],
                     metadata={"action": "GENESIS"}
                 )
-                tx_hash = await self.dta.execute_transaction(tx)
-                await ctx.fire_channel_read(DtaAnchoredEvent(tx_hash=tx_hash))
+                tx_hash = await self.pta.execute_transaction(tx)
+                await ctx.fire_channel_read(PtaAnchoredEvent(tx_hash=tx_hash))
 
             elif isinstance(command, ExecuteParallelWasmCmd):
                 log.info(f"⚡ [Infra] FSM 명령 수신: WASM 병렬 실행 ({command.concurrent_agents} 노드)")
@@ -140,7 +140,7 @@ class DefinPipelineFactory:
     @classmethod
     def build(cls, 
               broker: Any, 
-              dta_adapter: Any, 
+              pta_adapter: Any, 
               notary_keys: List[str],
               chaos_mode: str = "NORMAL",
               concurrent_agents: int = 3) -> ChannelPipeline:
@@ -153,7 +153,7 @@ class DefinPipelineFactory:
             pipeline.add_last(WalletChaosInjector(mode=chaos_mode))
             
         pipeline.add_last(Eip712Authenticator())
-        pipeline.add_last(InfrastructureAdapterHandler(broker, dta_adapter, notary_keys))
+        pipeline.add_last(InfrastructureAdapterHandler(broker, pta_adapter, notary_keys))
         pipeline.add_last(DefinFsmBridgeHandler(concurrent_agents=concurrent_agents))
         pipeline.add_last(PipelineTailErrorHandler()) # Tail 에러 핸들러
         

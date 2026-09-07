@@ -10,7 +10,7 @@ from fiber.infra.wasm.bridge import WasmBridge
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.wasm.adapter.gateway import GatewayAdapter
+from xphi.kernel.adapter.gateway import GatewayAdapter
 
 log = get_emitter("e2e.wasm.bridge")
 

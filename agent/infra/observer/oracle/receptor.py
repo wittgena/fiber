@@ -6,8 +6,8 @@ import hashlib
 from typing import Dict, Any, List, Optional
 
 from fiber.agent.infra.observer.oracle.aggregator import ProvableOracleAggregator
-from xphi.kernel.wasm.adapter.state import StateAdapter
-from xphi.kernel.wasm.adapter.sign import NodeSigner
+from xphi.kernel.adapter.state import StateAdapter
+from xphi.kernel.adapter.sign import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
 
 class OracleReceptor:
