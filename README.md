@@ -34,7 +34,6 @@ response = await acompletion(
     stream=True,
     # Standard OpenAI kwargs are fully supported (temperature, tool_calls, etc.)
 )
-
 ```
 
 ### 1.2. Advanced Pipeline & Dynamic Control
@@ -52,14 +51,12 @@ response = completion(
     fallbacks=["gpt-4o-mini"], # Auto-retry on RateLimit or API errors
     mock_response="Simulated Response", # Bypasses network for rapid testing
 )
-
 ```
 
 * **Dynamic Guardrails:** Inject custom validation rules per request without altering global configurations.
 
 ```python
 metadata={"post_call_rules": [async_pii_filter_function]}
-
 ```
 
 ### 1.3. Edge Gateway & Zero-Trust Integration
@@ -70,7 +67,6 @@ For decentralized agents, the FastAPI-based REST Gateway (`edge.llm`) provides a
 POST /v1/chat/completions HTTP/1.1
 Authorization: Bearer <provider_key_if_any>
 X-X402-Receipt: <x402_signed_receipt>
-
 ```
 
 The gateway extracts the receipt, invokes the `AUTHORIZE_INTENT` via the WASM Kernel, and delegates the approved Fuel budget to the underlying pipeline. Invalid or depleted receipts immediately trigger an `HTTP 402 Payment Required` to initiate a transparent retry.
@@ -89,8 +85,12 @@ As agent protocols evolve toward stateless architectures, they push the critical
 
 * **Stateless Auth & Replay Protection:** Centralizes the cryptographic overhead required in a connectionless model. It strictly validates **DPoP (Demonstrating Proof-of-Possession)** signatures (RFC 9449) and SPIFFE URIs per request, utilizing a distributed nonce lock (`NonceReplayProtector`) to silently reject replay attacks at the edge.
 * **Idempotency & Concurrency Control:** Acknowledges that tool calls are structural state mutations. It resolves race conditions when multiple agents attempt to `MUTATE` state simultaneously and prevents double-execution during network disconnects. By enforcing explicit idempotency keys, it tracks inbound intents (`INITIALIZE`, `MUTATE`, `COMMIT`, `QUERY`) through a strict Finite State Machine context.
-* **Deterministic Mempool Queueing:** Instead of exposing host systems to raw MCP REST payloads, intents are translated into deterministic `LogicStream` events and queued into the WASM kernel's mempool. Agents immediately receive a `202 Accepted` to continue inference without I/O blocking, while the kernel safely sequences the operations—structurally insulating the host from both command injection vectors and synchronization failures.
- 
+* **Tri-Track Concurrency & Deterministic Queueing:** Instead of exposing host systems to raw, chaotic MCP REST payloads, intents are translated into deterministic `LogicStream` events and queued into the core bus. The gateway acts as a sophisticated traffic controller, routing intents into one of three distinct topological modes based on the target worker's profile:
+* **`Ephemeral` Mode:** Instantiates single-use, fault-isolated sandboxes per request, ensuring zero memory leaks and safe Human-in-the-Loop interaction.
+* **`Linear` Mode:** Routes CPU-heavy workloads (e.g., C-bound mathematical engines) into a pre-warmed daemon with strict sequential queueing, eliminating cold starts.
+* **`Multiplex` Mode:** Unleashes extreme lock-free concurrency within a single asynchronous daemon to handle thousands of I/O-bound operations (e.g., Oracle data fetches) in parallel.
+By enforcing this routing and returning a `202 Accepted` when processes are parked (YIELD), the bridge structurally insulates the host from both command injection vectors and synchronization failures.
+
 ---
 
 ## 2. Fiber CLI Tool
@@ -120,7 +120,6 @@ Instead of hardcoding every possible test parameter into the root CLI, `fiber` c
 ```bash
 # Run the LLM Compatibility suite with suite-specific arguments
 fiber e2e bridge.llm.compat --model gemini/gemini-3.1-flash-lite --proxy
-
 ```
 
 > *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `bridge.llm.compat` suite's internal `argparse`.*
@@ -135,14 +134,15 @@ Beyond testing, the CLI routes the system into specific operational contexts, au
 | **`trace`** | **[Experimental / Chaos Sandbox]** Ignites a specialized hypervisor (`tracer_controller`) to inject structural anomalies (e.g., OOM traps, Byzantine faults) into isolated containers to observe kernel resilience. | `fiber trace -t oom_tracer -c fault.yml` |
 | **`deploy`** | **[Deployment Manager]** Manages multi-node orchestration and cluster scaling logic. | `fiber deploy -t master` |
 | **`shell`** | **[Client Observatory]** Launches an interactive God-Mode console. Connects directly to the asynchronous message tunnel without booting a full local kernel reactor. | `fiber shell --env-file .env` |
-| **`connect`** | **[Egress Sidecar / A2A Bridge]** Sublimates any legacy 3rd-party MCP server into a DPHI autonomous node. Acts as a lightweight proxy wrapping standard I/O to the distributed FSM bus. | `fiber connect -t my-db -e "node index.js"` |
+| **`connect`** | **[Egress Sidecar / A2A Bridge]** Sublimates any legacy MCP server into a DPHI autonomous node. Acts as a topology-adaptive proxy (Ephemeral, Linear, or Multiplex) wrapping standard I/O to the distributed FSM bus. | `fiber connect --mode multiplex -t oracle -e "python agent.py"` |
 
 ### 2.4. Egress Sidecar & A2A Sublimation (The `connect` Mode)
 
 The `fiber connect` command represents the ecosystem's most potent adoption vector. It enables providers and indie developers alike to integrate existing Web2 servers into the deterministic A2A (Agent-to-Agent) economy with **absolutely zero code modifications**.
 
 * **Zero-Trust NAT Traversal:** Operating purely via outbound subscription (Pull-based), the connector requires **zero inbound firewall configurations**. Organizations can safely expose internal DB or ERP tools to global AI agents while remaining deeply concealed behind strict corporate VPCs.
-* **Instant X402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex X402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits monetization and idempotency.
+* **Topology-Adaptive Execution:** The sidecar does not force a one-size-fits-all execution model. By simply appending a `--mode` flag (`ephemeral`, `linear`, `multiplex`), developers can dynamically configure how their legacy script handles concurrency—from strict sandbox isolation for destructive tasks to high-throughput asynchronous loops for I/O-bound Oracles—without rewriting a single line of internal business logic.
+* **Instant X402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex X402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits monetization and distributed idempotency protection (Idempotency Shields).
 * **The Pathway to WASM:** By isolating physical execution within this Sidecar boundary, Fiber establishes a seamless migration path. Providers can effortlessly swap their legacy subprocesses with deterministic WASM sandboxes in the future—transitioning from rudimentary APIs into fully autonomous, instruction-metered smart contracts without disrupting client agents.
 
 ---
@@ -171,8 +171,6 @@ Defines the core sandbox engine principles for executing deterministic state tra
 * **Tier 1 (General I/O Isolate):** A V8 Isolate-based gateway handling external network I/O and protocol translation (Non-deterministic).
 * **Tier 2 (Constrained Pyodide):** An I/O-constrained Python runtime ensuring deterministic execution for business logic like AI agent inference and data transformation.
 * **Tier 3 (Native WASM):** A deterministic native WASM execution layer for core system modules. Responsible for PTA state updates, precision metering, and receipt issuance.
-
-
 * **Ephemeral Runtime & Lock-Free PTA:** Reduces idle daemon overhead by creating and destroying sandboxes on a per-request basis. The PTA tree structure removes database locking bottlenecks, supporting concurrent scaling.
 
 ---

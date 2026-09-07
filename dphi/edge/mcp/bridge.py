@@ -29,7 +29,6 @@ class TransitionBridge:
             raise HTTPException(status_code=423, detail="REPLAY_ATTACK_DETECTED")
 
         # 2. [클린 아키텍처] 레거시 스키마(arguments) 배려 제거. 오직 MCP 표준 _meta에만 신원 기록.
-        # 이 데이터가 특정 레거시에 맞게 변형되는 것은 WorkerConnector 측의 Quarantine 영역이 전담함.
         if "params" not in payload: payload["params"] = {}
         if "_meta" not in payload["params"]: payload["params"]["_meta"] = {}
         
@@ -58,7 +57,7 @@ class TransitionBridge:
                                 "payload": input_responses
                             }
                         )
-                        return await self._wait_for_resolution(handle_id)
+                        return await self._wait_for_resolution(handle_id, identity.target_server_id, rpc)
                         
                     log.debug(f"[Bridge] {handle_id} is YIELDED. Returning existing prompt.")
                     return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}))
@@ -103,9 +102,9 @@ class TransitionBridge:
         )
         log.debug(f"[Bridge] Intent {handle_id} published (EXECUTE).")
 
-        return await self._wait_for_resolution(handle_id)
+        return await self._wait_for_resolution(handle_id, identity.target_server_id, rpc)
 
-    async def _wait_for_resolution(self, handle_id: str) -> Union[Dict[str, Any], JSONResponse]:
+    async def _wait_for_resolution(self, handle_id: str, target_server_id: str, rpc: InternalRpcClient) -> Union[Dict[str, Any], JSONResponse]:
         tunnel = await TunnelFactory.get_default()
         reply_channel = f"mcp.intent.reply.{handle_id}"
         pubsub = tunnel.pubsub()
@@ -130,8 +129,20 @@ class TransitionBridge:
                             return state_data.get("executable_payload", {})
                             
         except asyncio.TimeoutError:
-            log.warning(f"[Bridge] Timeout waiting for backend resolution of {handle_id}")
+            log.warning(f"[Bridge] Timeout waiting for backend resolution of {handle_id}. Broadcasting FORCE_ROLLBACK.")
+            
+            # [핵심] 클라이언트에게 504를 반환하고 끊기 전에, 해당 요청을 처리 중이던 
+            # 서브프로세스(ephemeral) 또는 큐(linear/multiplex)를 강제로 비우도록 인텐트를 발행합니다.
+            try:
+                await rpc.publish_intent(
+                    channel=f"mcp.intent.queue.{target_server_id}",
+                    payload={"handle_id": handle_id, "action": "FORCE_ROLLBACK"}
+                )
+            except Exception as e:
+                log.error(f"[Bridge] Failed to broadcast FORCE_ROLLBACK for {handle_id}: {e}")
+                
             raise HTTPException(status_code=504, detail="Transaction suspended or upstream timeout.")
+            
         finally:
             await pubsub.unsubscribe(reply_channel)
             await pubsub.close()

@@ -107,7 +107,7 @@ class McpBridgePipeline(PipelineRunner):
 
         self.oracle_id = "oracle-01"
         self.deploy_id = "legacy-01"
-        self.validator_id = "agent.validator"  # [추가] RPC 라우팅을 위한 타겟 ID 일치
+        self.validator_id = "agent.validator" 
         self.finlib_id = "finlib-01"
         self.margin_id = "margin-01"
 
@@ -118,26 +118,31 @@ class McpBridgePipeline(PipelineRunner):
         self.server = None
         self._server_task = None
 
-        # [Connectors Setup]
+        # =========================================================
+        # [핵심] Architectural Correctness: 3분류 모드 적용
+        # =========================================================
+        
+        # 1. MULTIPLEX Mode: 비동기 통신 및 락 없는 인메모리 병렬 라우팅 
         oracle_cmd = f"{sys.executable} -m {agent_oracle.__name__}"
-        self.oracle_connector = WorkerConnector(target_id=self.oracle_id, legacy_command=oracle_cmd, mode="ephemeral")
+        self.oracle_connector = WorkerConnector(target_id=self.oracle_id, legacy_command=oracle_cmd, mode="multiplex")
         self._oracle_task = None
 
+        # 2. EPHEMERAL Mode: OTP 상호작용 및 파괴적 명령 실행을 위한 샌드박스 격리
         deploy_cmd = f"{sys.executable} -m {agent_deploy.__name__}"
         self.deploy_connector = WorkerConnector(target_id=self.deploy_id, legacy_command=deploy_cmd, mode="ephemeral")
         self._deploy_task = None
 
-        # [추가] Validator(Auth/Sign) 전담 에이전트 데몬
+        # 3. LINEAR Mode: 극단적 속도를 위한 콜드스타트 없는 순차적 데몬 워커들
         validator_cmd = f"{sys.executable} -m {agent_validator.__name__}"
-        self.validator_connector = WorkerConnector(target_id=self.validator_id, legacy_command=validator_cmd, mode="daemon")
+        self.validator_connector = WorkerConnector(target_id=self.validator_id, legacy_command=validator_cmd, mode="linear")
         self._validator_task = None
 
         finlib_cmd = f"{sys.executable} -m {agent_finlib.__name__}"
-        self.finlib_connector = WorkerConnector(target_id=self.finlib_id, legacy_command=finlib_cmd, mode="daemon")
+        self.finlib_connector = WorkerConnector(target_id=self.finlib_id, legacy_command=finlib_cmd, mode="linear")
         self._finlib_task = None
 
         margin_cmd = f"{sys.executable} -m {agent_margin.__name__}"
-        self.margin_connector = WorkerConnector(target_id=self.margin_id, legacy_command=margin_cmd, mode="daemon")
+        self.margin_connector = WorkerConnector(target_id=self.margin_id, legacy_command=margin_cmd, mode="linear")
         self._margin_task = None
 
         self.worker_daemon = None
@@ -156,33 +161,27 @@ class McpBridgePipeline(PipelineRunner):
 
         self.set_phases([
             Phase("Phase 1: Event-Driven Zero-Latency Proof", self.phase_zero_latency),
-            Phase("Phase 2: High-Concurrency Daemon Stress (FinLib)", self.phase_finlib_multiplexing),
-            Phase("Phase 3: Unit Economics Vectorization (Margin BI)", self.phase_margin_simulation),
-            Phase("Phase 4: x402 Billing Rejection (Free-Rider Defense)", self.phase_x402_rejection),
-            Phase("Phase 5: Precise Error Routing (Invalid Params)", self.phase_error_routing),
-            Phase("Phase 6: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
-            Phase("Phase 7: MCP 2026-07-28 Stateless Re-issue & Resume", self.phase_stateless_otp_resume),
-            Phase("Phase 8: Autonomous Reconciliation (Sentinel)", self.phase_sentinel_reconciliation)
+            Phase("Phase 2: High-Throughput Linear Queue Stress (FinLib)", self.phase_finlib_linear_queue),
+            Phase("Phase 3: Native Async Multiplexing Concurrency (Oracle)", self.phase_oracle_multiplexing),
+            Phase("Phase 4: Unit Economics Vectorization (Margin BI)", self.phase_margin_simulation),
+            Phase("Phase 5: x402 Billing Rejection (Free-Rider Defense)", self.phase_x402_rejection),
+            Phase("Phase 6: Precise Error Routing (Invalid Params)", self.phase_error_routing),
+            Phase("Phase 7: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
+            Phase("Phase 8: MCP 2026-07-28 Stateless Re-issue & Resume", self.phase_stateless_otp_resume),
+            Phase("Phase 9: Autonomous Reconciliation (Sentinel)", self.phase_sentinel_reconciliation)
         ])
 
     def _setup_security_context(self):
-        """
-        [Zero-Trust 보안 컨텍스트 주입]
-        1. DB 복호화를 위한 인간의 마스터 패스프레이즈 주입 (Validator 전용)
-        2. A2A 서명 및 검증을 위한 Ed25519 일회성(Ephemeral) 키 페어 주입
-        """
         print("\n" + "="*80)
         print("🔐 [Security Context] Zero-Trust Auth Validator Initialization")
         pwd = getpass.getpass("👉 cli.sign 에서 설정했던 Master Passphrase를 입력하세요: ")
         os.environ["DPHI_MASTER_PASSPHRASE"] = pwd
         print("="*80 + "\n")
 
-        # Validator와 Deployer가 서로를 신뢰하기 위한 Ed25519 키 페어 런타임 생성
         val_key = ed25519.Ed25519PrivateKey.generate()
         priv_bytes = val_key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption())
         pub_bytes = val_key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
         
-        # Validator에게는 서명(Private) 권한 부여 / Deployer에게는 검증(Public) 권한만 부여
         os.environ["DPHI_VALIDATOR_PRIVATE_KEY"] = priv_bytes.hex()
         os.environ["DPHI_VALIDATOR_PUBLIC_KEY"] = pub_bytes.hex()
         
@@ -252,13 +251,11 @@ class McpBridgePipeline(PipelineRunner):
 
     async def _setup_rest_edge(self):
         tunnel = await TunnelFactory.get_default()
-
         self.rest_app = create_app(
             config=Config(wasm_timeout=5.0),
             tunnel=tunnel,            
             ledger=self.mock_ledger   
         )
-
         u_config = uvicorn.Config(
             app=self.rest_app, 
             host="127.0.0.1", 
@@ -271,19 +268,17 @@ class McpBridgePipeline(PipelineRunner):
         log.info("[Pipeline] REST Edge (Stateless Gateway) Bootstrapped with DI.")
 
     async def run_pipeline(self) -> List[TestResult]:
-        # [Zero-Trust 컨텍스트 설정: 인간의 개입 및 키 분배]
         self._setup_security_context()
         
         log.info(f"\n=== Starting Enterprise A2A Suite: {self.name} ===")
-
         await self._setup_rpc_bus()
         await self._setup_rest_edge()
         await asyncio.sleep(1.0)
 
-        log.info(f"[Pipeline] Igniting Connectors (Daemon/Ephemeral)")
+        log.info(f"[Pipeline] Igniting Connectors (Multiplex/Ephemeral/Linear)")
         self._oracle_task = asyncio.create_task(self.oracle_connector.run())
         self._deploy_task = asyncio.create_task(self.deploy_connector.run())
-        self._validator_task = asyncio.create_task(self.validator_connector.run())  # [추가] Validator 데몬 가동
+        self._validator_task = asyncio.create_task(self.validator_connector.run())
         self._finlib_task = asyncio.create_task(self.finlib_connector.run()) 
         self._margin_task = asyncio.create_task(self.margin_connector.run()) 
         await asyncio.sleep(2.0)
@@ -338,21 +333,44 @@ class McpBridgePipeline(PipelineRunner):
             res = await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
         if res.status_code != 200: raise RuntimeError(f"Expected 200, got {res.status_code}")
 
-    async def phase_finlib_multiplexing(self):
+    async def phase_finlib_linear_queue(self):
+        """[개선] 워커 내부는 순차 처리이나, 커넥터와 OS 단에서의 병렬 큐 밀어넣기를 테스트"""
         async def send_compute(idx: int):
             payload = {"jsonrpc": "2.0", "id": idx, "method": "tools/call", "params": {"name": "resolve_dates", "arguments": {"base_date": "2026-09-04", "offset_business_days": idx}}}
             headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
             async with httpx.AsyncClient(base_url=self.local_url, timeout=10.0) as client:
                 return await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
+        
         req_count = 10
         results = await asyncio.gather(*[send_compute(i) for i in range(1, req_count + 1)])
-        if any(res.status_code != 200 for res in results): raise RuntimeError("Multiplexing failed")
+        if any(res.status_code != 200 for res in results): raise RuntimeError("Linear Queueing failed")
+        
+    async def phase_oracle_multiplexing(self):
+        """[신규] Oracle 워커가 단일 프로세스 내에서 다수의 거래소 API 요청을 비동기 병렬로 처리하는지 검증"""
+        async def fetch_symbol(symbol: str, req_id: int):
+            payload = {
+                "jsonrpc": "2.0", "id": req_id, "method": "tools/call",
+                "params": {"name": "fetch_aggregated_kline", "arguments": {"symbol": symbol}}
+            }
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+            async with httpx.AsyncClient(base_url=self.local_url, timeout=15.0) as client:
+                return await client.post(f"/v1/mcp-gateway/{self.oracle_id}/invoke", json=payload, headers=headers)
+                
+        # 3개의 무거운 네트워크 요청을 '동시에' 발사
+        symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+        start_time = time.time()
+        
+        results = await asyncio.gather(*[fetch_symbol(sym, 100+i) for i, sym in enumerate(symbols)])
+        
+        elapsed = time.time() - start_time
+        log.info(f"  └─ 3 Concurrent Oracle Fetches Completed in {elapsed:.2f}s")
+        
+        if any(res.status_code != 200 for res in results): 
+            raise RuntimeError("Oracle Multiplexing failed. One or more API calls returned error.")
 
     async def phase_margin_simulation(self):
         payload = {
-            "jsonrpc": "2.0", 
-            "id": 200, 
-            "method": "tools/call", 
+            "jsonrpc": "2.0", "id": 200, "method": "tools/call", 
             "params": {
                 "name": "calculate_trajectory_margin",
                 "arguments": {
@@ -409,7 +427,6 @@ class McpBridgePipeline(PipelineRunner):
             self.prompt_id = prompt_res.get("id")
             log.info(f"  └─ Captured Elicitation Prompt ID: {self.prompt_id}")
 
-        # Idempotency 테스트를 위해 동일 Payload 재전송
         headers["x-nonce"] = uuid.uuid4().hex 
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res2 = await client.post(f"/v1/mcp-gateway/{self.deploy_id}/invoke", json=self.deploy_payload, headers=headers)

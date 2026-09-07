@@ -1,5 +1,4 @@
 # fiber.agent.infra.worker.finlib
-## @lineage: fiber.infra.agent.worker.finlib
 import sys
 import json
 import logging
@@ -37,11 +36,7 @@ class FinLib(AgentProtocol):
         
         self.tick_sizes = {"BTCUSD": 0.5, "ETHUSD": 0.01, "SOLUSD": 0.001}
         self.lot_sizes = {"BTCUSD": 0.001, "ETHUSD": 0.01, "SOLUSD": 0.1}
-        
-        # QuantLib 캘린더 엔진 캐싱
         self.target_calendar = ql.TARGET() if HAS_QL else None
-        
-        # 금융 공학 연산을 위한 AST 화이트리스트 (Injection 방어)
         self.allowed_math_funcs = {
             "log": math.log, 
             "exp": math.exp, 
@@ -49,11 +44,7 @@ class FinLib(AgentProtocol):
             "pow": math.pow
         }
 
-    # =====================================================================
-    # AgentProtocol 추상 메서드 구현 (도구 목록 및 실행 라우팅)
-    # =====================================================================
     def handle_tools_list(self, req_id: Any):
-        """MCP 2026 규격의 tools/list 요청 처리"""
         tools = [
             {
                 "name": "resolve_dates",
@@ -118,10 +109,6 @@ class FinLib(AgentProtocol):
         self.send_response(req_id, {"tools": tools})
 
     def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
-        """
-        MCP 2026 규격의 tools/call 요청 처리
-        코어에서 주입한 _meta와 레거시가 필요한 arguments가 분리되어 전달됩니다.
-        """
         try:
             if tool_name == "resolve_dates":
                 res = self._tool_resolve_dates(arguments)
@@ -148,9 +135,6 @@ class FinLib(AgentProtocol):
             # [고의적 에러 테스트 라우팅] (Phase 5: Precise Error Routing 연동)
             self.send_error(req_id, -32602, f"Invalid params: {str(e)}")
 
-    # =====================================================================
-    # 순수 비즈니스 로직 (도구 구현체들)
-    # =====================================================================
     def _tool_resolve_dates(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """QuantLib C++ 엔진을 활용한 초고속 휴일/영업일 계산 (또는 Mock)"""
         if not HAS_QL:
@@ -239,7 +223,6 @@ class FinLib(AgentProtocol):
 def main():
     server = FinLib()
     try:
-        # [적용] 부모 클래스(AgentProtocol)의 강력한 루프 실행
         server.serve_forever()
     except KeyboardInterrupt:
         log.info("FinLib Oracle Terminated by Interrupt.")

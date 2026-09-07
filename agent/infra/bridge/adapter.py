@@ -1,10 +1,9 @@
 # fiber.agent.infra.bridge.adapter
-## @lineage: fiber.infra.agent.bridge.adapter
-## @lineage: fiber.dphi.edge.mcp.adapter
 import time
 import json
 import base64
 import uuid
+import asyncio
 from functools import lru_cache
 from typing import Dict, Any, Tuple, Optional
 
@@ -19,7 +18,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("mcp.adapter")
+log = get_emitter("bridge.adapter")
 
 # ---------------------------------------------------------
 # Data Models
@@ -42,21 +41,37 @@ class IdempotencyMapper:
 
     async def get_or_create_handle(self, target_id: str, idempotency_key: str) -> Tuple[str, bool]:
         """
-        @IMPROVEMENT: 밀리초(ms) 타임스탬프의 충돌 위험을 제거하고, 
-        UUIDv4 기반의 고유 식별자를 사용하여 초고동시성(Multiplexing) 환경에서의 무결성을 보장합니다.
+        @IMPROVEMENT: UUIDv4 기반 식별자 사용 및 Race Condition 방어.
+        동시에 동일한 멱등성 키로 들어온 요청 중 하나만 저장(nx=True)에 성공하며,
+        실패한 쪽은 승리한 핸들을 다시 읽어와 재사용함으로써 충돌을 방지합니다.
         """
         redis_key = f"mcp:idem:{target_id}:{idempotency_key}"
         try:
+            # 1. 1차 조회 (대부분 여기서 걸림)
             existing_handle = await self.tunnel.get(redis_key)
             if existing_handle:
-                # [FIX] Tunnel 객체는 이미 디코딩된 문자열을 반환하므로 .decode() 호출을 제거하고 안전하게 캐스팅
                 return str(existing_handle), False
                 
+            # 2. 캐시 미스 시 새로운 핸들 생성
             entropy = uuid.uuid4().hex[:12]
             new_handle = f"txn_{int(time.time())}_{entropy}"
             
-            await self.tunnel.set(redis_key, new_handle, ex=86400, nx=True)
-            return new_handle, True
+            # 3. 원자적 기록 시도 (Check-Then-Act 레이스 방어)
+            is_set = await self.tunnel.set(redis_key, new_handle, ex=86400, nx=True)
+            
+            if is_set:
+                # 락 획득 성공 (최초 요청자)
+                return new_handle, True
+            else:
+                # 락 획득 실패: 내가 생성하는 찰나의 순간에 다른 프로세스가 이미 썼음.
+                # [개선] 에러를 던지거나 False를 그대로 반환하지 않고, 이긴 쪽의 핸들을 다시 가져옴.
+                await asyncio.sleep(0.01) # 아주 짧은 백오프
+                winner_handle = await self.tunnel.get(redis_key)
+                if winner_handle:
+                    return str(winner_handle), False
+                else:
+                    raise RuntimeError("Idempotency Race Condition: Lost lock but key is gone.")
+                    
         except Exception as e:
             log.critical(f"Tunnel Idempotency Check Failed: {e}")
             raise RuntimeError("Distributed state storage unavailable")

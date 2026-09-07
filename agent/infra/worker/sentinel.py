@@ -1,7 +1,4 @@
 # fiber.agent.infra.worker.sentinel
-## @lineage: fiber.infra.agent.worker.sentinel
-## @lineage: fiber.a2a.worker.sentinel
-## @lineage: fiber.infra.worker.agent.sentinel
 import asyncio
 import time
 import json

@@ -1,5 +1,4 @@
 # fiber.agent.infra.bridge.connector
-## @lineage: fiber.infra.agent.bridge.connector
 import os
 import sys
 import json
@@ -45,13 +44,12 @@ class LegacyTransport:
     async def send_payload(self, safe_payload: Dict[str, Any]):
         if not self.process or self.process.returncode is not None:
             raise RuntimeError(f"Legacy process {self.handle_id} is dead.")
-        # [핵심 2] 전달받은 순수/변환된 딕셔너리를 직렬화하여 전송
         raw_msg = json.dumps(safe_payload) + "\n"
         self.process.stdin.write(raw_msg.encode('utf-8'))
         await self.process.stdin.drain()
 
     async def receive_raw(self) -> str:
-        """[핵심 3] 쓰레기 데이터 무시 로직 완전 제거. 있는 그대로의 스트림만 반환하여 Quarantine에 위임"""
+        """ephemeral 모드 전용: STDOUT을 동기적(Await)으로 읽음"""
         raw_output = await self.process.stdout.readline()
         if not raw_output:
             raise RuntimeError(f"EOF reached while reading stdout for {self.handle_id}.")
@@ -73,17 +71,23 @@ class WorkerConnector:
         self.legacy_command = legacy_command
         self.mode = mode.lower()
         
+        if self.mode not in ("ephemeral", "linear", "multiplex"):
+            raise ValueError(f"Invalid mode: {self.mode}. Must be ephemeral, linear, or multiplex.")
+        
         self.tunnel = None
         self.rpc = InternalRpcClient()
         self.listen_channel = f"mcp.intent.queue.{self.target_id}"
         self.running = False
         
-        # [핵심 4] 타겟 ID에 맞는 부패 방지 계층(Quarantine Adapter) 장착
         self.quarantine = QuarantineRegistry.get_adapter(self.target_id)
         
-        self.active_sandboxes: Dict[str, LegacyTransport] = {}
-        self.daemon_transport: Optional[LegacyTransport] = None
+        # Mode-specific state
+        self.active_sandboxes: Dict[str, LegacyTransport] = {} # For ephemeral
+        self.shared_transport: Optional[LegacyTransport] = None # For linear / multiplex
         self.pending_requests: Dict[str, asyncio.Future] = {}
+        
+        # [핵심] Linear 모드에서 레거시 워커의 STDIN 꼬임을 막기 위한 큐 락(Queue Lock)
+        self.linear_lock = asyncio.Lock()
 
     async def run(self):
         self.tunnel = await TunnelFactory.get_default()
@@ -93,10 +97,11 @@ class WorkerConnector:
         self.running = True
         log.info(f"[Connector:{self.target_id}] 🚀 Listening for Intents on DPHI Bus (Mode: {self.mode.upper()})")
 
-        if self.mode == "daemon":
-            self.daemon_transport = LegacyTransport(self.legacy_command, f"daemon-{self.target_id}")
-            await self.daemon_transport.start()
-            asyncio.create_task(self._daemon_stdout_listener())
+        # [모드 분기] linear와 multiplex는 단일 데몬 프로세스를 띄우고 Listener를 부착
+        if self.mode in ("linear", "multiplex"):
+            self.shared_transport = LegacyTransport(self.legacy_command, f"shared-{self.target_id}")
+            await self.shared_transport.start()
+            asyncio.create_task(self._shared_stdout_listener())
 
         try:
             async for msg in pubsub.listen():
@@ -114,23 +119,21 @@ class WorkerConnector:
             await pubsub.unsubscribe(self.listen_channel)
             await pubsub.close()
             
-            if self.daemon_transport:
-                await self.daemon_transport.close()
+            if self.shared_transport:
+                await self.shared_transport.close()
             for transport in self.active_sandboxes.values():
                 await transport.close()
 
-    async def _daemon_stdout_listener(self):
-        while self.running and self.daemon_transport and self.daemon_transport.process:
+    async def _shared_stdout_listener(self):
+        """[핵심] linear/multiplex 모드에서 백그라운드로 STDOUT을 수신하여 Future를 Resolve"""
+        while self.running and self.shared_transport and self.shared_transport.process:
             try:
-                raw_output = await self.daemon_transport.process.stdout.readline()
+                raw_output = await self.shared_transport.process.stdout.readline()
                 if not raw_output:
                     break
                 
                 raw_str = raw_output.decode('utf-8')
-                
-                # [적용] Egress 데이터를 격리 구역에서 검증 및 파싱 (에러 시 빠른 실패, JSONDecodeError 발생)
                 response = self.quarantine.translate_egress(raw_str)
-
                 req_id = response.get("id")
 
                 if response.get("method") == "rpc_delegate":
@@ -138,12 +141,20 @@ class WorkerConnector:
                     continue
 
                 if response.get("method") and "elicitation" in response.get("method", ""):
-                    log.warning(f"[Connector] ⏸️ Daemon TRAP: Elicitation detected for {req_id}")
+                    log.warning(f"[Connector] ⏸️ TRAP: Elicitation (YIELD) detected for {req_id}")
+                    if self.mode == "linear":
+                        log.error(f"🚨 FATAL: Linear mode worker yielded! This blocks the entire queue.")
+                    
                     await self.rpc.call("mcp.bridge.resolve_state", {
                         "handle_id": req_id,
                         "status": "YIELD",
                         "executable_payload": response
                     })
+                    
+                    # YIELD 발생 시, 현재 대기 중인 Future를 취소 (RESUME 시점에 새로운 Future 할당)
+                    future = self.pending_requests.pop(req_id, None)
+                    if future and not future.done():
+                        future.cancel()
                     continue
                 
                 future = self.pending_requests.pop(req_id, None)
@@ -151,8 +162,7 @@ class WorkerConnector:
                     future.set_result(response)
                     
             except Exception as e:
-                log.error(f"[Connector] Daemon Listener Fracture: {e}")
-                # Daemon 프로세스는 죽이지 않되, 실패한 파싱으로 인한 로그를 남기고 대기
+                log.error(f"[Connector] Shared Listener Fracture: {e}")
                 await asyncio.sleep(0.1)
 
     async def _handle_agent_rpc_delegation(self, rpc_req: Dict[str, Any]):
@@ -163,20 +173,12 @@ class WorkerConnector:
 
         try:
             core_res = await self.rpc.call(target_method, payload)
-            feedback_payload = {
-                "jsonrpc": "2.0",
-                "id": call_id,
-                "result": core_res
-            }
-            await self.daemon_transport.send_payload(feedback_payload)
+            feedback_payload = {"jsonrpc": "2.0", "id": call_id, "result": core_res}
+            await self.shared_transport.send_payload(feedback_payload)
         except Exception as e:
             log.error(f"[Connector] Failed to delegate agent RPC: {e}")
-            error_payload = {
-                "jsonrpc": "2.0",
-                "id": call_id,
-                "error": {"code": -32000, "message": f"Core delegation failure: {str(e)}"}
-            }
-            await self.daemon_transport.send_payload(error_payload)
+            error_payload = {"jsonrpc": "2.0", "id": call_id, "error": {"code": -32000, "message": f"Core delegation failure: {str(e)}"}}
+            await self.shared_transport.send_payload(error_payload)
 
     async def process_intent(self, intent_data: Dict[str, Any]):
         handle_id = intent_data.get("handle_id")
@@ -188,26 +190,30 @@ class WorkerConnector:
 
         try:
             if action == "EXECUTE":
-                if self.mode == "daemon":
-                    await self._execute_daemon(handle_id, payload)
-                else:
+                if self.mode == "ephemeral":
                     await self._execute_ephemeral(handle_id, payload)
+                elif self.mode == "linear":
+                    await self._execute_shared(handle_id, payload, use_lock=True)
+                elif self.mode == "multiplex":
+                    await self._execute_shared(handle_id, payload, use_lock=False)
 
             elif action == "RESUME":
-                if self.mode == "daemon":
-                    log.warning(f"RESUME not supported in Daemon Mode. Ignoring {handle_id}.")
+                if self.mode == "linear":
+                    log.warning(f"RESUME not supported in Linear Mode. Ignoring {handle_id}.")
                     return
-                
-                transport = self.active_sandboxes.get(handle_id)
-                if not transport:
-                    log.error(f"Cannot RESUME {handle_id}: Sandbox not found.")
-                    return
-                
-                log.info(f"[Connector] Resuming Parked Intent: {handle_id}")
-                await self._cycle_io(handle_id, payload, transport)
+                elif self.mode == "multiplex":
+                    log.info(f"[Connector] Multiplexing RESUME to Shared Transport: {handle_id}")
+                    await self._resume_multiplex(handle_id, payload)
+                elif self.mode == "ephemeral":
+                    transport = self.active_sandboxes.get(handle_id)
+                    if not transport:
+                        log.error(f"Cannot RESUME {handle_id}: Sandbox not found.")
+                        return
+                    log.info(f"[Connector] Resuming Parked Intent: {handle_id}")
+                    await self._cycle_io(handle_id, payload, transport)
 
             elif action in ("RESUME_OR_KILL", "FORCE_ROLLBACK"):
-                if self.mode == "daemon":
+                if self.mode in ("linear", "multiplex"):
                     future = self.pending_requests.pop(handle_id, None)
                     if future and not future.done():
                         future.cancel()
@@ -221,26 +227,51 @@ class WorkerConnector:
         except Exception as e:
             log.error(f"[Connector] Lifecycle Crash for {handle_id}: {e}")
             await self._report_fault(handle_id, str(e))
-            if self.mode != "daemon":
+            if self.mode == "ephemeral":
                 await self._destroy_sandbox(handle_id)
 
-    async def _execute_daemon(self, handle_id: str, payload: Dict[str, Any]):
+    # -------------------------------------------------------------------------
+    # Execution Strategies
+    # -------------------------------------------------------------------------
+    
+    async def _execute_shared(self, handle_id: str, payload: Dict[str, Any], use_lock: bool):
+        payload["id"] = handle_id
+        safe_payload = self.quarantine.translate_ingress(payload)
+        
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         self.pending_requests[handle_id] = future
         
+        if use_lock:
+            # Linear 모드: STDIN 오염 방지를 위해 앞선 처리가 끝날 때까지 대기
+            async with self.linear_lock:
+                log.debug(f"[Connector] Linear Enqueue: {handle_id}")
+                await self.shared_transport.send_payload(safe_payload)
+                await self._wait_and_resolve_shared(handle_id, future)
+        else:
+            # Multiplex 모드: 락 없이 STDIN으로 무한 스트리밍 (워커가 알아서 라우팅)
+            log.debug(f"[Connector] Multiplexing Intent: {handle_id}")
+            await self.shared_transport.send_payload(safe_payload)
+            await self._wait_and_resolve_shared(handle_id, future)
+
+    async def _resume_multiplex(self, handle_id: str, payload: Dict[str, Any]):
+        """고도화된 비동기 워커에게 RESUME 데이터를 다시 흘려보냄"""
         payload["id"] = handle_id
-        
-        log.debug(f"[Connector] Multiplexing Intent: {handle_id}")
-        
-        # [적용] Ingress 데이터를 격리 구역을 통해 안전하게 변환 후 전송 (유연성 지원)
+        payload["action"] = "RESUME" # 워커 라우팅을 위한 힌트 삽입
         safe_payload = self.quarantine.translate_ingress(payload)
-        await self.daemon_transport.send_payload(safe_payload)
         
+        loop = asyncio.get_running_loop()
+        future = loop.create_future()
+        self.pending_requests[handle_id] = future
+        
+        await self.shared_transport.send_payload(safe_payload)
+        await self._wait_and_resolve_shared(handle_id, future)
+
+    async def _wait_and_resolve_shared(self, handle_id: str, future: asyncio.Future):
         try:
             response = await future
             status = "FAULTED" if "error" in response else "RESOLVED"
-            log.info(f"[Connector] ⏹️ Daemon Intent {handle_id} {status}.")
+            log.info(f"[Connector] ⏹️ Shared Intent {handle_id} {status}.")
             
             await self.rpc.call("mcp.bridge.resolve_state", {
                 "handle_id": handle_id,
@@ -248,7 +279,7 @@ class WorkerConnector:
                 "executable_payload": response
             })
         except asyncio.CancelledError:
-            log.warning(f"Daemon request {handle_id} was cancelled.")
+            log.warning(f"Shared request {handle_id} was cancelled or yielded.")
 
     async def _execute_ephemeral(self, handle_id: str, payload: Dict[str, Any]):
         if handle_id in self.active_sandboxes:
@@ -264,11 +295,9 @@ class WorkerConnector:
 
     async def _cycle_io(self, handle_id: str, payload: Dict[str, Any], transport: LegacyTransport, is_rollback: bool = False):
         try:
-            # [적용] Ingress 변환
             safe_payload = self.quarantine.translate_ingress(payload)
             await transport.send_payload(safe_payload)
             
-            # [적용] Egress 변환 및 검증 (STDOUT 오염 시 즉각 Fail-Fast 발동)
             raw_output = await transport.receive_raw()
             response = self.quarantine.translate_egress(raw_output)
 
@@ -328,7 +357,12 @@ def main():
     parser = argparse.ArgumentParser(description="Fiber Worker Egress Sidecar Connector")
     parser.add_argument("--target", required=True, help="Target ID (e.g., db-server-01)")
     parser.add_argument("--exec", required=True, help="Legacy command (e.g., 'python -m agent.finlib')")
-    parser.add_argument("--mode", default="ephemeral", choices=["ephemeral", "daemon"], help="Execution mode for the sandbox.")
+    parser.add_argument(
+        "--mode", 
+        default="ephemeral", 
+        choices=["ephemeral", "linear", "multiplex"], 
+        help="Execution mode: ephemeral (isolation), linear (sequential queue), multiplex (async routing)"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")

@@ -1,5 +1,4 @@
 # fiber.phase.cli.main
-## @lineage: fiber.cli.main
 import os
 import sys
 import asyncio
