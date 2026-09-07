@@ -13,8 +13,8 @@ from xphi.bound.space.sandbox.protocol import (
     MsgExecutionReceipt, MsgSettlementSeal
 )
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.kernel.wasm.adapter.utxo import (
-    UtxoAdapter, UtxoPointer, UtxoInput, UtxoOutput, UtxoTransaction,
+from xphi.kernel.wasm.adapter.dta import (
+    DtaAdapter, DtaPointer, DtaInput, DtaOutput, DtaTransaction,
     AgentWallet, compute_merkle_root
 )
 from xphi.state.ledger.consensus import KernelLedger, SealedKernel, ToposBlob
@@ -118,10 +118,10 @@ class EcoProtocolInterface(D3Protocol):
     def __init__(self, verifier: Optional[SettlementVerifier] = None):
         self.broker = DphiBroker()
         self.ledger = KernelLedger()
-        self.utxo_adapter = UtxoAdapter(broker=self.broker)
+        self.dta_adapter = DtaAdapter(broker=self.broker)
         self.oracle = LedgerOracle(broker=self.broker)
 
-        self.validator = ProtocolValidator(self.utxo_adapter, self.ledger, self.oracle)
+        self.validator = ProtocolValidator(self.dta_adapter, self.ledger, self.oracle)
         self.exec_actuator = GenericExecutionActuator(self.broker, self.validator)
         
         self.settlement_verifier = verifier or LocalMockVerifier()
@@ -146,41 +146,41 @@ class NotaryNode:
         self.parent = parent
         self.sub_notaries: List['NotaryNode'] = []
         self.wallet = AgentWallet(private_key=private_key_hex) if private_key_hex else AgentWallet()
-        self.utxo_ptrs: List[UtxoPointer] = []
+        self.dta_ptrs: List[DtaPointer] = []
         self.generated_state_roots: List[str] = []
 
     async def execute_pledge(self, amount: int, interface: D3Protocol) -> str:
-        tx_mint = UtxoTransaction(inputs=[], outputs=[UtxoOutput(amount=amount, owner=self.wallet.address, asset_type=self.incentive.resource_type.value)], metadata={"action": "GENESIS_MINT"})
+        tx_mint = DtaTransaction(inputs=[], outputs=[DtaOutput(amount=amount, owner=self.wallet.address, asset_type=self.incentive.resource_type.value)], metadata={"action": "GENESIS_MINT"})
         msg = MsgIngressPledge(axis=self.axis, actor_address=self.wallet.address, pledge_tx=tx_mint)
         tx_hash = await interface.publish_pledge(msg)
-        self.utxo_ptrs.append(UtxoPointer(tx_hash, 0))
+        self.dta_ptrs.append(DtaPointer(tx_hash, 0))
         self.incentive.resource_balance += amount
         return tx_hash
 
     async def execute_swarm_task(self, num_workers: int, burn_amount: int, target_payload: Any, interface: D3Protocol, tier: str = "SYSTEM") -> str:
-        if not self.utxo_ptrs: return "0x0"
+        if not self.dta_ptrs: return "0x0"
         total_needed = num_workers * burn_amount
-        ptr = self.utxo_ptrs.pop(0)
+        ptr = self.dta_ptrs.pop(0)
         sig = self.wallet.sign_payload(ptr.to_key())
         worker_wallets = [AgentWallet() for _ in range(num_workers)]
-        outputs = [UtxoOutput(amount=burn_amount, owner=w.address, asset_type=self.incentive.resource_type.value) for w in worker_wallets]
+        outputs = [DtaOutput(amount=burn_amount, owner=w.address, asset_type=self.incentive.resource_type.value) for w in worker_wallets]
         remain_amount = self.incentive.resource_balance - total_needed
         if remain_amount > 0:
-            outputs.append(UtxoOutput(amount=remain_amount, owner=self.wallet.address, asset_type=self.incentive.resource_type.value))
+            outputs.append(DtaOutput(amount=remain_amount, owner=self.wallet.address, asset_type=self.incentive.resource_type.value))
 
-        tx_distribute = UtxoTransaction(inputs=[UtxoInput(pointer=ptr, signature=sig, owner_address=self.wallet.address)], outputs=outputs, metadata={"action": "SWARM_DISTRIBUTION"})
+        tx_distribute = DtaTransaction(inputs=[DtaInput(pointer=ptr, signature=sig, owner_address=self.wallet.address)], outputs=outputs, metadata={"action": "SWARM_DISTRIBUTION"})
         distribute_hash = await interface.publish_delegation(MsgDelegateTrust(delegator_address=self.wallet.address, split_tx=tx_distribute))
         
         if remain_amount > 0:
-            self.utxo_ptrs.append(UtxoPointer(distribute_hash, num_workers))
+            self.dta_ptrs.append(DtaPointer(distribute_hash, num_workers))
         self.incentive.resource_balance = remain_amount
 
         receipt_hashes = []
         for i, worker in enumerate(worker_wallets):
-            worker_ptr = UtxoPointer(distribute_hash, i)
-            tx_exec = UtxoTransaction(
-                inputs=[UtxoInput(pointer=worker_ptr, signature=worker.sign_payload(worker_ptr.to_key()), owner_address=worker.address)],
-                outputs=[UtxoOutput(amount=0, owner="0xDEAD", asset_type="CONSUME")]
+            worker_ptr = DtaPointer(distribute_hash, i)
+            tx_exec = DtaTransaction(
+                inputs=[DtaInput(pointer=worker_ptr, signature=worker.sign_payload(worker_ptr.to_key()), owner_address=worker.address)],
+                outputs=[DtaOutput(amount=0, owner="0xDEAD", asset_type="CONSUME")]
             )
             exec_msg = MsgWasmExecution(worker_address=worker.address, target_wasm=target_payload, execution_tx=tx_exec)
             exec_msg.tier = tier 
