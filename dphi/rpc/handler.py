@@ -255,8 +255,8 @@ async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
 
 async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
     """
-    [NEW] L402 / X402 영수증(Macaroon 등)의 유효성과 잔고를 전담 검증하는 핸들러.
-    mcp.bridge가 Free-rider를 막기 위해 샌드박스를 띄우기 전 선제적으로 호출합니다.
+    - X402 영수증(Macaroon 등)의 유효성과 잔고를 전담 검증
+    - mcp.bridge가 Free-rider를 막기 위해 샌드박스를 띄우기 전 선제적으로 호출
     """
     receipt = params.get("payment_receipt")
     action = params.get("action", "unknown_action")
@@ -270,7 +270,7 @@ async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> d
         is_valid_receipt = True 
         
         if not is_valid_receipt:
-            return _build_error(402, "L402 Payment Required: Receipt is invalid or depleted.")
+            return _build_error(402, "x402 Payment Required: Receipt is invalid or depleted.")
             
         return {"status": "VALIDATED", "clearance": "GRANTED"}
     except Exception as e:

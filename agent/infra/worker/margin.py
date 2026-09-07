@@ -17,7 +17,7 @@ from fiber.agent.infra.observer.intent.trajectory import (
 from fiber.agent.infra.bridge.protocol import AgentProtocol
 
 class ExecutionPricingModel(BaseModel):
-    base_l402_fee_usd: float = Field(0.002, description="Base L402 invocation fee")
+    base_x402_fee_usd: float = Field(0.002, description="Base X402 invocation fee")
     profit_share_ratio: float = Field(0.05, ge=0.0, le=1.0, description="Take-rate on net arbitrage profit")
 
 class ExecutionInfraModel(BaseModel):
@@ -95,15 +95,15 @@ class MarginCalcAgent(AgentProtocol):
         
         projected_gross_profit = req.trade_size_usd * net_spread_yield
         
-        # 3. L402 수취 모델 결정
-        effective_l402_fee = max(
-            req.pricing.base_l402_fee_usd,
+        # 3. x402 수취 모델 결정
+        effective_x402_fee = max(
+            req.pricing.base_x402_fee_usd,
             projected_gross_profit * req.pricing.profit_share_ratio
         )
         
         # 4. 연산 인프라 원가
         var_cost_per_call = req.infra.avg_latency_sec * req.infra.compute_cost_per_sec_usd
-        marginal_profit = effective_l402_fee - var_cost_per_call
+        marginal_profit = effective_x402_fee - var_cost_per_call
 
         if marginal_profit <= 0:
             return {
@@ -116,7 +116,7 @@ class MarginCalcAgent(AgentProtocol):
         tps_arr = np.array(req.tps_range, dtype=np.float64)
         monthly_volume = tps_arr * self.MONTHLY_SECONDS
         
-        revenue_vec = monthly_volume * effective_l402_fee
+        revenue_vec = monthly_volume * effective_x402_fee
         cost_vec = req.infra.monthly_fixed_cost_usd + (monthly_volume * var_cost_per_call)
         profit_vec = revenue_vec - cost_vec
         margin_pct_vec = (profit_vec / revenue_vec) * 100.0
@@ -134,7 +134,7 @@ class MarginCalcAgent(AgentProtocol):
             },
             "unit_economics": {
                 "projected_trade_profit_usd": round(projected_gross_profit, 4),
-                "effective_fee_usd": round(effective_l402_fee, 6),
+                "effective_fee_usd": round(effective_x402_fee, 6),
                 "compute_cost_usd": round(var_cost_per_call, 8),
                 "marginal_profit_usd": round(marginal_profit, 6)
             },

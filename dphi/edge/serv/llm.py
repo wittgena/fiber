@@ -66,7 +66,7 @@ async def public_chat_completions(
                 raise HTTPException(
                     status_code=status.HTTP_402_PAYMENT_REQUIRED, 
                     detail=f"Kernel Authorization Rejected: {auth_res.error}",
-                    headers={"WWW-Authenticate": 'L402 macaroon=""'}
+                    headers={"WWW-Authenticate": 'x402_signed_proof=""'}
                 )
             
             kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
@@ -128,7 +128,7 @@ async def public_embeddings(
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED, 
                 detail=f"Kernel Authorization Rejected: {auth_res.error}",
-                headers={"WWW-Authenticate": 'L402 macaroon=""'}
+                headers={"WWW-Authenticate": 'x402_signed_proof=""'}
             )
         kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
         

@@ -70,9 +70,8 @@ class TransitionBridge:
                     
             return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
 
-        # 4. 보안 및 결제 검증 (DPoP & L402)
+        # 4. 보안 및 결제 검증 (DPoP & x402)
         is_authenticated = False
-
         if identity.proof_of_possession:
             if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
                 raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")

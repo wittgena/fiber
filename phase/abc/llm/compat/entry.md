@@ -145,14 +145,14 @@ response = await acompletion(
 
 ## 6. Edge LLM Gateway Integration (Zero-Trust API)
 
-`fiber.llm`은 파이썬 함수 형태의 진입점 외에도, 분산 환경 및 다중 에이전트(A2A) 통신을 위한 FastAPI 기반의 Zero-Trust API 게이트웨이(`edge.llm`)를 기본 제공합니다. 이 게이트웨이는 OpenAI API 스펙과 100% 호환되며, DPHI 인프라의 경제 시스템(L402)과 강력하게 결합되어 있습니다.
+`fiber.llm`은 파이썬 함수 형태의 진입점 외에도, 분산 환경 및 다중 에이전트(A2A) 통신을 위한 FastAPI 기반의 Zero-Trust API 게이트웨이(`edge.llm`)를 기본 제공합니다. 이 게이트웨이는 OpenAI API 스펙과 100% 호환되며, DPHI 인프라의 경제 시스템(x402)과 강력하게 결합되어 있습니다.
 
 ### 6.1. X-X402-Receipt & Kernel Authorization
 
 외부에서 DPHI 네트워크의 컴퓨팅 자원을 호출하려면 물리적 예산 증명이 필요합니다.
 게이트웨이는 LLM 호출을 파이프라인으로 넘기기 전, 다음 절차를 엄격하게 수행합니다.
 
-1. **Receipt Extraction**: HTTP 헤더에서 `X-X402-Receipt` (지불 증명/L402 Macaroon)를 추출합니다.
+1. **Receipt Extraction**: HTTP 헤더에서 `X-X402-Receipt` (지불 증명/x402_signed_proof)를 추출합니다.
 2. **Kernel Intent (DphiBroker)**: WASM 커널에 `AUTHORIZE_INTENT`를 호출하여 영수증을 검증하고, 사용 가능한 연료 예산(Fuel Budget)과 상태 씰링(Audit Hash)을 발급받습니다.
 3. **Pipeline Injection**: 발급된 커널 인가 정보(`kernel_auth`)를 `acompletion` 함수의 `metadata` `kwargs`로 주입하여, 파이프라인 미들웨어(ContextBinder, StreamAggregator)가 예산을 통제하도록 위임합니다.
 
@@ -171,5 +171,5 @@ response = await acompletion(
 
 인가 실패나 LLM 호출 중 타임아웃 발생 시, 표준화된 HTTP 에러로 매핑하여 반환합니다.
 
-* **402 Payment Required**: 예산 고갈, 영수증 위조 시 발생하며, `WWW-Authenticate: L402 macaroon=""` 헤더를 포함하여 에이전트의 자동 결제 로직을 재트리거합니다.
+* **402 Payment Required**: 예산 고갈, 영수증 위조 시 발생하며, `WWW-Authenticate: x402_signed_proof=""` 헤더를 포함하여 에이전트의 자동 결제 로직을 재트리거합니다.
 * **502 Bad Gateway**: 하위 파이프라인에서 오류가 발생할 경우 원천 에러 컨텍스트를 보존하여 반환합니다.

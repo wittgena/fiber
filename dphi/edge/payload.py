@@ -69,7 +69,7 @@ async def verify_access_credential(
     if path.startswith("/v1/ext/"):
         return None
 
-    # MCP Gateway 라우터 우회: 내부 브릿지가 DPoP / L402(Track A/B)를 직접 자체 검증함
+    # MCP Gateway 라우터 우회: 내부 브릿지가 DPoP / x402(Track A/B)를 직접 자체 검증함
     if path.startswith("/v1/mcp-gateway/"):
         return None
 
@@ -78,14 +78,14 @@ async def verify_access_credential(
         return api_key
 
     # 글로벌 LLM Gateway 결제 검증
-    l402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
-    if l402_header:
-        return l402_header
+    x402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
+    if x402_header:
+        return x402_header
 
     raise HTTPException(
         status_code=status.HTTP_402_PAYMENT_REQUIRED, 
-        detail="Zero-Trust Enforced: Payment Required. Please provide a stablecoin/L402 receipt.",
-        headers={"WWW-Authenticate": 'L402 macaroon=""'}
+        detail="Zero-Trust Enforced: Payment Required. Please provide a stablecoin/x402 receipt.",
+        headers={"WWW-Authenticate": 'x402_signed_proof=""'}
     )
 
 @asynccontextmanager

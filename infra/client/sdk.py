@@ -1,5 +1,4 @@
 # fiber.infra.client.sdk
-## @lineage: fiber.dphi.client.sdk
 """
 @desc: DPHI Public Gateway SDK Core & Integration Scenario Runner
 - Provides a zero-trust computing blackbox client for isolated sandbox workloads.
@@ -109,7 +108,7 @@ class DphiPublicClient:
             await verifier._client.aclose()
 
     async def get_fuel_balance(self, client_id: str, asset_type: str = "fuel") -> Dict[str, Any]:
-        self.log.info(f"\n💰 [Economy] Checking UTXO hot state for {client_id}...")
+        self.log.info(f"\n💰 [Economy] Checking PTA hot state for {client_id}...")
         verifier = self._get_verified_client()
         try:
             response = await verifier.async_get_verified(Endpoints.BILLING_BALANCE, params={"client_id": client_id, "asset_type": asset_type})
@@ -221,7 +220,7 @@ class DphiPublicClient:
             
             headers = {}
             if response.status_code == 402:
-                self.log.warning("  ├─ 🛑 402 Payment Required intercepted. Initiating auto L402 Handshake...")
+                self.log.warning("  ├─ 🛑 402 Payment Required intercepted. Initiating auto x402 Handshake...")
                 
                 # 핸드셰이크 요청도 SandboxIntent 규격 사용
                 hs_res = await self.request_handshake(SandboxIntent(
@@ -229,7 +228,7 @@ class DphiPublicClient:
                 ))
                 macaroon = hs_res.get("macaroon")
                 if not macaroon:
-                    raise Exception("Failed to procure L402 Macaroon from Handshake")
+                    raise Exception("Failed to procure x402 Macaroon from Handshake")
                     
                 headers["X-X402-Receipt"] = macaroon
                 self.log.info("  ├─ 💸 Payment authorized. Retrying LLM Compute via WASM Kernel...")

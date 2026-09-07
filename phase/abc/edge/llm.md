@@ -5,11 +5,11 @@
 
 `fiber.phase.abc.edge.llm`은 DPHI 생태계 외부의 클라이언트(에이전트)가 내부의 LLM 추론 자원을 소비할 수 있도록 통제하는 **Zero-Trust 기반의 API 인그레스(Ingress) 계층**입니다.
 
-이 모듈의 핵심 역할은 **LiteLLM 및 OpenAI SDK 스펙과 호환되는 REST API**를 제공함과 동시에, 모든 요청이 하위 연산 파이프라인으로 진입하기 전에 L402(초소액 결제 증명) 기반의 커널 인가(Kernel Authorization)를 강제하는 것입니다. 이를 통해 에이전트 간에 발생할 수 있는 권한 탈취 및 예산 초과(Runaway Cost)를 물리적으로 차단합니다.
+이 모듈의 핵심 역할은 **LiteLLM 및 OpenAI SDK 스펙과 호환되는 REST API**를 제공함과 동시에, 모든 요청이 하위 연산 파이프라인으로 진입하기 전에 x402(초소액 결제 증명) 기반의 커널 인가(Kernel Authorization)를 강제하는 것입니다. 이를 통해 에이전트 간에 발생할 수 있는 권한 탈취 및 예산 초과(Runaway Cost)를 물리적으로 차단합니다.
 
 본 API 게이트웨이는 내부적으로 `fiber.llm.entry` 모듈의 비동기 채널 파이프라인을 래핑(Wrapping)하여 구동되며, 시스템의 보안 요건 및 인프라 환경에 따라 다음과 같이 두 가지 방식으로 병행 운용할 수 있습니다.
 
-* **Edge Ingress Mode (네트워크 API):** 본 문서에 정의된 `edge.llm` 라우터를 통해 구동되며, L402 결제 및 커널 인증이 필수적인 외부 분산 에이전트(A2A)용 네트워크 엔드포인트로 활용됩니다.
+* **Edge Ingress Mode (네트워크 API):** 본 문서에 정의된 `edge.llm` 라우터를 통해 구동되며, x402 결제 및 커널 인증이 필수적인 외부 분산 에이전트(A2A)용 네트워크 엔드포인트로 활용됩니다.
 * **Native Library Mode (로컬 SDK):** 별도의 네트워크 통신이나 Zero-Trust 인증 계층이 불필요한 내부망(Internal) 애플리케이션의 경우, `import fiber.llm`을 선언하여 기존 OpenAI/LiteLLM 코드를 대체하는 라이브러리 형태로 직접 통합(Drop-in Replacement)이 가능합니다.
 
 ---
@@ -58,7 +58,7 @@
 
 <br>제공된 `X-X402-Receipt`가 만료되었거나, 할당된 연산 예산(Fuel)이 부족함.<br>
 
-<br>응답 헤더에 `WWW-Authenticate: L402 macaroon=""`를 포함하여 에이전트의 결제 트리거를 유도함. |
+<br>응답 헤더에 `WWW-Authenticate: x402_signed_proof=""`를 포함하여 에이전트의 결제 트리거를 유도함. |
 | **502 Bad Gateway** | `fiber.llm` | **[Downstream LLM Error]**<br>
 
 <br>하위 LLM 파이프라인 처리 중 외부 프로바이더(OpenAI, Anthropic 등) 타임아웃 또는 커넥션 오류 발생. 원천 에러 메시지가 `detail`에 포함됨. |
