@@ -97,7 +97,7 @@ class EdgeWorkflow(Workflow):
         ## 3. Balance Check
         res = await self.client.get(f"{self.base_url}/v1/public/billing/balance", params={"client_id": cmd.client_id, "asset_type": "fuel"})
         if res.status_code != 200:
-            raise RuntimeError("Insufficient UTXO Balance")
+            raise RuntimeError("Insufficient Balance")
 
         ## 4. Sandbox Execute
         res = await self.client.post(

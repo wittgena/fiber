@@ -64,12 +64,12 @@ metadata={"post_call_rules": [async_pii_filter_function]}
 
 ### 1.3. Edge Gateway & Zero-Trust Integration
 
-For decentralized agents, the FastAPI-based REST Gateway (`edge.llm`) provides a standard HTTP interface (`/v1/chat/completions`). Clients simply point their Base URL to the DPHI Gateway and inject the L402 payment proof.
+For decentralized agents, the FastAPI-based REST Gateway (`edge.llm`) provides a standard HTTP interface (`/v1/chat/completions`). Clients simply point their Base URL to the DPHI Gateway and inject the X402 payment proof.
 
 ```http
 POST /v1/chat/completions HTTP/1.1
 Authorization: Bearer <provider_key_if_any>
-X-X402-Receipt: <l402_macaroon_proof>
+X-X402-Receipt: <x402_signed_receipt>
 
 ```
 
@@ -142,7 +142,7 @@ Beyond testing, the CLI routes the system into specific operational contexts, au
 The `fiber connect` command represents the ecosystem's most potent adoption vector. It enables providers and indie developers alike to integrate existing Web2 servers into the deterministic A2A (Agent-to-Agent) economy with **absolutely zero code modifications**.
 
 * **Zero-Trust NAT Traversal:** Operating purely via outbound subscription (Pull-based), the connector requires **zero inbound firewall configurations**. Organizations can safely expose internal DB or ERP tools to global AI agents while remaining deeply concealed behind strict corporate VPCs.
-* **Instant L402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex L402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits monetization and idempotency.
+* **Instant X402 Monetization:** Developers simply wrap their standard Python or Node.js scripts with the `connect` command. The Fiber Edge Gateway handles all complex X402 stablecoin netting, DPoP cryptography, and FSM lifecycle management. The legacy script effortlessly inherits monetization and idempotency.
 * **The Pathway to WASM:** By isolating physical execution within this Sidecar boundary, Fiber establishes a seamless migration path. Providers can effortlessly swap their legacy subprocesses with deterministic WASM sandboxes in the future—transitioning from rudimentary APIs into fully autonomous, instruction-metered smart contracts without disrupting client agents.
 
 ---
@@ -154,7 +154,7 @@ The `fiber connect` command represents the ecosystem's most potent adoption vect
 A universal compute and metering proxy architecture agnostic to specific runtimes or settlement layers.
 
 * **Execution & Ledger Agnosticism (BYOC & BYOS):** Acts as a transparent proxy that does not enforce a specific execution runtime. After sealing a session, it asynchronously routes proof data (`AuditReceipt`) to external ledgers (RDBMS, Vaults, DA, EVM) via agnostic egress adapters.
-* **In-Memory Netting:** Leverages an off-chain UTXO model to process micro-transactions entirely in-memory, mitigating database row-locking bottlenecks and external network gas fees.
+* **In-Memory Netting:** Leverages an off-chain PTA model to process micro-transactions entirely in-memory, mitigating database row-locking bottlenecks and external network gas fees.
 * **Core Components:**
 * `edge.llm`: A router that maps LLM requests to computational intents, translating token usage into internal `Fuel` units and enforcing budget limits.
 * `dvm.wasm`: A native WASM isolated environment that ensures state consistency through precise instruction-level metering.
@@ -170,10 +170,10 @@ Defines the core sandbox engine principles for executing deterministic state tra
 * **3-Tier Execution Layers:**
 * **Tier 1 (General I/O Isolate):** A V8 Isolate-based gateway handling external network I/O and protocol translation (Non-deterministic).
 * **Tier 2 (Constrained Pyodide):** An I/O-constrained Python runtime ensuring deterministic execution for business logic like AI agent inference and data transformation.
-* **Tier 3 (Native WASM):** A deterministic native WASM execution layer for core system modules. Responsible for UTXO state updates, precision metering, and receipt issuance.
+* **Tier 3 (Native WASM):** A deterministic native WASM execution layer for core system modules. Responsible for PTA state updates, precision metering, and receipt issuance.
 
 
-* **Ephemeral Runtime & Lock-Free UTXO:** Reduces idle daemon overhead by creating and destroying sandboxes on a per-request basis. The UTXO tree structure removes database locking bottlenecks, supporting concurrent scaling.
+* **Ephemeral Runtime & Lock-Free PTA:** Reduces idle daemon overhead by creating and destroying sandboxes on a per-request basis. The PTA tree structure removes database locking bottlenecks, supporting concurrent scaling.
 
 ---
 
@@ -219,16 +219,16 @@ Embeds **REVM (Rust EVM)** within the WASM sandbox to deterministically simulate
 
 The infrastructure utilizes an event-driven **Finite State Machine (FSM)** to decouple computational intent from infrastructure execution across decentralized workflows.
 
-* **Compute Lifecycle:** Verifies caller identities via EIP-712 signatures, mints Genesis UTXOs, orchestrates parallel WASM executions, and seals final micro-settlements into L1 proofs.
+* **Compute Lifecycle:** Verifies caller identities via EIP-712 signatures, mints Genesis PTAs, orchestrates parallel WASM executions, and seals final micro-settlements into L1 proofs.
 * **FSM-Driven Validation:** Halts invalid transaction workflows before execution begins, rejecting zero-balance requests and unverified callers.
 * **Fault Injection Resilience:** The state machine intercepts in-flight anomalies—such as forced allowance zeroing or corrupted calldata—triggering safe halts to maintain network stability.
 
-### 5.5. API Gateway & L402 Ingress Validation
+### 5.5. API Gateway & X402 Ingress Validation
 
 🔗 **[View Log: phase.e2e.edge.log](./phase/abc/log/edge/phase.e2e.edge.20260830.log)**
 
 The FastAPI-based REST Gateway serves as the entry point, ensuring compute resources are allocated only to authenticated and funded requests.
 
-* **L402 Payment & Tier Routing:** Handles incoming requests through a quoting phase, mapping intents to execution tiers and clearing charges via Web3 wallets and Rollup Adapters.
+* **X402 Payment & Tier Routing:** Handles incoming requests through a quoting phase, mapping intents to execution tiers and clearing charges via Web3 wallets and Rollup Adapters.
 * **Signature Verification:** Ingress traffic is strictly inspected. If a payload's cryptographic signature is invalid, the edge immediately terminates the workflow.
 * **Rate Limiting & WAF:** Deflects unauthorized or unfunded request spikes at the API perimeter to preserve internal execution capacity for valid intents.

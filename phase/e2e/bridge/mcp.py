@@ -102,7 +102,7 @@ class MockLedger:
 # =========================================================
 class McpBridgePipeline(PipelineRunner):
     def __init__(self, config: E2EConfig):
-        super().__init__(name="Zero-Latency, L402 Billing & Hybrid FSM Trace", scope_name="MCP_BRIDGE_SUITE")
+        super().__init__(name="Zero-Latency, x402 Billing & Hybrid FSM Trace", scope_name="MCP_BRIDGE_SUITE")
         self.config = config
 
         self.oracle_id = "oracle-01"
@@ -158,7 +158,7 @@ class McpBridgePipeline(PipelineRunner):
             Phase("Phase 1: Event-Driven Zero-Latency Proof", self.phase_zero_latency),
             Phase("Phase 2: High-Concurrency Daemon Stress (FinLib)", self.phase_finlib_multiplexing),
             Phase("Phase 3: Unit Economics Vectorization (Margin BI)", self.phase_margin_simulation),
-            Phase("Phase 4: L402 Billing Rejection (Free-Rider Defense)", self.phase_l402_rejection),
+            Phase("Phase 4: x402 Billing Rejection (Free-Rider Defense)", self.phase_x402_rejection),
             Phase("Phase 5: Precise Error Routing (Invalid Params)", self.phase_error_routing),
             Phase("Phase 6: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
             Phase("Phase 7: MCP 2026-07-28 Stateless Re-issue & Resume", self.phase_stateless_otp_resume),
@@ -333,7 +333,7 @@ class McpBridgePipeline(PipelineRunner):
     # =====================================================================
     async def phase_zero_latency(self):
         payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "100 * 50"}}}
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_l402"}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
         if res.status_code != 200: raise RuntimeError(f"Expected 200, got {res.status_code}")
@@ -341,7 +341,7 @@ class McpBridgePipeline(PipelineRunner):
     async def phase_finlib_multiplexing(self):
         async def send_compute(idx: int):
             payload = {"jsonrpc": "2.0", "id": idx, "method": "tools/call", "params": {"name": "resolve_dates", "arguments": {"base_date": "2026-09-04", "offset_business_days": idx}}}
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_l402"}
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
             async with httpx.AsyncClient(base_url=self.local_url, timeout=10.0) as client:
                 return await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
         req_count = 10
@@ -362,19 +362,19 @@ class McpBridgePipeline(PipelineRunner):
                         "arn:bybit": {"rate": 0.00012, "time": int(time.time())}
                     },
                     "trade_size_usd": 10000.0,
-                    "pricing": {"base_l402_fee_usd": 0.002, "profit_share_ratio": 0.05},
+                    "pricing": {"base_x402_fee_usd": 0.002, "profit_share_ratio": 0.05},
                     "infra": {"monthly_fixed_cost_usd": 30.0, "compute_cost_per_sec_usd": 0.00001, "avg_latency_sec": 0.05},
                     "tps_range": [1.0, 10.0, 50.0]
                 }
             }
         }
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_l402"}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(f"/v1/mcp-gateway/{self.margin_id}/invoke", json=payload, headers=headers)
             if res.status_code != 200: 
                 raise RuntimeError(f"Margin Sim Failed: Expected 200, got {res.status_code} ({res.text})")
 
-    async def phase_l402_rejection(self):
+    async def phase_x402_rejection(self):
         payload = {"jsonrpc": "2.0", "id": 300, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "1 + 1"}}}
         headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "invalid_receipt"}
         async with httpx.AsyncClient(base_url=self.local_url) as client:
@@ -383,7 +383,7 @@ class McpBridgePipeline(PipelineRunner):
 
     async def phase_error_routing(self):
         payload = {"jsonrpc": "2.0", "id": 99, "method": "tools/call", "params": {"name": "calc_indicators_batch", "arguments": {"prices_matrix": "BAD_DATA"}}}
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_l402"}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
             if res.status_code != 502: raise RuntimeError("Expected HTTP 502")
@@ -397,7 +397,7 @@ class McpBridgePipeline(PipelineRunner):
         headers = {
             "x-idempotency-key": self.idem_key_otp, 
             "x-nonce": uuid.uuid4().hex, 
-            "X-X402-Receipt": "valid_l402",
+            "X-X402-Receipt": "valid_x402",
             "x-spiffe-id": self.test_spiffe_id 
         }
 
@@ -437,7 +437,7 @@ class McpBridgePipeline(PipelineRunner):
         headers = {
             "x-idempotency-key": self.idem_key_otp,
             "x-nonce": uuid.uuid4().hex, 
-            "X-X402-Receipt": "valid_l402",
+            "X-X402-Receipt": "valid_x402",
             "x-spiffe-id": self.test_spiffe_id 
         }
 
@@ -466,7 +466,7 @@ class McpBridgePipeline(PipelineRunner):
         headers = {
             "x-idempotency-key": idem_key_sentinel, 
             "x-nonce": uuid.uuid4().hex, 
-            "X-X402-Receipt": "valid_l402", 
+            "X-X402-Receipt": "valid_x402", 
             "x-spiffe-id": self.test_spiffe_id
         }
 

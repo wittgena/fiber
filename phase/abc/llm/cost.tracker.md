@@ -105,7 +105,7 @@ if billing_result["status"] == "success":
 DPHI 아키텍처는 토큰 사용량(Usage)과 커널의 연료(Fuel)를 데이터 오염 없이 완벽히 분리하여 관리합니다.
 
 * **Usage (토큰 사용량):** API 제공자(OpenAI, Anthropic 등)가 응답으로 내려주는 실제 프롬프트/컴플리션 토큰 수(`res.usage`)입니다. `TenantEco`와 `UsageTracker`를 통한 **사후 정산(Post-billing)** 및 통계 산출에만 사용됩니다.
-* **Fuel (커널 연료):** DPHI 커널(L402 경제 시스템)이 해당 요청에 대해 **사전 할당(Pre-allocation)한 토큰 예산**입니다. 파이프라인 내부(`StreamAggregator` 등)에서 실시간 차감 및 Kill-switch(물리적 스트림 절단) 용도로 사용됩니다.
+* **Fuel (커널 연료):** DPHI 커널(x402 경제 시스템)이 해당 요청에 대해 **사전 할당(Pre-allocation)한 토큰 예산**입니다. 파이프라인 내부(`StreamAggregator` 등)에서 실시간 차감 및 Kill-switch(물리적 스트림 절단) 용도로 사용됩니다.
 
 `llm.entry`의 `ChannelObserver`는 이 두 데이터를 명확히 분리하여 텔레메트리 이벤트로 발송합니다.
 

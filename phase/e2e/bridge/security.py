@@ -1,6 +1,4 @@
 # fiber.phase.e2e.bridge.security
-## @lineage: fiber.phase.e2e.server.security
-## @lineage: fiber.e2e.server.security
 import asyncio
 import random
 import time
@@ -22,7 +20,7 @@ log = get_emitter("server.security")
 """Workflow Messages (Phase Transitions)"""
 class StartSecuritySweepMsg(WorkflowMessage): pass
 class VolumetricAttackMsg(WorkflowMessage): pass
-class L402BypassAttackMsg(WorkflowMessage): pass
+class X402BypassAttackMsg(WorkflowMessage): pass
 class SmugglingAttackMsg(WorkflowMessage): pass
 class McpPoisoningMsg(WorkflowMessage): pass
 class SignatureTamperMsg(WorkflowMessage): pass
@@ -105,19 +103,19 @@ class SecurityMembraneWorkflow(Workflow):
 
         self._record("Transfer-Encoding", "Chunked Smuggling", (411, 411), chunk_status, "Chunked encoding explicitly forbidden (Connection Dropped, 400 or 411).")
 
-        return L402BypassAttackMsg()
+        return X402BypassAttackMsg()
 
     @step
-    async def phase_l402_bypass(self, msg: L402BypassAttackMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 2] L402 Economic Firewall Bypass ---")
+    async def phase_x402_bypass(self, msg: X402BypassAttackMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 2] x402 Economic Firewall Bypass ---")
         
         res_unauth = await self.client.post("/v1/public/agent/execute", json={"action": "test"})
-        self._record("Auth Bypass", "L402 Evasion", (402, 402), res_unauth.status_code, "Access to restricted endpoint blocked. HTTP 402 Payment Required enforced.")
+        self._record("Auth Bypass", "x402 Evasion", (402, 402), res_unauth.status_code, "Access to restricted endpoint blocked. HTTP 402 Payment Required enforced.")
 
-        if "L402 macaroon" in res_unauth.headers.get("WWW-Authenticate", ""):
-            self.log.info("  └─ ✅ Passed: Strict L402 Macaroon challenge observed.")
+        if "x402_signed_proof" in res_unauth.headers.get("WWW-Authenticate", ""):
+            self.log.info("  └─ ✅ Passed: Strict x402 Proof challenge observed.")
         else:
-            return ErrorMessage("L402 Challenge Header Missing.")
+            return ErrorMessage("x402 Challenge Header Missing.")
 
         return SmugglingAttackMsg()
 

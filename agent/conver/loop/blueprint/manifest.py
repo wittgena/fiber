@@ -1,7 +1,4 @@
 # fiber.agent.conver.loop.blueprint.manifest
-## @lineage: surgent.engine.blueprint.manifest
-## @lineage: surgent.agent.blueprint.manifest
-## @lineage: surgent.agent.protocol.blueprint.manifest
 from __future__ import annotations
 
 from enum import Enum
@@ -28,8 +25,8 @@ def get_instruction(focus: str, target_tier: str = "SYSTEM", fuel_limit: int = 2
         f"You are operating within the DPHI Zero-Trust Architecture (2026 Sandbox Environment).\n"
         f"Topology: '{focus}' | Constraint Tier: {target_tier} | Maximum Fuel Limit: {fuel_limit} (WASM Kinetic Trap Active).\n"
         f"Navigate through the specified deterministic events sequentially.\n"
-        f"Determine the most efficient commands dynamically based on your environment. Avoid database lock contention by respecting the in-memory UTXO netting model.\n"
-        f"If an anomaly, Byzantine fault, or topological rupture is detected, trigger the 'signal' tool to broadcast L402 architectural telemetry.\n\n"
+        f"Determine the most efficient commands dynamically based on your environment. Avoid database lock contention by respecting the in-memory PTA netting model.\n"
+        f"If an anomaly, Byzantine fault, or topological rupture is detected, trigger the 'signal' tool to broadcast x402 architectural telemetry.\n\n"
         f"CRITICAL RULES FOR FUNCTION CALLING:\n"
         f"1. EXACT TOOL NAMES: Strictly use exact lowercase tool names as registered (e.g., 'terminal', '{CoreAction.SIGNAL.value}', '{CoreAction.FINISH.value}').\n"
         f"2. REQUIRED PARAMETERS: Never omit required parameters. For example, when using 'terminal', you must provide BOTH 'command' and 'security_risk'."
@@ -66,14 +63,14 @@ BLUEPRINT_MANIFESTS: Dict[BlueprintType, Dict[str, Dict[str, Any]]] = {
     BlueprintType.SCHEME: {
         "agent": {
             "topology_name": "agent.cognitive",
-            "focus": "XOR Parity & UTXO State Validation",
+            "focus": "XOR Parity & PTA State Validation",
             "min_cognitive_score": 3,
             "relations": "sequential",
-            "instruction": get_instruction("XOR Parity & UTXO State Validation"),
+            "instruction": get_instruction("XOR Parity & PTA State Validation"),
             "steps": [
                 {"action": "terminal", "intent": "phase.cognitive", "content": "Scan the dphi log and extract multi-agent Fuel and memory metrics."},
                 {"action": "terminal", "intent": "phase.cognitive", "content": "Execute 'validate_parity' wasm to assert the XOR Parity triplet (topos_id, nexus_id, phase_id) consistency across the cluster."},
-                {"action": CoreAction.SIGNAL.value, "intent": "phase.cognitive", "content": "Emit telemetry signal containing UTXO state parity validation and precise metering costs."},
+                {"action": CoreAction.SIGNAL.value, "intent": "phase.cognitive", "content": "Emit telemetry signal containing PTA state parity validation and precise metering costs."},
                 {"action": CoreAction.FINISH.value, "intent": "phase.cognitive", "content": "Append the canonical hash to collapse log and seal the epoch."}
             ]
         },
@@ -110,7 +107,7 @@ BLUEPRINT_MANIFESTS: Dict[BlueprintType, Dict[str, Dict[str, Any]]] = {
             "min_cognitive_score": 4,
             "instruction": get_instruction("Ephemeral Runtime & Self-Healing Orchestration"),
             "steps": [
-                {"action": "terminal", "intent": "phase.autopoiesis", "content": "Author a lightweight L402 Edge 'health_api.py' that returns {'status': 'alive'} on port 8080."},
+                {"action": "terminal", "intent": "phase.autopoiesis", "content": "Author a lightweight x402 Edge 'health_api.py' that returns {'status': 'alive'} on port 8080."},
                 {"action": "terminal", "intent": "phase.autopoiesis", "content": "Deploy the API server as a background process inside the V8 Isolate context, capturing 'api.log'."},
                 {"action": "terminal", "intent": "phase.autopoiesis", "content": "Poll the local health endpoint. If blocked by OS-Level boundaries, mutate permissions dynamically and retry."},
                 {"action": CoreAction.FINISH.value, "intent": "phase.autopoiesis", "content": "Terminate the background API process, seal the micro-debt transaction, and exit."}
@@ -142,9 +139,9 @@ BLUEPRINT_MANIFESTS: Dict[BlueprintType, Dict[str, Dict[str, Any]]] = {
             "min_cognitive_score": 1,
             "instruction": get_instruction("Deterministic Schema & Zero-Gas Netting"),
             "steps": [
-                {"action": "terminal", "intent": "phase.folder", "content": "Locate and read 'raw_input.txt' to inspect unstructured noisy data targeting the UTXO ledger."},
+                {"action": "terminal", "intent": "phase.folder", "content": "Locate and read 'raw_input.txt' to inspect unstructured noisy data targeting the PTA ledger."},
                 {"action": "terminal", "intent": "phase.folder", "content": "Execute 'topos_compiler.py' under strict deterministic Pyodide constraints to produce 'compiler_output.json'."},
-                {"action": "terminal", "intent": "phase.folder", "content": "Verify the structural integrity of the generated JSON against the L402 payment schema."},
+                {"action": "terminal", "intent": "phase.folder", "content": "Verify the structural integrity of the generated JSON against the x402 payment schema."},
                 {"action": CoreAction.FINISH.value, "intent": "phase.folder", "content": "Seal the validated data into a KernelCommit (AuditReceipt) and exit without database row-locking."}
             ]
         },

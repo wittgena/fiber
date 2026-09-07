@@ -44,7 +44,7 @@ Any complex legacy system converges into one of three topological archetypes. Th
 
 * **Topology:** Daemon Mode + Stateless Pure Compute
 * **Mechanism:** Pre-loads computationally heavy C++ financial engines (e.g., TA-Lib, QuantLib) into memory, neutralizing initialization overhead. By supporting multi-dimensional matrix operations and strict AST whitelist validation, it minimizes IPC latency to near-zero.
-* **Architectural Value:** Instigates **Compute Resource Optimization** within the A2A ecosystem. Agents forgo allocating local Fuel for heavy calculations and floating-point variances; instead, they route micro-payments (L402) to this node to query **"deterministically agreed-upon mathematical truth."**
+* **Architectural Value:** Instigates **Compute Resource Optimization** within the A2A ecosystem. Agents forgo allocating local Fuel for heavy calculations and floating-point variances; instead, they route micro-payments (x402) to this node to query **"deterministically agreed-upon mathematical truth."**
 
 ### Archetype Gamma: Consensus Defense & Cryptographic Attestation (`agent.oracle`)
 
@@ -61,5 +61,5 @@ Any complex legacy system converges into one of three topological archetypes. Th
 The `worker.connector` and the three workload archetypes provide a standardized framework designed to federate centralized legacy infrastructure into the A2A network. This architecture enforces self-sustaining economic and structural efficiencies:
 
 1. **Developmental Interoperability:** Mapping existing legacy codebases into these three archetypes establishes immediate interoperability with the A2A economy without requiring underlying logic modifications.
-2. **Security & Compliance:** By processing NAT traversal, fault isolation, and DPoP/L402 validation entirely at the edge node, inbound network exposure and internal compliance friction for infrastructure operators are eliminated.
+2. **Security & Compliance:** By processing NAT traversal, fault isolation, and DPoP/x402 validation entirely at the edge node, inbound network exposure and internal compliance friction for infrastructure operators are eliminated.
 3. **Economic Determinism:** Through the removal of initialization overhead (Init Tax) and the enforcement of lock-free O(1) concurrency, the marginal cost of compute node operation approaches absolute zero, structurally optimizing routing efficiency across the protocol.

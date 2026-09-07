@@ -1,5 +1,4 @@
 # fiber.agent.infra.worker.oracle
-## @lineage: fiber.infra.agent.worker.oracle
 import sys
 import json
 import time
@@ -87,7 +86,7 @@ class OracleMcpServer(AgentProtocol):
                 self._sealed_cache[cache_key] = {'payload': sealed_payload, 'ts': now}
 
             # 3. 에이전트는 어떠한 가짜 영수증도 만들지 않고, 순수하게 증명된 데이터만 반환합니다.
-            # 이 페이로드에 대한 과금(UTXO) 및 검증은 rpc.handler가 담당합니다.
+            # 이 페이로드에 대한 과금(PTA Netting) 및 검증은 rpc.handler가 담당합니다.
             self.send_response(req_id, {
                 "content": [{"type": "text", "text": json.dumps(sealed_payload)}],
                 "isError": False

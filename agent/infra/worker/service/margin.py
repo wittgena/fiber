@@ -14,7 +14,7 @@ class ComputeMetrics(BaseModel):
 class CostFactors(BaseModel):
     cost_per_ms_usd: float = Field(0.0000002)
     cost_per_mb_usd: float = Field(0.0000015)
-    l402_routing_fee_usd: float = Field(0.0001)
+    x402_routing_fee_usd: float = Field(0.0001)
     fixed_infra_monthly_usd: float = Field(30.0)
 
 class ValueCapturePolicy(BaseModel):
@@ -37,7 +37,7 @@ class ServiceMarginAgent(AgentProtocol):
     def handle_tools_list(self, req_id: Any):
         self.send_response(req_id, {"tools": [{
             "name": "calculate_edge_economics",
-            "description": "Calculates L402 pricing based on physical V8 compute metrics.",
+            "description": "Calculates x402 pricing based on physical V8 compute metrics.",
             "inputSchema": EdgeMarginRequest.model_json_schema()
         }]})
 
@@ -57,26 +57,26 @@ class ServiceMarginAgent(AgentProtocol):
     def _execute_metering_logic(self, req: EdgeMarginRequest) -> Dict[str, Any]:
         # 1. 물리적 원가 산출
         total_time_ms = req.metrics.wasm_instantiation_ms + req.metrics.execution_time_ms
-        absolute_cost = (total_time_ms * req.costs.cost_per_ms_usd) + (req.metrics.memory_peak_mb * req.costs.cost_per_mb_usd) + req.costs.l402_routing_fee_usd
+        absolute_cost = (total_time_ms * req.costs.cost_per_ms_usd) + (req.metrics.memory_peak_mb * req.costs.cost_per_mb_usd) + req.costs.x402_routing_fee_usd
 
         # 2. 가치 포획 및 청구 금액 확정
         value_share_fee = req.policy.client_projected_value_usd * req.policy.dynamic_take_rate
-        final_l402_fee = max(req.policy.base_toll_fee_usd, value_share_fee)
-        marginal_profit = final_l402_fee - absolute_cost
+        final_x402_fee = max(req.policy.base_toll_fee_usd, value_share_fee)
+        marginal_profit = final_x402_fee - absolute_cost
 
         if marginal_profit <= 0:
-            return {"actionable": False, "absolute_cost": absolute_cost, "proposed_fee": final_l402_fee}
+            return {"actionable": False, "absolute_cost": absolute_cost, "proposed_fee": final_x402_fee}
 
         # 3. 매트릭스 도출
         tps_arr = np.array(req.tps_range, dtype=np.float64)
         monthly_volume = tps_arr * self.MONTHLY_SECONDS
-        revenue_vec = monthly_volume * final_l402_fee
+        revenue_vec = monthly_volume * final_x402_fee
         profit_vec = revenue_vec - (req.costs.fixed_infra_monthly_usd + (monthly_volume * absolute_cost))
 
         return {
             "metering_target": req.caller_id,
             "unit_economics": {
-                "l402_invoice_usd": round(final_l402_fee, 6),
+                "x402_invoice_usd": round(final_x402_fee, 6),
                 "physical_cost_usd": round(absolute_cost, 8),
                 "marginal_profit_usd": round(marginal_profit, 6),
             },

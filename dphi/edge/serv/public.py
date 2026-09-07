@@ -262,7 +262,7 @@ async def public_sandbox_handshake(
 
 @public_edge.post(
     "/billing/invoice", 
-    summary="Issue L402 Invoice for Resource Access"
+    summary="Issue x402 Invoice for Resource Access"
 )
 async def public_issue_invoice(
     req: InvoiceIssueRequest,
@@ -276,7 +276,7 @@ async def public_issue_invoice(
 
 @public_edge.get(
     "/billing/balance", 
-    summary="Check UTXO Fuel Balance"
+    summary="Check Fuel Balance"
 )
 async def public_get_balance(
     client_id: str = Query(..., description="조회할 클라이언트 주소"),
