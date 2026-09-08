@@ -6,11 +6,12 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from fiber.infra.client.rpc import InternalRpcClient
+from fiber.dphi.client.rpc import InternalRpcClient
 from fiber.dphi.edge.serv.depend import get_rpc_client
-from fiber.agent.gateway.adapter import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
+
+from xphi.kernel.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("mcp.bridge")
 

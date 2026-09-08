@@ -9,15 +9,15 @@ from fiber.llm.driver.registry import LLMRegistry
 from fiber.llm.driver.model import LLMModel
 from fiber.llm.model.message import Message
 
-from fiber.agent.client.engine.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
-from fiber.agent.client.tool.schema.action import Action, Observation
+from fiber.agent.engine.adapter import AgentCommunicator, ExecutionController, SecurityManager, EngineContextAdapter
+from fiber.agent.engine.tool.schema.action import Action, Observation
 from fiber.agent.conver.conv.visual import ConversationVisualizer
 from fiber.agent.conver.state import ConversationState
 
-from fiber.agent.client.llm.security import SecurityAnalyzerBase
+from fiber.agent.loop.llm.security import SecurityAnalyzerBase
 from fiber.agent.conver.protocol.context import ProtoConv
 from fiber.agent.conver.space.manager import SandboxWorkspace
-from fiber.agent.client.tool.action.types import (
+from fiber.agent.engine.tool.action.types import (
     ConversationCallbackType,
     ConversationID,
     ConversationTokenCallbackType,

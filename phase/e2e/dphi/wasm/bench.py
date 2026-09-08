@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, List, Dict, Callable
 
 from fiber.phase.plane.shell.sandbox import TestScripts
-from fiber.infra.eco.anchor import ActorIdentity
+from fiber.dphi.infra.eco.anchor import ActorIdentity
 
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.bound.space.sandbox.runner import SchemeRunner

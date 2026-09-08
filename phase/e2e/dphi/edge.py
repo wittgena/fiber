@@ -10,9 +10,9 @@ from eth_account.messages import encode_defunct
 
 from fiber.dphi.edge.workflow import EdgeWorkflow
 from fiber.dphi.edge.payload import create_app, Config
-from fiber.dphi.daemon.rpc import RpcWorkerDaemon
-from fiber.infra.e2e import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
-from fiber.infra.client.http import VerifiedHttpClient
+from fiber.dphi.infra.daemon.rpc import RpcWorkerDaemon
+from fiber.dphi.infra.e2e import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
+from fiber.dphi.client.http import VerifiedHttpClient
 
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.state.phase.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
