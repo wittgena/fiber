@@ -8,9 +8,9 @@ from collections.abc import Sequence
 from typing import Any, Self, TYPE_CHECKING
 from pydantic import Field
 
-from fiber.agent.client.tool.action.types import ConversationCallbackType, ConversationID, ConversationTags
-from fiber.agent.client.event.action import ActionEvent
-from fiber.agent.client.event.observation import (
+from fiber.agent.engine.tool.action.types import ConversationCallbackType, ConversationID, ConversationTags
+from fiber.agent.engine.event.action import ActionEvent
+from fiber.agent.engine.event.observation import (
     AgentErrorEvent,
     ObservationEvent,
     UserRejectObservation,
@@ -27,7 +27,7 @@ from fiber.agent.conver.protocol.command import (
 
 from fiber.agent.conver.protocol.stats import ConversationStats
 if TYPE_CHECKING:
-    from fiber.agent.client.llm.security import SecurityAnalyzerBase
+    from fiber.agent.engine.llm.security import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
@@ -280,7 +280,7 @@ class ConversationState(SurgeBaseModel):
             callback = getattr(self, "on_state_change", None)
             if callback is not None and old is not _sentinel:
                 try:
-                    from fiber.agent.client.event.conv import ConversationStateUpdateEvent
+                    from fiber.agent.engine.event.conv import ConversationStateUpdateEvent
                     callback(ConversationStateUpdateEvent(key=name, value=value))
                 except Exception:
                     log.exception(f"State change callback failed for field {name}", exc_info=True)

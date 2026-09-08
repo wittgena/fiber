@@ -5,7 +5,7 @@ import json
 from typing import Dict, Any
 from pydantic import BaseModel, Field, ValidationError
 from fiber.infra.oracle.observer.trajectory import FundingRateComparator
-from fiber.agent.gateway.protocol import AgentProtocol
+from fiber.infra.protocol.agent import AgentProtocol
 
 class ObservationPoint(BaseModel):
     rate: float = Field(...)

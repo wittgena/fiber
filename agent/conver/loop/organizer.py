@@ -5,11 +5,11 @@
 from typing import Any, Callable, Awaitable
 
 from fiber.llm.model.message import Message, TextContent
-from fiber.agent.client.event.message import MessageEvent
-from fiber.agent.client.event.action import ActionEvent
-from fiber.agent.client.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from fiber.agent.engine.event.message import MessageEvent
+from fiber.agent.engine.event.action import ActionEvent
+from fiber.agent.engine.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
 
-from fiber.agent.client.llm.facade import MessageBuilder, LLMFacade
+from fiber.agent.engine.llm.facade import MessageBuilder, LLMFacade
 from fiber.llm.exception.types import (
     FunctionCallValidationError, 
     LLMContextWindowExceedError, 

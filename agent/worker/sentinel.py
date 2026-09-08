@@ -6,7 +6,7 @@ import json
 from typing import List, Dict, Any
 
 from fiber.infra.client.rpc import InternalRpcClient
-from fiber.agent.gateway.protocol import AgentProtocol
+from fiber.infra.protocol.agent import AgentProtocol
 from xphi.state.ledger.consensus import KernelLedger
 
 class AgentSentinel(AgentProtocol):

@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, Any
 
-from fiber.agent.client.tool.action.factory import CoreAction
+from fiber.agent.engine.tool.action.factory import CoreAction
 
 class BlueprintType(Enum):
     SCHEME = "scheme"

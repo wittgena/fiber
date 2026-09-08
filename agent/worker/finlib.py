@@ -9,7 +9,7 @@ import math
 import hashlib
 from typing import Dict, Any, List
 
-from fiber.agent.gateway.protocol import AgentProtocol
+from fiber.infra.protocol.agent import AgentProtocol
 
 log = logging.getLogger("agent.finlib")
 

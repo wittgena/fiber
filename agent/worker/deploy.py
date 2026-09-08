@@ -11,7 +11,7 @@ from typing import Dict, Any
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.exceptions import InvalidSignature
 
-from fiber.agent.gateway.protocol import AgentProtocol
+from fiber.infra.protocol.agent import AgentProtocol
 from fiber.infra.client.rpc import InternalRpcClient
 
 log = logging.getLogger("agent.deploy")

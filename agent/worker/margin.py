@@ -15,7 +15,7 @@ from fiber.infra.oracle.observer.trajectory import (
     SpreadSnapshot,
     ArbitrageIntent
 )
-from fiber.agent.gateway.protocol import AgentProtocol
+from fiber.infra.protocol.agent import AgentProtocol
 
 class ExecutionPricingModel(BaseModel):
     base_x402_fee_usd: float = Field(0.002, description="Base X402 invocation fee")

@@ -7,7 +7,7 @@ import asyncio
 from typing import Dict, Any
 
 from fiber.infra.oracle.receptor import OracleReceptor
-from fiber.agent.gateway.protocol import AsyncAgentProtocol
+from fiber.infra.protocol.agent import AsyncAgentProtocol
 
 class OracleMcpServer(AsyncAgentProtocol):
     def __init__(self):

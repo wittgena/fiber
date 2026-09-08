@@ -13,8 +13,8 @@ from collections.abc import Sequence
 from typing import overload
 from pydantic import BaseModel, Field
 
-from fiber.agent.client.event.action import ActionEvent
-from fiber.agent.client.event.observation import ObservationBaseEvent
+from fiber.agent.engine.event.action import ActionEvent
+from fiber.agent.engine.event.observation import ObservationBaseEvent
 
 from xphi.arch.model.conv.event import Event, LLMConvertibleEvent
 from xphi.arch.model.conv.event import EventID, ToolCallID

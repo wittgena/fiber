@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.infra.client.rpc import InternalRpcClient
-from fiber.agent.gateway.connector import WorkerConnector
+from fiber.infra.gateway.connector import WorkerConnector
 from fiber.infra.e2e import (
     PipelineRunner, 
     ManagedTestServer, 

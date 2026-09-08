@@ -10,12 +10,12 @@ from rich.console import Console, Group
 from rich.rule import Rule
 from rich.text import Text
 
-from fiber.agent.client.event.acp import ACPToolCallEvent
-from fiber.agent.client.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
-from fiber.agent.client.event.action import ActionEvent
-from fiber.agent.client.event.message import MessageEvent
-from fiber.agent.client.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
-from fiber.agent.client.event.system import SystemPromptEvent
+from fiber.agent.engine.event.acp import ACPToolCallEvent
+from fiber.agent.engine.event.conv import PauseEvent, ConversationStateUpdateEvent, ConversationErrorEvent
+from fiber.agent.engine.event.action import ActionEvent
+from fiber.agent.engine.event.message import MessageEvent
+from fiber.agent.engine.event.observation import ObservationEvent, AgentErrorEvent, UserRejectObservation
+from fiber.agent.engine.event.system import SystemPromptEvent
 from fiber.agent.conver.protocol.stats import ConversationStats
 from fiber.agent.conver.protocol.context import ConvStateProtocol
 

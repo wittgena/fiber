@@ -5,7 +5,7 @@ import json
 from typing import Dict, Any, List, Optional
 import numpy as np
 from pydantic import BaseModel, Field, ValidationError
-from fiber.agent.gateway.protocol import AgentProtocol
+from fiber.infra.protocol.agent import AgentProtocol
 
 class ComputeMetrics(BaseModel):
     wasm_instantiation_ms: float = Field(...)

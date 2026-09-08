@@ -22,20 +22,20 @@ from fiber.llm.model.message import (
 from fiber.llm.response import LLMResponse
 
 # Surgent Schemas & Events
-from fiber.agent.client.tool.schema.action import Action, Observation
-from fiber.agent.client.tool.schema.builder import ActionDefinition
-from fiber.agent.client.event.action import ActionEvent
-from fiber.agent.client.event.message import MessageEvent
-from fiber.agent.client.event.system import SystemPromptEvent, TokenEvent
-from fiber.agent.client.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
+from fiber.agent.engine.tool.schema.action import Action, Observation
+from fiber.agent.engine.tool.schema.builder import ActionDefinition
+from fiber.agent.engine.event.action import ActionEvent
+from fiber.agent.engine.event.message import MessageEvent
+from fiber.agent.engine.event.system import SystemPromptEvent, TokenEvent
+from fiber.agent.engine.event.observation import ObservationEvent, UserRejectObservation, AgentErrorEvent
 from fiber.agent.conver.status import ConverStatus
 
 # Surgent Core Actions & Engines
-from fiber.agent.client.tool.action.factory import CoreAction
-from fiber.agent.client.tool.action.resolver import ActionResolver
-from fiber.agent.client.tool.action.parser import format_context_exceeded_message, ActionParser
+from fiber.agent.engine.tool.action.factory import CoreAction
+from fiber.agent.engine.tool.action.resolver import ActionResolver
+from fiber.agent.engine.tool.action.parser import format_context_exceeded_message, ActionParser
 from fiber.agent.conver.loop.step import StepHandler, StepContext
-from fiber.agent.client.tool.mcp.factory import MCPClient, create_mcp_tools, MCPExecutor
+from fiber.agent.engine.tool.mcp.factory import MCPClient, create_mcp_tools, MCPExecutor
 
 # Xphi Arch & Kernel
 from xphi.arch.model.conv.tool import Tool

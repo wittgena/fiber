@@ -3,7 +3,7 @@
 import asyncio
 from typing import Optional, Any, List
 
-from fiber.agent.client.engine.executor import LocalExecutionEngine, ProxyExecutionEngine, DEFAULT_SECURITY_POLICY
+from fiber.agent.engine.executor import LocalExecutionEngine, ProxyExecutionEngine, DEFAULT_SECURITY_POLICY
 from xphi.arch.model.dphi.graph import EntryNode
 from xphi.arch.model.conv.event import LLMConvertibleEvent
 from xphi.kernel.space.topos.node.gan import Message, GanNode

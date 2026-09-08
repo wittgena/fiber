@@ -175,7 +175,7 @@ def run_connector(
     resolved_cmd = KNOWN_AGENTS.get(exec_cmd, exec_cmd)
 
     async def _launch_connector():
-        from fiber.agent.gateway.connector import WorkerConnector
+        from fiber.infra.gateway.connector import WorkerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
         daemon = WorkerConnector(target_id=target, legacy_command=resolved_cmd)
         
