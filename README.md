@@ -1,17 +1,38 @@
 # fiber.README
 @desc: Fiber Project - Agent Deterministic Infrastructure
 
-While autonomous AI agents offer unprecedented capabilities, they routinely expose host systems to unpredictable billing runaways, application-layer vulnerabilities, and complex state management burdens.
+While autonomous AI agents offer unprecedented capabilities, modern stateless agent protocols (like MCP) routinely expose host systems to severe vulnerabilities—from uncontained memory leaks (OOM) and Confused Deputy attacks to unpredictable billing runaways.
 
-**Fiber** is a zero-trust cryptographic metering proxy that definitively resolves these bottlenecks. By providing a zero-friction drop-in replacement for existing SDKs, Fiber replaces fragile software assumptions with hardware-level isolation, deterministic state enforcement, and absolute budget control.
+**Fiber** is a zero-trust cryptographic metering proxy that definitively resolves these structural bottlenecks. Functioning primarily as a **Secure MCP Bridge**, Fiber replaces fragile software assumptions with hardware-level isolation, deterministic state enforcement, and absolute budget control. Additionally, it provides a zero-friction drop-in replacement for existing LLM SDKs (e.g., LiteLLM, OpenAI).
 
 ---
 
-## 1. LLM Compatibility & Edge Gateway
+## 1. Secure MCP Bridge & LLM Gateway
 
-The `fiber.llm.entry` module is a high-performance LLM router that provides a **Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features without requiring rewrites to your agent architecture.
+### 1.1. MCP Gateway (The Stateless Complexity Anchor)
 
-### 1.1. Zero-Friction Migration
+As agent protocols (e.g., MCP 2.0) shift to stateless architectures, they push heavy complexities—race conditions, cryptographic replay attacks, and idempotency—onto the client. The gateway's **Transition Bridge** absorbs this burden.
+
+It centralizes DPoP signature validation and tracks inbound intents through a strict Finite State Machine context. Instead of exposing host systems to chaotic raw REST payloads, it translates intents into deterministic `LogicStream` events routed via **Tri-Track Concurrency**:
+
+* **`Ephemeral` Mode:** Instantiates single-use, fault-isolated sandboxes per request, ensuring zero memory leaks and safe Human-in-the-Loop interaction.
+* **`Linear` Mode:** Routes CPU-heavy workloads into a pre-warmed daemon with strict sequential queueing, eliminating cold starts.
+* **`Multiplex` Mode:** Unleashes extreme lock-free concurrency within a single async daemon to handle thousands of I/O-bound operations (e.g., Oracle data fetches) in parallel.
+
+### 1.2. Edge Gateway (REST API)
+
+For decentralized agents, point your Base URL to the DPHI Gateway and inject the X402 payment proof.
+
+```http
+POST /v1/chat/completions HTTP/1.1
+Authorization: Bearer <provider_key_if_any>
+X-X402-Receipt: <x402_signed_receipt>
+
+```
+
+### 1.3. LLM Compatibility & Zero-Friction Migration
+
+Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performance LLM router that provides a **Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features without requiring rewrites to your agent architecture.
 
 Return objects follow standard Pydantic models (e.g., `openai.types.chat.ChatCompletion`). Simply change your import path:
 
@@ -25,9 +46,10 @@ response = await acompletion(
     stream=True,
     # Standard OpenAI kwargs are fully supported (temperature, tool_calls, etc.)
 )
+
 ```
 
-### 1.2. Dynamic Pipeline Control
+### 1.4. Dynamic Pipeline Control
 
 * **Fuel Trap:** Physically terminates the connection at the hypervisor level if a streaming response exhausts its token budget, preventing billing runaways.
 * **Declarative Tool Recovery:** Dynamically detects and strictly normalizes malformed tool calls from heterogeneous LLMs (like Gemini) into the OpenAI standard format.
@@ -40,27 +62,8 @@ response = completion(
     mock_response="Simulated Response", # Bypasses network for rapid testing
     metadata={"post_call_rules": [async_pii_filter_function]} # Dynamic Guardrails
 )
+
 ```
-
-### 1.3. Edge Gateway (REST API)
-
-For decentralized agents, point your Base URL to the DPHI Gateway and inject the X402 payment proof.
-
-```http
-POST /v1/chat/completions HTTP/1.1
-Authorization: Bearer <provider_key_if_any>
-X-X402-Receipt: <x402_signed_receipt>
-```
-
-### 1.4. MCP Gateway (The Stateless Complexity Anchor)
-
-As agent protocols (e.g., MCP 2.0) shift to stateless architectures, they push heavy complexities—race conditions, cryptographic replay attacks, and idempotency—onto the client. The gateway's **Transition Bridge** absorbs this burden.
-
-It centralizes DPoP signature validation and tracks inbound intents through a strict Finite State Machine context. Instead of exposing host systems to chaotic raw REST payloads, it translates intents into deterministic `LogicStream` events routed via **Tri-Track Concurrency**:
-
-* **`Ephemeral` Mode:** Instantiates single-use, fault-isolated sandboxes per request, ensuring zero memory leaks and safe Human-in-the-Loop interaction.
-* **`Linear` Mode:** Routes CPU-heavy workloads into a pre-warmed daemon with strict sequential queueing, eliminating cold starts.
-* **`Multiplex` Mode:** Unleashes extreme lock-free concurrency within a single async daemon to handle thousands of I/O-bound operations (e.g., Oracle data fetches) in parallel.
 
 ---
 
@@ -76,6 +79,7 @@ fiber [OPTIONS] COMMAND [ARGS]...
 
 # Local / Development execution
 python -m fiber.phase.cli.main [OPTIONS] COMMAND [ARGS]...
+
 ```
 
 ### 2.2. E2E Testing & Dynamic Argument Forwarding
@@ -87,6 +91,7 @@ Instead of hardcoding parameters, the CLI transparently forwards unknown argumen
 ```bash
 # Run the LLM Compatibility suite with suite-specific arguments
 fiber e2e bridge.llm.compat --model gemini/gemini-3.1-flash-lite --proxy
+
 ```
 
 > *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `bridge.llm.compat` suite's internal `argparse`.*
@@ -120,6 +125,7 @@ Fiber utilizes a universal, runtime-agnostic compute architecture (DPHI).
 
 * **In-Memory Netting:** Processes micro-transactions off-chain to eliminate database row-locking and network gas fees.
 * **3-Tier Sandbox Execution:**
+
 1. **Tier 1 (V8 Isolate):** Handles external I/O and protocol translation.
 2. **Tier 2 (Pyodide):** Constrained, deterministic execution for AI inference/logic.
 3. **Tier 3 (Native WASM):** Instruction-level metering and exact state updates.
