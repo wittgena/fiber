@@ -12,7 +12,7 @@ from fiber.agent.conver.loop.blueprint.manifest import BlueprintType
 from fiber.agent.conver.loop.blueprint.registry import TaskResolver, BLUEPRINT_REGISTRY
 from fiber.phase.flow.agent.runtime import RuntimeController
 
-from fiber.dphi.adapter.transaction.settlement import ClearingAdapter, TransactionReceipt
+from fiber.dphi.transaction.settlement import ClearingAdapter, TransactionReceipt
 from fiber.phase.plane.scope.manager import managed_scope
 from fiber.phase.plane.scope.observer import FlowTransition
 from fiber.llm.model.tier import model_tier_registry

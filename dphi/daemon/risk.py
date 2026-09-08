@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from contextlib import suppress
 
-from fiber.agent.infra.observer.intent.trajectory import (
+from fiber.infra.oracle.observer.trajectory import (
     TrajectoryOracleReceptor, 
     ArbitrageIntent,
     TensionPhase,

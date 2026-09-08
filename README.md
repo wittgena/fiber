@@ -15,9 +15,9 @@ It is a zero-trust cryptographic metering proxy that logically separates executi
 
 ## 1. LLM Compatibility & Edge Gateway
 
-🔗 **[Read the Full Documents: Compat Entry](./phase/abc/llm/compat/entry.md) | [Edge Gateway](./phase/abc/edge/llm.md) | [Token Utilities**](./phase/abc/llm/compat/token.md)
+🔗 **[Read the Full Documents: Compat Entry](./phase/abc/gateway/llm/entry.md) | [Edge Gateway](./phase/abc/gateway/llm/rest.edge.md) | [Token Utilities**](./phase/abc/gateway/llm/token.md)
 
-The `fiber.llm` module is a high-performance LLM router and gateway that provides a **Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features—Fuel metering, fault-tolerance, and state normalizations—protecting your underlying infrastructure from runaway AI costs and application-layer vulnerabilities without requiring rewrites to your existing agent architectures.
+The `fiber.llm.entry` module is a high-performance LLM router and gateway that provides a **Drop-in Replacement for the OpenAI SDK and LiteLLM**. It transparently embeds DPHI’s core features—Fuel metering, fault-tolerance, and state normalizations—protecting your underlying infrastructure from runaway AI costs and application-layer vulnerabilities without requiring rewrites to your existing agent architectures.
 
 ### 1.1. Zero-Friction Migration (Drop-in Replacement)
 
@@ -38,7 +38,7 @@ response = await acompletion(
 
 ### 1.2. Advanced Pipeline & Dynamic Control
 
-Beyond basic compatibility, `fiber.llm` exposes a powerful asynchronous channel pipeline via the `metadata` and `kwargs` fields.
+Beyond basic compatibility, `fiber.llm.entry` exposes a powerful asynchronous channel pipeline via the `metadata` and `kwargs` fields.
 
 * **Fuel Trap & Authorization (kernel_auth):** Enforces a strict token budget. If a streaming response exhausts the allocated fuel_budget, the connection is immediately physically terminated (Kinetic Trap) at the hypervisor level. This prevents unpredictable billing spikes caused by infinite loops or malicious prompt injections.
 * **Declarative Tool Recovery:** Heterogeneous LLMs (e.g., Gemini) often leak or malform function call formats. The internal `StateMapper` dynamically detects and recovers these deviations, strictly normalizing them into the OpenAI `tool_calls` format.
@@ -79,7 +79,7 @@ The `fiber.llm.model.token` package provides exact equivalents to LiteLLM’s to
 * **Safe Context Trimming:** `trim_messages()` safely evicts older messages while strictly preserving `system` prompts and critical `tool_result` contexts.
 * **Token-Safe Splitter:** A native `TokenSplitter` slices documents by Token IDs rather than string length, completely preventing multi-byte character corruption across chunk boundaries during RAG workloads.
 
-### 1.5. MCP Transition Bridge (Stateless Complexity Anchor)
+### 1.5. MCP Gateway (Transition Bridge - Stateless Complexity Anchor)
 
 As agent protocols evolve toward stateless architectures, they push the critical responsibilities of concurrency control, idempotency, and cryptographic authentication entirely onto the enterprise implementation. The gateway's `TransitionBridge` is engineered to absorb this externalized complexity. It acts as a definitive state anchor, sublimating fragmented, stateless requests into secure and ordered **deterministic state transitions** without requiring clients to build complex distributed locks.
 
@@ -111,7 +111,7 @@ python -m fiber.phase.cli.main [OPTIONS] COMMAND [ARGS]...
 
 ### 2.2. E2E Testing & Dynamic Argument Forwarding (Core Feature)
 
-The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`dphi.defin`, `dphi.eco`, `dphi.edge`, `flare`, `dphi.wasm.entry`, `bridge.llm.compat`).
+The most powerful aspect of the `fiber` CLI is its transparent test orchestration. The `fiber e2e` command dynamically loads distributed integration suites (`dphi.wasm.entry`, `dphi.defin`, `dphi.eco`, `dphi.edge`, `gateway.llm.compat`, `gateway.mcp`, `flare`).
 
 Instead of hardcoding every possible test parameter into the root CLI, `fiber` captures unknown arguments and transparently **forwards them to the target module's standard `main(args)` entrypoint**. This ensures zero-friction scalability as new domains and parameters are added.
 
@@ -147,9 +147,9 @@ The `fiber connect` command represents the ecosystem's most potent adoption vect
 
 ---
 
-## 3. DPHI Gateway Overview
+## 3. DPHI Overview
 
-🔗 **[Read the Full Document: Gateway Overview](./phase/abc/dphi/overview.md)**
+🔗 **[Read the Full Document: Dphi Overview](./phase/abc/dphi/overview.md)**
 
 A universal compute and metering proxy architecture agnostic to specific runtimes or settlement layers.
 
