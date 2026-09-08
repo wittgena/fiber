@@ -32,7 +32,7 @@ class RpcWorkerDaemon(AbstractDaemon):
     async def _init_context(self):
         from fiber.infra.eco.anchor import NexusAnchor
         from fiber.phase.plane.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
-        from fiber.dphi.adapter.transaction.settlement import ClearingAdapter
+        from fiber.dphi.transaction.settlement import ClearingAdapter
 
         from xphi.kernel.wasm.broker import DphiBroker
         from xphi.watcher.server.stream.edge import LogStreamStore

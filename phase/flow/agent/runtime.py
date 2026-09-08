@@ -12,7 +12,7 @@ from fiber.agent.conver.space.manager import SpaceNode, space_provider
 from fiber.llm.driver.model import LLMModel
 from fiber.llm.driver.config.agent import AgentConfig
 from fiber.phase.plane.scope.observer import ManifoldFolder, FlowTransition
-from fiber.dphi.adapter.transaction.settlement import ClearingAdapter, TransactionReceipt
+from fiber.dphi.transaction.settlement import ClearingAdapter, TransactionReceipt
 
 from xphi.arch.model.conv.tool import Tool
 from xphi.arch.model.surge.blueprint import SurgeBlueprint

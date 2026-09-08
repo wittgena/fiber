@@ -9,7 +9,7 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.adapter.transaction.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
+from fiber.dphi.transaction.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from fiber.infra.eco.builder import EcoBuilder
 from fiber.infra.client.wallet import LocalWalletClient
 

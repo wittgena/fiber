@@ -23,11 +23,6 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.edge")
 
-
-# ==========================================
-# Test Pipeline Runners
-# ==========================================
-
 class GatewayTracerPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig):
         super().__init__(name="Public Gateway & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")

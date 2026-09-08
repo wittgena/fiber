@@ -10,7 +10,7 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.adapter.transaction.settlement import TransactionReceipt
+from fiber.dphi.transaction.settlement import TransactionReceipt
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.kernel.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
