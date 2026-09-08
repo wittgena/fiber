@@ -15,7 +15,7 @@ from typing import (
     TypeVar,
 )
 from fiber.agent.engine.tool.schema.action import Action, Observation
-from fiber.infra.protocol.context import ToolExecutionContextProtocol
+from fiber.agent.engine.protocol.context import ToolExecutionContextProtocol
 
 ActionT = TypeVar("ActionT", bound=Action)
 ObservationT = TypeVar("ObservationT", bound=Observation)

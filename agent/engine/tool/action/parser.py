@@ -18,7 +18,7 @@ from pydantic import ValidationError
 from fiber.agent.engine.tool.schema.builder import ActionDefinition
 from fiber.agent.engine.event.action import ActionEvent
 from fiber.agent.engine.event.observation import AgentErrorEvent
-from fiber.agent.engine.llm.security import SecurityAnalyzerBase
+from fiber.agent.loop.llm.security import SecurityAnalyzerBase
 import xphi.arch.model.conv.security.eval as risk
 
 from fiber.agent.engine.tool.schema.action import Action, Observation

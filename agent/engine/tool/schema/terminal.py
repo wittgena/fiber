@@ -193,7 +193,7 @@ class TerminalTool(ActionDefinition[TerminalAction, TerminalObservation]):
             return [tool_instance]
 
         # conv_state가 주어지면 실제 환경 바인딩 (Gov 런타임용)
-        from fiber.infra.protocol.terminal import TerminalExecutor
+        from fiber.agent.engine.protocol.terminal import TerminalExecutor
 
         working_dir = conv_state.workspace.working_dir
         if not os.path.isdir(working_dir):

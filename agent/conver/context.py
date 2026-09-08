@@ -14,7 +14,7 @@ from fiber.agent.engine.tool.schema.action import Action, Observation
 from fiber.agent.conver.conv.visual import ConversationVisualizer
 from fiber.agent.conver.state import ConversationState
 
-from fiber.agent.engine.llm.security import SecurityAnalyzerBase
+from fiber.agent.loop.llm.security import SecurityAnalyzerBase
 from fiber.agent.conver.protocol.context import ProtoConv
 from fiber.agent.conver.space.manager import SandboxWorkspace
 from fiber.agent.engine.tool.action.types import (

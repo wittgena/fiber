@@ -7,7 +7,7 @@ import random
 import json
 from typing import Any
 
-from fiber.infra.eco.anchor import ActorIdentity
+from fiber.dphi.infra.eco.anchor import ActorIdentity
 
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.kernel.adapter.state import StateAdapter

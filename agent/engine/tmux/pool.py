@@ -19,7 +19,7 @@ from typing import Final
 import libtmux
 
 from xphi.watcher.plane.emitter import get_logger
-from fiber.infra.protocol.builder import sanitized_env
+from fiber.agent.engine.protocol.builder import sanitized_env
 from xphi.bound.bridge.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,

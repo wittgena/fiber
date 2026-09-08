@@ -6,13 +6,13 @@ from typing import Dict, Any, Optional
 
 from pydantic import SecretStr
 
-from fiber.agent.conver.loop.executor import NodeExecutor
+from fiber.agent.loop.executor import NodeExecutor
 from fiber.agent.conver.space.manager import SpaceNode, space_provider
 
 from fiber.llm.driver.model import LLMModel
 from fiber.llm.driver.config.agent import AgentConfig
 from fiber.phase.plane.scope.observer import ManifoldFolder, FlowTransition
-from fiber.dphi.transaction.settlement import ClearingAdapter, TransactionReceipt
+from fiber.dphi.infra.transaction.settlement import ClearingAdapter, TransactionReceipt
 
 from xphi.arch.model.conv.tool import Tool
 from xphi.arch.model.surge.blueprint import SurgeBlueprint

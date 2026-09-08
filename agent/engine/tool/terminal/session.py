@@ -10,7 +10,7 @@ import bashlex
 from bashlex.errors import ParsingError
 
 from fiber.agent.engine.tool.schema.terminal import TerminalAction, TerminalObservation
-from fiber.infra.protocol.context import ToolExecutionContextProtocol
+from fiber.agent.engine.protocol.context import ToolExecutionContextProtocol
 
 from fiber.agent.engine.tool.terminal.interface import TerminalInterface, TerminalSessionBase
 from fiber.agent.engine.tool.terminal.context import ExecutionEngine, ExecutionContext

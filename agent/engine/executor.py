@@ -6,11 +6,11 @@ import json
 from typing import Dict, Any, List, Callable
 
 from fiber.agent.engine.adapter import AgentCommunicator, ExecutionController
-from fiber.agent.conver.loop.activator import Activator
+from fiber.agent.loop.activator import Activator
 from fiber.agent.conver.state import ConversationState
 from fiber.agent.conver.conv.visual import ConversationVisualizer
 from fiber.agent.conver.space.manager import SandboxWorkspace
-from fiber.agent.conver.loop.organizer import EvalReflector, TensionHandler, LLMInvocationHandler, ToolCallHandler, TextResponseHandler
+from fiber.agent.loop.organizer import EvalReflector, TensionHandler, LLMInvocationHandler, ToolCallHandler, TextResponseHandler
 from fiber.agent.engine.tool.schema.terminal import TerminalTool
 from fiber.agent.engine.tool.action.factory import CoreAction
 from fiber.agent.engine.tool.action.resolver import ActionResolver

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
-from fiber.infra.protocol.builder import executor_factory, sanitized_env
+from fiber.agent.engine.protocol.builder import executor_factory, sanitized_env
 
 from xphi.kernel.space.topos.node.gan import Message, GanNode
 from xphi.kernel.space.topos.node.event import WorkspaceReady

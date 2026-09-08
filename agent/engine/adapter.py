@@ -26,17 +26,17 @@ from fiber.agent.engine.tool.action.types import ConversationID
 from fiber.llm.driver.model import LLMModel
 from fiber.llm.model.message import Message, TextContent
 from fiber.agent.conver.protocol.stats import ConversationStats
-from fiber.agent.engine.llm.security import SecurityAnalyzerBase
+from fiber.agent.loop.llm.security import SecurityAnalyzerBase
 from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
 
-from fiber.infra.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
+from fiber.agent.engine.protocol.context import AgentCommunicationProtocol, ExecutionControlProtocol, SecurityControlProtocol
 from fiber.agent.conver.protocol.context import ProtoConv, EngineContextProtocol
 from fiber.agent.conver.protocol.context import ConvStateProtocol
 from fiber.agent.conver.protocol.command import TransitionStatus, UpdateSecurityPolicy
 from fiber.agent.conver.status import ConverStatus
 
 from fiber.agent.engine.actor import Actor
-from fiber.agent.engine.llm.facade import MessageBuilder, LLMFacade
+from fiber.agent.loop.llm.facade import MessageBuilder, LLMFacade
 
 from fiber.phase.plane.resolver.secret import SecretValue
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory

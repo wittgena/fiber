@@ -3,8 +3,8 @@ import time
 import json
 import asyncio
 
-from fiber.infra.eco.anchor import ActorIdentity
-from fiber.infra.eco.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
+from fiber.dphi.infra.eco.anchor import ActorIdentity
+from fiber.dphi.infra.eco.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.phase.plane.shell.sandbox import TestScripts
 
 from xphi.bound.space.sandbox.protocol import TriadAxis

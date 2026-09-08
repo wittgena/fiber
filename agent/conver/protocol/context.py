@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Protocol, Any
 
 from fiber.agent.engine.tool.action.types import ConversationID, ConversationTags, ConversationCallbackType
 from fiber.agent.conver.protocol.stats import ConversationStats
-from fiber.agent.engine.llm.security import SecurityAnalyzerBase
+from fiber.agent.loop.llm.security import SecurityAnalyzerBase
 from fiber.llm.driver.model import LLMModel
 from fiber.agent.conver.protocol.command import StateCommand
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
 from fiber.phase.plane.shell.sandbox import SandboxRunner, ScriptDef, TestScripts
-from fiber.infra.eco.anchor import ActorIdentity
+from fiber.dphi.infra.eco.anchor import ActorIdentity
 
 from xphi.kernel.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod

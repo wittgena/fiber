@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from fiber.infra.protocol.context import ToolExecutionContextProtocol
+    from fiber.agent.engine.protocol.context import ToolExecutionContextProtocol
     from fiber.agent.engine.tool.schema.terminal import TerminalAction, TerminalObservation
     from fiber.agent.engine.tool.terminal.session import TerminalSessionBase
 

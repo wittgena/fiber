@@ -19,7 +19,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 from fiber.llm.driver.config.mcp import MCPConfig
 from fiber.llm.param import ChatCompletionToolParam
 
-from fiber.infra.protocol.builder import AsyncExecutorProtocol
+from fiber.agent.engine.protocol.builder import AsyncExecutorProtocol
 from fiber.agent.engine.tool.mcp.exception import MCPError, MCPTimeoutError
 from fiber.agent.engine.tool.schema.action import Action, Observation, Schema
 from fiber.agent.engine.tool.schema.builder import ActionAnnotations, ActionDefinition
@@ -60,7 +60,7 @@ class MCPClient(AnchorClient):
         **kwargs
     ):
         if executor is None:
-            from fiber.infra.protocol.builder import executor_factory
+            from fiber.agent.engine.protocol.builder import executor_factory
             self._executor = executor_factory.get_async_executor()
         else:
             self._executor = executor

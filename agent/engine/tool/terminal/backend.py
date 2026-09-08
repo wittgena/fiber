@@ -24,7 +24,7 @@ import fcntl
 import pty
 import select
 
-from fiber.infra.protocol.builder import sanitized_env
+from fiber.agent.engine.protocol.builder import sanitized_env
 from fiber.agent.engine.tool.terminal.interface import TerminalInterface
 
 from xphi.bound.bridge.terminal import (

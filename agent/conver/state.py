@@ -27,7 +27,7 @@ from fiber.agent.conver.protocol.command import (
 
 from fiber.agent.conver.protocol.stats import ConversationStats
 if TYPE_CHECKING:
-    from fiber.agent.engine.llm.security import SecurityAnalyzerBase
+    from fiber.agent.loop.llm.security import SecurityAnalyzerBase
     SecurityType = SecurityAnalyzerBase | Any
 else:
     SecurityType = Any
