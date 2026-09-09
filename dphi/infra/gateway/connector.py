@@ -1,5 +1,4 @@
 # fiber.dphi.infra.gateway.connector
-## @lineage: fiber.infra.gateway.connector
 import os
 import sys
 import json

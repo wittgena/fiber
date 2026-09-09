@@ -1,4 +1,5 @@
-# prev.readme
+# fiber.phase.abc.prev.readme
+@lineage: prev.readme
 @desc: Fiber Project - Agent Deterministic Infrastructure
 
 While autonomous AI agents offer unprecedented capabilities, deploying them in production environments routinely exposes organizations to three structural liabilities:

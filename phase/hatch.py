@@ -1,43 +1,30 @@
 # fiber.phase.hatch
-import tempfile
-import subprocess
+import os
 from pathlib import Path
-from hatchling.builders.hooks.plugin.interface import BuildHookInterface
+from hatchling.metadata.plugin.interface import MetadataHookInterface
 
-class CustomBuildHook(BuildHookInterface):
-    def initialize(self, version, build_data):
+class CustomMetadataHook(MetadataHookInterface):
+    def update(self, metadata: dict):
+        version = metadata.get("version", "1.1.2")
+        target_tag = version if version.startswith("v") else f"v{version}"
+        
+        deps = self.config.get("base_dependencies", [])
+        
         workspace_root = Path(self.root).parent
         local_xphi = workspace_root / "xphi"
-        target_modules = ["arch", "kernel", "watcher"]
         
-        if "force_include" not in build_data:
-            build_data["force_include"] = {}
+        force_remote = os.environ.get("FIBER_BUILD_DIST") == "1"
 
-        ## [CASE 1] 로컬 개발 시 (버전 무관하게 실시간 변경사항 동기화)
-        if local_xphi.exists():
-            print("[JIT Assembly] Sibling 'xphi' workspace detected. Using bleeding-edge local source.")
-            self._inject_modules(local_xphi, target_modules, build_data)
-                
-        ## [CASE 2] 외부 빌드 / 배포 시 (Fiber 버전과 xphi 버전을 1:1로 락(Lock) 매칭)
-        else:
-            target_tag = version if version.startswith("v") else f"v{version}"
-            print(f"[JIT Assembly] Fetching 'xphi' (Tag: {target_tag}) to match Fiber version {version}...")
+        if local_xphi.exists() and not force_remote:
+            print(f"[Phase: Metadata] Sibling 'xphi' detected. Using local source binding for DEV mode.")
+            ## 표준 PEP 508 file:// URI 포맷 주입
+            deps.append(f"xphi @ file://{local_xphi.resolve().as_posix()}")
             
-            with tempfile.TemporaryDirectory() as temp_dir:
-                try:
-                    subprocess.run(
-                        ["git", "clone", "--branch", target_tag, "--depth", "1", 
-                         "https://github.com/wittgena/xphi.git", temp_dir],
-                        check=True, capture_output=True
-                    )
-                    self._inject_modules(Path(temp_dir), target_modules, build_data)
-                except subprocess.CalledProcessError as e:
-                    print(f"[FATAL] Failed to fetch xphi tag {target_tag}. Ensure repos are version-synced.")
-                    raise
-
-    def _inject_modules(self, source_root: Path, target_modules: list, build_data: dict):
-        for mod in target_modules:
-            src = str(source_root / mod)
-            dst = f"xphi/{mod}"
-            if Path(src).exists():
-                build_data["force_include"][src] = dst
+        ## [CASE 2] 외부 설치(USER) 또는 배포용 빌드 모드
+        ## xphi를 site-packages에 병렬로 설치하되, 버전이 완벽히 일치하는 태그를 강제 동기화
+        else:
+            print(f"[Phase: Metadata] Injecting STRICT topology lock: xphi (Tag: {target_tag})")
+            deps.append(f"xphi @ git+https://github.com/wittgena/xphi.git@{target_tag}")
+        
+        ## 4. 동적으로 완성된 의존성 리스트를 메타데이터에 반영
+        metadata["dependencies"] = deps
