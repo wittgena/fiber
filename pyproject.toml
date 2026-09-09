@@ -1,15 +1,14 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "fiber"
-version = "1.1.2"
+#version = "1.1.2"
 description = "The Universal Integration Boundary for heterogeneous AI ecosystems"
 readme = "README.md"
 requires-python = ">=3.10"
-
-dynamic = ["dependencies"]
+dynamic = ["version", "dependencies"]
 
 [project.scripts]
 fiber = "fiber.phase.cli.main:app"
@@ -19,13 +18,20 @@ dev = ["pytest", "pytest-asyncio"]
 
 [tool.hatch.metadata.hooks.custom]
 path = "phase/hatch.py"
-
 base_dependencies = [
-    "uvloop", "fastapi", "redis", "trio", "networkx", "pyyaml", 
-    "watchdog", "rocksdict", "transformers", "libcst", 
-    "datamodel-code-generator", "acp", "mcp==2.0.0a3", "tyro", "web3",
-    "pydantic", "httpx"
+    "uvloop", "fastapi", "redis", "networkx", "pyyaml", "orjson",
+    "watchdog", "rocksdict", "libcst", "datamodel-code-generator", 
+    "mcp==2.0.0a3", "tyro", "pydantic", "httpx"
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["fiber"]
+[tool.hatch.version]
+source="vcs"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel.force-include]
+"agent" = "fiber/agent"
+"dphi" = "fiber/dphi"
+"llm" = "fiber/llm"
+"phase" = "fiber/phase"

@@ -27,7 +27,6 @@ For decentralized agents, point your Base URL to the DPHI Gateway and inject the
 POST /v1/chat/completions HTTP/1.1
 Authorization: Bearer <provider_key_if_any>
 X-X402-Receipt: <x402_signed_receipt>
-
 ```
 
 ### 1.3. LLM Compatibility & Zero-Friction Migration
@@ -37,16 +36,15 @@ Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performan
 Return objects follow standard Pydantic models (e.g., `openai.types.chat.ChatCompletion`). Simply change your import path:
 
 ```python
-# Instead of: from openai import AsyncOpenAI / litellm import acompletion
+## Instead of: from openai import AsyncOpenAI / litellm import acompletion
 from fiber.llm.entry import acompletion
 
 response = await acompletion(
     model="gpt-4o",
     messages=[{"role": "user", "content": "Analyze this data."}],
     stream=True,
-    # Standard OpenAI kwargs are fully supported (temperature, tool_calls, etc.)
+    ## Standard OpenAI kwargs are fully supported (temperature, tool_calls, etc.)
 )
-
 ```
 
 ### 1.4. Dynamic Pipeline Control
@@ -58,45 +56,94 @@ response = await acompletion(
 response = completion(
     model="gemini-3.5-flash",
     messages=[...],
-    fallbacks=["gpt-4o-mini"], # Auto-retry on RateLimit or API errors
-    mock_response="Simulated Response", # Bypasses network for rapid testing
-    metadata={"post_call_rules": [async_pii_filter_function]} # Dynamic Guardrails
+    fallbacks=["gpt-4o-mini"], ## Auto-retry on RateLimit or API errors
+    mock_response="Simulated Response", ## Bypasses network for rapid testing
+    metadata={"post_call_rules": [async_pii_filter_function]} ## Dynamic Guardrails
 )
-
 ```
 
 ---
 
-## 2. Fiber CLI Tool
+## 2. Installation & Topology Alignment
+
+Fiber will **not** be published to public registries like PyPI in the foreseeable future. Instead, it utilizes a self-bifurcating installation pipeline where `fiber` and its core dependency `xphi` are tightly coupled and installed directly via local repositories or Git references.
+
+The setup below demonstrates the **USER Mode (Static Distribution Simulation)**, allowing flexible topology alignments depending on your deployment goals.
+
+### 2.1. Environment Setup
+
+```bash
+## 1. Create and enter a dedicated sandbox directory
+mkdir -p ~/fiber
+cd ~/fiber
+
+## 2. Bind your virtual environment (e.g., using pyenv)
+pyenv local fiber-user
+pip install --upgrade pip
+```
+
+### 2.2. Installation Scenarios
+
+Choose the appropriate command based on your source availability and target topology. We recommend using `uv pip` for strict dependency resolution.
+
+```bash
+## [Scenario 1: Dirty Local] Bind to current local source (default behavior)
+uv pip install /path/to/local/self/fiber
+
+## [Scenario 2: Remote Dist] Simulate a remote distribution state from local source
+FIBER_BUILD_DIST=1 uv pip install /path/to/local/self/fiber
+
+## [Scenario 3: Direct Remote] Install directly from GitHub without local source
+uv pip install git+https://github.com/wittgena/fiber.git@v1.1.2
+
+## [Scenario 4: Mismatch & Locked] Force specific version mismatches for testing
+FIBER_XPHI_REMOTE_REF=v1.0.0 FIBER_BUILD_DIST=1 uv pip install /path/to/local/self/fiber
+FIBER_XPHI_LOCAL_REF=v1.1.2 uv pip install /path/to/local/self/fiber
+```
+
+### 2.3. Verification
+
+Upon execution, the system detects its static package state and automatically anchors its topology to your home directory (`~/.anchor/`).
+
+```bash
+## 1. Test the CLI
+fiber --help
+
+## 2. Verify Topology
+## Ensure the `bound.json` (Single Source of Truth for virtual paths) is generated:
+cat ~/.anchor/bound.json
+```
+
+---
+
+## 3. Fiber CLI Tool
 
 The `fiber` CLI is the single entry point for bootstrapping the ecosystem. It functions as a **Topological Router**, dynamically assigning the appropriate node profile and delegating execution.
 
-### 2.1. Execution & Local Usage
+### 3.1. Execution & Local Usage
 
 ```bash
-# Global execution
+## Global execution
 fiber [OPTIONS] COMMAND [ARGS]...
 
-# Local / Development execution
+## Local / Development execution (For DEV Mode without pip install)
 python -m fiber.phase.cli.main [OPTIONS] COMMAND [ARGS]...
-
 ```
 
-### 2.2. E2E Testing & Dynamic Argument Forwarding
+### 3.2. E2E Testing & Dynamic Argument Forwarding
 
 Instead of hardcoding parameters, the CLI transparently forwards unknown arguments directly to the target module's standard `main(args)` entrypoint. This ensures zero-friction scalability as new domains and parameters are added.
 
 **Example:**
 
 ```bash
-# Run the LLM Compatibility suite with suite-specific arguments
+## Run the LLM Compatibility suite with suite-specific arguments
 fiber e2e bridge.llm.compat --model gemini/gemini-3.1-flash-lite --proxy
-
 ```
 
 > *Note: In the example above, `--model` and `--proxy` are completely unknown to the root `fiber` CLI. They are gracefully passed down to the `bridge.llm.compat` suite's internal `argparse`.*
 
-### 2.3. Ecosystem Operational Modes
+### 3.3. Ecosystem Operational Modes
 
 Beyond testing, the CLI routes the system into specific operational contexts, automatically segregating topologies (e.g., `EDGE` vs. `COMPUTE`) based on the requested workload:
 
@@ -108,7 +155,7 @@ Beyond testing, the CLI routes the system into specific operational contexts, au
 | **`shell`** | **[Client Observatory]** Launches an interactive God-Mode console. Connects directly to the asynchronous message tunnel without booting a full local kernel reactor. | `fiber shell --env-file .env` |
 | **`connect`** | **[Egress Sidecar / A2A Bridge]** Sublimates any legacy MCP server into a DPHI autonomous node. Acts as a topology-adaptive proxy (Ephemeral, Linear, or Multiplex) wrapping standard I/O to the distributed FSM bus. | `fiber connect --mode multiplex -t oracle -e "python agent.py"` |
 
-### 2.4. Egress Sidecar & A2A Sublimation (The `connect` Mode)
+### 3.4. Egress Sidecar & A2A Sublimation (The `connect` Mode)
 
 The `fiber connect` command is the ecosystem's most potent adoption vector. It enables you to integrate existing Web2 servers into the Agent-to-Agent economy with **absolutely zero code modifications**.
 
@@ -119,7 +166,7 @@ The `fiber connect` command is the ecosystem's most potent adoption vector. It e
 
 ---
 
-## 3. Architecture & Sandbox Constraints
+## 4. Architecture & Sandbox Constraints
 
 Fiber utilizes a universal, runtime-agnostic compute architecture (DPHI).
 
@@ -132,7 +179,7 @@ Fiber utilizes a universal, runtime-agnostic compute architecture (DPHI).
 
 ---
 
-## 4. System Certification & Validation Logs
+## 5. System Certification & Validation Logs
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
