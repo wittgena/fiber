@@ -9,11 +9,11 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from fiber.dphi.edge.mcp.bridge import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
+from fiber.dphi.edge.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.dphi.edge.serv.public import public_edge
 from fiber.dphi.edge.serv.ext import ext_router
 from fiber.dphi.edge.serv.llm import llm_edge
-from fiber.dphi.infra.origin import OriginRegistry
+from fiber.dphi.eco.config.origin import OriginRegistry
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
@@ -138,7 +138,6 @@ async def lifespan(app: FastAPI):
         log.info("StrictOtlpExtractionEngine initialized.")
 
         # 3. Stateless Transition Bridge 인스턴스 마운트 (2026-07-28 규격)
-        # [개선] redis_client 파라미터를 완전히 제거하고 추상화된 tunnel 주입
         nonce_protector = NonceReplayProtector(tunnel=tunnel)
         mapper = IdempotencyMapper(tunnel=tunnel)
 
