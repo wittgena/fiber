@@ -3,10 +3,10 @@ import time
 import json
 import asyncio
 
-from xphi.arch.model.anchor.nexus import ActorIdentity
-from fiber.dphi.eco.actor import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
+from fiber.dphi.eco.notary import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.phase.e2e.infra.sandbox import TestScripts
 
+from xphi.arch.model.anchor.nexus import ActorIdentity
 from xphi.bound.space.sandbox.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor

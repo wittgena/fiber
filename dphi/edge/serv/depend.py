@@ -3,12 +3,14 @@ from typing import Any
 from fastapi import Request, HTTPException, status
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
-from xphi.watcher.receptor.audit.secret import SecretAuditor
 
+from xphi.watcher.receptor.audit.secret import SecretAuditor
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
+from xphi.bound.xor.secret.cipher import Cipher
+from xphi.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
 
 log = get_emitter("dphi.depend")
 
@@ -44,9 +46,35 @@ async def get_otlp_engine(request: Request) -> StrictOtlpExtractionEngine:
     return _get_state_attr(request, "otlp_engine")
 
 async def get_secret_auditor(request: Request) -> SecretAuditor:
-    """PII 마스킹 및 감사 로그 기록기 주입"""
+    """
+    PII 마스킹 및 감사 로그 기록기 주입 (KMS 연동 기반)
+    앱 상태에 등록된 인스턴스가 없으면 KMS Vendor를 통해 동적으로 암호화 모듈을 조립합니다.
+    """
     auditor = getattr(request.app.state, "secret_auditor", None)
-    if not auditor:
-        log.warning("[DI Warning] 'secret_auditor' not found in app.state. Using ephemeral fallback.")
-        return SecretAuditor()
-    return auditor
+    if auditor:
+        return auditor
+        
+    log.warning("[DI Warning] 'secret_auditor' not found in app.state. Provisioning ephemeral KMS-backed fallback.")
+    
+    try:
+        # 1. KMSVendor 추상화를 통해 시크릿 키 획득 시도 (현재는 LOCAL이지만 추후 AWS/GCP 등으로 교체 가능)
+        secret_key = get_secret_from_vendor(
+            client=None,
+            key_manager=KMSVendor.LOCAL,
+            secret_name="LEDGER_CIPHER_KEY"
+        )
+        
+        # 2. 로컬 환경 변수에도 없을 경우의 E2E 테스트용 최후 폴백(Fallback)
+        if not secret_key:
+            secret_key = "dphi-ephemeral-test-key-32bytes!"
+            
+        # 3. Cipher 객체를 조립하여 SecretAuditor에 명시적으로 주입 (TypeError 완벽 해결)
+        cipher_instance = Cipher(secret_key=secret_key)
+        return SecretAuditor(cipher=cipher_instance)
+        
+    except Exception as e:
+        log.critical(f"[Security] SecretAuditor provisioning failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Cryptographic audit module unavailable."
+        )

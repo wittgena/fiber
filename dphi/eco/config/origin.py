@@ -1,5 +1,4 @@
 # fiber.dphi.eco.config.origin
-## @lineage: fiber.dphi.infra.origin
 import os
 import json
 import hashlib

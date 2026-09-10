@@ -9,7 +9,7 @@ import httpx
 
 from fiber.phase.e2e.infra.config import Phase, E2EConfig, TestResult
 from fiber.phase.e2e.infra.bridge import BaseBridgePipeline, log
-from fiber.dphi.edge.gateway.connector import WorkerConnector
+from fiber.agent.worker.connector import WorkerConnector
 
 import fiber.agent.worker.mcp.oracle as agent_oracle
 import fiber.agent.worker.mcp.finlib as agent_finlib

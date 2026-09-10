@@ -24,7 +24,6 @@ from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.state.ledger.consensus import LogicStream
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
-# [개선] PhaseAnchorOutput 직접 임포트를 제거하고, 안전한 팩토리 함수(create_state_anchor)를 임포트
 from xphi.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
 
 log = get_emitter("rpc.handler")
@@ -89,7 +88,7 @@ async def handle_mcp_state_resolve(params: dict, ctx: WorkerContext) -> dict:
     if not handle_id or not status: return _build_error(422, "Missing handle_id or status")
 
     expected_owner = f"mcp_bridge_{handle_id}"
-    prev_pointer_key = next((key for key, output in ctx.pta_adapter._unspent_pool.items() 
+    prev_pointer_key = next((key for key, output in ctx.pta_adapter._unfold_pool.items() 
                              if output.owner == expected_owner and output.asset_type == "mcp_state_anchor"), None)
 
     inputs = []

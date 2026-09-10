@@ -22,7 +22,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from fiber.phase.e2e.infra.config import Phase, E2EConfig, TestResult
 from fiber.phase.e2e.infra.bridge import BaseBridgePipeline, log
-from fiber.dphi.edge.gateway.connector import WorkerConnector
+from fiber.agent.worker.connector import WorkerConnector
 
 import fiber.agent.worker.legacy.sandbox as agent_deploy
 import fiber.agent.worker.mcp.sentinel as agent_sentinel

@@ -1,4 +1,4 @@
-# fiber.phase.e2e.dphi.edge
+# fiber.phase.e2e.edge.sandbox
 import asyncio
 import random
 import uvicorn
@@ -46,7 +46,6 @@ class GatewayTracerPipeline(PipelineRunner):
         self.worker_daemon = None
         self._worker_task = None
         
-        # [개선] WASM Build 생략 및 Origin 무결성 검증 포함 6단계 Phase 구성
         self.set_phases([
             Phase("Origin API Format Validation", self.phase_origin_api_verification),
             Phase("Origin Tamper Resistance (Fail-Fast)", self.phase_origin_tamper_resistance),
