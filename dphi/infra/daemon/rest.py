@@ -1,6 +1,4 @@
 # fiber.dphi.infra.daemon.rest
-## @lineage: fiber.dphi.daemon.rest
-## @lineage: fiber.phase.kernel.daemon.rest
 import os
 import asyncio
 import json

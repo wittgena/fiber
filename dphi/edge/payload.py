@@ -13,6 +13,7 @@ from fiber.dphi.edge.mcp.bridge import IdempotencyMapper, NonceReplayProtector, 
 from fiber.dphi.edge.serv.public import public_edge
 from fiber.dphi.edge.serv.ext import ext_router
 from fiber.dphi.edge.serv.llm import llm_edge
+from fiber.dphi.infra.origin import OriginRegistry
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
@@ -94,6 +95,19 @@ async def lifespan(app: FastAPI):
     config: Config = getattr(app.state, "config", get_default_config())
     
     try:
+        # -------------------------------------------------------------------
+        # [CRITICAL SECURITY INITIALIZATION]
+        # 0. Origin Registry 초기화 및 암호학적 자가 검증 (Fail-Fast)
+        # -------------------------------------------------------------------
+        log.info("Initializing Origin Registry and verifying cryptographic state...")
+        registry = OriginRegistry()
+        trusted_state = registry.load_and_verify()
+        
+        # 검증된 상태를 읽기 전용 인스턴스로 앱 전체에 주입
+        app.state.origin_registry = registry
+        log.info(f"Origin Registry integrated successfully. Active signers: {len(trusted_state.active_signers)}")
+        # -------------------------------------------------------------------
+
         # [개선] 더 이상 redis_client를 앱 상태에서 찾지 않음. 통신망은 tunnel 단일화.
         tunnel = app.state.tunnel
         ledger = app.state.ledger
@@ -140,6 +154,7 @@ async def lifespan(app: FastAPI):
         
     except Exception as e:
         log.error(f"Failed to initialize REST Edge services: {e}", exc_info=True)
+        # 보안 검증 등 크리티컬한 초기화가 실패하면 애플리케이션 기동 자체를 중지시킴
         raise
         
     finally:

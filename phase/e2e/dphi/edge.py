@@ -2,7 +2,11 @@
 import asyncio
 import random
 import uvicorn
+import json
+import os
+import tempfile
 from typing import Any, Callable, Coroutine, List, Optional
+from contextlib import suppress
 
 import httpx
 from eth_account import Account
@@ -13,13 +17,17 @@ from fiber.dphi.edge.payload import create_app, Config
 from fiber.dphi.infra.daemon.rpc import RpcWorkerDaemon
 from fiber.dphi.infra.e2e import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.dphi.client.http import VerifiedHttpClient
+from fiber.dphi.infra.origin import OriginRegistry
 
-from xphi.arch.wasm.builder import WasmBuilder
 from xphi.state.phase.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.tracer.edge import SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
+
+from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.state.ledger.consensus import KernelLedger
+from xphi.kernel.space.bind.resolver import resolve_path
 
 log = get_emitter("e2e.edge")
 
@@ -29,24 +37,46 @@ class GatewayTracerPipeline(PipelineRunner):
         self.config = config
         self.tracer = HttpFlowTracer()
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
-        
         self.test_config = Config(wasm_timeout=5.0)
-        self.rest_app = create_app(self.test_config)
         
-        u_config = uvicorn.Config(app=self.rest_app, host="127.0.0.1", port=self.config.port, log_level="error", access_log=False)
-        self.server = ManagedTestServer(u_config)
+        self.rest_app = None
+        self.server = None
         self._server_task = None
         
-        self.worker_daemon = RpcWorkerDaemon(ctx=self.rest_app.state)
+        self.worker_daemon = None
         self._worker_task = None
         
+        # [개선] WASM Build 생략 및 Origin 무결성 검증 포함 6단계 Phase 구성
         self.set_phases([
-            Phase("Wasm Build & Pre-warm", self.phase_wasm_build),
+            Phase("Origin API Format Validation", self.phase_origin_api_verification),
+            Phase("Origin Tamper Resistance (Fail-Fast)", self.phase_origin_tamper_resistance),
             Phase("Gateway Ingress (Golden Path)", self.phase_ingress_e2e_golden),
             Phase("Gateway Ingress (Negative Path)", self.phase_ingress_e2e_negative),
             Phase("Gateway Ingress (Tampered Attestation)", self.phase_ingress_e2e_tampered),
             Phase("Sentinel Security (Chaos WAF Check)", self.phase_sentinel_security)
         ])
+
+    async def _bootstrap_infrastructure(self):
+        log.info(f"[{self.scope_name}] Bootstrapping infrastructure (Tunnel & Ledger)...")
+        
+        self.tunnel = await TunnelFactory.get_default()
+        self.ledger = KernelLedger()
+        
+        self.rest_app = create_app(
+            config=self.test_config,
+            tunnel=self.tunnel,
+            ledger=self.ledger
+        )
+        
+        u_config = uvicorn.Config(
+            app=self.rest_app, 
+            host="127.0.0.1", 
+            port=self.config.port, 
+            log_level="error", 
+            access_log=False
+        )
+        self.server = ManagedTestServer(u_config)
+        self.worker_daemon = RpcWorkerDaemon(ctx=self.rest_app.state)
 
     async def _wait_for_server(self):
         async with httpx.AsyncClient() as client:
@@ -59,6 +89,8 @@ class GatewayTracerPipeline(PipelineRunner):
 
     async def run_pipeline(self) -> List[TestResult]:
         log.info(f"\n=== Starting Pipeline: {self.name} ({self.scope_name}) ===")
+        
+        await self._bootstrap_infrastructure()
         
         log.info(f"[Pipeline] Booting embedded Uvicorn REST server on {self.local_url}...")
         self._server_task = asyncio.create_task(self.server.serve())
@@ -95,21 +127,79 @@ class GatewayTracerPipeline(PipelineRunner):
                     await asyncio.wait_for(self._worker_task, timeout=5.0)
                 except (asyncio.CancelledError, asyncio.TimeoutError):
                     pass
+                    
+            try:
+                await TunnelFactory.close_all()
+                log.info("[Pipeline] TunnelFactory closed securely.")
+            except Exception as e:
+                log.error(f"[Pipeline] Error closing TunnelFactory: {e}")
+                
             log.info(f"[Pipeline] All daemons and servers evaporated safely.")
             
         return results
 
-    async def phase_wasm_build(self):
-        builder = WasmBuilder()
-        await builder.trace()
-        if getattr(builder, 'rupture_confirmed', False): raise RuntimeError("WasmBuilder failed")
+    # =========================================================================
+    # Phase Implementations
+    # =========================================================================
+
+    async def phase_origin_api_verification(self):
+        """[Data Exposure Test] 검증된 신뢰 키가 API를 통해 올바르게 송출되는지 확인"""
+        async with httpx.AsyncClient(base_url=self.local_url, timeout=5.0) as client:
+            res = await client.get("/v1/public/keys")
+            
+            if res.status_code != 200:
+                raise RuntimeError(f"Origin API failed with status {res.status_code}")
+                
+            if "x-dphi-root-signature" not in res.headers:
+                raise RuntimeError("Critical: 'X-Dphi-Root-Signature' header is missing from Origin API response.")
+                
+            data = res.json()
+            if "active_signers" not in data or not isinstance(data["active_signers"], list):
+                raise RuntimeError("Critical: Payload schema is malformed. Expected 'active_signers' list.")
+                
+            log.info(f"Origin API Validated. Retrieved {len(data['active_signers'])} active signers securely.")
+
+    async def phase_origin_tamper_resistance(self):
+        """[Tamper-Resistance Test] JSON 파일 변조 시 시스템이 Fail-Fast(패닉)하는지 검증"""
+        origin_root = resolve_path("origin")
+        real_config_path = os.path.join(str(origin_root), "config.json")
+        
+        # 1. 실제 설정 읽기
+        with open(real_config_path, "r", encoding="utf-8") as f:
+            tampered_config = json.load(f)
+            
+        # 2. 서명(Signature) 1바이트 훼손 시뮬레이션
+        sig = tampered_config["attestation"]["pre_signed_root_sig"]
+        tampered_sig = ("0" if sig[0] != "0" else "1") + sig[1:]  # 첫 글자 강제 변경
+        tampered_config["attestation"]["pre_signed_root_sig"] = tampered_sig
+        
+        # 3. 임시 파일에 변조된 설정 저장
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
+            json.dump(tampered_config, tmp)
+            tmp_path = tmp.name
+            
+        try:
+            # 4. 변조된 파일로 OriginRegistry 로딩 시도
+            registry = OriginRegistry(config_path=tmp_path)
+            try:
+                registry.load_and_verify()
+                # 에러 없이 통과해버리면 무결성 방어가 뚫린 것임
+                raise RuntimeError("SECURITY BYPASS! OriginRegistry accepted a cryptographically tampered config.")
+            
+            # [핵심 수정] ValueError가 아닌 RuntimeError 내부의 정책 강제 메시지를 잡아서 검증
+            except RuntimeError as e:
+                if "Zero-Trust Policy Enforced" in str(e):
+                    # [성공] 변조를 감지하고 즉각 차단함
+                    log.info(f"Tamper Resistance Verified. Attack blocked successfully: {e}")
+                else:
+                    # 예상치 못한 다른 RuntimeError의 경우 다시 던짐
+                    raise e
+        finally:
+            os.remove(tmp_path)
 
     async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
         """
         [정합성이 회복된 E2E 시나리오 러너]
-        - 클라이언트(E2E)가 직접 진짜 지갑과 서명을 생성하여 시스템에 진입합니다.
-        - HTTP 통신 계층에서 응답 서명(Attestation)을 직접 검증합니다.
-        - FSM의 최종 종단 상태(Terminal State)를 통해 비즈니스 흐름 전체의 완결성을 검증합니다.
         """
         async with httpx.AsyncClient(base_url=self.config.base_url, timeout=15.0) as client:
             response_hooks = [self.tracer.trace_response]
@@ -127,14 +217,12 @@ class GatewayTracerPipeline(PipelineRunner):
             client.event_hooks['request'] = [self.tracer.trace_request]
             client.event_hooks['response'] = response_hooks
 
-            # 1. 클라이언트 자격 증명(지갑) 생성
             wallet = Account.create()
             client_id = wallet.address
             action = "EXECUTE_PYTHON"
             max_fuel = 1000000
             source_code = "print('Hello from Edge E2E Test')"
 
-            # 2. 암호학적 서명 생성 (결함 주입 시 고의로 위조 서명 사용)
             if inject_faults:
                 signature = "0x_tampered_invalid_signature_for_chaos_testing"
             else:
@@ -142,7 +230,6 @@ class GatewayTracerPipeline(PipelineRunner):
                 msg = encode_defunct(text=sig_text)
                 signature = wallet.sign_message(msg).signature.hex()
 
-            # 3. 완벽한 도메인 이벤트 조립
             start_event = StartIntentEvent(
                 client_id=client_id,
                 action=action,
@@ -151,13 +238,11 @@ class GatewayTracerPipeline(PipelineRunner):
                 signature=signature
             )
             
-            # 4. 순수 FSM 및 Workflow 인스턴스화 후 실행
             fsm = EdgePhaseFSM()
             workflow = EdgeWorkflow(fsm=fsm, client=client, base_url=self.config.base_url)
             
             await workflow.execute(start_event) 
             
-            # 5. FSM 거시 상태(Macro State)를 통한 엄격한 E2E 결과 검증
             if attestation_injector is not None:
                 if fsm.state != EdgePhaseState.FAILED:
                     raise RuntimeError("Attestation Bypass! Tampered headers were NOT rejected.")

@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import orjson
 
-from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query
+from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from fiber.dphi.infra.eco.builder import NotarySwarm
@@ -66,28 +66,34 @@ class SandboxHandshakeResponse(BaseModel):
     macaroon: Optional[str] = None
     next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
 
+
 """BASE INFRASTRUCTURE (TRUST ANCHOR)"""
 @public_edge.get(
     "/keys", 
     summary="Get Trusted Signer Keys (Strictly Pre-Signed)"
 )
-async def get_public_keys():
-    active_signers_env = os.getenv("DPHI_ACTIVE_SIGNERS")
-    root_signature = os.getenv("DPHI_PRE_SIGNED_ROOT_SIG")
-
-    if not active_signers_env or not root_signature:
-        log.critical("[Security] DPHI_ACTIVE_SIGNERS or DPHI_PRE_SIGNED_ROOT_SIG not configured.")
+async def get_public_keys(request: Request):
+    # [CRITICAL SECURITY FIX] os.getenv를 제거하고 lifespan에서 검증된 레지스트리 상태를 호출
+    registry = getattr(request.app.state, "origin_registry", None)
+    
+    if not registry or not registry.is_verified:
+        log.critical("[Security] Origin Registry is missing or not verified.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail="Security misconfiguration: Trusted registry is offline."
+            detail="Security misconfiguration: Trusted registry is offline or tampered."
         )
 
-    payload_dict = {"active_signers": [key.strip() for key in active_signers_env.split(",")]}
+    # 읽기 전용 검증 상태 획득
+    trusted_state = registry.get_state()
+
+    # 원본 CLI 서명 시점과 동일한 키 구조체 구성
+    payload_dict = {"active_signers": trusted_state.active_signers}
     
     return Response(
         content=orjson.dumps(payload_dict),
         media_type="application/json",
-        headers={"X-Dphi-Root-Signature": root_signature}
+        # 클라이언트 단에서의 2차 검증을 위한 Root 서명 반환
+        headers={"X-Dphi-Root-Signature": trusted_state.root_signature}
     )
 
 
@@ -156,7 +162,7 @@ async def public_sandbox_execute(
             raise HTTPException(status_code=401, detail=f"Intent Rejected: {{\"detail\":\"{e.detail}\"}}")
 
         exec_req = BilledExecutionRequest(
-            sandbox_schema={  # [CRITICAL FIX] agent_schema -> sandbox_schema
+            sandbox_schema={
                 "runtime": "python3.11-wasm",
                 "files": {"main.py": intent.source_code}, 
                 "limits": {"max_fuel": intent.max_fuel}

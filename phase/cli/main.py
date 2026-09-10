@@ -41,7 +41,6 @@ def _load_env(env_file: Optional[str]):
             log.warning("[Fiber] python-dotenv is not installed. Ignoring --env-file option.")
 
 def boot_kernel(mode_name: str):
-    """지정된 환경변수를 쥐고 커널을 붕괴(Collapse)시켜 PhaseReactor를 점화 (Server/Host 역할)"""
     log.info(f"[Fiber] Igniting Kernel in {mode_name.upper()} mode...")
     try:
         PhaseReactor.ignite(main_coro_func=main_async, teardown_hook=teardown)

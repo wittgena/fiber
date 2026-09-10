@@ -1,6 +1,4 @@
 # fiber.dphi.infra.daemon.tracer
-## @lineage: fiber.dphi.daemon.tracer
-## @lineage: fiber.phase.kernel.daemon.tracer
 import os
 import asyncio
 from contextlib import suppress
@@ -14,10 +12,6 @@ log = get_emitter("daemon.tracer")
 
 @contract.daemon("tracer_controller")
 class TracerControllerDaemon(AbstractDaemon):
-    """
-    @desc: `fiber trace` 명령어를 통해 실행되는 카오스 엔지니어링 및 진단용 하이퍼바이저 데몬.
-    주어진 타겟(TRACE_TARGET)에 맞는 Tracer(OOMTracer, ReproTracer 등)를 인스턴스화하고 실행을 지휘합니다.
-    """
     def __init__(self, ctx):
         super().__init__("TracerControllerDaemon")
         self.ctx = ctx
@@ -25,10 +19,6 @@ class TracerControllerDaemon(AbstractDaemon):
         self._trace_task = None
 
     def _ensure_tracer_config(self, target: str):
-        """
-        [안전장치] 대상 시나리오에 대한 Config가 Registry에 없을 경우, 
-        초기화 시 KeyError로 인해 데몬이 뻗는 것을 막기 위해 최소한의 Fallback Mocks를 주입합니다.
-        """
         if TracerRegistry.get(target):
             return
 
@@ -72,7 +62,6 @@ class TracerControllerDaemon(AbstractDaemon):
         
         # 1. 시나리오 라우팅 및 인스턴스화
         self._ensure_tracer_config(self.target)
-        
         if self.target == "oom_tracer":
             tracer_instance = OOMTracer(target_name=self.target)
         elif self.target == "repro_worker":
@@ -85,7 +74,6 @@ class TracerControllerDaemon(AbstractDaemon):
         try:
             # 백그라운드 태스크로 실행하여 NodeRuntime의 Cancel 시그널(Ctrl+C)에 안전하게 반응
             self._trace_task = asyncio.create_task(tracer_instance.execute())
-            
             while self.running:
                 if self._trace_task.done():
                     exc = self._trace_task.exception()
@@ -94,11 +82,8 @@ class TracerControllerDaemon(AbstractDaemon):
                     else:
                         log.info(f"[{self.name}] ✅ Trace Scenario '{self.target}' completed successfully.")
                     
-                    # 추적이 끝났으므로 데몬을 자발적으로 종료(Evaporate)하여 리소스 반환
                     break 
-                    
                 await asyncio.sleep(1.0)
-                
         except asyncio.CancelledError:
             log.info(f"[{self.name}] Cancel signal received. Aborting trace scenario.")
         except Exception as e:

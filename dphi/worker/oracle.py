@@ -1,6 +1,4 @@
 # fiber.dphi.worker.oracle
-## @lineage: fiber.agent.worker.oracle
-## @lineage: fiber.agent.infra.worker.oracle
 import sys
 import json
 import time
