@@ -19,6 +19,27 @@ It centralizes DPoP signature validation and tracks inbound intents through a st
 * **`Linear` Mode:** Routes CPU-heavy workloads into a pre-warmed daemon with strict sequential queueing, eliminating cold starts.
 * **`Multiplex` Mode:** Unleashes extreme lock-free concurrency within a single async daemon to handle thousands of I/O-bound operations (e.g., Oracle data fetches) in parallel.
 
+**Architecture & Quick Start Flow:**
+The Transition Bridge operates statelessly by decoupling the HTTP ingress from physical execution via a message bus. 
+
+```text
+[Client] ⚡ HTTP POST ➔ [Edge Gateway (Daemon)] ➔ (Intent Bus) ➔ [fiber connect] ➔ STDIN/OUT ➔ [Legacy App]
+```
+
+```bash
+## 1. Boot the Gateway Daemon (Provides the REST Edge API on localhost:8000)
+fiber daemon -s rest_edge
+
+## 2. Wrap and boot your legacy script as an autonomous worker (Listening on the bus)
+fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py"
+
+## 3. Clients trigger the agent safely via localhost (Gateway handles Auth, Nonce, X402)
+curl -X POST [http://127.0.0.1:8000/v1/mcp-gateway/oracle-01/invoke](http://127.0.0.1:8000/v1/mcp-gateway/oracle-01/invoke) \
+     -H "x-nonce: 12345" \
+     -H "x-idempotency-key: req-01" \
+     -d '{"method": "fetch_data", "params": {}}'
+```
+
 ### 1.2. Edge Gateway (REST API)
 
 The Edge Gateway is not merely a REST API, but a cryptographically anchored membrane. Initialized via a self-verifying OriginRegistry, it mandates strict "Fail-Fast" policies against any configuration tampering before runtime. For decentralized agents, point your Base URL to this Gateway and inject the X402 payment proof.
