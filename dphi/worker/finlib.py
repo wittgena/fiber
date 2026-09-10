@@ -1,6 +1,4 @@
 # fiber.dphi.worker.finlib
-## @lineage: fiber.agent.worker.finlib
-## @lineage: fiber.agent.infra.worker.finlib
 import sys
 import json
 import logging

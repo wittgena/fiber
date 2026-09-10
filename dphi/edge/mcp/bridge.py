@@ -148,9 +148,7 @@ class TransitionBridge:
             await pubsub.unsubscribe(reply_channel)
             await pubsub.close()
 
-# ---------------------------------------------------------
-# HTTP Ingress Route (MCP 2026-07-28 Spec)
-# ---------------------------------------------------------
+## HTTP Ingress Route (MCP 2026-07-28 Spec)
 mcp_bridge = APIRouter(prefix="/v1/mcp-gateway", tags=["Enterprise MCP Bridge"])
 
 @mcp_bridge.post("/{target_server_id}/invoke")

@@ -1,22 +1,29 @@
 # fiber.phase.cli.sign
-## @lineage: fiber.cli.sign
 import os
 import sys
 import secrets
-import pyotp
 import sqlite3
 import qrcode
-from typing import Annotated
+import hashlib
+import json
+import nacl.signing
+import nacl.encoding
+from typing import Annotated, Optional
 
 import typer
+import pyotp
 from eth_account import Account
-
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+try:
+    import dotenv
+except ImportError:
+    dotenv = None
+
 from xphi.kernel.adapter.state import StateAdapter
-from xphi.kernel.adapter.sign import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
 
@@ -24,37 +31,57 @@ SIGN_ROOT = resolve_path("sign")
 DEFAULT_DB_PATH = os.path.join(str(SIGN_ROOT), "deploy_audit.sqlite")
 BASE_SPIFFE_DOMAIN = "spiffe://self/"
 
-log_sign = get_emitter("cli.sign")
+log_sign = get_emitter("fiber.cli.sign")
 
 app = typer.Typer(
-    name="flow",
-    help="Flow Unified Identity & Security CLI Tools",
-    add_completion=False,
+    name="sign",
+    help="Fiber Unified Identity, Cryptographic Keys & Security CLI Tools",
     no_args_is_help=True,
+    add_completion=False,
 )
 
 # ==========================================
-# Helper: SPIFFE ID 정규화 (Canonicalization)
+# Common Utilities
 # ==========================================
+def _load_env(env_file: Optional[str]):
+    """Injects environment variables from a .env file into the runtime context."""
+    if env_file:
+        if dotenv:
+            try:
+                dotenv.load_dotenv(env_file)
+                log_sign.info(f"[Fiber] Loaded environment from {env_file}")
+            except Exception as e:
+                log_sign.error(f"[Fiber] Failed to load .env file: {e}")
+                raise typer.Exit(1)
+        else:
+            log_sign.warning("[Fiber] python-dotenv is not installed. Ignoring --env-file option.")
+
 def _normalize_spiffe_id(user_id: str) -> str:
-    """
-    사용자가 'fiber'만 입력해도 'spiffe://self/fiber'로 자동 변환합니다.
-    이미 'spiffe://'를 포함하여 입력한 경우 원본을 유지합니다.
-    """
+    """Canonicalizes the identifier into a valid SPIFFE URI."""
     if user_id.startswith("spiffe://"):
         return user_id
     return f"{BASE_SPIFFE_DOMAIN}{user_id}"
 
+def _write_secure_file(filepath: str, content: str, is_private: bool = True):
+    """Writes content to a file with strict OS-level permissions."""
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    with open(filepath, 'w') as f:
+        f.write(content)
+    # chmod 600 for private keys (Owner Read/Write only), 644 for public
+    if is_private:
+        os.chmod(filepath, 0o600)
+    else:
+        os.chmod(filepath, 0o644)
 
 # ==========================================
-# Crypto Vault (관리자 시크릿 암호화 전담)
+# Crypto Vault (AES-GCM for TOTP)
 # ==========================================
 class AdminSecretVault:
     def __init__(self, passphrase: str):
         self.passphrase = passphrase.encode('utf-8')
 
     def encrypt(self, secret: str) -> tuple[str, str, str]:
-        """TOTP 평문 시크릿을 AES-GCM으로 암호화하여 반환"""
+        """Encrypts a plaintext TOTP secret using AES-GCM."""
         salt = os.urandom(16)
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -66,115 +93,194 @@ class AdminSecretVault:
         aesgcm = AESGCM(aes_key)
         nonce = os.urandom(12)
         ciphertext = aesgcm.encrypt(nonce, secret.encode('utf-8'), None)
-        
         return salt.hex(), nonce.hex(), ciphertext.hex()
 
-
 # ==========================================
-# Domain 1: Machine Identity (기계 신원 및 노드 서명)
+# Domain 1: Machine Identity (EVM & Node Keys)
 # ==========================================
-machine_app = typer.Typer(help="Manage Machine Identities (EVM Keys, Node Signatures)")
+machine_app = typer.Typer(
+    help="Manage Machine Identities (EVM Billing Wallets & Ed25519 Consensus Keys)",
+    no_args_is_help=True
+)
 app.add_typer(machine_app, name="machine")
 
-def _generate_agent(name: str) -> tuple[str, str]:
+def _generate_evm_wallet(name: str) -> tuple[str, str]:
+    """Generates a secp256k1 keypair for EVM-compatible billing and smart contracts."""
     priv = secrets.token_hex(32)
     private_key = "0x" + priv
     account = Account.from_key(private_key)
-    
-    log_sign.info(f"[{name} Agent]")
+
+    log_sign.info(f"[{name} - EVM Billing Identity]")
     log_sign.info(f"EVM Address : {account.address}")
     log_sign.info(f"Private Key : {private_key}")
     log_sign.info(f"DID Format  : did:pkh:eip155:84532:{account.address}")
-    log_sign.info("-" * 50)
-    
+    log_sign.info("-" * 60)
     return private_key, account.address
 
-@machine_app.command("genkey")
-def flow_genkey():
-    """Generate EOA Wallets for Testnet Agents."""
-    log_sign.info("🚀 Generating EOA Wallets for Testnet Agents...\n")
-    
-    alpha_pkey, _ = _generate_agent("Alpha (Compute Provider)")
-    beta_pkey, _ = _generate_agent("Beta (Data Consumer)")
-    
-    log_sign.info("📋 Copy & Paste this to your .env file:")
-    log_sign.info("=" * 50)
-    log_sign.info(f'AGENT_ALPHA_PKEY="{alpha_pkey}"')
-    log_sign.info(f'AGENT_BETA_PKEY="{beta_pkey}"')
-    log_sign.info("=" * 50)
-
-
-@machine_app.command("signature")
-def flow_signature(
-    keys: Annotated[str, typer.Option("--keys", "-k", help="신뢰할 Edge 노드들의 Public Key 목록 (쉼표 구분)")],
-    root_key: Annotated[str, typer.Option("--root-key", "-r", help="보안 격리된 Master Root Private Key (Hex)")]
+@machine_app.command("gen-evm")
+def flow_gen_evm(
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True, help="Path to .env file")] = None,
 ):
-    """Generate offline Root Signature for DPHI Edge."""
-    signers_list = [k.strip() for k in keys.split(",")]
-    
-    log_sign.info("\n🔒 [Offline Signer] Generating Pre-signed Payload...")
-    payload_dict = {"active_signers": signers_list}
-    canonical_bytes = StateAdapter.to_canonical_bytes(payload_dict)
-    
+    """Generate secp256k1 EOA Wallets for X402 Billing and Agent Identities."""
+    _load_env(env_file)
+    log_sign.info("🚀 Generating EVM Wallets for X402 Billing & A2A Economy...\n")
+
+    alpha_pkey, _ = _generate_evm_wallet("Alpha (Compute Provider)")
+    beta_pkey, _ = _generate_evm_wallet("Data Consumer Beta")
+    master_pkey, _ = _generate_evm_wallet("System Clearinghouse Master")
+
+    log_sign.info("📋 Copy & Paste this to your .env file:")
+    log_sign.info("=" * 60)
+    log_sign.info(f'AGENT_PKEY_ALPHA="{alpha_pkey}"')
+    log_sign.info(f'AGENT_PKEY_BETA="{beta_pkey}"')
+    log_sign.info(f'SYSTEM_CLEARING_PKEY="{master_pkey}"')
+    log_sign.info("=" * 60)
+
+
+def _generate_ed25519_node(name: str) -> tuple[str, str]:
+    """Generates an Ed25519 keypair and returns raw hex (no terminal exposure)."""
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    public_key = private_key.public_key()
+
+    priv_hex = private_key.private_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PrivateFormat.Raw,
+        encryption_algorithm=serialization.NoEncryption()
+    ).hex()
+
+    pub_hex = public_key.public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw
+    ).hex()
+
+    log_sign.info(f"[{name}] - Keys successfully generated in memory.")
+    return priv_hex, pub_hex
+
+@machine_app.command("bootstrap-origin")
+def flow_bootstrap_origin(
+    out_dir: Annotated[str, typer.Option("--out-dir", "-o", help="Directory for secure file staging")] = os.path.expanduser("~/.ssh/fiber"),
+    count: Annotated[int, typer.Option("--count", "-c", help="Number of validator nodes to generate")] = 3,
+    location: Annotated[str, typer.Option("--location", "-l", help="Logical repository path (e.g., fiber.phase.abc.validator.origin_config)")] = "fiber.phase.abc.validator.origin_config",
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True, help="Path to .env file")] = None,
+):
+    """Automates Origin Bootstrapping: Generates Root, Validators, and signs them instantly (1-Step Process)."""
+    _load_env(env_file)
+    log_sign.info(f"🛡️ Bootstrapping Origin Infrastructure ({count} Validators) securely in {out_dir} ...\n")
+
+    os.makedirs(out_dir, exist_ok=True)
+    os.chmod(out_dir, 0o700)
+
+    # 1. Master Root Key 생성 및 저장
+    root_priv, root_pub = _generate_ed25519_node("Master Root Key")
+    _write_secure_file(os.path.join(out_dir, "master_root.key"), root_priv, is_private=True)
+    _write_secure_file(os.path.join(out_dir, "master_root.pub"), root_pub, is_private=False)
+
+    # 2. Validator Nodes 생성 및 저장
+    val_pubs = []
+    validators_metadata = []
+    for i in range(1, count + 1):
+        v_priv, v_pub = _generate_ed25519_node(f"Validator Node {i}")
+        _write_secure_file(os.path.join(out_dir, f"validator_{i}.key"), v_priv, is_private=True)
+        _write_secure_file(os.path.join(out_dir, f"validator_{i}.pub"), v_pub, is_private=False)
+        val_pubs.append(v_pub)
+        
+        # [수정완료] 순수 무결성 식별 데이터만 남김 (로컬 key_path 제거)
+        validators_metadata.append({
+            "node_id": f"validator_{i}",
+            "pubkey": v_pub
+        })
+
+    # 3. 즉각적인 인메모리 서명 (NodeSigner 로직과 100% 동일한 방식)
+    log_sign.info("\n🔒 [Offline Signer] Generating Pre-signed Payload in memory...")
     try:
-        temp_signer = NodeSigner(private_key_hex=root_key)
-        root_signature = temp_signer.sign_payload(canonical_bytes)
-        root_pubkey = temp_signer.pubkey_hex
+        payload_dict = {"active_signers": val_pubs}
+        canonical_bytes = StateAdapter.to_canonical_bytes(payload_dict)
+
+        signing_key = nacl.signing.SigningKey(root_priv, encoder=nacl.encoding.HexEncoder)
+        payload_hash_str = hashlib.sha256(canonical_bytes).hexdigest()
+        signed = signing_key.sign(payload_hash_str.encode('utf-8'))
+        root_signature = signed.signature.hex()
     except Exception as e:
-        log_sign.error(f"🚨 서명 생성 실패: {e}")
+        log_sign.error(f"🚨 Signature Generation Failed: {e}")
         sys.exit(1)
 
-    log_sign.info("\n✅ 성공적으로 서명이 생성되었습니다. Edge 서버 환경변수에 아래 내용을 주입하세요.\n")
-    log_sign.info("=" * 60)
-    log_sign.info(f"DPHI_ACTIVE_SIGNERS={','.join(signers_list)}")
-    log_sign.info(f"DPHI_PRE_SIGNED_ROOT_SIG={root_signature}")
-    log_sign.info("=" * 60)
-    log_sign.info("\n[참고] 이 서명을 검증하기 위해 클라이언트(SDK)에 주입해야 할 Root Public Key:")
-    log_sign.info(f"DPHI_ROOT_PUBKEY={root_pubkey}")
-    log_sign.info("=" * 60)
+    # 4. JSON 포맷 설정 파일 생성 (GitOps 및 무결성 검증용)
+    json_config_path = os.path.join(out_dir, "origin_config.json")
+    
+    # [수정완료] CLI 옵션(location) 반영 및 불필요한 env_injection, root_key_path 완벽 제거
+    config_data = {
+        "location": location,
+        "network": "fiber.origin",
+        "attestation": {
+            "root_pubkey": root_pub,
+            "pre_signed_root_sig": root_signature
+        },
+        "validators": validators_metadata
+    }
+    
+    _write_secure_file(json_config_path, json.dumps(config_data, indent=4), is_private=False)
+
+    # 5. 결과 출력 및 격리 가이드 (로거 텔레메트리 차단을 피하기 위해 print() 사용)
+    print("\n✅ Origin Bootstrapping Complete. Keys are written to disk with chmod 600/644.")
+    print("=" * 70)
+    print(f"Root Key      : {os.path.join(out_dir, 'master_root.key')}")
+    print(f"JSON Config   : {json_config_path}")
+    print(f"Validators    : {count} pairs generated")
+    print("=" * 70)
+
+    print("\n🔥 [HOT SERVER] - Legacy / Env Inject (If needed):")
+    print("-" * 70)
+    print(f'COMMITTEE_VALIDATORS="{",".join(val_pubs)}"')
+    print(f'DPHI_ACTIVE_SIGNERS="{",".join(val_pubs)}"')
+    print(f'DPHI_PRE_SIGNED_ROOT_SIG="{root_signature}"')
+    print("-" * 70)
+
+    print("\n⚠️  [SECURITY WARNING] The staging process is complete.")
+    print(f"1. Commit '{json_config_path}' to your Git Repository.")
+    print(f"2. Move your Master Root Key to Cold Storage immediately:")
+    print(f"-> mv {os.path.join(out_dir, 'master_root.key')} /Volumes/SECURE_USB/\n")
 
 
 # ==========================================
-# Domain 2: Human Identity (인간 관리자 및 TOTP 프로비저닝)
+# Domain 2: Human Identity (Admin TOTP)
 # ==========================================
-admin_app = typer.Typer(help="Manage Human Administrators and TOTP Secrets")
+admin_app = typer.Typer(
+    help="Manage Human Administrators and Encrypted TOTP Provisioning",
+    no_args_is_help=True
+)
 app.add_typer(admin_app, name="admin")
 
 @admin_app.command("totp-enroll")
 def enroll_admin(
-    user_id: Annotated[str, typer.Option("--user", "-u", help="관리자 식별자 (예: fiber 또는 spiffe://self/fiber)")],
-    db_path: Annotated[str, typer.Option("--db", "-d", help="SQLite DB 파일 경로")] = DEFAULT_DB_PATH
+    user_id: Annotated[str, typer.Option("--user", "-u", help="Administrator identifier (e.g. fiber or spiffe://self/fiber)")],
+    db_path: Annotated[str, typer.Option("--db", "-d", help="Path to SQLite Audit DB")] = DEFAULT_DB_PATH,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True, help="Path to .env file")] = None,
 ):
     """Generate a new encrypted TOTP secret for an administrator and inject it into SQLite."""
-    # [수정] 식별자 정규화 처리
+    _load_env(env_file)
     canonical_id = _normalize_spiffe_id(user_id)
-    
+
     log_sign.info(f"🔐 Provisioning TOTP for Administrator: {canonical_id}")
     log_sign.info(f"📁 Target Database: {db_path}")
-    
-    # 1. 시크릿 발급 및 Vault 암호화 준비
+
     secret = pyotp.random_base32()
     totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
-        name=canonical_id,  # Authenticator 앱에도 정규화된 이름으로 표기됨
+        name=canonical_id,
         issuer_name="DPHI_Enterprise_Deploy"
     )
-    
-    # 마스터 패스프레이즈를 인터랙티브하게 입력 받음
+
     passphrase = typer.prompt("🔑 Enter Master Passphrase to encrypt the TOTP secret", hide_input=True, confirmation_prompt=True)
     vault = AdminSecretVault(passphrase)
-    
+
     try:
-        # AES-GCM 암호화 수행
         salt_hex, nonce_hex, cipher_hex = vault.encrypt(secret)
     except Exception as e:
         log_sign.error(f"🚨 Encryption Failed: {e}")
         sys.exit(1)
-    
-    # 2. SQLite 연결 및 암호화된 데이터 주입
+
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     try:
         conn = sqlite3.connect(db_path)
-        # 평문 대신 암호화 요소(salt, nonce, ciphertext)를 저장
         conn.execute("""
             CREATE TABLE IF NOT EXISTS admin_users (
                 user_id TEXT PRIMARY KEY,
@@ -183,7 +289,6 @@ def enroll_admin(
                 ciphertext TEXT
             )
         """)
-        # INSERT OR REPLACE로 기존 키가 있으면 덮어쓰기 (정규화된 ID 사용)
         conn.execute("""
             INSERT OR REPLACE INTO admin_users (user_id, salt, nonce, ciphertext) 
             VALUES (?, ?, ?, ?)
@@ -194,39 +299,37 @@ def enroll_admin(
         log_sign.error(f"🚨 DB Injection Failed: {e}")
         sys.exit(1)
 
-    log_sign.info("\n✅ 성공적으로 DB에 '암호화된' TOTP 시크릿이 주입되었습니다.")
-    log_sign.info("=" * 60)
+    log_sign.info("\n✅ Encrypted TOTP secret successfully injected into database.")
+    log_sign.info("=" * 70)
     log_sign.info(f"Admin ID    : {canonical_id}")
-    log_sign.info("🔒 (The Secret is encrypted. It cannot be recovered without the Master Passphrase)")
-    log_sign.info("=" * 60)
-    
-    # 터미널 QR 코드 렌더링
-    log_sign.info("📱 스마트폰 Authenticator (Google/Authy 등) 앱을 열고 아래 QR 코드를 스캔하세요:\n")
+    log_sign.info("🔒 (Encrypted securely under Master Passphrase)")
+    log_sign.info("=" * 70)
+
+    log_sign.info("📱 Open your Authenticator app (Google/Authy) and scan the QR code below:\n")
     qr = qrcode.QRCode(version=1, box_size=1, border=2)
     qr.add_data(totp_uri)
     qr.make(fit=True)
     qr.print_ascii(out=sys.stdout, invert=True)
     print("\n")
-    
-    log_sign.info("=" * 60)
-    log_sign.info("💡 QR 스캔이 불가능한 경우, 아래 수동 입력 키를 사용하세요 (단 1회성 출력):")
-    log_sign.info(f"Base32 Key : {secret}")
-    log_sign.info("=" * 60)
 
+    log_sign.info("=" * 70)
+    log_sign.info(f"Base32 Manual Key: {secret}")
+    log_sign.info("=" * 70)
 
 @admin_app.command("totp-revoke")
 def revoke_admin(
-    user_id: Annotated[str, typer.Option("--user", "-u", help="권한을 폐기할 관리자 식별자 (예: fiber)")],
-    db_path: Annotated[str, typer.Option("--db", "-d", help="SQLite DB 파일 경로")] = DEFAULT_DB_PATH
+    user_id: Annotated[str, typer.Option("--user", "-u", help="Administrator identifier to revoke (e.g. fiber)")],
+    db_path: Annotated[str, typer.Option("--db", "-d", help="Path to SQLite Audit DB")] = DEFAULT_DB_PATH,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True, help="Path to .env file")] = None,
 ):
-    """Revoke (delete) a TOTP secret for an administrator."""
-    # [수정] 식별자 정규화 처리 (폐기할 때도 짧게 입력 가능하도록)
+    """Revoke (delete) an administrator's TOTP secret from SQLite."""
+    _load_env(env_file)
     canonical_id = _normalize_spiffe_id(user_id)
-    
+
     log_sign.info(f"🗑️ Revoking TOTP access for Administrator: {canonical_id}")
     log_sign.info(f"📁 Target Database: {db_path}")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    
+
     try:
         conn = sqlite3.connect(db_path)
         conn.execute("""
@@ -237,16 +340,17 @@ def revoke_admin(
                 ciphertext TEXT
             )
         """)
-        # 정규화된 ID로 삭제
         conn.execute("DELETE FROM admin_users WHERE user_id = ?", (canonical_id,))
         conn.commit()
-        
-        log_sign.info(f"✅ 관리자 '{canonical_id}'의 TOTP 권한이 DB에서 완전히 삭제되었습니다.")
+
+        log_sign.info(f"✅ Administrator '{canonical_id}' successfully revoked from database.")
         conn.close()
     except Exception as e:
         log_sign.error(f"🚨 Revocation Failed: {e}")
         sys.exit(1)
 
+def main():
+    app()
 
 if __name__ == "__main__":
-    app()
+    main()

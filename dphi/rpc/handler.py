@@ -480,7 +480,7 @@ async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
     try:
         result = await ctx.profile_service.execute(
             client_id=client_id, 
-            schema=req.agent_schema,
+            schema=req.sandbox_schema,
             entry=req.target_entry, 
             depth=req.context_depth, 
             tier=target_tier,
@@ -517,7 +517,7 @@ async def handle_profile_execute_billed(params: dict, ctx: WorkerContext) -> dic
     try:
         result = await ctx.profile_service.execute(
             client_id=client_id, 
-            schema=req.agent_schema,
+            schema=req.sandbox_schema,
             entry=req.target_entry, 
             depth=req.context_depth, 
             tier=target_tier,

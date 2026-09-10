@@ -1,5 +1,4 @@
 # fiber.dphi.infra.daemon.rpc
-## @lineage: fiber.dphi.daemon.rpc
 import os
 import json
 import asyncio
@@ -128,7 +127,6 @@ class RpcWorkerDaemon(AbstractDaemon):
                 response = {"error": True, "code": 404, "message": f"Method {method} not found"}
                 log.warning(f"[{self.name}] Unknown method invoked: {method}")
             else:
-                # [IMPROVED] 2. 핸들러 크래시(예: DB 타임아웃, 문법 오류) 방어벽 구축
                 try:
                     response = await handler(params, self.worker_ctx)
                 except Exception as handler_exc:

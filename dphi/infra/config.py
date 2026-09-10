@@ -1,5 +1,4 @@
 # fiber.dphi.infra.config
-## @lineage: fiber.infra.config
 import os
 from enum import Enum
 from typing import Dict, List, Union
@@ -35,7 +34,7 @@ _KNOWN_RPC_URLS: Dict[ChainIdType, str] = {
 
 _ALCHEMY_API_KEY = os.getenv("ALCHEMY_API_KEY", "")
 
-# Anvil/Hardhat 표준 테스트 계정 0, 1, 2
+# Anvil/Hardhat 테스트 계정 0, 1, 2
 _DEFAULT_PKEY_0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 _DEFAULT_PKEY_1 = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 _DEFAULT_PKEY_2 = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
@@ -108,8 +107,6 @@ class ContractRegistry(BaseModel):
         "TARGET_USDC",
         _KNOWN_USDC_ADDRESSES.get(ACTIVE_CHAIN_ID, "0x0000000000000000000000000000000000000000")
     ))
-    
-    # CosmWasm 바인딩 (defin.py에서 사용)
     target_cw20: str = Field(default_factory=lambda: os.getenv("TARGET_CW20", "akash1cw20tokenaddressmock1234"))
 
 class WasmBrokerConfig(BaseModel):
@@ -133,6 +130,19 @@ class DAConfig(BaseModel):
     """Celestia DAaaS configurations."""
     namespace_id: str = os.getenv("DA_NAMESPACE", "0000000000000000000000000000000000000000000000000000d941")
 
+class DelegationConfig(BaseModel):
+    """Configuration for intent delegation to the Public Core (Origin)."""
+    
+    ## 퍼블릭 코어(오리진)의 엔드포인트 URL. 로컬에서 처리 불가능한 인텐트가 이 주소로 위탁됨.
+    origin_url: str = Field(
+        default_factory=lambda: os.getenv("DPHI_ORIGIN_URL", "https://api.fiber.network")
+    )
+    
+    ## 로컬 워커가 존재하지 않을 경우 오리진으로 자동 폴백(Fallback)할지 여부
+    allow_fallback: bool = Field(
+        default_factory=lambda: str(os.getenv("ALLOW_ORIGIN_FALLBACK", "true")).lower() == "true"
+    )
+
 class ExchangeConfig(BaseModel):
     """Master configuration object integrating Network, WASM execution, and External Plugs."""
     mode: NetEnv = CURRENT_ENV
@@ -144,6 +154,7 @@ class ExchangeConfig(BaseModel):
     
     export_attestation: ExportAttestationConfig = Field(default_factory=ExportAttestationConfig)
     da_layer: DAConfig = Field(default_factory=DAConfig)
+    delegation: DelegationConfig = Field(default_factory=DelegationConfig)
     
     def get_agent_pkey(self, agent_name: str) -> str:
         """Retrieves the private key for a requested agent."""

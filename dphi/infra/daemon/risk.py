@@ -1,5 +1,4 @@
 # fiber.dphi.infra.daemon.risk
-## @lineage: fiber.dphi.daemon.risk
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
@@ -54,12 +53,7 @@ class _LocalBrokerAdapter:
 
 
 class DormantTrajectorySentinel:
-    """
-    WASM 커널 기반의 동역학 평가 엔진을 백그라운드에서 주기적으로 호출하여
-    시장의 비선형적 발작(Spiking) 및 위상장 텐션을 모니터링하는 센티널.
-    """
     def __init__(self, broker: DphiBroker):
-        # 코어 수정을 피하기 위해 로컬 어댑터로 브로커를 래핑하여 주입
         safe_broker = _LocalBrokerAdapter(broker)
         self.receptor = TrajectoryOracleReceptor(broker=safe_broker)
         self.alert_emitter = get_emitter("sentinel.awakening")
