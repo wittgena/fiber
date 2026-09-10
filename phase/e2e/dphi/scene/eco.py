@@ -6,12 +6,12 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.phase.plane.shell.sandbox import EpochBase
-from fiber.dphi.eco.transaction.settlement import ClearingAdapter
-from fiber.dphi.eco.anchor import ActorIdentity
+from fiber.phase.e2e.infra.sandbox import EpochBase
+from xphi.bound.adapter.settlement import ClearingAdapter
+from xphi.arch.model.anchor.nexus import ActorIdentity
 
 from xphi.bound.space.sandbox.runner import SchemeRunner
-from xphi.kernel.adapter.state import StateAdapter
+from xphi.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

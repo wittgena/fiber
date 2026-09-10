@@ -8,11 +8,11 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 
 import fiber.phase.e2e.dphi.scene as scene_module
-from fiber.phase.plane.flare import FlareController
 
 from xphi.kernel.space.topos.tunnel.flare import FlareTunnelFactory
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
+from xphi.watcher.plane.phase.flare import FlareController
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.flare")

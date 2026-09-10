@@ -10,8 +10,8 @@ from typing import Any, Dict, Optional, List
 
 from fiber.dphi.eco.transaction.rollup import ShadowAdapter
 
-from xphi.kernel.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
-from xphi.kernel.adapter.dphi.dvm import DvmAdapter
+from xphi.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
+from xphi.bound.adapter.dphi.dvm import DvmAdapter
 from xphi.state.phase.fsm.defin import (
     DefinFSM, 
     FsmStartIntent, PtaAnchoredEvent, WasmExecutedEvent, 

@@ -11,14 +11,14 @@ import libtmux
 from fiber.agent.engine.protocol.builder import sanitized_env
 from fiber.agent.engine.tool.terminal.interface import TerminalInterface
 
-from xphi.bound.bridge.terminal import (
+from xphi.bound.space.terminal import (
     HISTORY_LIMIT,
     TMUX_SESSION_HEIGHT,
     TMUX_SESSION_WIDTH,
     TMUX_SOCKET_NAME,
     CMD_OUTPUT_PS1_END
 )
-from xphi.bound.bridge.terminal import CmdOutputMetadata
+from xphi.bound.space.terminal import CmdOutputMetadata
 from xphi.watcher.plane.emitter import get_logger
 
 log = get_logger(__name__)

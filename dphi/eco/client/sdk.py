@@ -1,29 +1,34 @@
 # fiber.dphi.eco.client.sdk
-## @lineage: fiber.dphi.client.sdk
-## @lineage: fiber.infra.client.sdk
 """
-@desc: DPHI Public Gateway SDK Core & Integration Scenario Runner
+@desc: DPHI Public Gateway SDK Core
 - Provides a zero-trust computing blackbox client for isolated sandbox workloads.
 - Integrates LLM edge and Enterprise MCP interfaces.
+- Intended for external developers and agentic workflows.
 """
-
 import time
-import asyncio
 import logging
 from dataclasses import dataclass, asdict
 from typing import Dict, Any, Optional, List
 import httpx
 
 from fiber.dphi.eco.client.http import VerifiedHttpClient
-from xphi.arch.model.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest
+from xphi.arch.model.edge.receipt import (
+    AuditLogRequest, 
+    AuditEvent, 
+    ExportLogsServiceRequest,
+    ResourceLogs,
+    ScopeLogs,
+    LogRecord,
+    KeyValue
+)
+from xphi.arch.model.dphi.receptor import EdgeHeader
 
 
 # =========================================================================
-# @phase.1: SDK Models & Endpoints (Sandbox/Client 규격으로 정밀 정렬 완료)
+# Endpoints & Models
 # =========================================================================
 class Endpoints:
-    """백엔드의 실제 라우터 Prefix에 맞게 엔드포인트를 분리 및 정렬했습니다."""
-    
+    """Backend routing prefixes and endpoints for DPHI Gateway."""
     # --- edge.public (prefix: /v1/public) ---
     KEYS              = "/v1/public/keys"
     SANDBOX_QUOTE     = "/v1/public/sandbox/quote"
@@ -58,7 +63,6 @@ class LLMIntent:
 
 @dataclass
 class MCPStateIntent:
-    """Enterprise MCP 2.0 호출을 위한 필수 헤더/페이로드 모델"""
     action: str
     handle_id: Optional[str]
     payload: Dict[str, Any]
@@ -71,10 +75,72 @@ class MCPStateIntent:
 
 
 # =========================================================================
-# @phase.2: Core SDK Client
+# Strict Payload Factory (Zero-Trust Data Assurance)
+# =========================================================================
+class StrictPayloadFactory:
+    """
+    Constructs highly constrained payloads that strictly comply with 
+    the DPHI Gateway's Zero-Trust validation schemas and extraction rulesets.
+    """
+
+    @staticmethod
+    def create_telemetry_payload(
+        tenant_id: str, 
+        model_name: str, 
+        prompt_tokens: int, 
+        completion_tokens: int,
+        message: str = "Telemetry sealed"
+    ) -> ExportLogsServiceRequest:
+        return ExportLogsServiceRequest(
+            resourceLogs=[
+                ResourceLogs(
+                    resource={
+                        "attributes": [
+                            KeyValue(key="tenant", value={"id": tenant_id})
+                        ]
+                    },
+                    scopeLogs=[
+                        ScopeLogs(
+                            logRecords=[
+                                LogRecord(
+                                    timeUnixNano=str(time.time_ns()), 
+                                    attributes=[
+                                        KeyValue(key="llm", value={"model": model_name}),
+                                        KeyValue(key="prompt_tokens", value={"intValue": prompt_tokens}),
+                                        KeyValue(key="completion_tokens", value={"intValue": completion_tokens})
+                                    ],
+                                    body={"stringValue": message}
+                                )
+                            ]
+                        )
+                    ]
+                )
+            ]
+        )
+
+    @staticmethod
+    def create_audit_payload(actor: str, action: str, message: str, require_proof: bool = True) -> AuditLogRequest:
+        return AuditLogRequest(
+            event=AuditEvent(
+                message=message,
+                actor=actor,
+                action=action,
+                status="success"
+            ),
+            verbose=require_proof,
+            sign_local=False
+        )
+
+
+# =========================================================================
+# Core SDK Client
 # =========================================================================
 class DphiPublicClient:
-    def __init__(self, base_url: str = "http://localhost:8000", api_key: str = "test_key"):
+    """
+    Client for interacting with the DPHI Zero-Trust Infrastructure.
+    Handles cryptographic handshakes, secure compute execution, and audit logging.
+    """
+    def __init__(self, base_url: str = "http://localhost:8000", api_key: str = ""):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.http_timeout = httpx.Timeout(60.0, connect=5.0)
@@ -84,7 +150,10 @@ class DphiPublicClient:
             logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     def _get_verified_client(self) -> VerifiedHttpClient:
-        headers = {"X-Dphi-API-Key": self.api_key}
+        headers = {}
+        if self.api_key:
+            headers["X-Dphi-API-Key"] = self.api_key
+            
         base_client = httpx.AsyncClient(
             base_url=self.base_url, 
             headers=headers, 
@@ -93,138 +162,132 @@ class DphiPublicClient:
         return VerifiedHttpClient(client=base_client, max_age_seconds=60)
 
     # -------------------------------------------------------------------------
-    # Public Edge Methods
+    # Public Edge (Sandbox & Economy)
     # -------------------------------------------------------------------------
     async def request_handshake(self, intent: SandboxIntent) -> Dict[str, Any]:
-        self.log.info(f"\n🤝 [Economy] Negotiating execution budget for {intent.client_id}...")
         verifier = self._get_verified_client()
         try:
             response = await verifier.async_post_verified(Endpoints.SANDBOX_HANDSHAKE, json=asdict(intent))
-            data = response.json()
-            self.log.info(f"  └─ ✅ Handshake Ready. Estimated Cost: ${data.get('estimated_cost_usd', 0):.4f}")
-            return data
+            response.raise_for_status()
+            return response.json()
         except Exception as e:
-            self.log.error(f"  └─ ❌ Handshake Failed: {e}")
-            return {"error": str(e)}
+            self.log.error(f"[SDK] Handshake Failed: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
     async def get_fuel_balance(self, client_id: str, asset_type: str = "fuel") -> Dict[str, Any]:
-        self.log.info(f"\n💰 [Economy] Checking PTA hot state for {client_id}...")
         verifier = self._get_verified_client()
         try:
             response = await verifier.async_get_verified(Endpoints.BILLING_BALANCE, params={"client_id": client_id, "asset_type": asset_type})
-            data = response.json()
-            self.log.info(f"  └─ ✅ Balance: {data.get('balance')} {asset_type}")
-            return data
+            response.raise_for_status()
+            return response.json()
         except Exception as e:
-            self.log.error(f"  └─ ❌ Balance Check Failed: {e}")
-            return {"error": str(e)}
+            self.log.error(f"[SDK] Balance Check Failed: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
     async def execute_sandbox_intent(self, intent: SandboxIntent, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
-        self.log.info(f"\n🚀 [Compute] Requesting isolated execution for {intent.client_id}...")
         verifier = self._get_verified_client()
         headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
-            
         try:
             response = await verifier.async_post_verified(Endpoints.SANDBOX_EXECUTE, json=asdict(intent), headers=headers)
-            receipt = response.json()
-            self.log.info(f"  └─ ✅ Success! Billed: ${receipt.get('metered_cost_usd', 0):.4f}")
-            self.log.info(f"  └─ 📜 State Root: {receipt.get('state_root')}")
-            return receipt
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as he:
+            self.log.error(f"[SDK] Execution Rejected (Status {he.response.status_code}): {he.response.text}")
+            raise
         except Exception as e:
-            self.log.error(f"  └─ ❌ Execution Rejected: {e}")
-            return {"error": str(e)}
+            self.log.error(f"[SDK] Execution Failed: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
+    # -------------------------------------------------------------------------
+    # Compliance & Audit Methods
+    # -------------------------------------------------------------------------
     async def verify_audit_receipt(self, receipt: Dict[str, Any]) -> Dict[str, Any]:
-        self.log.info(f"\n🔍 [Compliance] Verifying cryptographic integrity of the receipt...")
         verifier = self._get_verified_client()
         try:
             response = await verifier.async_post_verified(Endpoints.AUDIT_VERIFY, json=receipt)
-            data = response.json()
-            if data.get("is_valid"):
-                self.log.info("  └─ ✅ VERIFIED: Receipt is cryptographically authentic.")
-            else:
-                self.log.critical("  └─ 🚨 COMPROMISED: Receipt verification failed!")
-            return data
+            response.raise_for_status()
+            return response.json()
         except Exception as e:
-            self.log.error(f"  └─ ❌ Verification Error: {e}")
-            return {"error": str(e)}
+            self.log.error(f"[SDK] Verification Error: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
-    async def run_sandbox_intent(self, intent: SandboxIntent) -> Dict[str, Any]:
-        self.log.info("\n" + "="*65)
-        self.log.info(f"🤖 [Auto-Orchestration] Initiating Zero-Trust Sandbox Run")
-        self.log.info("="*65)
-        
-        hs_res = await self.request_handshake(intent)
-        if "error" in hs_res:
-            return {"error": "Handshake sequence failed", "details": hs_res}
-            
-        macaroon = hs_res.get("macaroon", "dummy_macaroon_for_internal_auth")
-        await self.get_fuel_balance(intent.client_id)
-        
-        exec_res = await self.execute_sandbox_intent(intent, payment_receipt=macaroon)
-        if "error" in exec_res:
-            return {"error": "Execution sequence failed", "details": exec_res}
-            
-        verify_res = await self.verify_audit_receipt(exec_res)
-        if not verify_res.get("is_valid"):
-            self.log.critical("🚨 Execution succeeded but receipt verification failed.")
-            return {"error": "Receipt tampered during transit"}
-            
-        self.log.info("\n🎉 [Sandbox Run] All sequences completed securely.")
-        return exec_res
-
-    async def push_telemetry(self, request: ExportLogsServiceRequest) -> Dict[str, Any]:
+    async def push_telemetry(self, request: ExportLogsServiceRequest, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
         verifier = self._get_verified_client()
+        headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
         try:
-            response = await verifier.async_post_verified(Endpoints.TELEMETRY_LOGS, json=request.model_dump(exclude_none=True))
-            content_hash = response.headers.get("x-edge-content-hash", "N/A")
-            return {"status": "success", "content_hash": content_hash}
+            response = await verifier.async_post_verified(
+                Endpoints.TELEMETRY_LOGS, 
+                json=request.model_dump(exclude_none=True), 
+                headers=headers
+            )
+            response.raise_for_status()
+            
+            # [해결됨] xphi.arch.model.dphi.receptor.EdgeHeader 상수를 사용하여 
+            # 서버가 보낸 헤더 키(X-Kernel-Fingerprint 등)와 완벽히 일치시킴. 
+            # httpx.Headers는 Case-Insensitive 하므로 상수값(.value)을 그대로 써도 매칭됨.
+            headers_dict = response.headers
+            content_hash = headers_dict.get(EdgeHeader.CONTENT_HASH.value, "N/A")
+            fingerprint = headers_dict.get(EdgeHeader.FINGERPRINT.value, "N/A")
+            
+            return {
+                "status": "success", 
+                "content_hash": content_hash, 
+                "fingerprint": fingerprint
+            }
+        except httpx.HTTPStatusError as he:
+            self.log.error(f"[SDK] Telemetry Rejected (Status {he.response.status_code}): {he.response.text}")
+            raise
         except Exception as e:
-            return {"error": str(e)}
+            self.log.error(f"[SDK] Telemetry Exception: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
-    async def record_audit_event(self, request: AuditLogRequest) -> Dict[str, Any]:
+    async def record_audit_event(self, request: AuditLogRequest, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
         verifier = self._get_verified_client()
+        headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
         try:
-            response = await verifier.async_post_verified(Endpoints.AUDIT_EVENT, json=request.model_dump(exclude_none=True))
+            response = await verifier.async_post_verified(
+                Endpoints.AUDIT_EVENT, 
+                json=request.model_dump(exclude_none=True), 
+                headers=headers
+            )
+            response.raise_for_status()
             return response.json().get("result", {})
+        except httpx.HTTPStatusError as he:
+            self.log.error(f"[SDK] Audit Rejected (Status {he.response.status_code}): {he.response.text}")
+            raise
         except Exception as e:
-            return {"error": str(e)}
+            self.log.error(f"[SDK] Audit Exception: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
     # -------------------------------------------------------------------------
-    # LLM Edge Methods
+    # LLM & Enterprise MCP
     # -------------------------------------------------------------------------
     async def execute_secure_llm_intent(self, intent: LLMIntent) -> Dict[str, Any]:
-        self.log.info(f"\n🧠 [Intelligence] Requesting Zero-Trust LLM Compute for {intent.client_id}...")
         verifier = self._get_verified_client()
-        url = Endpoints.LLM_CHAT
-        
         payload = {
             "model": intent.model,
             "messages": intent.messages,
             "max_tokens": intent.max_tokens,
-            "metadata": {"client_id": intent.client_id} # 메타데이터 키도 client_id로 일치
+            "metadata": {"client_id": intent.client_id}
         }
 
         try:
-            response = await verifier._client.post(url, json=payload)
+            response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload)
             
-            headers = {}
             if response.status_code == 402:
-                self.log.warning("  ├─ 🛑 402 Payment Required intercepted. Initiating auto x402 Handshake...")
-                
-                # 핸드셰이크 요청도 SandboxIntent 규격 사용
+                self.log.warning("[SDK] 402 Payment Required. Initiating auto x402 Handshake...")
                 hs_res = await self.request_handshake(SandboxIntent(
                     client_id=intent.client_id, action="LLM_COMPUTE", source_code="", max_fuel=intent.max_tokens, signature="sig"
                 ))
@@ -232,34 +295,19 @@ class DphiPublicClient:
                 if not macaroon:
                     raise Exception("Failed to procure x402 Macaroon from Handshake")
                     
-                headers["X-X402-Receipt"] = macaroon
-                self.log.info("  ├─ 💸 Payment authorized. Retrying LLM Compute via WASM Kernel...")
-                response = await verifier._client.post(url, json=payload, headers=headers)
+                headers = {"X-X402-Receipt": macaroon}
+                response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload, headers=headers)
                 
             response.raise_for_status()
-            llm_res = response.json()
-            
-            audit_hash = llm_res.get("system_fingerprint", "N/A")
-            fuel_consumed = llm_res.get("usage", {}).get("fuel_consumed", "Unknown")
-            
-            self.log.info(f"  └─ ✅ LLM Response Received! (Fuel Burned: {fuel_consumed})")
-            self.log.info(f"  └─ 📜 Audit Fingerprint Extracted: {audit_hash}")
-            return llm_res
-
+            return response.json()
         except Exception as e:
-            self.log.error(f"  └─ ❌ LLM Execution Failed: {e}")
-            return {"error": str(e)}
+            self.log.error(f"[SDK] LLM Execution Failed: {e}")
+            raise
         finally:
             await verifier._client.aclose()
 
-    # -------------------------------------------------------------------------
-    # Enterprise MCP Edge Method
-    # -------------------------------------------------------------------------
     async def process_mcp_state(self, intent: MCPStateIntent) -> Dict[str, Any]:
-        self.log.info(f"\n🏢 [Enterprise] Processing MCP State for Tenant {intent.x_tenant_id}...")
         verifier = self._get_verified_client()
-        url = Endpoints.MCP_STATE
-        
         headers = {
             "x-spiffe-id": intent.x_spiffe_id,
             "x-dpop-proof": intent.x_dpop_proof,
@@ -277,96 +325,11 @@ class DphiPublicClient:
         }
 
         try:
-            response = await verifier._client.post(url, json=payload, headers=headers)
+            response = await verifier._client.post(Endpoints.MCP_STATE, json=payload, headers=headers)
             response.raise_for_status()
-            res_data = response.json()
-            self.log.info(f"  └─ ✅ MCP State Processed. Result: {res_data.get('status', 'OK')}")
-            return res_data
+            return response.json()
         except httpx.HTTPStatusError as he:
-            self.log.error(f"  └─ ❌ MCP State Rejected (Status {he.response.status_code}): {he.response.text}")
-            return {"error": he.response.text, "code": he.response.status_code}
-        except Exception as e:
-            self.log.error(f"  └─ ❌ MCP State Exception: {e}")
-            return {"error": str(e)}
+            self.log.error(f"[SDK] MCP State Rejected (Status {he.response.status_code}): {he.response.text}")
+            raise
         finally:
             await verifier._client.aclose()
-
-
-# =========================================================================
-# @phase.3: Testing Scenario Components (Payload Builder & Runner)
-# =========================================================================
-class UsecasePayloadBuilder:
-    @staticmethod
-    def build_intent() -> SandboxIntent:
-        return SandboxIntent(
-            client_id="sandbox-client-99", action="EXECUTE_PYTHON",
-            source_code="print('Verified Execution!')", max_fuel=1_500_000, signature="0xab1234567890_mock_signature"
-        )
-
-    @staticmethod
-    def build_otlp() -> ExportLogsServiceRequest:
-        return ExportLogsServiceRequest(
-            resourceLogs=[{"resource": {"attributes": {"tenant": {"id": "tenant-corp-xyz"}}}, "scopeLogs": [{"logRecords": [{"timeUnixNano": str(time.time_ns()), "attributes": [{"key": "llm.model", "value": {"stringValue": "gpt-4"}}]}]}]}]
-        )
-
-    @staticmethod
-    def build_audit() -> AuditLogRequest:
-        return AuditLogRequest(event=AuditEvent(message="Accessed Sensitive Record", actor="health-client-01", action="READ", target="P-88910"), verbose=True)
-
-    @staticmethod
-    def build_llm_intent() -> LLMIntent:
-        return LLMIntent(
-            client_id="analyst-client-01", model="inter/claude-3-opus",
-            messages=[{"role": "system", "content": "You are a cyber security expert."}, {"role": "user", "content": "Explain Topological Sealing."}], max_tokens=1024
-        )
-
-    @staticmethod
-    def build_mcp_intent() -> MCPStateIntent:
-        return MCPStateIntent(
-            action="COMMIT", handle_id="hdl-123", payload={"record": "data"},
-            x_spiffe_id="spiffe://trust.domain/client/1", x_dpop_proof="proof-123",
-            x_nonce="nonce-abc", x_tenant_id="tenant-corp-xyz", x_idempotency_key="idemp-key-1"
-        )
-
-class UsecaseRunner:
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.client = DphiPublicClient(base_url=base_url)
-        self.log = logging.getLogger("dphi.client.sdk")
-
-    async def run_all(self):
-        self.log.info("\n=== [START] DPHI Public Usecase Scenarios ===")
-        self.log.info(f"📍 Target Edge URL: {self.client.base_url}")
-
-        ## 1. Isolated Sandbox Execution
-        intent_req = UsecasePayloadBuilder.build_intent()
-        await self.client.run_sandbox_intent(intent_req)
-        await asyncio.sleep(0.5)
-        
-        ## 2. OTLP Telemetry Ingress
-        otlp_req = UsecasePayloadBuilder.build_otlp()
-        await self.client.push_telemetry(otlp_req)
-        await asyncio.sleep(0.5)
-        
-        ## 3. Secure Regulated Audit Logging
-        audit_req = UsecasePayloadBuilder.build_audit()
-        await self.client.record_audit_event(audit_req)
-        await asyncio.sleep(0.5)
-
-        ## 4. Zero-Trust LLM Compute
-        llm_intent = UsecasePayloadBuilder.build_llm_intent()
-        llm_res = await self.client.execute_secure_llm_intent(llm_intent)
-        
-        if "error" not in llm_res:
-            fingerprint = llm_res.get("system_fingerprint")
-            if fingerprint and fingerprint != "N/A":
-                verify_payload = {"receipt_id": "llm_chat_verification", "state_root": fingerprint, "receipt_type": "Proof-of-Compute"}
-                await self.client.verify_audit_receipt(verify_payload)
-
-        ## 5. Enterprise MCP State Sync 
-        mcp_intent = UsecasePayloadBuilder.build_mcp_intent()
-        await self.client.process_mcp_state(mcp_intent)
-        self.log.info("\n=== [SUCCESS] All Usecase Scenarios Completed ===")
-
-if __name__ == "__main__":
-    runner = UsecaseRunner()
-    asyncio.run(runner.run_all())

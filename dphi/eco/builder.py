@@ -1,7 +1,4 @@
 # fiber.dphi.eco.builder
-## @lineage: fiber.dphi.infra.eco.builder
-## @lineage: fiber.infra.eco.builder
-## @lineage: fiber.infra.builder
 import json
 import time
 import uuid
@@ -17,8 +14,8 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.dphi.eco.client.wallet import LocalWalletClient
 from fiber.dphi.eco.config.exchange import dphi_env
-from fiber.dphi.eco.anchor import LedgerEventSchema, StreamAppendRequest
-from fiber.dphi.eco.transaction.settlement import TransactionReceipt
+from xphi.arch.model.anchor.nexus import LedgerEventSchema, StreamAppendRequest
+from xphi.bound.adapter.settlement import TransactionReceipt
 
 from xphi.arch.model.dphi.receptor import (
     TradeIngressRequest,
@@ -26,7 +23,7 @@ from xphi.arch.model.dphi.receptor import (
     ParityTripletSchema
 )
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.kernel.adapter.state import StateAdapter
+from xphi.bound.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 

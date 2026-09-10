@@ -15,7 +15,7 @@ from xphi.bound.space.manager import BaseWorkspace
 from fiber.agent.conver.status import ConverStatus
 from xphi.arch.model.conv.event import Event, EventID
 from fiber.agent.conver.conv.store.stream import LogStore
-from fiber.phase.plane.resolver.secret import SecretRegistry
+from xphi.bound.xor.secret.registry import SecretRegistry
 from xphi.watcher.plane.observer.span import end_active_span, should_enable_observability, start_active_span
 
 class ConvStateProtocol(Protocol):

@@ -23,11 +23,11 @@ from fiber.dphi.eco.client.rpc import InternalRpcClient
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.model.dphi.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.bound.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.kernel.adapter.state import StateAdapter
+from xphi.bound.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (
     SandboxIntent,
     AuditReceipt,
@@ -40,7 +40,7 @@ from xphi.arch.model.edge.receipt import (
     KernelExecutionRecord,
     KernelOtlpRecord
 )
-from fiber.phase.plane.receptor.audit.secret import SecretAuditor
+from xphi.watcher.receptor.audit.secret import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.public")
@@ -73,7 +73,6 @@ class SandboxHandshakeResponse(BaseModel):
     summary="Get Trusted Signer Keys (Strictly Pre-Signed)"
 )
 async def get_public_keys(request: Request):
-    # [CRITICAL SECURITY FIX] os.getenv를 제거하고 lifespan에서 검증된 레지스트리 상태를 호출
     registry = getattr(request.app.state, "origin_registry", None)
     
     if not registry or not registry.is_verified:
@@ -83,16 +82,12 @@ async def get_public_keys(request: Request):
             detail="Security misconfiguration: Trusted registry is offline or tampered."
         )
 
-    # 읽기 전용 검증 상태 획득
     trusted_state = registry.get_state()
-
-    # 원본 CLI 서명 시점과 동일한 키 구조체 구성
     payload_dict = {"active_signers": trusted_state.active_signers}
     
     return Response(
         content=orjson.dumps(payload_dict),
         media_type="application/json",
-        # 클라이언트 단에서의 2차 검증을 위한 Root 서명 반환
         headers={"X-Dphi-Root-Signature": trusted_state.root_signature}
     )
 
@@ -145,7 +140,7 @@ async def public_sandbox_execute(
     rpc: InternalRpcClient = Depends(get_rpc_client),
     broker: DphiBroker = Depends(get_wasm_broker)
 ):
-    request_id = f"sandbox_{uuid.uuid4().hex[:8]}"  # cbot_ -> sandbox_ 로 식별자 일치
+    request_id = f"sandbox_{uuid.uuid4().hex[:8]}" 
     with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
         val_req = IntentValidationRequest(
             requester_id=intent.client_id,
@@ -195,7 +190,7 @@ async def public_sandbox_execute(
         
         evo_ctx = StateAdapter.build_evolution_context(phase_root={})
         transition_payload = StateAdapter.build_transition_payload(
-            intent_action="record_sandbox_execution",  # [CRITICAL FIX] 커널 상태 전이 액션명 변경
+            intent_action="record_sandbox_execution", 
             intent_payload=kernel_req_dict,
             evolution_ctx=evo_ctx
         )
@@ -210,7 +205,7 @@ async def public_sandbox_execute(
         
         return AuditReceipt(
             receipt_id=request_id,
-            receipt_type="Proof-of-Sandbox-Action",  # [CRITICAL FIX] 영수증 타입명 변경
+            receipt_type="Proof-of-Sandbox-Action", 
             status="SUCCESS",
             fuel_consumed=fuel_metered,
             metered_cost_usd=cost_usd,
@@ -276,7 +271,7 @@ async def public_issue_invoice(
 ):
     try:
         return await rpc.call("eco.exchange.invoice.issue", req.model_dump())
-    except HTTPException as e:
+    except HTTPException:
         raise
 
 
@@ -291,7 +286,7 @@ async def public_get_balance(
 ):
     try:
         return await rpc.call("eco.exchange.balance", {"client_id": client_id, "asset_type": asset_type})
-    except HTTPException as e:
+    except HTTPException:
         raise
 
 
@@ -318,7 +313,13 @@ async def public_otlp_logs_export(
         try:
             extracted_metrics = otlp_engine.execute(raw_json_bytes)
         except ValueError as e:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+            # [보안/사용성 개선] 엔진에서 뱉는 raw 에러를 통제하여 명확한 422 힌트 제공
+            error_msg = str(e)
+            log.warning(f"[Public OTLP] Rule extraction rejected payload: {error_msg}")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+                detail=f"Telemetry ruleset violation: {error_msg}. Please ensure your payload contains all strictly required metrics."
+            )
 
         kernel_req_dict = KernelOtlpRecord(
             content_hash=content_hash,
@@ -370,8 +371,18 @@ async def public_audit_log(
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
     request_time = str(time.time())
-    event_dict = payload.event.model_dump(exclude_none=True)
-    sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
+    
+    try:
+        # [보안/사용성 개선] 데이터 추출 및 변환 중 발생할 수 있는 비즈니스 예외 통제
+        event_dict = payload.event.model_dump(exclude_none=True)
+        sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
+    except ValueError as e:
+        log.warning(f"[Public Audit] Payload failed business validation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
+            detail=f"Audit event validation failed: {str(e)}."
+        )
+
     sanitized_event["_billing_ref"] = x_x402_receipt
     
     evo_ctx = StateAdapter.build_evolution_context(phase_root={})

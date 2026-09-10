@@ -1,4 +1,5 @@
-# fiber.phase.plane.shell.sandbox
+# fiber.phase.e2e.infra.sandbox
+## @lineage: fiber.phase.plane.shell.sandbox
 import os
 import time
 import json
@@ -9,12 +10,12 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.eco.transaction.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from fiber.dphi.eco.builder import EcoBuilder
 from fiber.dphi.eco.client.wallet import LocalWalletClient
 
+from xphi.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from xphi.bound.space.sandbox.runner import SchemeRunner
-from xphi.kernel.adapter.state import StateAdapter
+from xphi.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -283,10 +284,6 @@ class EpochBase(SchemeRunner):
         raise NotImplementedError
         
     async def hook_process_payment(self, mandate: Optional[Ap2MandateResult] = None) -> Optional[X402SettlementReceipt]: 
-        """
-        🌟 [개선] 지연 정산 훅: L1 결제(Push) 대신, Mandate를 기반으로 
-        오프체인 Capability Token(영수증)을 발급하는 프로세스로 섀도우 연산 대체
-        """
         if mandate:
             log.info(f"  └─ Issuing Capability Receipt based on Mandate: {mandate.mandate.constraints.max_spend_usdc} USDC")
             return MandateAdapter.issue_deferred_receipt(mandate)

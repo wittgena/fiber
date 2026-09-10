@@ -1,5 +1,4 @@
 # fiber.dphi.edge.serv.gateway
-## @lineage: fiber.dphi.edge.gateway.bridge
 import json
 import asyncio
 import time
@@ -11,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 from fiber.dphi.edge.serv.depend import get_rpc_client
 
-from xphi.kernel.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
+from xphi.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 

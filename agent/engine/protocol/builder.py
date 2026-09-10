@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from fiber.agent.engine.tool.schema.builder import DeclaredResources, ActionDefinition
 
 from xphi.arch.model.conv.event import Event
-from xphi.bound.secret.redact import redact_string
+from xphi.bound.xor.secret.redact import redact_string
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

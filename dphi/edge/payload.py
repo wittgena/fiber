@@ -17,7 +17,7 @@ from fiber.dphi.eco.config.origin import OriginRegistry
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.parser.ruleset.otlp import StrictOtlpRulesetParser
+from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
 from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.server.middleware import (
     AttestationMiddleware,
@@ -25,6 +25,10 @@ from xphi.watcher.server.middleware import (
     WasTelemetry,
 )
 from xphi.watcher.plane.emitter import get_emitter
+
+from xphi.bound.xor.secret.cipher import Cipher
+from xphi.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
+from xphi.watcher.receptor.audit.secret import SecretAuditor
 
 log = get_emitter(__name__)
 
@@ -103,12 +107,26 @@ async def lifespan(app: FastAPI):
         registry = OriginRegistry()
         trusted_state = registry.load_and_verify()
         
-        # 검증된 상태를 읽기 전용 인스턴스로 앱 전체에 주입
         app.state.origin_registry = registry
         log.info(f"Origin Registry integrated successfully. Active signers: {len(trusted_state.active_signers)}")
+
+        # -------------------------------------------------------------------
+        # [NEW] KMS 기반 SecretAuditor 싱글톤 초기화 (Fail-Fast)
+        # -------------------------------------------------------------------
+        log.info("Provisioning Cryptographic Secret Auditor via KMS...")
+        secret_key = get_secret_from_vendor(
+            client=None,
+            key_manager=KMSVendor.LOCAL,  # 추후 AWS_KMS 등으로 변경 가능
+            secret_name="LEDGER_CIPHER_KEY"
+        )
+        if not secret_key:
+            log.warning("KMS returned no key. Using ephemeral testing key.")
+            secret_key = "dphi-ephemeral-test-key-32bytes!"
+            
+        app.state.secret_auditor = SecretAuditor(cipher=Cipher(secret_key=secret_key))
+        log.info("SecretAuditor mounted successfully to app.state.")
         # -------------------------------------------------------------------
 
-        # [개선] 더 이상 redis_client를 앱 상태에서 찾지 않음. 통신망은 tunnel 단일화.
         tunnel = app.state.tunnel
         ledger = app.state.ledger
 
@@ -180,7 +198,7 @@ def _get_root_path(config: Config) -> str:
 def create_app(
     config: Optional[Config] = None,
     tunnel: Optional[Any] = None,
-    ledger: Optional[Any] = None  # [개선] 파라미터에서 redis_client 완전 제거
+    ledger: Optional[Any] = None  
 ) -> FastAPI:
     config = config or get_default_config()
     app = FastAPI(
@@ -194,13 +212,13 @@ def create_app(
     # State Injection
     app.state.config = config
     app.state.tunnel = tunnel
-    app.state.ledger = ledger  # [개선] 앱 상태(app.state)에서도 redis_client 삭제
+    app.state.ledger = ledger  
     app.state.is_ready = False  
     
     # Routers Binding
     app.include_router(public_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
-    app.include_router(mcp_bridge)  # 분리된 Enterprise MCP 브릿지 라우터 마운트
+    app.include_router(mcp_bridge)  
     app.include_router(ext_router) 
 
     # Readiness Probe
@@ -210,13 +228,34 @@ def create_app(
             return {"status": "ok", "message": "API Payload is ready"}
         raise HTTPException(status_code=503, detail="Service Not Ready")
 
+    # [보안 개선] 통제된 정보 누출 (Controlled Information Leakage) 적용
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         client_host = request.client.host if request.client else 'unknown'
-        log.warning(f"[Security] Rejected malformed payload from {client_host}")
+        
+        # 내부 구조(Tree)는 숨기고, 문제가 된 '마지막 필드명(Leaf Node)'만 추출
+        safe_hints = []
+        for err in exc.errors():
+            loc = err.get("loc", [])
+            if len(loc) > 0:
+                field_name = str(loc[-1])
+                # 인덱스 번호(리스트 위치)는 제거하고 실제 키 이름만 수집
+                if not field_name.isdigit(): 
+                    safe_hints.append(field_name)
+        
+        hint_msg = ""
+        if safe_hints:
+            unique_hints = sorted(list(set(safe_hints)))
+            hint_msg = f" Missing or invalid field(s) detected: {unique_hints}."
+
+        log.warning(f"[Security] Rejected malformed payload from {client_host}.{hint_msg}")
+        
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, 
-            content={"detail": "Payload validation failed (Invalid encoding or format)"}
+            content={
+                "detail": f"Payload validation failed.{hint_msg}",
+                "resolution": "Ensure the payload complies with the strictly required JSON schema."
+            }
         )
 
     # Middlewares

@@ -12,7 +12,7 @@ try:
 except ImportError:
     dotenv = None
 
-from fiber.phase.plane.shell.entry import EcosystemShell
+from xphi.kernel.shell.entry import EcosystemShell
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.ops.boot import main_async, teardown
@@ -174,7 +174,7 @@ def run_connector(
     resolved_cmd = KNOWN_AGENTS.get(exec_cmd, exec_cmd)
 
     async def _launch_connector():
-        from fiber.dphi.edge.gateway.connector import WorkerConnector
+        from fiber.agent.worker.connector import WorkerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
         daemon = WorkerConnector(target_id=target, legacy_command=resolved_cmd)
         

@@ -15,8 +15,8 @@ from fiber.agent.engine.tool.schema.builder import DeclaredResources, ActionAnno
 from fiber.llm.model.message import ImageContent, TextContent
 from fiber.agent.engine.tool.schema.action import Action, Observation
 
-from xphi.bound.parser.mark import maybe_truncate
-from xphi.bound.bridge.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS, CmdOutputMetadata
+from xphi.bound.xor.parser.mark import maybe_truncate
+from xphi.bound.space.terminal import MAX_CMD_OUTPUT_SIZE, NO_CHANGE_TIMEOUT_SECONDS, CmdOutputMetadata
 
 class TerminalAction(Action):
     """Schema for bash command execution."""

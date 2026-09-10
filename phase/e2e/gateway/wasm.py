@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Callable
 from xphi.arch.wasm.builder import WasmBuilder
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.adapter.gateway import GatewayAdapter
+from xphi.bound.adapter.gateway import GatewayAdapter
 from xphi.kernel.wasm.gateway import GatewayWasm
 
 log = get_emitter("e2e.gateway.wasm")

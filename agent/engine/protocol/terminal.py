@@ -18,8 +18,8 @@ from fiber.agent.engine.protocol.builder import ChainBuilder
 from fiber.agent.engine.protocol.builder import _is_tmux_available, create_terminal_session
 from fiber.agent.engine.tmux.pool import DEFAULT_MAX_PANES, PooledTmuxTerminal, TmuxPanePool
 
-from xphi.bound.bridge.terminal import TerminalCommandStatus
-from xphi.bound.bridge.terminal import CMD_OUTPUT_PS1_END
+from xphi.bound.space.terminal import TerminalCommandStatus
+from xphi.bound.space.terminal import CMD_OUTPUT_PS1_END
 
 from xphi.watcher.plane.emitter import get_emitter
 

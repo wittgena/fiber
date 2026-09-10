@@ -26,7 +26,7 @@ from fiber.llm.exception.eco import (
     looks_like_auth_error,
     looks_like_malformed_conversation_history_error
 )
-from xphi.bound.secret.redact import redact_string
+from xphi.bound.xor.secret.redact import redact_string
 from fiber.llm.exception.types import (
     LLMAuthenticationError,
     LLMBadRequestError,

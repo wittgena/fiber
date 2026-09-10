@@ -16,7 +16,7 @@ from fiber.agent.engine.tool.terminal.interface import TerminalInterface, Termin
 from fiber.agent.engine.tool.terminal.context import ExecutionEngine, ExecutionContext
 from fiber.agent.engine.tool.terminal.polling import PollingExecutionEngine
 
-from xphi.bound.bridge.terminal import TerminalCommandStatus
+from xphi.bound.space.terminal import TerminalCommandStatus
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

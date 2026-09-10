@@ -42,7 +42,6 @@ class RealtimeMarginRequest(BaseModel):
 # =====================================================================
 class MarginCalcAgent(AgentProtocol):
     def __init__(self):
-        # [적용] 부모 클래스 초기화 - 자동으로 stdout 격리 및 로깅 설정이 적용됩니다.
         super().__init__(agent_name="agent.margin")
         
         self.MONTHLY_SECONDS = 30 * 24 * 60 * 60
