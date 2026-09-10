@@ -13,7 +13,7 @@
 import os
 from abc import ABC, abstractmethod
 
-from xphi.bound.bridge.terminal import NO_CHANGE_TIMEOUT_SECONDS
+from xphi.bound.space.terminal import NO_CHANGE_TIMEOUT_SECONDS
 from fiber.agent.engine.tool.schema.terminal import TerminalAction, TerminalObservation
 
 class TerminalInterface(ABC):

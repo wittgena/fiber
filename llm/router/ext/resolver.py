@@ -1,10 +1,5 @@
-# fiber.phase.plane.resolver.ext
-## @lineage: fiber.phase.scope.resolver.ext
-## @lineage: xphi.arch.contract.resolver.ext
-## @lineage: arch.contract.resolver.ext
-## @lineage: arch.topos.resolver.ext
-## @lineage: topos.resolver.ext
-## @lineage: bound.resolver.ext.inter
+# fiber.llm.router.ext.resolver
+## @lineage: fiber.phase.plane.resolver.ext
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, Union

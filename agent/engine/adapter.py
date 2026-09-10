@@ -38,7 +38,7 @@ from fiber.agent.conver.status import ConverStatus
 from fiber.agent.engine.actor import Actor
 from fiber.agent.loop.llm.facade import MessageBuilder, LLMFacade
 
-from fiber.phase.plane.resolver.secret import SecretValue
+from xphi.bound.xor.secret.registry import SecretValue
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 

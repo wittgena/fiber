@@ -1,5 +1,4 @@
 # fiber.agent.worker.mcp.finlib
-## @lineage: fiber.dphi.worker.finlib
 import sys
 import json
 import logging
@@ -27,12 +26,9 @@ try:
 except ImportError:
     HAS_QL = False
     log.warning("Optional dependency 'QuantLib' not found. 'resolve_dates' will use MOCK mode.")
-# =====================================================================
-
 
 class FinLib(AgentProtocol):
     def __init__(self):
-        # [적용] 부모 클래스 초기화 - 자동으로 stdout이 격리(Barrier)되고 로깅 환경이 설정됩니다.
         super().__init__(agent_name="agent.finlib")
         
         self.tick_sizes = {"BTCUSD": 0.5, "ETHUSD": 0.01, "SOLUSD": 0.001}

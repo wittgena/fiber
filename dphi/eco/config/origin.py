@@ -9,7 +9,7 @@ import nacl.exceptions
 from typing import List, Optional
 from pydantic import BaseModel
 
-from xphi.kernel.adapter.state import StateAdapter
+from xphi.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
 

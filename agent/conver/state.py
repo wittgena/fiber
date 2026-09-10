@@ -37,7 +37,7 @@ from fiber.agent.conver.conv.io import IOManager
 from xphi.arch.model.conv.event import Event
 from xphi.arch.model.conv.event import EventID
 from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase, NeverConfirm
-from fiber.phase.plane.resolver.secret import SecretRegistry
+from xphi.bound.xor.secret.registry import SecretRegistry
 from fiber.agent.conver.conv.store.stream import LogStore, VirtualEventLogProxy
 from xphi.arch.model.surge.disc import SurgeBaseModel
 from xphi.bound.space.manager import BaseWorkspace

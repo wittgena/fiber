@@ -12,7 +12,7 @@ from fiber.dphi.eco.transaction.rollup import RollupAdapter
 from fiber.dphi.eco.config.exchange import dphi_env
 
 from xphi.arch.contract.interface import ContractRouter
-from fiber.dphi.eco.transaction.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt
+from xphi.bound.adapter.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")

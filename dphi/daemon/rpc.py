@@ -34,25 +34,19 @@ class RpcWorkerDaemon(AbstractDaemon):
         self._tasks = set()
 
     async def _init_context(self):
-        from fiber.dphi.eco.anchor import NexusAnchor
-        from fiber.phase.plane.receptor.gov.policy import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
-        from fiber.dphi.eco.transaction.settlement import ClearingAdapter
+        from xphi.arch.model.anchor.nexus import NexusAnchor
+        from xphi.bound.adapter.settlement import ClearingAdapter
+        from fiber.dphi.rpc.legacy.validator import AuthValidatorService
 
-        from xphi.kernel.wasm.broker import DphiBroker
-        from xphi.watcher.server.stream.edge import LogStreamStore
-        from xphi.kernel.adapter.pta import PtaAdapter
-        from xphi.kernel.adapter.sign import NodeSigner
         from xphi.bound.space.sandbox.resolver import BenchProfile
-        
-        # [추가] 운영 환경용 Validator 서비스 임포트
-        try:
-            from fiber.dphi.rpc.legacy.validator import AuthValidatorService
-        except ImportError:
-            # 테스트/Mock 환경에서 경로가 다를 경우 대비
-            from fiber.agent.worker.mcp.validator import AuthValidatorService
+        from xphi.kernel.wasm.broker import DphiBroker
+        from xphi.bound.adapter.pta import PtaAdapter
+        from xphi.bound.adapter.sign import NodeSigner
 
-        log.info(f"[{self.name}] Initializing Headless Worker Dependencies...")
+        from xphi.watcher.server.stream.edge import LogStreamStore
+        from xphi.watcher.receptor.policy.ingress import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
         
+        log.info(f"[{self.name}] Initializing Headless Worker Dependencies...")
         broker = getattr(self.app_ctx, "broker", None) or DphiBroker()
         store = getattr(self.app_ctx, "store", None) or LogStreamStore()
         

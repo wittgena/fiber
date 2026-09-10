@@ -3,11 +3,11 @@ from typing import Any
 from fastapi import Request, HTTPException, status
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
-from fiber.phase.plane.receptor.audit.secret import SecretAuditor
+from xphi.watcher.receptor.audit.secret import SecretAuditor
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.depend")

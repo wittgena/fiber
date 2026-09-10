@@ -27,12 +27,12 @@ import select
 from fiber.agent.engine.protocol.builder import sanitized_env
 from fiber.agent.engine.tool.terminal.interface import TerminalInterface
 
-from xphi.bound.bridge.terminal import (
+from xphi.bound.space.terminal import (
     CMD_OUTPUT_PS1_BEGIN,
     CMD_OUTPUT_PS1_END,
     HISTORY_LIMIT,
 )
-from xphi.bound.bridge.terminal import CmdOutputMetadata
+from xphi.bound.space.terminal import CmdOutputMetadata
 from xphi.watcher.plane.emitter import get_logger
 
 logger = get_logger(__name__)

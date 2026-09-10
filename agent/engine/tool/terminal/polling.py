@@ -4,7 +4,7 @@
 import re
 import time
 from typing import TYPE_CHECKING, Any
-from xphi.bound.bridge.terminal import (
+from xphi.bound.space.terminal import (
     CMD_OUTPUT_PS1_END,
     MAX_CMD_OUTPUT_SIZE,
     POLL_INTERVAL,
@@ -17,9 +17,9 @@ from bashlex.errors import ParsingError
 from fiber.agent.engine.tool.schema.terminal import TerminalAction, TerminalObservation
 from fiber.agent.engine.tool.terminal.context import ExecutionEngine, ExecutionContext
 
-from xphi.bound.bridge.terminal import CmdOutputMetadata
-from xphi.bound.bridge.terminal import TerminalCommandStatus
-from xphi.bound.parser.mark import maybe_truncate
+from xphi.bound.space.terminal import CmdOutputMetadata
+from xphi.bound.space.terminal import TerminalCommandStatus
+from xphi.bound.xor.parser.mark import maybe_truncate
 from xphi.watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:

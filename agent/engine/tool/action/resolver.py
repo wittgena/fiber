@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from fiber.agent.conver.protocol.context import ProtoConv, ConvStateProtocol
     from fiber.agent.engine.tool.schema.builder import ActionDefinition
 
-from xphi.bound.parser.action import ActionSchemaCompiler, DEFAULT
+from xphi.bound.xor.parser.action import ActionSchemaCompiler, DEFAULT
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

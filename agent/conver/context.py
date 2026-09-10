@@ -23,7 +23,7 @@ from fiber.agent.engine.tool.action.types import (
     ConversationTokenCallbackType,
 )
 
-from fiber.phase.plane.resolver.secret import SecretValue
+from xphi.bound.xor.secret.registry import SecretValue
 from xphi.arch.event.next import next_id
 from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
 from fiber.llm.model.provider.secret import Cipher

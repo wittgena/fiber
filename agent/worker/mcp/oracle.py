@@ -6,7 +6,7 @@ import time
 import asyncio
 from typing import Dict, Any
 
-from xphi.bound.oracle.receptor import OracleReceptor
+from xphi.bound.xor.oracle.receptor import OracleReceptor
 from xphi.arch.contract.protocol.agent import AsyncAgentProtocol
 
 class OracleMcpServer(AsyncAgentProtocol):

@@ -1,6 +1,6 @@
-# fiber.phase.plane.scope.surface
+# fiber.phase.flow.scope.surface
+## @lineage: fiber.phase.plane.scope.surface
 ## @lineage: fiber.phase.scope.surface
-## @lineage: fiber.phase.flow.scope.surface
 import os
 import sys
 import time

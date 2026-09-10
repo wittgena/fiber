@@ -1,9 +1,10 @@
-# fiber.phase.plane.scope.manager
+# fiber.phase.flow.scope.manager
+## @lineage: fiber.phase.plane.scope.manager
 ## @lineage: fiber.phase.scope.manager
 import asyncio
 from contextlib import asynccontextmanager, AsyncExitStack
 
-from fiber.phase.plane.scope.surface import get_surface_class, SurfaceConfig
+from fiber.phase.flow.scope.surface import get_surface_class, SurfaceConfig
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.tracer.scope import scope_trace, get_current_trace_path
 

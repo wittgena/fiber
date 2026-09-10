@@ -11,7 +11,7 @@ from fiber.agent.engine.tool.schema.action import Action, Observation
 from fiber.agent.engine.tool.action.types import ConversationID
 
 from xphi.arch.model.conv.security.confirm import ConfirmationPolicyBase
-from fiber.phase.plane.resolver.secret import SecretValue
+from xphi.bound.xor.secret.registry import SecretValue
 
 
 class SecretProviderProtocol(Protocol):

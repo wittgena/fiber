@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 from pydantic import ValidationError
 
-from fiber.dphi.eco.anchor import AnchorProposal, StreamAppendRequest
+from xphi.arch.model.anchor.nexus import AnchorProposal, StreamAppendRequest
 
 from xphi.bound.space.sandbox.config import tier_config, fuel_config
 from xphi.arch.model.dphi.receptor import (
@@ -19,13 +19,13 @@ from xphi.arch.model.edge.receipt import BilledExecutionRequest, KernelLedgerApp
 
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.kernel.wasm.cgroup import Tier
-from xphi.kernel.adapter.state import StateAdapter
+from xphi.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.state.ledger.consensus import LogicStream
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
 # [개선] PhaseAnchorOutput 직접 임포트를 제거하고, 안전한 팩토리 함수(create_state_anchor)를 임포트
-from xphi.kernel.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
+from xphi.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
 
 log = get_emitter("rpc.handler")
 
@@ -53,7 +53,7 @@ async def handle_mcp_state_query(params: dict, ctx: WorkerContext) -> dict:
     if not handle_id: return _build_error(422, "Missing handle_id")
     
     expected_owner = f"mcp_bridge_{handle_id}"
-    for key, output in ctx.pta_adapter._unspent_pool.items():
+    for key, output in ctx.pta_adapter._unfold_pool.items():
         if output.owner == expected_owner and output.asset_type == "mcp_state_anchor":
             status = getattr(output, "phase_status", "UNKNOWN")
             payload = getattr(output, "executable_payload", {})
@@ -242,7 +242,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
     if not all([payee_address, amount_usdc, resource_id]): return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from fiber.dphi.eco.transaction.settlement import MandateAdapter
+        from xphi.bound.adapter.settlement import MandateAdapter
         invoice = MandateAdapter.build_x402_invoice(payee_address=payee_address, amount_usdc=amount_usdc, resource_id=resource_id)
         return {"status": "INVOICE_ISSUED", "invoice": invoice.model_dump() if hasattr(invoice, "model_dump") else invoice.__dict__}
     except Exception as e:

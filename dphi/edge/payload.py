@@ -17,7 +17,7 @@ from fiber.dphi.eco.config.origin import OriginRegistry
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.parser.ruleset.otlp import StrictOtlpRulesetParser
+from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
 from xphi.watcher.server.mcp import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.watcher.server.middleware import (
     AttestationMiddleware,
