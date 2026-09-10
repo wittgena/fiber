@@ -34,7 +34,7 @@ fiber daemon -s rest_edge
 fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py"
 
 ## 3. Clients trigger the agent safely via localhost (Gateway handles Auth, Nonce, X402)
-curl -X POST [http://127.0.0.1:8000/v1/mcp-gateway/oracle-01/invoke](http://127.0.0.1:8000/v1/mcp-gateway/oracle-01/invoke) \
+curl -X POST http://127.0.0.1:8000/v1/mcp-gateway/oracle-01/invoke \
      -H "x-nonce: 12345" \
      -H "x-idempotency-key: req-01" \
      -d '{"method": "fetch_data", "params": {}}'
