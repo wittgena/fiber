@@ -163,8 +163,8 @@ def run_connector(
 ):
     _load_env(env_file)
 
-    import fiber.agent.worker.legacy.sandbox as agent_deploy
-    import fiber.agent.worker.mcp.oracle as agent_oracle
+    import fiber.dphi.worker.legacy.sandbox as agent_deploy
+    import fiber.dphi.worker.mcp.oracle as agent_oracle
 
     KNOWN_AGENTS = {
         "agent.deploy": f"{sys.executable} -m {agent_deploy.__name__}",
@@ -174,7 +174,7 @@ def run_connector(
     resolved_cmd = KNOWN_AGENTS.get(exec_cmd, exec_cmd)
 
     async def _launch_connector():
-        from fiber.agent.worker.connector import WorkerConnector
+        from fiber.dphi.worker.connector import WorkerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
         daemon = WorkerConnector(target_id=target, legacy_command=resolved_cmd)
         
