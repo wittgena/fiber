@@ -14,7 +14,7 @@ from xphi.bound.adapter.state import StateAdapter
 
 from xphi.kernel.wasm.gateway import GatewayWasm
 from xphi.state.ledger.consensus import KernelLedger, ToposBlob
-from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
+from xphi.state.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 
 log = get_emitter("pipeline.defin")

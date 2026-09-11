@@ -11,7 +11,7 @@ from pathlib import Path
 from xphi.arch.contract.phase.transformer import RelativeImportAligner
 
 from xphi.arch.contract.registry.unified import contract
-from xphi.state.runtime.executor.cli import CliTaskAdapter, parse_local, dispatch_cli
+from xphi.state.phase.executor.cli import CliTaskAdapter, parse_local, dispatch_cli
 from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.watcher.plane.emitter import get_emitter
 

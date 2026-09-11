@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.dphi.eco.transaction.pipeline import DefinPipelineFactory, TransactionPipelineFactory
 
-from xphi.state.phase.network.channel.pipeline import DuplexChannel, ChannelContext
+from xphi.state.network.channel.pipeline import DuplexChannel, ChannelContext
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

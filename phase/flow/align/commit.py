@@ -12,7 +12,7 @@ from xphi.kernel.space.topos.node.discovery import NodeDiscovery
 from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.state.phase.commit import anchor_commit, Attractor, EpochManager
-from xphi.state.runtime.flow.executor import dispatch_flow_cli
+from xphi.state.phase.flow.executor import dispatch_flow_cli
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("align.commit", mode="SLIM")
