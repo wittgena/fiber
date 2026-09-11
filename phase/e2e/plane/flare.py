@@ -1,4 +1,4 @@
-# fiber.phase.e2e.flare
+# fiber.phase.e2e.plane.flare
 import sys
 import os
 import argparse
@@ -15,7 +15,7 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.phase.flare import FlareController
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("e2e.flare")
+log = get_emitter("e2e.plane.flare")
 MODULE_PATH = scene_module.__name__
 
 @dataclass

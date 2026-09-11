@@ -132,6 +132,6 @@ The `fiber connect` command is the ecosystem's most potent adoption vector. It e
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
 * 🔗 **[workflow.wasm.log](./phase/abc/log/workflow.wasm.20260825.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Fuel traps (OOM/Timeout blocks), Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...)
-* 🔗 **[workflow.flare.log](./phase/abc/log/workflow.flare.20260827.log):** Validates V8 Hologram isolation within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
+* 🔗 **[workflow.flare.log](./phase/abc/log/plane/e2e.plane.flare.20260911.log):** Validates V8 Hologram isolation within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
 * 🔗 **[workflow.settlement.log](./phase/abc/log/workflow.settlement.20260825.log):** Validates REVM pre-validation of smart contract state transitions and rollbacks.
 * 🔗 **[e2e.edge.sandbox.log](./phase/abc/log/edge/e2e.edge.sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience

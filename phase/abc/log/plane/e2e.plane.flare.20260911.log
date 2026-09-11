@@ -1,0 +1,114 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m fiber.phase.e2e.plane.flare
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 24 aliases.
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-67801
+ LOG | SYSTEM | INFO  |  flare.entry: 
+[PHASE 1] Initializing Cloudflare Edge Orchestrator in [DEV] mode
+ LOG | SYSTEM | INFO  |  flare.entry: [PHASE 2] Connecting to Edge Endpoint: http://127.0.0.1:8787
+ LOG | SYSTEM | INFO  |  tunnel.flare: [FlareTunnel] Initialized Duck-Typed HTTP Bridge targeting Edge: http://127.0.0.1:8787
+ LOG | SYSTEM | INFO  |  tunnel.flare: [FlareTunnelFactory] Provisioned Async Flare Tunnel: http://127.0.0.1:8787
+ LOG | SYSTEM | INFO  |  flare.entry: [PHASE 3] Handing over execution to FlareController...
+ LOG | SYSTEM | INFO  |  flare.controller: 
+--- [START] Orchestrating Cloudflare Microservices Sandbox (DEV) ---
+ LOG | SYSTEM | INFO  |  flare.controller: 📦 Multi-Worker Microservices Provisioned: JS Router & Native Python Engine.
+ LOG | SYSTEM | INFO  |  flare.controller: [SYSTEM] Igniting Dual V8 Holograms (Python Engine & JS Router)...
+ LOG | agent  | INFO  |  auditor.flare.dev.js_router:   [JS_ROUTER] ⚡ V8 Hologram Materialized (Port 8787 / Insp 9287).
+ LOG | agent  | INFO  |  auditor.flare.dev.python_engine:   [PYTHON_ENGINE] ⚡ V8 Hologram Materialized (Port 8788 / Insp 9288).
+ LOG | TEST_EXECUTION | INFO  |  flare.controller: 
+>>> [PHASE] Starting Flare Edge Test Suite: FLARE <<<
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+======================================================================
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 🚀 [START] CLOUDFLARE NATIVE UNIFIED VALIDATION PIPELINE
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: ======================================================================
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   └─ Policy successfully enforced to SYSTEM.
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 1] Native OS-Level Isolation & Security ---
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: WasmCG successfully blocked unregistered API: Phase Collapse Failed: Drift topology malformed (json_parse_err). Root envelope rejected: unknown varian
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Host Filesystem Scan (Func: execute_code)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 27.14ms | Output: FileNotFoundError: [Errno 44] No such file or directory: '/etc/passwd'
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Low-level Socket Binding (Func: execute_code)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 7.37ms | Output: BlockingIOError: [Errno 26] Operation in progress
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Host Environment Variable Leakage (Func: execute_code)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 4.59ms | Output: PermissionError: Isolated
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Emscripten Process Restriction (Func: execute_code)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.9] [Acc:1.3] space.runner:   [PASS] Time: 6.33ms | Output: OSError: [Errno 138] emscripten does not support processes.
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.8] [Acc:1.4] space.runner: 
+[TEST] Isolation: Prevent Thread Creation (Func: execute_code)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.8] [Acc:1.5] space.runner:   [PASS] Time: 5.63ms | Output: RuntimeError: can't start new thread
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:space.runner' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.1] [Acc:1.6] space.runner: 
+[TEST] Isolation: Prevent sys.exit() Engine Shutdown (Func: execute_code)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:scene.flare'
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 2] Causality (Epoch-Tick) & Parity Validation ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:-1.1] space.runner: 
+[TEST] Causality: Generate Topos Anchor ID (Func: generate_topos_id)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:-0.9] space.runner:   [PASS] Time: 3.58ms | Output: {"data":{"id":"91892699669463040"},"success":true}
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:-0.8] space.runner: 
+[TEST] Parity: Validate All 3 IDs (Func: verify_parity)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:-0.7] space.runner:   [PASS] Time: 2.72ms | Output: {"data":{"is_valid":false},"success":true}
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:-0.6] space.runner: 
+[TEST] Parity: Reject Insufficient Info (Func: verify_parity)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:-0.5] space.runner:   [PASS] Time: 2.58ms | Output: At least two identification IDs are required for parity recovery and correction
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 3] Computation Determinism & Byzantine Faults ---
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:-0.4] space.runner:   [PASS] Time: 0.00ms | Output: PRNG sequences are perfectly identical (0.7946015362095357)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:-0.2] space.runner:   [PASS] Time: 0.00ms | Output: Perfect FP Determinism achieved: 13.093669021622972
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:-0.1] space.runner: 
+[TEST] Byzantine Defense: Quarantine rogue signature (2-of-3 threshold) (Func: seal_epoch)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:0.0] space.runner:   [PASS] Time: 10.58ms | Output: {"data":{"anchor_result":{"commit_hash":"f099fdc0738917003d8e6ed0cfaad3bb9e784cd82503b304494fa90204c36c8f","payload_json":"{\"cached_states\":{},\"par
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 4] Cloudflare Edge Physical Boundaries ---
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:0.2] space.runner:   [PASS] Time: 0.00ms | Output: Edge context perfectly isolated. Warm-start bleeding neutralized.
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:0.4] space.runner:   [PASS] Time: 0.00ms | Output: Time Freezing active. Spectre attack neutralized.
+ LOG | TEST_EXECUTION | WARN  |  scene.flare: ⚠️ Simulating a Kinetic Trap (Timeout 5.0s). Expecting client cutoff.
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Broker timed out. Kinetic Trap neutralized via Timeout cutoff.
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: ⏳ Allowing Edge Thread to breathe and recover State Ledger (2.5s)...
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+=== [DONE] Scenarios Completed: 17 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  flare.controller: 
+[SYSTEM] Generating Canonical Proof for Edge execution...
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: 
+===========================================================================
+ LOG | SYSTEM | INFO  |  e2e.plane.flare:                🚀 CLOUDFLARE EDGE PIPELINE EXECUTION REPORT 🚀               
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: ===========================================================================
+ LOG | SYSTEM | CRIT  |  flare.entry: 🔴 [FAILED] Edge Test execution terminated with errors.
+ LOG | SYSTEM | CRIT  |  flare.entry: 📝 [Ledger] Canonical payload is empty.
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: 
+🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+ LOG | SYSTEM | INFO  |  e2e.plane.flare:                       🚨 DETAILED EDGE FAILURE TRACES 🚨                     
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: ===========================================================================
+
+
+[Reactor] 🛑 Reactor itself was cancelled. Cascading shutdown...
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.1] [Acc:1.8] space.runner: [space.runner] Bursting logs suppressed... (x3)

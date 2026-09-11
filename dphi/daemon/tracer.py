@@ -1,5 +1,4 @@
 # fiber.dphi.daemon.tracer
-## @lineage: fiber.dphi.infra.daemon.tracer
 import os
 import asyncio
 from contextlib import suppress

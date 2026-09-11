@@ -1,4 +1,4 @@
-# fiber.phase.e2e.topos
+# fiber.phase.e2e.plane.topos
 import sys
 import argparse
 import logging
@@ -10,24 +10,29 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 
 from fiber.dphi.edge.workflow import EdgeWorkflow
+from fiber.dphi.edge.state import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 
 from xphi.watcher.plane.phase.topos import ToposOrchestrator, ToposContext
-from fiber.dphi.edge.state import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("e2e.topos")
+log = get_emitter("e2e.plane.topos")
 
 # =====================================================================
-# 1. Distributed Scene (Black-box & White-box Network Verifier)
+# 1. Distributed Scene (Black-box Network Verifier)
 # =====================================================================
 
 class ToposDistributedScene:
+    """
+    @desc: 인프라 내부(Redis, Worker)의 상태를 모르는 상태에서 오직 Gateway API만을 
+    통해 다중 컨테이너 간의 통신과 FSM 결정론적 라우팅을 검증하는 블랙박스 횡단 테스트.
+    """
     def __init__(self, broker: Any = None, context: ToposContext = None):
         self.broker = broker
         self.context = context
         
         self.router = context.router if context else None
+        # 클라우드 K3s 환경일 경우를 대비해 라우터의 동적 호스트 획득 (로컬은 8000)
         self.base_url = self.router.host_url if self.router else "http://127.0.0.1:8000"
         self.auditors = context.auditors if context else {}
         
@@ -37,17 +42,19 @@ class ToposDistributedScene:
 
     async def _execute_fsm_workflow(self, scenario_name: str, tamper_signature: bool = False):
         """EdgeWorkflow(FSM)를 사용하여 분산망 횡단 테스트 수행"""
-        
         headers = self.router.build_headers() if self.router else {}
+        
         async with httpx.AsyncClient(base_url=self.base_url, timeout=20.0, headers=headers) as client:
-            ## 클라이언트(테스터) 자격 증명 생성
+            # 1. 클라이언트(테스터) 자격 증명 생성
             wallet = Account.create()
             client_id = wallet.address
+            
+            # Blueprint에 띄워진 'fiber-worker-oracle' 워커로 메시지를 타겟팅
             action = "EXECUTE_PYTHON_DISTRIBUTED"
             max_fuel = 2000000
             source_code = "print('Hello from Distributed Topos Resonance Test')"
 
-            ## 서명 생성 (결함 주입 시 위조)
+            # 2. 서명 생성 (결함 주입 시 위조)
             if tamper_signature:
                 signature = "0x_tampered_invalid_signature_for_topos_testing"
             else:
@@ -63,14 +70,14 @@ class ToposDistributedScene:
                 signature=signature
             )
 
-            ## FSM 기반 클라이언트 워크플로우 인스턴스화
+            # 3. FSM 기반 클라이언트 워크플로우 인스턴스화
             fsm = EdgePhaseFSM()
             workflow = EdgeWorkflow(fsm=fsm, client=client, base_url=self.base_url)
             
             try:
                 await workflow.execute(start_event)
                 
-                ## 시나리오별 거시 상태(Macro State) 검증
+                # 4. 시나리오별 거시 상태(Macro State) 검증
                 if not tamper_signature and fsm.state != EdgePhaseState.COMPLETED:
                     raise RuntimeError(f"Golden Path Failed! Final FSM state: {fsm.state.name}")
                     
@@ -83,7 +90,7 @@ class ToposDistributedScene:
                 self.log.error(f"  [SCENARIO HALTED] {scenario_name}: {e}")
 
     async def phase_distributed_resonance(self):
-        """[정상 경로] Gateway -> Redis -> Compute Worker -> Redis -> Gateway의 1-Cycle 왕복 검증"""
+        """[정상 경로] Gateway -> Redis -> Oracle Worker -> Redis -> Gateway의 1-Cycle 왕복 검증"""
         self.log.info("  ▶️ [TEST] Distributed Resonance (Golden Path)")
         await self._execute_fsm_workflow("Distributed Resonance (Golden Path)", tamper_signature=False)
 
@@ -92,7 +99,7 @@ class ToposDistributedScene:
         self.log.info("  ▶️ [TEST] Edge Ingress Defense (Negative Path)")
         await self._execute_fsm_workflow("Edge Ingress Defense (Tampered Sig)", tamper_signature=True)
         
-        # [개선] Auditor를 이용한 물리/의미론적 상태 단언 (Cross-validation)
+        # [Cross-Validation] Auditor를 이용한 물리/의미론적 상태 단언
         if "state" in self.auditors:
             gateway_state = self.auditors["state"]
             if not gateway_state.is_running:
@@ -136,20 +143,25 @@ class ToposDistributedScene:
 # =====================================================================
 
 class ToposFlow:
-    def __init__(self, mode: str = "dev", suites: List[str] = None, keep_workspace: bool = False):
+    """
+    @desc: CLI에서 입력받은 환경(Docker vs Kube)에 따라 오케스트레이터를 설정하고 실행
+    """
+    def __init__(self, mode: str = "dev", infra_type: str = "compose", keep_workspace: bool = False):
         self.mode = mode
-        self.suites = suites or []
+        self.infra_type = infra_type
         self.keep_workspace = keep_workspace
 
     async def test(self):
-        log.info(f"\n[PHASE 1] Initializing Topos Orchestrator in [{self.mode.upper()}] mode")
+        log.info(f"\n[PHASE 1] Initializing Topos Orchestrator [{self.infra_type.upper()}] in [{self.mode.upper()}] mode")
         
         broker = None 
 
-        # [개선] ToposOrchestrator 사용
+        # 재정렬된 ToposOrchestrator에 인프라 타입 다형성 주입
         controller = ToposOrchestrator(
-            target_name="dphi-topos-sandbox",
+            target_name="fiber-topos-cluster",
             mode=self.mode,
+            infra_type=self.infra_type,         # "compose" or "kube"
+            namespace="fiber-topos",
             timeout=120,
             suites={"distributed_fsm": ToposDistributedScene} 
         )
@@ -158,7 +170,7 @@ class ToposFlow:
         success, err_msg = await controller.execute(broker=broker)
         
         log.info("\n" + "="*75)
-        log.info("🚀 TOPOS CLUSTER PIPELINE EXECUTION REPORT 🚀".center(75))
+        log.info(f"🚀 TOPOS CLUSTER PIPELINE EXECUTION REPORT ({self.infra_type.upper()}) 🚀".center(75))
         log.info("="*75)
         
         if success:
@@ -198,9 +210,10 @@ class ToposFlow:
 # =====================================================================
 
 def main(args_list: list[str] = None):
-    parser = argparse.ArgumentParser(description="DPHI Topology (Docker Compose) E2E Orchestrator")
+    parser = argparse.ArgumentParser(description="DPHI Topology (Docker Compose / K3s) E2E Orchestrator")
     parser.add_argument("--mode", choices=["dev", "deploy"], default="dev", help="Execution mode")
-    parser.add_argument("--keep-workspace", action="store_true", help="Preserve compose files after test")
+    parser.add_argument("--infra", choices=["compose", "kube"], default="compose", help="Target Infrastructure Type (Docker Compose vs Kubernetes)")
+    parser.add_argument("--keep-workspace", action="store_true", help="Preserve compose/kube manifests after test")
     parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
     
     args, _ = parser.parse_known_args(args_list)
@@ -211,6 +224,7 @@ def main(args_list: list[str] = None):
 
     app = ToposFlow(
         mode=args.mode,
+        infra_type=args.infra,
         keep_workspace=args.keep_workspace
     )
     PhaseReactor.ignite(main_coro_func=app.run)
