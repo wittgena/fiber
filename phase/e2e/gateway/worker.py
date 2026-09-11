@@ -9,11 +9,11 @@ import httpx
 
 from fiber.phase.e2e.infra.config import Phase, E2EConfig, TestResult
 from fiber.phase.e2e.infra.bridge import BaseBridgePipeline, log
-from fiber.agent.worker.connector import WorkerConnector
+from fiber.dphi.worker.connector import WorkerConnector
 
-import fiber.agent.worker.mcp.oracle as agent_oracle
-import fiber.agent.worker.mcp.finlib as agent_finlib
-import fiber.agent.worker.mcp.margin as agent_margin
+import fiber.dphi.worker.mcp.oracle as agent_oracle
+import fiber.dphi.worker.mcp.finlib as agent_finlib
+import fiber.dphi.worker.mcp.margin as agent_margin
 from xphi.state.phase.reactor import PhaseReactor
 
 class CoreRoutingPipeline(BaseBridgePipeline):

@@ -19,7 +19,7 @@ from fiber.phase.e2e.infra.config import PipelineRunner, ManagedTestServer, Test
 from fiber.dphi.eco.client.http import VerifiedHttpClient
 from fiber.dphi.eco.config.origin import OriginRegistry
 
-from xphi.state.phase.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from fiber.dphi.edge.state import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.tracer.chaos.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.tracer.edge import SceneConfig, HttpFlowTracer
