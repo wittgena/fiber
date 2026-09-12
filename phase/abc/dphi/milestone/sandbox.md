@@ -5,7 +5,7 @@
 
 본 문서는 결정론적 상태 전이(Deterministic State Transition)와 제로 트러스트(Zero-Trust) 연산을 수행하는 샌드박스 아키텍처 원칙을 정의한다.
 
-* **Edge Translation:** 외부 네트워크(EVM, CEX) 통신은 Tier 1으로 격리된다. 외부 증명 데이터(TxHash 등)는 검증 완료 직후 메모리에서 파기(Drop)되며, 코어 런타임에는 정규화된 내부 규격(Fuel, Unlocked Macaroon)만 주입된다.
+* **Edge Translation:** 외부 네트워크(EVM, CEX) 통신은 Tier 1으로 격리된다. 외부 증명 데이터(TxHash 등)는 검증 완료 직후 메모리에서 파기(Drop)되며, 코어 런타임에는 정규화된 내부 규격(Fuel, Unlocked x402_receipt)만 주입된다.
 * **Ephemeral Runtime:** 상시 대기하는 데몬이나 컨테이너(Docker) 방식을 사용하지 않는다. 모든 샌드박스 인스턴스는 요청 단위로 생성되며, 연산 완료 및 상태 루트(State Root) 산출 직후 메모리에서 해제(Destroy)된다.
 * **Lock-Free PTA:** 데이터베이스 락(Lock) 기반의 Account 모델 대신 개별 상태가 독립된 PTA 트리를 채택하여, 동시성 제어 병목을 제거하고 CPU 코어 수에 비례하는 선형적 확장을 지원한다.
 

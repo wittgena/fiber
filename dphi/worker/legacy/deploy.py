@@ -1,6 +1,4 @@
-# fiber.dphi.worker.legacy.sandbox
-## @lineage: fiber.agent.worker.legacy.sandbox
-## @lineage: fiber.dphi.worker.deploy
+# fiber.dphi.worker.legacy.deploy
 import os
 import sys
 import json

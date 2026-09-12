@@ -1,7 +1,4 @@
 # fiber.dphi.worker.connector
-## @lineage: fiber.agent.worker.connector
-## @lineage: fiber.dphi.edge.gateway.connector
-## @lineage: fiber.dphi.infra.gateway.connector
 import os
 import sys
 import json

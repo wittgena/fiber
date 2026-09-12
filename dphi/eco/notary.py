@@ -1,7 +1,4 @@
 # fiber.dphi.eco.notary
-## @lineage: fiber.dphi.eco.actor
-## @lineage: fiber.dphi.infra.eco.actor
-## @lineage: fiber.infra.eco.actor
 import json
 from enum import Enum
 from dataclasses import dataclass

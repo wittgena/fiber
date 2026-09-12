@@ -9,12 +9,13 @@ from fastapi.responses import JSONResponse
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 from fiber.dphi.edge.serv.depend import get_rpc_client
+from fiber.dphi.edge.parser import McpPayloadParser
 
 from xphi.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("gateway.bridge")
+log = get_emitter("serv.gateway")
 
 def _extract_error_message(error_detail: Any) -> str:
     """Sandbox나 RPC에서 반환된 다양한 형태의 에러 객체에서 안전하게 메시지를 추출합니다."""
@@ -32,7 +33,6 @@ class TransitionBridge:
         self, identity: AgentIdentity, payload: Dict[str, Any], target_uri: str, target_method: str, rpc: InternalRpcClient
     ) -> Union[Dict[str, Any], JSONResponse]:
         
-        # [개선] 로거 직렬화 파손 방지를 위한 완벽한 string 캐스팅 (AnyUrl 에러 방어)
         trace_ctx = {
             "trace_id": str(identity.idempotency_key), 
             "target": str(identity.target_server_id), 
@@ -45,7 +45,7 @@ class TransitionBridge:
             log.warning(f"[Bridge:Security] REPLAY_ATTACK_DETECTED - Nonce lock failed", extra={"nonce": str(identity.nonce), **trace_ctx})
             raise HTTPException(status_code=423, detail="REPLAY_ATTACK_DETECTED")
 
-        # 2. [클린 아키텍처] 레거시 스키마(arguments) 배려 제거. 오직 MCP 표준 _meta에만 신원 기록.
+        # 2. 레거시 스키마 배려 제거. 오직 MCP 표준 _meta에만 신원 기록.
         if "params" not in payload: payload["params"] = {}
         if "_meta" not in payload["params"]: payload["params"]["_meta"] = {}
         payload["params"]["_meta"]["user_id"] = str(identity.agent_uri)
@@ -55,7 +55,6 @@ class TransitionBridge:
             identity.target_server_id, identity.idempotency_key
         )
         
-        # 이후 모든 로그는 handle_id를 기준으로 추적 가능하도록 context 업데이트
         trace_ctx["handle_id"] = str(handle_id)
         log.debug(f"[Bridge:Idempotency] Handle mapped", extra={"is_new": is_new, **trace_ctx})
 
@@ -83,7 +82,6 @@ class TransitionBridge:
                     return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}))
                     
                 elif status == "FAULTED":
-                    # [개선] 딕셔너리 에러 메시지 추출 방어
                     raw_err = state_res.get("error_detail", "Execution Fault")
                     safe_msg = _extract_error_message(raw_err)
                     
@@ -108,6 +106,7 @@ class TransitionBridge:
         if identity.receipt:
             try:
                 await rpc.call("eco.billing.receipt.validate", {
+                    "target_server_id": identity.target_server_id,
                     "action": payload.get("name", "unknown_tool"),
                     "payment_receipt": identity.receipt
                 })
@@ -159,7 +158,6 @@ class TransitionBridge:
                             return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}))
                         
                         elif status == "FAULTED":
-                            # [개선] 딕셔너리 에러 메시지 안전 추출 
                             raw_err = state_data.get("error_detail", "Execution Fault")
                             safe_msg = _extract_error_message(raw_err)
                             
@@ -168,7 +166,20 @@ class TransitionBridge:
                         
                         elif status == "RESOLVED":
                             log.info(f"[Bridge:PubSub:Resolved] Execution completed successfully", extra=trace_ctx)
-                            return state_data.get("executable_payload", {})
+                            executable_payload = state_data.get("executable_payload", {})
+                            
+                            # [개선] 복잡한 JSON-RPC 딥 파싱을 외부 순수 파서로 위임 (Single Responsibility)
+                            telemetry_data = McpPayloadParser.extract_telemetry(executable_payload)
+
+                            if telemetry_data and isinstance(telemetry_data, dict):
+                                telemetry_data["target"] = target_server_id
+                                try:
+                                    await tunnel.publish("eco.telemetry.events", json.dumps(telemetry_data))
+                                    log.debug(f"[Bridge:Telemetry] Successfully broadcasted to eco.telemetry.events", extra=trace_ctx)
+                                except Exception as emit_err:
+                                    log.error(f"[Bridge:Telemetry:Error] Failed to broadcast: {emit_err}", extra=trace_ctx)
+                                    
+                            return executable_payload
                             
         except asyncio.TimeoutError:
             log.warning(f"[Bridge:PubSub:Timeout] 30s timeout reached. Broadcasting FORCE_ROLLBACK", extra=trace_ctx)
@@ -220,9 +231,7 @@ async def invoke_mcp_stateless(
         
         result = await adapter.invoke_mcp_sync(identity, payload, target_uri, target_method, rpc)
         return result
-        
     except HTTPException:
-        # FastAPI will handle HTTPExceptions properly, log is already recorded inside adapter
         raise
     except Exception as e:
         log.error(f"[Bridge:Ingress:Fatal] Internal Facade Fracture", extra={"error": str(e), "idempotency_key": str(x_idempotency_key)}, exc_info=True)

@@ -1,5 +1,4 @@
 # fiber.dphi.daemon.rest
-## @lineage: fiber.dphi.infra.daemon.rest
 import os
 import asyncio
 import json
@@ -12,30 +11,30 @@ from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fiber.dphi.edge.payload import create_app, Config
+from fiber.dphi.edge.policy import RoutingPolicyEngine, ClusterStateMesh, ExtProcStreamHandler
+
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.server.mcp import SecureMCPServer
-from xphi.watcher.receptor.policy.router import RoutingPolicyEngine, ClusterStateMesh
+from xphi.arch.contract.server import SecureMCPServer
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.state.ledger.consensus import KernelLedger
 
 log = get_emitter("daemon.edge")
 
 # =========================================================================
-# Shared Utility: Port Reaper (권한 및 시스템 포트 충돌 방어 처리)
+# Shared Utility: Port Reaper
 # =========================================================================
 async def clear_zombie_ports(ports: List[int], tag: str):
-    """지정된 포트들을 점유하고 있는 좀비 프로세스를 정리하는 공통 유틸리티"""
+    """지정된 포트들을 점유하고 있는 기존 프로세스를 정리하는 공통 유틸리티"""
     reaper = SystemOps(redis_conn=None, tag=tag)
     my_pid = str(os.getpid())
     is_root = os.geteuid() == 0 if hasattr(os, 'geteuid') else False
     
     for port in set(ports):
-        # 특권 포트(443 등)에 대한 무의미한 OS 시스템 프로세스 킬링 방지
         if port < 1024 and not is_root:
-            log.warning(f"[{tag}] Port {port} is a privileged port. Reaper bypassed due to non-root execution.")
+            log.warning(f"[{tag}] Port {port} requires elevated privileges. Cleanup bypassed.")
             continue
 
         try:
@@ -43,14 +42,15 @@ async def clear_zombie_ports(ports: List[int], tag: str):
             for pid in pids:
                 if pid == my_pid:
                     continue
-                log.warning(f"[{tag}] Port {port} is occupied by PID {pid}. Attempting to reap...")
+                log.warning(f"[{tag}] Port {port} is occupied by PID {pid}. Attempting to terminate...")
                 try:
                     await reaper._execute_kill(pid, force=True)
                 except Exception as kill_err:
-                    log.error(f"[{tag}] Failed to kill PID {pid} (Possible OS/Permission restriction): {kill_err}")
+                    log.error(f"[{tag}] Failed to terminate PID {pid} (Permission/OS restriction): {kill_err}")
             
             if pids:
-                await asyncio.sleep(0.5)
+                # [안정화 수정] OS가 소켓 자원을 완전히 회수할 확실한 시간 확보 (0.5s -> 1.5s)
+                await asyncio.sleep(1.5)
         except Exception as e:
             log.warning(f"[{tag}] Error scanning port {port}: {e}")
 
@@ -61,7 +61,6 @@ async def clear_zombie_ports(ports: List[int], tag: str):
 class GatewaySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GATEWAY_")
     host: str = "0.0.0.0"
-    # 시스템 환경변수가 없으면 권한 제약이 없는 8443을 기본값으로 사용하여 충돌 차단
     proxy_port: int = int(os.getenv("GATEWAY_PROXY_PORT", 8443)) 
     mcp_port: int = int(os.getenv("GATEWAY_MCP_PORT", 8084))
     upstream_url: str = "http://127.0.0.1:8000"
@@ -96,9 +95,9 @@ class DphiGatewayServer:
         path = request.path
         
         if not path.startswith("/v1/public"):
-            raise web.HTTPForbidden(reason="Brane Security: Access Denied.")
+            raise web.HTTPForbidden(reason="Security: Access Denied.")
         if client_ip in self.firewall_rules["blocked_ips"]:
-            raise web.HTTPForbidden(reason="Brane Security: IP Quarantined.")
+            raise web.HTTPForbidden(reason="Security: IP Quarantined.")
 
         headers = dict(request.headers)
         headers.pop("Host", None) 
@@ -148,20 +147,27 @@ class DphiGatewayServer:
         await proxy_runner.setup()
         await mcp_runner.setup()
         
-        proxy_site = web.TCPSite(proxy_runner, self.settings.host, self.settings.proxy_port)
-        mcp_site = web.TCPSite(mcp_runner, self.settings.host, self.settings.mcp_port)
+        # [안정화 수정] 강제 바인딩(SO_REUSEADDR/PORT)을 통해 TIME_WAIT 포트 충돌 원천 차단
+        proxy_site = web.TCPSite(
+            proxy_runner, self.settings.host, self.settings.proxy_port, 
+            reuse_address=True, reuse_port=True
+        )
+        mcp_site = web.TCPSite(
+            mcp_runner, self.settings.host, self.settings.mcp_port, 
+            reuse_address=True, reuse_port=True
+        )
         
         try:
             await asyncio.gather(proxy_site.start(), mcp_site.start())
         except OSError as e:
-            self.log.error(f"Failed to bind ports ({self.settings.proxy_port}, {self.settings.mcp_port}). Permission denied or port in use: {e}")
+            self.log.error(f"Failed to bind ports ({self.settings.proxy_port}, {self.settings.mcp_port}). Error: {e}")
             raise e
         
         self.log.info(json.dumps({
-            "msg": "🚀 Gateway Membrane Activated",
+            "msg": "Gateway Server Started",
             "public_proxy_port": self.settings.proxy_port,
             "control_mcp_port": self.settings.mcp_port,
-            "shielding_upstream": self.settings.upstream_url
+            "upstream_url": self.settings.upstream_url
         }), file=sys.stderr)
 
 
@@ -179,7 +185,7 @@ class GatewayEdgeDaemon(AbstractDaemon):
         
     async def _setup_routing_mesh(self):
         topology = os.getenv("GATEWAY_TOPOLOGY", "EMBEDDED_BYPASS")
-        log.info(f"[{self.name}] Assembling Unified Membrane in {topology} mode.")
+        log.info(f"[{self.name}] Configuring routing mesh in {topology} mode.")
 
         broker_facade = getattr(self.ctx, 'tunnel', None)
         if not broker_facade:
@@ -193,17 +199,16 @@ class GatewayEdgeDaemon(AbstractDaemon):
         self._tasks.add(asyncio.create_task(state_mesh.start_mesh_sync()))
         
         if topology == "EXT_PROC":
-            from xphi.watcher.receptor.policy.router import ExtProcStreamHandler
             stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
             self._tasks.add(asyncio.create_task(stream_handler.serve()))
 
     async def run(self):
-        log.info(f"[{self.name}] Initiating Autonomous Gateway Daemon...")
+        log.info(f"[{self.name}] Starting Gateway Edge Daemon...")
         try:
             await clear_zombie_ports([self.settings.proxy_port, self.settings.mcp_port], tag=self.name)
             await self._setup_routing_mesh()
             
-            log.info(f"[{self.name}] Igniting Public Gateway & MCP Control Plane...")
+            log.info(f"[{self.name}] Starting Public Gateway & MCP Control Plane...")
             self.gateway_server = DphiGatewayServer(self.settings)
             gw_task = asyncio.create_task(self.gateway_server.start_dual_servers())
             self._tasks.add(gw_task)
@@ -212,16 +217,16 @@ class GatewayEdgeDaemon(AbstractDaemon):
                 if gw_task.done():
                     exc = gw_task.exception()
                     if exc:
-                        log.error(f"[{self.name}] Gateway dual servers crashed explicitly: {exc}", exc_info=exc)
+                        log.error(f"[{self.name}] Gateway servers crashed: {exc}", exc_info=exc)
                     else:
-                        log.error(f"[{self.name}] Gateway dual servers exited unexpectedly.")
+                        log.error(f"[{self.name}] Gateway servers exited unexpectedly.")
                     break
                 await asyncio.sleep(1.0)
                 
         except asyncio.CancelledError:
-            log.info(f"[{self.name}] Cancel signal received.")
+            log.info(f"[{self.name}] Shutdown signal received.")
         except Exception as e:
-            log.error(f"[{self.name}] Fatal execution error. Evaporating daemon: {e}", exc_info=True)
+            log.error(f"[{self.name}] Fatal error. Terminating daemon: {e}", exc_info=True)
         finally:
             await self._teardown()
 
@@ -236,7 +241,7 @@ class GatewayEdgeDaemon(AbstractDaemon):
                 task.cancel()
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
-        log.info(f"[{self.name}] Resource cleanup complete.")
+        log.info(f"[{self.name}] Gateway Edge resource cleanup complete.")
 
 
 # =========================================================================
@@ -255,20 +260,18 @@ class RestEdgeDaemon(AbstractDaemon):
         self._tunnel = None
 
     async def run(self):
-        log.info(f"[{self.name}] Initiating Autonomous REST Edge Daemon...")
+        log.info(f"[{self.name}] Starting REST Edge Daemon...")
         try:
             await clear_zombie_ports([self.target_port], tag=self.name)
             
             # ---------------------------------------------------------
             # 1. 리소스 선점 (데몬 주도 인프라 초기화)
             # ---------------------------------------------------------
-            # TunnelFactory: 노드 전체 터널 객체를 데몬이 확보
             self._tunnel = await TunnelFactory.get_default()
             
-            # Ledger: 커널에서 주입받거나, 없을 경우 로컬 인스턴스로 자동 초기화 (Auto-Role)
             ledger = getattr(self.ctx, "ledger", None)
             if ledger is None:
-                log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger (Auto-Role).")
+                log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger.")
                 ledger = KernelLedger()
 
             # ---------------------------------------------------------
@@ -277,7 +280,7 @@ class RestEdgeDaemon(AbstractDaemon):
             resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
                 internal_edge_url=resolved_internal_url,
-                redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"), # Config 내 설정값으로만 전달
+                redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
                 max_payload_size=int(os.getenv("MAX_PAYLOAD_SIZE", 1024 * 1024 * 10)),
                 wasm_timeout=float(os.getenv("WASM_TIMEOUT", 10.0)),
                 pubsub_channel=os.getenv("PUBSUB_CHANNEL", "audit_channel")
@@ -286,7 +289,6 @@ class RestEdgeDaemon(AbstractDaemon):
             # ---------------------------------------------------------
             # 3. 의존성 주입 (DI) 기반 API 애플리케이션 생성
             # ---------------------------------------------------------
-            # rest.api의 create_app은 주입된 객체만 사용하여 상태 비저장 형태로 기동됨
             injected_app = create_app(
                 config=runtime_config,
                 tunnel=self._tunnel,
@@ -304,7 +306,7 @@ class RestEdgeDaemon(AbstractDaemon):
             self.server = uvicorn.Server(config)
             
             self._server_task = asyncio.create_task(self.server.serve())
-            log.info(f"[{self.name}] REST Edge safely listening on http://127.0.0.1:{self.target_port}")
+            log.info(f"[{self.name}] REST Edge listening on http://127.0.0.1:{self.target_port}")
             log.info(f"[{self.name}] Routing internal traffic to: {resolved_internal_url}")
             
             while self.running:
@@ -318,20 +320,18 @@ class RestEdgeDaemon(AbstractDaemon):
                 await asyncio.sleep(1.0)
                 
         except asyncio.CancelledError:
-            log.info(f"[{self.name}] Cancel signal received.")
+            log.info(f"[{self.name}] Shutdown signal received.")
         except Exception as e:
-            log.error(f"[{self.name}] Fatal error. Evaporating daemon: {e}", exc_info=True)
+            log.error(f"[{self.name}] Fatal error. Terminating daemon: {e}", exc_info=True)
         finally:
             await self._teardown()
 
     async def _teardown(self):
         log.info(f"[{self.name}] Releasing REST Edge resources...")
         
-        # 1. API 어플리케이션(Uvicorn)에 안전 종료 시그널 전달
         if self.server:
             self.server.should_exit = True
             
-        # 2. Race Condition 방지: API의 Graceful Shutdown을 위한 충분한 타임아웃 보장
         shutdown_timeout = float(os.getenv("SHUTDOWN_TIMEOUT", 15.0))
         
         if self._server_task and not self._server_task.done():
@@ -344,13 +344,11 @@ class RestEdgeDaemon(AbstractDaemon):
                 with suppress(asyncio.CancelledError):
                     await self._server_task
 
-        # 3. 글로벌 자원 명시적 회수 (API의 월권 행위를 데몬이 정상 회수 처리)
-        log.info(f"[{self.name}] Reaping injected global resources...")
-
+        log.info(f"[{self.name}] Releasing injected global resources...")
         try:
             await TunnelFactory.close_all()
-            log.info(f"[{self.name}] TunnelFactory closed securely at daemon level.")
+            log.info(f"[{self.name}] TunnelFactory closed successfully.")
         except Exception as e:
             log.error(f"[{self.name}] Error closing TunnelFactory: {e}")
 
-        log.info(f"[{self.name}] Resource cleanup complete.")
+        log.info(f"[{self.name}] REST Edge resource cleanup complete.")

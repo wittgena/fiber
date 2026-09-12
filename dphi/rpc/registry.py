@@ -18,6 +18,7 @@ from fiber.dphi.rpc.handler import (
     WorkerContext
 )
 from fiber.dphi.rpc.receipt import handle_billing_receipt_validate
+from fiber.dphi.rpc.margin import handle_compute_margin_calculate
 from fiber.dphi.rpc.legacy.validator import AuthValidatorService
 
 def build_internal_rpc_registry(
@@ -44,6 +45,8 @@ def build_internal_rpc_registry(
         "eco.billing.receipt.validate": handle_billing_receipt_validate,
         "eco.compute.intent.validate": handle_intent_validate,
         "eco.compute.execute": handle_execute_compute,
+
+        "eco.margin.calculate": handle_compute_margin_calculate,
         
         # Economy & Billing
         "eco.exchange.order.ingress": handle_trade_ingress,

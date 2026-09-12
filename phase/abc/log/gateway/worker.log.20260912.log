@@ -1,0 +1,233 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m fiber.phase.e2e.gateway.worker
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 24 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+[Registry] DAEMON Registered: dynamic_pricing -> DynamicPricingDaemon
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-24476
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Core Routing & Performance Suite ===
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [E2E Pipeline] DynamicPricingDaemon successfully injected into test lifecycle.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock Ledger & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Initializing Secure MCP Server (Native Gateway)...
+ LOG | KERNEL | INFO  |  kernel.ledger: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | SYSTEM | INFO  |  daemon.pricing: [DynamicPricingDaemon] Autonomous Pricing Daemon Started.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | SYSTEM | INFO  |  adapter.sign: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | KERNEL | INFO  |  ledger.oracle: [LedgerOracle] Mounted ledger DB in Read-Only mode. Canonical WASM Broker attached.
+⚠️ DPHI_MASTER_PASSPHRASE missing. Validator cannot operate.
+Generating Ephemeral Signing Key for Validator.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 17 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-24476] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  daemon.pricing: [Vault] Pricing Sentinel deployed. Awaiting telemetry streams...
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  dphi.infra.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/kernel/space/origin/config.json
+ LOG | SYSTEM | INFO  |  dphi.infra.origin: ✅ Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Provisioning Cryptographic Secret Auditor via KMS...
+ LOG | SYSTEM | WARN  |  fiber.dphi.edge.payload: KMS returned no key. Using ephemeral testing key.
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Stateless MCP Transition Bridge (2026-07-28) initialized and mounted to app.state.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.1] fiber.dphi.edge.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.kernel.space.topos.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 4 Connectors...
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector:finlib-01] 🚀 Listening for Intents on DPHI Bus (Mode: LINEAR)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-finlib-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.dphi.worker.mcp.finlib
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector:margin-01] 🚀 Listening for Intents on DPHI Bus (Mode: MULTIPLEX)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-margin-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.dphi.worker.mcp.margin
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector:search-archive-01] 🚀 Listening for Intents on DPHI Bus (Mode: MULTIPLEX)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-search-archive-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.dphi.worker.search.archive
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector:oracle-01] 🚀 Listening for Intents on DPHI Bus (Mode: MULTIPLEX)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-oracle-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.dphi.worker.mcp.oracle
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-finlib-01] Sandbox running (PID: 24518)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-margin-01] Sandbox running (PID: 24519)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] gateway.connector: [Transport:shared-search-archive-01] Sandbox running (PID: 24520)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] gateway.connector: [Transport:shared-oracle-01] Sandbox running (PID: 24521)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] gateway.connector: [Sandbox] Initializing DuckDB In-Memory Engine & Filters...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:-0.1] gateway.connector: [Sandbox] DuckDB Search Worker successfully mounted. Ready for Intents.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.0] gateway.connector: [Sandbox] Async Agent 'search.archive.worker' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.2] gateway.connector: [Sandbox] Initializing Async Deterministic Oracle Receptor...
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:0.3] gateway.connector: [Sandbox:RAW] LOG | SYSTEM | INFO  |  adapter.sign: [Crypto] Node identity loaded. PubKey: d9b397e1...
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:0.4] gateway.connector: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.6] gateway.connector: [Sandbox] Production Universal Margin Oracle online. Awaiting computation requests...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.7] gateway.connector: [Sandbox] Async Agent 'agent.margin' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.8] gateway.connector: [Sandbox] Sync Agent 'agent.finlib' Ignited. Listening on stdin...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.9] gateway.connector: [Sandbox] Async Oracle Receptor successfully mounted. Ready for A2A Intents.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:1.1] gateway.connector: [Sandbox] Async Agent 'agent.oracle' Ignited. Listening on async stdin...
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+▶️ [PHASE 1/8] Phase 1: Event-Driven Zero-Latency Proof
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+ LOG | SYSTEM | INFO  |  gateway.connector: [Sandbox] Incoming RPC payload recognized. Method: tools/call
+ LOG | SYSTEM | WARN  |  gateway.connector: [Sandbox:RAW] /usr/local/self/fiber/dphi/worker/mcp/finlib.py:192: DeprecationWarning: ast.Num is deprecated and will be removed in Python 3.14; use ast.Constant instead
+ LOG | SYSTEM | WARN  |  gateway.connector: [Sandbox:RAW] elif isinstance(node, ast.Num):
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214624_0e5bb6eb8b98 RESOLVED.
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED ✅
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+▶️ [PHASE 2/8] Phase 2: High-Throughput Linear Queue Stress (FinLib)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.1] serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.5] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+ LOG | SYSTEM | INFO  |  gateway.connector: [Sandbox] Incoming RPC payload recognized. Method: tools/call
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214624_86e02769912d RESOLVED.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.57) Den: 7.50)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+ LOG | SYSTEM | INFO  |  gateway.connector: [Sandbox] Incoming RPC payload recognized. Method: tools/call
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 2.59) Den: 12.00)
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214624_08f9ce37e5af RESOLVED.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 2.71) Den: 12.50)
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+ LOG | SYSTEM | INFO  |  gateway.connector: [Sandbox] Incoming RPC payload recognized. Method: tools/call
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214624_d7c142dd1ec8 RESOLVED.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 2.82) Den: 13.00)
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.3] gateway.connector: [Sandbox] Incoming RPC payload recognized. Method: tools/call
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214624_c1f7d706af74 RESOLVED.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 2.94) Den: 13.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:gateway.connector' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214624_776bd1c43e4f RESOLVED.
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED ✅
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+▶️ [PHASE 3/8] Phase 3: Native Async Multiplexing Concurrency (Oracle)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 3.58) Den: 17.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:0.1] gateway.connector: [Sandbox:RAW] HTTP Request: GET https://api.exchange.coinbase.com/products/SOL-USDT/candles?granularity=60&start=1789214460&end=1789214520 "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:-0.9] gateway.connector: [Sandbox:RAW] LOG | SYSTEM | INFO  |  exchange.universal:   └─ [Universal Async Seal] Sig: ef6502e4de41...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.8] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214625_270d886e8dcc RESOLVED.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:-0.7] gateway.connector: [Sandbox:RAW] HTTP Request: GET https://api.exchange.coinbase.com/products/ETH-USDT/candles?granularity=60&start=1789214460&end=1789214520 "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:-0.5] gateway.connector: [Sandbox:RAW] HTTP Request: GET https://api.exchange.coinbase.com/products/BTC-USDT/candles?granularity=60&start=1789214460&end=1789214520 "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:-0.4] gateway.connector: [Sandbox:RAW] LOG | SYSTEM | INFO  |  exchange.universal:   └─ [Universal Async Seal] Sig: 73fbd8a7c3fb...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:-0.0] serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:-0.3] gateway.connector: [Sandbox:RAW] LOG | SYSTEM | INFO  |  exchange.universal:   └─ [Universal Async Seal] Sig: bb386584d293...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.2] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214625_5e7c90730bab RESOLVED.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.1] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214625_bd205e29b77b RESOLVED.
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 3 Concurrent Oracle Fetches Completed in 1.49s
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED ✅
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+▶️ [PHASE 4/8] Phase 4: Unit Economics Vectorization (Margin BI)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.0] gateway.connector: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.1] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214626_61773213b0a9 RESOLVED.
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/margin-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED ✅
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+▶️ [PHASE 5/8] Phase 5: x402 Billing Rejection (Free-Rider Defense)
+ LOG | SYSTEM | WARN  |  rpc.client: [RPC Error] eco.billing.receipt.validate failed: x402 Payment Required: Insufficient balance. Required: $0.0020
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:0.9] serv.gateway: [Bridge:Billing] Payment rejected
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 402 Payment Required"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED ✅
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.8] infra.e2e.bridge: 
+▶️ [PHASE 6/8] Phase 6: Precise Error Routing (Invalid Params)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.72) Den: 24.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:0.9] gateway.connector: [Sandbox] Invalid Parameters for calc_indicators_batch: prices_matrix must be a list of arrays
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.2] [Acc:1.0] gateway.connector: [Connector:FAULT] Shared Sandbox execution failed. Error details: {'code': -32602, 'message': 'Invalid params: prices_matrix must be a list of arrays'}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.1] gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214626_51828705aaf9 FAULTED.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.89) Den: 24.50)
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 502 Bad Gateway"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.9] infra.e2e.bridge:   └─ Status: PASSED ✅
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.1] infra.e2e.bridge: 
+▶️ [PHASE 7/8] Phase 7: Data-Intensive Async Multiplexing (DuckDB Search)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 2.01) Den: 25.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:gateway.connector'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.5] gateway.connector: [Sandbox] Executing DuckDB Search -> Domain: Domain_1_Control_Failure, Limit: 2
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] ⏹️ Shared Intent txn_1789214626_43f24d4877a0 RESOLVED.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.6] serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully (x4)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/search-archive-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Total E2E Latency: 2.42s
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   ├─ [DuckDB] Processed 75.29 MB
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   ├─ [DuckDB] Extracted 47 events
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   ├─ [DuckDB] Pure SQL Time: 2.0948s
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ [DuckDB] Python Time: 0.0015s
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED ✅
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+▶️ [PHASE 8/8] Phase 8: Autonomic Dynamic Pricing Alignment
+ LOG | SYSTEM | INFO  |  rpc.margin: [Universal Pricing] search-archive-01 -> Base: \(0.002 | CPU:\)0.00021 | IO: \(0.00376 | Total:\)0.00644
+ LOG | SYSTEM | INFO  |  daemon.pricing: ⚖️ [Pricing Enforcer] Updated X402 Fee for search-archive-01 -> $0.0064
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   ├─ Genesis Floor Price: $0.0020
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   ├─ New Dynamic Price  : $0.0064
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.3] serv.gateway: [Bridge:Start] Ingress request received (x6)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | WARN  |  rpc.client: [RPC Error] eco.billing.receipt.validate failed: x402 Payment Required: Insufficient balance. Required: $0.0064
+ LOG | SYSTEM | WARN  |  serv.gateway: [Bridge:Billing] Payment rejected
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/search-archive-01/invoke "HTTP/1.1 402 Payment Required"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Gateway precisely rejected underfunded request based on Dynamic Price ($0.0064).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.2] infra.e2e.bridge:   └─ Status: PASSED ✅
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.3] infra.e2e.bridge: 
+[BasePipeline] Teardown sequence initiated...
+ LOG | SYSTEM | INFO  |  daemon.pricing: [DynamicPricingDaemon] Cancellation signal received.
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-oracle-01] Terminating sandbox (PID: 24521)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-finlib-01] Terminating sandbox (PID: 24518)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-margin-01] Terminating sandbox (PID: 24519)
+ LOG | SYSTEM | INFO  |  gateway.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  gateway.connector: [Transport:shared-search-archive-01] Terminating sandbox (PID: 24520)
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  daemon.pricing: [DynamicPricingDaemon] Daemon evaporated cleanly.
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  fiber.dphi.edge.payload: API Payload Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Teardown complete.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+================================================================================
+⚡ [CORE ROUTING BENCHMARK REPORT]
+================================================================================
+✅ 01. [MCP_CORE_SUITE]Phase 1: Event-Driven Zero-Latency Proof           | PASSED
+✅ 02. [MCP_CORE_SUITE]Phase 2: High-Throughput Linear Queue Stress (FinLib) | PASSED
+✅ 03. [MCP_CORE_SUITE]Phase 3: Native Async Multiplexing Concurrency (Oracle) | PASSED
+✅ 04. [MCP_CORE_SUITE]Phase 4: Unit Economics Vectorization (Margin BI)  | PASSED
+✅ 05. [MCP_CORE_SUITE]Phase 5: x402 Billing Rejection (Free-Rider Defense) | PASSED
+✅ 06. [MCP_CORE_SUITE]Phase 6: Precise Error Routing (Invalid Params)    | PASSED
+✅ 07. [MCP_CORE_SUITE]Phase 7: Data-Intensive Async Multiplexing (DuckDB Search) | PASSED
+✅ 08. [MCP_CORE_SUITE]Phase 8: Autonomic Dynamic Pricing Alignment       | PASSED
+--------------------------------------------------------------------------------
+🎉 CORE ROUTING PIPELINE VALIDATED SUCCESSFULLY.
+================================================================================
+
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.5] [Acc:0.5] gateway.connector: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0 (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.5] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.1] serv.gateway: [serv.gateway] Bursting logs suppressed... (x29)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.8] gateway.connector: [Sandbox] Incoming RPC payload recognized. Method: tools/call (x3)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.4] gateway.connector: [gateway.connector] Bursting logs suppressed... (x26)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:1.3] gateway.connector: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call (x2)
+(self) wittgena@wittgenas-MacBook-Pro self % 

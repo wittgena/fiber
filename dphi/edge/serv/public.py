@@ -40,7 +40,7 @@ from xphi.arch.model.edge.receipt import (
     KernelExecutionRecord,
     KernelOtlpRecord
 )
-from xphi.watcher.receptor.audit.secret import SecretAuditor
+from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.public")
@@ -63,7 +63,7 @@ class SandboxHandshakeResponse(BaseModel):
     estimated_fuel: int
     estimated_cost_usd: float
     invoice: Dict[str, Any]
-    macaroon: Optional[str] = None
+    x402_receipt: Optional[str] = None
     next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
 
 
@@ -257,7 +257,7 @@ async def public_sandbox_handshake(
         estimated_fuel=fuel,
         estimated_cost_usd=cost_usd,
         invoice=invoice_data.get("invoice", {}),
-        macaroon=invoice_data.get("macaroon")
+        x402_receipt=invoice_data.get("x402_receipt")
     )
 
 

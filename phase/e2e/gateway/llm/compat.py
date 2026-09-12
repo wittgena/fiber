@@ -1,5 +1,4 @@
 # fiber.phase.e2e.gateway.llm.compat
-## @lineage: fiber.phase.e2e.bridge.llm.compat
 from __future__ import annotations
 
 import argparse
