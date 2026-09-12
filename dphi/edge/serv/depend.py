@@ -4,7 +4,7 @@ from fastapi import Request, HTTPException, status
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 
-from xphi.watcher.receptor.audit.secret import SecretAuditor
+from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine

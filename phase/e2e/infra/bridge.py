@@ -1,5 +1,4 @@
 # fiber.phase.e2e.infra.bridge
-## @lineage: fiber.dphi.infra.e2e.bridge
 import os
 import sys
 import time

@@ -1,10 +1,4 @@
 # fiber.dphi.eco.client.sdk
-"""
-@desc: DPHI Public Gateway SDK Core
-- Provides a zero-trust computing blackbox client for isolated sandbox workloads.
-- Integrates LLM edge and Enterprise MCP interfaces.
-- Intended for external developers and agentic workflows.
-"""
 import time
 import logging
 from dataclasses import dataclass, asdict
@@ -23,10 +17,6 @@ from xphi.arch.model.edge.receipt import (
 )
 from xphi.arch.model.dphi.receptor import EdgeHeader
 
-
-# =========================================================================
-# Endpoints & Models
-# =========================================================================
 class Endpoints:
     """Backend routing prefixes and endpoints for DPHI Gateway."""
     # --- edge.public (prefix: /v1/public) ---
@@ -73,16 +63,7 @@ class MCPStateIntent:
     x_idempotency_key: str
     x_trace_id: Optional[str] = None
 
-
-# =========================================================================
-# Strict Payload Factory (Zero-Trust Data Assurance)
-# =========================================================================
 class StrictPayloadFactory:
-    """
-    Constructs highly constrained payloads that strictly comply with 
-    the DPHI Gateway's Zero-Trust validation schemas and extraction rulesets.
-    """
-
     @staticmethod
     def create_telemetry_payload(
         tenant_id: str, 
@@ -131,15 +112,8 @@ class StrictPayloadFactory:
             sign_local=False
         )
 
-
-# =========================================================================
-# Core SDK Client
-# =========================================================================
+"""Core SDK Client"""
 class DphiPublicClient:
-    """
-    Client for interacting with the DPHI Zero-Trust Infrastructure.
-    Handles cryptographic handshakes, secure compute execution, and audit logging.
-    """
     def __init__(self, base_url: str = "http://localhost:8000", api_key: str = ""):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
@@ -291,11 +265,11 @@ class DphiPublicClient:
                 hs_res = await self.request_handshake(SandboxIntent(
                     client_id=intent.client_id, action="LLM_COMPUTE", source_code="", max_fuel=intent.max_tokens, signature="sig"
                 ))
-                macaroon = hs_res.get("macaroon")
-                if not macaroon:
-                    raise Exception("Failed to procure x402 Macaroon from Handshake")
+                x402_receipt = hs_res.get("x402_receipt")
+                if not x402_receipt:
+                    raise Exception("Failed to procure x402_receipt from Handshake")
                     
-                headers = {"X-X402-Receipt": macaroon}
+                headers = {"X-X402-Receipt": x402_receipt}
                 response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload, headers=headers)
                 
             response.raise_for_status()

@@ -1,5 +1,4 @@
 # fiber.dphi.worker.mcp.finlib
-## @lineage: fiber.agent.worker.mcp.finlib
 import sys
 import json
 import logging

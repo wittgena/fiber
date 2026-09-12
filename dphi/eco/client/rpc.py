@@ -1,5 +1,4 @@
 # fiber.dphi.eco.client.rpc
-## @lineage: fiber.dphi.client.rpc
 import uuid
 import json
 import asyncio
@@ -13,10 +12,6 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("rpc.client")
 
 class InternalRpcClient:
-    """
-    Message Bus 기반의 Transport-Agnostic RPC 클라이언트.
-    Gateway(Public Edge)에서 내부 Worker(Handler)를 호출할 때 사용됩니다.
-    """
     def __init__(self, queue_name: str = "internal.rpc.queue"):
         self.queue_name = queue_name
 

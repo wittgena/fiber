@@ -1,8 +1,5 @@
-# fiber.dphi.worker.mcp.sentinel
-## @lineage: fiber.agent.worker.mcp.sentinel
-## @lineage: fiber.dphi.worker.sentinel
-## @lineage: fiber.agent.worker.sentinel
-## @lineage: fiber.agent.infra.worker.sentinel
+# fiber.dphi.worker.sentinel
+## @lineage: fiber.dphi.worker.mcp.sentinel
 import asyncio
 import time
 import json
