@@ -12,7 +12,7 @@ try:
 except ImportError:
     dotenv = None
 
-from xphi.kernel.shell.entry import EcosystemShell
+from xphi.kernel.ops.shell.entry import EcosystemShell
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.ops.boot import main_async, teardown

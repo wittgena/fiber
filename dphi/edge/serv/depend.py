@@ -7,10 +7,10 @@ from fiber.dphi.eco.client.rpc import InternalRpcClient
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.arch.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.bound.xor.secret.cipher import Cipher
-from xphi.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
+from xphi.arch.bound.xor.secret.cipher import Cipher
+from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
 
 log = get_emitter("dphi.depend")
 

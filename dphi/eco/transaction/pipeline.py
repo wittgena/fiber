@@ -8,13 +8,13 @@ from typing import Any, Dict, Optional, List
 
 from fiber.dphi.eco.transaction.rollup import ShadowAdapter
 
-from xphi.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
-from xphi.bound.adapter.dphi.dvm import DvmAdapter
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
+from xphi.arch.bound.adapter.dphi.dvm import DvmAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 
 from xphi.kernel.wasm.gateway import GatewayWasm
 from xphi.state.ledger.consensus import KernelLedger, ToposBlob
-from xphi.state.network.channel.pipeline import DuplexChannel, ChannelContext, ChannelPipeline
+from xphi.state.phase.channel import DuplexChannel, ChannelContext, ChannelPipeline
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 
 log = get_emitter("pipeline.defin")

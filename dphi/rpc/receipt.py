@@ -6,7 +6,7 @@ from typing import Dict, Any
 from pydantic import ValidationError
 
 from fiber.dphi.rpc.handler import WorkerContext, _build_error
-from xphi.bound.adapter.settlement import (
+from xphi.arch.bound.adapter.settlement import (
     MandateAdapter, 
     Ap2MandateResult, 
     X402SettlementReceipt

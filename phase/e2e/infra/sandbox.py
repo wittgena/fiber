@@ -13,9 +13,9 @@ from cryptography.hazmat.primitives import serialization
 from fiber.dphi.eco.builder import EcoBuilder
 from fiber.dphi.eco.client.wallet import LocalWalletClient
 
-from xphi.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
-from xphi.bound.space.sandbox.runner import SchemeRunner
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
+from xphi.kernel.space.sandbox.runner import SchemeRunner
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

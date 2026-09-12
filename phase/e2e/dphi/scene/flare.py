@@ -8,7 +8,7 @@ from typing import Any, Dict
 from fiber.phase.e2e.infra.sandbox import SandboxRunner, TestScripts
 from xphi.arch.model.anchor.nexus import ActorIdentity
 
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

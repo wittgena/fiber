@@ -10,7 +10,7 @@ from typing import Any, List, Dict, Optional
 from fiber.phase.e2e.infra.sandbox import SandboxRunner, ScriptDef, TestScripts
 from xphi.arch.model.anchor.nexus import ActorIdentity
 
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 

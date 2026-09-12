@@ -23,11 +23,11 @@ from fiber.dphi.eco.client.rpc import InternalRpcClient
 
 from xphi.arch.contract.interface import ContractRouter
 from xphi.arch.model.dphi.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.arch.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (
     SandboxIntent,
     AuditReceipt,

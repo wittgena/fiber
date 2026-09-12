@@ -7,11 +7,11 @@ from fiber.dphi.eco.notary import EcoProtocolInterface, EcosystemActor, GrantRes
 from fiber.phase.e2e.infra.sandbox import TestScripts
 
 from xphi.arch.model.anchor.nexus import ActorIdentity
-from xphi.bound.space.sandbox.protocol import TriadAxis
+from xphi.kernel.space.sandbox.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 
 log = get_emitter("e2e.eco")
 

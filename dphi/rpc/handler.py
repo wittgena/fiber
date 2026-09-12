@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from xphi.arch.model.anchor.nexus import AnchorProposal, StreamAppendRequest
 
-from xphi.bound.space.sandbox.config import tier_config, fuel_config
+from xphi.kernel.space.sandbox.config import tier_config, fuel_config
 from xphi.arch.model.dphi.receptor import (
     EdgeState, AnchorProposalRequest, IntentValidationRequest,
     ExecuteComputeRequest, ProofGenerationRequest, TradeIngressRequest,
@@ -19,12 +19,12 @@ from xphi.arch.model.edge.receipt import BilledExecutionRequest, KernelLedgerApp
 
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.kernel.wasm.cgroup import Tier
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.state.ledger.consensus import LogicStream
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
-from xphi.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
+from xphi.arch.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
 
 log = get_emitter("rpc.handler")
 
@@ -241,7 +241,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
     if not all([payee_address, amount_usdc, resource_id]): return _build_error(422, "Missing required invoice parameters")
 
     try:
-        from xphi.bound.adapter.settlement import MandateAdapter
+        from xphi.arch.bound.adapter.settlement import MandateAdapter
         invoice = MandateAdapter.build_x402_invoice(payee_address=payee_address, amount_usdc=amount_usdc, resource_id=resource_id)
         return {"status": "INVOICE_ISSUED", "invoice": invoice.model_dump() if hasattr(invoice, "model_dump") else invoice.__dict__}
     except Exception as e:

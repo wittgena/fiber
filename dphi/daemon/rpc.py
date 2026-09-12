@@ -19,11 +19,11 @@ from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.state.ledger.gateway import StoreGateway
 
 from xphi.arch.model.anchor.nexus import NexusAnchor
-from xphi.bound.adapter.settlement import ClearingAdapter
-from xphi.bound.space.sandbox.resolver import BenchProfile
+from xphi.arch.bound.adapter.settlement import ClearingAdapter
+from xphi.kernel.space.sandbox.resolver import BenchProfile
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.adapter.pta import PtaAdapter
-from xphi.bound.adapter.sign import NodeSigner
+from xphi.arch.bound.adapter.pta import PtaAdapter
+from xphi.arch.bound.adapter.sign import NodeSigner
 from xphi.arch.model.edge.receipt import LogstEvent
 from xphi.watcher.receptor.warden import AuditWarden
 

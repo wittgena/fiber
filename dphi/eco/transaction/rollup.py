@@ -13,8 +13,8 @@ from fiber.dphi.eco.config.exchange import dphi_env
 
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.adapter.state import StateAdapter
-from xphi.bound.adapter.dphi.dvm import DvmAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.dphi.dvm import DvmAdapter
 from xphi.state.ledger.consensus import KernelLedger, ToposBlob
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -225,7 +225,7 @@ class RollupAdapter:
         return rollup_hash
 
     async def process_x402_settlement(self, invoice: Any) -> Any:
-        from xphi.bound.adapter.settlement import X402SettlementReceipt
+        from xphi.arch.bound.adapter.settlement import X402SettlementReceipt
         
         tx_hash = await self.transfer(
             to_address=invoice.pay_to,

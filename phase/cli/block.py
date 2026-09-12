@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from xphi.kernel.space.topos.tunnel.surface import SurfaceMQ, SurfaceClient
-from xphi.bound.xor.parser.ruleset.engine import LifecycleRegexParser, AuditRulesetParser, CompiledEngine
-from xphi.bound.space.contract import Contract, CoherenceState
+from xphi.arch.bound.xor.parser.ruleset.engine import LifecycleRegexParser, AuditRulesetParser, CompiledEngine
+from xphi.kernel.space.contract import Contract, CoherenceState
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.tracer.bound import SystemBound, log_streamer
 from xphi.watcher.plane.emitter import get_emitter

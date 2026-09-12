@@ -11,7 +11,7 @@ from fiber.dphi.eco.client.rpc import InternalRpcClient
 from fiber.dphi.edge.serv.depend import get_rpc_client
 from fiber.dphi.edge.parser import McpPayloadParser
 
-from xphi.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
+from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 

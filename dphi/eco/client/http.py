@@ -22,8 +22,8 @@ from fiber.llm.router.constants import (
     HTTP_HANDLER_CONNECT_TIMEOUT_SECONDS,
 )
 from xphi.arch.model.config import config
-from xphi.bound.adapter.sign import NodeSigner
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.sign import NodeSigner
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("client.http")

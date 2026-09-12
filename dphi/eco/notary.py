@@ -7,13 +7,13 @@ from typing import Dict, Any, Optional, List, Protocol
 from fiber.dphi.eco.config.exchange import dphi_env
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.bound.space.sandbox.protocol import (
+from xphi.kernel.space.sandbox.protocol import (
     TriadAxis, ProtocolValidator, D3Protocol,
     MsgIngressPledge, MsgDelegateTrust, MsgWasmExecution, 
     MsgExecutionReceipt, MsgSettlementSeal
 )
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.adapter.pta import (
+from xphi.arch.bound.adapter.pta import (
     PtaAdapter, PtaPointer, PtaInput, PtaOutput, PtaTransaction,
     AgentWallet, compute_merkle_root
 )
