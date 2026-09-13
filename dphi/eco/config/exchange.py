@@ -40,7 +40,6 @@ _DEFAULT_PKEY_0 = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f
 _DEFAULT_PKEY_1 = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 _DEFAULT_PKEY_2 = "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
 
-
 class AgentAccount(BaseModel):
     """Unified account structure serving D3Fi Intent workflows"""
     name: str
@@ -168,4 +167,4 @@ class ExchangeConfig(BaseModel):
             return env_val.replace('\\n', '\n')
         return agent.fallback_pkey
 
-dphi_env = ExchangeConfig()
+exchange_config = ExchangeConfig()

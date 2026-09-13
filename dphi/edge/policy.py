@@ -163,21 +163,3 @@ class ExtProcStreamHandler:
     async def serve(self) -> None:
         log.info("[Gateway] ExtProc Stream Handler bound to gRPC port 50051...")
         await asyncio.sleep(36000)
-
-
-"""FACTORIES (Dependency Injection)"""
-def get_topos_sequencer() -> ToposSequencer:
-    return ToposSequencer()
-
-def get_fuel_allocator() -> FuelAllocator:
-    return FuelAllocator()
-
-def get_health_monitor() -> HealthMonitor:
-    return HealthMonitor()
-
-def get_ingress_policy() -> IngressPolicyEngine:
-    return IngressPolicyEngine(
-        sequencer=ToposSequencer(),
-        allocator=FuelAllocator(),
-        monitor=HealthMonitor()
-    )

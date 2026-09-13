@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 from xphi.arch.contract.protocol.agent import AgentProtocol
-from xphi.state.ledger.consensus import KernelLedger
+from xphi.state.anchor.consensus import KernelLedger
 
 class AgentSentinel(AgentProtocol):
     def __init__(self, ledger: KernelLedger, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):

@@ -4,7 +4,7 @@
 import time
 from typing import Any, Dict, List, Optional
 
-from xphi.arch.event.next import uuid
+from xphi.arch.bound.event.next import uuid
 from fiber.llm.router.stream.parser.chunk import ParsedChunk
 from fiber.llm.model.types.core import (
     Choices,

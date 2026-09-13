@@ -23,7 +23,7 @@ try:
 except ImportError:
     dotenv = None
 
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
 

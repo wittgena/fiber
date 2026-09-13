@@ -13,7 +13,7 @@ from fiber.llm.exception.mapping import exception_type
 
 from fiber.llm.router.mapper.state import StateMapper
 
-from xphi.arch.event.next import uuid4 
+from xphi.arch.bound.event.next import uuid4 
 from xphi.kernel.space.bind.resolver import find_current_self, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 

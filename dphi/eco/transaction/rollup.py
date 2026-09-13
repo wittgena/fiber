@@ -9,13 +9,13 @@ from typing import Dict, Any, List, Optional
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.eco.config.exchange import dphi_env
+from fiber.dphi.eco.config.exchange import exchange_config
 
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.bound.adapter.state import StateAdapter
-from xphi.bound.adapter.dphi.dvm import DvmAdapter
-from xphi.state.ledger.consensus import KernelLedger, ToposBlob
+from xphi.arch.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.dphi.dvm import DvmAdapter
+from xphi.state.anchor.consensus import KernelLedger, ToposBlob
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("transaction.rollup")
@@ -141,7 +141,7 @@ class RollupAdapter:
         self.agent_alias = agent_alias
         self.simulate = simulate
         
-        agent_config = getattr(dphi_env.agents, agent_alias)
+        agent_config = getattr(exchange_config.agents, agent_alias)
         self.clearing_address = agent_config.evm_address.lower()
         self.wallet_address = self.clearing_address
         self.network_id = "dvm-rollup-chain"
@@ -160,7 +160,7 @@ class RollupAdapter:
         decimals = 6 if asset.lower() == "usdc" else 18
         amount_wei = int(float(amount_str) * (10 ** decimals))
         
-        target_contract = getattr(dphi_env.contracts, f"target_{asset.lower()}").lower()
+        target_contract = getattr(exchange_config.contracts, f"target_{asset.lower()}").lower()
         valid_mock_erc20_bytecode = "0x6080604052348015600f57600080fd5b506004361060285760003560e01c806323b872dd14602d575b600080fd5b00"
 
         calldata = DvmAdapter.build_erc20_transfer_calldata(to_address, amount_wei)
@@ -225,7 +225,7 @@ class RollupAdapter:
         return rollup_hash
 
     async def process_x402_settlement(self, invoice: Any) -> Any:
-        from xphi.bound.adapter.settlement import X402SettlementReceipt
+        from xphi.arch.bound.adapter.settlement import X402SettlementReceipt
         
         tx_hash = await self.transfer(
             to_address=invoice.pay_to,
@@ -253,7 +253,7 @@ class RollupAdapter:
         decimals = 6 if asset.lower() == "usdc" else 18
         amount_wei = int(float(amount_str) * (10 ** decimals))
         
-        target_contract = getattr(dphi_env.contracts, f"target_{asset.lower()}").lower()
+        target_contract = getattr(exchange_config.contracts, f"target_{asset.lower()}").lower()
         valid_mock_erc20_bytecode = "0x6080604052348015600f57600080fd5b506004361060285760003560e01c806323b872dd14602d575b600080fd5b00"
 
         calldata = DvmAdapter.build_erc20_transfer_from_calldata(agent_address, self.clearing_address, amount_wei)

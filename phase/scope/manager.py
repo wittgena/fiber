@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager, AsyncExitStack
 
 from fiber.phase.scope.surface import get_surface_class, SurfaceConfig
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.watcher.tracer.scope import scope_trace, get_current_trace_path
+from xphi.arch.dev.tracer.scope import scope_trace, get_current_trace_path
 
 log_flow = get_emitter("scope.manager")
 

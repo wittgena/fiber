@@ -10,11 +10,11 @@ from typing import Dict, Any, Optional
 
 import aiohttp
 
-from fiber.dphi.eco.config.exchange import dphi_env
+from fiber.dphi.eco.config.exchange import exchange_config
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.bound.adapter.sign import NodeSigner
-from xphi.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.pta import NodeSigner
+from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -30,11 +30,11 @@ class OriginDelegatorDaemon(AbstractDaemon):
         self.ctx = ctx
         
         # 1. 인프라 및 라우팅 설정 로드
-        self.origin_url = dphi_env.delegation.origin_url
-        self.allow_fallback = dphi_env.delegation.allow_fallback
+        self.origin_url = exchange_config.delegation.origin_url
+        self.allow_fallback = exchange_config.delegation.allow_fallback
         
         # 2. 오리진 무결성 검증을 위한 신뢰된 위원회 공개키
-        self.trusted_witnesses = set(dphi_env.export_attestation.witness_pubkeys)
+        self.trusted_witnesses = set(exchange_config.export_attestation.witness_pubkeys)
         
         # 3. 게이트웨이 자체의 신원(Signer) - 오리진에 위탁 시 DPoP 래핑에 사용
         # 시스템 마스터 키를 가져오거나 기본 NodeSigner 인스턴스 사용

@@ -9,7 +9,7 @@ from typing import Optional
 from fiber.llm.router.constants import DEFAULT_MAX_RECURSE_DEPTH
 from fiber.llm.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
-from xphi.arch.model.config import config
+from fiber.llm.model.config import config
 
 class Rules:
     def __init__(self) -> None:

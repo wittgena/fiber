@@ -10,7 +10,7 @@ from fiber.llm.router.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 from fiber.llm.model.types.param.legacy import LegacyParams
 from fiber.llm.model.provider.secret import get_secret_str, get_secret
 
-from xphi.arch.model.config import config
+from fiber.llm.model.config import config
 from xphi.watcher.plane.emitter import get_emitter 
 
 log_route = get_emitter("routing.locator")

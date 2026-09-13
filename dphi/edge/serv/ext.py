@@ -6,13 +6,13 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from fiber.dphi.eco.client.ext.evm import Web3Adapter
-from fiber.dphi.eco.client.ext.wallet import EthWalletAdapter
+from fiber.dphi.eco.ext.evm import Web3Adapter
+from fiber.dphi.eco.ext.wallet import EthWalletAdapter
 from fiber.dphi.eco.transaction.rollup import RollupAdapter
-from fiber.dphi.eco.config.exchange import dphi_env
+from fiber.dphi.eco.config.exchange import exchange_config
 
-from xphi.arch.contract.interface import ContractRouter
-from xphi.bound.adapter.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt
+from xphi.arch.contract.protocol.router import ContractRouter
+from xphi.arch.bound.adapter.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("edge.ext")
@@ -243,7 +243,7 @@ async def get_evm_balance(address: str, web3: Web3Adapter = Depends(get_web3_ada
 @evm_edge.post("/wrap", summary="ETH -> WETH 변환 (Auto-Wrap 스마트 컨트랙트 호출)", response_model=WrapResponse)
 async def wrap_native_to_weth(req: WrapRequest, web3: Web3Adapter = Depends(get_web3_adapter)):
     try:
-        private_key = dphi_env.get_agent_pkey(req.agent_alias)
+        private_key = exchange_config.get_agent_pkey(req.agent_alias)
         amount_int = int(req.amount_wei)
         
         tx_hash = await web3.wrap_weth(

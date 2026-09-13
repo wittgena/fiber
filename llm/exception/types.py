@@ -8,7 +8,7 @@
 ## @lineage: bound.agent.exception.types
 ## @lineage: ext.router.exception.types
 ## @lineage: engine.exception.types
-from xphi.arch.event.next import ToposId
+from xphi.arch.bound.event.next import ToposId
 ConversationID = ToposId
 
 class DriverError(Exception):
