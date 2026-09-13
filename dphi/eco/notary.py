@@ -14,10 +14,7 @@ from xphi.kernel.space.sandbox.protocol import (
     MsgExecutionReceipt, MsgSettlementSeal
 )
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.arch.bound.adapter.pta import (
-    PtaAdapter, PtaPointer, PtaInput, PtaOutput, PtaTransaction,
-    AgentWallet, compute_merkle_root
-)
+from xphi.arch.bound.adapter.pta import PtaAdapter, PtaPointer, PtaInput, PtaOutput, PtaTransaction, compute_merkle_root
 from xphi.state.anchor.consensus import KernelLedger, SealedKernel, ToposBlob
 from xphi.state.anchor.oracle import AnchorOracle
 
