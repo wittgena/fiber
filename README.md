@@ -75,15 +75,32 @@ Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performan
 
 * **Fuel Trap:** Physically terminates the connection at the network transport layer (or sandbox boundary) if a streaming response exhausts its token budget, preventing billing runaways.
 * **Declarative Tool Recovery:** Dynamically detects and strictly normalizes malformed tool calls from heterogeneous LLMs (like Gemini) into the OpenAI standard format.
+* **Zero-Overhead Observability:** Safely inject plug-and-play custom tracers (e.g., Datadog, LangSmith) via fire-and-forget interceptors without blocking or adding latency to LLM responses.
+
+**1. Define a Custom Tracer (Non-blocking):**
 
 ```python
-## Just change your import path. No architecture rewrite needed.
+from fiber.llm.trace import BaseLLMTracer
+
+class DatadogTracer(BaseLLMTracer):
+    async def on_llm_start(self, meta, kwargs): ...
+    async def on_llm_error(self, meta, exc, duration_ms): ...
+    async def on_llm_end(self, meta, response, duration_ms):
+        # Fire-and-forget metric recording
+        datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}"])
+
+```
+
+**2. Drop-in Replacement Execution:**
+
+```python
 from fiber.llm.entry import acompletion
 
 response = await acompletion(
     model="gemini-3.5-flash",
     messages=[{"role": "user", "content": "Analyze this data."}],
     fallbacks=["gpt-4o-mini"], 
+    llm_tracers=[DatadogTracer()], # Plug-and-play telemetry injection
     metadata={"post_call_rules": [async_pii_filter_function]} # Dynamic Guardrails
 )
 ```
@@ -145,4 +162,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * 🔗 **[workflow.flare.log](./phase/abc/log/plane/e2e.plane.flare.20260911.log):** Validates V8 isolation Sandboxing within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
 * 🔗 **[workflow.settlement.log](./phase/abc/log/workflow.settlement.20260825.log):** Validates REVM pre-validation of smart contract state transitions and rollbacks.
 * 🔗 **[e2e.edge.sandbox.log](./phase/abc/log/edge/e2e.edge.sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience
-* 🔗 **[e2e.llm.compat.log](./phase/abc/log/gateway/e2e.llm.compat.20260912.log):** Validates the LLM governance pipeline, confirming physical Fuel Trap terminations on streaming budget exhaustion, dynamic tier-based fallback routing, and deterministic recovery of heterogeneous tool calls via the InterLLM adapter.
+* 🔗 **[e2e.llm.compat.log](./phase/abc/log/llm/compat.20260912.log):** Validates the LLM governance pipeline, confirming physical Fuel Trap terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.

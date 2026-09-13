@@ -1,5 +1,4 @@
 # fiber.dev.e2e.llm.compat
-## @lineage: fiber.phase.e2e.gateway.llm.compat
 from __future__ import annotations
 
 import argparse
@@ -8,13 +7,17 @@ import os
 import socket
 import time
 from types import SimpleNamespace
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Any, Dict
 
 from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.llm.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
+from fiber.llm.execution import ExecutionMetadata
+
+# Custom Tracer Test를 위한 모듈
+from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
@@ -22,12 +25,35 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.llm.compat")
 
+# [NEW] 유저가 임의로 만든 커스텀 Tracer (호출 여부만 기록)
+class DummyTestTracer(BaseLLMTracer):
+    def __init__(self):
+        self.started = False
+        self.ended = False
+        self.error = False
+        self.recorded_model = None
+        self.duration = 0.0
+
+    async def on_llm_start(self, meta: ExecutionMetadata, kwargs: Dict[str, Any]):
+        self.started = True
+        self.recorded_model = meta.base_model
+
+    async def on_llm_end(self, meta: ExecutionMetadata, response: Any, duration_ms: float):
+        self.ended = True
+        self.duration = duration_ms
+
+    async def on_llm_error(self, meta: ExecutionMetadata, exc: Exception, duration_ms: float):
+        self.error = True
+
+
 class StartCompatMsg(WorkflowMessage): pass
 class FallbackTestMsg(WorkflowMessage): pass
 class MockBypassTestMsg(WorkflowMessage): pass
 class FuelTrapTestMsg(WorkflowMessage): pass
 class TokenUtilsTestMsg(WorkflowMessage): pass
 class AdapterMappingTestMsg(WorkflowMessage): pass
+class InterceptorTestMsg(WorkflowMessage): pass  # [NEW] Phase 7 연결용 메시지
+
 
 class LlmCompatWorkflow(Workflow):
     class Meta:
@@ -38,7 +64,7 @@ class LlmCompatWorkflow(Workflow):
         self.run_context = run_context
         self.target_model = run_context.get("target_model")
         self.test_fallback_only = run_context.get("test_fallback_only", False)
-        
+
         self.log = log
         self.success_count = 0
         self.fail_count = 0
@@ -63,14 +89,14 @@ class LlmCompatWorkflow(Workflow):
                 messages=[{"role": "user", "content": "Hello, DPHI Kernel!"}],
                 metadata={"kernel_auth": {"audit_hash": audit_hash}}
             )
-            
+
             if response and response.choices:
                 self.log.info(f"[{self.name}] ✅ Passed: Standard async completion executed successfully.")
                 self.success_count += 1
-                
+
                 usage = getattr(response, "usage", None)
                 self.total_fuel += getattr(usage, "fuel_consumed", 0) if usage else 0
-                
+
                 sealed_hash = getattr(response, "system_fingerprint", "N/A")
                 if sealed_hash == audit_hash:
                     self.audit_traces.append(sealed_hash)
@@ -78,7 +104,7 @@ class LlmCompatWorkflow(Workflow):
                     self.log.warning(f"[{self.name}] ⚠️ Audit hash mismatch: Expected {audit_hash}, Got {sealed_hash}")
             else:
                 raise ValueError("Empty or invalid response structure.")
-                
+
         except Exception as e:
             self.log.error(f"[{self.name}] ❌ Failed: {e}")
             self.fail_count += 1
@@ -92,28 +118,28 @@ class LlmCompatWorkflow(Workflow):
         try:
             fallback_1 = model_tier_registry.get_optimal_model(min_cognitive_score=2) or "gemini/gemini-3.1-flash-lite"
             fallback_2 = model_tier_registry.get_optimal_model(min_cognitive_score=3) or "gemini/gemma-4-31b"
-            
+
             self.log.info(f"[{self.name}] ⚙️ Fallback Pool Configured: {fallback_1}, {fallback_2}")
             audit_hash = f"audit_fb_{int(time.time())}"
-            
+
             response = await acompletion(
                 model="invalid-trigger-model", 
                 messages=[{"role": "user", "content": "Trigger fallback"}],
                 fallbacks=[fallback_1, {"model": fallback_2, "temperature": 0.5}],
                 metadata={"kernel_auth": {"audit_hash": audit_hash}}
             )
-            
+
             used_model = getattr(response, "model", None) or ""
             if not used_model or fallback_1 in used_model or fallback_2 in used_model:
                 self.log.info(f"[{self.name}] ✅ Passed: Fallback successfully routed to '{used_model}'.")
                 self.success_count += 1
-                
+
                 usage = getattr(response, "usage", None)
                 self.total_fuel += getattr(usage, "fuel_consumed", 0) if usage else 0
                 self.audit_traces.append(getattr(response, "system_fingerprint", "N/A"))
             else:
                 raise ValueError(f"Fallback didn't route as expected. Used: {used_model}")
-                
+
         except Exception as e:
             self.log.error(f"[{self.name}] ❌ Failed: {e}")
             self.fail_count += 1
@@ -121,7 +147,7 @@ class LlmCompatWorkflow(Workflow):
 
         if self.test_fallback_only:
             return StopMessage(result=True)
-            
+
         return MockBypassTestMsg()
 
     @step
@@ -130,7 +156,7 @@ class LlmCompatWorkflow(Workflow):
         try:
             start_time = time.time()
             expected_mock = "This is a bypassed mock response."
-            
+
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Cost me nothing!"}],
@@ -138,17 +164,17 @@ class LlmCompatWorkflow(Workflow):
                 mock_delay=1.0,
                 metadata={"kernel_auth": {"audit_hash": "audit_mock"}}
             )
-            
+
             elapsed = time.time() - start_time
             content = response.choices[0].message.content
-            
+
             if content == expected_mock and elapsed >= 1.0:
                 self.log.info(f"[{self.name}] ✅ Passed: Mock response received in {elapsed:.2f}s (Expected >1.0s).")
                 self.success_count += 1
                 self.audit_traces.append("audit_mock")
             else:
                 raise ValueError("Mock payload mismatch or delay ignored.")
-                
+
         except Exception as e:
             self.log.error(f"[{self.name}] ❌ Failed: {e}")
             self.fail_count += 1
@@ -162,25 +188,25 @@ class LlmCompatWorkflow(Workflow):
         try:
             budget = 5 
             self.log.info(f"[{self.name}] ⛽ Injecting artificial fuel budget: {budget}")
-            
+
             stream = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Write a very long essay about the history of the universe."}],
                 stream=True,
                 metadata={"kernel_auth": {"fuel_budget": budget}}
             )
-            
+
             chunks_received = 0
             async for _ in stream:
                 chunks_received += 1
-                
+
             if chunks_received <= budget + 2:
                 self.log.info(f"[{self.name}] ✅ Passed: Stream physically killed after {chunks_received} chunks.")
                 self.success_count += 1
                 self.total_fuel += chunks_received
             else:
                 raise ValueError(f"Fuel trap failed to kill stream. Received {chunks_received} chunks.")
-                
+
         except Exception as e:
             self.log.error(f"[{self.name}] ❌ Failed: {e}")
             self.fail_count += 1
@@ -194,12 +220,12 @@ class LlmCompatWorkflow(Workflow):
         try:
             msgs = [{"role": "user", "content": "Hello world"}]
             count = token_counter(model=self.target_model, messages=msgs)
-            
+
             safe_max = get_modified_max_tokens(
                 model=self.target_model, base_model=self.target_model, 
                 messages=msgs, user_max_tokens=1000, buffer_perc=0.1
             )
-            
+
             splitter = TokenSplitter(chunk_size=10, chunk_overlap=2, model="gemini/gemini-3.1-flash-lite")
             chunks = splitter.split_text("This is a relatively long string meant to be safely split by token IDs.")
 
@@ -224,7 +250,7 @@ class LlmCompatWorkflow(Workflow):
             # 1. StateMapper & Traverser 규칙 직접 검증 (Gemini Tool Leak 시뮬레이션)
             from fiber.llm.router.mapper.state import StateMapper
             mapper = StateMapper()
-            
+
             mock_raw_resp = {
                 "content": {
                     "parts": [
@@ -252,14 +278,14 @@ class LlmCompatWorkflow(Workflow):
                     "parameters": {"type": "object", "properties": {}}
                 }
             }]
-            
+
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "What time is it right now? Use the tool."}],
                 tools=tools,
                 metadata={"kernel_auth": {"audit_hash": "audit_tool_test"}}
             )
-            
+
             if response.choices:
                 choice = response.choices[0]
                 finish_reason = getattr(choice, "finish_reason", None) if not isinstance(choice, dict) else choice.get("finish_reason")
@@ -274,6 +300,42 @@ class LlmCompatWorkflow(Workflow):
             self.log.error(f"[{self.name}] ❌ Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Adapter Mapping Failed: {e}")
+
+        # Phase 7로 트랜지션
+        return InterceptorTestMsg()
+
+    @step
+    async def phase_custom_interceptor(self, msg: InterceptorTestMsg) -> WorkflowMessage:
+        """[NEW] Phase 7: Custom Tracer Injection 검증"""
+        self.log.info(f"[{self.name}] 🔄 [Phase 7] Custom Tracer/Interceptor Injection Verification")
+        try:
+            # 1. 커스텀 Tracer 인스턴스화
+            test_tracer = DummyTestTracer()
+            audit_hash = f"audit_tracer_{int(time.time())}"
+            
+            # 2. 파이프라인에 주입 (llm_tracers kwarg 활용)
+            response = await acompletion(
+                model=self.target_model,
+                messages=[{"role": "user", "content": "Say 'hello interceptor'"}],
+                llm_tracers=[test_tracer],  # ✨ 핵심: 커스텀 트레이서 주입
+                metadata={"kernel_auth": {"audit_hash": audit_hash}}
+            )
+            
+            # 3. 비동기 Task 실행 보장 대기 (fire-and-forget 태스크들이 실행될 틈 제공)
+            await asyncio.sleep(0.1) 
+            
+            # 4. 검증 (Tracer가 정상적으로 콜백을 받았는지 확인)
+            if test_tracer.started and test_tracer.ended and (test_tracer.recorded_model == self.target_model):
+                self.log.info(f"[{self.name}] ✅ Passed: Custom Tracer successfully hooked into lifecycle (Duration: {test_tracer.duration:.2f}ms).")
+                self.success_count += 1
+                self.audit_traces.append(getattr(response, "system_fingerprint", "N/A"))
+            else:
+                raise ValueError(f"Tracer hooks not fired properly! Started: {test_tracer.started}, Ended: {test_tracer.ended}")
+                
+        except Exception as e:
+            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.fail_count += 1
+            return ErrorMessage(f"Custom Interceptor Failed: {e}")
 
         return StopMessage(result=True)
 
@@ -307,7 +369,7 @@ class LlmCompatApplication:
             workflow_task = asyncio.create_task(self.workflow.run())
             await self.workflow.execute()
             await workflow_task
-            
+
             if self.workflow.fail_count > 0:
                 raise RuntimeError(f"Workflow finished with {self.workflow.fail_count} failures.")
 
@@ -338,7 +400,7 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     resolved_model = getattr(args, 'model', None) or os.environ.get("LLM_COMPAT_MODEL")
     use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
     test_fallback = getattr(args, 'test_fallback', False) or os.environ.get("LLM_COMPAT_FALLBACK_ONLY", "false").lower() == "true"
-    
+
     if not is_online:
         log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
         resolved_model = "ollama/local-gemma-3"
@@ -359,7 +421,7 @@ def main(args: list[str] = None):
     parser.add_argument("-m", "--model", type=str, help="Target LLM model to use.")
     parser.add_argument("--proxy", action="store_true", help="Enable remote proxy extension layout.")
     parser.add_argument("--test-fallback", action="store_true", help="Run ONLY the fallback routing scenario.")
-    
+
     args, _ = parser.parse_known_args(args)
     scope_kwargs, run_context = get_environment_context(args)
     app = LlmCompatApplication(

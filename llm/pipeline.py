@@ -23,6 +23,9 @@ from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
 from xphi.state.phase.channel import ChannelPipeline, ChannelContext, DuplexChannel, RpcBridge
 from xphi.watcher.plane.emitter import get_emitter
 
+# Interceptor (Tracer)
+from fiber.dev.trace.llm.interceptor import TracerInterceptorChannel
+
 # Loggers
 log = get_emitter("runtime.entry")
 log_handlers = get_emitter("executor.handlers")
@@ -361,6 +364,9 @@ class PipelineBootstrap:
         pipeline = ChannelPipeline()
         bridge = RpcBridge()
         
+        # 외부에서 주입된 Tracer들을 kwargs에서 안전하게 추출 (하위 핸들러로 흘러가지 않도록 pop)
+        llm_tracers = kwargs.pop("llm_tracers", [])
+        
         ## Head
         pipeline.add_last(CompletionTransport())
         pipeline.add_last(DphiFuelInterceptor())
@@ -371,6 +377,12 @@ class PipelineBootstrap:
         pipeline.add_last(FallbackHandler())
         pipeline.add_last(PromptTransformer())      
         pipeline.add_last(MockBypass())
+        
+        # [✨ Tracer 주입 위치]
+        # Request 방향(Tail->Head): ContextBinder -> ChannelObserver -> TracerInterceptor -> MockBypass
+        if llm_tracers:
+            pipeline.add_last(TracerInterceptorChannel(llm_tracers))
+            
         pipeline.add_last(ChannelObserver())        
         pipeline.add_last(ContextBinder())          
 
@@ -386,6 +398,9 @@ class PipelineBootstrap:
         pipeline = ChannelPipeline()
         bridge = RpcBridge()
         
+        # 외부에서 주입된 Tracer들을 kwargs에서 안전하게 추출
+        llm_tracers = kwargs.pop("llm_tracers", [])
+        
         ## Head
         pipeline.add_last(EmbeddingTransport())
         pipeline.add_last(DphiFuelInterceptor())
@@ -394,6 +409,11 @@ class PipelineBootstrap:
         pipeline.add_last(PayloadTranslator())
         pipeline.add_last(FallbackHandler())
         pipeline.add_last(MockBypass())
+        
+        # [✨ Tracer 주입 위치]
+        if llm_tracers:
+            pipeline.add_last(TracerInterceptorChannel(llm_tracers))
+            
         pipeline.add_last(ChannelObserver())
         pipeline.add_last(ContextBinder())
 
