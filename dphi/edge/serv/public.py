@@ -21,7 +21,7 @@ from fiber.dphi.edge.serv.depend import (
 )
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 
-from xphi.arch.contract.interface import ContractRouter
+from xphi.arch.contract.protocol.router import ContractRouter
 from xphi.arch.model.dphi.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
 

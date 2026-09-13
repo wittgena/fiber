@@ -5,121 +5,46 @@ import json
 import asyncio
 import logging
 import argparse
-from typing import Dict, Any, Optional
+from pathlib import Path
+from typing import Dict, Any, Optional, Protocol
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
-from fiber.dphi.edge.gateway.quarantine import QuarantineRegistry
+from fiber.dphi.worker.registry.quarantine import QuarantineRegistry
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("gateway.connector")
+log = get_emitter("worker.connector")
 
-class LegacyTransport:
-    def __init__(self, command: str, handle_id: str):
-        self.command = command
-        self.handle_id = handle_id
-        self.process: Optional[asyncio.subprocess.Process] = None
+# ==========================================
+# 1. Transport Protocol (Interface)
+# ==========================================
+class WorkerTransport(Protocol):
+    """WorkerConnector가 통신 방식을 몰라도 되도록 보장하는 Duck-Typing 인터페이스"""
+    async def start(self) -> None: ...
+    async def send_payload(self, safe_payload: Dict[str, Any]) -> None: ...
+    async def receive_raw(self) -> str: ...
+    async def read_egress_stream(self) -> bytes: ...  # [개선/추가] 표준 출력 다형성 인터페이스
+    async def close(self) -> None: ...
+    
+    # Process 모니터링 및 로깅을 위한 속성 (PID 등) - 하위 호환성 유지
+    process: Any 
 
-    async def start(self):
-        log.info(f"[Transport:{self.handle_id}] Booting legacy sandbox: {self.command}")
-        self.process = await asyncio.create_subprocess_shell(
-            self.command,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        asyncio.create_task(self._monitor_stderr())
-        log.info(f"[Transport:{self.handle_id}] Sandbox running (PID: {self.process.pid})")
-
-    async def _monitor_stderr(self):
-        """JSON 스트림을 파싱하여 중앙 로그 시스템으로 릴레이"""
-        while self.process and not self.process.stderr.at_eof():
-            try:
-                line = await self.process.stderr.readline()
-                if not line:
-                    continue
-                    
-                raw_str = line.decode('utf-8').strip()
-                if not raw_str:
-                    continue
-                
-                try:
-                    # 워커가 발생시킨 JSON 포맷의 구조화된 로그 파싱
-                    log_data = json.loads(raw_str)
-                    
-                    level = log_data.get("level", "INFO").upper()
-                    msg = log_data.get("message", "")
-                    worker_req_id = log_data.get("req_id")
-                    logger_name = log_data.get("logger", "worker")
-                    
-                    # Trace용 Context 포맷팅
-                    log_ctx = {
-                        "handle_id": self.handle_id, 
-                        "worker_req_id": worker_req_id, 
-                        "worker_source": logger_name
-                    }
-                    
-                    # 릴레이 발행
-                    if level == "DEBUG":
-                        log.debug(f"[Sandbox] {msg}", extra=log_ctx)
-                    elif level in ("WARN", "WARNING"):
-                        log.warning(f"[Sandbox] {msg}", extra=log_ctx)
-                    elif level == "ERROR":
-                        log.error(f"[Sandbox] {msg}", extra=log_ctx)
-                    elif level == "CRITICAL":
-                        log.critical(f"[Sandbox] {msg}", extra=log_ctx)
-                    else:
-                        log.info(f"[Sandbox] {msg}", extra=log_ctx)
-                        
-                except json.JSONDecodeError:
-                    # JSON 형식이 아닌 에러(C 레벨 세그폴트, 트레이스백 등)는 원문 그대로 방출
-                    log.warning(f"[Sandbox:RAW] {raw_str}", extra={"handle_id": self.handle_id})
-                    
-            except Exception as e:
-                log.error(f"[Transport:{self.handle_id}] STDERR Relay fractured: {e}")
-                break
-
-    async def send_payload(self, safe_payload: Dict[str, Any]):
-        if not self.process or self.process.returncode is not None:
-            raise RuntimeError(f"Legacy process {self.handle_id} is dead.")
-            
-        try:
-            # [보강 1] 직렬화 실패 지점 가시성 확보 (AnyUrl 에러 등 추적용)
-            raw_msg = json.dumps(safe_payload) + "\n"
-        except TypeError as e:
-            safe_keys = list(safe_payload.keys())
-            log.error(f"[Transport:{self.handle_id}] Payload Serialization Failed: {e}. Top-level Keys: {safe_keys}", exc_info=True)
-            raise RuntimeError(f"Serialization failed for transport payload: {e}")
-
-        self.process.stdin.write(raw_msg.encode('utf-8'))
-        await self.process.stdin.drain()
-
-    async def receive_raw(self) -> str:
-        """ephemeral 모드 전용: STDOUT을 동기적(Await)으로 읽음"""
-        raw_output = await self.process.stdout.readline()
-        if not raw_output:
-            raise RuntimeError(f"EOF reached while reading stdout for {self.handle_id}.")
-        return raw_output.decode('utf-8')
-
-    async def close(self):
-        if self.process and self.process.returncode is None:
-            log.info(f"[Transport:{self.handle_id}] Terminating sandbox (PID: {self.process.pid})")
-            self.process.terminate()
-            try:
-                await asyncio.wait_for(self.process.wait(), timeout=2.0)
-            except asyncio.TimeoutError:
-                self.process.kill()
-
-
+# ==========================================
+# 2. Worker Connector
+# ==========================================
 class WorkerConnector:
-    def __init__(self, target_id: str, legacy_command: str, mode: str = "ephemeral"):
+    def __init__(self, target_id: str, execution_target: str, mode: str = "ephemeral", transport_type: str = "stdio"):
         self.target_id = target_id
-        self.legacy_command = legacy_command
+        self.execution_target = execution_target
         self.mode = mode.lower()
+        self.transport_type = transport_type.lower()
         
         if self.mode not in ("ephemeral", "linear", "multiplex"):
             raise ValueError(f"Invalid mode: {self.mode}. Must be ephemeral, linear, or multiplex.")
+            
+        if self.transport_type not in ("stdio", "network"):
+            raise ValueError(f"Invalid transport: {self.transport_type}. Must be stdio or network.")
         
         self.tunnel = None
         self.rpc = InternalRpcClient()
@@ -128,10 +53,20 @@ class WorkerConnector:
         
         self.quarantine = QuarantineRegistry.get_adapter(self.target_id)
         
-        self.active_sandboxes: Dict[str, LegacyTransport] = {}
-        self.shared_transport: Optional[LegacyTransport] = None
+        self.active_sandboxes: Dict[str, WorkerTransport] = {}
+        self.shared_transport: Optional[WorkerTransport] = None
         self.pending_requests: Dict[str, asyncio.Future] = {}
         self.linear_lock = asyncio.Lock()
+
+    def _create_transport(self, handle_id: str) -> WorkerTransport:
+        """Transport 팩토리: 설정된 타입에 따라 적절한 전송 계층 객체를 동적으로 생성"""
+        # [개선] 통합된 fiber.dphi.worker.transport 모듈에서 로드
+        if self.transport_type == "network":
+            from fiber.dphi.worker.transport import NetworkTransport
+            return NetworkTransport(execution_target=self.execution_target, handle_id=handle_id)
+        else:
+            from fiber.dphi.worker.transport import StdioTransport
+            return StdioTransport(command=self.execution_target, handle_id=handle_id)
 
     async def run(self):
         self.tunnel = await TunnelFactory.get_default()
@@ -139,14 +74,16 @@ class WorkerConnector:
         await pubsub.subscribe(self.listen_channel)
         
         self.running = True
-        log.info(f"[Connector:{self.target_id}] 🚀 Listening for Intents on DPHI Bus (Mode: {self.mode.upper()})")
-
-        if self.mode in ("linear", "multiplex"):
-            self.shared_transport = LegacyTransport(self.legacy_command, f"shared-{self.target_id}")
-            await self.shared_transport.start()
-            asyncio.create_task(self._shared_stdout_listener())
+        log.info(f"[Connector:{self.target_id}] 🚀 Listening for Intents on DPHI Bus (Mode: {self.mode.upper()}, Transport: {self.transport_type.upper()})")
 
         try:
+            # Shared Transport 부팅 단계
+            if self.mode in ("linear", "multiplex"):
+                self.shared_transport = self._create_transport(f"shared-{self.target_id}")
+                await self.shared_transport.start()
+                asyncio.create_task(self._shared_stdout_listener())
+
+            # 인텐트 메시지 수신 루프
             async for msg in pubsub.listen():
                 if not self.running:
                     break
@@ -168,10 +105,13 @@ class WorkerConnector:
                 await transport.close()
 
     async def _shared_stdout_listener(self):
-        """linear/multiplex 모드에서 백그라운드로 STDOUT을 수신하여 Future를 Resolve"""
-        while self.running and self.shared_transport and self.shared_transport.process:
+        """linear/multiplex 모드에서 백그라운드로 Egress Stream을 수신하여 Future를 Resolve"""
+        # [개선] self.shared_transport.process 체크를 제거하고 프로토콜 자체에 의존
+        while self.running and self.shared_transport:
             try:
-                raw_output = await self.shared_transport.process.stdout.readline()
+                # [개선] process.stdout.readline() 에 직접 접근하는 추상화 누수 제거
+                # 다형성 인터페이스인 read_egress_stream()을 사용하여 데이터를 읽음
+                raw_output = await self.shared_transport.read_egress_stream()
                 if not raw_output:
                     break
                 
@@ -304,7 +244,6 @@ class WorkerConnector:
         try:
             response = await future
             
-            # [보강 2] 에러 응답 은닉 방지 - Sandbox의 에러 내역 상세 로깅
             if "error" in response:
                 status = "FAULTED"
                 log.error(f"[Connector:FAULT] Shared Sandbox execution failed. Error details: {response['error']}", extra={"handle_id": handle_id})
@@ -326,14 +265,14 @@ class WorkerConnector:
             log.warning(f"[Connector] Duplicate EXECUTE ignored for {handle_id}")
             return
         
-        transport = LegacyTransport(self.legacy_command, handle_id)
+        transport = self._create_transport(handle_id)
         await transport.start()
         self.active_sandboxes[handle_id] = transport
         
         log.debug(f"[Connector] Injecting New Ephemeral Intent: {handle_id}")
         await self._cycle_io(handle_id, payload, transport)
 
-    async def _cycle_io(self, handle_id: str, payload: Dict[str, Any], transport: LegacyTransport, is_rollback: bool = False):
+    async def _cycle_io(self, handle_id: str, payload: Dict[str, Any], transport: WorkerTransport, is_rollback: bool = False):
         try:
             safe_payload = self.quarantine.translate_ingress(payload)
             await transport.send_payload(safe_payload)
@@ -366,7 +305,6 @@ class WorkerConnector:
                     "executable_payload": response
                 })
             else:
-                # [보강 3] 에러 응답 은닉 방지 - Sandbox의 에러 내역 상세 로깅 (Ephemeral)
                 if is_rollback or "error" in response:
                     status = "FAULTED"
                     if "error" in response:
@@ -401,20 +339,34 @@ class WorkerConnector:
         except Exception as rpc_e:
             log.critical(f"[Connector] Failed to report FAULT to Core: {rpc_e}")
 
+# ==========================================
+# 3. CLI Entry Point
+# ==========================================
 def main():
     parser = argparse.ArgumentParser(description="Fiber Worker Egress Sidecar Connector")
     parser.add_argument("--target", required=True, help="Target ID (e.g., db-server-01)")
-    parser.add_argument("--exec", required=True, help="Legacy command (e.g., 'python -m agent.finlib')")
+    parser.add_argument("--exec", required=True, help="Legacy command OR Binary root path (e.g., 'python -m agent', '/opt/bin')")
     parser.add_argument(
         "--mode", 
         default="ephemeral", 
         choices=["ephemeral", "linear", "multiplex"], 
         help="Execution mode: ephemeral (isolation), linear (sequential queue), multiplex (async routing)"
     )
+    parser.add_argument(
+        "--transport",
+        default="stdio",
+        choices=["stdio", "network"],
+        help="Transport layer: stdio (subprocess I/O) or network (HTTP multiplexing)"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
-    connector = WorkerConnector(target_id=args.target, legacy_command=args.exec, mode=args.mode)
+    connector = WorkerConnector(
+        target_id=args.target, 
+        execution_target=args.exec, 
+        mode=args.mode,
+        transport_type=args.transport
+    )
     
     try:
         asyncio.run(connector.run())

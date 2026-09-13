@@ -73,7 +73,7 @@ fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py
 
 Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performance LLM router that provides a **Drop-in Replacement** for the OpenAI SDK and LiteLLM, offering unified support across `openai`, `anthropic`, `gemini`, and `openai-like` providers.
 
-* **Fuel Trap:** Physically terminates the connection at the hypervisor level if a streaming response exhausts its token budget, preventing billing runaways.
+* **Fuel Trap:** Physically terminates the connection at the network transport layer (or sandbox boundary) if a streaming response exhausts its token budget, preventing billing runaways.
 * **Declarative Tool Recovery:** Dynamically detects and strictly normalizes malformed tool calls from heterogeneous LLMs (like Gemini) into the OpenAI standard format.
 
 ```python
@@ -90,7 +90,7 @@ response = await acompletion(
 
 ---
 
-## 2. Installation & Topology Alignment
+## 2. Installation & Infra Provisioning
 
 Fiber utilizes an integrated installation pipeline where `fiber` and its core dependency `xphi` are tightly coupled. We recommend using `uv pip` for strict dependency resolution.
 
@@ -103,7 +103,7 @@ pyenv local fiber-user
 uv pip install /path/to/local/self/fiber
 # OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.2
 
-## 3. Verify Topology (Anchors to ~/.anchor/bound.json)
+## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help
 ```
 
@@ -111,7 +111,7 @@ fiber --help
 
 ## 3. Fiber CLI Tool
 
-The `fiber` CLI is a **Topological Router**, dynamically assigning the appropriate node profile and delegating execution. It transparently forwards unknown arguments directly to the target module to ensure zero-friction scalability.
+The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the appropriate node profile and delegating execution. It transparently forwards unknown arguments directly to the target module to ensure zero-friction scalability.
 
 ### 3.1. Ecosystem Operational Modes
 
@@ -119,7 +119,7 @@ The `fiber` CLI is a **Topological Router**, dynamically assigning the appropria
 | --- | --- | --- |
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python app.py"` |
 | **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker) and applies topology profiles. | `fiber daemon -s rest_edge` |
-| **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e gateway.llm.compat --model gemini/gemini-3.1-flash-lite` |
+| **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.compat --model gemini/gemini-3.1-flash-lite` |
 
 ### 3.2. Egress Sidecar (The `connect` Mode)
 
@@ -141,8 +141,8 @@ The underlying X402 economic protocol flexibly scales across three distinct envi
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
-* 🔗 **[workflow.wasm.log](./phase/abc/log/workflow.wasm.20260825.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Fuel traps (OOM/Timeout blocks), Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...)
-* 🔗 **[workflow.flare.log](./phase/abc/log/plane/e2e.plane.flare.20260911.log):** Validates V8 Hologram isolation within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
+* 🔗 **[workflow.wasm.log](./phase/abc/log/workflow.wasm.20260825.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), Distributed Execution Determinism recovery, Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...)
+* 🔗 **[workflow.flare.log](./phase/abc/log/plane/e2e.plane.flare.20260911.log):** Validates V8 isolation Sandboxing within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
 * 🔗 **[workflow.settlement.log](./phase/abc/log/workflow.settlement.20260825.log):** Validates REVM pre-validation of smart contract state transitions and rollbacks.
 * 🔗 **[e2e.edge.sandbox.log](./phase/abc/log/edge/e2e.edge.sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience
 * 🔗 **[e2e.llm.compat.log](./phase/abc/log/gateway/e2e.llm.compat.20260912.log):** Validates the LLM governance pipeline, confirming physical Fuel Trap terminations on streaming budget exhaustion, dynamic tier-based fallback routing, and deterministic recovery of heterogeneous tool calls via the InterLLM adapter.

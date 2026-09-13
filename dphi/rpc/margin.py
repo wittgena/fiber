@@ -61,7 +61,7 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
         total_calculated_fee = req.base_fee_usd + cpu_cost + io_cost + value_premium
         safe_fee_usd = round(max(req.base_fee_usd, total_calculated_fee), 5)
         
-        log.info(f"[Universal Pricing] {req.target_worker} -> Base: \({req.base_fee_usd} | CPU:\){cpu_cost:.5f} | IO: \({io_cost:.5f} | Total:\){safe_fee_usd:.5f}")
+        log.info(f"[Universal Pricing] {req.target_worker} -> Base: ({req.base_fee_usd} | CPU:){cpu_cost:.5f} | IO: ({io_cost:.5f} | Total:){safe_fee_usd:.5f}")
 
         # MCP 규격(content/text)이 아닌 순수 JSON 딕셔너리 리턴
         return {

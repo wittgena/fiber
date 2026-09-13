@@ -168,9 +168,7 @@ class TransitionBridge:
                             log.info(f"[Bridge:PubSub:Resolved] Execution completed successfully", extra=trace_ctx)
                             executable_payload = state_data.get("executable_payload", {})
                             
-                            # [개선] 복잡한 JSON-RPC 딥 파싱을 외부 순수 파서로 위임 (Single Responsibility)
                             telemetry_data = McpPayloadParser.extract_telemetry(executable_payload)
-
                             if telemetry_data and isinstance(telemetry_data, dict):
                                 telemetry_data["target"] = target_server_id
                                 try:
@@ -180,7 +178,6 @@ class TransitionBridge:
                                     log.error(f"[Bridge:Telemetry:Error] Failed to broadcast: {emit_err}", extra=trace_ctx)
                                     
                             return executable_payload
-                            
         except asyncio.TimeoutError:
             log.warning(f"[Bridge:PubSub:Timeout] 30s timeout reached. Broadcasting FORCE_ROLLBACK", extra=trace_ctx)
             

@@ -73,12 +73,7 @@ class MarginCalcAgent(AsyncAgentProtocol):
                 result = self._execute_trajectory_analysis(req_data)
                 
             elif tool_name == "calculate_compute_margin":
-                # [핵심 아키텍처 변경] 
-                # 워커 내부에서 도메인 로직을 처리하지 않습니다.
-                # Connector가 열어둔 백도어(rpc_delegate)를 통해 내부 순수 RPC 망(eco.margin.calculate)으로 위임(Delegation)합니다.
-                
                 try:
-                    # AsyncAgentProtocol이 제공하는 내부 통신 브릿지 활용 (또는 Connector가 후킹하는 포맷 방출)
                     result = await self.request_core_rpc(
                         target_method="eco.margin.calculate", 
                         payload=arguments
@@ -105,10 +100,6 @@ class MarginCalcAgent(AsyncAgentProtocol):
             self.log.error(f"Domain Logic Fracture: {e}", exc_info=True)
             await self.send_error(req_id, -32000, str(e))
 
-    # =====================================================================
-    # [기존] 순수 비즈니스 로직 (수익성 및 손익분기 분석) 
-    # - 이 부분은 차익거래 도메인에 특화되어 있으므로 워커에 잔존
-    # =====================================================================
     def _execute_trajectory_analysis(self, req: RealtimeMarginRequest) -> Dict[str, Any]:
         snapshot, intent = FundingRateComparator.evaluate(req.symbol, req.observations)
 

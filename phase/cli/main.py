@@ -134,7 +134,7 @@ def run_e2e(
         log.info(f"[Fiber] ↪ Forwarding extra arguments to suite: {' '.join(extra_args)}")
     
     for t in targets:
-        module_path = f"fiber.phase.e2e.{t}"
+        module_path = f"fiber.dev.e2e.{t}"
         try:
             test_module = importlib.import_module(module_path)
             if hasattr(test_module, "main"):
@@ -176,7 +176,7 @@ def run_connector(
     async def _launch_connector():
         from fiber.dphi.worker.connector import WorkerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
-        daemon = WorkerConnector(target_id=target, legacy_command=resolved_cmd)
+        daemon = WorkerConnector(target_id=target, execution_target=resolved_cmd)
         
         try:
             await daemon.run()
