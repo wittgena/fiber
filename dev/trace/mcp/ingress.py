@@ -14,7 +14,7 @@ from fiber.dphi.worker.connector import WorkerConnector
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.state.ledger.consensus import KernelLedger
+from xphi.state.anchor.consensus import KernelLedger
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("tracer.mcp_ingress")

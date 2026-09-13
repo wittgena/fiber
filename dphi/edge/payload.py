@@ -17,7 +17,7 @@ from fiber.dphi.eco.config.origin import OriginRegistry
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.arch.bound.xor.parser.ruleset.otlp import StrictOtlpRulesetParser
+from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser
 from xphi.arch.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from xphi.arch.contract.server import (
     AttestationMiddleware,
@@ -151,7 +151,7 @@ async def lifespan(app: FastAPI):
                 {"tag": "completion_tokens", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.completion_tokens"}
             ]
         }
-        otlp_parser = StrictOtlpRulesetParser()
+        otlp_parser = OtlpRulesetParser()
         app.state.otlp_engine = otlp_parser.parse_ruleset(default_otlp_ruleset)
         log.info("StrictOtlpExtractionEngine initialized.")
 

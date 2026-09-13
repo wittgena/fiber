@@ -1,7 +1,4 @@
 # fiber.dev.e2e.dphi.scene.sandbox
-## @lineage: fiber.phase.dev.e2e.dphi.scene.sandbox
-## @lineage: fiber.phase.e2e.dphi.scene.sandbox
-## @lineage: fiber.phase.e2e.scene.sandbox
 import time
 import asyncio
 import json
@@ -10,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
 from fiber.dev.infra.sandbox import SandboxRunner, ScriptDef, TestScripts
-from xphi.arch.model.anchor.nexus import ActorIdentity
+from xphi.state.anchor.nexus import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod

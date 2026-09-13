@@ -1,19 +1,11 @@
 # fiber.dphi.eco.client.ext.wallet
-## @lineage: fiber.dphi.client.ext.wallet
-## @lineage: fiber.infra.client.ext.wallet
-## @lineage: dphi.client.ext.wallet
-## @lineage: phase.client.ext.wallet
-## @lineage: bound.client.ext.wallet
-## @lineage: ator.client.ext.wallet
-## @lineage: bound.eco.wallet.eth
-## @lineage: eco.bound.wallet.eth
 import os
 import asyncio
 import time
 from typing import Optional
 
-from fiber.dphi.eco.client.ext.evm import Web3Adapter
-from fiber.dphi.eco.config.exchange import dphi_env
+from fiber.dphi.eco.ext.evm import Web3Adapter
+from fiber.dphi.eco.config.exchange import exchange_config
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("wallet.eth")
@@ -29,10 +21,10 @@ class EthWalletAdapter:
         self.simulate = simulate
         self.agent_alias = agent_alias
         
-        self.private_key = dphi_env.get_agent_pkey(agent_alias)
+        self.private_key = exchange_config.get_agent_pkey(agent_alias)
         self.account = self.w3.eth.account.from_key(self.private_key)
         self.wallet_address = self.account.address
-        self.network_id = str(dphi_env.network.chain_id)
+        self.network_id = str(exchange_config.network.chain_id)
         self.erc20_abi = [
             {"constant": False, "inputs": [{"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transfer", "outputs": [{"name": "", "type": "bool"}], "type": "function"},
             {"constant": False, "inputs": [{"name": "_from", "type": "address"}, {"name": "_to", "type": "address"}, {"name": "_value", "type": "uint256"}], "name": "transferFrom", "outputs": [{"name": "", "type": "bool"}], "type": "function"},
@@ -49,7 +41,7 @@ class EthWalletAdapter:
             return f"0x_simulated_approve_{os.urandom(8).hex()}"
 
         try:
-            asset_contract_addr = getattr(dphi_env.contracts, f"target_{asset.lower()}", dphi_env.contracts.target_erc20)
+            asset_contract_addr = getattr(exchange_config.contracts, f"target_{asset.lower()}", exchange_config.contracts.target_erc20)
             contract_address = self.w3.to_checksum_address(asset_contract_addr)
             contract = self.w3.eth.contract(address=contract_address, abi=self.erc20_abi)
             
@@ -108,7 +100,7 @@ class EthWalletAdapter:
             return f"0x_simulated_tx_{os.urandom(8).hex()}"
 
         try:
-            asset_contract_addr = getattr(dphi_env.contracts, f"target_{asset.lower()}", dphi_env.contracts.target_erc20)
+            asset_contract_addr = getattr(exchange_config.contracts, f"target_{asset.lower()}", exchange_config.contracts.target_erc20)
             contract_address = self.w3.to_checksum_address(asset_contract_addr)
             contract = self.w3.eth.contract(address=contract_address, abi=self.erc20_abi)
             
@@ -169,7 +161,7 @@ class EthWalletAdapter:
             return f"0x_simulated_transferfrom_{os.urandom(8).hex()}"
 
         try:
-            asset_contract_addr = getattr(dphi_env.contracts, f"target_{asset.lower()}", dphi_env.contracts.target_erc20)
+            asset_contract_addr = getattr(exchange_config.contracts, f"target_{asset.lower()}", exchange_config.contracts.target_erc20)
             contract_address = self.w3.to_checksum_address(asset_contract_addr)
             contract = self.w3.eth.contract(address=contract_address, abi=self.erc20_abi)
             

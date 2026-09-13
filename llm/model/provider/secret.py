@@ -13,7 +13,7 @@ import httpx
 from pydantic import BaseModel, SecretStr
 from cryptography.fernet import Fernet
 
-from xphi.arch.model.config import config
+from fiber.llm.model.config import config
 from xphi.arch.bound.xor.secret.client import get_secret_from_vendor
 from xphi.arch.bound.xor.secret.cipher import Cipher
 from xphi.watcher.plane.emitter import get_emitter

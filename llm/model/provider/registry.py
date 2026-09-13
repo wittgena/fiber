@@ -6,7 +6,7 @@ from typing import Dict, Tuple, Optional, Union
 
 from fiber.llm.model.types.support import ProviderTypes
 
-from xphi.arch.model.config import config
+from fiber.llm.model.config import config
 from xphi.kernel.space.bind.resolver import resolve_path 
 from xphi.watcher.plane.emitter import get_emitter 
 

@@ -8,7 +8,7 @@ import asyncio
 from fiber.dphi.eco.notary import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.dev.infra.sandbox import TestScripts
 
-from xphi.arch.model.anchor.nexus import ActorIdentity
+from xphi.state.anchor.nexus import ActorIdentity
 from xphi.kernel.space.sandbox.protocol import TriadAxis
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor

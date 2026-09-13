@@ -1,6 +1,4 @@
 # fiber.dev.e2e.plane.flare
-## @lineage: fiber.phase.dev.e2e.plane.flare
-## @lineage: fiber.phase.e2e.plane.flare
 import sys
 import os
 import argparse

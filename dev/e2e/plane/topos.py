@@ -11,8 +11,8 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from fiber.dphi.edge.workflow import EdgeWorkflow
-from fiber.dphi.edge.state import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from fiber.dev.infra.edge.workflow import EdgeWorkflow
+from fiber.dev.infra.edge.fsm import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 
 from xphi.watcher.plane.phase.topos import ToposOrchestrator, ToposContext
 from xphi.state.phase.reactor import PhaseReactor

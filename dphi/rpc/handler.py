@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 from pydantic import ValidationError
 
-from xphi.arch.model.anchor.nexus import AnchorProposal, StreamAppendRequest
+from xphi.state.anchor.nexus import AnchorProposal, StreamAppendRequest
 
 from xphi.kernel.space.sandbox.config import tier_config, fuel_config
 from xphi.arch.model.dphi.receptor import (
@@ -21,7 +21,7 @@ from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.kernel.wasm.cgroup import Tier
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
-from xphi.state.ledger.consensus import LogicStream
+from xphi.state.anchor.consensus import LogicStream
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 
 from xphi.arch.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor

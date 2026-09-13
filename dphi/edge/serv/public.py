@@ -23,7 +23,7 @@ from fiber.dphi.eco.client.rpc import InternalRpcClient
 
 from xphi.arch.contract.protocol.router import ContractRouter
 from xphi.arch.model.dphi.receptor import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.arch.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
@@ -303,7 +303,7 @@ async def public_otlp_logs_export(
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
     broker: DphiBroker = Depends(get_wasm_broker),
-    otlp_engine: StrictOtlpExtractionEngine = Depends(get_otlp_engine)
+    otlp_engine: OtlpExtractionEngine = Depends(get_otlp_engine)
 ):
     try:
         payload_dict = payload.model_dump(exclude_none=True)

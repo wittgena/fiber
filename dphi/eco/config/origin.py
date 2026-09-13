@@ -13,7 +13,7 @@ from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
 
 ORIGIN_ROOT = resolve_path("origin")
-log = get_emitter("dphi.infra.origin")
+log = get_emitter("config.origin")
 
 class TrustedOriginState(BaseModel):
     """검증이 완료된 인메모리 상태를 보장하는 데이터 모델"""

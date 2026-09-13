@@ -23,7 +23,7 @@ from fiber.llm.router.stream.pipeline import (
 )
 from fiber.llm.router.stream.accumulator import StreamAccumulator
 
-from xphi.arch.model.config import config
+from fiber.llm.model.config import config
 from xphi.state.phase.channel import ChannelPipeline
 from xphi.watcher.plane.emitter import get_emitter
 

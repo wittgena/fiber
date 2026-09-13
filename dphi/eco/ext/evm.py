@@ -1,11 +1,4 @@
 # fiber.dphi.eco.client.ext.evm
-## @lineage: fiber.dphi.client.ext.evm
-## @lineage: fiber.infra.client.ext.evm
-## @lineage: dphi.client.ext.evm
-## @lineage: phase.client.ext.evm
-## @lineage: bound.client.ext.evm
-## @lineage: ator.client.ext.evm
-## @lineage: bound.eco.web3
 import os
 import time
 import random
@@ -16,7 +9,7 @@ from dataclasses import dataclass, field, asdict
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from fiber.dphi.eco.config.exchange import dphi_env
+from fiber.dphi.eco.config.exchange import exchange_config
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("web3.adapter")
@@ -48,13 +41,13 @@ class EvmBuilder:
         should_revert: bool = False
     ) -> EvmIntent:
         """@desc: Constructs deterministic scenario execution vectors bounded by strict system parameters intent"""
-        caller = dphi_env.agents.alpha.evm_address
+        caller = exchange_config.agents.alpha.evm_address
         value = 0
         requires_access_list = False
         
         if scenario_type == "ERC20_TRANSFER":
-            target = dphi_env.contracts.target_erc20
-            calldata = "0xa9059cbb" + "000000000000000000000000" + dphi_env.agents.beta.evm_address[2:] + "0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+            target = exchange_config.contracts.target_erc20
+            calldata = "0xa9059cbb" + "000000000000000000000000" + exchange_config.agents.beta.evm_address[2:] + "0000000000000000000000000000000000000000000000000de0b6b3a7640000"
             storage_slots = ["0x0", "0x1", "0x2"]
             requires_access_list = True
             
@@ -66,10 +59,10 @@ class EvmBuilder:
             
         elif scenario_type == "UNISWAP_EXACT_INPUT":
             target = "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
-            token_in = dphi_env.contracts.target_erc20.replace("0x", "").zfill(64).lower() 
+            token_in = exchange_config.contracts.target_erc20.replace("0x", "").zfill(64).lower() 
             token_out = "1c7D4B196Cb0C7B01d743Fbc6116a902379C7238".zfill(64).lower()       
             fee = hex(3000).replace("0x", "").zfill(64)                                     
-            recipient = dphi_env.agents.alpha.evm_address.replace("0x", "").zfill(64).lower()
+            recipient = exchange_config.agents.alpha.evm_address.replace("0x", "").zfill(64).lower()
             deadline = hex(int(time.time()) + 1800).replace("0x", "").zfill(64)             
             amount_in = hex(int(0.001 * 1e18)).replace("0x", "").zfill(64)                  
             amount_out_min = "0000000000000000000000000000000000000000000000000000000000000000"
@@ -104,7 +97,7 @@ class EvmBuilder:
             mock_code = "0xfd" if should_revert else "0x608060405234801561001057600080fd5b506101"
         else:
             mock_code = "0x"
-        padded_alpha_address = "0x000000000000000000000000" + dphi_env.agents.alpha.evm_address[2:]
+        padded_alpha_address = "0x000000000000000000000000" + exchange_config.agents.alpha.evm_address[2:]
         return {
             "balance": hex(balance_wei),
             "nonce": random.randint(1, 100) if not is_contract else 1,
@@ -122,7 +115,7 @@ class EvmBuilder:
             "timestamp": int(time.time()),
             "block_number": random.randint(19_000_000, 20_000_000),
             "coinbase": "0xdafea492d9c6733ae3d56b7ed1adb60692c98bc5",
-            "chain_id": dphi_env.network.chain_id
+            "chain_id": exchange_config.network.chain_id
         }
     
 class EVMOrchestrator:
@@ -138,7 +131,7 @@ class EVMOrchestrator:
             return
             
         self.w3 = AsyncWeb3(AsyncHTTPProvider(self.rpc_url))
-        if dphi_env.network.use_poa_middleware:
+        if exchange_config.network.use_poa_middleware:
             self.w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
             
         self._is_active = True
@@ -240,14 +233,14 @@ class MockOrchestrator:
         pass
 
     async def verify_connection(self):
-        log.info(f"🧪 [MOCK MODE] Using Local Mock Builder Simulated Chain ID: {dphi_env.network.chain_id}")
+        log.info(f"🧪 [MOCK MODE] Using Local Mock Builder Simulated Chain ID: excpange_configv.network.chain_id")
 
     async def fetch_account_state(self, address: str, storage_slots: List[str] = None) -> Dict[str, Any]:
         if not address or not address.startswith("0x"):
             log.warning(f"MockOrchestrator received non-EVM address {address}. Returning empty state.")
             return {}
 
-        is_contract = (address.lower() == dphi_env.contracts.target_erc20.lower())
+        is_contract = (address.lower() == exchange_config.contracts.target_erc20.lower())
         is_revert = (self.user_intent.get("calldata") == "0xdeadbeef" and self.user_intent.get("scenario_type") != "DPHI_INVERSION")
         return EvmBuilder.build_state_snapshot(address, is_contract=is_contract, should_revert=is_revert)
 
@@ -305,14 +298,14 @@ class InversionOrchestrator:
 class Web3Adapter:
     """순수 AsyncWeb3 기반 RPC 통신 어댑터"""
     def __init__(self, rpc_url: str = None):
-        self.rpc_url = rpc_url or dphi_env.network.rpc_url
+        self.rpc_url = rpc_url or exchange_config.network.rpc_url
         self.w3 = AsyncWeb3(AsyncHTTPProvider(self.rpc_url))
         
         # PoA 네트워크(Sepolia 등) 호환성을 위한 미들웨어 주입
-        if dphi_env.network.use_poa_middleware:
+        if exchange_config.network.use_poa_middleware:
             self.w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
             
-        self.weth_address = self.w3.to_checksum_address(dphi_env.contracts.target_erc20)
+        self.weth_address = self.w3.to_checksum_address(exchange_config.contracts.target_erc20)
         self.weth_abi = [
             {"constant": True, "inputs": [{"name": "", "type": "address"}], "name": "balanceOf", "outputs": [{"name": "", "type": "uint256"}], "type": "function"},
             {"constant": False, "inputs": [], "name": "deposit", "outputs": [], "payable": True, "type": "function"}

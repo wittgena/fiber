@@ -14,21 +14,21 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from fiber.dphi.edge.workflow import EdgeWorkflow
+from fiber.dev.infra.edge.workflow import EdgeWorkflow
 from fiber.dphi.edge.payload import create_app, Config
 from fiber.dphi.daemon.rpc import RpcWorkerDaemon
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.dphi.eco.client.http import VerifiedHttpClient
 from fiber.dphi.eco.config.origin import OriginRegistry
 
-from fiber.dphi.edge.state import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from fiber.dev.infra.edge.fsm import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.arch.dev.tracer.transport import SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.state.ledger.consensus import KernelLedger
+from xphi.state.anchor.consensus import KernelLedger
 from xphi.kernel.space.bind.resolver import resolve_path
 
 log = get_emitter("e2e.edge")

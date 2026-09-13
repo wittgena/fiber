@@ -7,7 +7,7 @@ from fiber.dphi.eco.client.rpc import InternalRpcClient
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.arch.bound.xor.parser.ruleset.otlp import StrictOtlpExtractionEngine
+from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.bound.xor.secret.cipher import Cipher
 from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
@@ -25,10 +25,7 @@ def _get_state_attr(request: Request, attr_name: str) -> Any:
         )
     return val
 
-# =========================================================
-# Gateway Dependencies (Only what the public edge needs)
-# =========================================================
-
+"""Gateway Dependencies (Only what the public edge needs)"""
 async def get_rpc_client() -> InternalRpcClient:
     """[NEW] 내부망 워커와 통신하기 위한 메시지 버스 기반 RPC 클라이언트"""
     return InternalRpcClient()
@@ -41,7 +38,7 @@ async def get_pubsub(request: Request) -> DistributedPubSub:
     """글로벌 브로드캐스트 및 이벤트 파이프라인 주입"""
     return _get_state_attr(request, "pubsub")
 
-async def get_otlp_engine(request: Request) -> StrictOtlpExtractionEngine:
+async def get_otlp_engine(request: Request) -> OtlpExtractionEngine:
     """텔레메트리 파싱 엔진"""
     return _get_state_attr(request, "otlp_engine")
 
@@ -57,7 +54,7 @@ async def get_secret_auditor(request: Request) -> SecretAuditor:
     log.warning("[DI Warning] 'secret_auditor' not found in app.state. Provisioning ephemeral KMS-backed fallback.")
     
     try:
-        # 1. KMSVendor 추상화를 통해 시크릿 키 획득 시도 (현재는 LOCAL이지만 추후 AWS/GCP 등으로 교체 가능)
+        # 1. KMSVendor 추상화를 통해 시크릿 키 획득 시도
         secret_key = get_secret_from_vendor(
             client=None,
             key_manager=KMSVendor.LOCAL,
@@ -71,7 +68,6 @@ async def get_secret_auditor(request: Request) -> SecretAuditor:
         # 3. Cipher 객체를 조립하여 SecretAuditor에 명시적으로 주입 (TypeError 완벽 해결)
         cipher_instance = Cipher(secret_key=secret_key)
         return SecretAuditor(cipher=cipher_instance)
-        
     except Exception as e:
         log.critical(f"[Security] SecretAuditor provisioning failed: {e}")
         raise HTTPException(

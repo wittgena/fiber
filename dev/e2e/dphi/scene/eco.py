@@ -1,6 +1,4 @@
 # fiber.dev.e2e.dphi.scene.eco
-## @lineage: fiber.phase.dev.e2e.dphi.scene.eco
-## @lineage: fiber.phase.e2e.dphi.scene.eco
 import time
 import json
 from typing import Any, List, Dict
@@ -10,7 +8,7 @@ from cryptography.hazmat.primitives import serialization
 
 from fiber.dev.infra.sandbox import EpochBase
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
-from xphi.arch.model.anchor.nexus import ActorIdentity
+from xphi.state.anchor.nexus import ActorIdentity
 
 from xphi.kernel.space.sandbox.runner import SchemeRunner
 from xphi.arch.bound.adapter.state import StateAdapter

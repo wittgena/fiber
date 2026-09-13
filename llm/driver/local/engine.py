@@ -9,7 +9,7 @@ import requests
 import json
 
 from xphi.arch.model.dphi.resonance import BridgeEvent
-from xphi.arch.event.next import uuid4
+from xphi.arch.bound.event.next import uuid4
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter('local.engine')

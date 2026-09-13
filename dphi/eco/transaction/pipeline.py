@@ -13,7 +13,7 @@ from xphi.arch.bound.adapter.dphi.dvm import DvmAdapter
 from xphi.arch.bound.adapter.state import StateAdapter
 
 from xphi.kernel.wasm.gateway import GatewayWasm
-from xphi.state.ledger.consensus import KernelLedger, ToposBlob
+from xphi.state.anchor.consensus import KernelLedger, ToposBlob
 from xphi.state.phase.channel import DuplexChannel, ChannelContext, ChannelPipeline
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 

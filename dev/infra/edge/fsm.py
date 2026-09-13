@@ -1,6 +1,4 @@
 # fiber.dphi.edge.state
-## @lineage: xphi.state.phase.fsm.edge
-## @lineage: xphi.kernel.dphi.fsm.edge
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Any, Dict
@@ -19,7 +17,7 @@ class StartIntentEvent:
     action: str
     max_fuel: int
     source_code: str
-    signature: str  # [정합성 회복] 클라이언트(E2E)가 생성한 실제 서명
+    signature: str
 
 @dataclass
 class ComputePhaseCompletedEvent:
@@ -44,7 +42,7 @@ class RunComputePhaseCmd:
     action: str
     max_fuel: int
     source_code: str
-    signature: str  # [정합성 회복] Workflow에 그대로 전달될 서명
+    signature: str
 
 @dataclass
 class RunCompliancePhaseCmd:
@@ -82,7 +80,7 @@ class EdgePhaseFSM:
                 action=event.action,
                 max_fuel=event.max_fuel, 
                 source_code=event.source_code,
-                signature=event.signature  # 서명 무결성 전달
+                signature=event.signature
             )
 
         ## Phase 2: Compliance (감사 및 로깅)

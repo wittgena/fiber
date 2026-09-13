@@ -12,9 +12,9 @@ import httpx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.eco.client.wallet import LocalWalletClient
-from fiber.dphi.eco.config.exchange import dphi_env
-from xphi.arch.model.anchor.nexus import LedgerEventSchema, StreamAppendRequest
+from fiber.dphi.eco.client.ext import ExtClient
+from fiber.dphi.eco.config.exchange import exchange_config
+from xphi.state.anchor.nexus import LedgerEventSchema, StreamAppendRequest
 from xphi.arch.bound.adapter.settlement import TransactionReceipt
 
 from xphi.arch.model.dphi.receptor import (
@@ -40,7 +40,7 @@ class NotarySwarm:
                 format=serialization.PublicFormat.Raw
             ).hex()
             self.notaries.append({"priv": private_key, "pub": public_hex})
-        dphi_env.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
+        exchange_config.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
 
     @property
     def public_keys(self) -> List[str]:
@@ -59,7 +59,7 @@ class EcoBuilder:
 
     @staticmethod
     def get_testnet_wallet(edge_server_url: str = "http://localhost:8000/v1/ext") -> 'ExtWalletClient':
-        return LocalWalletClient(base_url=edge_server_url)
+        return ExtClient(base_url=edge_server_url)
 
     @staticmethod
     def ap2_mandate_params(
@@ -93,10 +93,10 @@ class EcoBuilder:
             slippage = 5000 
             
         req = TradeIngressRequest(
-            cilent_id=dphi_env.agents.alpha.did,
+            cilent_id=exchange_config.agents.alpha.did,
             action=action,
             parameters={
-                "target_service": dphi_env.agents.beta.did,
+                "target_service": exchange_config.agents.beta.did,
                 "payment_token": "USDC" if not should_fail_policy else token,
                 "max_fee_amount": max_fee,          
                 "slippage_tolerance_bps": slippage,      
@@ -128,7 +128,7 @@ class EcoBuilder:
         
         trace_id = uuid.uuid4().hex
         span_id = uuid.uuid4().hex[:16]
-        agent_did = dphi_env.agents.alpha.did 
+        agent_did = exchange_config.agents.alpha.did 
         
         req = ExportLogsServiceRequest(
             resourceLogs=[{
@@ -199,7 +199,7 @@ class EcoBuilder:
             events.append(event)
             
         req = StreamAppendRequest(
-            stream_name=dphi_env.da_layer.namespace_id,
+            stream_name=exchange_config.da_layer.namespace_id,
             verbose=True,
             events=events
         )
@@ -221,10 +221,10 @@ class EcoBuilder:
             state_hash=ledger_root
         )
         
-        witnesses = dphi_env.export_attestation.witness_pubkeys
+        witnesses = exchange_config.export_attestation.witness_pubkeys
         mock_signatures = [f"{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)]
         req = AnchorProposalRequest(
-            receptor_id=dphi_env.contracts.nexus_clearing,
+            receptor_id=exchange_config.contracts.nexus_clearing,
             proposed_parity=parity,
             parent_nexus_id=14591,
             self_parent_state="genesis",

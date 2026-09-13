@@ -17,7 +17,7 @@ from fiber.llm.router.ext.llm.model.types.block import (
 )
 from fiber.llm.router.mapper.pydantic import ConfigDict, Field
 from fiber.llm.router.ext.llm.handle.template import BasePromptTemplate
-from xphi.arch.event.next import uuid4
+from xphi.arch.bound.event.next import uuid4
 
 class BaseEvent(BaseModel):
     model_config = ConfigDict(

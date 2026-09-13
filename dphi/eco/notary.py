@@ -3,10 +3,11 @@ import json
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List, Protocol
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.eco.config.exchange import dphi_env
+from fiber.dphi.eco.config.exchange import exchange_config
 from xphi.watcher.plane.emitter import get_emitter
-
 from xphi.kernel.space.sandbox.protocol import (
     TriadAxis, ProtocolValidator, D3Protocol,
     MsgIngressPledge, MsgDelegateTrust, MsgWasmExecution, 
@@ -17,8 +18,8 @@ from xphi.arch.bound.adapter.pta import (
     PtaAdapter, PtaPointer, PtaInput, PtaOutput, PtaTransaction,
     AgentWallet, compute_merkle_root
 )
-from xphi.state.ledger.consensus import KernelLedger, SealedKernel, ToposBlob
-from xphi.state.ledger.oracle import LedgerOracle
+from xphi.state.anchor.consensus import KernelLedger, SealedKernel, ToposBlob
+from xphi.state.anchor.oracle import AnchorOracle
 
 log = get_emitter("notary.actor")
 
@@ -52,6 +53,23 @@ class LocalMockVerifier:
             raise RuntimeError("Consensus Failed: Signature verification rejected (Signer mismatch)")
         return True
 
+class AgentWallet:
+    """Ed25519 기반의 실제 암호학적 지갑 (서명 및 검증용)"""
+    def __init__(self):
+        self.private_key = ed25519.Ed25519PrivateKey.generate()
+        self.public_key = self.private_key.public_key()
+        raw_pub = self.public_key.public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw
+        )
+        self.address = f"cosm_{base64.urlsafe_b64encode(raw_pub).decode().rstrip('=')}"
+
+    def sign_payload(self, payload: str) -> str:
+        """주어진 페이로드를 Private Key로 서명"""
+        signature = self.private_key.sign(payload.encode('utf-8'))
+        return base64.urlsafe_b64encode(signature).decode()
+
+
 class GenericExecutionActuator:
     def __init__(self, broker: DphiBroker, validator: ProtocolValidator):
         self.broker = broker
@@ -63,7 +81,7 @@ class GenericExecutionActuator:
         try:
             # 타겟 코드를 추출
             payload = msg.target_wasm if isinstance(msg.target_wasm, str) else json.dumps(msg.target_wasm)
-            execution_tier = getattr(msg, "tier", None) or dphi_env.wasm.tier
+            execution_tier = getattr(msg, "tier", None) or exchange_config.wasm.tier
 
             # [CRITICAL FIX] 딕셔너리 포장({"action":...})을 제거하고, 순수 문자열 코드(payload)를 인자로 던집니다.
             # 이래야 브로커가 DVM 파싱 크래시를 내지 않고 Python Wasm Sandbox(EXECUTE_CODE)로 정상 라우팅합니다.
@@ -119,7 +137,7 @@ class EcoProtocolInterface(D3Protocol):
         self.broker = DphiBroker()
         self.ledger = KernelLedger()
         self.pta_adapter = PtaAdapter(broker=self.broker)
-        self.oracle = LedgerOracle(broker=self.broker)
+        self.oracle = AnchorOracle(broker=self.broker)
 
         self.validator = ProtocolValidator(self.pta_adapter, self.ledger, self.oracle)
         self.exec_actuator = GenericExecutionActuator(self.broker, self.validator)
@@ -205,7 +223,7 @@ class EcosystemActor:
         self.alias = alias
         self.axis = axis
         self.state = ActorState.ORPHAN
-        pkey = dphi_env.get_agent_pkey(agent_alias) if agent_alias else None
+        pkey = exchange_config.get_agent_pkey(agent_alias) if agent_alias else None
         self.wallet = AgentWallet(private_key=pkey) if pkey else AgentWallet()
         self.budget_committed = initial_budget
         self.resource_type = resource_type

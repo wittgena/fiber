@@ -19,7 +19,7 @@ from fiber.llm.model.types.openai import ValidUserMessageContentTypes
 from fiber.llm.param import ModelResponse
 from fiber.llm.execution import ExecutionMetadata, CompletionContext, EmbeddingContext
 
-from xphi.arch.model.config import config
+from fiber.llm.model.config import config
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("param.processor")

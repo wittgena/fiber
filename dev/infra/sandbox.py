@@ -1,7 +1,4 @@
 # fiber.dev.infra.sandbox
-## @lineage: fiber.phase.dev.infra.sandbox
-## @lineage: fiber.phase.e2e.infra.sandbox
-## @lineage: fiber.phase.plane.shell.sandbox
 import os
 import time
 import json
@@ -13,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.dphi.eco.builder import EcoBuilder
-from fiber.dphi.eco.client.wallet import LocalWalletClient
+from fiber.dphi.eco.client.ext import ExtClient
 
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from xphi.kernel.space.sandbox.runner import SchemeRunner
@@ -190,7 +187,7 @@ class EpochBase(SchemeRunner):
             ).hex() for k in self.committee_keys
         ]
         
-        self.wallet_client: LocalWalletClient = EcoBuilder.get_testnet_wallet()
+        self.wallet_client: ExtClient = EcoBuilder.get_testnet_wallet()
         self.wallet_client.simulate = simulate_wallet
 
     def _sign_multisig(self, signers: List[ed25519.Ed25519PrivateKey], commit_dict: Dict[str, Any]) -> List[str]:

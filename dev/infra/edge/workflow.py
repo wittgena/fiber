@@ -4,7 +4,7 @@ import httpx
 from typing import Any
 
 from fiber.dphi.eco.client.rpc import InternalRpcClient
-from fiber.dphi.edge.state import (
+from fiber.dev.infra.edge.fsm import (
     EdgePhaseFSM, StartIntentEvent, PhaseFailedEvent,
     ComputePhaseCompletedEvent, CompliancePhaseCompletedEvent, SettlementPhaseCompletedEvent,
     RunComputePhaseCmd, RunCompliancePhaseCmd, RunSettlementPhaseCmd,
@@ -122,7 +122,6 @@ class EdgeWorkflow(Workflow):
 
     async def _run_settlement_phase(self, cmd: RunSettlementPhaseCmd) -> SettlementPhaseCompletedEvent:
         """3단계: 내부망 P2P 거래, 원장 기록, 외부 정산을 하나로 묶어 처리"""
-        # [FIX] RPC 호출 시 내부 파라미터도 client_id로 일치
         res_ex = await self.rpc.call("eco.exchange.order.ingress", {
             "client_id": cmd.client_id, "action": "TRADE", "parameters": {"target_pair": "ETH/USDC", "amount": 100}
         })

@@ -10,7 +10,7 @@ from fiber.dphi.edge.payload import create_app, Config
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.state.ledger.consensus import KernelLedger
+from xphi.state.anchor.consensus import KernelLedger
 from xphi.watcher.plane.emitter import get_emitter
 
 # SDK 의존성

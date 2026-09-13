@@ -17,7 +17,7 @@ from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
 
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
-from xphi.state.ledger.consensus import KernelLedger
+from xphi.state.anchor.consensus import KernelLedger
 
 log = get_emitter("e2e.compliance")
 

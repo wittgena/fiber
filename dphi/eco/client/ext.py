@@ -1,19 +1,10 @@
 # fiber.dphi.eco.client.wallet
-## @lineage: fiber.dphi.client.wallet
-## @lineage: fiber.infra.client.wallet
-## @lineage: dphi.client.wallet
-## @lineage: phase.client.wallet
-## @lineage: bound.client.wallet
-## @lineage: ator.client.wallet
-## @lineage: ator.client.local.wallet
-## @lineage: eco.client.local.wallet
-## @lineage: bound.client.local.wallet
 import json
 import hashlib
 from typing import Any, Dict, Optional
 import httpx
 
-class LocalWalletClient:
+class ExtClient:
     """
     Ext Edge API (receptor.edge.ext) 와 통신하는 HTTP 클라이언트.
     Agent 지갑 상태 조회, 능동적 X402 결제, WETH 래핑 및 내부 지연 정산 트리거를 지원합니다.
