@@ -1,6 +1,4 @@
-# fiber.dev.e2e.gateway.audit
-## @lineage: fiber.phase.dev.e2e.gateway.audit
-## @lineage: fiber.phase.e2e.gateway.audit
+# fiber.dev.e2e.worker.audit
 import os
 import sys
 import time
@@ -122,7 +120,6 @@ class AuditSecurityPipeline(BaseBridgePipeline):
 
     async def setup_workers(self):
         """Worker Connector 및 Sentinel 데몬 기동"""
-        # Deploy 샌드박스 부팅 (민감 정보가 지워진 안전한 os.environ 상속)
         deploy_cmd = f"{sys.executable} -m fiber.dphi.worker.deploy"
         self.connectors.append(
             WorkerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")

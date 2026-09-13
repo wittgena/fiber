@@ -19,9 +19,9 @@ dev = ["pytest", "pytest-asyncio"]
 [tool.hatch.metadata.hooks.custom]
 path = "phase/hatch.py"
 base_dependencies = [
-    "uvloop", "fastapi", "redis", "networkx", "pyyaml", "orjson",
+    "uvloop", "fastapi", "redis", "networkx", "pyyaml", "orjson", "typer", "numpy", "canonicaljson", "aiohttp",
     "watchdog", "rocksdict", "libcst", "datamodel-code-generator", 
-    "mcp==2.0.0a3", "tyro", "pydantic", "httpx"
+    "mcp==2.0.0a3", "tyro", "pydantic", "httpx", "wasmtime"
 ]
 
 [tool.hatch.version]
@@ -31,7 +31,7 @@ source="vcs"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel.force-include]
-"agent" = "fiber/agent"
+"dev" = "fiber/dev"
 "dphi" = "fiber/dphi"
 "llm" = "fiber/llm"
 "phase" = "fiber/phase"
