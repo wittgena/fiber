@@ -2,13 +2,15 @@
 
 @desc: Fiber Project - Agent Deterministic Infrastructure
 
-While autonomous AI agents offer unprecedented capabilities, modern stateless agent protocols (like MCP) routinely expose host systems to severe vulnerabilities—from uncontained memory leaks (OOM) and Confused Deputy attacks to unpredictable billing runaways.
+Fiber is a cryptographic proxy designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
 
-Fiber is a zero-trust cryptographic proxy that definitively resolves these structural bottlenecks. Fiber operates on an architecture that trusts mathematical proofs over identities, treating all interactions as strictly external. Designed for AI deployment, Fiber anchors your agentic architecture on three core pillars:
+This document provides a practical guide on how to integrate and deploy Fiber across its three core operational pillars:
 
-1. **Cryptographic Audit & Compliance:** Generates mathematically provable, Merkle proof receipts for every agent action, enabling safe B2B adoption and strict liability tracking.
-2. **Secure Agentic Bridge (MCP Sidecar):** Connect legacy systems into autonomous agents with zero code changes, enforced by wasm-level isolation.
-3. **LLM Governance & Fuel Traps:** Provides a low-friction, drop-in replacement for existing LLM SDK or API (e.g., LiteLLM, OpenAI) that physically terminates connections to prevent API billing runaways.
+* **[1.1] Cryptographic Audit & Compliance:** How to record mathematically provable, Merkle-proof receipts for every agent action.
+* **[1.2] Secure Agentic Bridge (MCP Sidecar):** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
+* **[1.3] LLM Governance & Dynamic Pipeline:** How to use Fiber as a drop-in replacement for standard LLM SDKs to enforce hard network-level budget traps and normalize tool calls across models (OpenAI, Gemini, Anthropic).
+
+Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (connect, daemon, e2e)** to help you quickly provision your infrastructure.
 
 ---
 
@@ -130,27 +132,14 @@ fiber --help
 
 The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the appropriate node profile and delegating execution. It transparently forwards unknown arguments directly to the target module to ensure zero-friction scalability.
 
-### 3.1. Ecosystem Operational Modes
-
 | Mode | Description | Example |
 | --- | --- | --- |
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python app.py"` |
 | **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker) and applies topology profiles. | `fiber daemon -s rest_edge` |
 | **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.compat --model gemini/gemini-3.1-flash-lite` |
 
-### 3.2. Egress Sidecar (The `connect` Mode)
-
-The `fiber connect` command is the easiest integration path into the ecosystem. It enables you to integrate existing Web2 servers into the Agent-to-Agent economy with **absolutely zero code modifications**.
-
-* **Zero-Trust NAT Traversal:** Operates purely via outbound subscription. Organizations can safely expose internal DBs to global AI agents while remaining concealed behind strict corporate VPCs (Zero inbound firewall configurations).
-* **Enterprise-Grade Access Control:** The Edge Gateway handles complex DPoP cryptography, Identity verification, and Idempotency Shields automatically before a request ever hits your legacy application.
-
-## 3.3. Scalable Economic Topology (X402)
-The underlying X402 economic protocol flexibly scales across three distinct environments without requiring any architectural changes:
-
-* Standalone: In standalone deployments, X402 receipts function purely as cryptographic execution proofs, requiring no external crypto wallets or real-world assets.
-* Enterprise: For enterprise governance, the exact same mechanism can be configured as an internal chargeback system to enforce strict departmental AI budgets.
-* Commercial: For commercialization, the architecture seamlessly integrates with external networks (e.g., EVM, Binance, USDC) to process real financial settlements and monetize agentic services.
+> **Note on X402 Economic Scaling:** 
+> Fiber naturally scales from `Standalone` (local testing) to `Enterprise` (internal chargebacks) to `Commercial` (real financial settlement on external networks) using the exact same CLI commands. No architectural teardowns are required.
 
 ---
 
