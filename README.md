@@ -71,54 +71,58 @@ fiber daemon -s rest_edge
 fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py"
 ```
 
-새롭게 확립된 '명시적 슬롯(Slot) 기반 파이프라인'과 **'Flat List UX 파사드(Facade)'** 아키텍처의 우아함을 README에 정확하게 반영하기 위해, `1.3. LLM Governance & Dynamic Pipeline` 섹션을 다음과 같이 개선해야 합니다.
-
-핵심 변경 포인트는 과거의 제한적인 `llm_tracers` 파라미터 대신, **어떤 미들웨어(Tracer, Cache, Guardrail 등)든 1차원 리스트(`interceptors`)로 던지면 프레임워크가 알아서 안전한 생명주기 슬롯(Slot)에 기계적으로 조립해 준다는 '스마트 라우팅'의 강점**을 강조하는 것입니다.
-
 ---
 
 ### 1.3. LLM Governance & Dynamic Pipeline
 
-Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performance LLM router that provides a **Drop-in Replacement** for the OpenAI SDK and LiteLLM. It enforces strict Netty-style pipeline governance while maintaining a Pythonic, developer-friendly UX Facade.
+Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performance LLM router providing a **Drop-in Replacement** for the OpenAI SDK and LiteLLM. It enforces strict, Netty-style pipeline governance while maintaining a Pythonic, developer-friendly UX Facade.
 
-* **Physical Fuel Trap:** Physically terminates the TCP connection at the network transport layer (or sandbox boundary) if a streaming response exhausts its token budget, mathematically preventing billing runaways.
-* **Declarative Tool Recovery:** Dynamically detects and strictly normalizes malformed tool calls from heterogeneous LLMs (like Gemini) into the OpenAI standard format.
-* **Slot-based Middleware & UX Facade:** Safely inject plug-and-play custom plugins (e.g., Datadog Tracers, Semantic Caches, PII Guardrails) via a simple flat list (`interceptors`). The Entry Facade autonomously routes them to deterministic lifecycle slots (`PRE_OBSERVER`, `PRE_TRANSLATE`) without blocking the main I/O or risking core pipeline corruption.
+* **Physical Fuel Trap:** Mathematically prevents billing runaways by physically terminating the TCP connection if a streaming response exhausts its predefined token budget.
+* **Declarative Tool Recovery:** Dynamically detects and normalizes malformed tool calls from heterogeneous LLMs (e.g., Gemini) into the strict OpenAI standard format.
+* **Slot-based Middleware (UX Facade):** Safely inject custom plugins (e.g., Datadog Tracers, Semantic Caches, PII Guardrails) using a simple flat list (`interceptors=[]`). The Entry Facade autonomously routes them to deterministic lifecycle slots without blocking the main I/O or risking core pipeline corruption.
 
-**1. Define a Custom Interceptor (Self-Routing & Non-blocking):**
+**1. Define Middleware by Target Slot:**
 
 ```python
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.llm.pipeline import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
-# Example A: A Tracer that automatically routes to the PRE_OBSERVER slot
+# [1] PRE_OBSERVER: Fire-and-forget telemetry (Zero-latency)
 class DatadogTracer(BaseLLMTracer):
-    async def on_llm_start(self, meta, kwargs): ...
     async def on_llm_end(self, meta, response, duration_ms):
-        # Fire-and-forget metric recording (Zero latency overhead)
         datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}"])
 
-# Example B: A custom Cache that routes to the PRE_TRANSLATE slot
+# [2] PRE_TRANSLATE: Intercept raw dict payload for instant Semantic Caching
 class SemanticCache(DuplexChannel):
     target_slot = PipelineSlot.PRE_TRANSLATE
-    async def write(self, ctx, msg): ...
+    async def write(self, ctx, msg: dict):
+        if "USE_CACHE" in str(msg):
+            return await ctx.fire_channel_read(mock_response) # Short-circuit physical I/O
+        await ctx.fire_write(msg)
+
+# [3] POST_TRANSLATE: Enforce Security Policies on strict Pydantic objects
+class PIIGuardrail(DuplexChannel):
+    target_slot = PipelineSlot.POST_TRANSLATE
+    async def write(self, ctx, processed_msg):
+        if "SECRET-SSN" in str(getattr(processed_msg, "original_kwargs", {})):
+            raise PermissionError("Guardrail Block: PII detected.") # Active pipeline rupture
+        await ctx.fire_write(processed_msg)
 
 ```
 
-**2. Drop-in Execution via UX Facade:**
+**2. Execute via Drop-in Facade (Order-Agnostic Injection):**
 
 ```python
 from fiber.llm.entry import acompletion
 
-# Internal Pipeline Flow (Self-Routed):
-# [Slot: PRE_TRANSLATE (Cache)] ➔ [Core: Pydantic/Fallback] ➔ [Slot: PRE_OBSERVER (Tracer)] ➔ [Core: FuelTrap/Network]
+# The framework autonomously restructures the flat list into the strict pipeline:
+# [Cache] ➔ [Translator Core] ➔ [PII Guardrail] ➔ [Tracer] ➔ [Network I/O]
 response = await acompletion(
     model="gemini-3.5-flash",
-    messages=[{"role": "user", "content": "Analyze this financial data."}],
-    fallbacks=["gpt-4o-mini"], 
-    interceptors=[DatadogTracer(), SemanticCache()], # Clean, flat-list plugin injection
-    metadata={"kernel_auth": {"audit_hash": "audit_12345"}} # Immutable tracking
+    messages=[{"role": "user", "content": "Analyze this data."}],
+    interceptors=[DatadogTracer(), PIIGuardrail(), SemanticCache()], # Clean injection
+    metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
 )
 ```
 

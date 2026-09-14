@@ -16,7 +16,7 @@ from fiber.llm.exception.mapping import exception_type
 from fiber.llm.router.stream.wrapper import StreamWrapper
 
 from fiber.llm.router.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
-from fiber.llm.router.inter.registry import AdapterRegistry
+from fiber.llm.router.registry.adapter import AdapterRegistry
 
 # Arch & Watcher
 from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
@@ -75,17 +75,32 @@ class DphiFuelInterceptor(DuplexChannel):
             log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
             raise
 
+import os
+import uuid
+
 class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
+        # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
         if "call_id" not in msg:
-            msg["call_id"] = str(uuid.uuid4())
+            msg["call_id"] = os.urandom(8).hex()
 
         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
         metadata = msg.get("metadata", {})
         
+        # 2. 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
+        raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
+        
+        # 외부에서 유효한 OTel 규격(32자리)이 안 들어오면 새로 발급 (uuid4.hex는 완벽한 32자리 16진수)
+        if raw_trace_id and len(raw_trace_id) == 32:
+            resolved_trace_id = raw_trace_id
+        else:
+            resolved_trace_id = uuid.uuid4().hex
+        
+        resolved_session_id = msg.get("session_id") or metadata.get("session_id")
+
         system_meta = ExecutionMetadata(
-            session_id=msg.get("session_id") or metadata.get("session_id"),
-            trace_id=msg.get("trace_id") or metadata.get("trace_id"),
+            session_id=resolved_session_id,
+            trace_id=resolved_trace_id,
             call_id=msg["call_id"],
             metadata=metadata,
             base_model=msg.get("model", "unknown")
@@ -96,6 +111,27 @@ class ContextBinder(DuplexChannel):
         msg["system_meta"] = system_meta
         
         await ctx.fire_write(msg)
+
+# class ContextBinder(DuplexChannel):
+#     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
+#         if "call_id" not in msg:
+#             msg["call_id"] = str(uuid.uuid4())
+
+#         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
+#         metadata = msg.get("metadata", {})
+        
+#         system_meta = ExecutionMetadata(
+#             session_id=msg.get("session_id") or metadata.get("session_id"),
+#             trace_id=msg.get("trace_id") or metadata.get("trace_id"),
+#             call_id=msg["call_id"],
+#             metadata=metadata,
+#             base_model=msg.get("model", "unknown")
+#         )
+        
+#         ctx.set_attr("system_meta", system_meta)
+#         ctx.set_attr("request_kwargs", msg)
+#         msg["system_meta"] = system_meta
+#         await ctx.fire_write(msg)
 
 class ChannelObserver(DuplexChannel):
     def __init__(self):
@@ -305,7 +341,6 @@ class CompletionTransport(DuplexChannel):
         try:
             log.debug("Core Completion Transport 진입", model=msg.model, provider=msg.custom_llm_provider)
             adapter = AdapterRegistry.get_adapter(task_type="llm", provider_name=msg.custom_llm_provider)
-            
             if asyncio.iscoroutinefunction(adapter.execute):
                 response = await adapter.execute(msg)
             else:
