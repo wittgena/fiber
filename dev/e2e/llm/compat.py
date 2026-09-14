@@ -9,15 +9,13 @@ import time
 from types import SimpleNamespace
 from typing import List, Tuple, Optional, Any, Dict
 
+from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.llm.model.tier import model_tier_registry
-from fiber.phase.scope.manager import managed_scope
 from fiber.llm.execution import ExecutionMetadata
-
-# Custom Tracer Test를 위한 모듈
-from fiber.dev.trace.llm.interceptor import BaseLLMTracer
+from fiber.phase.scope.manager import managed_scope
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
@@ -247,7 +245,6 @@ class LlmCompatWorkflow(Workflow):
         """[NEW] Phase 6: InterLLM Adapter & State Mapper (Traverser) 검증"""
         self.log.info(f"[{self.name}] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification")
         try:
-            # 1. StateMapper & Traverser 규칙 직접 검증 (Gemini Tool Leak 시뮬레이션)
             from fiber.llm.router.mapper.state import StateMapper
             mapper = StateMapper()
 
@@ -263,13 +260,11 @@ class LlmCompatWorkflow(Workflow):
                 raw=mock_raw_resp
             )
 
-            # Traverser가 STATE_EXTRACTION_RULES를 이용해 복구해내는지 확인
             choice_dict = mapper.to_openai_choice(mock_llama_resp, req_id="mock_req", logger=self.log, provider="gemini")
             if choice_dict["finish_reason"] != "tool_calls" or not choice_dict["message"].get("tool_calls"):
                 raise ValueError("StateMapper failed to recover tool_calls from raw response.")
             self.log.info(f"[{self.name}] 🎯 Passed: StateMapper successfully traversed and recovered tool_calls.")
 
-            # 2. E2E Tool Call 파이프라인 검증 (InterLLMAdapter 경유)
             tools = [{
                 "type": "function",
                 "function": {
@@ -301,23 +296,22 @@ class LlmCompatWorkflow(Workflow):
             self.fail_count += 1
             return ErrorMessage(f"Adapter Mapping Failed: {e}")
 
-        # Phase 7로 트랜지션
         return InterceptorTestMsg()
 
     @step
     async def phase_custom_interceptor(self, msg: InterceptorTestMsg) -> WorkflowMessage:
-        """[NEW] Phase 7: Custom Tracer Injection 검증"""
-        self.log.info(f"[{self.name}] 🔄 [Phase 7] Custom Tracer/Interceptor Injection Verification")
+        """[NEW] Phase 7: Flat List Interceptor Injection Verification"""
+        self.log.info(f"[{self.name}] 🔄 [Phase 7] Flat List Interceptor (UX Facade) Injection Verification")
         try:
             # 1. 커스텀 Tracer 인스턴스화
             test_tracer = DummyTestTracer()
             audit_hash = f"audit_tracer_{int(time.time())}"
             
-            # 2. 파이프라인에 주입 (llm_tracers kwarg 활용)
+            # ✨ 핵심 변경점: 1차원 리스트(interceptors) 파라미터를 통해 직관적으로 주입
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Say 'hello interceptor'"}],
-                llm_tracers=[test_tracer],  # ✨ 핵심: 커스텀 트레이서 주입
+                interceptors=[test_tracer],  # <--- 사용성(UX) 극대화 지점
                 metadata={"kernel_auth": {"audit_hash": audit_hash}}
             )
             
@@ -326,11 +320,11 @@ class LlmCompatWorkflow(Workflow):
             
             # 4. 검증 (Tracer가 정상적으로 콜백을 받았는지 확인)
             if test_tracer.started and test_tracer.ended and (test_tracer.recorded_model == self.target_model):
-                self.log.info(f"[{self.name}] ✅ Passed: Custom Tracer successfully hooked into lifecycle (Duration: {test_tracer.duration:.2f}ms).")
+                self.log.info(f"[{self.name}] ✅ Passed: Custom Interceptor successfully hooked into lifecycle via entry Facade (Duration: {test_tracer.duration:.2f}ms).")
                 self.success_count += 1
                 self.audit_traces.append(getattr(response, "system_fingerprint", "N/A"))
             else:
-                raise ValueError(f"Tracer hooks not fired properly! Started: {test_tracer.started}, Ended: {test_tracer.ended}")
+                raise ValueError(f"Interceptor hooks not fired properly! Started: {test_tracer.started}, Ended: {test_tracer.ended}")
                 
         except Exception as e:
             self.log.error(f"[{self.name}] ❌ Failed: {e}")

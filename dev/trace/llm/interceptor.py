@@ -5,6 +5,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
+from fiber.llm.pipeline import PipelineSlot
 from fiber.llm.execution import ExecutionMetadata
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter
@@ -25,6 +26,13 @@ class BaseLLMTracer(ABC):
         pass
 
 class TracerInterceptorChannel(DuplexChannel):
+    """
+    파이프라인에 장착되어 메인 비즈니스 로직(LLM 호출)을 블로킹하지 않고, 
+    비동기적(Fire-and-forget)으로 관측 데이터를 외부로 방출하는 채널.
+    """
+    
+    target_slot = PipelineSlot.PRE_OBSERVER
+
     def __init__(self, tracers: List[BaseLLMTracer]):
         self.tracers = tracers
 
@@ -32,6 +40,7 @@ class TracerInterceptorChannel(DuplexChannel):
         ctx.set_attr("tracer_start_time", time.time())
         meta = ctx.get_attr("system_meta")
         
+        # 원본 msg 변이 방지를 위해 deepcopy 후 비동기 태스크로 던짐
         safe_kwargs = copy.deepcopy(msg)
         for tracer in self.tracers:
             asyncio.create_task(self._safe_execute(tracer.on_llm_start, meta, safe_kwargs))
@@ -62,4 +71,5 @@ class TracerInterceptorChannel(DuplexChannel):
         try:
             await func(*args)
         except Exception as e:
+            # 트레이서 내부의 에러가 메인 파이프라인(LLM 스트림 등)을 붕괴시키지 않도록 격리
             log.warning(f"[Tracer] Custom tracer '{func.__self__.__class__.__name__}' fractured: {e}")
