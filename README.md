@@ -71,39 +71,54 @@ fiber daemon -s rest_edge
 fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py"
 ```
 
+새롭게 확립된 '명시적 슬롯(Slot) 기반 파이프라인'과 **'Flat List UX 파사드(Facade)'** 아키텍처의 우아함을 README에 정확하게 반영하기 위해, `1.3. LLM Governance & Dynamic Pipeline` 섹션을 다음과 같이 개선해야 합니다.
+
+핵심 변경 포인트는 과거의 제한적인 `llm_tracers` 파라미터 대신, **어떤 미들웨어(Tracer, Cache, Guardrail 등)든 1차원 리스트(`interceptors`)로 던지면 프레임워크가 알아서 안전한 생명주기 슬롯(Slot)에 기계적으로 조립해 준다는 '스마트 라우팅'의 강점**을 강조하는 것입니다.
+
+---
+
 ### 1.3. LLM Governance & Dynamic Pipeline
 
-Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performance LLM router that provides a **Drop-in Replacement** for the OpenAI SDK and LiteLLM, offering unified support across `openai`, `anthropic`, `gemini`, and `openai-like` providers.
+Beyond MCP protocol management, the `fiber.llm.entry` module is a high-performance LLM router that provides a **Drop-in Replacement** for the OpenAI SDK and LiteLLM. It enforces strict Netty-style pipeline governance while maintaining a Pythonic, developer-friendly UX Facade.
 
-* **Fuel Trap:** Physically terminates the connection at the network transport layer (or sandbox boundary) if a streaming response exhausts its token budget, preventing billing runaways.
+* **Physical Fuel Trap:** Physically terminates the TCP connection at the network transport layer (or sandbox boundary) if a streaming response exhausts its token budget, mathematically preventing billing runaways.
 * **Declarative Tool Recovery:** Dynamically detects and strictly normalizes malformed tool calls from heterogeneous LLMs (like Gemini) into the OpenAI standard format.
-* **Zero-Overhead Observability:** Safely inject plug-and-play custom tracers (e.g., Datadog, LangSmith) via fire-and-forget interceptors without blocking or adding latency to LLM responses.
+* **Slot-based Middleware & UX Facade:** Safely inject plug-and-play custom plugins (e.g., Datadog Tracers, Semantic Caches, PII Guardrails) via a simple flat list (`interceptors`). The Entry Facade autonomously routes them to deterministic lifecycle slots (`PRE_OBSERVER`, `PRE_TRANSLATE`) without blocking the main I/O or risking core pipeline corruption.
 
-**1. Define a Custom Tracer (Non-blocking):**
+**1. Define a Custom Interceptor (Self-Routing & Non-blocking):**
 
 ```python
-from fiber.llm.trace import BaseLLMTracer
+from fiber.dev.trace.llm.interceptor import BaseLLMTracer
+from fiber.llm.pipeline import PipelineSlot
+from xphi.state.phase.channel import DuplexChannel
 
+# Example A: A Tracer that automatically routes to the PRE_OBSERVER slot
 class DatadogTracer(BaseLLMTracer):
     async def on_llm_start(self, meta, kwargs): ...
-    async def on_llm_error(self, meta, exc, duration_ms): ...
     async def on_llm_end(self, meta, response, duration_ms):
-        # Fire-and-forget metric recording
+        # Fire-and-forget metric recording (Zero latency overhead)
         datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}"])
+
+# Example B: A custom Cache that routes to the PRE_TRANSLATE slot
+class SemanticCache(DuplexChannel):
+    target_slot = PipelineSlot.PRE_TRANSLATE
+    async def write(self, ctx, msg): ...
 
 ```
 
-**2. Drop-in Replacement Execution:**
+**2. Drop-in Execution via UX Facade:**
 
 ```python
 from fiber.llm.entry import acompletion
 
+# Internal Pipeline Flow (Self-Routed):
+# [Slot: PRE_TRANSLATE (Cache)] ➔ [Core: Pydantic/Fallback] ➔ [Slot: PRE_OBSERVER (Tracer)] ➔ [Core: FuelTrap/Network]
 response = await acompletion(
     model="gemini-3.5-flash",
-    messages=[{"role": "user", "content": "Analyze this data."}],
+    messages=[{"role": "user", "content": "Analyze this financial data."}],
     fallbacks=["gpt-4o-mini"], 
-    llm_tracers=[DatadogTracer()], # Plug-and-play telemetry injection
-    metadata={"post_call_rules": [async_pii_filter_function]} # Dynamic Guardrails
+    interceptors=[DatadogTracer(), SemanticCache()], # Clean, flat-list plugin injection
+    metadata={"kernel_auth": {"audit_hash": "audit_12345"}} # Immutable tracking
 )
 ```
 
