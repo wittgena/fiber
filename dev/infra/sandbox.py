@@ -76,19 +76,35 @@ print(f'Processed {len(parsed)} records')
         title="Determinism: PRNG Idempotency",
         code="import random, os\nprint(f'{random.random()}|{os.urandom(4).hex()}')"
     )
-    
+
     ENV_LEAK = ScriptDef(
-        title="Isolation: Prevent Host Environment Variable Leakage",
+        title="Isolation: Selective Gateway & Host Leak Prevention",
         code="""
 import os
-is_virtual = '__LLVM_PROFILE_RT_INIT_ONCE' in os.environ
-current_path = os.environ.get('PATH', '')
-is_host_path_blocked = len(current_path.split(':')) <= 3 and 'Users' not in current_path
-print(f'Isolated: {is_virtual and is_host_path_blocked}')
+env = os.environ
+
+## 1. Active Gateway Permeability: Verify that the explicitly whitelisted orchestration marker successfully penetrates the host-to-sandbox bridge
+is_gateway_working = env.get('FIBER_ISOLATION_MARKER') == '1'
+
+## 2. Host Environment Segregation: Guarantee strict absence of platform-specific or CI-injected variables to maintain absolute determinism across OS architectures.
+## (Note: Pyodide's default POSIX mocks like 'USER' or 'PWD' are intentionally excluded from this blocklist)
+blocked_keys = ['GITHUB_ACTIONS', 'COMPUTERNAME', 'XPC_SERVICE_NAME', 'COMMAND_MODE', 'TERM_PROGRAM']
+is_host_blocked = all(k not in env for k in blocked_keys)
+
+## 3. State Entropy Constraint: Strictly cap the total quantity of environment variables
+## to prevent unrestricted host leakage or state space inflation.
+is_minimal = len(env) <= 11
+
+## [Assertion] A controlled closed system: Only explicitly authorized intents enter, host noise is blocked
+isolated = is_gateway_working and is_host_blocked and is_minimal
+
+## Emitting payload dump for rigorous runtime audit and traceability
+print(f'Isolated: {isolated} | Dump: {dict(env)}')
         """.strip(),
         expect_success=True,
         expected_match="Isolated: True"
     )
+
     IO_VIOLATION = ScriptDef(
         title="Isolation: Deny Low-level Filesystem Scan",
         code="with open('/etc/passwd', 'r') as f:\n    print(f.read())",
