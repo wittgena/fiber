@@ -1,6 +1,4 @@
-# fiber.dev.e2e.gateway.wasm
-## @lineage: fiber.phase.dev.e2e.gateway.wasm
-## @lineage: fiber.phase.e2e.gateway.wasm
+# fiber.dev.e2e.dphi.wasm.gateway 
 import sys
 import asyncio
 import json

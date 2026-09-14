@@ -1,4 +1,5 @@
-# fiber.dphi.edge.state
+# fiber.dev.infra.edge.fsm
+## @lineage: fiber.dphi.edge.state
 from enum import Enum, auto
 from dataclasses import dataclass
 from typing import Any, Dict

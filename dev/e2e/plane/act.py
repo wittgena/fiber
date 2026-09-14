@@ -1,6 +1,4 @@
 # fiber.dev.e2e.plane.act
-## @lineage: fiber.phase.dev.e2e.plane.act
-## @lineage: fiber.phase.e2e.plane.act
 import os
 import sys
 import argparse
@@ -18,14 +16,14 @@ FIBER_ROOT = resolve_path("fiber")
 log = get_emitter("e2e.plane.act")
 
 # =====================================================================
-# 1. CI/CD Scene (Black-box Workflow Verifier)
+# 1. CI/CD Scene (System E2E & Release Auditor)
 # =====================================================================
 
 class ActWorkflowScene:
     """
     @desc: 실제 GitHub Actions 환경과 동일하게 nektos/act 런타임을 구동하여,
-    빌드 및 통합 테스트 Job들이 메타데이터 훅(hatch)을 의도한 CASE(A, D)대로 
-    발동시키는지 검증하는 횡단 테스트 씬(Scene).
+    빌드, 의존성 바인딩(XPHI), 그리고 백그라운드 인프라(Redis 등)가 연동된 
+    System E2E 테스트가 성공적으로 완수되는지 횡단 검증하는 Scene.
     """
     def __init__(self, broker: Any = None, context: ActContext = None):
         self.broker = broker
@@ -38,37 +36,36 @@ class ActWorkflowScene:
         self.failed_cases: List[Dict[str, str]] = []
         self.log = get_emitter("scene.act")
 
-    async def phase_integration_test(self):
+    async def phase_system_e2e_test(self):
         """
-        [CASE D: 원격 격리 바인딩 (Remote Fallback)] 
-        Integration Test Job을 실행하여, 로컬 환경과 완전히 단절된 상태에서 
-        xphi 원격 의존성(Remote)이 자연스럽게 에러 없이 엮어내는지 검증합니다.
-        (과거 CASE C에서 변경됨: --bind 제거에 따른 클린룸 테스트)
+        [PHASE 1: System E2E & Remote Binding] 
+        단순 패키지 설치를 넘어, 실제 Redis 사이드카 컨테이너가 뜬 상태에서
+        Fiber <-> XPHI 간의 상태 전이 및 인텐트 제어가 정상 작동하는지 통합 검증합니다.
         """
-        self.log.info("  ▶️ [TEST] Integration Job (Isolated Remote Fallback)")
+        self.log.info("  ▶️ [TEST] System E2E Job (Infrastructure & Intent Validation)")
         
         try:
-            # 명시적 환경 변수 없이 실행 (Hatch 훅의 fallback 유도)
+            # 새로 설계된 build.yml의 'system-e2e-test' Job을 타겟팅
             success = await self.adapter.apply_job(
-                job_name="integration-test", 
+                job_name="system-e2e-test", 
                 env={}
             )
             
             if not success:
-                raise RuntimeError("Integration job fractured. Check act logs for dependency conflicts.")
+                raise RuntimeError("System E2E job fractured. Check act logs for background service or test failures.")
                 
-            self.log.info("  └─ Integration Test Passed ✅")
+            self.log.info("  └─ System E2E Test Passed ✅ (Services & Binding OK)")
                 
         except Exception as e:
             self.fail_count += 1
-            self.failed_cases.append({"title": "Integration Test Job", "error": str(e)})
-            self.log.error(f"  [SCENARIO HALTED] Integration Job: {e}")
+            self.failed_cases.append({"title": "System E2E Test Job", "error": str(e)})
+            self.log.error(f"  [SCENARIO HALTED] System E2E Job: {e}")
 
     async def phase_build_release_audit(self):
         """
-        [CASE A: 원격 강제 바인딩]
-        배포용 빌드(Release Build)를 실행하고, 산출물(.whl)이 임시 폴더(/tmp)로
-        무사히 추출되었는지, 내부에 로컬 경로가 스며들지 않았는지 사후 감사 수행.
+        [PHASE 2: Deterministic Release Build]
+        E2E 테스트를 통과한 코드에 대해 배포용 빌드(Release Build)를 실행하고, 
+        산출물(.whl) 내부에 로컬 경로가 오염되지 않았는지 사후 감사 수행.
         """
         self.log.info("  ▶️ [TEST] Release Build Job (Deterministic Remote Enforcement)")
         
@@ -88,7 +85,7 @@ class ActWorkflowScene:
                 is_clean = await auditor.verify()
                 
                 if not is_clean:
-                    msg = "FATAL: Artifact Determinism check failed!"
+                    msg = "FATAL: Artifact Determinism check failed! Local paths detected."
                     self.log.error(f"  [FATAL_RUPTURE] {msg}")
                     raise RuntimeError(msg)
                 else:
@@ -102,7 +99,6 @@ class ActWorkflowScene:
     async def run_all(self):
         self.log.info("\n=== [START] Executing ACT CI/CD Workflow Scenes ===")
         
-        # 1. 인프라 접근성/바이너리 확인
         if not self.adapter:
             self.log.error("  └─ ACT Runtime Availability: Failed 🔴 (Adapter missing)")
             self.fail_count += 1
@@ -112,7 +108,7 @@ class ActWorkflowScene:
         self.log.info("  └─ ACT Runtime Availability: Confirmed 🟢")
 
         # 2. 독립된 CI/CD 시나리오 순차 실행
-        await self.phase_integration_test()
+        await self.phase_system_e2e_test()
         await self.phase_build_release_audit()
         
         # 3. 결과 정리
@@ -137,10 +133,6 @@ class ActFlow:
     async def test(self):
         log.info(f"\n[PHASE 1] Initializing ACT Orchestrator in [{self.mode.upper()}] mode")
         
-        # [핵심] 위치 투명성(Location Transparency) 확보
-        # 소스 코드는 더 이상 마운트(--bind)하지 않지만, Nektos/act가 로컬의 
-        # .github/workflows/*.yml 파이프라인 명세서를 파싱하려면 반드시 프로젝트 
-        # 루트 디렉터리에서 실행되어야 하므로 CWD 스위칭을 유지합니다.
         original_cwd = Path.cwd()
         if FIBER_ROOT:
             os.chdir(FIBER_ROOT)
@@ -151,7 +143,6 @@ class ActFlow:
         try:
             broker = None 
 
-            # 이 시점에 os.getcwd()는 FIBER_ROOT이므로 ActOrchestrator도 동일한 경로를 기준으로 초기화됨
             controller = ActOrchestrator(
                 mode=self.mode,
                 suites={"workflow_validation": ActWorkflowScene} 
@@ -193,7 +184,6 @@ class ActFlow:
                 sys.exit(1)
                 
         finally:
-            # 테스트 종료 후 원래의 실행 경로로 복구 (Side-effect 방어)
             os.chdir(original_cwd)
 
     async def run(self):
