@@ -1,0 +1,40 @@
+name: "Bot: Front Gatekeeper"
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛡️ One-Shot Sentinel Logic
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.repository }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          # Block unauthorized PR reopens by locking the thread
+          if [ "\(ACTION" == "reopened" ] && [ "\)AUTHOR" != "$OWNER" ]; then
+            echo "Action: Unauthorized reopen detected. Locking thread."
+            
+            gh pr comment \(PR_NUMBER --repo\)REPO --body "**[System Diagnostic: Access Denied]**
+            
+            Reopening failed PRs is prohibited. Thread is now permanently locked."
+            
+            gh pr close \(PR_NUMBER --repo\)REPO
+            gh pr lock \(PR_NUMBER --repo\)REPO --reason "resolved"
+            exit 0
+          fi
+
+          # Grant one-time execution label for newly opened PRs
+          if [ "$ACTION" == "opened" ]; then
+            echo "Action: New PR opened. Granting E2E execution token."
+            gh pr edit \(PR_NUMBER --repo\)REPO --add-label "e2e-approved"
+          fi

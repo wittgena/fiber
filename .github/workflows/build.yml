@@ -1,16 +1,24 @@
 name: "Fiber CI/CD Pipeline"
+
 on:
   push:
     branches: [ "main" ]
     tags: [ "v*.*.*" ]
   pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: \({{ github.workflow }}-\){{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # [Phase 1: System E2E Testing] Dynamically bind dependencies and verify infrastructure
   system-e2e-test:
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'e2e-approved')
     runs-on: ubuntu-latest
     
-    # [인프라] E2E 테스트를 위해 Redis를 사이드카 컨테이너로 프로비저닝
+    permissions:
+      contents: read
+
     services:
       redis:
         image: redis:7-alpine
@@ -32,9 +40,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip" # 의존성 설치 속도 향상
+          cache: "pip"
 
-      # [핵심 추가] Pyodide 및 레거시 파이썬 샌드박싱 격리 실행을 위한 Deno 런타임 주입
       - name: 🦕 Setup Deno
         uses: denoland/setup-deno@v1
         with:
@@ -43,55 +50,45 @@ jobs:
       - name: ⚙️ Install dependencies
         run: |
           pip install uv hatch
-          # Explicitly instruct 'uv' to use the isolated system environment
           uv pip install --system -e .[dev]
 
-      # [핵심 추가] 테스트 실행 전, resolver가 기준점을 찾을 수 있도록 
-      # 현재 워크스페이스에 .anchor 토폴로지 경계를 명시적으로 부트스트랩합니다.
       - name: 🗺️ Bootstrap Topology Boundary
         run: |
           python -m xphi.kernel.space.bind.around
 
       - name: 🧪 Run System E2E Suite
         env:
-          # XPHI와 Fiber가 CI 환경의 Redis를 바라보도록 환경변수 주입
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
         run: |
-          # Fiber 내장 E2E 오케스트레이터를 통한 통합 인프라 테스트 수행
           fiber e2e dphi.wasm.entry
 
-  # [Phase 2: Release] Build pure, deterministic Wheel for external distribution
   build-release:
-    needs: system-e2e-test # 선행 E2E 검증 통과 시에만 발동
+    needs: system-e2e-test
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write 
     steps:
       - name: 📥 Checkout Fiber
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+        
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: 📦 Build Deterministic Wheel
-        env:
-          # Trigger strictly remote dependency lock in hatch hook (CASE A)
-          FIBER_BUILD_DIST: "1" 
         run: |
           pip install hatch
           hatch build
-
-      # [CRITICAL] Upload artifacts so the local act orchestrator (DeterminismAuditor) can extract and inspect them
+          
       - name: 📤 Upload Artifacts for Auditor
         uses: actions/upload-artifact@v4
         with:
           name: fiber-release-wheel
           path: dist/*.whl
-
+          
       - name: 🚀 Publish to GitHub Releases
         uses: softprops/action-gh-release@v1
         with:
