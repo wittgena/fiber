@@ -126,9 +126,10 @@ class ActFlow:
     """
     @desc: CLI 기반으로 CI 파이프라인 E2E 검증기를 구동하고 레포팅하는 컨트롤 플레인.
     """
-    def __init__(self, mode: str = "dev", keep_workspace: bool = False):
+    def __init__(self, mode: str = "dev", keep_workspace: bool = False, rebuild: bool = False):
         self.mode = mode
         self.keep_workspace = keep_workspace
+        self.rebuild = rebuild
 
     async def test(self):
         log.info(f"\n[PHASE 1] Initializing ACT Orchestrator in [{self.mode.upper()}] mode")
@@ -145,7 +146,8 @@ class ActFlow:
 
             controller = ActOrchestrator(
                 mode=self.mode,
-                suites={"workflow_validation": ActWorkflowScene} 
+                suites={"workflow_validation": ActWorkflowScene},
+                rebuild=self.rebuild
             )
             controller.keep_workspace = self.keep_workspace
             
@@ -199,6 +201,7 @@ def main(args_list: list[str] = None):
     parser.add_argument("--mode", choices=["dev", "deploy"], default="dev", help="Execution mode")
     parser.add_argument("--keep-workspace", action="store_true", help="Preserve artifact temp directory after test")
     parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--rebuild", action="store_true", help="Force act to rebuild container and clear cache")
     
     args, _ = parser.parse_known_args(args_list)
 
@@ -208,7 +211,8 @@ def main(args_list: list[str] = None):
 
     app = ActFlow(
         mode=args.mode,
-        keep_workspace=args.keep_workspace
+        keep_workspace=args.keep_workspace,
+        rebuild=args.rebuild
     )
     PhaseReactor.ignite(main_coro_func=app.run)
 

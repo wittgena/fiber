@@ -1,0 +1,39 @@
+name: "Bot: Close Failed PRs"
+
+on:
+  workflow_run:
+    workflows: ["Fiber CI/CD Pipeline"]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  auto-close:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🧹 Find, Close PR and Revoke Approval
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Locate the open PR associated with the failed commit SHA
+          PR_NUMBER=\((gh pr list --repo\)REPO --search "$HEAD_SHA" --state open --json number --jq '.[0].number')
+          
+          if [ -n "\(PR_NUMBER" ] && [ "\)PR_NUMBER" != "null" ]; then
+            echo "Action: Failed PR #$PR_NUMBER identified. Initiating closure and label revocation."
+            
+            # Notify failure reasons and policy
+            gh pr comment \(PR_NUMBER --repo\)REPO --body "**[System Diagnostic: E2E Pipeline Failed]**
+            
+            CI pipeline did not pass the required structural and deterministic validations.
+            PR is now closed and the execution label has been removed. Please ensure local validation passes before opening a new request."
+            
+            # Close the PR and remove the execution authorization label
+            gh pr close \(PR_NUMBER --repo\)REPO
+            gh pr edit \(PR_NUMBER --repo\)REPO --remove-label "e2e-approved"
+          else
+            echo "Status: No active PR found for this commit SHA. Halting workflow."
+          fi

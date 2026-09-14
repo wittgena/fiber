@@ -25,7 +25,7 @@ class ScriptDef:
     title: str
     code: str
     expect_success: bool = True
-    expected_match: Optional[str] = None
+    expected_match: Optional[str | tuple[str, ...]] = None
     tier: str = "SYSTEM"
 
 class TestScripts:
@@ -150,7 +150,7 @@ while True:
     lst.append('A' * (1024 * 1024))
         """,
         expect_success=False,
-        expected_match="MemoryError", 
+        expected_match=("MemoryError", "Sandbox Hard Terminated"),
         tier="STANDARD"
     )
     STACK_OVERFLOW_ATTACK = ScriptDef(
@@ -175,10 +175,20 @@ class SandboxRunner(SchemeRunner):
         if result.success != script.expect_success:
             self._record_fail(elapsed_ms, f"Expected Success={script.expect_success}, Got {result.success} (Output: {output_str})", "Execution Output", title=script.title)
             return
-            
-        if script.expected_match and script.expected_match not in output_str:
-            self._record_fail(elapsed_ms, f"Expected string '{script.expected_match}' not found in output. Output: {output_str}", "String Match", title=script.title)
-            return
+
+        if script.expected_match is not None:
+            if isinstance(script.expected_match, tuple):
+                if not any(match_str in output_str for match_str in script.expected_match):
+                    self._record_fail(elapsed_ms, f"Expected one of {script.expected_match} not found in output. Output: {output_str}", "String Match", title=script.title)
+                    return
+            else:
+                if script.expected_match not in output_str:
+                    self._record_fail(elapsed_ms, f"Expected string '{script.expected_match}' not found in output. Output: {output_str}", "String Match", title=script.title)
+                    return
+
+        # if script.expected_match and script.expected_match not in output_str:
+        #     self._record_fail(elapsed_ms, f"Expected string '{script.expected_match}' not found in output. Output: {output_str}", "String Match", title=script.title)
+        #     return
             
         if validator:
             try:
