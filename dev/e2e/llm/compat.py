@@ -23,7 +23,6 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.llm.compat")
 
-# [NEW] 유저가 임의로 만든 커스텀 Tracer (호출 여부만 기록)
 class DummyTestTracer(BaseLLMTracer):
     def __init__(self):
         self.started = False
@@ -50,8 +49,7 @@ class MockBypassTestMsg(WorkflowMessage): pass
 class FuelTrapTestMsg(WorkflowMessage): pass
 class TokenUtilsTestMsg(WorkflowMessage): pass
 class AdapterMappingTestMsg(WorkflowMessage): pass
-class InterceptorTestMsg(WorkflowMessage): pass  # [NEW] Phase 7 연결용 메시지
-
+class InterceptorTestMsg(WorkflowMessage): pass
 
 class LlmCompatWorkflow(Workflow):
     class Meta:
@@ -307,11 +305,11 @@ class LlmCompatWorkflow(Workflow):
             test_tracer = DummyTestTracer()
             audit_hash = f"audit_tracer_{int(time.time())}"
             
-            # ✨ 핵심 변경점: 1차원 리스트(interceptors) 파라미터를 통해 직관적으로 주입
+            # 2. 1차원 리스트(interceptors) 파라미터를 통해 직관적으로 주입
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Say 'hello interceptor'"}],
-                interceptors=[test_tracer],  # <--- 사용성(UX) 극대화 지점
+                interceptors=[test_tracer],
                 metadata={"kernel_auth": {"audit_hash": audit_hash}}
             )
             
@@ -349,7 +347,6 @@ class LlmCompatWorkflow(Workflow):
         self.log.info(f"  Fuel Burned         : {self.total_fuel}")
         self.log.info(f"  Audit Hashes Sealed : {', '.join(self.audit_traces)}")
         self.log.info("="*60 + "\n")
-
 
 class LlmCompatApplication:
     def __init__(self, scope_kwargs: dict, run_context: dict):

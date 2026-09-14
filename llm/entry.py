@@ -6,12 +6,11 @@ from typing import Any, List, Dict
 
 from fiber.llm.pipeline import PipelineBootstrap, PipelineSlot
 from fiber.llm.model.types.general import EmbeddingResponse
-from xphi.watcher.plane.emitter import get_emitter
-
-# [NEW] 파사드 라우팅 및 오토 래핑 처리를 위한 임포트
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer, TracerInterceptorChannel
 
-log = get_emitter("runtime.entry")
+from xphi.watcher.plane.emitter import get_emitter
+
+log = get_emitter("llm.entry")
 
 def _run_sync(coro: Any) -> Any:
     """이벤트 루프 안전 처리를 위한 동기화 래퍼 헬퍼 (DRY)"""
@@ -80,9 +79,7 @@ async def aembedding(*args, **kwargs) -> EmbeddingResponse:
     if not model:
         raise ValueError("model param not passed in.")
         
-    # ✨ 임베딩 진입 전에도 동일하게 스마트 라우팅 수행
     kwargs = _route_interceptors(kwargs)
-        
     return await PipelineBootstrap.execute_embedding(model=model, input_data=input_data, **kwargs)
 
 def embedding(*args, **kwargs) -> EmbeddingResponse:

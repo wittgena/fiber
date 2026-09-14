@@ -1,8 +1,4 @@
 # fiber.llm.router.ext.llm.gemini
-## @lineage: fiber.dphi.model.ext.llm.gemini
-## @lineage: dphi.model.ext.llm.gemini
-## @lineage: phase.client.model.llm.gemini
-## @lineage: phase.client.ext.llm.gemini
 import asyncio
 import inspect
 import functools

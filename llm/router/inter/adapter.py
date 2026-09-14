@@ -1,7 +1,4 @@
 # fiber.llm.router.inter.adapter
-## @lineage: fiber.dphi.model.inter.adapter
-## @lineage: dphi.model.inter.adapter
-## @lineage: agent.llm.router.base
 import json
 from typing import AsyncGenerator, Union
 import httpx
