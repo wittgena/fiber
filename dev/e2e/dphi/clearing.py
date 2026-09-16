@@ -1,23 +1,21 @@
-# fiber.dev.e2e.dphi.defin
-## @lineage: fiber.phase.dev.e2e.dphi.defin
-## @lineage: fiber.phase.e2e.dphi.defin
+# fiber.dev.e2e.dphi.clearing
 import asyncio
 import json
 import uuid
 import hashlib
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, List
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.eco.transaction.pipeline import DefinPipelineFactory, TransactionPipelineFactory
+from fiber.dphi.eco.transaction.pipeline import ClearingPipelineFactory, TransactionPipelineFactory
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("e2e.defin")
+log = get_emitter("e2e.dphi.clearing")
 
 @dataclass
 class TestResult:
@@ -41,7 +39,7 @@ class NodeIdentity:
 
 
 class E2ETestSinkHandler(DuplexChannel):
-    """Outbound 역방향 흐름의 종단점(Head)에서 최종 결과를 캡처"""
+    """Captures the final response of the outbound pipeline flow."""
     def __init__(self):
         self.future = asyncio.Future()
 
@@ -50,7 +48,7 @@ class E2ETestSinkHandler(DuplexChannel):
             if isinstance(msg, bytes):
                 try:
                     msg = json.loads(msg.decode('utf-8').strip())
-                except:
+                except json.JSONDecodeError:
                     pass
             self.future.set_result(msg)
         return 
@@ -70,11 +68,11 @@ class MockE2EInfrastructure:
         async def execute_shadow(self, payload: dict) -> dict:
             calldata = payload.get("calldata", "0x")
             
-            # 시나리오 3 대응: Calldata 훼손
+            # Scenario 3: Corrupted Calldata (Invalid Opcode)
             if "0xdeadbeef" in calldata:
                 return {"success": False, "error": "Invalid Opcode"}
             
-            # 시나리오 2 대응: 카오스 인젝터가 0x00...00으로 덮어쓴 스토리지 슬롯을 정확히 감지
+            # Scenario 2: Storage slot mutation (Insufficient allowance)
             snapshot = payload.get("state_snapshot", {})
             for contract_data in snapshot.values():
                 storage = contract_data.get("storage", {})
@@ -86,13 +84,13 @@ class MockE2EInfrastructure:
 
 class VmComputeTestSuite:
     def __init__(self):
-        self.log = get_emitter("e2e.defin.compute")
+        self.log = get_emitter("e2e.clearing.compute")
         self.results: List[TestResult] = []
 
     async def run_scenario(self, title: str, agents: int, deposit: int, expected_success: bool = True, chaos_mode: str = "NORMAL"):
-        self.log.info(f"\n\n{'='*80}\n🚀 [DEPIN SCENARIO] {title}\n{'='*80}")
+        self.log.info(f"▶ [Compute] {title} (Chaos: {chaos_mode})")
         
-        pipeline = DefinPipelineFactory.build(
+        pipeline = ClearingPipelineFactory.build(
             broker=MockE2EInfrastructure.MockBroker(),
             pta_adapter=MockE2EInfrastructure.MockPTAAdapter(),
             notary_keys=["mock_key_1"],
@@ -110,41 +108,42 @@ class VmComputeTestSuite:
             "signature": "valid_mock_signature",
             "deposit_usdc": deposit
         }
-        raw_bytes = (json.dumps(initial_payload) + "\n").encode('utf-8')
         
-        await pipeline._process_read(raw_bytes, 0)
+        await pipeline._process_read((json.dumps(initial_payload) + "\n").encode('utf-8'), 0)
         
         try:
-            final_response = await asyncio.wait_for(sink.future, timeout=2.0)
-            is_success = final_response.get("status") == "completed"
+            res = await asyncio.wait_for(sink.future, timeout=2.0)
+            is_success = res.get("status") == "completed"
+            
             if not is_success and not expected_success:
-                self.log.info(f"✅ 방어 로직 정상 작동 (응답: {final_response})")
+                reason = res.get('reason', 'Unknown Exception')
+                self.log.info(f"  └ ✅ Defense logic triggered successfully (Reason: {reason})")
         except asyncio.TimeoutError:
-            self.log.error("💥 Pipeline 응답 타임아웃")
+            self.log.error("  └ 💥 Pipeline response timeout")
             is_success = False
 
         self.results.append(TestResult(
-            target="VM_BILLING_PIPELINE",
+            target="VM_COMPUTE",
             scenario=title,
             success=is_success,
             expected_success=expected_success
         ))
 
     async def execute(self) -> List[TestResult]:
-        self.log.info("\n[CLI] 🏃‍♂️ Initiating Pipeline-driven Cross-VM DePIN Tests")
+        self.log.info("🏃‍♂️ Initiating Pipeline-driven Cross-VM Compute Tests")
         await self.run_scenario("1. Golden Path Compute (3 Agents)", agents=3, deposit=100, expected_success=True)
         await self.run_scenario("2. Negative Balance Halted by FSM", agents=3, deposit=0, expected_success=False)
-        await self.run_scenario("3. Invalid EIP-712 Signature (Blocked at Edge)", agents=1, deposit=100, expected_success=False, chaos_mode="INVALID_SIGNATURE")
+        await self.run_scenario("3. Invalid EIP-712 Signature", agents=1, deposit=100, expected_success=False, chaos_mode="INVALID_SIGNATURE")
         return self.results
 
 
-class SettlementTestSuite:
+class TransactionClearingSuite:
     def __init__(self):
-        self.log = get_emitter("e2e.defin.settlement")
+        self.log = get_emitter("e2e.clearing.tx")
         self.results: List[TestResult] = []
 
     async def run_scenario(self, title: str, expected_success: bool, chaos_mode: str = "NORMAL"):
-        self.log.info(f"\n▶️ [WALLET DOMAIN] Scenario: {title} (Chaos: {chaos_mode})")
+        self.log.info(f"▶ [Transaction] {title} (Chaos: {chaos_mode})")
         
         pipeline = TransactionPipelineFactory.build(
             dvm_adapter=MockE2EInfrastructure.E2EDvmInterpreterAdapter(),
@@ -154,8 +153,8 @@ class SettlementTestSuite:
         pipeline.handlers.insert(0, sink) 
         
         clearing_node = NodeIdentity()
-        
         target_contract_address = "0x0000000000000000000000000000000000000000"
+        
         raw_payload = {
             "action": "DEFERRED_CHARGE",
             "caller": clearing_node.evm_address,
@@ -170,67 +169,70 @@ class SettlementTestSuite:
         try:
             res = await asyncio.wait_for(sink.future, timeout=2.0)
             is_success = res.get("status") == "completed"
+            
             if not is_success and not expected_success:
-                self.log.info(f"✅ 방어 로직 정상 작동 (응답: {res})")
-        except:
+                reason = res.get('reason', 'Unknown Exception')
+                self.log.info(f"  └ ✅ Defense logic triggered successfully (Reason: {reason})")
+        except asyncio.TimeoutError:
+            self.log.error("  └ 💥 Pipeline response timeout")
             is_success = False
 
         self.results.append(TestResult(
-            target="SETTLEMENT_PIPELINE",
+            target="TX_CLEARING",
             scenario=title,
             success=is_success,
             expected_success=expected_success
         ))
 
     async def execute(self) -> List[TestResult]:
-        self.log.info("\n[CLI] 🏃‍♂️ Initiating Pipeline-driven Settlement Sequences...")
+        self.log.info("🏃‍♂️ Initiating Pipeline-driven Transaction Clearing Tests")
         await self.run_scenario("1. Standard Deferred Charge", expected_success=True)
         await self.run_scenario("2. State Reversion (Insufficient Allowance)", expected_success=False, chaos_mode="FORCE_INSUFFICIENT_ALLOWANCE")
         await self.run_scenario("3. VM Halt (Corrupted Calldata)", expected_success=False, chaos_mode="CORRUPT_CALLDATA")
         return self.results
 
 
-class MasterDefinSuite:
+class MasterClearingSuite:
     def __init__(self):
         self.log = log
         self.all_results: List[TestResult] = []
 
     def _print_report(self):
-        self.log.info("\n" + "="*90)
-        self.log.info("📊 [DPHI E2E INTEGRATION REPORT: PIPELINE ARCHITECTURE]")
-        self.log.info("="*90)
+        self.log.info("=" * 80)
+        self.log.info("📊 [CLEARING PIPELINE] E2E INTEGRATION REPORT")
+        self.log.info("-" * 80)
         
         all_passed = True
         for idx, res in enumerate(self.all_results, 1):
-            status_icon = "✅" if res.passed else "❌"
-            status_text = "PASSED" if res.passed else "FAILED"
+            status = "✅ PASS" if res.passed else "❌ FAIL"
             if not res.passed: all_passed = False
             
-            target_label = f"[{res.target}]".ljust(25)
-            self.log.info(f"{status_icon} {idx:02d}. {target_label} {res.scenario.ljust(50)} | Result: {status_text}")
+            target_label = f"[{res.target}]".ljust(15)
+            self.log.info(f"{idx:02d}. {status} | {target_label} | {res.scenario}")
             
-        self.log.info("-" * 90)
+        self.log.info("-" * 80)
         if all_passed:
-            self.log.info("🎉 ALL PIPELINE & FSM SCENARIOS EXECUTED SUCCESSFULLY.")
+            self.log.info("🎉 ALL CLEARING PIPELINE & FSM SCENARIOS EXECUTED SUCCESSFULLY.")
         else:
             self.log.critical("💥 E2E PIPELINE FAILED. Inspect structural logs for deviations.")
-        self.log.info("="*90 + "\n")
+        self.log.info("=" * 80)
 
     async def execute(self):
-        self.log.info("\n" + "="*90)
+        self.log.info("=" * 80)
         self.log.info("🧪 [MASTER SUITE] Commencing Decoupled E2E Integration Tests")
-        self.log.info("="*90)
+        self.log.info("=" * 80)
         
         compute_suite = VmComputeTestSuite()
         self.all_results.extend(await compute_suite.execute())
 
-        settlement_suite = SettlementTestSuite()
-        self.all_results.extend(await settlement_suite.execute())
+        tx_suite = TransactionClearingSuite()
+        self.all_results.extend(await tx_suite.execute())
 
         self._print_report()
 
+
 def main(args_list: list[str] = None):
-    app = MasterDefinSuite()
+    app = MasterClearingSuite()
     PhaseReactor.ignite(main_coro_func=app.execute)
 
 if __name__ == "__main__":

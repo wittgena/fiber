@@ -12,7 +12,7 @@ import fiber.dev.e2e.dphi.scene as scene_module
 from xphi.kernel.space.topos.tunnel.flare import FlareTunnelFactory
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
-from xphi.watcher.plane.phase.flare import FlareController
+from xphi.watcher.plane.infra.flare import FlareController
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.plane.flare")

@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import os
 import socket
+import sys
 import time
 import uuid
 from typing import List, Tuple, Optional, Any, Dict
@@ -23,12 +24,7 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.llm.trace")
-tracer_log = get_emitter("plugin.tracer")  # ✨ 트레이서 전용 시각화 로거
-
-
-# =====================================================================
-# [PLUGINS] 모의 인터셉터 및 트레이서 정의
-# =====================================================================
+tracer_log = get_emitter("plugin.tracer")
 
 class DebugTracer(BaseLLMTracer):
     """[Slot: PRE_OBSERVER] 실전형 비동기 방출 트레이서 (상세 시각화 로깅 지원)"""
@@ -54,13 +50,32 @@ class DebugTracer(BaseLLMTracer):
     async def on_llm_end(self, meta: ExecutionMetadata, response: Any, duration_ms: float):
         self.ended = True
         self.duration = duration_ms
-        usage = getattr(response, "usage", None)
-        total_tokens = getattr(usage, "total_tokens", "N/A") if usage else "N/A"
+        
+        # [수정 1] dict 및 object(Pydantic) 타입 모두 안전하게 처리
+        if isinstance(response, dict):
+            usage = response.get("usage", {})
+            total_tokens = usage.get("total_tokens", "N/A") if usage else "N/A"
+            choices = response.get("choices", [])
+        else:
+            usage = getattr(response, "usage", None)
+            total_tokens = getattr(usage, "total_tokens", "N/A") if usage else "N/A"
+            choices = getattr(response, "choices", [])
         
         # 첫 번째 선택지(Choice)의 결과물 일부 노출 (스트리밍 방어 처리)
         content_preview = "[Streaming Content or Empty]"
-        if hasattr(response, "choices") and len(response.choices) > 0:
-            content_preview = str(response.choices[0].message.content)[:100].replace('\n', ' ') + "..."
+        if choices and len(choices) > 0:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                content = first_choice.get("message", {}).get("content", "")
+            else:
+                msg_obj = getattr(first_choice, "message", None)
+                if isinstance(msg_obj, dict):
+                    content = msg_obj.get("content", "")
+                else:
+                    content = getattr(msg_obj, "content", "") if msg_obj else ""
+            
+            if content:
+                content_preview = str(content)[:100].replace('\n', ' ') + "..."
 
         tracer_log.info(
             f"\n[✅ LLM CALL COMPLETED] \n"
@@ -353,8 +368,9 @@ class LlmTraceApplication:
             await self.workflow.execute()
             await workflow_task
 
+            # [수정 2] raise RuntimeError 방지 -> Graceful Shutdown 처리
             if self.workflow.fail_count > 0:
-                raise RuntimeError(f"Workflow finished with {self.workflow.fail_count} failures.")
+                log.error(f"🚨 Workflow finished with {self.workflow.fail_count} failures.")
 
     async def _teardown_hook(self):
         if self.workflow:
@@ -367,6 +383,10 @@ class LlmTraceApplication:
             main_coro_func=self._startup_hook,
             teardown_hook=self._teardown_hook
         )
+        
+        # 비동기 루프 종료 후 실패가 있었다면 프로세스 종료 코드(exit 1) 반환
+        if self.workflow and self.workflow.fail_count > 0:
+            sys.exit(1)
 
 
 def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:

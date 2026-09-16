@@ -35,6 +35,15 @@ When an array of interceptors is passed to the entry point, the UX Facade extrac
  └────────────────────────────────────────────────────┘
 ```
 
+### Pipeline Security
+This Netty-style duplex architecture inherently defends against modern gateway vulnerabilities (such as payload injections and observability bypasses) across three critical chokepoints:
+
+* Entry (Translator): Strict Pydantic normalization drops unverified/malformed payloads instantly, radically reducing the attack surface.
+
+* Middle (Un-bypassable Slots): Data and error flows are decoupled. If a Guardrail (POST_TRANSLATE) ruptures the pipeline due to a policy violation, the exception deterministically flows back up to the Tracer (PRE_OBSERVER), guaranteeing zero blind spots in audit logs.
+
+* Exit (Fuel Trap): A hard, network-level socket termination mathematically prevents malicious agents from causing infinite streaming loops and billing runaways.
+
 ---
 
 ## 2. Interceptor Specifications by Slot

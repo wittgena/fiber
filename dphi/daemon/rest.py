@@ -17,7 +17,7 @@ from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.contract.server import SecureMCPServer
+from phase.contract.server import SecureMCPServer
 from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import KernelLedger
 

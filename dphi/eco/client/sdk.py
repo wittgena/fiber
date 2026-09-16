@@ -15,7 +15,7 @@ from xphi.arch.model.edge.receipt import (
     LogRecord,
     KeyValue
 )
-from xphi.arch.model.dphi.receptor import EdgeHeader
+from xphi.arch.model.edge.receptor import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for DPHI Gateway."""

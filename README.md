@@ -126,6 +126,8 @@ response = await acompletion(
 )
 ```
 
+* Upcoming Milestone: 3-Point Record & Replay: Captures exact pipeline states across Entry, Translator, and Exit slots. This will enable zero-cost, deterministic CI/CD and local time-travel debugging by replaying LLM interactions without physical network calls.
+
 ---
 
 ## 2. Installation & Infra Provisioning
@@ -166,8 +168,8 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
-* 🔗 **[workflow.wasm.log](./phase/abc/log/workflow.wasm.20260825.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), Distributed Execution Determinism recovery, Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...)
+* 🔗 **[dphi.wasm.log](./phase/abc/log/dphi/wasm.entry.20260916.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), Distributed Execution Determinism recovery, Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...)
 * 🔗 **[workflow.flare.log](./phase/abc/log/plane/e2e.plane.flare.20260911.log):** Validates V8 isolation Sandboxing within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
-* 🔗 **[workflow.settlement.log](./phase/abc/log/workflow.settlement.20260825.log):** Validates REVM pre-validation of smart contract state transitions and rollbacks.
-* 🔗 **[e2e.edge.sandbox.log](./phase/abc/log/edge/e2e.edge.sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience
-* 🔗 **[e2e.llm.compat.log](./phase/abc/log/llm/compat.20260912.log):** Validates the LLM governance pipeline, confirming physical Fuel Trap terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* 🔗 **[dphi.clearing.log](./phase/abc/log/dphi/clearing.20260916.log):** Validates the WASM-based Clearing FSM and transaction pipeline, confirming deterministic edge defenses against invalid EIP-712 signatures, zero balances, and corrupted calldata via chaos injection.
+* 🔗 **[edge.sandbox.log](./phase/abc/log/edge/sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience
+* 🔗 **[llm.compat.log](./phase/abc/log/edge/llm/compat.20260913.log):** Validates the LLM governance pipeline, confirming physical Fuel Trap terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.

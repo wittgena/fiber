@@ -18,7 +18,7 @@
 
 * **`edge.llm` (Zero-Trust LLM Gateway):** 산업 표준 API(OpenAI 규격)를 지원하는 라우터이다. LLM 요청을 WASM 커널의 연산 의도(Compute Intent)와 결속시킨다. 토큰 소모량을 내부 연산 단위(`Fuel`)로 변환하며, 예산 초과 감지 시 커넥션을 파이프라인 레벨에서 차단(Kill-switch)한다.
 * **`dvm.wasm` (Deterministic WASM Sandbox):** 외부 런타임 및 컨테이너 의존성이 배제된 네이티브 WASM 격리 환경이다. `max_fuel` 파라미터를 통해 명령어를 계량하며, 메모리 경계 침범이나 무한 루프 시 커널 트랩(Trap) 및 종료를 트리거한다. I/O가 격리되어 상태 발산율(State divergence rate) 0.000%를 보장한다.
-* **PTA Billing Adapter:** 중앙화된 락(Lock) 없이 동시성 상태 전환을 관리하고 병렬 API 요청의 미사용 잔고를 추적한다. Ed25519 서명 및 PTA 포인터 검증을 `< 150 µs` 내에 수행한다.
+* **PTA Billing Adapter:** 중앙화된 락(Lock) 없이 동시성 상태 전환을 관리하고 병렬 API 요청의 미사용 잔고를 추적한다. Ed25519 서명 및 PTA 포인터 검증을 `< 1ms` 내에 수행한다.
 * **Dynamic Metering Engine:** 외부 컴퓨팅 백엔드의 응답 메트릭을 인터셉트하여 실시간 PTA 차감을 실행한다. LLM 추론 토큰과 샌드박스 연산 사이클을 단일 `Fuel` 단위로 통합 처리한다.
 * **Merkle Rollup Compressor:** 마이크로 과금 해시 데이터를 단일 캐노니컬 루트 해시(`canonical_hash`)로 병합하여 암호학적 증명인 `AuditReceipt`를 발행한다.
 
@@ -36,28 +36,27 @@
 * **Step 4. State Collapse & Topological Sealing:** 세션 종료 시 잔고를 병합하여 다중 서명 기반 `AuditReceipt`를 발행한다. LLM 모드의 경우, API 응답 JSON의 `system_fingerprint` 및 `usage` 객체 내에 감사 해시를 주입(Topological Sealing)하여 반환한다.
 * **Step 5. Agnostic Egress:** 클라이언트에게 API 응답을 반환하는 동시에 롤업 데이터를 Egress Adapter로 비동기 전송한다.
 
-## 5. Egress Adapter 스펙 매트릭스 (Agnostic Egress Matrix)
+## 5. 목표 성능 지표 (Target Performance Metrics)
 
-* **`adapter.egress.rdbms`:** PostgreSQL, Oracle 등 관계형 DB를 지원하며, Web2 기반 SaaS의 월별 인보이싱 처리를 위한 롤업 해시를 저장한다.
-* **`adapter.egress.vault`:** 프라이빗 볼트(Private Vault) 스토리지를 지원하며, EU AI Act 등 법적 감사(Audit) 목적으로 증명 데이터를 비공개 보관한다.
-* **`adapter.egress.da`:** Celestia, EigenDA를 지원하며, 분산 네트워크(Web3/DePIN) 환경을 위한 퍼블릭 데이터 가용성(DA)을 확보한다.
-* **`adapter.egress.evm`:** Ethereum, Base, Arbitrum 등 EVM 체인을 지원하며, 확정 부채에 대한 스마트 컨트랙트 정산을 위해 영수증을 `calldata` 형식으로 변환 및 비동기 전송한다.
+본 지표는 DPHI의 Lock-free 메모리 아키텍처와 WASM AOT(Ahead-of-Time) 컴파일 최적화가 적용된 상태를 기준으로 하며, 컴퓨팅 최적화 노드(Compute-optimized Node) 환경에서의 p99(상위 99%) 타겟을 정의합니다.
 
-## 6. 목표 성능 지표 (Target Performance Metrics)
+* **WASM 인스턴스 콜드 부트 (Instantiation): `< 1ms`**
+  * AOT 컴파일을 통해 네이티브 기계어로 사전 번역된 모듈을 메모리에 적재합니다. OS 레벨의 컨테이너(수백 ms)와 비교할 수 없는 마이크로초 단위의 샌드박스 프로비저닝을 보장합니다.
+* **인메모리 상계 및 롤업 (Netting & Merkle Emission): `< 1ms`**
+  * 중앙화된 DB 락(Lock)을 배제한 PTA 알고리즘을 통해, 고주파 마이크로 과금 차감 및 머클 트리 해시 갱신을 순수 메모리 대역폭 속도로 처리합니다.
+* **프록시 체류 시간 (Pass-through Latency): `< 1 ms`**
+  * Zero-copy I/O 및 비동기 네트워크 스택(e.g., io_uring/epoll)을 활용하여, HTTP 파싱 및 라우팅 오버헤드를 1ms 이내로 통제합니다.
+* **암호학적 연산 오버헤드 (Cryptographic Overhead): `< 1 ms`**
+  * SIMD 가속을 활용한 페이로드 정규화/해싱 및 Ed25519 다중 서명 검증을 엣지(Edge)에서 즉시 처리하여 외부 인증 서버 통신 병목을 제거합니다.
+* **샌드박스 강제 종료 지연 (Kinetic Trap Latency): `< 1ms`**
+  * 연산 예산(Fuel) 고갈 또는 메모리 경계 침범 시 하드웨어 트랩(SIGSEGV)을 활용하여 즉각적으로 WASM 컨텍스트를 파괴하고 자원을 회수합니다.
+* **코어 처리량 (Throughput): `30,000+ TPS` (초기 벤치마크 기준)**
+  * 원장 영속성(Persistence)과 암호학적 롤업을 Egress 큐로 완전 분리(Decoupling)하여, 단일 컴퓨팅 노드에서도 선형적인 성능 확장을 통해 초당 수만 건의 결제/라우팅 트랜잭션을 처리합니다.
 
-* **초기화 지연 시간 (Instantiation):** 콜드 부트 지연 시간 `< 500 µs`.
-* **라우팅 지연 시간 (Pass-through Latency):** 표준 API 및 LLM 프록시 라우팅 오버헤드 `< 500 µs`.
-* **강제 종료 지연 (Kinetic Trap Latency):** 메모리 경계 침범 또는 예산 초과 감지 시 스트림 파괴 및 커널 종료 완료 타임 `< 100 µs`.
-* **암호학적 오버헤드 (Cryptographic Overhead):** 100KB 페이로드 정규화 및 해싱 연산 `< 200 µs`, 다중 서명 합의 검증 `< 150 µs`.
-* **머클 롤업 연산 (Merkle Emission):** 머클 경로 방출 완료 타임 `< 500 µs`.
-* **상계 지연 시간 (Netting Latency):** 상태 얽힘(Entanglement) 및 PTA 업데이트 연산당 `< 1 ms`.
-* **코어 처리량 (Throughput):** 단일 노드 기준 `100,000+ TPS` 달성.
-
-## 7. 청산 엔진 특화 기능 스펙 (Settlement Engine-Specific Features)
+## 6. 청산 엔진 특화 기능 스펙 (Settlement Engine-Specific Features)
 
 * **크레딧 초기화 (PTA Bootstrap):**
 * 생명주기 시작 전, 클라이언트의 선결제 자산(법정화폐 또는 암호화폐)을 시스템 내 초기 PTA 상태 포인터로 주입(Inject)하여 고주파 결제 대기 상태를 구성한다.
-
 
 * **마이너스 PTA 및 지연 결제 (Overdraft & Deferred Billing):**
 * 사전에 정의된 기업 화이트리스트 정책에 따라 신용 한도 초과(마이너스 잔액) 상태의 PTA 전환을 허용한다.
@@ -67,7 +66,6 @@
 * **외부 응답 헤더 기반 동적 과금 (Standard Header Parsing):**
 * 외부 백엔드 서버가 응답 헤더에 표준 사용량 규격(예: `X-Dphi-Consume-Fuel: 500`)을 명시하여 반환할 경우, 동적 계량 엔진이 이를 파싱하여 인메모리 차감을 수행한다.
 * 해당 인터페이스를 통해 단일 차감 기준이 아닌 다차원 가격 정책 알고리즘을 시스템에 동적으로 적용할 수 있다.
-
 
 * **O(log N) 기반 머클 트리 검증 (Merkle Tree Aggregation):**
 * 롤업 압축 과정에서 개별 마이크로 과금 해시를 이진 트리(Binary Tree) 형태로 집계한다.

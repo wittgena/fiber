@@ -17,7 +17,7 @@ from xphi.state.anchor.consensus import KernelLedger, ToposBlob
 from xphi.state.phase.channel import DuplexChannel, ChannelContext, ChannelPipeline
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 
-log = get_emitter("pipeline.defin")
+log = get_emitter("transaction.pipeline")
 
 
 # =====================================================================
@@ -25,7 +25,7 @@ log = get_emitter("pipeline.defin")
 # =====================================================================
 
 class JsonMessageCodec(DuplexChannel):
-    """Raw Bytes <-> JSON Dictionary 양방향 직렬화 (스트림 단편화 대응)"""
+    """Bi-directional raw bytes <-> JSON serialization (handles stream fragmentation)."""
     def __init__(self):
         self._buffer = bytearray()
 
@@ -52,7 +52,7 @@ class JsonMessageCodec(DuplexChannel):
             await ctx.fire_write(msg)
 
 class WalletChaosInjector(DuplexChannel):
-    """테스트 및 검증을 위한 공통 Chaos 주입기"""
+    """Common Chaos injector for E2E testing and fault validation."""
     def __init__(self, mode: str = "NORMAL"):
         self.mode = mode
 
@@ -61,11 +61,11 @@ class WalletChaosInjector(DuplexChannel):
             return await ctx.fire_channel_read(msg)
 
         if self.mode == "INVALID_SIGNATURE":
-            log.warning("👾 [Chaos] EIP-712 서명 무효화 주입")
+            log.warning("👾 [Chaos] Injecting invalid EIP-712 signature.")
             msg["signature"] = None
 
         elif self.mode == "FORCE_INSUFFICIENT_ALLOWANCE" and "active_snapshot" in msg:
-            log.warning("👾 [Chaos] 스토리지 스냅샷 변조: Allowance를 강제로 0으로 덮어씁니다.")
+            log.warning("👾 [Chaos] Mutating storage snapshot: Forcing allowance to 0.")
             target_contract = msg.get("target_contract")
             if target_contract and target_contract in msg["active_snapshot"]:
                 if "storage" not in msg["active_snapshot"][target_contract]:
@@ -73,28 +73,28 @@ class WalletChaosInjector(DuplexChannel):
                 msg["active_snapshot"][target_contract]["storage"]["0x0000000000000000000000000000000000000000000000000000000000000000"] = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
         elif self.mode == "CORRUPT_CALLDATA" and "calldata" in msg:
-            log.warning("👾 [Chaos] 패킷 오염: 트랜잭션 Calldata 훼손 중...")
+            log.warning("👾 [Chaos] Packet corruption: Mutilating transaction calldata.")
             msg["calldata"] = "0xdeadbeef" + msg["calldata"][10:]
 
         await ctx.fire_channel_read(msg)
 
 class PipelineTailErrorHandler(DuplexChannel):
-    """파이프라인 최하단에서 처리되지 않은 모든 Inbound 예외를 포획하여 Outbound 에러 응답으로 역전송"""
+    """Catches unhandled inbound exceptions at the pipeline tail and reflects them as outbound error responses."""
     async def exception_caught(self, ctx: ChannelContext, exc: Exception):
-        log.error(f"🚨 [Pipeline] 전역 예외 포착 및 역전송: {exc}")
+        log.error(f"🚨 [Pipeline] Global exception caught & reflected: {exc}")
         await ctx.fire_write({"status": "error", "reason": str(exc)})
 
 
 # =====================================================================
-# 2. Defin Pipeline Components (WASM-Ready)
+# 2. Clearing Pipeline Components (WASM-Ready)
 # =====================================================================
 
-class DefinFlowPropagator(DuplexChannel):
+class ClearingFlowPropagator(DuplexChannel):
     async def channel_active(self, ctx: ChannelContext):
         flow_id = f"dphi_{uuid.uuid4().hex[:8]}"
         ctx.set_attr("flow_id", flow_id)
         with flow_scope(flow_id=flow_id, phase="EDGE_ACTIVE", client_id="GATEWAY"):
-            log.info("🌐 [Pipeline] 신규 Billing 세션 연결")
+            log.info("🌐 [Pipeline] New billing session established.")
             await ctx.fire_channel_active()
 
 class Eip712Authenticator(DuplexChannel):
@@ -104,10 +104,10 @@ class Eip712Authenticator(DuplexChannel):
             signature = msg.get("signature")
 
             if not signature:
-                await ctx.fire_exception_caught(PermissionError("EIP-712 서명 검증 실패. 인가되지 않은 접근입니다."))
+                await ctx.fire_exception_caught(PermissionError("EIP-712 signature validation failed. Unauthorized access."))
                 return
 
-            log.info(f"🔐 [Security] 암호학적 신원 검증 통과 (Caller: {caller_evm[:10]}...)")
+            log.info(f"🔐 [Security] Cryptographic identity verified (Caller: {caller_evm[:10]}...)")
             ctx.set_attr("verified_tenant", caller_evm)
 
             safe_intent_dict = {
@@ -120,8 +120,8 @@ class Eip712Authenticator(DuplexChannel):
         else:
             await ctx.fire_channel_read(msg)
 
-class DefinInfraHandler(DuplexChannel):
-    """[OUTBOUND] 순수 Dict 포맷의 WASM 커맨드를 인프라로 구동"""
+class ClearingInfraHandler(DuplexChannel):
+    """[OUTBOUND] Executes pure Dict-formatted WASM commands against the physical infrastructure."""
     def __init__(self, broker: Any, pta_adapter: Any, notary_keys: List[str]):
         self.broker = broker
         self.pta = pta_adapter
@@ -137,7 +137,7 @@ class DefinInfraHandler(DuplexChannel):
             if cmd_type == "MintGenesisPtaCmd":
                 budget = command.get("budget", 0)
                 owner = command.get("owner", "")
-                log.info(f"⚡ [Infra] FSM 명령 수신: PTA 제네시스 발행 ({budget} Fuel)")
+                log.info(f"⚡ [Infra] FSM Command received: Mint PTA Genesis ({budget} Fuel)")
 
                 tx = PtaTransaction(
                     inputs=[], 
@@ -154,7 +154,7 @@ class DefinInfraHandler(DuplexChannel):
             elif cmd_type == "ExecuteParallelWasmCmd":
                 agents = command.get("concurrent_agents", 1)
                 budget_per_agent = command.get("budget_per_agent", 0)
-                log.info(f"⚡ [Infra] FSM 명령 수신: WASM 병렬 실행 ({agents} 노드)")
+                log.info(f"⚡ [Infra] FSM Command received: Execute parallel WASM ({agents} nodes)")
 
                 await asyncio.sleep(0.05)
                 mock_tx_hashes = [f"0x_worker_tx_{i}" for i in range(agents)]
@@ -168,14 +168,14 @@ class DefinInfraHandler(DuplexChannel):
 
             elif cmd_type == "SealSettlementCmd":
                 net_debt = command.get("net_debt", 0)
-                log.info(f"⚡ [Infra] FSM 명령 수신: L1 정산 증명 Seal (Debt: {net_debt} micro-USDC)")
+                log.info(f"⚡ [Infra] FSM Command received: Seal L1 settlement proof (Debt: {net_debt} micro-USDC)")
 
                 receipt_hash = f"0x_mock_receipt_{uuid.uuid4().hex[:8]}"
                 await ctx.fire_write({"status": "completed", "receipt": receipt_hash})
 
             elif cmd_type == "FsmHaltCmd":
                 reason = command.get("reason", "Unknown Halt Reason")
-                log.warning(f"🛑 [Infra] FSM 정지 명령 수신: {reason}")
+                log.warning(f"🛑 [Infra] FSM Halt Command received: {reason}")
                 await ctx.fire_write({"status": "error", "reason": reason})
 
             else:
@@ -184,8 +184,8 @@ class DefinInfraHandler(DuplexChannel):
         except Exception as e:
             await ctx.fire_exception_caught(e)
 
-class DefinFsmBridgeHandler(DuplexChannel):
-    """[INBOUND] Defin 인프라 이벤트를 WASM FFI에 던지고, 상태를 관리하는 브릿지"""
+class ClearingFsmBridgeHandler(DuplexChannel):
+    """[INBOUND] Routes infrastructure events to WASM FFI and manages deterministic FSM state transitions."""
     def __init__(self, wasm_gateway: GatewayWasm, concurrent_agents: int = 3):
         self.gateway = wasm_gateway
         self.concurrent_agents = concurrent_agents
@@ -195,10 +195,10 @@ class DefinFsmBridgeHandler(DuplexChannel):
             return await ctx.fire_channel_read(msg)
 
         event_payload = msg
-        log.info(f"🧠 [WASM Bridge] Defin 이벤트 수신 및 상태 전이 요청: {event_payload['event_type']}")
+        log.info(f"🧠 [WASM Bridge] Clearing event received, transitioning state: {event_payload['event_type']}")
 
-        # 1. 컨텍스트에서 FSM 상태 복구 (없으면 Rust DefinFSM 스키마에 맞춰 초기화)
-        fsm_state = ctx.get_attr("defin_fsm_state")
+        # 1. Restore FSM state from context (initialize matching Rust ClearingFSM schema if missing)
+        fsm_state = ctx.get_attr("clearing_fsm_state")
         if not fsm_state:
             fsm_state = {
                 "state": "Init",
@@ -210,9 +210,9 @@ class DefinFsmBridgeHandler(DuplexChannel):
                 "all_tx_hashes": []
             }
 
-        # 2. WASM 게이트웨이 타격 (O(1) FFI)
+        # 2. Invoke WASM Gateway (O(1) FFI)
         try:
-            receipt = self.gateway.execute_defin_fsm(
+            receipt = self.gateway.execute_clearing_fsm(
                 fsm_state=fsm_state, 
                 event=event_payload
             )
@@ -222,17 +222,16 @@ class DefinFsmBridgeHandler(DuplexChannel):
 
         if not receipt.get("success"):
             error_msg = receipt.get('revert_reason', 'Unknown WASM Error')
-            return await ctx.fire_exception_caught(RuntimeError(f"WASM Defin Execution Reverted: {error_msg}"))
+            return await ctx.fire_exception_caught(RuntimeError(f"WASM Clearing Execution Reverted: {error_msg}"))
 
-        # 3. 업데이트된 상태 보존
-        ctx.set_attr("defin_fsm_state", receipt.get("next_fsm_state"))
+        # 3. Preserve updated state
+        ctx.set_attr("clearing_fsm_state", receipt.get("next_fsm_state"))
         
-        # 4. 커맨드 발산
+        # 4. Emit resulting command
         command = receipt.get("command")
         if command:
-            log.info(f"🧠 [WASM Bridge] Defin 커맨드 발산: {command.get('command_type')}")
+            log.info(f"🧠 [WASM Bridge] Emitting Clearing command: {command.get('command_type')}")
             await ctx.fire_write(command)
-
 
 # =====================================================================
 # 3. Transaction Pipeline Components (WASM-Ready)
@@ -251,7 +250,7 @@ class TransactionInfraHandler(DuplexChannel):
 
         try:
             if cmd_type == "ExecuteDvmCmd":
-                log.info(f"⚡ [Infra] DVM Payload 조립 및 실행 요청 (Target: {command.get('target_contract')})")
+                log.info(f"⚡ [Infra] Assembling and executing DVM Payload (Target: {command.get('target_contract')})")
 
                 snapshot_bytes = base64.b64decode(command.get("active_snapshot", ""))
                 snapshot_dict = json.loads(snapshot_bytes) if snapshot_bytes else {}
@@ -299,7 +298,7 @@ class TransactionInfraHandler(DuplexChannel):
                 )
 
                 sealed_hash = self.ledger.save_transition(blob)
-                log.info(f"✅ [Infra] L2 원장 기록 완료. Rollup Hash: 0x{sealed_hash[:16]}...")
+                log.info(f"✅ [Infra] L2 Ledger sealed. Rollup Hash: 0x{sealed_hash[:16]}...")
 
                 await ctx.fire_write({
                     "status": "completed", 
@@ -346,7 +345,7 @@ class TransactionBridgeHandler(DuplexChannel):
         else:
             return await ctx.fire_channel_read(msg)
 
-        log.info(f"🧠 [WASM Bridge] Transaction 이벤트 수신 및 상태 전이 요청: {event_payload['event_type']}")
+        log.info(f"🧠 [WASM Bridge] Transaction event received, transitioning state: {event_payload['event_type']}")
 
         fsm_state = ctx.get_attr("transaction_fsm_state")
         if not fsm_state:
@@ -375,7 +374,7 @@ class TransactionBridgeHandler(DuplexChannel):
 
         command = receipt.get("command")
         if command:
-            log.info(f"🧠 [WASM Bridge] Transaction 커맨드 발산: {command.get('command_type')}")
+            log.info(f"🧠 [WASM Bridge] Emitting Transaction command: {command.get('command_type')}")
             await ctx.fire_write(command)
 
 
@@ -383,7 +382,7 @@ class TransactionBridgeHandler(DuplexChannel):
 # 4. Pipeline Factories
 # =====================================================================
 
-class DefinPipelineFactory:
+class ClearingPipelineFactory:
     @classmethod
     def build(cls, 
               broker: Any, 
@@ -394,17 +393,17 @@ class DefinPipelineFactory:
 
         pipeline = ChannelPipeline()
         pipeline.add_last(JsonMessageCodec())
-        pipeline.add_last(DefinFlowPropagator())
+        pipeline.add_last(ClearingFlowPropagator())
 
         if chaos_mode != "NORMAL":
             pipeline.add_last(WalletChaosInjector(mode=chaos_mode))
 
         pipeline.add_last(Eip712Authenticator())
-        pipeline.add_last(DefinInfraHandler(broker, pta_adapter, notary_keys))
+        pipeline.add_last(ClearingInfraHandler(broker, pta_adapter, notary_keys))
         
-        # [NEW] WASM 런타임 인스턴스를 Defin 브릿지에 주입
+        # Inject WASM runtime instance into the bridge
         wasm_gateway = GatewayWasm()
-        pipeline.add_last(DefinFsmBridgeHandler(
+        pipeline.add_last(ClearingFsmBridgeHandler(
             wasm_gateway=wasm_gateway, 
             concurrent_agents=concurrent_agents
         ))
@@ -427,7 +426,7 @@ class TransactionPipelineFactory:
             ledger=KernelLedger()
         ))
 
-        # WASM 런타임 인스턴스를 Transaction 브릿지에 주입
+        # Inject WASM runtime instance into the bridge
         wasm_gateway = GatewayWasm()
         pipeline.add_last(TransactionBridgeHandler(wasm_gateway=wasm_gateway))
         pipeline.add_last(PipelineTailErrorHandler())
