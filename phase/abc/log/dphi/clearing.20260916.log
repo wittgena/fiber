@@ -1,0 +1,83 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.dphi.clearing
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 25 aliases.
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-38221
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: ================================================================================
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: 🧪 [MASTER SUITE] Commencing Decoupled E2E Integration Tests
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: ================================================================================
+ LOG | SYSTEM | INFO  |  e2e.clearing.compute: 🏃‍♂️ Initiating Pipeline-driven Cross-VM Compute Tests
+ LOG | SYSTEM | INFO  |  e2e.clearing.compute: ▶ [Compute] 1. Golden Path Compute (3 Agents) (Chaos: NORMAL)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🔐 [Security] Cryptographic identity verified (Caller: 0xb6e12d1c...)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🧠 [WASM Bridge] Clearing event received, transitioning state: FsmStartIntent
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'clearing_fsm' (0.32 KB)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ✅ [WASM Gateway] Execution successful: 'clearing_fsm' (0.51 ms)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🧠 [WASM Bridge] Emitting Clearing command: MintGenesisPtaCmd
+ LOG | SYSTEM | INFO  |  transaction.pipeline: ⚡ [Infra] FSM Command received: Mint PTA Genesis (100000000 Fuel)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🧠 [WASM Bridge] Clearing event received, transitioning state: PtaAnchoredEvent
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'clearing_fsm' (0.31 KB)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ✅ [WASM Gateway] Execution successful: 'clearing_fsm' (0.10 ms)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🧠 [WASM Bridge] Emitting Clearing command: ExecuteParallelWasmCmd
+ LOG | SYSTEM | INFO  |  transaction.pipeline: ⚡ [Infra] FSM Command received: Execute parallel WASM (3 nodes)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🧠 [WASM Bridge] Clearing event received, transitioning state: WasmExecutedEvent
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'clearing_fsm' (0.43 KB)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ✅ [WASM Gateway] Execution successful: 'clearing_fsm' (0.21 ms)
+ LOG | SYSTEM | INFO  |  transaction.pipeline: 🧠 [WASM Bridge] Emitting Clearing command: SealSettlementCmd
+ LOG | SYSTEM | INFO  |  transaction.pipeline: ⚡ [Infra] FSM Command received: Seal L1 settlement proof (Debt: 50001 micro-USDC)
+ LOG | SYSTEM | INFO  |  e2e.clearing.compute: ▶ [Compute] 2. Negative Balance Halted by FSM (Chaos: NORMAL)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] transaction.pipeline: 🔐 [Security] Cryptographic identity verified (Caller: 0x2c1c1a90...)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] transaction.pipeline: 🧠 [WASM Bridge] Clearing event received, transitioning state: FsmStartIntent
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'clearing_fsm' (0.32 KB)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ✅ [WASM Gateway] Execution successful: 'clearing_fsm' (0.26 ms)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] transaction.pipeline: 🧠 [WASM Bridge] Emitting Clearing command: FsmHaltCmd
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:1.6] transaction.pipeline: 🛑 [Infra] FSM Halt Command received: Initial deposit must be greater than 0
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.clearing.compute'
+ LOG | SYSTEM | INFO  |  e2e.clearing.compute:   └ ✅ Defense logic triggered successfully (Reason: Initial deposit must be greater than 0)
+ LOG | SYSTEM | INFO  |  e2e.clearing.compute: ▶ [Compute] 3. Invalid EIP-712 Signature (Chaos: INVALID_SIGNATURE)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 1.70) Den: 7.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.clearing.compute'
+ LOG | SYSTEM | INFO  |  e2e.clearing.compute:   └ ✅ Defense logic triggered successfully (Reason: EIP-712 signature validation failed. Unauthorized access.)
+ LOG | SYSTEM | INFO  |  e2e.clearing.tx: 🏃‍♂️ Initiating Pipeline-driven Transaction Clearing Tests
+ LOG | SYSTEM | INFO  |  e2e.clearing.tx: ▶ [Transaction] 1. Standard Deferred Charge (Chaos: NORMAL)
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 1.93) Den: 8.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.gateway'
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'transaction_fsm' (0.46 KB)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ✅ [WASM Gateway] Execution successful: 'transaction_fsm' (0.30 ms)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 2.05) Den: 9.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.gateway'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] wasm.gateway: ⚡ [WASM Gateway] Invoking module 'transaction_fsm' (0.34 KB)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] wasm.gateway: ✅ [WASM Gateway] Execution successful: 'transaction_fsm' (0.11 ms)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 2.39) Den: 10.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.clearing.tx'
+ LOG | SYSTEM | INFO  |  e2e.clearing.tx: ▶ [Transaction] 2. State Reversion (Insufficient Allowance) (Chaos: FORCE_INSUFFICIENT_ALLOWANCE)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 2.73) Den: 12.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.gateway'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] wasm.gateway: ⚡ [WASM Gateway] Invoking module 'transaction_fsm' (0.66 KB)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:wasm.gateway' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] wasm.gateway: ✅ [WASM Gateway] Execution successful: 'transaction_fsm' (0.26 ms)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.clearing.tx'
+ LOG | SYSTEM | INFO  |  e2e.clearing.tx:   └ ✅ Defense logic triggered successfully (Reason: REVM Execution Reverted: ERC20: insufficient allowance)
+ LOG | SYSTEM | INFO  |  e2e.clearing.tx: ▶ [Transaction] 3. VM Halt (Corrupted Calldata) (Chaos: CORRUPT_CALLDATA)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:transaction.pipeline' (Acc: 3.41) Den: 15.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.clearing.tx'
+ LOG | SYSTEM | INFO  |  e2e.clearing.tx:   └ ✅ Defense logic triggered successfully (Reason: REVM Execution Reverted: Invalid Opcode)
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: ================================================================================
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: 📊 [CLEARING PIPELINE] E2E INTEGRATION REPORT
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: --------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: 01. ✅ PASS | [VM_COMPUTE]    | 1. Golden Path Compute (3 Agents)
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: 02. ✅ PASS | [VM_COMPUTE]    | 2. Negative Balance Halted by FSM
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: 03. ✅ PASS | [VM_COMPUTE]    | 3. Invalid EIP-712 Signature
+ LOG | SYSTEM | INFO  |  e2e.dphi.clearing: 04. ✅ PASS | [TX_CLEARING]   | 1. Standard Deferred Charge
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] e2e.dphi.clearing: 05. ✅ PASS | [TX_CLEARING]   | 2. State Reversion (Insufficient Allowance)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] e2e.dphi.clearing: 06. ✅ PASS | [TX_CLEARING]   | 3. VM Halt (Corrupted Calldata)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] e2e.dphi.clearing: --------------------------------------------------------------------------------
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.dphi.clearing' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] e2e.dphi.clearing: 🎉 ALL CLEARING PIPELINE & FSM SCENARIOS EXECUTED SUCCESSFULLY.
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:4.0] transaction.pipeline: [transaction.pipeline] Bursting logs suppressed... (x22)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.3] wasm.gateway: [wasm.gateway] Bursting logs suppressed... (x7)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.7] e2e.dphi.clearing: [e2e.dphi.clearing] Bursting logs suppressed... (x2)
+(self) wittgena@wittgenas-MacBook-Pro self % 

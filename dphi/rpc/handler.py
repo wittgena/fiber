@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from xphi.state.anchor.nexus import AnchorProposal, StreamAppendRequest
 
 from xphi.kernel.space.sandbox.config import tier_config, fuel_config
-from xphi.arch.model.dphi.receptor import (
+from xphi.arch.model.edge.receptor import (
     EdgeState, AnchorProposalRequest, IntentValidationRequest,
     ExecuteComputeRequest, ProofGenerationRequest, TradeIngressRequest,
     EpochInitPayload, ClearingReceiptRequest

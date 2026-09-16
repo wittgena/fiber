@@ -1,16 +1,12 @@
-# fiber.llm.driver.local.engine
-## @lineage: xphi.arch.local.llm
-## @lineage: arch.local.llm
-## @lineage: ator.client.local.llm
+# fiber.phase.scope.local.engine
 import os
 import time
 import subprocess
 import requests
 import json
-
-from xphi.arch.model.dphi.resonance import BridgeEvent
 from xphi.arch.bound.event.next import uuid4
 from xphi.watcher.plane.emitter import get_emitter
+from dataclasses import dataclass
 
 log = get_emitter('local.engine')
 MODEL_HF = os.getenv("LLAMA_MODEL_HF", "ggml-org/gemma-3-1b-it-GGUF")
@@ -25,6 +21,13 @@ LLAMA_SERVER_CMD = [
     "-hf", MODEL_HF,
     "--port", str(SERVER_PORT),
 ]
+
+@dataclass
+class BridgeEvent:
+    """엔진에 상관없이 워크플로우가 수신할 공통 이벤트 규격"""
+    content: str
+    source: str = "agent"
+    event_type: str = "message"
 
 class LLMEngine:
     """

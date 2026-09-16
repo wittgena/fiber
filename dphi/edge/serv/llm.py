@@ -10,7 +10,7 @@ from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.param import ModelResponse, EmbeddingResponse
 from fiber.llm.router.stream.wrapper import StreamWrapper
 
-from xphi.arch.contract.protocol.router import ContractRouter
+from fiber.phase.contract.router import ContractRouter
 from xphi.arch.model.dphi.auth import DphiKey, DphiAction, KernelAuthPayload
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter, flow_scope

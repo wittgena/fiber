@@ -17,7 +17,7 @@ from fiber.dphi.eco.config.exchange import exchange_config
 from xphi.state.anchor.nexus import LedgerEventSchema, StreamAppendRequest
 from xphi.arch.bound.adapter.settlement import TransactionReceipt
 
-from xphi.arch.model.dphi.receptor import (
+from xphi.arch.model.edge.receptor import (
     TradeIngressRequest,
     AnchorProposalRequest,
     ParityTripletSchema

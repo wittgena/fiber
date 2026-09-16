@@ -13,7 +13,6 @@ from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import KernelLedger
 from xphi.watcher.plane.emitter import get_emitter
 
-# SDK 의존성
 from fiber.dphi.eco.client.sdk import DphiPublicClient, StrictPayloadFactory
 
 log = get_emitter("tracer.eco_egress")

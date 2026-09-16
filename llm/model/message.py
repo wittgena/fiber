@@ -51,9 +51,6 @@ class SafeAttributeObjectProxy:
         val = self.__getattr__(key)
         return default if val is None else val
 
-
-# 2. 순수 모델 확장: OpenAI 파싱 로직 주입 (어댑터 패턴)
-
 class MessageToolCall(CoreMessageToolCall):
     @classmethod
     def from_chat_tool_call(cls, tool_call: Any) -> "MessageToolCall":
