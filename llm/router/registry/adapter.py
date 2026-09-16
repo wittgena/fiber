@@ -6,7 +6,7 @@ from typing import Dict, AsyncGenerator, Generator, Any, List, Union
 
 # Adapter & Execution Imports
 from fiber.llm.router.inter.adapter import BaseProviderAdapter, GenericHTTPAdapter
-from fiber.llm.execution import CompletionContext, EmbeddingContext
+from fiber.llm.context.metadata import CompletionContext, EmbeddingContext
 
 # Router & Registry Imports
 from fiber.llm.router.registry.llm import LLMRouter, ModuleMissingError

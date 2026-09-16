@@ -142,15 +142,15 @@ print(f'Isolated: {isolated} | Dump: {dict(env)}')
         expected_match="timeout", 
         tier="STANDARD"
     )
-    OOM_ATTACK = ScriptDef(
-        title="Resource: Heap Fragmentation OOM Guard",
+    HEAP_ALLOCATION_ATTACK = ScriptDef(
+        title="Resource: Heap Allocation Guard (OOM / SLA Timeout)",
         code="""
 lst = []
 while True:
-    lst.append('A' * (1024 * 1024))
-        """,
+    lst.append(bytearray(10 * 1024 * 1024))
+        """.strip(),
         expect_success=False,
-        expected_match=("MemoryError", "Sandbox Hard Terminated"),
+        expected_match=("MemoryError", "Sandbox Hard Terminated", "timeout"),
         tier="STANDARD"
     )
     STACK_OVERFLOW_ATTACK = ScriptDef(

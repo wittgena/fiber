@@ -1,6 +1,4 @@
 # fiber.dev.e2e.dphi.eco
-## @lineage: fiber.phase.dev.e2e.dphi.eco
-## @lineage: fiber.phase.e2e.dphi.eco
 import time
 import json
 import asyncio
@@ -68,8 +66,6 @@ class EcoIntegrationWorkflow(Workflow):
 
         parity = StateAdapter.build_parity_triplet("eco_topos_1", 101, 777)
         sig_hex = self.aggregator_identity.sign(parity)
-
-        # [FIXED] 필수 메타데이터 파라미터 (parent_nexus_id, self_parent_state 등) 모두 주입
         real_payload = StateAdapter.build_seal_epoch_payload(
             parity=parity, 
             parent_nexus_id=0, self_parent_state="0x_genesis", repos={}, cached_states={},
@@ -91,7 +87,6 @@ class EcoIntegrationWorkflow(Workflow):
         await actor.pledge_to_interface(self.interface)
 
         try:
-            # 샌드박스의 NET_VIOLATION 에러가 Actuator를 뚫고 파이프라인에 정확히 도달하는지 테스트!
             await actor.notary_node.execute_swarm_task(1, 100, TestScripts.NET_VIOLATION.code, self.interface)
             return ErrorMessage("Substrate breach successful. Isolation failed!")
         except RuntimeError as e:
@@ -106,7 +101,6 @@ class EcoIntegrationWorkflow(Workflow):
         await actor.pledge_to_interface(self.interface)
 
         try:
-            # STANDARD 타임아웃 에러 전파 테스트
             await actor.notary_node.execute_swarm_task(1, 100, TestScripts.INFINITE_LOOP_ATTACK.code, self.interface, tier="STANDARD")
             return ErrorMessage("Quota Exhaustion failed to halt execution!")
         except RuntimeError as e:

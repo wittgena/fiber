@@ -23,7 +23,7 @@ from xphi.arch.model.message import (
     ThinkingBlock,
     RedactedThinkingBlock,
     ReasoningItemModel,
-    Message as CoreMessage,
+    Message as BaseMessage,
     content_to_str,
 )
 from xphi.watcher.plane.emitter import get_emitter
@@ -103,8 +103,7 @@ class TextContent(CoreTextContent):
         return handle_deprecated_model_fields(data, cls._DEPRECATED_FIELDS)
 
 
-class Message(CoreMessage):
-    # Pydantic 필드 타입을 서브클래스(어댑터) 타입으로 오버라이드
+class Message(BaseMessage):
     content: Sequence[TextContent | ImageContent] = Field(default_factory=list)
     tool_calls: list[MessageToolCall] | None = None
 

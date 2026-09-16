@@ -14,7 +14,7 @@ from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.llm.model.tier import model_tier_registry
-from fiber.llm.execution import ExecutionMetadata
+from fiber.llm.context.metadata import ExecutionMetadata
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step

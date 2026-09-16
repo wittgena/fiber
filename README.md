@@ -157,7 +157,7 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 | --- | --- | --- |
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python app.py"` |
 | **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker) and applies topology profiles. | `fiber daemon -s rest_edge` |
-| **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.compat --model gemini/gemini-3.1-flash-lite` |
+| **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.trace --model gemini/gemini-3.1-flash-lite` |
 
 > **Note on X402 Economic Scaling:** 
 > Fiber naturally scales from `Standalone` (local testing) to `Enterprise` (internal chargebacks) to `Commercial` (real financial settlement on external networks) using the exact same CLI commands. No architectural teardowns are required.

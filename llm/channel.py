@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Union
 
 # Eco & Ator Models
 from fiber.llm.param import ModelResponse
-from fiber.llm.execution import ExecutionMetadata
+from fiber.llm.context.metadata import ExecutionMetadata
 from fiber.llm.model.types.general import EmbeddingResponse
 from fiber.llm.exception.mapping import exception_type
 from fiber.llm.router.stream.wrapper import StreamWrapper

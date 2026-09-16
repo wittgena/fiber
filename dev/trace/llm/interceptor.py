@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Union, Optional
 
 from fiber.llm.pipeline import PipelineSlot
-from fiber.llm.execution import ExecutionMetadata
+from fiber.llm.context.metadata import ExecutionMetadata
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter
 

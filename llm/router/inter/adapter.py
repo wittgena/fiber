@@ -4,7 +4,7 @@ from typing import AsyncGenerator, Union
 import httpx
 
 from fiber.llm.param import ModelResponse
-from fiber.llm.execution import CompletionContext 
+from fiber.llm.context.metadata import CompletionContext 
 from fiber.dphi.eco.client.http import get_client
 
 from xphi.watcher.plane.emitter import get_emitter

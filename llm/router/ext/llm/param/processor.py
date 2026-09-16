@@ -17,7 +17,7 @@ from fiber.llm.model.info import get_features, supports_httpx_timeout, supports_
 from fiber.llm.exception.eco import UnsupportedParamsError
 from fiber.llm.model.types.openai import ValidUserMessageContentTypes
 from fiber.llm.param import ModelResponse
-from fiber.llm.execution import ExecutionMetadata, CompletionContext, EmbeddingContext
+from fiber.llm.context.metadata import ExecutionMetadata, CompletionContext, EmbeddingContext
 
 from fiber.llm.model.config import config
 from xphi.watcher.plane.emitter import get_emitter
