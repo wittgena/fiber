@@ -1,5 +1,6 @@
 # fiber.dphi.eco.notary
 import json
+import base64
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List, Protocol
@@ -52,8 +53,32 @@ class LocalMockVerifier:
 
 class AgentWallet:
     """Ed25519 기반의 실제 암호학적 지갑 (서명 및 검증용)"""
-    def __init__(self):
-        self.private_key = ed25519.Ed25519PrivateKey.generate()
+    def __init__(self, private_key: Optional[Any] = None):
+        # ✅ private_key 인자를 받아 처리할 수 있도록 수정
+        if private_key is None:
+            self.private_key = ed25519.Ed25519PrivateKey.generate()
+            self.private_key_hex = self.private_key.private_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PrivateFormat.Raw,
+                encryption_algorithm=serialization.NoEncryption()
+            ).hex()
+        elif isinstance(private_key, str):
+            # Hex 문자열로 키가 전달된 경우 파싱하여 객체 복원
+            try:
+                raw_bytes = bytes.fromhex(private_key)
+                self.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(raw_bytes)
+                self.private_key_hex = private_key
+            except ValueError:
+                raise ValueError("Invalid private key hex format")
+        else:
+            # 이미 Ed25519PrivateKey 객체인 경우
+            self.private_key = private_key
+            self.private_key_hex = self.private_key.private_bytes(
+                encoding=serialization.Encoding.Raw,
+                format=serialization.PrivateFormat.Raw,
+                encryption_algorithm=serialization.NoEncryption()
+            ).hex()
+
         self.public_key = self.private_key.public_key()
         raw_pub = self.public_key.public_bytes(
             encoding=serialization.Encoding.Raw,
