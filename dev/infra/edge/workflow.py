@@ -11,7 +11,7 @@ from fiber.dev.infra.edge.fsm import (
     RunComputePhaseCmd, RunCompliancePhaseCmd, RunSettlementPhaseCmd,
     FinishWorkflowCmd, HaltWorkflowCmd
 )
-from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.workflow.edge")

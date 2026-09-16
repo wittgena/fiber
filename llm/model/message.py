@@ -23,7 +23,7 @@ from xphi.arch.model.message import (
     ThinkingBlock,
     RedactedThinkingBlock,
     ReasoningItemModel,
-    Message as BaseMessage,
+    BaseMessage,
     content_to_str,
 )
 from xphi.watcher.plane.emitter import get_emitter

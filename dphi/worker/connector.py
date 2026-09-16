@@ -11,7 +11,7 @@ from typing import Dict, Any, Optional, Protocol
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 from fiber.dphi.worker.registry.quarantine import QuarantineRegistry
 
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("worker.connector")

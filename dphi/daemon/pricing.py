@@ -7,7 +7,7 @@ from contextlib import suppress
 from fiber.dphi.eco.client.rpc import InternalRpcClient
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.pricing")
@@ -35,10 +35,6 @@ class PricingRiskManager:
         self.MIN_PRICE_USD = 0.001 ## 하한선 (Hard Floor)
 
     async def calculate_and_verify_price(self, telemetry: Dict[str, Any]) -> float:
-        """
-        [개선] 내부 순수 RPC 망(eco.margin.calculate)을 통해 마진 연산을 수행하고, 
-        하드 코딩된 리스크 캡으로 단가를 검증합니다.
-        """
         target_id = telemetry.get("target", "unknown_worker")
         
         try:
@@ -52,7 +48,7 @@ class PricingRiskManager:
             # 3. 리스크 매니지먼트 (캡 적용)
             verified_fee = max(self.MIN_PRICE_USD, min(proposed_fee, self.MAX_PRICE_USD))
             if proposed_fee != verified_fee:
-                log.warning(f"[Risk Alert] Agent proposed unsafe fee (\({proposed_fee}) for {target_id}. Clamped to\){verified_fee}.")
+                log.warning(f"[Risk Alert] Agent proposed unsafe fee ({proposed_fee}) for {target_id}. Clamped to {verified_fee}.")
                 
             return verified_fee
             

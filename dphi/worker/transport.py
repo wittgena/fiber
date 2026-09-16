@@ -7,7 +7,7 @@ import httpx
 
 from fiber.phase.cli.network import WorkerRuntimeBootstrapper
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.topos.tunnel.surface import EchoListener, SurfaceClient
+from xphi.kernel.space.tunnel.surface import EchoListener, SurfaceClient
 
 # 통합된 모듈로 로거 네임스페이스 통일
 log = get_emitter("worker.transport")

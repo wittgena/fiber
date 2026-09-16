@@ -19,7 +19,7 @@ from fiber.llm.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
-from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

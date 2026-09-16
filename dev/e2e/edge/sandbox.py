@@ -27,7 +27,7 @@ from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInject
 from xphi.arch.dev.tracer.transport import SceneConfig, HttpFlowTracer
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import KernelLedger
 from xphi.kernel.space.bind.resolver import resolve_path
 
