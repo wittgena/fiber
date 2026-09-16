@@ -62,34 +62,3 @@ jobs:
           XPHI_ENV: "ci"
         run: |
           fiber e2e dphi.wasm.entry
-
-  build-release:
-    needs: system-e2e-test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write 
-    steps:
-      - name: 📥 Checkout Fiber
-        uses: actions/checkout@v4
-        
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: 📦 Build Deterministic Wheel
-        run: |
-          pip install hatch
-          hatch build
-          
-      - name: 📤 Upload Artifacts for Auditor
-        uses: actions/upload-artifact@v4
-        with:
-          name: fiber-release-wheel
-          path: dist/*.whl
-          
-      - name: 🚀 Publish to GitHub Releases
-        uses: softprops/action-gh-release@v1
-        with:
-          files: dist/*

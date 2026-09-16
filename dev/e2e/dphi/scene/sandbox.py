@@ -201,7 +201,7 @@ class SandboxScene(SandboxRunner):
         
         # 3. 악성 자원 소모 방어 (Cgroup Trap - STANDARD Tier 강제)
         await self._assert_script(TestScripts.INFINITE_LOOP_ATTACK)
-        await self._assert_script(TestScripts.OOM_ATTACK)
+        await self._assert_script(TestScripts.HEAP_ALLOCATION_ATTACK)
         await self._assert_script(TestScripts.STACK_OVERFLOW_ATTACK)
 
         await asyncio.sleep(3.0)

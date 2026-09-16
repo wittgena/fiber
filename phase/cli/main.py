@@ -121,12 +121,12 @@ def run_shell(
 @app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_e2e(
     ctx: typer.Context,
-    target: Annotated[str, typer.Argument(help="Target test suite (e.g., defin, eco, edge, flare, llm.compat, all)")],
+    target: Annotated[str, typer.Argument(help="Target test suite (e.g., llm.trace, edge.compliance, dphi.clearing, dphi.wasm.entry, plane.flare, all)")],
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["dphi.defin", "dphi.eco", "edge.compliance", "edge.sandbox", "plane.flare", "wasm.entry", "llm.compat"]
+    KNOWN_SUITES = ["llm.trace", "edge.compliance", "dphi.clearing", "dphi.wasm.entry", "plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] 🧪 Igniting E2E Test Suite(s): {', '.join(targets)}")
