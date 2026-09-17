@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any, Optional
 
 from fastapi import HTTPException
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("rpc.client")

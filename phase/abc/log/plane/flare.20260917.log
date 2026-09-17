@@ -1,0 +1,165 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.plane.flare
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 25 aliases.
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-88504
+ LOG | SYSTEM | INFO  |  flare.entry: 
+[PHASE 1] Initializing Cloudflare Edge Orchestrator in [DEV] mode
+ LOG | SYSTEM | INFO  |  flare.entry: [PHASE 2] Connecting to Edge Endpoint: http://127.0.0.1:8787
+ LOG | SYSTEM | INFO  |  tunnel.flare: [FlareTunnel] Initialized Duck-Typed HTTP Bridge targeting Edge: http://127.0.0.1:8787
+ LOG | SYSTEM | INFO  |  tunnel.flare: [FlareTunnelFactory] Provisioned Async Flare Tunnel: http://127.0.0.1:8787
+ LOG | SYSTEM | INFO  |  flare.entry: [PHASE 3] Handing over execution to FlareController...
+ LOG | SYSTEM | INFO  |  edge.sandbox.controller: 
+--- [START] Orchestrating Edge V8 Sandbox Environment (DEV) ---
+ LOG | SYSTEM | INFO  |  edge.sandbox.controller: 📦 Edge Microservices Provisioned: WASM Gateway Node & Native Python Engine.
+ LOG | SYSTEM | INFO  |  edge.sandbox.controller: [SYSTEM] Starting Dual V8 Isolate Workers (WASM Gateway & Python Engine)...
+ LOG | telemetry | INFO  |  auditor.v8_sandbox.wasm_gateway:   [WASM_GATEWAY] ⚡ V8 Isolate Provisioned (Port 8787 / Debug 9287).
+ LOG | telemetry | INFO  |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE] ⚡ V8 Isolate Provisioned (Port 8788 / Debug 9288).
+ LOG | SYSTEM | INFO  |  edge.sandbox.controller: ⏳ Waiting 3.0s for Cloudflare Local Registry & Pyodide stabilization...
+ LOG | TEST_EXECUTION | INFO  |  edge.sandbox.controller: 
+>>> [PHASE] Starting Edge Integration Suite: FLARE <<<
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+======================================================================
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 🚀 [START] CLOUDFLARE NATIVE UNIFIED VALIDATION PIPELINE
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: ======================================================================
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 1] Native OS-Level Isolation & Security ---
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [DPHI] (job_id: 6824e1d3-6d28-4649-810b-8f3eb52fbf93, method: invoke_wasm, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.wasm_gateway:   [WASM_GATEWAY_FAULT] [Router] ⚠️ WASM returned logical error for ID: 6824e1d3-6d28-4649-810b-8f3eb52fbf93 | Msg:Phase Collapse Failed: Drift topology malformed (json_parse_err). Root envelope rejected: unknown variant `hack_system_memory`, expected one of `execute_code`, `compute_root_fingerprint`, `evaluate_tension`, `generate_proof`, `generate_topos_id`, `generate_phase_id`, `init_epoch`, `process_evolution`, `process_topos_tick`, `inscribe_actor`, `seal_epoch`, `verify_build_lineage`, `verify_parity`, `execute_transition`, `configure_topology`, `process_field_dynamics` at line 1 column 30
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: WasmCG successfully blocked unregistered API: Phase Collapse Failed: Drift topology malformed (json_parse_err). Root envelope rejected: unknown varian
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Host Filesystem Scan (Func: execute_code)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: d761e2ac-e253-40bd-9246-82b6259ce087, method: execute, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE_FAULT] [PythonEngine] ⚠️ Execution Fault Caught: FileNotFoundError | Formatting Error Response...
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 5a39840d4f18d68f88e8b6a85b9f08bf13558989305b72b67b08147f8f158e10
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 56.00ms | Output: FileNotFoundError: [Errno 44] No such file or directory: '/etc/passwd'
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Low-level Socket Binding (Func: execute_code)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: bc2cbfe3-a5fd-4501-8224-37233e9607d3, method: execute, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE_FAULT] [PythonEngine] ⚠️ Execution Fault Caught: BlockingIOError | Formatting Error Response...
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 15.86ms | Output: BlockingIOError: [Errno 26] Operation in progress
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Host Environment Variable Leakage (Func: execute_code)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: c25629da-bca1-4c36-a69f-2f1a965f7081, method: execute, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE_FAULT] [PythonEngine] ⚠️ Execution Fault Caught: PermissionError | Formatting Error Response...
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 10.87ms | Output: PermissionError: Isolated
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Emscripten Process Restriction (Func: execute_code)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 48c8466d-1600-4479-853e-997884dc4387, method: execute, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE_FAULT] [PythonEngine] ⚠️ Execution Fault Caught: OSError | Formatting Error Response...
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 21.96ms | Output: OSError: [Errno 138] emscripten does not support processes.
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent Thread Creation (Func: execute_code)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 17f87978-5aab-4318-8224-0f1d59b797f5, method: execute, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE_FAULT] [PythonEngine] ⚠️ Execution Fault Caught: RuntimeError | Formatting Error Response...
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 13.50ms | Output: RuntimeError: can't start new thread
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Isolation: Prevent sys.exit() Engine Shutdown (Func: execute_code)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 9d912848-b089-49bd-9806-720625d43963, method: execute, timeout: 18.0s)
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.python_engine:   [PYTHON_ENGINE_FAULT] [PythonEngine] ⚠️ Execution Fault Caught: SystemExit | Formatting Error Response...
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 14.08ms | Output: SystemExit: 1
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 7f7b76d6-1ca6-4322-9a54-57e376fc5e07, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: SSRF attempt successfully intercepted.
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 2] Causality (Epoch-Tick) & Parity Validation ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:space.runner' (Acc: 1.55) Den: 7.50)
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Causality: Generate Topos Anchor ID (Func: generate_topos_id)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [DPHI] (job_id: 0e0e74b5-a08e-40a5-a70a-01e7fb5cb41b, method: invoke_wasm, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 3.54ms | Output: {"data":{"id":"93753872266297344"},"success":true}
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Parity: Validate All 3 IDs (Func: verify_parity)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [DPHI] (job_id: ac50ec5a-c75c-49e7-909c-b4874521e846, method: invoke_wasm, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 3.70ms | Output: {"data":{"is_valid":false},"success":true}
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Parity: Reject Insufficient Info (Func: verify_parity)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [DPHI] (job_id: db6318f6-fd17-4c3d-a3e1-617cba198ed0, method: invoke_wasm, timeout: 18.0s)
+[Telemetry] 🟢 System Stabilized on 'telemetry:auditor.v8_sandbox.wasm_gateway'
+ LOG | telemetry | ERROR |  auditor.v8_sandbox.wasm_gateway:   [WASM_GATEWAY_FAULT] [Router] ⚠️ WASM returned logical error for ID: db6318f6-fd17-4c3d-a3e1-617cba198ed0 | Msg:At least two identification IDs are required for parity recovery and correction
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:space.runner' (Acc: 2.12) Den: 10.00)
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 3.91ms | Output: At least two identification IDs are required for parity recovery and correction
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:scene.flare'
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 3] Computation Determinism & Byzantine Faults ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:tunnel.flare' (Acc: 1.91) Den: 9.50)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 380904c7-eb14-4724-a063-d1bf46bf8c27, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 566b77b6-f788-4bae-99c2-7dbbe906dcf6, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: PRNG sequences are perfectly identical (0.7946015362095357)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 281eb55c-374d-4e7d-86ad-41d138d9f1c6, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 1b9f884b-dbf7-4fdf-a81e-30417782611b, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 3088dce9-6abe-4b46-b9e0-48fdaadbde01, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Perfect FP Determinism achieved: 13.093669021622972
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[TEST] Byzantine Defense: Quarantine rogue signature (2-of-3 threshold) (Func: seal_epoch)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [DPHI] (job_id: f09b4db1-e5d7-4d3f-88b8-8102738293a3, method: invoke_wasm, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 7.54ms | Output: {"data":{"anchor_result":{"commit_hash":"f099fdc0738917003d8e6ed0cfaad3bb9e784cd82503b304494fa90204c36c8f","payload_json":"{\"cached_states\":{},\"par
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:scene.flare'
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 4] Cloudflare Edge Physical Boundaries ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:tunnel.flare' (Acc: 2.29) Den: 15.00)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: f6c4d6c5-7f92-4333-a7be-deec43a3f0c1, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 5ee784de-2d85-4f8d-90b5-627c5bf19652, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Edge context perfectly isolated. Warm-start bleeding neutralized.
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: 86f033f2-fe4e-4642-9d41-301c867b0a89, method: execute, timeout: 18.0s)
+HTTP Request: POST http://127.0.0.1:8787/ "HTTP/1.1 200 OK"
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: 52d2466b195091a3916ca3a27e26de2f83dbe2fb10912f4b0345d0147df5a03c
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Time Freezing active. Spectre attack neutralized.
+ LOG | TEST_EXECUTION | WARN  |  scene.flare: ⚠️ Simulating a Kinetic Trap (Timeout 5.0s). Expecting client cutoff.
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:tunnel.flare' (Acc: 2.54) Den: 18.00)
+ LOG | TEST_EXECUTION | INFO  |  tunnel.flare: [FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [PYTHON] (job_id: df521603-0904-46f5-b6c9-7f233685df8f, method: execute, timeout: 18.0s)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Broker timed out. Kinetic Trap neutralized via Timeout cutoff.
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: ⏳ Allowing Edge Thread to breathe and recover State Ledger (2.5s)...
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 
+--- [Domain 5] PTA & Epoch Merkle Sealing ---
+ LOG | TEST_EXECUTION | INFO  |  scene.flare: 📦 Assembling 15 Edge-Sealed Transactions (pta) into Merkle Tree...
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: PTA Rollup Complete. Epoch Merkle Root: 3f67833f405c2e0f...
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+=== [DONE] Scenarios Completed: 18 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  edge.sandbox.controller: 
+[SYSTEM] Verifying Epoch Merkle Root generated by Edge Suites...
+ LOG | TEST_EXECUTION | INFO  |  edge.sandbox.controller: [Telemetry] Edge Execution Proof sealed via PTA! Root Hash: 3f67833f405c2e0f83d7e4c0bf230e64fda3b6b7773160045524e103132d40df
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: 
+===========================================================================
+ LOG | SYSTEM | INFO  |  e2e.plane.flare:                🚀 CLOUDFLARE EDGE PIPELINE EXECUTION REPORT 🚀               
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: ===========================================================================
+ LOG | SYSTEM | INFO  |  flare.entry: 🟢 [SUCCESS] All Edge Test Suites (flare) PASSED.
+ LOG | SYSTEM | INFO  |  flare.entry: 🔗 Execution Canonical Hash (Sealed at Edge): 3f67833f405c2e0f83d7e4c0bf230e64fda3b6b7773160045524e103132d40df
+ LOG | SYSTEM | INFO  |  e2e.plane.flare: ===========================================================================
+
+[Reactor] 🏁 Lifecycle terminated cleanly.
+(self) wittgena@wittgenas-MacBook-Pro self % 

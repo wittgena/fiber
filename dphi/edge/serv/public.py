@@ -25,7 +25,7 @@ from fiber.phase.contract.router import ContractRouter
 from xphi.arch.model.edge.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 
-from xphi.kernel.space.topos.tunnel.subs import DistributedPubSub
+from xphi.kernel.space.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (

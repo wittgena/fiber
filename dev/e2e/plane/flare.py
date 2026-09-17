@@ -4,16 +4,19 @@ import os
 import argparse
 import importlib
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import List, Dict
 
 import fiber.dev.e2e.dphi.scene as scene_module
 
-from xphi.kernel.space.topos.tunnel.flare import FlareTunnelFactory
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
-from xphi.watcher.plane.infra.flare import FlareController
-from xphi.watcher.plane.emitter import get_emitter
+from xphi.watcher.plane.flare.tunnel import FlareTunnelFactory
+from xphi.watcher.plane.flare.controller import FlareController
+
+# [수정됨] flow_scope를 추가로 import 합니다.
+from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("e2e.plane.flare")
 MODULE_PATH = scene_module.__name__
@@ -21,7 +24,7 @@ MODULE_PATH = scene_module.__name__
 @dataclass
 class FlarePipelineConfig:
     suites_registry: Dict[str, str] = field(default_factory=lambda: {
-        "flare": f"{MODULE_PATH}.flare:FlareUnifiedScene",
+        "flare": f"{MODULE_PATH}.flare:FlareScene",
     })
     
     default_suites: List[str] = field(default_factory=lambda: [
@@ -41,23 +44,28 @@ class FlareFlow:
             self.suites = suites
         
         self.log = get_emitter("flare.entry")
+        self.log.debug(f"[FlareFlow:__init__] Initialized with mode={self.mode}, command={self.command}, suites={self.suites}, keep_workspace={self.keep_workspace}") # [LOG ADDED]
 
     def _resolve_suite_class(self, suite_name_or_path: str):
         module_path_str = self.config.suites_registry.get(suite_name_or_path, suite_name_or_path)
+        self.log.debug(f"[FlareFlow:_resolve_suite_class] Resolving suite '{suite_name_or_path}' -> '{module_path_str}'") # [LOG ADDED]
         try:
             if ":" not in module_path_str:
                 raise ValueError(f"Invalid suite format '{module_path_str}'. Expected 'module.path:ClassName'")
 
             mod_name, cls_name = module_path_str.split(":")
             module = importlib.import_module(mod_name)
-            return getattr(module, cls_name)
+            suite_cls = getattr(module, cls_name)
+            self.log.debug(f"[FlareFlow:_resolve_suite_class] Successfully loaded class {cls_name} from {mod_name}") # [LOG ADDED]
+            return suite_cls
         except Exception as e:
             self.log.error(f"[CLI] Failed to load suite '{suite_name_or_path}': {e}")
             sys.exit(1)
 
     async def test(self):
         self.log.info(f"\n[PHASE 1] Initializing Cloudflare Edge Orchestrator in [{self.mode.upper()}] mode")
-            
+        
+        self.log.debug("[FlareFlow:test] Validating and mapping requested suites...") # [LOG ADDED]
         suite_map = {}
         for suite_name in self.suites:
             if suite_name not in self.config.suites_registry:
@@ -68,24 +76,34 @@ class FlareFlow:
         if not suite_map:
             self.log.error("❌ [CLI] No valid test suites found to execute.")
             sys.exit(1)
+            
+        self.log.debug(f"[FlareFlow:test] Suite map constructed: {list(suite_map.keys())}") # [LOG ADDED]
 
         worker_name = "dphi-edge-sandbox"
         edge_url = "http://127.0.0.1:8787" if self.mode == "dev" else f"https://{worker_name}.workers.dev"
 
         self.log.info(f"[PHASE 2] Connecting to Edge Endpoint: {edge_url}")
         
+        self.log.debug("[FlareFlow:test] Awaiting FlareTunnelFactory.get_default()...") # [LOG ADDED]
+        t0 = time.time() # [LOG ADDED]
         await FlareTunnelFactory.get_default(mq_url=edge_url)
+        self.log.debug(f"[FlareFlow:test] FlareTunnelFactory initialized in {time.time() - t0:.3f}s") # [LOG ADDED]
         
-        ## Extended timeout to 60.0s to accommodate Pyodide Cold Boot and prevent 429 lock-out loop
+        # =========================================================================
+        # [핵심 개선] 60초 강제 확장을 제거하여 다이내믹 타임아웃 존중 (Fast-Fail 복원)
+        # =========================================================================
+        self.log.debug("[FlareFlow:test] Instantiating DphiBroker with timeout=15.0s (Dynamic Timeout Enable)") # [LOG ADDED]
         broker = DphiBroker(
             tunnel_factory=FlareTunnelFactory,
             request_stream="wasm:execute:stream:tester_isolated",
-            timeout=60.0
+            timeout=15.0  # [FIX] 60.0에서 15.0(기본값)으로 롤백. 이제 5초짜리 테스트는 8초 시점에 깔끔하게 끊어집니다.
         )
         broker.control_channel = "wasm:control:req:tester_isolated"
+        self.log.debug(f"[FlareFlow:test] Broker instantiated. Request stream: {broker.request_stream}, Control: {broker.control_channel}") # [LOG ADDED]
 
         self.log.info("[PHASE 3] Handing over execution to FlareController...")
         
+        self.log.debug("[FlareFlow:test] Instantiating FlareController...") # [LOG ADDED]
         controller = FlareController(
             target_name=worker_name,
             mode=self.mode,
@@ -94,7 +112,10 @@ class FlareFlow:
         )
         controller.keep_workspace = self.keep_workspace
         
+        self.log.debug("[FlareFlow:test] Yielding execution to controller.execute() -> Will block until orchestration/tests complete.") # [LOG ADDED]
+        t1 = time.time() # [LOG ADDED]
         success, err_msg = await controller.execute(broker=broker)
+        self.log.debug(f"[FlareFlow:test] controller.execute() returned in {time.time() - t1:.3f}s. Success={success}") # [LOG ADDED]
         
         log.info("\n" + "="*75)
         log.info("🚀 CLOUDFLARE EDGE PIPELINE EXECUTION REPORT 🚀".center(75))
@@ -130,28 +151,22 @@ class FlareFlow:
             sys.exit(1)
 
     async def run(self):
-        await self.test()
-
-
-# =========================================================================
-# [구조적 정렬] Standard Entrypoint
-# =========================================================================
+        self.log.debug("[FlareFlow:run] Entrypoint triggered, awaiting test()...") # [LOG ADDED]
+        # [수정됨] 하위 전체 트리에 적용되도록 flow_scope(mode="RAW") 블록으로 감쌉니다.
+        # 이로 인해 하위 로거들(터널, 스페이스 러너 등)이 Burst Control을 우회하게 됩니다.
+        with flow_scope(mode="RAW"):
+            await self.test()
 
 def main(args_list: list[str] = None):
-    """
-    [Standard Entrypoint]
-    args_list가 None이면 python -m 실행으로 간주되어 sys.argv를 파싱하고,
-    fiber e2e CLI 로부터 인자가 넘어오면 해당 인자(extra_args)를 파싱합니다.
-    """
     parser = argparse.ArgumentParser(description="DPHI Cloudflare Edge Orchestrator")
     parser.add_argument("--mode", choices=["dev", "deploy"], default="dev", help="Run locally (dev) or on Global Edge (deploy)")
     parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run")
     parser.add_argument("--debug", action="store_true", help="Enable DEBUG log level to capture underlying Edge/Wrangler streams.")
     parser.add_argument("--keep-workspace", action="store_true", help="Prevent teardown of the workspace on failure for post-mortem analysis.")
     
-    # args_list가 주입되면 해당 리스트를 파싱하고, 아니면 기본 sys.argv를 파싱합니다.
     args, _ = parser.parse_known_args(args_list)
-
+    
+    # [LOG ADDED] 기본 로거 포맷이 세팅되기 전일 수 있으나 print 형태로 남기거나 세팅 직후 남김
     if args.debug:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
@@ -160,8 +175,10 @@ def main(args_list: list[str] = None):
         
         logging.getLogger("auditor.flare.dev").setLevel(logging.DEBUG)
         log.info("🐛 [DEBUG MODE] Internal stream logging is ENABLED.")
+        log.debug(f"[main] Parsed CLI arguments: mode={args.mode}, suites={args.suites}, keep_workspace={args.keep_workspace}") # [LOG ADDED]
 
     config = FlarePipelineConfig()
+    log.debug("[main] Instantiating FlareFlow pipeline app...") # [LOG ADDED]
     app = FlareFlow(
         mode=args.mode, 
         command="test", 
@@ -169,6 +186,8 @@ def main(args_list: list[str] = None):
         config=config,
         keep_workspace=args.keep_workspace
     )
+    
+    log.debug("[main] Igniting PhaseReactor with app.run coroutine...")
     PhaseReactor.ignite(main_coro_func=app.run)
 
 if __name__ == "__main__":

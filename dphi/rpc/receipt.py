@@ -12,7 +12,7 @@ from xphi.arch.bound.adapter.settlement import (
     X402SettlementReceipt
 )
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 
 log = get_emitter("rpc.receipt")
 

@@ -1,11 +1,13 @@
 # fiber.llm.channel
 from __future__ import annotations
 
+import os
 import asyncio
 import httpx
 import json
 import time
 import uuid
+import copy
 from typing import Any, Dict, List, Union
 
 # Eco & Ator Models
@@ -18,7 +20,6 @@ from fiber.llm.router.stream.wrapper import StreamWrapper
 from fiber.llm.router.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.llm.router.registry.adapter import AdapterRegistry
 
-# Arch & Watcher
 from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
 from xphi.state.phase.channel import ChannelPipeline, ChannelContext, DuplexChannel, RpcBridge
 from xphi.watcher.plane.emitter import get_emitter
@@ -75,9 +76,6 @@ class DphiFuelInterceptor(DuplexChannel):
             log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
             raise
 
-import os
-import uuid
-
 class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
         # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
@@ -109,33 +107,11 @@ class ContextBinder(DuplexChannel):
         ctx.set_attr("system_meta", system_meta)
         ctx.set_attr("request_kwargs", msg)
         msg["system_meta"] = system_meta
-        
         await ctx.fire_write(msg)
-
-# class ContextBinder(DuplexChannel):
-#     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
-#         if "call_id" not in msg:
-#             msg["call_id"] = str(uuid.uuid4())
-
-#         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
-#         metadata = msg.get("metadata", {})
-        
-#         system_meta = ExecutionMetadata(
-#             session_id=msg.get("session_id") or metadata.get("session_id"),
-#             trace_id=msg.get("trace_id") or metadata.get("trace_id"),
-#             call_id=msg["call_id"],
-#             metadata=metadata,
-#             base_model=msg.get("model", "unknown")
-#         )
-        
-#         ctx.set_attr("system_meta", system_meta)
-#         ctx.set_attr("request_kwargs", msg)
-#         msg["system_meta"] = system_meta
-#         await ctx.fire_write(msg)
 
 class ChannelObserver(DuplexChannel):
     def __init__(self):
-        self.emitter = get_emitter("executor.telemetry", phase="LLM_CALL")
+        self.emitter = get_emitter("channel.observer", phase="LLM_CALL")
 
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
         ctx.set_attr("start_time", time.time())
@@ -227,41 +203,37 @@ class MockBypass(DuplexChannel):
 
         await ctx.fire_write(msg)
 
-class PromptTransformer(DuplexChannel):
-    async def write(self, ctx: ChannelContext, msg: dict):
-        prompt_id = msg.get("prompt_id")
-        if prompt_id:
-            try:
-                log_handlers.debug("Prompt Management requested", prompt_id=prompt_id)
-            except Exception as e:
-                log_handlers.error("Failed to resolve dynamic prompt", error=str(e))
-                await ctx.fire_exception_caught(e)
-                return
-                
-        if msg.get("tools") is not None:
-            if len(msg.get("tools", [])) == 0:
-                log_handlers.debug("[DEBUG-PROMPT-TRANSFORMER] 빈 tools 리스트가 감지되어 None으로 초기화합니다.")
-                msg["tools"] = None
-            else:
-                log_handlers.debug(f"[DEBUG-PROMPT-TRANSFORMER] {len(msg.get('tools'))}개의 tool이 감지되었습니다.")
-        await ctx.fire_write(msg)
-
 class FallbackHandler(DuplexChannel):
+    """
+    Intercepts pipeline exceptions and automatically retries with alternative models.
+    Acts as a 'reflector' that catches bubbling errors and pushes new requests downward.
+    """
     async def write(self, ctx: ChannelContext, msg: dict):
+        # [FLOW: OUTBOUND] 1. Extract fallback queue from the outgoing request
         fallbacks = msg.pop("fallbacks", [])
         if fallbacks:
             ctx.set_attr("fallbacks", fallbacks)
-            ctx.set_attr("original_msg", msg.copy())
+            # 2. Preserve a pristine snapshot. 
+            # (Deepcopy ensures downstream processors cannot mutate our backup)
+            ctx.set_attr("original_msg", copy.deepcopy(msg))
+        
+        # 3. Pass the clean message further down the pipeline
         await ctx.fire_write(msg)
 
     async def exception_caught(self, ctx: ChannelContext, exc: Exception):
+        # [FLOW: REVERSE ERROR] 1. Catch bubbling exception from downstream (e.g., Timeout, 502)
         fallbacks = ctx.get_attr("fallbacks", [])
+        
+        # 2. If fallback pool is exhausted, let the error propagate to the user
         if not fallbacks:
             await ctx.fire_exception_caught(exc)
             return
 
+        # 3. Pop the next candidate and restore the pristine snapshot
         next_fallback = fallbacks.pop(0)
-        retry_msg = ctx.get_attr("original_msg").copy()
+        retry_msg = copy.deepcopy(ctx.get_attr("original_msg")) # Deepcopy for true idempotency
+        
+        # 4. Patch the request with the new fallback model/configurations
         if isinstance(next_fallback, dict):
             fallback_config = next_fallback.copy()
             retry_msg["model"] = fallback_config.pop("model", retry_msg.get("model"))
@@ -270,16 +242,38 @@ class FallbackHandler(DuplexChannel):
             retry_msg["model"] = next_fallback
 
         log_handlers.warning(f"Fallback attempt triggered. Retrying with model: {retry_msg['model']}", error=str(exc))
+        
+        ## [FLOW: REFLECT HERE] Reflect the modified request back DOWN the pipeline
+        ## (This breaks the error chain and re-enters the PayloadTranslator cleanly)
         await ctx.fire_write(retry_msg)
 
 class PayloadTranslator(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
         try:
+            ## 1. Payload Pre-processing
+            prompt_id = msg.get("prompt_id")
+            if prompt_id:
+                try:
+                    log_handlers.debug("Prompt Management requested", prompt_id=prompt_id)
+                except Exception as e:
+                    log_handlers.error("Failed to resolve dynamic prompt", error=str(e))
+                    await ctx.fire_exception_caught(e)
+                    return
+            
+            # Tools 정규화 로직 통합
+            if msg.get("tools") is not None:
+                if len(msg.get("tools", [])) == 0:
+                    log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] 빈 tools 리스트가 감지되어 None으로 초기화합니다.")
+                    msg["tools"] = None
+                else:
+                    log_handlers.debug(f"[DEBUG-PAYLOAD-TRANSLATOR] {len(msg.get('tools'))}개의 tool이 감지되었습니다.")
+            
+            ## 2. Core Translation (Processor 빌드)
             model = msg.get("model")
             tools_data = msg.get("tools")
             if tools_data:
                 log_handlers.debug(
-                    "[DEBUG-PRE-TRANSLATOR] 전달된 원시 tools 스키마:\n"
+                    "[DEBUG-PAYLOAD-TRANSLATOR] 전달된 원시 tools 스키마:\n"
                     f"{json.dumps(tools_data, ensure_ascii=False, indent=2)}"
                 )
             
@@ -295,10 +289,12 @@ class PayloadTranslator(DuplexChannel):
             if not msg.get("aembedding") and hasattr(processed_ctx, "original_kwargs"):
                 post_tools = processed_ctx.original_kwargs.get("tools")
                 if post_tools:
-                    log_handlers.debug("[DEBUG-POST-TRANSLATOR] CompletionProcessor 빌드 성공. Tools 속성 유지됨.")
+                    log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] CompletionProcessor 빌드 성공. Tools 속성 유지됨.")
 
+            # 다음 파이프라인으로 Context 전달
             ctx.set_attr("processed_context", processed_ctx)
             await ctx.fire_write(processed_ctx)
+
         except Exception as e:
             show_trace = ctx.get_attr("trace_errors", False)
             log_handlers.error("Payload translation failed", error=str(e), exc_info=show_trace)

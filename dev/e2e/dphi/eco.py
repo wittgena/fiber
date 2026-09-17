@@ -8,7 +8,7 @@ from fiber.dev.infra.sandbox import TestScripts
 
 from xphi.state.anchor.nexus import ActorIdentity
 from xphi.kernel.space.sandbox.protocol import TriadAxis
-from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.bound.adapter.state import StateAdapter

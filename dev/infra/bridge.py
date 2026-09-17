@@ -22,7 +22,7 @@ import fiber.dphi.rpc.registry as rpc_registry
 from fiber.dphi.daemon.rpc import RpcWorkerDaemon
 from fiber.dphi.edge.payload import create_app, Config
 
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.e2e.bridge")

@@ -20,7 +20,7 @@ import fiber.dphi.worker.search.archive as agent_search
 
 from fiber.dphi.daemon.pricing import DynamicPricingDaemon
 from fiber.dphi.eco.client.rpc import InternalRpcClient
-from xphi.kernel.space.topos.tunnel.factory import TunnelFactory
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 
 from xphi.state.phase.reactor import PhaseReactor
 

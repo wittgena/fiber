@@ -12,7 +12,7 @@ from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge
 from fiber.llm.channel import (
     CompletionTransport, EmbeddingTransport, DphiFuelInterceptor, 
     StreamAggregator, PayloadTranslator, FallbackHandler, 
-    PromptTransformer, MockBypass, ChannelObserver, ContextBinder
+    MockBypass, ChannelObserver, ContextBinder
 )
 
 class PipelineSlot(Enum):
@@ -54,7 +54,6 @@ class PipelineBootstrap:
         
         # 🔒 Legacy Core: 절대 순서 유지
         pipeline.add_last(FallbackHandler())
-        pipeline.add_last(PromptTransformer())      
         pipeline.add_last(MockBypass())
         
         # [✨ Slot: PRE_OBSERVER] - (기존 llm_tracers 가 주입되던 정확히 그 위치)
@@ -93,7 +92,7 @@ class PipelineBootstrap:
         pipeline.add_last(FallbackHandler())
         pipeline.add_last(MockBypass())
         
-        # [✨ Slot: PRE_OBSERVER] - (기존 llm_tracers 주입 위치)
+        # [Slot: PRE_OBSERVER] - (기존 llm_tracers 주입 위치)
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.PRE_OBSERVER, []), PipelineSlot.PRE_OBSERVER.name)
             
         ## Tail

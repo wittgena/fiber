@@ -11,7 +11,7 @@ import httpx
 import uvicorn
 
 from fiber.dphi.edge.payload import create_app, Config
-from xphi.kernel.space.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector

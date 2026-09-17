@@ -10,10 +10,8 @@ from pydantic import BaseModel
 from openai.lib import _parsing, _pydantic
 
 from fiber.llm.router.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
-
-from fiber.llm.model.provider.resolver import get_llm_provider
+from fiber.llm.model.provider.resolver import _resolver_instance
 from fiber.llm.model.types.core import Usage
-from fiber.llm.model.info import get_features, supports_httpx_timeout, supports_function_calling, get_supported_openai_params
 from fiber.llm.exception.eco import UnsupportedParamsError
 from fiber.llm.model.types.openai import ValidUserMessageContentTypes
 from fiber.llm.param import ModelResponse
@@ -49,6 +47,7 @@ CONFIG_MAP = {
 }
 _OPENAI_REGIONAL_HOSTS = {"eu.api.openai.com": "eu", "us.api.openai.com": "us"}
 
+
 def _delete_nested_path(data: Dict, path: str):
     try:
         segments = re.findall(r"[^\.\[]+|\[[^\]]*\]", path)
@@ -72,12 +71,6 @@ def _to_json_schema(model_or_dict: Any) -> Optional[dict]:
         "json_schema": {"schema": _pydantic.to_strict_json_schema(model_or_dict), "name": model_or_dict.__name__, "strict": True}
     }
 
-def _resolve_timeout(raw: dict, provider: str) -> Union[float, httpx.Timeout]:
-    val = raw.get("timeout") or raw.get("request_timeout") or REQUEST_TIMEOUT
-    if val in [None, DEFAULT_REQUEST_TIMEOUT_SECONDS]: return COMPLETION_HTTP_FALLBACK_SECONDS
-    if isinstance(val, httpx.Timeout) and not supports_httpx_timeout(provider):
-        return float(val.read) if val.read is not None else COMPLETION_HTTP_FALLBACK_SECONDS
-    return float(val) if not isinstance(val, httpx.Timeout) else val
 
 class BaseProcessor:
     def __init__(self, task_type: str, model: str, raw_kwargs: dict):
@@ -101,10 +94,20 @@ class BaseProcessor:
 
         if self.original_kwargs.get("azure", False) or deployment_id: custom_prov = "azure"
 
-        res_model, res_prov, dyn_key, res_base = get_llm_provider(
+        # 개선: 인스턴스를 통해 직접 resolve 호출
+        res_model, res_prov, dyn_key, res_base = _resolver_instance.resolve(
             model=target_model, custom_llm_provider=custom_prov, api_base=api_base, api_key=api_key
         )
         return res_prov, (dyn_key or api_key), res_base, res_model
+
+    # 개선: 전역 함수였던 _resolve_timeout을 클래스 메서드로 편입하여 self.provider를 활용
+    def _resolve_timeout(self) -> Union[float, httpx.Timeout]:
+        val = self.original_kwargs.get("timeout") or self.original_kwargs.get("request_timeout") or REQUEST_TIMEOUT
+        if val in [None, DEFAULT_REQUEST_TIMEOUT_SECONDS]: return COMPLETION_HTTP_FALLBACK_SECONDS
+        
+        if isinstance(val, httpx.Timeout) and not _resolver_instance.supports_httpx_timeout(self.provider):
+            return float(val.read) if val.read is not None else COMPLETION_HTTP_FALLBACK_SECONDS
+        return float(val) if not isinstance(val, httpx.Timeout) else val
 
     def _extract_non_defaults(self) -> dict:
         defaults = DEFAULT_CHAT_COMPLETION_PARAM_VALUES if self.task_type == "chat" else DEFAULT_EMBEDDING_PARAM_VALUES
@@ -160,7 +163,11 @@ class BaseProcessor:
         if conf_inst and hasattr(conf_inst, "get_supported_openai_params"):
             supported = conf_inst.get_supported_openai_params(self.model)
         else:
-            supported = get_supported_openai_params(model=self.model, custom_llm_provider=self.provider, base_model=self.original_kwargs.get("base_model"), request_type=req_type) or []
+            # 개선: 인스턴스 메서드를 직접 호출하여 이미 찾은 모델과 프로바이더 전달
+            supported = _resolver_instance.get_supported_openai_params(
+                model=self.model, custom_llm_provider=self.provider, 
+                base_model=self.original_kwargs.get("base_model"), request_type=req_type
+            ) or []
             
         allowed_openai = self.original_kwargs.get("allowed_openai_params", [])
         supported.extend(allowed_openai + ["user", "stream_options", "stream", "max_retries"])
@@ -226,7 +233,8 @@ class CompletionProcessor(BaseProcessor):
 
     def _normalize_tools(self, non_defaults: dict):
         if "tools" in non_defaults:
-            is_supported = supports_function_calling(self.model, self.provider)
+            # 개선: 인스턴스 메서드를 통해 검증 로직 단순화
+            is_supported = _resolver_instance.supports_function_calling(self.model, self.provider)
             if self.provider == "gemini" or self.provider_key == "gemini":
                 is_supported = True
                 
@@ -290,7 +298,7 @@ class CompletionProcessor(BaseProcessor):
 
         return CompletionContext(
             model=self.model, messages=msgs, custom_llm_provider=self.provider, api_key=self.api_key, api_base=self.api_base, 
-            timeout=_resolve_timeout(self.original_kwargs, self.provider), model_response=resp, optional_params=payload, system_meta=meta, 
+            timeout=self._resolve_timeout(), model_response=resp, optional_params=payload, system_meta=meta, 
             headers={**self.original_kwargs.get("headers", {}), **(self.original_kwargs.get("extra_headers") or {})}, 
             stream=self.original_kwargs.get("stream", False), acompletion=self.original_kwargs.get("acompletion", False), 
             shared_session=self.original_kwargs.get("shared_session"), client_instance=self.original_kwargs.get("client"),
@@ -311,9 +319,8 @@ class EmbeddingProcessor(BaseProcessor):
                 else: raise UnsupportedParamsError(status_code=500, message="dimensions not supported for older OpenAI models.")
 
         payload = self._build_optional_params(non_defaults)
-
         return EmbeddingContext(
             model=self.model, input=self.input, custom_llm_provider=self.provider, api_key=self.api_key, api_base=self.api_base, 
-            timeout=_resolve_timeout(self.original_kwargs, self.provider), aembedding=self.original_kwargs.get("aembedding", False), 
+            timeout=self._resolve_timeout(), aembedding=self.original_kwargs.get("aembedding", False), 
             optional_params=payload, original_kwargs=self.original_kwargs
         )

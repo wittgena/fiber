@@ -5,7 +5,6 @@ import json
 from typing import Dict, Tuple, Optional, Union
 
 from fiber.llm.model.types.support import ProviderTypes
-
 from fiber.llm.model.config import config
 from xphi.kernel.space.bind.resolver import resolve_path 
 from xphi.watcher.plane.emitter import get_emitter 
@@ -15,18 +14,12 @@ REGISTRY_ROOT = resolve_path("registry") / "llms"
 DEFAULT_REGISTRY_FILENAME = "model_prices_and_context_window.json"
 PROVIDER_KEY = "model_provider"
 
-
-# =====================================================================
-# 1. Provider Key Resolution
-# =====================================================================
 class ProviderKeyResolver:
     """@desc: Helper to resolve provider logic and skip-patterns before registration."""
-    
     SKIP_PROVIDERS = frozenset({ProviderTypes.GITHUB_COPILOT.value, ProviderTypes.CHATGPT.value})
 
     @classmethod
     def extract_provider(cls, spec: dict) -> str:
-        # 💡 상수를 통해 안전하게 프로바이더 값 추출
         return str(spec.get(PROVIDER_KEY, "")).strip()
 
     @classmethod
@@ -37,10 +30,6 @@ class ProviderKeyResolver:
             return True
         return False
 
-
-# =====================================================================
-# 2. Local Registry I/O
-# =====================================================================
 class RegistryIO:
     """@desc: Namespace for local registry file operations (Network I/O removed)."""
     
@@ -186,13 +175,11 @@ class ModelCostRegistry:
                     existing_model = {}
                     model_cost_key = key
                     
-            # 💡 기존 모델 정보에 병합 전, 중복 키(PROVIDER_KEY)를 깔끔하게 제거
             if existing_model.get(PROVIDER_KEY) is None:
                 existing_model.pop(PROVIDER_KEY, None)
                 
             updated_dict = cls._merge_dicts(existing_model, value)
             model_cost.setdefault(model_cost_key, {}).update(updated_dict)
-            
             log_cost.debug(f"Added/updated model={model_cost_key} in model_cost")
             cls._update_provider_models(key, provider)
             

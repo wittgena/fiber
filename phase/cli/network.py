@@ -10,9 +10,9 @@ from typing import Optional, Dict, Any, AsyncGenerator, List, Union
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from xphi.kernel.space.topos.tunnel.surface import EchoListener, SurfaceClient
+from xphi.kernel.space.tunnel.surface import EchoListener, SurfaceClient
 from xphi.arch.bound.xor.parser.ruleset.engine import LifecycleRegexParser, AuditRulesetParser, CompiledEngine
-from xphi.kernel.space.contract import Contract, CoherenceState
+from xphi.arch.contract.space.state import Contract, CoherenceState
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.arch.dev.tracer.base import SystemBound, log_streamer
 from xphi.watcher.plane.emitter import get_emitter
