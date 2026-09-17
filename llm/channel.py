@@ -13,12 +13,12 @@ from typing import Any, Dict, List, Union
 # Eco & Ator Models
 from fiber.llm.param import ModelResponse
 from fiber.llm.context.metadata import ExecutionMetadata
-from fiber.llm.model.types.general import EmbeddingResponse
-from fiber.llm.exception.mapping import exception_type
+from fiber.llm.types.provider.general import EmbeddingResponse
+from fiber.llm.types.exception.mapping import exception_type
 from fiber.llm.router.stream.wrapper import StreamWrapper
 
-from fiber.llm.router.ext.llm.param.processor import CompletionProcessor, EmbeddingProcessor
-from fiber.llm.router.registry.adapter import AdapterRegistry
+from fiber.llm.router.llm.param.processor import CompletionProcessor, EmbeddingProcessor
+from fiber.llm.model.registry.adapter import AdapterRegistry
 
 from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
 from xphi.state.phase.channel import ChannelPipeline, ChannelContext, DuplexChannel, RpcBridge

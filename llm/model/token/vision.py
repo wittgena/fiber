@@ -6,7 +6,7 @@ import struct
 from typing import Tuple, Union
 
 from fiber.dphi.eco.client.http import get_client, SafeHttpClient
-from fiber.llm.router.constants import (
+from fiber.llm.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,
     MAX_IMAGE_URL_DOWNLOAD_SIZE_MB,

@@ -5,7 +5,7 @@ import asyncio
 from typing import Any, List, Dict
 
 from fiber.llm.pipeline import PipelineBootstrap, PipelineSlot
-from fiber.llm.model.types.general import EmbeddingResponse
+from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer, TracerInterceptorChannel
 
 from xphi.watcher.plane.emitter import get_emitter

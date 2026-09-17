@@ -6,8 +6,8 @@ import uuid
 from typing import Optional, Any
 
 from fiber.llm.param import ModelResponse
-from fiber.llm.router.registry.adapter import AdapterRegistry
-from fiber.llm.router.mapper.traverser import StateTraverser
+from fiber.llm.model.registry.adapter import AdapterRegistry
+from fiber.llm.mapper.traverser import StateTraverser
 
 class VCRManager:
     def __init__(self, mode: str, fixture_path: str):

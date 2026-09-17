@@ -20,7 +20,7 @@ from fiber.llm.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
 from fiber.dev.trace.llm.debugger import DebugTracer, DummySemanticCache, DummyPIIGuardrail
 from fiber.dev.trace.llm.vcr import VCRManager, apply_vcr_patch
-from fiber.llm.router.mapper.traverser import StateTraverser
+from fiber.llm.mapper.traverser import StateTraverser
 
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.kernel.space.bind.resolver import resolve_path

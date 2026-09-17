@@ -1,8 +1,8 @@
 # fiber.llm.model.cost.unit
 ## @lineage: llm.model.cost.unit
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, TypedDict, cast
-from fiber.llm.model.types.general import CacheCreationTokenDetails, CompletionTokensDetailsWrapper, ImageResponse, ModelInfo, PromptTokensDetailsWrapper, ServiceTier, DataResidency
-from fiber.llm.model.types.core import Usage
+from fiber.llm.types.provider.general import CacheCreationTokenDetails, CompletionTokensDetailsWrapper, ImageResponse, ModelInfo, PromptTokensDetailsWrapper, ServiceTier, DataResidency
+from fiber.llm.types.provider.core import Usage
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("cost.unit")

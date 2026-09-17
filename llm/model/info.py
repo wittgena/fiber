@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional, Dict
 from fiber.llm.model.provider.registry import model_cost, lookup_base_model_info
 from fiber.llm.model.provider.resolver import get_llm_provider
-from fiber.llm.exception.eco import BadRequestError
+from fiber.llm.types.exception.eco import BadRequestError
 from fiber.llm.model.config import config
 from xphi.watcher.plane.emitter import get_emitter
 

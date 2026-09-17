@@ -9,8 +9,8 @@ from xphi.state.phase.channel import DuplexChannel, ChannelContext
 
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 from fiber.llm.router.stream.accumulator import StreamAccumulator
-from fiber.llm.model.types.stream import ModelResponseStream
-from fiber.llm.exception.eco import APIResponseValidationError
+from fiber.llm.types.provider.stream import ModelResponseStream
+from fiber.llm.types.exception.eco import APIResponseValidationError
 
 class ChunkCodecHandler(DuplexChannel):
     """1단계: 원시 데이터를 파싱하고 Accumulator를 통해 ModelResponseStream 조립"""
