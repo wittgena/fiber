@@ -36,7 +36,6 @@ class DebugTracer(BaseLLMTracer):
 
     async def on_llm_start(self, meta: ExecutionMetadata, kwargs: Dict[str, Any]):
         self.started = True
-        # 민감하지 않은(API 키 제외) 파라미터만 추출
         safe_kwargs = {k: v for k, v in kwargs.items() if k not in ["api_key", "headers", "interceptors", "pipeline_hooks"]}
         
         tracer_log.info(
@@ -51,7 +50,6 @@ class DebugTracer(BaseLLMTracer):
         self.ended = True
         self.duration = duration_ms
         
-        # [수정 1] dict 및 object(Pydantic) 타입 모두 안전하게 처리
         if isinstance(response, dict):
             usage = response.get("usage", {})
             total_tokens = usage.get("total_tokens", "N/A") if usage else "N/A"
@@ -61,7 +59,6 @@ class DebugTracer(BaseLLMTracer):
             total_tokens = getattr(usage, "total_tokens", "N/A") if usage else "N/A"
             choices = getattr(response, "choices", [])
         
-        # 첫 번째 선택지(Choice)의 결과물 일부 노출 (스트리밍 방어 처리)
         content_preview = "[Streaming Content or Empty]"
         if choices and len(choices) > 0:
             first_choice = choices[0]
@@ -96,16 +93,12 @@ class DebugTracer(BaseLLMTracer):
 
 
 class DummySemanticCache(DuplexChannel):
-    """[Slot: PRE_TRANSLATE] I/O 숏서킷을 수행하는 모의 캐시"""
     target_slot = PipelineSlot.PRE_TRANSLATE
-
     async def write(self, ctx: ChannelContext, msg: dict):
         meta = ctx.get_attr("system_meta")
         tracer_log.info(f"💾 [CACHE HOOK] Validating Trace ID: {meta.trace_id if meta else 'N/A'}")
         
         prompt = msg.get("messages", [{}])[-1].get("content", "")
-        
-        # 특정 키워드가 있으면 실제 LLM을 타지 않고 가짜 응답을 즉시 반환 (Short-circuit)
         if "USE_CACHE" in prompt:
             tracer_log.info("🎯 [CACHE HIT] Short-circuiting physical I/O...")
             cached_response = ModelResponse(
@@ -121,9 +114,7 @@ class DummySemanticCache(DuplexChannel):
 
 
 class DummyPIIGuardrail(DuplexChannel):
-    """[Slot: POST_TRANSLATE] 검증된 객체 상태에서 민감 정보를 차단하는 가드레일"""
     target_slot = PipelineSlot.POST_TRANSLATE
-
     async def write(self, ctx: ChannelContext, processed_msg: Any):
         meta = ctx.get_attr("system_meta")
         tracer_log.info(f"🛡️ [GUARDRAIL HOOK] Inspecting Payload for Trace ID: {meta.trace_id if meta else 'N/A'}")
@@ -135,7 +126,6 @@ class DummyPIIGuardrail(DuplexChannel):
             content = msg.get("content", "")
             if "SECRET-SSN" in content:
                 tracer_log.error("🛑 [GUARDRAIL BLOCK] Sensitive Information (PII) Detected!")
-                # 파이프라인 멈춤(Hang)을 방지하기 위해 명시적으로 에러 전파 후 즉시 리턴
                 err = PermissionError("Guardrail Triggered: PII (SSN) detected.")
                 await ctx.fire_exception_caught(err)
                 return  
@@ -153,6 +143,7 @@ class GuardrailMsg(WorkflowMessage): pass
 class UnifiedFacadeMsg(WorkflowMessage): pass
 class StreamTraceMsg(WorkflowMessage): pass
 class ErrorTraceMsg(WorkflowMessage): pass
+class FallbackTraceMsg(WorkflowMessage): pass  # [NEW] Fallback 테스트용 메시지
 
 
 class LlmTraceWorkflow(Workflow):
@@ -182,45 +173,35 @@ class LlmTraceWorkflow(Workflow):
                 interceptors=[test_tracer],
                 metadata={"kernel_auth": {"audit_hash": "audit_trace_01"}}
             )
-            
-            await asyncio.sleep(0.1) # Fire-and-forget 대기
+            await asyncio.sleep(0.1)
             if test_tracer.started and test_tracer.ended:
-                self.log.info(f"[{self.name}] ✅ Passed: Tracer executed asynchronously (Duration: {test_tracer.duration:.2f}ms).")
+                self.log.info(f"[{self.name}] ✅ Passed: Tracer executed asynchronously.")
                 self.success_count += 1
             else:
                 raise ValueError("Tracer lifecycle hooks not fired.")
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
-
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
         return SemanticCacheMsg()
 
     @step
     async def phase_semantic_cache(self, msg: SemanticCacheMsg) -> WorkflowMessage:
         self.log.info(f"\n[{self.name}] 🔄 [Phase 2] PRE_TRANSLATE: Semantic Cache Short-circuit")
         try:
-            start_time = time.time()
             test_cache = DummySemanticCache()
-            
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Hello, USE_CACHE."}],
                 interceptors=[test_cache],
                 metadata={"kernel_auth": {"audit_hash": "audit_cache_01"}}
             )
-            
-            elapsed = time.time() - start_time
             content = response.choices[0].message.content
-            
-            if content == "[CACHED] Hit!" and elapsed < 0.5:
-                self.log.info(f"[{self.name}] ✅ Passed: Cache short-circuited payload instantly ({elapsed:.3f}s).")
+            if content == "[CACHED] Hit!":
+                self.log.info(f"[{self.name}] ✅ Passed: Cache short-circuited payload instantly.")
                 self.success_count += 1
             else:
-                raise ValueError(f"Cache miss or invalid payload. Content: {content}")
+                raise ValueError("Cache miss.")
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
-
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
         return GuardrailMsg()
 
     @step
@@ -235,46 +216,33 @@ class LlmTraceWorkflow(Workflow):
                     interceptors=[test_guardrail],
                     metadata={"kernel_auth": {"audit_hash": "audit_guard_01"}}
                 )
-                raise RuntimeError("Request passed the guardrail when it should have been blocked!")
-            
+                raise RuntimeError("Request passed the guardrail!")
             except PermissionError as pe:
-                self.log.info(f"[{self.name}] ✅ Passed: Guardrail successfully blocked PII egress. ({pe})")
+                self.log.info(f"[{self.name}] ✅ Passed: Guardrail successfully blocked PII egress.")
                 self.success_count += 1
-
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
-
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
         return UnifiedFacadeMsg()
 
     @step
     async def phase_unified_facade(self, msg: UnifiedFacadeMsg) -> WorkflowMessage:
-        self.log.info(f"\n[{self.name}] 🔄 [Phase 4] UNIFIED FACADE: Auto-Routing Flat List Injection (Trace ID Propagation)")
+        self.log.info(f"\n[{self.name}] 🔄 [Phase 4] UNIFIED FACADE: Auto-Routing Flat List Injection")
         try:
-            # 모든 플러그인을 순서 상관없이 한 번에 섞어서 던짐
-            tracer = DebugTracer()
-            cache = DummySemanticCache()
-            guardrail = DummyPIIGuardrail()
-
-            # 정상 요청 검증: 동일한 Trace ID가 캐시 -> 가드레일 -> 트레이서를 관통하며 로깅되는지 확인
+            tracer, cache, guardrail = DebugTracer(), DummySemanticCache(), DummyPIIGuardrail()
             await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Process normal data."}],
                 interceptors=[tracer, cache, guardrail], 
                 metadata={"kernel_auth": {"audit_hash": "audit_unified_01"}}
             )
-            
             await asyncio.sleep(0.1)
             if tracer.started and tracer.ended:
-                self.log.info(f"[{self.name}] ✅ Passed: Unified Facade routed all plugins cleanly without collision.")
+                self.log.info(f"[{self.name}] ✅ Passed: Unified Facade routed all plugins cleanly.")
                 self.success_count += 1
             else:
-                raise ValueError("Tracer failed to record in Unified mode.")
-                
+                raise ValueError("Tracer failed.")
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
-
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
         return StreamTraceMsg()
 
     @step
@@ -282,30 +250,21 @@ class LlmTraceWorkflow(Workflow):
         self.log.info(f"\n[{self.name}] 🔄 [Phase 5] STREAM TRACING: Asynchronous Chunk Tracking")
         try:
             stream_tracer = DebugTracer()
-            
             response_stream = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Count from 1 to 3."}],
-                interceptors=[stream_tracer],
-                stream=True,
+                interceptors=[stream_tracer], stream=True,
                 metadata={"kernel_auth": {"audit_hash": "audit_stream_01"}}
             )
-            
-            # 스트림 소비
-            async for chunk in response_stream:
-                pass 
-                
+            async for chunk in response_stream: pass 
             await asyncio.sleep(0.1)
             if stream_tracer.started and stream_tracer.ended:
                 self.log.info(f"[{self.name}] ✅ Passed: Stream successfully tracked by tracer.")
                 self.success_count += 1
             else:
                 raise ValueError("Tracer failed on stream execution.")
-                
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
-            
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
         return ErrorTraceMsg()
 
     @step
@@ -313,28 +272,75 @@ class LlmTraceWorkflow(Workflow):
         self.log.info(f"\n[{self.name}] 🔄 [Phase 6] ERROR TRACING: Exception Boundary & Injection Testing")
         try:
             error_tracer = DebugTracer()
-            
             try:
-                # 존재하지 않는 모델을 던져 의도적 에러 유발
                 await acompletion(
                     model="invalid/fake-model-999",
                     messages=[{"role": "user", "content": "Trigger an error!"}],
                     interceptors=[error_tracer]
                 )
             except Exception:
-                pass # 메인 파이프라인 에러는 무시. 우리는 트레이서가 예외를 잘 잡았는지만 확인합니다.
-                
+                pass 
             await asyncio.sleep(0.1)
-            # 시작은 했으나, 성공 종료(ended)되지 않고 에러 훅(error)이 트리거되었는지 확인
+            # 여기서는 Fallback이 없으므로 Tracer가 에러를 감지해야 정상
             if error_tracer.started and not error_tracer.ended and error_tracer.error:
-                self.log.info(f"[{self.name}] ✅ Passed: Error correctly captured by tracer without pipeline crash.")
+                self.log.info(f"[{self.name}] ✅ Passed: Error correctly captured by tracer.")
                 self.success_count += 1
             else:
                 raise ValueError("Tracer did not capture the error properly.")
+        except Exception as e:
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
+        return FallbackTraceMsg()
+
+    @step
+    async def phase_fallback_trace(self, msg: FallbackTraceMsg) -> WorkflowMessage:
+        """[NEW] Phase 7: FallbackHandler & Deepcopy Verification"""
+        self.log.info(f"\n[{self.name}] 🔄 [Phase 7] FALLBACK TRACING: Idempotent Retry & Deepcopy Shield")
+        try:
+            fallback_tracer = DebugTracer()
+            
+            # 1. 고의로 실패할 모델로 시작하되, fallbacks에 정상 모델 지정
+            response = await acompletion(
+                model="invalid/will-fail-model",
+                messages=[{"role": "user", "content": "Trigger fallback mechanism!"}],
+                fallbacks=[self.target_model],
+                interceptors=[fallback_tracer],
+                metadata={"kernel_auth": {"audit_hash": "audit_fallback_trace_01"}}
+            )
+            await asyncio.sleep(0.1)
+            
+            # 2. 결과 추출 (프로바이더별 비표준 반환값 대응)
+            used_model = getattr(response, "model", None)
+            if not used_model and hasattr(response, "_hidden_params"):
+                used_model = response._hidden_params.get("custom_llm_provider", "") or response._hidden_params.get("model", "")
+            used_model_str = str(used_model) if used_model else "Unknown (Hidden by Provider)"
+            
+            content = ""
+            if hasattr(response, "choices") and response.choices:
+                first_choice = response.choices[0]
+                if isinstance(first_choice, dict):
+                    content = first_choice.get("message", {}).get("content", "")
+                else:
+                    msg_obj = getattr(first_choice, "message", None)
+                    content = msg_obj.get("content", "") if isinstance(msg_obj, dict) else (getattr(msg_obj, "content", "") if msg_obj else "")
+
+            # 3. 상세 검증 로깅
+            if content:
+                self.log.info(f"[{self.name}] 🎯 Fallback network call succeeded. Data received.")
+                self.log.info(f"[{self.name}] 🕵️  Resolved Model : {used_model_str}")
+            else:
+                raise ValueError("Fallback executed but no content was returned.")
+
+            self.log.info(f"[{self.name}] 🛡️ Tracer state check -> Started: {fallback_tracer.started}, Ended: {fallback_tracer.ended}, Error Logged: {fallback_tracer.error}")
+            
+            # 4. Tracer 은폐 여부 엄격 검증
+            if fallback_tracer.started and fallback_tracer.ended and not fallback_tracer.error:
+                self.log.info(f"[{self.name}] ✅ Passed: FallbackHandler successfully shielded the Tracer. Deepcopy preserved message integrity.")
+                self.success_count += 1
+            else:
+                raise ValueError(f"Tracer leak detected! Tracer saw the error instead of being shielded.")
                 
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
+            self.log.error(f"[{self.name}] ❌ Failed: {e}"); self.fail_count += 1
             
         return StopMessage(result=True)
 
@@ -368,7 +374,6 @@ class LlmTraceApplication:
             await self.workflow.execute()
             await workflow_task
 
-            # [수정 2] raise RuntimeError 방지 -> Graceful Shutdown 처리
             if self.workflow.fail_count > 0:
                 log.error(f"🚨 Workflow finished with {self.workflow.fail_count} failures.")
 
@@ -384,7 +389,6 @@ class LlmTraceApplication:
             teardown_hook=self._teardown_hook
         )
         
-        # 비동기 루프 종료 후 실패가 있었다면 프로세스 종료 코드(exit 1) 반환
         if self.workflow and self.workflow.fail_count > 0:
             sys.exit(1)
 

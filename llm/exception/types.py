@@ -1,13 +1,4 @@
 # fiber.llm.exception.types
-## @lineage: llm.exception.types
-## @lineage: agent.loop.runtime.exception.types
-## @lineage: agent.runtime.exception.types
-## @lineage: ator.runtime.exception.types
-## @lineage: bound.eco.exception.types
-## @lineage: eco.bound.exception.types
-## @lineage: bound.agent.exception.types
-## @lineage: ext.router.exception.types
-## @lineage: engine.exception.types
 from xphi.arch.bound.event.next import ToposId
 ConversationID = ToposId
 

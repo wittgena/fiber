@@ -3,17 +3,16 @@ from __future__ import annotations
 
 import re
 from urllib.parse import urlparse
-from typing import Tuple, Optional, Union
+from typing import Tuple, Optional, Union, Dict, List
 
-from fiber.llm.model.provider.registry import ModelCostRegistry
+from fiber.llm.model.provider.registry import ModelCostRegistry, model_cost, lookup_base_model_info
 from fiber.llm.router.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 from fiber.llm.model.types.param.legacy import LegacyParams
 from fiber.llm.model.provider.secret import get_secret_str, get_secret
-
 from fiber.llm.model.config import config
 from xphi.watcher.plane.emitter import get_emitter 
 
-log_route = get_emitter("routing.locator")
+log_route = get_emitter("provider.resolver")
 
 PROVIDER_REGISTRY = {
     "openai": ("https://api.openai.com/v1", ["OPENAI_API_KEY"]),
@@ -155,7 +154,11 @@ def _endpoint_matches_api_base(endpoint: str, api_base: str) -> bool:
 class LLMProviderResolver:
     def __init__(self):
         self._provider_configs = PROVIDER_REGISTRY
+        self._lowercase_model_map: Optional[Dict[str, str]] = None
 
+    # ==========================================
+    # Layer 1: Core Routing
+    # ==========================================
     def resolve(
         self,
         model: str,
@@ -197,6 +200,144 @@ class LLMProviderResolver:
             )
         return model, custom_llm_provider, api_key, api_base
 
+    def get_api_base(self, model: str, optional_params: Union[dict, LegacyParams]) -> Optional[str]:
+        params = optional_params if isinstance(optional_params, LegacyParams) else LegacyParams(**optional_params)
+        
+        if params.api_base is not None:
+            return params.api_base
+
+        resolved_model = config.model_alias_map.get(model, model) if config.model_alias_map else model
+
+        if params.vertex_location and params.vertex_project:
+            is_stream = getattr(params, "stream", False)
+            content_endpoint = "streamGenerateContent" if is_stream else "generateContent"
+            return (
+                f"https://{params.vertex_location}-aiplatform.googleapis.com/v1/"
+                f"projects/{params.vertex_project}/locations/{params.vertex_location}/"
+                f"publishers/google/models/{resolved_model}:{content_endpoint}"
+            )
+
+        try:
+            _, provider, _, dynamic_api_base = self.resolve(
+                model=resolved_model,
+                custom_llm_provider=params.custom_llm_provider,
+                api_base=None,
+                api_key=params.api_key
+            )
+        except Exception:
+            provider = None
+            dynamic_api_base = None
+
+        if dynamic_api_base:
+            return dynamic_api_base
+            
+        if provider and provider in self._provider_configs:
+            static_base, _ = self._provider_configs[provider]
+            return static_base
+
+        return None
+
+    # ==========================================
+    # Layer 2: Model Capabilities
+    # ==========================================
+    def _get_cost_key(self, potential_key: str) -> Optional[str]:
+        if potential_key in model_cost:
+            return potential_key
+
+        if self._lowercase_model_map is None:
+            self._lowercase_model_map = {k.lower(): k for k in model_cost}
+
+        potential_key_lower = potential_key.lower()
+        matched_key = self._lowercase_model_map.get(potential_key_lower)
+        
+        if matched_key and matched_key in model_cost:
+            return matched_key
+
+        # 런타임 업데이트 대비 재캐싱
+        self._lowercase_model_map = {k.lower(): k for k in model_cost}
+        matched_key = self._lowercase_model_map.get(potential_key_lower)
+        if matched_key and matched_key in model_cost:
+            return matched_key
+
+        return None
+
+    def check_capability(self, model: str, custom_llm_provider: Optional[str], key: str, default_if_none: bool = False) -> bool:
+        try:
+            # 외부 get_llm_provider 호출 대신 내부 resolve 사용으로 오버헤드 제거
+            resolved_model, resolved_provider, _, _ = self.resolve(model=model, custom_llm_provider=custom_llm_provider)
+            model_info = lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
+            
+            if model_info.get(key) is not None:
+                return bool(model_info.get(key))
+
+            bare_model_key = self._get_cost_key(resolved_model)
+            if bare_model_key:
+                bare_entry = model_cost.get(bare_model_key) or {}
+                if bare_entry.get(key) is not None:
+                    return bool(bare_entry.get(key))
+
+            return default_if_none
+        except Exception as e:
+            log_route.debug(f"Capability check failed for {key}. model={model}, provider={custom_llm_provider}. Error: {e}")
+            return default_if_none
+
+    def supports_function_calling(self, model: str, custom_llm_provider: Optional[str] = None) -> bool:
+        return self.check_capability(model, custom_llm_provider, "supports_function_calling", default_if_none=False)
+
+
+    # ==========================================
+    # Layer 3: Provider Traits & Params
+    # ==========================================
+    def supports_httpx_timeout(self, custom_llm_provider: str) -> bool:
+        return custom_llm_provider in ["openai"]
+
+    def get_supported_openai_params(
+        self,
+        model: str,
+        custom_llm_provider: Optional[str] = None,
+        request_type: str = "chat_completion",
+        base_model: Optional[str] = None,
+    ) -> Optional[list]:
+        if not custom_llm_provider:
+            try:
+                _, custom_llm_provider, _, _ = self.resolve(model=model)
+            except GateBadRequestError:
+                return None
+
+        if custom_llm_provider == "openai" and request_type == "transcription":
+            if "gpt-4o" in model:
+                return config.OpenAIGPTAudioTranscriptionConfig().get_supported_openai_params(model=model)
+            return config.OpenAIWhisperAudioTranscriptionConfig().get_supported_openai_params(model=model)
+
+        config_mapping = {
+            "anthropic": "AnthropicConfig",
+            "huggingface": "HuggingFaceChatConfig",
+            "gemini": "GoogleAIStudioGeminiConfig",
+            "ollama": "OllamaConfig",
+            "openai": "OpenAIConfig",
+            "vertex_ai": "VertexAIConfig",
+            "bedrock": "AmazonBedrockGlobalConfig",
+            "azure": "AzureOpenAIConfig",
+        }
+        
+        provider_key = custom_llm_provider.split("/")[0] if "/" in custom_llm_provider else custom_llm_provider
+        config_class_name = config_mapping.get(provider_key, "OpenAILikeChatConfig")
+        
+        if hasattr(config, config_class_name):
+            config_instance = getattr(config, config_class_name)()
+            if hasattr(config_instance, "get_supported_openai_params"):
+                supported_params = config_instance.get_supported_openai_params(model=model)
+                if base_model and base_model != model:
+                    base_params = config_instance.get_supported_openai_params(model=base_model)
+                    supported_params = list(dict.fromkeys([*(supported_params or []), *(base_params or [])]))
+                return supported_params
+                
+        return None
+
+
+    # ==========================================
+    # Internal Helpers (기존 _resolve_* 로직)
+    # ==========================================
     def _resolve_special_cases(self, model: str, custom_llm_provider: Optional[str]) -> Tuple[str, Optional[str], bool]:
         if model.startswith("azure/"):
             model_name = model.split("/", 1)[1]
@@ -271,6 +412,9 @@ class LLMProviderResolver:
         return None
 
 
+# ==========================================
+# Global Export Wrappers 
+# ==========================================
 _resolver_instance = LLMProviderResolver()
 
 def get_llm_provider(
@@ -296,42 +440,19 @@ def get_llm_provider(
             model=model
         )
 
-def get_api_base(model: str, optional_params: Union[dict, LegacyParams]) -> Optional[str]:
-    params = optional_params if isinstance(optional_params, LegacyParams) else LegacyParams(**optional_params)
-    ## 1. Explicit Override Check (Highest Priority)
-    if params.api_base is not None:
-        return params.api_base
+# `fiber/llm/router/ext/llm/param/processor.py` 등 기존 모듈에서 호출 시 호환성을 유지하기 위한 래퍼 함수들입니다.
+# (향후 이 래퍼들을 삭제하고 프로세서에서 _resolver_instance를 직접 호출하도록 리팩토링하는 것을 권장합니다.)
 
-    resolved_model = config.model_alias_map.get(model, model) if config.model_alias_map else model
+def supports_function_calling(model: str, custom_llm_provider: Optional[str] = None) -> bool:
+    return _resolver_instance.supports_function_calling(model, custom_llm_provider)
 
-    ## 2. Vertex AI Special Routing (Requires complex structural assembly)
-    if params.vertex_location and params.vertex_project:
-        is_stream = getattr(params, "stream", False)
-        content_endpoint = "streamGenerateContent" if is_stream else "generateContent"
-        return (
-            f"https://{params.vertex_location}-aiplatform.googleapis.com/v1/"
-            f"projects/{params.vertex_project}/locations/{params.vertex_location}/"
-            f"publishers/google/models/{resolved_model}:{content_endpoint}"
-        )
+def supports_httpx_timeout(custom_llm_provider: str) -> bool:
+    return _resolver_instance.supports_httpx_timeout(custom_llm_provider)
 
-    ## 3. Retrieve Base from Single Truth Source (LLMProviderResolver)
-    try:
-        _, provider, _, dynamic_api_base = _resolver_instance.resolve(
-            model=resolved_model,
-            custom_llm_provider=params.custom_llm_provider,
-            api_base=None,
-            api_key=params.api_key
-        )
-    except Exception:
-        provider = None
-        dynamic_api_base = None
-
-    ## 4. Return resolved dynamic base OR fallback to Static Registry Map
-    if dynamic_api_base:
-        return dynamic_api_base
-        
-    if provider and provider in PROVIDER_REGISTRY:
-        static_base, _ = PROVIDER_REGISTRY[provider]
-        return static_base
-
-    return None
+def get_supported_openai_params(
+    model: str,
+    custom_llm_provider: Optional[str] = None,
+    request_type: str = "chat_completion",
+    base_model: Optional[str] = None,
+) -> Optional[list]:
+    return _resolver_instance.get_supported_openai_params(model, custom_llm_provider, request_type, base_model)

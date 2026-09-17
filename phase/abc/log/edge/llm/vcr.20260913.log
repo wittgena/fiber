@@ -1,0 +1,146 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.llm.vcr
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  tier.registry: Loaded 4 models into Registry.
+ LOG | SYSTEM | WARN  |  tier.registry: 🚨 All models exhausted or none meet cognitive requirement (Score >= 2).
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 🚀 Igniting Launcher Workflow via KernelReactor...
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-72121
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Entered Trace Path: [logical:local]
+ LOG | SYSTEM | INFO  |  surface.local: [*] Initializing Local Direct Surface...
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ====================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 🧪 [MASTER SUITE] Igniting LLM Trace & Facade Suite (gemini/gemini-3.1-flash-lite) [VCR: LIVE]
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ====================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 1] PRE_OBSERVER: Async Tracer Isolation
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.llm.router.ext.llm
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'timeout', 'api_base', 'system_meta'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : 01797bda7ba34c439fb86bd25c18168b
+ ├─ Model    : gemini/gemini-3.1-flash-lite
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+AFC is enabled with max remote calls: 10.
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[✅ LLM CALL COMPLETED] 
+ ├─ Trace ID : 01797bda7ba34c439fb86bd25c18168b
+ ├─ Latency  : 3924.78 ms
+ └─ Usage    : 0 tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Async Tracer Isolation (Total: 4145.09ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 2] PRE_TRANSLATE: Semantic Cache Short-circuit
+ LOG | SYSTEM | INFO  |  plugin.tracer: 🎯 [CACHE HIT] Short-circuiting physical I/O...
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Semantic Cache Short-circuit (Total: 1.43ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 3] POST_TRANSLATE: PII Security Guardrail
+ LOG | SYSTEM | ERROR |  plugin.tracer: 🛑 [GUARDRAIL BLOCK] Sensitive Information (PII) Detected!
+ LOG | LLM_CALL | ERROR |  channel.observer: LLM Request Failed: PermissionError - Guardrail Triggered: PII (SSN) detected.
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: PII Security Guardrail Blocking (Total: 0.83ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 4] UNIFIED FACADE: Auto-Routing Flat List Injection
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'timeout', 'api_base', 'system_meta'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : dcbac0d890c046e88df9e0f8a2603c29
+ ├─ Model    : gemini/gemini-3.1-flash-lite
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+AFC is enabled with max remote calls: 10.
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[✅ LLM CALL COMPLETED] 
+ ├─ Trace ID : dcbac0d890c046e88df9e0f8a2603c29
+ ├─ Latency  : 2937.81 ms
+ └─ Usage    : 0 tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Unified Facade Routing (Total: 3113.78ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 5] STREAM TRACING: Asynchronous Chunk Tracking
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'timeout', 'api_base', 'system_meta'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : 56a4b9ec26f945d393ccbc4961a44626
+ ├─ Model    : gemini/gemini-3.1-flash-lite
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+AFC is enabled with max remote calls: 10.
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[✅ LLM CALL COMPLETED] 
+ ├─ Trace ID : 56a4b9ec26f945d393ccbc4961a44626
+ ├─ Latency  : 768.30 ms
+ └─ Usage    : N/A tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Asynchronous Stream Tracking (Total: 2375.62ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 6] ERROR TRACING: Exception Boundary Verification
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | LLM_CALL | ERROR |  channel.observer: LLM Request Failed: GateBadRequestError - LLM Provider NOT provided. Pass model as E.g. `completion(model='huggingface/starcoder',..)`. You passed model=invalid/fake
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : b83efd9de0304c36bb1805b83f1c4eeb
+ ├─ Model    : invalid/fake
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | ERROR |  plugin.tracer: 
+[🚨 LLM CALL FAILED] 
+ ├─ Trace ID : b83efd9de0304c36bb1805b83f1c4eeb
+ ├─ Latency  : 0.37 ms
+ └─ Error    : GateBadRequestError - LLM Provider NOT provided. Pass model as E.g. `completion(model='huggingface/starcoder',..)`. You passed model=invalid/fake
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Exception Boundary Verification (Total: 104.30ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 7] FALLBACK TRACING: Idempotent Retry & Deepcopy Shield
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | SYSTEM | WARN  |  executor.handlers: Fallback attempt triggered. Retrying with model: gemini/gemini-3.1-flash-lite
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'timeout', 'api_base', 'system_meta'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : f19ba3f50b1e4940a0d8f8329cf9eb39
+ ├─ Model    : invalid/will-fail
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+AFC is enabled with max remote calls: 10.
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  plugin.tracer: 
+[✅ LLM CALL COMPLETED] 
+ ├─ Trace ID : f19ba3f50b1e4940a0d8f8329cf9eb39
+ ├─ Latency  : 2264.14 ms
+ └─ Usage    : 0 tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Fallback & Deepcopy Shielding (Total: 2515.89ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+====================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 📊 [LLM TRACE PIPELINE] E2E INTEGRATION REPORT (LATENCY BREAKDOWN)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ----------------------------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 01. ✅ PASS | [PHASE 1]  | Async Tracer Isolation              | Total: 4145.09ms (LLM: 3927.94ms + Overhead:  217.15ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 02. ✅ PASS | [PHASE 2]  | Semantic Cache Short-circuit        | Total:    1.43ms (LLM:    1.42ms + Overhead:    0.01ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 03. ✅ PASS | [PHASE 3]  | PII Security Guardrail Blocking     | Total:    0.83ms (LLM:    0.83ms + Overhead:    0.00ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 04. ✅ PASS | [PHASE 4]  | Unified Facade Routing              | Total: 3113.78ms (LLM: 2943.47ms + Overhead:  170.31ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 05. ✅ PASS | [PHASE 5]  | Asynchronous Stream Tracking        | Total: 2375.62ms (LLM: 2271.16ms + Overhead:  104.46ms)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 06. ✅ PASS | [PHASE 6]  | Exception Boundary Verification     | Total:  104.30ms (LLM:    2.49ms + Overhead:  101.81ms)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] e2e.llm.vcr: 07. ✅ PASS | [PHASE 7]  | Fallback & Deepcopy Shielding       | Total: 2515.89ms (LLM: 2269.40ms + Overhead:  246.49ms)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] e2e.llm.vcr: ----------------------------------------------------------------------------------------------------
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] e2e.llm.vcr: 🎉 ALL LLM TRACE PIPELINE SCENARIOS EXECUTED SUCCESSFULLY.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.llm.vcr' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] e2e.llm.vcr: ====================================================================================================
+
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:topos.workflow'
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  scope.manager: [managed_scope] Triggering safe teardown sequence for infrastructure resources.
+ LOG | SYSTEM | INFO  |  surface.local: [*] Folding Local Surface...
+ LOG | SYSTEM | INFO  |  scope.manager: [+] Context Manager closed safely.
+[Reactor] 🧹 Executing user-defined teardown hook...
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.llm.vcr' (Acc: 1.70) Den: 7.50)
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.7] e2e.llm.vcr: [e2e.llm.vcr] Bursting logs suppressed... (x2)
+(self) wittgena@wittgenas-MacBook-Pro self % 

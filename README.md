@@ -126,7 +126,10 @@ response = await acompletion(
 )
 ```
 
-* Upcoming Milestone: 3-Point Record & Replay: Captures exact pipeline states across Entry, Translator, and Exit slots. This will enable zero-cost, deterministic CI/CD and local time-travel debugging by replaying LLM interactions without physical network calls.
+* **Experimental VCR (Record & Replay Engine):** A network interceptor embedded at the pipeline Slot level. It serializes HTTP requests, asynchronous stream chunks, and network exceptions into local fixtures to decouple LLM I/O from internal logic. This ensures LLM test suites meet standard software engineering requirements: idempotent offline execution, isolated latency profiling (Network TTFB vs. Framework Overhead), and verification of payload state preservation during fallbacks.
+  * **Quick Usage:** Append the `--vcr` flag to control I/O state.
+  * `fiber e2e llm.vcr --vcr record` *(Serializes actual LLM HTTP traffic and stream iterations into JSON fixtures)*
+  * `fiber e2e llm.vcr --vcr replay` *(Bypasses network sockets using fixtures, executing the complete test suite in <150ms to validate internal framework logic)*
 
 ---
 
@@ -173,3 +176,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * 🔗 **[dphi.clearing.log](./phase/abc/log/dphi/clearing.20260916.log):** Validates the WASM-based Clearing FSM and transaction pipeline, confirming deterministic edge defenses against invalid EIP-712 signatures, zero balances, and corrupted calldata via chaos injection.
 * 🔗 **[edge.sandbox.log](./phase/abc/log/edge/sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience
 * 🔗 **[llm.compat.log](./phase/abc/log/edge/llm/compat.20260913.log):** Validates the LLM governance pipeline, confirming physical Fuel Trap terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* 🔗 **[llm.vcr.log](./phase/abc/log/edge/llm/vcr.replay.20260917.log):** *(Experimental)* Validates the VCR (Record & Replay) network interceptor, confirming zero-latency offline execution, precise latency breakdown (Network I/O vs Framework Overhead), and absolute Tracer shielding during idempotent fallbacks.
