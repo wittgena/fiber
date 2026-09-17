@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from xphi.arch.bound.event.next import uuid
 from fiber.llm.router.stream.parser.chunk import ParsedChunk
-from fiber.llm.model.types.core import (
+from fiber.llm.types.provider.core import (
     Choices,
     Delta,
     Message,
@@ -16,7 +16,7 @@ from fiber.llm.model.types.core import (
     FunctionCall,
     ChatCompletionMessageToolCall,
 )
-from fiber.llm.model.types.stream import ModelResponseStream, StreamingChoices
+from fiber.llm.types.provider.stream import ModelResponseStream, StreamingChoices
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("stream.accumulator")

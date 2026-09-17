@@ -15,7 +15,7 @@ from urllib.parse import urlparse, urlunparse
 import certifi
 import httpx
 
-from fiber.llm.router.constants import (
+from fiber.llm.constants import (
     AIOHTTP_CONNECTOR_LIMIT,
     AIOHTTP_KEEPALIVE_TIMEOUT,
     COMPLETION_HTTP_FALLBACK_SECONDS,

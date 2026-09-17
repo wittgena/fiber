@@ -8,7 +8,7 @@ from typing import Any, Dict, Generator, Optional, final
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from fiber.llm.model.types.general import ModelInfo
+from fiber.llm.types.provider.general import ModelInfo
 from fiber.llm.model.provider.registry import ModelCostRegistry 
 from fiber.llm.model.cost.unit import UnitCostCalculator
 from fiber.llm.model.cost.policy import CostPolicy

@@ -1,7 +1,4 @@
 # fiber.llm.router.util
-## @lineage: fiber.dphi.model.util
-## @lineage: dphi.model.util
-## @lineage: phase.client.model.parser
 import asyncio
 import base64
 import concurrent.futures
@@ -32,10 +29,8 @@ from urllib.parse import urlparse
 import platformdirs
 import requests
 
-from fiber.llm.router.ext.callback.dispatcher import dispatcher
-
 if TYPE_CHECKING:
-    from fiber.llm.router.ext.llm.model.types.block import ContentBlock, TextBlock
+    from fiber.llm.types.llm.block import ContentBlock, TextBlock
 
 
 T = TypeVar("T")
@@ -70,82 +65,6 @@ def asyncio_run(coro: Coroutine) -> Any:
                 "Or, use async entry methods like `aquery()`, `aretriever`, `achat`, etc."
             )
 
-
-@dispatcher.span
-async def run_jobs(
-    jobs: List[Coroutine[Any, Any, T]],
-    show_progress: bool = False,
-    workers: int = DEFAULT_NUM_WORKERS,
-    desc: Optional[str] = None,
-) -> List[T]:
-    semaphore = asyncio.Semaphore(workers)
-
-    @dispatcher.span
-    async def worker(job: Coroutine) -> Any:
-        async with semaphore:
-            return await job
-
-    pool_jobs = [worker(job) for job in jobs]
-
-    if show_progress:
-        from tqdm.asyncio import tqdm_asyncio
-        results = await tqdm_asyncio.gather(*pool_jobs, desc=desc)
-    else:
-        results = await asyncio.gather(*pool_jobs)
-
-    return results
-
-# ==========================================
-# 2. Tokenizer & Text Utilities
-# ==========================================
-
-@runtime_checkable
-class Tokenizer(Protocol):
-    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[Any]: ...
-
-_GLOBAL_TOKENIZER: Optional[Callable[[str], List[Any]]] = None
-
-def set_global_tokenizer(tokenizer: Union[Tokenizer, Callable[[str], list]]) -> None:
-    """Set the global tokenizer internally without relying on external libraries."""
-    global _GLOBAL_TOKENIZER
-    if isinstance(tokenizer, Tokenizer):
-        _GLOBAL_TOKENIZER = tokenizer.encode
-    else:
-        _GLOBAL_TOKENIZER = tokenizer
-
-
-def get_tokenizer(model_name: str = "gpt-3.5-turbo") -> Callable[[str], List]:
-    """Get the global tokenizer, initializing with tiktoken if necessary."""
-    global _GLOBAL_TOKENIZER
-
-    if _GLOBAL_TOKENIZER is None:
-        try:
-            import tiktoken
-        except ImportError:
-            raise ImportError(
-                "`tiktoken` package not found, please run `pip install tiktoken`"
-            )
-
-        should_revert = False
-        if "TIKTOKEN_CACHE_DIR" not in os.environ:
-            should_revert = True
-            os.environ["TIKTOKEN_CACHE_DIR"] = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "_static/tiktoken_cache",
-            )
-
-        enc = tiktoken.encoding_for_model(model_name)
-        tokenizer = partial(enc.encode, allowed_special="all")
-        set_global_tokenizer(tokenizer)
-
-        if should_revert:
-            del os.environ["TIKTOKEN_CACHE_DIR"]
-
-        assert _GLOBAL_TOKENIZER is not None
-
-    return _GLOBAL_TOKENIZER
-
-
 def truncate_text(text: str, max_length: int) -> str:
     """Truncate text to a maximum length."""
     if len(text) <= max_length:
@@ -177,7 +96,6 @@ def get_tqdm_iterable(
         except ImportError:
             pass
     return items
-
 
 def get_cache_dir() -> str:
     """Locate a platform-appropriate cache directory."""
@@ -341,7 +259,7 @@ def format_content_blocks(
     # ---------------------------------------------------------
     # [순환 참조 해결 2] 함수 내부에서 지연 임포트(Lazy Import) 실행
     # ---------------------------------------------------------
-    from fiber.llm.router.ext.llm.model.types.block import TextBlock
+    from fiber.llm.types.llm.block import TextBlock
     
     formatter = SafeFormatter(format_dict=kwargs)
     formatted_blocks: List["ContentBlock"] = []

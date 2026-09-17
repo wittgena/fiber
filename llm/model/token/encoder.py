@@ -1,17 +1,48 @@
 # fiber.llm.model.token.encoder
-## @lineage: llm.model.token.encoder
-from typing import Dict, List, Type, Union, cast, Optional
+from typing import Dict, List, Type, Union, cast, Optional, Protocol, runtime_checkable, Any, Callable
 from pydantic import BaseModel
 import tiktoken
 import time
 import random
-from functools import lru_cache
+from functools import lru_cache, partial
 
-from fiber.llm.model.types.openai import AllMessageValues
-from fiber.llm.model.types.general import SelectTokenizerResponse
+from fiber.llm.types.provider.openai import AllMessageValues
+from fiber.llm.types.provider.general import SelectTokenizerResponse
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.encoder")
+
+@runtime_checkable
+class Tokenizer(Protocol):
+    def encode(self, text: str, *args: Any, **kwargs: Any) -> List[Any]: ...
+
+_GLOBAL_TOKENIZER: Optional[Callable[[str], List[Any]]] = None
+
+def set_global_tokenizer(tokenizer: Union[Tokenizer, Callable[[str], list]]) -> None:
+    """Set the global tokenizer internally without relying on external libraries."""
+    global _GLOBAL_TOKENIZER
+    if isinstance(tokenizer, Tokenizer):
+        _GLOBAL_TOKENIZER = tokenizer.encode
+    else:
+        _GLOBAL_TOKENIZER = tokenizer
+
+def get_tokenizer(model_name: str = "gpt-3.5-turbo") -> Callable[[str], List[Any]]:
+    """
+    Get the tokenizer callable. 
+    Maintains backward compatibility with util.py signature.
+    """
+    global _GLOBAL_TOKENIZER
+
+    if _GLOBAL_TOKENIZER is not None:
+        return _GLOBAL_TOKENIZER
+
+    # 전역 토크나이저가 없으면 새로운 encode 함수를 partial로 감싸서 반환 (기존 동작 완벽 대체)
+    return partial(encode, model=model_name)
+
+
+# =========================================================================
+# Core Functions
+# =========================================================================
 
 @lru_cache(maxsize=1)
 def get_default_encoding(model_name: str = "cl100k_base") -> tiktoken.Encoding:
@@ -38,8 +69,6 @@ def convert_list_message_to_dict(messages: List):
     new_messages = []
     for message in messages:
         convert_msg_to_dict = cast(AllMessageValues, convert_to_dict(message))
-        # 만약 cleanup_none_field_in_message 함수가 별도로 존재한다면 아래 코드를 유지하지만,
-        # 현재 컨텍스트에 없다면 딕셔너리 컴프리헨션으로 안전하게 None을 제거합니다.
         cleaned_message = {k: v for k, v in convert_msg_to_dict.items() if v is not None}
         new_messages.append(cleaned_message)
     return new_messages
@@ -54,49 +83,44 @@ def convert_to_dict(message: Union[BaseModel, dict]) -> dict:
 
 
 # =========================================================================
-# [NEW] Integration with HuggingFace Tokenizers and Counter.py Facade
+# Integration with HuggingFace Tokenizers and Counter.py Facade
 # =========================================================================
 
 def _get_tokenizer(model: str, custom_tokenizer: Optional[Dict] = None) -> SelectTokenizerResponse:
     """
-    splitter.py 로직 차용: 모델명에 맞는 적절한 토크나이저(HuggingFace 또는 tiktoken)를 반환합니다.
+    모델명에 맞는 적절한 토크나이저(HuggingFace 또는 tiktoken)를 반환합니다.
     """
     if custom_tokenizer:
-        # custom_tokenizer 사용 시의 단순화된 지원 (전체 로직은 splitter에 위임)
-        from tokenizers import Tokenizer
+        from tokenizers import Tokenizer as HFTokenizer
         identifier = custom_tokenizer.get("identifier", "")
         revision = custom_tokenizer.get("revision", "main")
         try:
-            tokenizer = Tokenizer.from_pretrained(identifier, revision=revision)
+            tokenizer = HFTokenizer.from_pretrained(identifier, revision=revision)
             return {"type": "huggingface_tokenizer", "tokenizer": tokenizer}
         except Exception as e:
             log.warning(f"Failed to load custom tokenizer: {e}. Falling back to default.")
 
-    # Llama 계열 체크
     model_lower = model.lower()
     if "llama" in model_lower:
         try:
-            from tokenizers import Tokenizer
+            from tokenizers import Tokenizer as HFTokenizer
             repo = "Xenova/llama-3-tokenizer" if "llama-3" in model_lower else "hf-internal-testing/llama-tokenizer"
-            tokenizer = Tokenizer.from_pretrained(repo)
+            tokenizer = HFTokenizer.from_pretrained(repo)
             return {"type": "huggingface_tokenizer", "tokenizer": tokenizer}
         except ImportError:
             log.debug("tokenizers library not found. Falling back to tiktoken.")
         except Exception as e:
             log.debug(f"Failed to load specific llama tokenizer: {e}. Falling back to tiktoken.")
 
-    # 기본값 (OpenAI cl100k_base 등)
     return {"type": "openai_tokenizer", "tokenizer": get_default_encoding()}
 
 def encode(text: str, model: str = "gpt-3.5-turbo", custom_tokenizer: Optional[Union[dict, SelectTokenizerResponse]] = None) -> List[int]:
     """
-    @desc: counter.py에서 기대하는 범용 문자열 인코딩 함수입니다.
     선택된 토크나이저(tiktoken 또는 HuggingFace)를 사용하여 텍스트를 토큰 ID 리스트로 변환합니다.
     """
     if not text:
         return []
 
-    # custom_tokenizer가 이미 SelectTokenizerResponse 규격인 경우
     if custom_tokenizer and "tokenizer" in custom_tokenizer:
         tokenizer_config = custom_tokenizer
     else:
@@ -107,7 +131,8 @@ def encode(text: str, model: str = "gpt-3.5-turbo", custom_tokenizer: Optional[U
     try:
         # Tiktoken 처리
         if isinstance(tokenizer_obj, tiktoken.Encoding):
-            return tokenizer_obj.encode(text, disallowed_special=())
+            # 호환성을 위해 기존 util.py와 동일하게 allowed_special="all" 적용
+            return tokenizer_obj.encode(text, allowed_special="all")
         
         # HuggingFace Tokenizer 처리
         enc = tokenizer_obj.encode(text)

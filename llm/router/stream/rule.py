@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate
 from typing import Optional
 
-from fiber.llm.router.constants import DEFAULT_MAX_RECURSE_DEPTH
-from fiber.llm.exception.eco import JSONSchemaValidationError, APIResponseValidationError
+from fiber.llm.constants import DEFAULT_MAX_RECURSE_DEPTH
+from fiber.llm.types.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
 from fiber.llm.model.config import config
 
