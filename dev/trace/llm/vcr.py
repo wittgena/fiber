@@ -2,124 +2,269 @@
 import os
 import json
 import asyncio
-import uuid
-from typing import Optional, Any
+import time
+import copy
+from dataclasses import dataclass
+from typing import Optional, Any, Dict, AsyncGenerator
 
 from fiber.llm.param import ModelResponse
-from fiber.llm.model.registry.adapter import AdapterRegistry
 from fiber.llm.mapper.traverser import StateTraverser
+from fiber.llm.model.registry.adapter import AdapterRegistry
+from xphi.watcher.plane.emitter import get_emitter
 
+log = get_emitter("trace.llm.vcr")
+
+# ---------------------------------------------------------------------------
+# 1. Playback Controller Options
+# ---------------------------------------------------------------------------
+@dataclass
+class VCRPlaybackConfig:
+    mode: str = "live"
+    speed: str = "max"
+    chaos_latency_ms: float = 0.0
+
+# ---------------------------------------------------------------------------
+# 2. VCR Manager
+# ---------------------------------------------------------------------------
 class VCRManager:
-    def __init__(self, mode: str, fixture_path: str):
-        self.mode = mode.lower()  # 'live', 'record', 'replay'
-        self.fixture_path = fixture_path
-        self.fixtures = {}
+    def __init__(self, config: VCRPlaybackConfig, fixture_dir: str):
+        self.config = config
+        self.fixture_dir = fixture_dir
+        self.memory_fixtures: Dict[str, dict] = {}
         
-        if self.mode == "replay":
-            if os.path.exists(self.fixture_path):
-                with open(self.fixture_path, "r", encoding="utf-8") as f:
-                    self.fixtures = json.load(f)
+        if self.config.mode in ("record", "replay"):
+            os.makedirs(self.fixture_dir, exist_ok=True)
+
+    def _get_filepath(self, trace_id: str) -> str:
+        return os.path.join(self.fixture_dir, f"fixture_{trace_id}.json")
+
+    def get_fixture(self, trace_id: str) -> Optional[dict]:
+        if trace_id in self.memory_fixtures:
+            return self.memory_fixtures[trace_id]
+            
+        filepath = self._get_filepath(trace_id)
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self.memory_fixtures[trace_id] = data
+                return data
+                
+        if self.config.mode == "replay":
+            raise FileNotFoundError(f"VCR Fixture not found for trace_id '{trace_id}' at '{filepath}'.")
+        return None
+
+    def save_fixture(self, trace_id: str, fixture_data: dict):
+        if self.config.mode == "record":
+            filepath = self._get_filepath(trace_id)
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(fixture_data, f, indent=2, ensure_ascii=False)
+            self.memory_fixtures[trace_id] = fixture_data
+            log.info(f"💾 [VCR RECORD] Saved fixture for trace '{trace_id}' to: {filepath}")
+
+    @staticmethod
+    def create_empty_fixture(trace_id: str, ctx: Any) -> dict:
+        original_kwargs = getattr(ctx, "original_kwargs", {})
+        
+        return {
+            "trace_id": trace_id,
+            "request_context": {
+                "model": getattr(ctx, "model", "unknown-model"),
+                "provider": getattr(ctx, "custom_llm_provider", "unknown-provider"),
+                "messages": original_kwargs.get("messages", []),
+                "parameters": {
+                    "temperature": original_kwargs.get("temperature"),
+                    "max_tokens": original_kwargs.get("max_tokens"),
+                    "stream": original_kwargs.get("stream", False)
+                }
+            },
+            "network_metrics": {"ttfb_ms": 0.0, "total_duration_ms": 0.0},
+            "response_timeline": [],
+            "exception_boundary": {"occurred": False, "error_type": None, "message": None}
+        }
+
+# ---------------------------------------------------------------------------
+# 3. Async Stream Emulators
+# ---------------------------------------------------------------------------
+async def stream_recorder_proxy(
+    original_stream: AsyncGenerator, 
+    fixture_data: dict, 
+    manager: VCRManager, 
+    trace_id: str, 
+    start_time: float
+) -> AsyncGenerator:
+    last_time = start_time
+    is_first = True
+    
+    try:
+        async for chunk in original_stream:
+            current_time = time.perf_counter()
+            delta_ms = (current_time - last_time) * 1000
+            
+            if is_first:
+                fixture_data["network_metrics"]["ttfb_ms"] = (current_time - start_time) * 1000
+                is_first = False
+                
+            last_time = current_time
+            content = StateTraverser.resolve(chunk, "choices.0.delta.content", "")
+            fixture_data["response_timeline"].append({
+                "delta_ms": delta_ms,
+                "chunk": content or ""  # None 방지
+            })
+            yield chunk
+            
+    except Exception as e:
+        fixture_data["exception_boundary"] = {
+            "occurred": True,
+            "error_type": type(e).__name__,
+            "message": str(e)
+        }
+        raise
+    finally:
+        fixture_data["network_metrics"]["total_duration_ms"] = (time.perf_counter() - start_time) * 1000
+        manager.save_fixture(trace_id, fixture_data)
+
+
+async def stream_player_emulator(
+    fixture_data: dict, 
+    config: VCRPlaybackConfig, 
+    model_name: str
+) -> AsyncGenerator:
+    metrics = fixture_data.get("network_metrics", {})
+    timeline = fixture_data.get("response_timeline", [])
+    
+    if config.chaos_latency_ms > 0:
+        await asyncio.sleep(config.chaos_latency_ms / 1000.0)
+        
+    if config.speed == "real" and metrics.get("ttfb_ms", 0) > 0:
+        await asyncio.sleep(metrics["ttfb_ms"] / 1000.0)
+
+    for item in timeline:
+        if config.speed == "real" and item.get("delta_ms", 0) > 0:
+            await asyncio.sleep(item["delta_ms"] / 1000.0)
+            
+        yield ModelResponse(
+            id=f"vcr-{fixture_data.get('trace_id', 'mock')[:8]}",
+            model=model_name,
+            choices=[{"index": 0, "delta": {"content": item.get("chunk", "")}}]
+        )
+
+    exc = fixture_data.get("exception_boundary", {})
+    if exc.get("occurred"):
+        error_class = __builtins__.get(exc["error_type"], Exception) 
+        raise error_class(exc["message"])
+
+
+# ---------------------------------------------------------------------------
+# 4. Adapter Proxy
+# ---------------------------------------------------------------------------
+class VCRAdapterProxy:
+    def __init__(self, original_adapter: Any, manager: VCRManager):
+        self.original_adapter = original_adapter
+        self.manager = manager
+        self.config = manager.config
+
+    async def execute(self, ctx: Any) -> Any:
+        safe_ctx = copy.deepcopy(ctx)
+        
+        system_meta = getattr(safe_ctx, "system_meta", None)
+        trace_id = getattr(system_meta, "trace_id", None)
+        
+        if not trace_id:
+            trace_id = f"fallback_{time.time_ns()}"
+
+        is_stream = getattr(safe_ctx, "stream", False)
+        model_name = getattr(safe_ctx, "model", "vcr-mock-model")
+
+        if self.config.mode == "replay":
+            fixture = self.manager.get_fixture(trace_id)
+            if not fixture:
+                raise ValueError(f"No VCR fixture found for trace_id: '{trace_id}'")
+
+            vcr_latency = fixture["network_metrics"].get("total_duration_ms", 0)
+            if system_meta and hasattr(system_meta, "metadata"):
+                system_meta.metadata["_vcr_injected_latency_ms"] = vcr_latency + self.config.chaos_latency_ms
+            
+            if not is_stream and fixture["exception_boundary"]["occurred"]:
+                if self.config.chaos_latency_ms > 0:
+                    await asyncio.sleep(self.config.chaos_latency_ms / 1000.0)
+                exc = fixture["exception_boundary"]
+                raise __builtins__.get(exc["error_type"], Exception)(exc["message"])
+
+            if is_stream:
+                return stream_player_emulator(fixture, self.config, model_name)
             else:
-                raise FileNotFoundError(
-                    f"VCR Fixture not found at '{self.fixture_path}'.\n"
-                    f"Please run your test suite with '--vcr record' option first."
+                if self.config.chaos_latency_ms > 0:
+                    await asyncio.sleep(self.config.chaos_latency_ms / 1000.0)
+                if self.config.speed == "real":
+                    await asyncio.sleep(vcr_latency / 1000.0)
+                    
+                content = "".join([t["chunk"] for t in fixture["response_timeline"]])
+                return ModelResponse(
+                    id=f"vcr-{trace_id[:8]}",
+                    model=model_name,
+                    choices=[{"index": 0, "message": {"role": "assistant", "content": content}}],
                 )
 
-    def get_fixture(self, phase_id: str) -> Optional[dict]:
-        return self.fixtures.get(phase_id)
-
-    def save_fixture(self, phase_id: str, content: str, is_error: bool = False, error_msg: str = ""):
-        if self.mode == "record":
-            self.fixtures[phase_id] = {
-                "content": content,
-                "is_error": is_error,
-                "error_msg": error_msg
-            }
-            # 디렉터리가 존재하지 않으면 안전하게 자동 생성
-            os.makedirs(os.path.dirname(self.fixture_path), exist_ok=True)
-            with open(self.fixture_path, "w", encoding="utf-8") as f:
-                json.dump(self.fixtures, f, indent=2, ensure_ascii=False)
-
-
-def apply_vcr_patch(vcr: VCRManager):
-    if vcr.mode == "live":
-        return
-
-    original_get_adapter = AdapterRegistry.get_adapter
-
-    def patched_get_adapter(task_type, provider_name):
-        adapter = original_get_adapter(task_type, provider_name)
-        if getattr(adapter, "_is_vcr_patched", False):
-            return adapter
-            
-        original_execute = adapter.execute
-
-        async def vcr_execute(msg: Any):
-            original_kwargs = getattr(msg, "original_kwargs", {}) if not isinstance(msg, dict) else msg
-            phase_id = original_kwargs.get("metadata", {}).get("vcr_phase")
-            model_name = getattr(msg, "model", "vcr-mock-model") if not isinstance(msg, dict) else msg.get("model", "vcr-mock-model")
-            
-            # [REPLAY MODE] 인터넷 통신 없이 저장된 픽스처(Fixture) 반환
-            if vcr.mode == "replay" and phase_id:
-                fixture = vcr.get_fixture(phase_id)
-                if not fixture:
-                    raise ValueError(f"No VCR fixture mapped for phase_id: '{phase_id}'")
-                
-                # 에러 저장본이면 동일하게 예외 발생
-                if fixture["is_error"]:
-                    raise Exception(fixture["error_msg"])
-                
-                # 스트리밍 응답 흉내내기 (AsyncGenerator 반환)
-                if original_kwargs.get("stream"):
-                    async def dummy_stream():
-                        yield ModelResponse(
-                            id=f"vcr-{uuid.uuid4().hex[:8]}",
-                            model=model_name,
-                            choices=[{"index": 0, "delta": {"content": fixture["content"]}}]
-                        )
-                    return dummy_stream()
-                
-                # 일반 응답 흉내내기 (ModelResponse 객체 반환)
-                else:
-                    return ModelResponse(
-                        id=f"vcr-{uuid.uuid4().hex[:8]}",
-                        model=model_name,
-                        choices=[{
-                            "index": 0, 
-                            "message": {"role": "assistant", "content": fixture["content"]}, 
-                            "finish_reason": "stop"
-                        }],
-                        usage={"prompt_tokens": 10, "completion_tokens": 10, "total_tokens": 20}
-                    )
-
-            ## [RECORD / LIVE MODE] 실제 통신 수행 및 (Record 시) 결과 저장
-            try:
-                # 동기/비동기 호환 실행 보장
-                if asyncio.iscoroutinefunction(original_execute):
-                    res = await original_execute(msg)
-                else:
-                    res = original_execute(msg)
-                
-                if vcr.mode == "record" and phase_id:
-                    if original_kwargs.get("stream"):
-                        vcr.save_fixture(phase_id, "[Streaming Content Recorded]")
-                    else:
-                        content = StateTraverser.resolve(res, "choices.0.message.content", "")
-                        vcr.save_fixture(phase_id, content)
-                        
-                return res
-                
-            except Exception as e:
-                # 네트워크 장애나 통신 에러 자체를 파일에 기록 (Fallback 테스트용)
-                if vcr.mode == "record" and phase_id:
-                    vcr.save_fixture(phase_id, "", is_error=True, error_msg=str(e))
-                raise
-
-        # 어댑터 실행부 치환 및 패치 완료 마커 삽입
-        adapter.execute = vcr_execute
-        adapter._is_vcr_patched = True
+        start_time = time.perf_counter()
+        fixture_data = self.manager.create_empty_fixture(trace_id, safe_ctx)
         
-        return adapter
+        try:
+            response = await self.original_adapter.execute(safe_ctx)
+            
+            if self.config.mode == "record":
+                if is_stream:
+                    return stream_recorder_proxy(response, fixture_data, self.manager, trace_id, start_time)
+                else:
+                    duration = (time.perf_counter() - start_time) * 1000
+                    
+                    # [수정] 잡다한 방어 로직 모두 제거. 오직 Traverser 단일 경로 사용.
+                    content = StateTraverser.resolve(response, "choices.0.message.content", "")
+                    
+                    fixture_data["network_metrics"]["ttfb_ms"] = duration
+                    fixture_data["network_metrics"]["total_duration_ms"] = duration
+                    fixture_data["response_timeline"].append({"delta_ms": 0, "chunk": content or ""})
+                    self.manager.save_fixture(trace_id, fixture_data)
+                    
+                    if system_meta and hasattr(system_meta, "metadata"):
+                        system_meta.metadata["_vcr_injected_latency_ms"] = duration
+            return response
+            
+        except Exception as e:
+            if self.config.mode == "record":
+                duration = (time.perf_counter() - start_time) * 1000
+                fixture_data["network_metrics"]["total_duration_ms"] = duration
+                fixture_data["exception_boundary"] = {
+                    "occurred": True,
+                    "error_type": type(e).__name__,
+                    "message": str(e)
+                }
+                self.manager.save_fixture(trace_id, fixture_data)
+            raise
 
-    # 어댑터 레지스트리의 싱글톤 반환 로직 자체를 몽키 패치
-    AdapterRegistry.get_adapter = patched_get_adapter
+class VCRInjector:
+    @staticmethod
+    def apply(config: VCRPlaybackConfig, fixture_dir: str) -> Optional[VCRManager]:
+        if config.mode == "live":
+            return None
+            
+        manager = VCRManager(config=config, fixture_dir=fixture_dir)
+        
+        if not AdapterRegistry._is_initialized:
+            AdapterRegistry.setup_defaults()
+            
+        log.info(f"🔌 VCRInjector: Applying VCRAdapterProxy to AdapterRegistry ({config.mode} mode)")
+        
+        for task_type, providers in AdapterRegistry._adapters.items():
+            for provider_name, original_adapter in providers.items():
+                if not getattr(original_adapter, "_is_vcr_patched", False):
+                    proxy = VCRAdapterProxy(original_adapter, manager)
+                    proxy._is_vcr_patched = True
+                    AdapterRegistry._adapters[task_type][provider_name] = proxy
+                    
+        for task_type, original_fallback in AdapterRegistry._fallback_adapters.items():
+            if not getattr(original_fallback, "_is_vcr_patched", False):
+                proxy = VCRAdapterProxy(original_fallback, manager)
+                proxy._is_vcr_patched = True
+                AdapterRegistry._fallback_adapters[task_type] = proxy
+                
+        return manager

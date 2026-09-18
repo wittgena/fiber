@@ -72,15 +72,54 @@ response = await acompletion(
 
 ### 1.2. LLM VCR (Record & Replay Engine)
 
-A network interceptor embedded at the pipeline Slot level. It serializes HTTP requests, stream chunks, and network exceptions into local JSON fixtures. This decouples LLM I/O from internal logic, enabling idempotent offline testing and precise latency profiling (e.g., `Total: 155ms (LLM: 150ms + Overhead: 5ms)`).
+The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables reliable offline testing and exact latency replication without modifying your core business logic.
 
-**Quick Usage & Options:**
+**[1] Seamless Code Integration**
 
-* `fiber e2e llm.vcr --vcr record --fixture auth_test.json`
-*(Executes live API calls and serializes the exact traffic into a custom fixture file)*
-* `fiber e2e llm.vcr --vcr replay --fixture auth_test.json`
-*(Bypasses network sockets and replays the fixture, validating core pipeline logic in <150ms)*
-* **Offline Fallback:** If the system is offline and not in `replay` mode, the engine autonomously detects the network drop and falls back to a local model (e.g., `ollama/local-gemma-3`) to prevent suite crashes.
+Inject the VCR globally with two lines of code. It transparently wraps the `AdapterRegistry`, making your existing `acompletion` calls instantly recordable.
+
+```python
+import os
+import asyncio
+from fiber.llm.entry import acompletion
+from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
+
+# 1. Inject VCR globally (Controlled via environment variable)
+config = VCRPlaybackConfig(mode=os.environ.get("VCR_MODE", "live"), speed="real")
+VCRInjector.apply(config=config, fixture_dir="./fixtures")
+
+async def main():
+    # 2. Execute normal logic. The pipeline handles caching and routing.
+    # Note: Explicit `trace_id` is required to strictly map the record to the replay fixture.
+    response = await acompletion(
+        model="gemini/gemini-3.1-flash-lite",
+        messages=[{"role": "user", "content": "Count from 1 to 5."}],
+        stream=True
+    )
+    async for chunk in response:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+**[2] The Record & Replay Flow**
+
+Experience the workflow using the built-in interactive demo (`ex.recorder`).
+
+* **Step 1: Record (Freeze Network I/O)**
+Execute live API calls. The VCR intercepts the traffic and saves the exact stream timing (`delta_ms`) and exceptions to local fixtures.
+```bash
+python -m fiber.dev.ex.recorder --vcr record
+```
+
+* **Step 2: Replay (Offline Mocking)**
+Disconnect from the internet and run replay mode. The engine streams the cached response using the exact historical latency. You can also inject artificial jitter (`--vcr-chaos`) for resilience testing.
+```bash
+python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 1500
+```
+
+*(Note: When the mode is set to `live`, the VCR wrapper is completely detached, ensuring zero overhead in production.)*
 
 ### 1.3. Secure Agentic Bridge (MCP Gateway)
 
