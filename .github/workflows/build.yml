@@ -5,10 +5,10 @@ on:
     tags: [ "v*.*.*" ]
   pull_request:
     branches: [ "main" ]
-    types: [labeled, synchronize]
+    types: [opened, synchronize, reopened]
 
 concurrency:
-  group: \({{ github.workflow }}-\){{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -30,12 +30,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: 🛡️ Check E2E Approval Label
-        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'e2e-approved')
-        run: |
-          echo "❌ [Access Denied] The 'e2e-approved' label is missing."
-          echo "Please wait for the Gatekeeper bot to assign the label, or add it manually."
-          exit 1
+      # ❌ Watcher가 제거되었으므로 기존의 'Check E2E Approval Label' 단계는 삭제합니다.
 
       - name: 📥 Checkout Fiber
         uses: actions/checkout@v4
