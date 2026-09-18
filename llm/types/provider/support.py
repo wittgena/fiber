@@ -1,7 +1,4 @@
 # fiber.llm.types.provider.support
-## @lineage: fiber.llm.types.model.support
-## @lineage: fiber.llm.model.types.support
-## @lineage: fiber.llm.model.provider.protype
 from enum import Enum
 from typing import Optional, Literal, List, Dict
 from typing_extensions import TypedDict

@@ -1,5 +1,4 @@
 # fiber.llm.model.registry.adapter
-## @lineage: fiber.llm.router.registry.adapter
 import json
 import asyncio
 import functools
@@ -7,28 +6,22 @@ import httpx
 from pathlib import Path
 from typing import Dict, AsyncGenerator, Generator, Any, List, Union
 
-# Context & Parameter Imports
 from fiber.llm.param import ModelResponse
 from fiber.llm.context.metadata import CompletionContext, EmbeddingContext
-
-# Router & Registry Imports
 from fiber.llm.model.registry.llm import LLMRouter, ModuleMissingError
 from fiber.llm.model.registry.embedding import EmbeddingRouter
-
-# Mapper, Provider & Client Imports
 from fiber.llm.model.provider.resolver import get_llm_provider
+
 from fiber.llm.types.exception.mapping import exception_type
 from fiber.llm.mapper.state import StateMapper
+# ✅ 추가됨: 스트림 데이터 텍스트 추출을 위한 Traverser 모듈 임포트
+from fiber.llm.mapper.traverser import StateTraverseRule, StateTraverser
 from fiber.dphi.eco.client.http import get_client
 
-# XPHI Framework Imports
 from xphi.arch.bound.event.next import uuid4 
 from xphi.kernel.space.bind.resolver import find_current_self, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
-# ==========================================
-# Loggers & Module Initialization
-# ==========================================
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 llm_log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
 registry_log = get_emitter("registry.adapter")
@@ -42,7 +35,6 @@ class BaseProviderAdapter:
     """LLM 호출을 수행하고, 단일 응답 객체 또는 원시 청크 제너레이터를 반환하는 어댑터 인터페이스"""
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
         raise NotImplementedError()
-
 
 class GenericHTTPAdapter(BaseProviderAdapter):
     """순수 HTTP 통신(OpenAI 호환 포맷 등)을 통해 LLM과 직접 통신하는 경량 폴백 어댑터"""
@@ -84,6 +76,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                     response.raise_for_status()
                     async for line in response.aiter_lines():
                         if line:
+                            adapter_log.debug(f"[DEBUG ADAPTER - GenericHTTP] Yielding chunk type: {type(line)} | content: {repr(line[:100])}")
                             yield line
                             
             return stream_generator()
@@ -176,14 +169,38 @@ class InterLLMAdapter(BaseProviderAdapter):
             else:
                 response_stream = llm.stream_chat(llama_messages, **execution_kwargs)
             
-            # 파이프라인에서 StreamWrapper 처리를 하므로 여기선 원시 청크 제너레이터만 반환
+            # ✅ 수정됨: 단순 raw 방출을 넘어, 다중 위상 데이터를 OpenAI 규격으로 정규화하여 방출
             async def stream_generator():
+                def normalize_chunk(raw_chunk: Any) -> dict:
+                    """Gemini, LlamaIndex 등 이기종 Chunk를 OpenAI 표준 Dict 스키마로 강제 캐스팅"""
+                    content = StateTraverseRule.extract_stream_content(raw_chunk, default="")
+                    raw_finish_reason = StateTraverser.resolve(raw_chunk, "finish_reason")
+                    
+                    # Enum 객체 방어적 파싱 (예: <FinishReason.STOP: 'STOP'> -> 'stop')
+                    finish_reason = None
+                    if raw_finish_reason:
+                        finish_reason = str(raw_finish_reason).split(".")[-1].lower() if hasattr(raw_finish_reason, "value") else str(raw_finish_reason).lower()
+
+                    normalized = {
+                        "id": f"chatcmpl-{req_id}",
+                        "object": "chat.completion.chunk",
+                        "model": ctx.model,
+                        "choices": [{
+                            "index": 0,
+                            "delta": {"content": content, "role": "assistant"} if content else {"role": "assistant"},
+                            "finish_reason": finish_reason
+                        }]
+                    }
+                    return normalized
+
                 if ctx.acompletion:
                     async for chunk in response_stream:
-                        yield chunk.raw
+                        adapter_log.debug(f"[DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: {type(chunk.raw)}")
+                        yield normalize_chunk(chunk.raw)
                 else:
                     for chunk in response_stream:
-                        yield chunk.raw
+                        adapter_log.debug(f"[DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: {type(chunk.raw)}")
+                        yield normalize_chunk(chunk.raw)
 
             return stream_generator()
             
@@ -312,6 +329,6 @@ class AdapterRegistry:
         fallback = cls._fallback_adapters.get(task_type)
         adapter = task_manifold.get(provider_name, fallback)
         if not adapter:
-            raise ValueError(f"[Registry Error] '{task_type}' 작업을 처리할 폴백 어댑터조차 구성되지 않았습니다.")
+            raise ValueError(f"[Registry Error] '{task_type}' 작업을 처리할 폴백 어댑터 구성되지 않았습니다.")
             
         return adapter

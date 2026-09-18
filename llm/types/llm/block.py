@@ -1346,7 +1346,6 @@ class LLMMetadata(BaseModel):
     )
     is_function_calling_model: bool = Field(
         default=False,
-        # SEE: https://openai.com/blog/function-calling-and-other-api-updates
         description=(
             "Set True if the model supports function calling messages, similar to"
             " OpenAI's function calling API. For example, converting 'Email Anya to"

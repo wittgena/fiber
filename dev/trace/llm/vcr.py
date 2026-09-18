@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional, Any, Dict, AsyncGenerator
 
 from fiber.llm.param import ModelResponse
-from fiber.llm.mapper.traverser import StateTraverser
+from fiber.llm.mapper.traverser import StateTraverser, StateTraverseRule
 from fiber.llm.model.registry.adapter import AdapterRegistry
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -105,10 +105,22 @@ async def stream_recorder_proxy(
                 is_first = False
                 
             last_time = current_time
-            content = StateTraverser.resolve(chunk, "choices.0.delta.content", "")
+            
+            log.debug(f"\n[DEBUG VCR] =========================================")
+            log.debug(f"[DEBUG VCR] Raw chunk type: {type(chunk)}")
+            if hasattr(chunk, 'model_dump_json'):
+                log.debug(f"[DEBUG VCR] Pydantic dump: {chunk.model_dump_json()}")
+            elif isinstance(chunk, dict):
+                log.debug(f"[DEBUG VCR] Dict dump: {chunk}")
+            else:
+                log.debug(f"[DEBUG VCR] Raw representation: {repr(chunk)}")
+                
+            content = StateTraverseRule.extract_stream_content(chunk, default="")
+            log.debug(f"[DEBUG VCR] Extracted content: {repr(content)}")
+            log.debug(f"[DEBUG VCR] =========================================")
             fixture_data["response_timeline"].append({
                 "delta_ms": delta_ms,
-                "chunk": content or ""  # None 방지
+                "chunk": content
             })
             yield chunk
             
@@ -217,7 +229,6 @@ class VCRAdapterProxy:
                 else:
                     duration = (time.perf_counter() - start_time) * 1000
                     
-                    # [수정] 잡다한 방어 로직 모두 제거. 오직 Traverser 단일 경로 사용.
                     content = StateTraverser.resolve(response, "choices.0.message.content", "")
                     
                     fixture_data["network_metrics"]["ttfb_ms"] = duration

@@ -440,9 +440,6 @@ def get_llm_provider(
             model=model
         )
 
-# `fiber/llm/router/ext/llm/param/processor.py` 등 기존 모듈에서 호출 시 호환성을 유지하기 위한 래퍼 함수들입니다.
-# (향후 이 래퍼들을 삭제하고 프로세서에서 _resolver_instance를 직접 호출하도록 리팩토링하는 것을 권장합니다.)
-
 def supports_function_calling(model: str, custom_llm_provider: Optional[str] = None) -> bool:
     return _resolver_instance.supports_function_calling(model, custom_llm_provider)
 

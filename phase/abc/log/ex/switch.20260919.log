@@ -1,0 +1,200 @@
+(self) wittgena@wittgenas-MacBook-Pro self % VCR_MODE=record LOG_LEVEL=debug python -m dev.ex.switch
+================================================================================
+🛡️  FIBER ZERO-CODE INTEGRATION & SANDBOX
+================================================================================
+ LOG | SYSTEM | INFO  |  fiber.cli.sandbox: [Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active).
+ 🔒 [Sandbox] Strict Security Policy INJECTED (Air-gap & Warden active)
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+ LOG | SYSTEM | DEBUG |  registry.adapter: [Registry] 시스템 코어 다중 위상(Multi-topology) 레지스트리 초기화 시작
+ LOG | SYSTEM | DEBUG |  registry.llm: [Router] Scanning for dynamically trans-ed modules...
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.llm.router.llm
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: Anthropic in fiber.llm.router.llm.anthropic
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: LLM in fiber.llm.router.llm.base
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: GoogleGenAI in fiber.llm.router.llm.gemini
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: OpenAI in fiber.llm.router.llm.openai
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | DEBUG |  registry.adapter: [Registry] 시스템 코어 레지스트리 초기화 완료
+ LOG | SYSTEM | INFO  |  trace.llm.vcr: 🔌 VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ 🔌 [Integration] Status: ENGAGED (RECORD)
+ 🔄 [Integration] Aliased 'litellm' -> 'fiber.llm.entry'
+ 📦 [Integration] Aliased 'litellm.types.utils' -> 'fiber.llm.param'
+--------------------------------------------------------------------------------
+
+▶️ [BUSINESS LOGIC] Initiating LLM Call
+   ├─ Scenario: tech_debt_migration
+   ├─ Model: gemini/gemini-3.1-flash-lite
+   └─ Prompt: As a senior software architect, explain why relying on a temporary 'Zero-Code Integration' (like Python module aliasing or monkey-patching) is dangerous as a long-term production solution. Provide a 3-step action plan for safely migrating to a native SDK implementation. Use bullet points.
+
+ LOG | SYSTEM | DEBUG |  param.processor: [Vendor Config] Loaded custom mapper 'GoogleAIStudioGeminiConfig' from fiber.llm.router.llm.param.vendor.gemini
+ LOG | SYSTEM | DEBUG |  runtime.entry: Core Completion Transport 진입
+ LOG | SYSTEM | DEBUG |  registry.adapter: [InterLLM-014fb569] 🚀 execute START | model=gemini-3.1-flash-lite, provider=gemini, stream=True
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'timeout', 'system_meta', 'api_base'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | SYSTEM | DEBUG |  registry.adapter: [InterLLM-014fb569] 🌊 Initiating STREAM Execution
+ LOG | SYSTEM | DEBUG |  fiber.llm.router.llm.gemini: [GenAI-014fb569] 🌊⚡ _astream_chat START | model=gemini-3.1-flash-lite, messages_count=1
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+📡 [STREAM OPENED] Awaiting chunks...
+
+🤖 [AI RESPONSE] 
+----------------------------------------
+
+AFC is enabled with max remote calls: 10.
+ LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: 
+[DEBUG VCR] =========================================
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] Raw chunk type: <class 'dict'>
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': 'As a', 'role': 'assistant'}, 'finish_reason': None}]}
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] Extracted content: 'As a'
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] =========================================
+[🔍 DUCK-TYPING INSPECTOR - First Chunk]
+   ├─ Actual Type  : <class 'fiber.llm.types.provider.stream.ModelResponseStream'>
+   ├─ isinstance() : ✅ PASS
+
+----------------------------------------
+
+As a LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: 
+[DEBUG VCR] =========================================
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] Raw chunk type: <class 'dict'>
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' senior software architect, I have seen many projects fall into the "temporary hack"', 'role': 'assistant'}, 'finish_reason': None}]}
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] Extracted content: ' senior software architect, I have seen many projects fall into the "temporary hack"'
+ LOG | SYSTEM | DEBUG |  trace.llm.vcr: [DEBUG VCR] =========================================
+ senior software architect, I have seen many projects fall into the "temporary hack" LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.9] [Acc:-0.1] trace.llm.vcr: 
+[DEBUG VCR] =========================================
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.8] [Acc:0.0] trace.llm.vcr: [DEBUG VCR] Raw chunk type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.8] [Acc:0.2] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' trap. While monkey-patching or module aliasing provides immediate relief by bypassing restrictive interfaces or missing features, it introduces', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.7] [Acc:0.3] trace.llm.vcr: [DEBUG VCR] Extracted content: ' trap. While monkey-patching or module aliasing provides immediate relief by bypassing restrictive interfaces or missing features, it introduces'
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.7] [Acc:0.4] trace.llm.vcr: [DEBUG VCR] =========================================
+ trap. While monkey-patching or module aliasing provides immediate relief by bypassing restrictive interfaces or missing features, it introduces LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.6] [Acc:0.7] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' **architectural debt** that compounds over time.\n\n### Why "Zero-Code Integration" Hacks are Dangerous\n\n*', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.5] [Acc:0.8] trace.llm.vcr: [DEBUG VCR] Extracted content: ' **architectural debt** that compounds over time.\n\n### Why "Zero-Code Integration" Hacks are Dangerous\n\n*'
+ **architectural debt** that compounds over time.
+
+### Why "Zero-Code Integration" Hacks are Dangerous
+
+* LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.4] [Acc:-0.6] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': '   **Fragility and Silent Failures:** Monkey-patching relies on the internal implementation details of a third-party library.', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.4] [Acc:-0.5] trace.llm.vcr: [DEBUG VCR] Extracted content: '   **Fragility and Silent Failures:** Monkey-patching relies on the internal implementation details of a third-party library.'
+   **Fragility and Silent Failures:** Monkey-patching relies on the internal implementation details of a third-party library. LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.4] [Acc:-0.2] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' If the vendor updates their library, your "patch" may no longer align with the underlying object structure, leading to runtime exceptions that', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.3] [Acc:0.1] trace.llm.vcr: [DEBUG VCR] Extracted content: ' If the vendor updates their library, your "patch" may no longer align with the underlying object structure, leading to runtime exceptions that'
+ If the vendor updates their library, your "patch" may no longer align with the underlying object structure, leading to runtime exceptions that LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.3] [Acc:0.3] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': " are notoriously difficult to debug because the stack trace will point to your patch rather than the library's logic.\n*   **Breaking", 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.3] [Acc:0.5] trace.llm.vcr: [DEBUG VCR] Extracted content: " are notoriously difficult to debug because the stack trace will point to your patch rather than the library's logic.\n*   **Breaking"
+ are notoriously difficult to debug because the stack trace will point to your patch rather than the library's logic.
+*   **Breaking LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.3] [Acc:0.7] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' Type Safety and Static Analysis:** These hacks typically bypass static analysis tools (like Mypy or Pylance). By', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.3] [Acc:0.8] trace.llm.vcr: [DEBUG VCR] Extracted content: ' Type Safety and Static Analysis:** These hacks typically bypass static analysis tools (like Mypy or Pylance). By'
+ Type Safety and Static Analysis:** These hacks typically bypass static analysis tools (like Mypy or Pylance). By LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.6] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' mutating objects at runtime, you obscure the contract between your code and the integration. This makes your codebase opaque to IDEs, reducing', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.5] trace.llm.vcr: [DEBUG VCR] Extracted content: ' mutating objects at runtime, you obscure the contract between your code and the integration. This makes your codebase opaque to IDEs, reducing'
+ mutating objects at runtime, you obscure the contract between your code and the integration. This makes your codebase opaque to IDEs, reducing LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.0] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' developer velocity and increasing the likelihood of regression errors.\n*   **The "Hidden Dependency" Problem:** When you alias', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.1] trace.llm.vcr: [DEBUG VCR] Extracted content: ' developer velocity and increasing the likelihood of regression errors.\n*   **The "Hidden Dependency" Problem:** When you alias'
+ developer velocity and increasing the likelihood of regression errors.
+*   **The "Hidden Dependency" Problem:** When you aliasSUMMARY🔥| SYSTEM | DEBUG |  [G:0.9] [Acc:0.1] adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.4] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' modules or patch methods, you create a "shadow API." New team members will not understand why the code is structured in a non', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.6] trace.llm.vcr: [DEBUG VCR] Extracted content: ' modules or patch methods, you create a "shadow API." New team members will not understand why the code is structured in a non'
+ modules or patch methods, you create a "shadow API." New team members will not understand why the code is structured in a nonSUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.1] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': '-standard way, leading to "cargo-cult programming" where the hack is copied and proliferated throughout the system, making the', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.2] trace.llm.vcr: [DEBUG VCR] Extracted content: '-standard way, leading to "cargo-cult programming" where the hack is copied and proliferated throughout the system, making the'
+-standard way, leading to "cargo-cult programming" where the hack is copied and proliferated throughout the system, making the[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:trace.llm.vcr' (Acc: 1.82) Den: 30.50)
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.1] [Acc:1.8] trace.llm.vcr: 
+[DEBUG VCR] =========================================
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:trace.llm.vcr'
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-1.0] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' eventual migration significantly more expensive.\n*   **Security and Compliance Risks:** Runtime manipulation of objects is often flagged by security scanners as', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.7] trace.llm.vcr: [DEBUG VCR] Extracted content: ' eventual migration significantly more expensive.\n*   **Security and Compliance Risks:** Runtime manipulation of objects is often flagged by security scanners as'
+ eventual migration significantly more expensive.
+*   **Security and Compliance Risks:** Runtime manipulation of objects is often flagged by security scanners asSUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.0] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' a potential injection vector. Furthermore, it complicates your ability to audit dependencies, as the behavior of the library is no longer what the', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.1] trace.llm.vcr: [DEBUG VCR] Extracted content: ' a potential injection vector. Furthermore, it complicates your ability to audit dependencies, as the behavior of the library is no longer what the'
+ a potential injection vector. Furthermore, it complicates your ability to audit dependencies, as the behavior of the library is no longer what theSUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.5] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' vendor documented or shipped.\n\n---\n\n### 3-Step Action Plan for Native SDK Migration\n\nTo move from a "hack', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.7] trace.llm.vcr: [DEBUG VCR] Extracted content: ' vendor documented or shipped.\n\n---\n\n### 3-Step Action Plan for Native SDK Migration\n\nTo move from a "hack'
+ vendor documented or shipped.
+
+---
+
+### 3-Step Action Plan for Native SDK Migration
+
+To move from a "hack[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:trace.llm.vcr' (Acc: 1.53) Den: 34.00)
+-based" integration to a robust, native implementation, follow this structured transition:
+
+#### 1. Encapsulate the "Hack"[Telemetry] 🟢 System Stabilized on 'SYSTEM:adapter.base'
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.5] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' behind an Adapter Pattern\nBefore removing the patch, stop calling the library directly throughout your codebase. Create an **Adapter interface** that', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-2.5] trace.llm.vcr: [DEBUG VCR] Extracted content: ' behind an Adapter Pattern\nBefore removing the patch, stop calling the library directly throughout your codebase. Create an **Adapter interface** that'
+ behind an Adapter Pattern
+Before removing the patch, stop calling the library directly throughout your codebase. Create an **Adapter interface** thatSUMMARY🔥| SYSTEM | DEBUG |  [G:0.8] adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'> (x7)
+ LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-2.0] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' defines the behavior you actually need from the integration.\n*   Route all calls through this interface.\n*   Initially', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-1.9] trace.llm.vcr: [DEBUG VCR] Extracted content: ' defines the behavior you actually need from the integration.\n*   Route all calls through this interface.\n*   Initially'
+ defines the behavior you actually need from the integration.
+*   Route all calls through this interface.
+*   InitiallySUMMARY🔥| SYSTEM | DEBUG |  [G:0.9] [Acc:-0.1] adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-1.5] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ', the adapter will internally use your monkey-patch/alias.\n*   **Benefit:** You decouple your business logic from the integration', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-1.3] trace.llm.vcr: [DEBUG VCR] Extracted content: ', the adapter will internally use your monkey-patch/alias.\n*   **Benefit:** You decouple your business logic from the integration'
+, the adapter will internally use your monkey-patch/alias.
+*   **Benefit:** You decouple your business logic from the integrationSUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.9] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' implementation, making it ready for a drop-in replacement.\n\n#### 2. Implement the Native SDK in Parallel (The "Shadow', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.8] trace.llm.vcr: [DEBUG VCR] Extracted content: ' implementation, making it ready for a drop-in replacement.\n\n#### 2. Implement the Native SDK in Parallel (The "Shadow'
+ implementation, making it ready for a drop-in replacement.
+
+#### 2. Implement the Native SDK in Parallel (The "ShadowSUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.2] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': '" Phase)\nIntroduce the official SDK alongside your adapter. Modify your adapter to support a "dual-mode" operation', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.3] trace.llm.vcr: [DEBUG VCR] Extracted content: '" Phase)\nIntroduce the official SDK alongside your adapter. Modify your adapter to support a "dual-mode" operation'
+" Phase)
+Introduce the official SDK alongside your adapter. Modify your adapter to support a "dual-mode" operation[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:trace.llm.vcr' (Acc: 1.61) Den: 33.50)
+.
+*   Use a feature flag to toggle between the legacy "patch" path and the new "SDK" path.
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:adapter.base'
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:trace.llm.vcr' (Acc: 2.06) Den: 35.50)
+*   Implement a **side-by-side comparison**: In non-critical environments, execute both the legacy path and the new SDK path[Telemetry] 🟢 System Stabilized on 'SYSTEM:adapter.base'
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.1] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ', logging any discrepancies in output or performance.\n*   **Benefit:** This validates the SDK implementation against your existing business', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.3] [Acc:-1.7] trace.llm.vcr: [DEBUG VCR] Extracted content: ', logging any discrepancies in output or performance.\n*   **Benefit:** This validates the SDK implementation against your existing business'
+, logging any discrepancies in output or performance.
+*   **Benefit:** This validates the SDK implementation against your existing businessSUMMARY🔥| SYSTEM | DEBUG |  [G:0.9] [Acc:-0.0] adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'> (x6)
+ LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-1.2] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' requirements without risking production stability.\n\n#### 3. Formalize and Deprecate\nOnce the native SDK is verified', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-1.1] trace.llm.vcr: [DEBUG VCR] Extracted content: ' requirements without risking production stability.\n\n#### 3. Formalize and Deprecate\nOnce the native SDK is verified'
+ requirements without risking production stability.
+
+#### 3. Formalize and Deprecate
+Once the native SDK is verified LOG | SYSTEM | DEBUG |  adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.7] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ', perform the final cut-over.\n*   Remove the feature flag and delete the legacy monkey-patching/', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.6] trace.llm.vcr: [DEBUG VCR] Extracted content: ', perform the final cut-over.\n*   Remove the feature flag and delete the legacy monkey-patching/'
+, perform the final cut-over.
+*   Remove the feature flag and delete the legacy monkey-patching/SUMMARY🔥| SYSTEM | DEBUG |  [G:0.9] [Acc:0.1] adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.4] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': 'aliasing logic entirely.\n*   Promote the Adapter to a permanent part of your infrastructure layer, ensuring that any', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:-0.3] trace.llm.vcr: [DEBUG VCR] Extracted content: 'aliasing logic entirely.\n*   Promote the Adapter to a permanent part of your infrastructure layer, ensuring that any'
+aliasing logic entirely.
+*   Promote the Adapter to a permanent part of your infrastructure layer, ensuring that anySUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.1] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' future vendor SDK upgrades only require changes within the Adapter, not across your entire domain logic.\n*   **Benefit:** You have effectively transformed', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.2] trace.llm.vcr: [DEBUG VCR] Extracted content: ' future vendor SDK upgrades only require changes within the Adapter, not across your entire domain logic.\n*   **Benefit:** You have effectively transformed'
+ future vendor SDK upgrades only require changes within the Adapter, not across your entire domain logic.
+*   **Benefit:** You have effectively transformedSUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.7] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'content': ' a dangerous hack into a clean, maintainable architectural component.', 'role': 'assistant'}, 'finish_reason': None}]}
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:0.8] trace.llm.vcr: [DEBUG VCR] Extracted content: ' a dangerous hack into a clean, maintainable architectural component.'
+ a dangerous hack into a clean, maintainable architectural component. LOG | SYSTEM | DEBUG |  mapper.traverser: [Traverser] Failed to extract content from chunk type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.3] trace.llm.vcr: [DEBUG VCR] Dict dump: {'id': 'chatcmpl-014fb569', 'object': 'chat.completion.chunk', 'model': 'gemini-3.1-flash-lite', 'choices': [{'index': 0, 'delta': {'role': 'assistant'}, 'finish_reason': 'stop'}]}
+ LOG | SYSTEM | DEBUG |  mapper.traverser: [Traverser] Failed to extract content from chunk type: <class 'dict'>
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.4] trace.llm.vcr: [DEBUG VCR] Extracted content: ''
+ LOG | SYSTEM | DEBUG |  mapper.traverser: [Traverser] Failed to extract content from chunk type: <class 'fiber.llm.types.provider.stream.ModelResponseStream'>
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:trace.llm.vcr' (Acc: 1.61) Den: 34.00)
+
+
+----------------------------------------
+
+✅ [STREAM CLOSED] Duration: 11346.07ms
+   ├─ Total Chunks Received : 30
+   ├─ Legacy Extracted      : 29
+   ├─ Fiber Mapper Extracted: 29
+   └─ Data Mismatch Count   : 0
+
+================================================================================
+💾 [VCR FIXTURE INSPECTOR]
+   ├─ Path: ./fixtures/fixture_fixture_obj_tech_debt_migration.json
+⏱️  [METRICS] TTFB: 6396.47ms | Total Duration: 11343.38ms
+================================================================================
+
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.0] trace.llm.vcr: 
+[DEBUG VCR] ========================================= (x26)
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.2] [Acc:1.2] trace.llm.vcr: [DEBUG VCR] Raw chunk type: <class 'dict'> (x26)
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.1] [Acc:1.5] trace.llm.vcr: [DEBUG VCR] ========================================= (x25)
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.1] [Acc:1.6] trace.llm.vcr: [trace.llm.vcr] Bursting logs suppressed... (x14)
+SUMMARY🔥| SYSTEM | DEBUG |  [G:0.8] [Acc:0.2] adapter.base: [DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: <class 'dict'> (x4)
