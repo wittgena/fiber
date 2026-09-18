@@ -1,5 +1,4 @@
 # fiber.llm.mapper.traverser
-## @lineage: fiber.llm.router.mapper.traverser
 import os
 import json
 import asyncio
@@ -24,7 +23,12 @@ STATE_EXTRACTION_RULES = {
     "defaults": {
         "role": "assistant",
         "finish_stop": "stop",
-        "finish_tool": "tool_calls"
+        "finish_tool": "tool_calls",
+        "stream_content_paths": [
+            "delta",                     # Fiber 고유의 ChatResponse 속성
+            "choices.0.delta.content",   # OpenAI/LiteLLM 표준 경로
+            "content.parts.0.text"       # Gemini Native JSON 경로
+        ]
     }
 }
 
@@ -55,9 +59,22 @@ class StateTraverser:
                 current = getattr(current, k, None)
         return current if current is not None else default
 
+
 class StateTraverseRule:
     """@delegate: Declarative State Translation Engine"""
     
+    @staticmethod
+    def extract_stream_content(chunk: Any, default: str = "") -> str:
+        # 실제 추출 시도
+        for path in STATE_EXTRACTION_RULES["defaults"]["stream_content_paths"]:
+            content = StateTraverser.resolve(chunk, path)
+            if content:
+                return content
+                
+        # 모든 경로에서 실패했을 때만 경량 로그 출력 (Burst 방지)
+        log.debug(f"[Traverser] Failed to extract content from chunk type: {type(chunk)}")
+        return default
+
     @staticmethod
     def to_llama_messages(messages: List[dict]) -> List[ChatMessage]:
         """Brane Context Messages -> LlamaIndex ChatMessage"""
@@ -94,6 +111,7 @@ class StateTraverseRule:
         default_role = STATE_EXTRACTION_RULES["defaults"]["role"]
         role_val = StateTraverser.resolve(response, "message.role.value", default_role)
         raw_resp = getattr(response, "raw", None)
+        
         if not tool_calls and raw_resp:
             f_name_path = STATE_EXTRACTION_RULES["gemini"]["fallback_tool_name"]
             f_args_path = STATE_EXTRACTION_RULES["gemini"]["fallback_tool_args"]
@@ -122,7 +140,6 @@ class StateTraverseRule:
             },
             "finish_reason": STATE_EXTRACTION_RULES["defaults"]["finish_stop"]
         }
-
         if tool_calls:
             choice_data["message"]["tool_calls"] = tool_calls
             choice_data["finish_reason"] = STATE_EXTRACTION_RULES["defaults"]["finish_tool"]

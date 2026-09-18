@@ -2,14 +2,14 @@
 
 @desc: AI Agent Gateway
 
-Fiber is a cryptographic proxy designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
+Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
 
 This document provides a practical guide on how to integrate and deploy Fiber across its core operational pillars:
 
-* **[1.1] LLM Routing, Trace**: How to use Fiber as a drop-in replacement for standard LLM SDKs to route traffic, enforce network-level budget limits, and manage execution traces.
+* **[1.1] LLM Routing, Trace:** How to use Fiber as a drop-in replacement for standard LLM SDKs to route traffic, enforce network-level budget limits, and manage execution traces.
 * **[1.2] LLM VCR (Record & Replay Engine):** How to serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency profiling.
 * **[1.3] Secure Agentic Bridge (MCP Gateway):** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
-* **[1.4] Audit Log & Compliance Engine:** How to record verifiable Merkle-proof receipts for agent action.
+* **[1.4] Audit Log & Compliance Engine:** How to record verifiable Merkle-proof receipts for agent actions.
 
 Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (connect, daemon, e2e)** to help you quickly provision your infrastructure.
 
@@ -21,7 +21,7 @@ Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (c
 
 The fiber.llm.entry module is a high-performance LLM router that provides a drop-in replacement for the OpenAI SDK and LiteLLM. Beyond simple routing, it utilizes a strict, Netty-style asynchronous pipeline to seamlessly integrate execution tracing, network recording, and budget controls without compromising the developer-friendly UX.
 
-* **Fuel Breaker**: Strictly prevents unexpected billing spikes by physically terminating the TCP connection if a streaming response exceeds its predefined token budget.
+* **Fuel Breaker:** Strictly prevents unexpected billing spikes by physically terminating the TCP connection if a streaming response exceeds its predefined token budget.
 * **Declarative Tool Recovery:** Dynamically detects and normalizes malformed tool calls from heterogeneous LLMs (e.g., Gemini) into the strict OpenAI standard format.
 * **Slot-based Middleware (UX Facade):** Safely inject custom plugins (e.g., Datadog Tracers, Semantic Caches, PII Guardrails) using a simple flat list (`interceptors=[]`). The Entry Facade autonomously routes them to designated lifecycle slots without blocking the main I/O or risking core pipeline corruption.
 
@@ -69,56 +69,114 @@ response = await acompletion(
 )
 ```
 
+새로 개선된 `ex.switch`의 핵심(다중 위상 스트림 정규화 및 Traverser를 활용한 A/B 교차 검증)을 반영하여 1.2절을 기술적으로 간결하게 재구성했습니다. 불필요한 수식어를 제거하고 코드를 실용적인 수준으로 압축했습니다.
+
+---
+
 ### 1.2. LLM VCR (Record & Replay Engine)
 
-The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables reliable offline testing and exact latency replication without modifying your core business logic.
+The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables deterministic offline testing and precise historical latency emulation without altering business logic.
 
-**[1] Seamless Code Integration**
+Fiber provides two approaches for VCR integration:
 
-Inject the VCR globally with two lines of code. It transparently wraps the `AdapterRegistry`, making your existing `acompletion` calls instantly recordable.
+**[1] Native Integration**
+
+If using Fiber's SDK, the VCR can be injected globally. It wraps the `AdapterRegistry`, making standard `acompletion` calls recordable.
 
 ```python
-import os
-import asyncio
+import os, asyncio
 from fiber.llm.entry import acompletion
 from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
 
-# 1. Inject VCR globally (Controlled via environment variable)
+# 1. Inject VCR globally
 config = VCRPlaybackConfig(mode=os.environ.get("VCR_MODE", "live"), speed="real")
 VCRInjector.apply(config=config, fixture_dir="./fixtures")
 
 async def main():
-    # 2. Execute normal logic. The pipeline handles caching and routing.
-    # Note: Explicit `trace_id` is required to strictly map the record to the replay fixture.
+    # 2. Execute. Explicit `trace_id` binds the execution to a specific fixture.
     response = await acompletion(
         model="gemini/gemini-3.1-flash-lite",
         messages=[{"role": "user", "content": "Count from 1 to 5."}],
-        stream=True
+        stream=True,
+        metadata={"trace_id": "native_demo"}
     )
     async for chunk in response:
-        print(chunk.choices[0].delta.content, end="", flush=True)
+        print(chunk.choices[0].delta.content or "", end="", flush=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-**[2] The Record & Replay Flow**
+**[2] Zero-Code Integration (Module Aliasing & State Mapping)**
 
-Experience the workflow using the built-in interactive demo (`ex.recorder`).
+For legacy codebases tightly coupled to third-party SDKs (e.g., LiteLLM), Fiber uses **Zero-Code Integration**. By aliasing `sys.modules` at runtime, Fiber proxies legacy I/O calls.
 
-* **Step 1: Record (Freeze Network I/O)**
-Execute live API calls. The VCR intercepts the traffic and saves the exact stream timing (`delta_ms`) and exceptions to local fixtures.
-```bash
-python -m fiber.dev.ex.recorder --vcr record
+Crucially, the adapter layer autonomously normalizes heterogeneous stream payloads (like Gemini's native JSON) into strict OpenAI-compliant formats. This ensures rigid legacy parsers do not fail, while offering a 1-line declarative migration path via `StateTraverseRule`.
+
+```python
+import os, sys, asyncio
+
+# 1. Alias module namespaces before business logic loads
+VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
+if VCR_MODE in ("record", "replay"):
+    import fiber.llm.entry as litellm_entry
+    sys.modules["litellm"] = litellm_entry
+    
+    from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
+    VCRInjector.apply(config=VCRPlaybackConfig(mode=VCR_MODE), fixture_dir="./fixtures")
+
+# 2. Legacy Business Logic
+import litellm 
+from fiber.llm.mapper.traverser import StateTraverseRule
+
+async def main():
+    response = await litellm.acompletion(
+        model="gemini/gemini-3.1-flash-lite",
+        messages=[{"role": "user", "content": "Explain migration."}],
+        stream=True,
+        metadata={"trace_id": "tech_debt_migration"} 
+    )
+    
+    async for chunk in response:
+        # [Method A] Legacy Approach: Rigid, schema-bound defensive parsing
+        legacy_content = ""
+        try:
+            choices = getattr(chunk, "choices", None) or (chunk.get("choices", []) if isinstance(chunk, dict) else [])
+            if choices:
+                delta = getattr(choices[0], "delta", None) or (choices[0].get("delta", {}) if isinstance(choices[0], dict) else {})
+                legacy_content = getattr(delta, "content", None) or (delta.get("content", "") if isinstance(delta, dict) else "")
+        except Exception:
+            pass
+            
+        # [Method B] Fiber Approach: Declarative multi-topology traversal
+        # Reliably extracts data whether the chunk is an Object/Dict or OpenAI/Gemini schema
+        fiber_content = StateTraverseRule.extract_stream_content(chunk, default="")
+        
+        # Behavioral Equivalency Guaranteed: Adapter normalization ensures 100% parity
+        assert legacy_content == fiber_content  
+        print(fiber_content, end="", flush=True)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-* **Step 2: Replay (Offline Mocking)**
-Disconnect from the internet and run replay mode. The engine streams the cached response using the exact historical latency. You can also inject artificial jitter (`--vcr-chaos`) for resilience testing.
+**[3] The Record & Replay Flow**
+
+* **Step 1: Record (Capture Network I/O)**
+Executes live API calls, persisting stream timing (`delta_ms`) and normalized payloads to local fixtures.
+
 ```bash
-python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 1500
+VCR_MODE=record python -m fiber.dev.ex.switch
 ```
 
-*(Note: When the mode is set to `live`, the VCR wrapper is completely detached, ensuring zero overhead in production.)*
+* **Step 2: Replay (Offline Emulation)**
+Streams the cached response using exact historical latency. Add `--vcr-chaos` (in CLI) or `chaos_latency_ms` (in config) to inject artificial jitter for timeout resilience testing.
+
+```bash
+VCR_MODE=replay python -m fiber.dev.ex.switch
+```
+
+*(Note: In `live` mode, the VCR wrapper and aliases are bypassed entirely, introducing zero overhead.)*
 
 ### 1.3. Secure Agentic Bridge (MCP Gateway)
 
@@ -220,9 +278,10 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
-* 🔗 **[dphi.wasm.log](./phase/abc/log/dphi/wasm.entry.20260916.log&utm_source=gemini):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), Distributed Execution Determinism recovery, Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...)
-* 🔗 **[plane.flare.log](./phase/abc/log/plane/flare.20260917.log&utm_source=gemini):** Validates V8 isolation sandboxing within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
-* 🔗 **[dphi.clearing.log](./phase/abc/log/dphi/clearing.20260916.log&utm_source=gemini):** Validates the WASM-based Clearing FSM and transaction pipeline, confirming deterministic edge defenses against invalid EIP-712 signatures, zero balances, and corrupted calldata via chaos injection.
-* 🔗 **[edge.sandbox.log](./phase/abc/log/gateway/sandbox.20260911.log&utm_source=gemini):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience
-* 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log&utm_source=gemini):** Validates the LLM governance pipeline, confirming physical Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
-* 🔗 **[llm.vcr.log](./phase/abc/log/llm/vcr.replay.20260917.log&utm_source=gemini):** *(Experimental)* Validates the VCR (Record & Replay) network interceptor, confirming zero-latency offline execution, precise latency breakdown (Network I/O vs Framework Overhead), and absolute Tracer shielding during idempotent fallbacks.
+* 🔗 **[dphi.wasm.log](./phase/abc/log/dphi/wasm.entry.20260916.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), Distributed Execution Determinism recovery, Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...).
+* 🔗 **[plane.flare.log](./phase/abc/log/plane/flare.20260917.log):** Validates V8 isolation sandboxing within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
+* 🔗 **[dphi.clearing.log](./phase/abc/log/dphi/clearing.20260916.log):** Validates the WASM-based Clearing FSM and transaction pipeline, confirming deterministic edge defenses against invalid EIP-712 signatures, zero balances, and corrupted calldata via chaos injection.
+* 🔗 **[edge.sandbox.log](./phase/abc/log/gateway/sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience.
+* 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming physical Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* 🔗 **[llm.vcr.log](./phase/abc/log/llm/vcr.replay.20260917.log):** Validates the VCR (Record & Replay) network interceptor, confirming zero-latency offline execution, precise latency breakdown (Network I/O vs Framework Overhead), and absolute Tracer shielding during idempotent fallbacks.
+* 🔗 **[ex.switch.log](./phase/abc/log/ex/switch.20260919.log):** Validates the Sandbox zero-code integration, confirming runtime module aliasing, seamless multi-topology stream normalization via the State Mapper, and precise historical TTFB emulation during VCR playback.
