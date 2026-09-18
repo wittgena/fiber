@@ -30,8 +30,6 @@ jobs:
           --health-retries 5
 
     steps:
-      # ❌ Watcher가 제거되었으므로 기존의 'Check E2E Approval Label' 단계는 삭제합니다.
-
       - name: 📥 Checkout Fiber
         uses: actions/checkout@v4
         with:

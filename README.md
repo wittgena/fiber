@@ -67,7 +67,6 @@ response = await acompletion(
     interceptors=[DatadogTracer(), PIIGuardrail(), SemanticCache()], # Clean injection
     metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
 )
-
 ```
 
 ### 1.2. LLM VCR (Record & Replay Engine)
