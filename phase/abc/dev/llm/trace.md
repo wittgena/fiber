@@ -29,7 +29,7 @@ When an array of interceptors is passed to the entry point, the UX Facade extrac
  ├────────────────────────────────────────────────────┤
  │ [Slot: POST_TRANSLATE] ➔ (ex: PII Guardrail)                   │ Validated state. Enforces security policies.
  ├────────────────────────────────────────────────────┤
- │ [Core: Fuel Trap]      ➔ (Budget Exhaustion Trap)              │ Terminates socket physically on budget overrun.
+ │ [Core: Fuel Breaker]   ➔ (Budget Exhaustion Breaker)           │ Terminates socket physically on budget overrun.
  ├────────────────────────────────────────────────────┤
  │ [Core: Transport]      ➔ (Actual LLM Network I/O)              │ Edge boundary / Network transit.
  └────────────────────────────────────────────────────┘
@@ -42,7 +42,7 @@ This Netty-style duplex architecture inherently defends against modern gateway v
 
 * Middle (Un-bypassable Slots): Data and error flows are decoupled. If a Guardrail (POST_TRANSLATE) ruptures the pipeline due to a policy violation, the exception deterministically flows back up to the Tracer (PRE_OBSERVER), guaranteeing zero blind spots in audit logs.
 
-* Exit (Fuel Trap): A hard, network-level socket termination mathematically prevents malicious agents from causing infinite streaming loops and billing runaways.
+* Exit (Fuel Breaker): A hard, network-level socket termination mathematically prevents malicious agents from causing infinite streaming loops and billing runaways.
 
 ---
 

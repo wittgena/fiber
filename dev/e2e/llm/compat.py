@@ -46,7 +46,7 @@ class DummyTestTracer(BaseLLMTracer):
 class StartCompatMsg(WorkflowMessage): pass
 class FallbackTestMsg(WorkflowMessage): pass
 class MockBypassTestMsg(WorkflowMessage): pass
-class FuelTrapTestMsg(WorkflowMessage): pass
+class FuelBreakerTestMsg(WorkflowMessage): pass
 class TokenUtilsTestMsg(WorkflowMessage): pass
 class AdapterMappingTestMsg(WorkflowMessage): pass
 class InterceptorTestMsg(WorkflowMessage): pass
@@ -176,11 +176,11 @@ class LlmCompatWorkflow(Workflow):
             self.fail_count += 1
             return ErrorMessage(f"Mock Bypass Failed: {e}")
 
-        return FuelTrapTestMsg()
+        return FuelBreakerTestMsg()
 
     @step
-    async def phase_fuel_trap(self, msg: FuelTrapTestMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] 🔄 [Phase 4] Kinetic Membrane (Fuel Trap) Streaming")
+    async def phase_fuel_breaker(self, msg: FuelBreakerTestMsg) -> WorkflowMessage:
+        self.log.info(f"[{self.name}] 🔄 [Phase 4] Fuel Breaker Streaming")
         try:
             budget = 5 
             self.log.info(f"[{self.name}] ⛽ Injecting artificial fuel budget: {budget}")
@@ -201,12 +201,12 @@ class LlmCompatWorkflow(Workflow):
                 self.success_count += 1
                 self.total_fuel += chunks_received
             else:
-                raise ValueError(f"Fuel trap failed to kill stream. Received {chunks_received} chunks.")
+                raise ValueError(f"Fuel breaker failed to kill stream. Received {chunks_received} chunks.")
 
         except Exception as e:
             self.log.error(f"[{self.name}] ❌ Failed: {e}")
             self.fail_count += 1
-            return ErrorMessage(f"Fuel Trap Failed: {e}")
+            return ErrorMessage(f"Fuel Breaker Failed: {e}")
 
         return TokenUtilsTestMsg()
 

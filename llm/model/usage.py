@@ -424,7 +424,7 @@ class TenantEco:
             logger.info(
                 f"[EcoServ] Tenant: {tenant_id} | Model: {model_name} ({provider}) | "
                 f"Tokens: {normalized_usage.total_tokens} | "
-                f"Base Cost: \({base_total_cost:.6f} -> Final Cost:\){final_cost:.6f}"
+                f"Base Cost: {base_total_cost:.6f} -> Final Cost: {final_cost:.6f}"
             )
             
             # 4. Construct the deterministic Billing Intent for the Kernel

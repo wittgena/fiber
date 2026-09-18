@@ -130,10 +130,8 @@ class LlmTraceProfile:
         except (IndexError, AttributeError) as e:
             raise ValueError(f"Trace Miss: Invalid response structure. {e}")
 
-    # =========================================================================
-    # [시나리오 2] Fuel Trap (Kinetic Membrane 강제 차단 검증)
-    # =========================================================================
-    def build_fuel_trap_payload(self, budget: int = 5) -> Dict[str, Any]:
+    ## [phase.2] Fuel Breaker
+    def build_fuel_breaker_payload(self, budget: int = 5) -> Dict[str, Any]:
         return {
             "model": self.target_model,
             "messages": [{"role": "user", "content": "Write a very long essay about the universe."}],

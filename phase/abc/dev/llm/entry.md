@@ -1,9 +1,8 @@
 # fiber.phase.abc.dev.llm.entry
-@lineage: fiber.phase.abc.gateway.llm.entry
 
 ## 1. Overview
 
-The `fiber.llm.entry` module is an LLM router designed as a drop-in replacement for the OpenAI SDK and LiteLLM. It maintains interface compatibility while its internal architecture utilizes a DPHI Kernel-backed asynchronous Channel Pipeline.
+The `fiber.llm` module is an LLM router designed as a drop-in replacement for the OpenAI SDK and LiteLLM. It maintains interface compatibility while its internal architecture utilizes a DPHI Kernel-backed asynchronous Channel Pipeline.
 
 Without requiring modifications to existing codebases relying on OpenAI-compatible SDKs or established LLM routing frameworks, it integrates pipeline capabilities including Fuel-based budget control, dynamic fallbacks, mocking, prompt management, and response normalization.
 
@@ -68,7 +67,7 @@ In addition to standard parameters (`model`, `messages`, `temperature`, `stream`
 Governs kernel-level resource allocation via the `ContextBinder` and `StreamAggregator` middlewares.
 
 * `metadata={"kernel_auth": {"fuel_budget": 1000}}`: Sets the maximum allowed token (Fuel) budget.
-* **Kinetic Membrane (Fuel Trap)**: During streaming (`stream=True`), if consumed tokens exceed the allocated budget, the pipeline terminates the connection to enforce the budget limit.
+* **Fuel Breaker**: During streaming (`stream=True`), if consumed tokens exceed the allocated budget, the pipeline terminates the connection to enforce the budget limit.
 * The consumed fuel is recorded in `ModelResponse.usage.fuel_consumed`.
 * `audit_hash`: An injected kernel audit hash is embedded into the OpenAI-spec `system_fingerprint` field for auditing purposes.
 

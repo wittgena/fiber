@@ -13,9 +13,8 @@ from fiber.llm.mapper.traverser import StateTraverser
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter
 
-tracer_log = get_emitter("plugin.tracer")
+tracer_log = get_emitter("llm.tracer")
 
-## [MOCK INTERCEPTORS] 파이프라인 훅(Hook) 검증용 Mock 객체들
 class DebugTracer(BaseLLMTracer):
     """[Slot: PRE_OBSERVER] 실전형 비동기 방출 트레이서 (상세 시각화 로깅 지원)"""
     def __init__(self):
