@@ -32,9 +32,7 @@ FIXTURE_ROOT = resolve_path("fixture")
 log = get_emitter("e2e.llm.vcr")
 tracer_log = get_emitter("plugin.tracer")
 
-# =====================================================================
-# [REPORT DTO] 명확한 가시성을 위한 결과 객체 (지연 시간 분리)
-# =====================================================================
+"""[REPORT DTO] 명확한 가시성을 위한 결과 객체 (지연 시간 분리)"""
 @dataclass
 class TraceTestResult:
     phase_num: int
@@ -52,10 +50,7 @@ class TraceTestResult:
     def status_icon(self) -> str:
         return "✅ PASS" if self.success else "❌ FAIL"
 
-
-# =====================================================================
-# [WORKFLOW] 테스트 메시지 및 위상(Phase) 정의
-# =====================================================================
+"""[WORKFLOW] 테스트 메시지 및 위상(Phase) 정의"""
 class StartTraceMsg(WorkflowMessage): pass
 class SemanticCacheMsg(WorkflowMessage): pass
 class GuardrailMsg(WorkflowMessage): pass
@@ -241,13 +236,9 @@ class LlmTraceWorkflow(Workflow):
             llm_latency = (time.time() - llm_t0) * 1000
             
             await asyncio.sleep(0.1)
-            
-            # [REFACTOR] StateTraverser를 이용한 우아한 데이터 추출 (Dict/Object 다형성 충돌 원천 차단)
             content = StateTraverser.resolve(response, "choices.0.message.content", "")
-
             is_shielded = fallback_tracer.started and fallback_tracer.ended and not fallback_tracer.error
             is_success = bool(content) and is_shielded
-            
         except Exception as e:
             self.log.error(str(e)); is_success = False
             
@@ -291,16 +282,14 @@ class LlmTraceWorkflow(Workflow):
         self.post_message(StopMessage(result=False))
 
 
-## [APP & SYSTEM ENTRY] 애플리케이션 바인딩 및 VCR 초기화
+"""[APP & SYSTEM ENTRY] 애플리케이션 바인딩 및 VCR 초기화"""
 class LlmTraceApplication:
     def __init__(self, scope_kwargs: dict, run_context: dict):
         self.scope_kwargs = scope_kwargs
         self.run_context = run_context
         
-        # [MODIFIED] FIXTURE_ROOT 하위로 경로 지정 및 fixture 파일명 동적 반영
         fixture_filename = run_context.get("fixture_filename", "vcr_fixtures.json")
         fixture_file = os.path.join(FIXTURE_ROOT, fixture_filename)
-        
         self.vcr_manager = VCRManager(
             mode=run_context.get("vcr_mode", "live"),
             fixture_path=fixture_file
@@ -343,10 +332,7 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
     vcr_mode = getattr(args, 'vcr', "live")
     
-    # [MODIFIED] argparse에서 fixture 값을 가져옴
     fixture_filename = getattr(args, 'fixture', "vcr_fixtures.json")
-
-    # Replay 모드일 때는 오프라인이어도 통과
     if not is_online and vcr_mode != "replay":
         log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
         resolved_model = "ollama/local-gemma-3"
@@ -359,7 +345,7 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
         "use_proxy": scope_kwargs["use_proxy"], 
         "target_model": resolved_model,
         "vcr_mode": vcr_mode,
-        "fixture_filename": fixture_filename  # [MODIFIED] run_context에 추가
+        "fixture_filename": fixture_filename
     }
 
 def main(args: list[str] = None):

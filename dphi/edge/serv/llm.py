@@ -15,7 +15,7 @@ from xphi.arch.model.dphi.auth import DphiKey, DphiAction, KernelAuthPayload
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
-log = get_emitter("edge.llm")
+log = get_emitter("serv.llm")
 
 llm_edge = ContractRouter(
     namespace="llm",  
