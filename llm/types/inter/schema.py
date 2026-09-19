@@ -34,7 +34,7 @@ from deprecated import deprecated
 from typing_extensions import Self
 from PIL import Image
 
-from fiber.llm.mapper.pydantic import (
+from fiber.gateway.llm.mapper.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,
@@ -50,7 +50,7 @@ from fiber.llm.mapper.pydantic import (
     field_validator,
     model_serializer,
 )
-from fiber.llm.mapper.pydantic import CoreSchema
+from fiber.gateway.llm.mapper.pydantic import CoreSchema
 from fiber.llm.router.util import SAMPLE_TEXT, truncate_text
 
 if TYPE_CHECKING:

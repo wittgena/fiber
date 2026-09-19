@@ -22,12 +22,12 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from fiber.dev.infra.config import Phase, E2EConfig, TestResult
 from fiber.dev.infra.bridge import BaseBridgePipeline, log
-from fiber.dphi.worker.connector import WorkerConnector
-import fiber.dphi.worker.sentinel as agent_sentinel
+from fiber.gateway.node.worker.connector import WorkerConnector
+import fiber.gateway.node.worker.sentinel as agent_sentinel
 
-import fiber.dphi.worker.legacy.deploy as agent_deploy
-from fiber.dphi.rpc.legacy.validator import AuthValidatorService
-import fiber.dphi.rpc.registry as rpc_registry
+import fiber.gateway.node.worker.legacy.deploy as agent_deploy
+from fiber.gateway.edge.rpc.legacy.validator import AuthValidatorService
+import fiber.gateway.edge.rpc.registry as rpc_registry
 
 from xphi.state.phase.reactor import PhaseReactor
 

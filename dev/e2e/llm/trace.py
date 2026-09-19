@@ -11,10 +11,10 @@ import uuid
 from typing import List, Tuple, Optional, Any, Dict
 
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
-from fiber.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline import PipelineSlot
 from fiber.llm.entry import acompletion
 from fiber.llm.param import ModelResponse
-from fiber.llm.context.metadata import ExecutionMetadata
+from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.llm.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
 

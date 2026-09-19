@@ -6,7 +6,7 @@ import inspect
 import logging
 from typing import Any, Callable, cast, Dict, Generator, List, Optional, Type
 from contextlib import contextmanager
-from fiber.llm.mapper.pydantic import CoreSchema, core_schema
+from fiber.gateway.llm.mapper.pydantic import CoreSchema, core_schema
 
 logger = logging.getLogger(__name__)
 

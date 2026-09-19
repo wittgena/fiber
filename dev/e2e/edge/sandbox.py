@@ -1,6 +1,4 @@
 # fiber.dev.e2e.edge.sandbox
-## @lineage: fiber.phase.dev.e2e.edge.sandbox
-## @lineage: fiber.phase.e2e.edge.sandbox
 import asyncio
 import random
 import uvicorn
@@ -14,14 +12,14 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from fiber.dev.infra.edge.workflow import EdgeWorkflow
-from fiber.dphi.edge.payload import create_app, Config
-from fiber.dphi.daemon.rpc import RpcWorkerDaemon
+from fiber.dev.infra.workflow.edge import EdgeWorkflow
+from fiber.gateway.rest.payload import create_app, Config
+from fiber.gateway.edge.rpc.daemon import RpcWorkerDaemon
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
-from fiber.dphi.eco.client.http import VerifiedHttpClient
-from fiber.dphi.eco.config.origin import OriginRegistry
+from xphi.arch.bound.client.http import VerifiedHttpClient
+from fiber.gateway.edge.origin.registry import OriginRegistry
 
-from fiber.dev.infra.edge.fsm import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from xphi.kernel.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.arch.dev.tracer.transport import SceneConfig, HttpFlowTracer

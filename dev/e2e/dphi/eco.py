@@ -3,7 +3,7 @@ import time
 import json
 import asyncio
 
-from fiber.dphi.eco.notary import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
+from fiber.gateway.node.notary import EcoProtocolInterface, EcosystemActor, GrantResource, SettlementVerifier
 from fiber.dev.infra.sandbox import TestScripts
 
 from xphi.state.anchor.nexus import ActorIdentity

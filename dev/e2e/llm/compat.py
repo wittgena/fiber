@@ -14,7 +14,7 @@ from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.llm.model.tier import model_tier_registry
-from fiber.llm.context.metadata import ExecutionMetadata
+from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
@@ -243,7 +243,7 @@ class LlmCompatWorkflow(Workflow):
         """[NEW] Phase 6: InterLLM Adapter & State Mapper (Traverser) 검증"""
         self.log.info(f"[{self.name}] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification")
         try:
-            from fiber.llm.mapper.state import StateMapper
+            from fiber.gateway.llm.mapper.state import StateMapper
             mapper = StateMapper()
 
             mock_raw_resp = {

@@ -12,10 +12,10 @@ with contextlib.suppress(ImportError):
     import yaml
 
 from fiber.llm.types.llm.funcall import FunctionCallingLLM
-from fiber.llm.router.llm.base import LLM, ToolSelection
-from fiber.llm.router.llm.handle.template import BasePromptTemplate
+from fiber.gateway.llm.inter.base import LLM, ToolSelection
+from fiber.llm.router.handle.template import BasePromptTemplate
 from fiber.llm.types.llm.block import ChatResponse, CompletionResponse
-from fiber.llm.mapper.pydantic import (
+from fiber.gateway.llm.mapper.pydantic import (
     BaseModel,
     ConfigDict,
     Field,

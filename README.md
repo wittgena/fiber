@@ -69,8 +69,6 @@ response = await acompletion(
 )
 ```
 
-새로 개선된 `ex.switch`의 핵심(다중 위상 스트림 정규화 및 Traverser를 활용한 A/B 교차 검증)을 반영하여 1.2절을 기술적으로 간결하게 재구성했습니다. 불필요한 수식어를 제거하고 코드를 실용적인 수준으로 압축했습니다.
-
 ---
 
 ### 1.2. LLM VCR (Record & Replay Engine)

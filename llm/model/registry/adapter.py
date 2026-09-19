@@ -7,16 +7,16 @@ from pathlib import Path
 from typing import Dict, AsyncGenerator, Generator, Any, List, Union
 
 from fiber.llm.param import ModelResponse
-from fiber.llm.context.metadata import CompletionContext, EmbeddingContext
+from fiber.gateway.llm.context.metadata import CompletionContext, EmbeddingContext
 from fiber.llm.model.registry.llm import LLMRouter, ModuleMissingError
 from fiber.llm.model.registry.embedding import EmbeddingRouter
 from fiber.llm.model.provider.resolver import get_llm_provider
 
-from fiber.llm.types.exception.mapping import exception_type
-from fiber.llm.mapper.state import StateMapper
+from fiber.llm.exception.mapping import exception_type
+from fiber.gateway.llm.mapper.state import StateMapper
 # ✅ 추가됨: 스트림 데이터 텍스트 추출을 위한 Traverser 모듈 임포트
-from fiber.llm.mapper.traverser import StateTraverseRule, StateTraverser
-from fiber.dphi.eco.client.http import get_client
+from fiber.gateway.llm.mapper.traverser import StateTraverseRule, StateTraverser
+from xphi.arch.bound.client.http import get_client
 
 from xphi.arch.bound.event.next import uuid4 
 from xphi.kernel.space.bind.resolver import find_current_self, get_invoker

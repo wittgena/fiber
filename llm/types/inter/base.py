@@ -21,12 +21,12 @@ from typing import (
 )
 
 from fiber.llm.types.llm.block import ChatMessage, MessageRole, TextBlock
-from fiber.llm.mapper.pydantic import (
+from fiber.gateway.llm.mapper.pydantic import (
     BaseModel,
     GetCoreSchemaHandler,
     GetJsonSchemaHandler,
 )
-from fiber.llm.mapper.pydantic import CoreSchema, core_schema
+from fiber.gateway.llm.mapper.pydantic import CoreSchema, core_schema
 
 Model = TypeVar("Model", bound=BaseModel)
 

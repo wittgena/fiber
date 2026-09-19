@@ -8,7 +8,7 @@ from typing import (
 )
 
 # Pydantic Imports
-from fiber.llm.mapper.pydantic import (
+from fiber.gateway.llm.mapper.pydantic import (
     ConfigDict,
     Field,
     model_validator,

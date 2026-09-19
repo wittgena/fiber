@@ -14,7 +14,7 @@ from typing import List, Tuple, Any, Dict
 from fiber.llm.entry import acompletion
 from fiber.llm.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
-from fiber.llm.mapper.traverser import StateTraverser
+from fiber.gateway.llm.mapper.traverser import StateTraverser
 
 from fiber.dev.trace.llm.debugger import DebugTracer
 from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
