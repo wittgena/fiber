@@ -7,10 +7,10 @@ import uvicorn
 import httpx
 from typing import List
 
-from fiber.dphi.edge.payload import create_app, Config
-from fiber.dphi.daemon.rpc import RpcWorkerDaemon
+from fiber.gateway.rest.payload import create_app, Config
+from fiber.gateway.edge.rpc.daemon import RpcWorkerDaemon
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
-from fiber.dphi.eco.client.sdk import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary

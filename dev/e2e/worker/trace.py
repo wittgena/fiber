@@ -13,8 +13,8 @@ from fastapi import Request
 
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.dev.trace.llm.interceptor import LlmTraceProfile
-from fiber.dphi.edge.payload import create_app, Config
-from fiber.dphi.worker.connector import WorkerConnector
+from fiber.gateway.rest.payload import create_app, Config
+from fiber.gateway.node.worker.connector import WorkerConnector
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor
@@ -85,7 +85,7 @@ class AgentNetworkTracePipeline(PipelineRunner):
         # =========================================================================
         # [개선] 관측성 폐쇄 루프(Closed-loop)를 완성하는 가상의 SDK 워커 엔드포인트
         # =========================================================================
-        from fiber.dphi.eco.client.sdk import DphiPublicClient, StrictPayloadFactory
+        from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
         sdk_client = DphiPublicClient(base_url=self.local_url)
 
         @self.rest_app.post("/mock-agent-trace")

@@ -31,7 +31,7 @@ import filetype
 from tinytag import TinyTag, UnsupportedFormatError
 from typing_extensions import Self
 from fiber.llm.router.util import asyncio_run
-from fiber.llm.mapper.pydantic import (
+from fiber.gateway.llm.mapper.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,
@@ -41,7 +41,7 @@ from fiber.llm.mapper.pydantic import (
     field_validator,
     model_validator,
 )
-from fiber.llm.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
+from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
 from fiber.llm.types.inter.schema import ImageDocument
 from fiber.llm.router.util import resolve_binary
 from fiber.llm.model.token.encoder import get_tokenizer

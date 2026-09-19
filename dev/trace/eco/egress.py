@@ -6,14 +6,14 @@ from typing import List
 from contextlib import suppress
 
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
-from fiber.dphi.edge.payload import create_app, Config
+from fiber.gateway.rest.payload import create_app, Config
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import KernelLedger
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.dphi.eco.client.sdk import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 
 log = get_emitter("tracer.eco_egress")
 

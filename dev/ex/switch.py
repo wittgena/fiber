@@ -53,7 +53,7 @@ import litellm
 from litellm.types.utils import ModelResponseStream
 
 # Import Fiber Mapper/Traverser utilities for legacy migration demo
-from fiber.llm.mapper.traverser import StateTraverseRule
+from fiber.gateway.llm.mapper.traverser import StateTraverseRule
 
 async def analyze_and_extract_stream(scenario_id: str, prompt: str):
     trace_id = f"fixture_obj_{scenario_id}"

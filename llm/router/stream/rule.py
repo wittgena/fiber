@@ -6,10 +6,10 @@ from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate
 from typing import Optional
 
-from fiber.llm.constants import DEFAULT_MAX_RECURSE_DEPTH
-from fiber.llm.types.exception.eco import JSONSchemaValidationError, APIResponseValidationError
+from xphi.arch.bound.client.constants import DEFAULT_MAX_RECURSE_DEPTH
+from fiber.llm.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
-from fiber.llm.model.config import config
+from xphi.arch.contract.config.resolver import config
 
 class Rules:
     def __init__(self) -> None:

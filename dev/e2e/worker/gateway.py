@@ -12,14 +12,14 @@ import httpx
 from fiber.dev.infra.config import Phase, E2EConfig, TestResult
 from fiber.dev.infra.bridge import BaseBridgePipeline, log
 
-from fiber.dphi.worker.connector import WorkerConnector
-import fiber.dphi.worker.mcp.oracle as agent_oracle
-import fiber.dphi.worker.mcp.finlib as agent_finlib
-import fiber.dphi.worker.mcp.margin as agent_margin
-import fiber.dphi.worker.search.archive as agent_search
+from fiber.gateway.node.worker.connector import WorkerConnector
+import fiber.gateway.node.worker.mcp.oracle as agent_oracle
+import fiber.gateway.node.worker.mcp.finlib as agent_finlib
+import fiber.gateway.node.worker.mcp.margin as agent_margin
+import fiber.gateway.node.worker.search.archive as agent_search
 
-from fiber.dphi.daemon.pricing import DynamicPricingDaemon
-from fiber.dphi.eco.client.rpc import InternalRpcClient
+from fiber.gateway.node.daemon.pricing import DynamicPricingDaemon
+from fiber.gateway.edge.rpc.client import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 
 from xphi.state.phase.reactor import PhaseReactor

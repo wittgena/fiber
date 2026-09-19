@@ -9,8 +9,8 @@ import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dphi.eco.builder import EcoBuilder
-from fiber.dphi.eco.client.ext import ExtClient
+from fiber.gateway.node.builder import EcoBuilder
+from fiber.gateway.edge.ext.client import ExtClient
 
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from xphi.kernel.space.sandbox.runner import SchemeRunner

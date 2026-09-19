@@ -9,7 +9,7 @@ from typing import Any, List
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.dphi.eco.transaction.pipeline import ClearingPipelineFactory, TransactionPipelineFactory
+from fiber.gateway.edge.transaction.pipeline import ClearingPipelineFactory, TransactionPipelineFactory
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.state.phase.reactor import PhaseReactor

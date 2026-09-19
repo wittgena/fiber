@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Optional, Any, Dict, AsyncGenerator
 
 from fiber.llm.param import ModelResponse
-from fiber.llm.mapper.traverser import StateTraverser, StateTraverseRule
+from fiber.gateway.llm.mapper.traverser import StateTraverser, StateTraverseRule
 from fiber.llm.model.registry.adapter import AdapterRegistry
 from xphi.watcher.plane.emitter import get_emitter
 

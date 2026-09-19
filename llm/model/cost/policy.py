@@ -3,8 +3,8 @@
 import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Optional, Tuple, Union, cast
 from pydantic import BaseModel
-from fiber.llm.model.config import config as global_config
-from fiber.llm.constants import DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
+from xphi.arch.contract.config.resolver import config as global_config
+from xphi.arch.bound.client.constants import DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
 from fiber.llm.types.provider.general import CostPerToken
 from xphi.watcher.plane.emitter import get_emitter
 

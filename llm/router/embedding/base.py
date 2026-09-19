@@ -21,7 +21,7 @@ from typing_extensions import Self
 import numpy as np
 
 # Pydantic Imports
-from fiber.llm.mapper.pydantic import (
+from fiber.gateway.llm.mapper.pydantic import (
     BaseModel,
     Field,
     ConfigDict,
@@ -31,7 +31,7 @@ from fiber.llm.mapper.pydantic import (
 
 # Framework & Context Imports
 from fiber.llm.router.manager import CallbackManager
-from fiber.llm.context.cbevent import (
+from fiber.gateway.llm.context.cbevent import (
     CBEventType,
     EventPayload,
     EmbeddingEndEvent,
@@ -39,7 +39,7 @@ from fiber.llm.context.cbevent import (
     SparseEmbeddingEndEvent,
     SparseEmbeddingStartEvent,
 )
-from fiber.llm.constants import DEFAULT_EMBED_BATCH_SIZE
+from xphi.arch.bound.client.constants import DEFAULT_EMBED_BATCH_SIZE
 from fiber.llm.types.inter.schema import BaseNode, MetadataMode, TransformComponent
 
 from fiber.llm.router.util import get_tqdm_iterable

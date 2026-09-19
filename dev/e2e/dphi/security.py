@@ -10,7 +10,7 @@ from typing import Any, Callable, Dict, List, Optional
 import httpx
 import uvicorn
 
-from fiber.dphi.edge.payload import create_app, Config
+from fiber.gateway.rest.payload import create_app, Config
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 

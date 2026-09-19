@@ -5,7 +5,7 @@ import asyncio
 from typing import Any
 
 from fiber.llm.entry import acompletion
-from fiber.llm.mapper.traverser import StateTraverser
+from fiber.gateway.llm.mapper.traverser import StateTraverser
 from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
 from fiber.dev.trace.llm.debugger import DebugTracer
 

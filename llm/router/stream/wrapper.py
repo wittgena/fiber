@@ -8,10 +8,10 @@ import httpx
 from typing import Any, AsyncIterator, Callable, Optional, NoReturn
 from collections import deque
 
-from fiber.llm.constants import MAX_STREAMING_DURATION_SECONDS
+from xphi.arch.bound.client.constants import MAX_STREAMING_DURATION_SECONDS
 
-from fiber.llm.types.exception.mapping import exception_type
-from fiber.llm.types.exception.eco import OpenAIError
+from fiber.llm.exception.mapping import exception_type
+from fiber.llm.exception.eco import OpenAIError
 from fiber.llm.param import ModelResponseStream
 from fiber.llm.router.stream.pipeline import (
     ChunkCodecHandler, 
@@ -21,7 +21,7 @@ from fiber.llm.router.stream.pipeline import (
 )
 from fiber.llm.router.stream.accumulator import StreamAccumulator
 
-from fiber.llm.model.config import config
+from xphi.arch.contract.config.resolver import config
 from xphi.state.phase.channel import ChannelPipeline
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -125,7 +125,7 @@ class StreamWrapper:
         self._fire_fallback_error(e)
 
     def _fire_fallback_error(self, e: Exception) -> NoReturn:
-        from fiber.llm.types.exception.eco import MidStreamFallbackError
+        from fiber.llm.exception.eco import MidStreamFallbackError
         if isinstance(e, OpenAIError): 
             mapped_exception = e
         else:

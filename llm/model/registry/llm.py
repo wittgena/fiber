@@ -10,7 +10,7 @@ from dataclasses import dataclass, field, asdict
 
 from fiber.llm.model.provider.registry import get_model_cost_registry
 from fiber.llm.types.inter.llm import BaseLLM
-import fiber.llm.router.llm as llm_pkg 
+import fiber.gateway.llm.inter as llm_pkg 
 from xphi.watcher.plane.emitter import get_emitter
 
 registry_log = get_emitter("registry.llm")

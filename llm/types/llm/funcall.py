@@ -29,7 +29,7 @@ from fiber.llm.types.llm.block import (
     ChatResponseAsyncGen,
     ChatResponseGen,
 )
-from fiber.llm.router.llm.base import LLM, ToolSelection
+from fiber.gateway.llm.inter.base import LLM, ToolSelection
 
 import logging
 
