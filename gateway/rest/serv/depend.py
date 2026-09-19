@@ -1,5 +1,4 @@
 # fiber.gateway.rest.serv.depend
-## @lineage: fiber.dphi.edge.serv.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 
@@ -28,7 +27,7 @@ def _get_state_attr(request: Request, attr_name: str) -> Any:
 
 """Gateway Dependencies (Only what the public edge needs)"""
 async def get_rpc_client() -> InternalRpcClient:
-    """[NEW] 내부망 워커와 통신하기 위한 메시지 버스 기반 RPC 클라이언트"""
+    """내부망 워커와 통신하기 위한 메시지 버스 기반 RPC 클라이언트"""
     return InternalRpcClient()
 
 async def get_wasm_broker(request: Request) -> DphiBroker:

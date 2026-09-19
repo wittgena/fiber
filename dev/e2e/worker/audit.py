@@ -25,9 +25,9 @@ from fiber.dev.infra.bridge import BaseBridgePipeline, log
 from fiber.gateway.node.worker.connector import WorkerConnector
 import fiber.gateway.node.worker.sentinel as agent_sentinel
 
-import fiber.gateway.node.worker.legacy.deploy as agent_deploy
-from fiber.gateway.edge.rpc.legacy.validator import AuthValidatorService
+from fiber.gateway.edge.rpc.legacy.validator import ValidatorService
 import fiber.gateway.edge.rpc.registry as rpc_registry
+import fiber.gateway.node.worker.deploy as agent_deploy
 
 from xphi.state.phase.reactor import PhaseReactor
 
@@ -98,7 +98,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         os.environ["DPHI_AUDIT_DB_PATH"] = self.temp_db_path
         
         # 3. 확실한 데이터 연결을 위해 여기서 Validator 인스턴스를 직접 만듭니다.
-        self.validator_service = AuthValidatorService()
+        self.validator_service = ValidatorService()
         
         # [Zero-Trust 격리] 메모리에 올렸으니 즉시 환경 변수에서 민감 정보 영구 삭제
         os.environ.pop("DPHI_VALIDATOR_PRIVATE_KEY", None)

@@ -3,22 +3,261 @@ import os
 import time
 import json
 import hashlib
+import uuid
+import random
 from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field
+
 import httpx
+from pydantic import BaseModel, Field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.gateway.node.builder import EcoBuilder
+# --- Edge / Client / Config ---
 from fiber.gateway.edge.ext.client import ExtClient
+from fiber.gateway.edge.ext.config.exchange import exchange_config
 
-from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
-from xphi.kernel.space.sandbox.runner import SchemeRunner
+# --- xPhi Domain Adapters & Models ---
+from xphi.arch.bound.adapter.settlement import (
+    MandateAdapter, 
+    Ap2MandateResult, 
+    X402SettlementReceipt,
+    TransactionReceipt
+)
 from xphi.arch.bound.adapter.state import StateAdapter
+from xphi.kernel.space.sandbox.runner import SchemeRunner
 from xphi.kernel.wasm.method import DphiMethod
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.state.anchor.nexus import LedgerEventSchema, StreamAppendRequest
+from xphi.arch.model.edge.receptor import (
+    TradeIngressRequest,
+    AnchorProposalRequest,
+    ParityTripletSchema
+)
+from xphi.arch.model.edge.receipt import ExportLogsServiceRequest
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("sandbox.runner")
+log = get_emitter("infra.sandbox")
+
+
+# ============================================================================
+# 1. Sandbox Payload Builders (Migrated from node.builder)
+# ============================================================================
+
+class NotarySwarm:
+    def __init__(self, size: int = 3):
+        self.notaries = []
+        for i in range(size):
+            seed = hashlib.sha256(f"dphi_notary_node_{i}".encode()).digest()
+            private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
+            public_hex = private_key.public_key().public_bytes(
+                encoding=serialization.Encoding.Raw, 
+                format=serialization.PublicFormat.Raw
+            ).hex()
+            self.notaries.append({"priv": private_key, "pub": public_hex})
+        exchange_config.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
+
+    @property
+    def public_keys(self) -> List[str]:
+        return [node["pub"] for node in self.notaries]
+
+    def attest_payload(self, canonical_hash: bytes) -> List[str]:
+        return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
+
+
+class EcoBuilder:
+    __domain_metadata__ = {
+        "otlp_payload": "racks LLM GenAI metrics (tokens/latency) for billing.",
+        "trade_intent": "W3C DID + UniswapX/Fetch.ai. Intent-centric A2A (Agent-to-Agent) resource swap with slippage.",
+        "ledger_append": "Celestia/EigenDA + RISC Zero. Immutable DA (Data Availability) & ZK-verifiable compute logs.",
+        "anchor_proposal": "Ethereum L2 (OP Stack) Sequencer. Rollup of state roots (Merkle Parity) for global consensus."
+    }
+
+    @staticmethod
+    def get_testnet_wallet(edge_server_url: str = "http://localhost:8000/v1/ext") -> ExtClient:
+        return ExtClient(base_url=edge_server_url)
+
+    @staticmethod
+    def ap2_mandate_params(
+        agent_pub_hex: str, 
+        agent_key: ed25519.Ed25519PrivateKey,
+        target_action: str = "M2M_INFERENCE_SWAP",
+        max_spend_usdc: str = "0.50",
+        is_expired: bool = False  
+    ) -> Dict[str, Any]:
+        return {
+            "requester_id": agent_pub_hex,
+            "target_action": target_action,
+            "max_spend_usdc": max_spend_usdc,
+            "signer_key": agent_key,
+            "validity_ms": -3600000 if is_expired else 3600000,
+            "delegation_tier": "TIER_2_ORACLE",
+            "allowed_networks": ["base-mainnet", "arbitrum-one"],
+            "ip_restrictions": ["192.168.1.0/24", "10.0.0.0/8"]
+        }
+
+    @staticmethod
+    def trade_intent(
+        action: str = "A2A_COMPUTE_LEASE",
+        token: str = "USDC",
+        max_fee: str = "2.50",
+        slippage: int = 50,
+        should_fail_policy: bool = False 
+    ) -> Dict[str, Any]:
+        if should_fail_policy:
+            token = "DOGE"
+            slippage = 5000 
+            
+        req = TradeIngressRequest(
+            cilent_id=exchange_config.agents.alpha.did,
+            action=action,
+            parameters={
+                "target_service": exchange_config.agents.beta.did,
+                "payment_token": "USDC" if not should_fail_policy else token,
+                "max_fee_amount": max_fee,          
+                "slippage_tolerance_bps": slippage,      
+                "deadline_ts": int(time.time()) + (10 if should_fail_policy else 300),
+                "execution_environment": {
+                    "hardware": "NVIDIA_H100_80GB",
+                    "duration_seconds": 3600,
+                    "dataset_cid": "ipfs://QmYwAPJzv5CZsnA625s3Xf2sm5DcgXU1G"
+                }
+            }
+        )
+        return req.model_dump(exclude_none=True)
+
+    @staticmethod
+    def otlp_payload(
+        model_name: str = None, 
+        prompt_tokens: int = None,
+        completion_tokens: int = None,
+        latency_ms: int = None,
+        is_malformed: bool = False 
+    ) -> Dict[str, Any]:
+        models = ["gemini-1.5-pro", "gpt-4o", "claude-3-5-sonnet", "llama-3.1-70b-instruct"]
+        providers = ["gcp", "aws", "azure", "together-ai"]
+        
+        model_name = model_name or random.choice(models)
+        prompt_tokens = prompt_tokens or random.randint(100, 150000)
+        completion_tokens = completion_tokens or random.randint(10, 4096)
+        latency_ms = latency_ms or random.randint(500, 15000)
+        
+        trace_id = uuid.uuid4().hex
+        span_id = uuid.uuid4().hex[:16]
+        agent_did = exchange_config.agents.alpha.did 
+        
+        req = ExportLogsServiceRequest(
+            resourceLogs=[{
+                "resource": {
+                    "attributes": [
+                        {"key": "service.name", "value": {"stringValue": "xelog-agent-gateway"}},
+                        {"key": "cloud.provider", "value": {"stringValue": random.choice(providers)}},
+                        {"key": "cloud.region", "value": {"stringValue": "us-west-2"}},
+                        {"key": "agent.did", "value": {"stringValue": agent_did}},
+                        {"key": "tenant.id", "value": {"stringValue": agent_did}} 
+                    ]
+                },
+                "scopeLogs": [{
+                    "scope": {"name": "genai.instrumentation", "version": "1.2.0"},
+                    "logRecords": [{
+                        "timeUnixNano": str(int(time.time() * 1e9)),
+                        "traceId": trace_id,
+                        "spanId": span_id,
+                        "severityText": "INFO",
+                        "body": {"stringValue": f"[{model_name}] LLM Inference completed successfully."},
+                        "attributes": [
+                            {"key": "llm.model", "value": {"stringValue": model_name}},
+                            {"key": "gen_ai.request.model", "value": {"stringValue": model_name}},
+                            {"key": "gen_ai.response.latency_ms", "value": {"intValue": str(latency_ms)}},
+                            {"key": "prompt_tokens", "value": {"intValue": str(prompt_tokens)}},
+                            {"key": "completion_tokens", "value": {"intValue": str(completion_tokens)}},
+                            {"key": "reasoning_tokens", "value": {"intValue": str(random.randint(0, completion_tokens))}},
+                            {"key": "gen_ai.request.temperature", "value": {"doubleValue": "0.7"}},
+                            {"key": "gen_ai.response.finish_reason", "value": {"stringValue": "stop"}},
+                        ]
+                    }]
+                }]
+            }]
+        )
+        payload = req.model_dump(exclude_none=True)
+        
+        if is_malformed:
+            del payload["resourceLogs"] 
+        else:
+            estimated_cost = (prompt_tokens * 0.000001) + (completion_tokens * 0.000002)
+            payload["genai_metrics"] = {
+                "tenant_id": agent_did,
+                "model": model_name,
+                "usage": {
+                    "prompt_tokens": prompt_tokens, 
+                    "completion_tokens": completion_tokens,
+                    "estimated_cost_usd": round(estimated_cost, 4)
+                }
+            }
+        return payload
+
+    @staticmethod
+    def ledger_append(action_name: str, root_hash: str, event_count: int = 3) -> Dict[str, Any]:
+        events = []
+        for i in range(event_count):
+            pii_payload = {
+                "user_email": f"agent_{i}@dphi.network",
+                "kyc_wallet_ip": f"192.168.1.{10+i}",
+                "auth_token": f"Bearer eyJhbGci...{uuid.uuid4().hex[:8]}"
+            }
+            
+            event = LedgerEventSchema(
+                action=f"{action_name}_STEP_{i+1}",
+                user_id="system_clearing_engine",
+                pii_data=pii_payload, 
+                details=f"State transition step {i+1} for intent hash {root_hash}."
+            )
+            events.append(event)
+            
+        req = StreamAppendRequest(
+            stream_name=exchange_config.da_layer.namespace_id,
+            verbose=True,
+            events=events
+        )
+        return req.model_dump(exclude_none=True)
+
+    @staticmethod
+    def anchor_proposal(
+        state_roots: Dict[str, str], 
+        inject_fault: bool = False 
+    ) -> Dict[str, Any]:
+        ledger_root = state_roots.get("ledger_root", f"0x{uuid.uuid4().hex}")
+        if inject_fault:
+            ledger_root = "0xBAD_HASH_CORRUPTED_STATE"
+            
+        parity = ParityTripletSchema(
+            topos_id=f"epoch_{time.strftime('%Y%m%d')}_batch_01",
+            phase_id=1,
+            nexus_id=14592,
+            state_hash=ledger_root
+        )
+        
+        witnesses = exchange_config.export_attestation.witness_pubkeys
+        mock_signatures = [f"{uuid.uuid4().hex}{uuid.uuid4().hex}" for _ in range(3)]
+        req = AnchorProposalRequest(
+            receptor_id=exchange_config.contracts.nexus_clearing,
+            proposed_parity=parity,
+            parent_nexus_id=14591,
+            self_parent_state="genesis",
+            repos={
+                "exchange_merkle_root": state_roots.get("exchange_root", "0x00"),
+                "otlp_telemetry_root": state_roots.get("otlp_root", "0x00")
+            },
+            signers=witnesses[:3], 
+            signatures=mock_signatures,
+            timestamp=int(time.time() * 1000)
+        )
+        return req.model_dump(exclude_none=True)
+
+
+# ============================================================================
+# 2. Sandbox Script Definitions & Isolation Tests
+# ============================================================================
 
 @dataclass(frozen=True)
 class ScriptDef:
@@ -87,18 +326,15 @@ env = os.environ
 is_gateway_working = env.get('FIBER_ISOLATION_MARKER') == '1'
 
 ## 2. Host Environment Segregation: Guarantee strict absence of platform-specific or CI-injected variables to maintain absolute determinism across OS architectures.
-## (Note: Pyodide's default POSIX mocks like 'USER' or 'PWD' are intentionally excluded from this blocklist)
 blocked_keys = ['GITHUB_ACTIONS', 'COMPUTERNAME', 'XPC_SERVICE_NAME', 'COMMAND_MODE', 'TERM_PROGRAM']
 is_host_blocked = all(k not in env for k in blocked_keys)
 
 ## 3. State Entropy Constraint: Strictly cap the total quantity of environment variables
-## to prevent unrestricted host leakage or state space inflation.
 is_minimal = len(env) <= 11
 
-## [Assertion] A controlled closed system: Only explicitly authorized intents enter, host noise is blocked
+## [Assertion] A controlled closed system
 isolated = is_gateway_working and is_host_blocked and is_minimal
 
-## Emitting payload dump for rigorous runtime audit and traceability
 print(f'Isolated: {isolated} | Dump: {dict(env)}')
         """.strip(),
         expect_success=True,
@@ -161,6 +397,10 @@ while True:
     )
 
 
+# ============================================================================
+# 3. Sandbox Runners
+# ============================================================================
+
 class SandboxRunner(SchemeRunner):
     async def _assert_script(self, script: ScriptDef, context: dict = None, validator: Callable[[str], bool] = None):
         start_time = time.time()
@@ -185,10 +425,6 @@ class SandboxRunner(SchemeRunner):
                 if script.expected_match not in output_str:
                     self._record_fail(elapsed_ms, f"Expected string '{script.expected_match}' not found in output. Output: {output_str}", "String Match", title=script.title)
                     return
-
-        # if script.expected_match and script.expected_match not in output_str:
-        #     self._record_fail(elapsed_ms, f"Expected string '{script.expected_match}' not found in output. Output: {output_str}", "String Match", title=script.title)
-        #     return
             
         if validator:
             try:
@@ -302,7 +538,6 @@ class EpochBase(SchemeRunner):
 
     async def hook_validate_mandate(self) -> Optional[Ap2MandateResult]: 
         """[개선] 테스트용 에이전트 키를 생성하여 유효한 Mandate를 조립 후 반환"""
-        # 하위 클래스에서 오버라이드하여 실제 Mandate 객체를 반환하도록 구현 가능
         return None
         
     async def hook_inscribe_nodes(self, parity_triplet: Dict[str, Any]) -> Dict[str, str]: 
@@ -313,12 +548,10 @@ class EpochBase(SchemeRunner):
             log.info(f"  └─ Issuing Capability Receipt based on Mandate: {mandate.mandate.constraints.max_spend_usdc} USDC")
             return MandateAdapter.issue_deferred_receipt(mandate)
             
-        # Mandate가 없는 레거시 또는 Mock 상황
         mock_amount = "0.01"
         if mock_amount == "0.00":
             return None
 
-        # 지연 정산 시나리오에서 Mandate 없이 결제를 진행하는 경우 (예외적 즉시 결제 시뮬레이션)
         mock_tx_hash = f"0x_mock_push_{os.urandom(8).hex()}"
         return X402SettlementReceipt(
             receipt_id=f"rcpt_push_{mock_tx_hash[2:14]}",

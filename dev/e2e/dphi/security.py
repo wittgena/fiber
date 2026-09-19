@@ -204,7 +204,6 @@ class SecurityBoundWorkflow(Workflow):
 """Runner Execution Wrapper"""
 class SecuritySuiteRunner:
     def __init__(self):
-        # 💡 [개선] 러너는 분리된 모듈 레벨 로거를 사용하여 억제됨(Mute) 없이 정상 출력
         self.log = log
         self.port = 8366
         self.host = "127.0.0.1"

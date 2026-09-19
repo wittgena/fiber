@@ -1,5 +1,4 @@
 # fiber.gateway.rest.serv.public
-## @lineage: fiber.dphi.edge.serv.public
 import os
 import json
 import time
@@ -12,7 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from fiber.gateway.node.builder import NotarySwarm
+from fiber.gateway.node.notary import NotarySwarm
 from fiber.gateway.rest.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -20,8 +19,7 @@ from fiber.gateway.rest.serv.depend import (
     get_secret_auditor, 
     get_rpc_client
 )
-from fiber.gateway.edge.rpc.client import InternalRpcClient
-
+from fiber.gateway.edge.rpc.client import InternalRpcClient, RpcException
 from fiber.phase.contract.router import ContractRouter
 from xphi.arch.model.edge.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
@@ -113,8 +111,8 @@ async def public_sandbox_quote(
             payment_receipt=x_x402_receipt
         )
         try:
-            await rpc.call("eco.compute.intent.validate", val_req.model_dump(exclude_none=True))
-        except HTTPException as e:
+            await rpc.call("validate.compute.intent", val_req.model_dump(exclude_none=True))
+        except RpcException as e:
             raise HTTPException(status_code=422, detail=f"Intent Validation Failed: {{\"detail\":\"{e.detail}\"}}")
 
     exec_req = {
@@ -153,8 +151,8 @@ async def public_sandbox_execute(
         )
 
         try:
-            await rpc.call("eco.compute.intent.validate", val_req.model_dump(exclude_none=True))
-        except HTTPException as e:
+            await rpc.call("validate.compute.intent", val_req.model_dump(exclude_none=True))
+        except RpcException as e:
             raise HTTPException(status_code=401, detail=f"Intent Rejected: {{\"detail\":\"{e.detail}\"}}")
 
         exec_req = BilledExecutionRequest(
@@ -169,7 +167,7 @@ async def public_sandbox_execute(
 
         try:
             exec_data = await rpc.call("eco.profile.execute.billed", exec_req.model_dump())
-        except HTTPException as e:
+        except RpcException as e:
             raise HTTPException(status_code=422, detail=f"Compute Failed: {{\"detail\":\"{e.detail}\"}}")
         
         fuel_metered = exec_data.get("fuel_billed", 0)
@@ -237,7 +235,7 @@ async def public_sandbox_handshake(
     
     try:
         quote_data = await rpc.call("eco.profile.quote", quote_req)
-    except HTTPException as e:
+    except RpcException as e:
         raise HTTPException(status_code=422, detail=f"Quotation Failed: {e.detail}")
     
     cost_usd = quote_data.get("estimated_cost_usd", 0.0)
@@ -250,7 +248,7 @@ async def public_sandbox_handshake(
     
     try:
         invoice_data = await rpc.call("eco.exchange.invoice.issue", invoice_req)
-    except HTTPException as e:
+    except RpcException as e:
         raise HTTPException(status_code=500, detail=f"Invoice Issue Failed: {e.detail}")
 
     return SandboxHandshakeResponse(
@@ -272,7 +270,7 @@ async def public_issue_invoice(
 ):
     try:
         return await rpc.call("eco.exchange.invoice.issue", req.model_dump())
-    except HTTPException:
+    except RpcException:
         raise
 
 
@@ -287,7 +285,7 @@ async def public_get_balance(
 ):
     try:
         return await rpc.call("eco.exchange.balance", {"client_id": client_id, "asset_type": asset_type})
-    except HTTPException:
+    except RpcException:
         raise
 
 
@@ -314,7 +312,6 @@ async def public_otlp_logs_export(
         try:
             extracted_metrics = otlp_engine.execute(raw_json_bytes)
         except ValueError as e:
-            # [보안/사용성 개선] 엔진에서 뱉는 raw 에러를 통제하여 명확한 422 힌트 제공
             error_msg = str(e)
             log.warning(f"[Public OTLP] Rule extraction rejected payload: {error_msg}")
             raise HTTPException(
@@ -374,7 +371,6 @@ async def public_audit_log(
     request_time = str(time.time())
     
     try:
-        # [보안/사용성 개선] 데이터 추출 및 변환 중 발생할 수 있는 비즈니스 예외 통제
         event_dict = payload.event.model_dump(exclude_none=True)
         sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
     except ValueError as e:
@@ -435,5 +431,5 @@ async def public_audit_verify(
             "full_receipt": receipt.model_dump(exclude_none=True)
         }
         return await rpc.call("core.ledger.verify", rpc_payload)
-    except HTTPException as e:
+    except RpcException as e:
         raise HTTPException(status_code=e.status_code, detail=f"Verification Failed: {{\"detail\":\"{e.detail}\"}}")

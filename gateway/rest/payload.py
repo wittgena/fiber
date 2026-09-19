@@ -1,5 +1,4 @@
 # fiber.gateway.rest.payload
-## @lineage: fiber.dphi.edge.payload
 from contextlib import asynccontextmanager
 from typing import Optional, Any
 from urllib.parse import urlparse
@@ -18,7 +17,7 @@ from fiber.gateway.edge.origin.registry import OriginRegistry
 
 from xphi.kernel.space.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser
+from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
 from phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from phase.contract.server import (
     AttestationMiddleware,
@@ -100,10 +99,7 @@ async def lifespan(app: FastAPI):
     config: Config = getattr(app.state, "config", get_default_config())
     
     try:
-        # -------------------------------------------------------------------
         # [CRITICAL SECURITY INITIALIZATION]
-        # 0. Origin Registry 초기화 및 암호학적 자가 검증 (Fail-Fast)
-        # -------------------------------------------------------------------
         log.info("Initializing Origin Registry and verifying cryptographic state...")
         registry = OriginRegistry()
         trusted_state = registry.load_and_verify()
@@ -111,9 +107,7 @@ async def lifespan(app: FastAPI):
         app.state.origin_registry = registry
         log.info(f"Origin Registry integrated successfully. Active signers: {len(trusted_state.active_signers)}")
 
-        # -------------------------------------------------------------------
-        # [NEW] KMS 기반 SecretAuditor 싱글톤 초기화 (Fail-Fast)
-        # -------------------------------------------------------------------
+        # KMS 기반 SecretAuditor 싱글톤 초기화 (Fail-Fast)
         log.info("Provisioning Cryptographic Secret Auditor via KMS...")
         secret_key = get_secret_from_vendor(
             client=None,
@@ -143,15 +137,6 @@ async def lifespan(app: FastAPI):
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
         # 2. OTLP Parser & Extraction Engine Init
-        default_otlp_ruleset = {
-            "global_config": {"required_root_keys": ["resourceLogs"]},
-            "targets": [
-                {"tag": "tenant_id", "path": "resourceLogs.0.resource.attributes.tenant.id"},
-                {"tag": "model", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.llm.model"},
-                {"tag": "prompt_tokens", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.prompt_tokens"},
-                {"tag": "completion_tokens", "path": "resourceLogs.0.scopeLogs.0.logRecords.0.attributes.completion_tokens"}
-            ]
-        }
         otlp_parser = OtlpRulesetParser()
         app.state.otlp_engine = otlp_parser.parse_ruleset(default_otlp_ruleset)
         log.info("StrictOtlpExtractionEngine initialized.")
@@ -159,7 +144,6 @@ async def lifespan(app: FastAPI):
         # 3. Stateless Transition Bridge 인스턴스 마운트 (2026-07-28 규격)
         nonce_protector = NonceReplayProtector(tunnel=tunnel)
         mapper = IdempotencyMapper(tunnel=tunnel)
-
         app.state.mcp_transition_adapter = TransitionBridge(
             mapper=mapper,                           
             nonce_protector=nonce_protector
