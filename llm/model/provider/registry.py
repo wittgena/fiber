@@ -10,7 +10,7 @@ from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter 
 
 log_cost = get_emitter("provider.registry")
-REGISTRY_ROOT = resolve_path("registry") / "llms"
+REGISTRY_ROOT = resolve_path("abc") / "registry"
 DEFAULT_REGISTRY_FILENAME = "model_prices_and_context_window.json"
 PROVIDER_KEY = "model_provider"
 

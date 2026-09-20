@@ -61,3 +61,4 @@ jobs:
           XPHI_ENV: "ci"
         run: |
           fiber e2e dphi.wasm.entry
+          VCR_MODE=replay python -m fiber.dev.ex.switch

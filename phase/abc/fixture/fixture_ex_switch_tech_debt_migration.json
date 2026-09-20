@@ -1,0 +1,162 @@
+{
+  "scenario": "tech_debt_migration",
+  "latest_trace_id": "0151fd946e8230004cd5416bac94b552",
+  "history_keys": [
+    "0151fd946e8230004cd5416bac94b552"
+  ],
+  "traces": {
+    "0151fd946e8230004cd5416bac94b552": {
+      "trace_id": "0151fd946e8230004cd5416bac94b552",
+      "request_context": {
+        "model": "gemini-3.1-flash-lite",
+        "provider": "gemini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "As a senior software architect, explain why relying on a temporary 'Zero-Code Integration' (like Python module aliasing or monkey-patching) is dangerous as a long-term production solution. Provide a 3-step action plan for safely migrating to a native SDK implementation. Use bullet points."
+          }
+        ],
+        "parameters": {
+          "temperature": 0.7,
+          "max_tokens": null,
+          "stream": true
+        }
+      },
+      "network_metrics": {
+        "ttfb_ms": 3731.4795419806615,
+        "total_duration_ms": 8891.33250003215
+      },
+      "response_timeline": [
+        {
+          "delta_ms": 3731.4795419806615,
+          "chunk": "As a"
+        },
+        {
+          "delta_ms": 139.75104107521474,
+          "chunk": " senior software architect, I see \"zero-code\" integration hacks—such as monkey-"
+        },
+        {
+          "delta_ms": 140.41174994781613,
+          "chunk": "patching external libraries or dynamically aliasing Python modules—as **technical debt with high interest rates.** While they provide immediate"
+        },
+        {
+          "delta_ms": 200.0894589582458,
+          "chunk": " velocity, they fundamentally subvert the language’s runtime safety and the architecture’s predictability.\n\n### Why Temporary Hacks are Dangerous for"
+        },
+        {
+          "delta_ms": 189.5507910521701,
+          "chunk": " Production\n\n*   **Runtime Fragility (The \"Ghost in the Machine\"):** Monkey-patching modifies the internal state of a library"
+        },
+        {
+          "delta_ms": 109.88758399616927,
+          "chunk": " at runtime. If the underlying library updates its internal API or changes its class structure, your patch will likely trigger a "
+        },
+        {
+          "delta_ms": 270.3225000295788,
+          "chunk": "`TypeError` or `AttributeError` that is invisible to static analysis tools (like Mypy or Pyright).\n*   **"
+        },
+        {
+          "delta_ms": 139.98124992940575,
+          "chunk": "Broken Dependency Contracts:** When you alias modules or override methods, you break the contract between the library and your code. You effectively create a"
+        },
+        {
+          "delta_ms": 270.32895805314183,
+          "chunk": " \"hidden fork\" of the third-party code that is impossible to audit during security patching or dependency upgrades.\n*   **Debugging"
+        },
+        {
+          "delta_ms": 251.78591697476804,
+          "chunk": " Nightmares:** Standard debugging tools rely on stack traces and source code mapping. When you modify objects in memory, the stack trace no"
+        },
+        {
+          "delta_ms": 187.69575003534555,
+          "chunk": " longer matches the source code on disk. This significantly increases \"Mean Time to Recovery\" (MTTR) during a production incident"
+        },
+        {
+          "delta_ms": 139.43270803429186,
+          "chunk": ".\n*   **Hidden Side Effects:** Python modules are often imported across the entire application. A monkey-patch applied"
+        },
+        {
+          "delta_ms": 189.85783297102898,
+          "chunk": " for one specific use case may unintentionally alter the behavior of that library in a completely different part of your system, leading to non"
+        },
+        {
+          "delta_ms": 119.33337501250207,
+          "chunk": "-deterministic, intermittent bugs.\n\n---\n\n### 3-Step Action Plan for Native Migration\n\nTo move from a"
+        },
+        {
+          "delta_ms": 161.760792019777,
+          "chunk": " \"hack\" to a robust, native implementation, follow this architectural transition:\n\n#### 1. Define the Abstraction"
+        },
+        {
+          "delta_ms": 139.82179190497845,
+          "chunk": " Layer (The Adapter Pattern)\nInstead of calling the library directly (or your hacked version of it), create an internal"
+        },
+        {
+          "delta_ms": 149.817708064802,
+          "chunk": " interface (a Python `Protocol` or `Abstract Base Class`).\n*   **Action:** Define exactly what your application"
+        },
+        {
+          "delta_ms": 150.0095829833299,
+          "chunk": " needs from the integration.\n*   **Implementation:** Create a wrapper class that defines these requirements. Your application code should"
+        },
+        {
+          "delta_ms": 179.179499973543,
+          "chunk": " only ever interact with this wrapper, never the third-party library directly. This decouples your business logic from the integration"
+        },
+        {
+          "delta_ms": 160.1160840364173,
+          "chunk": " implementation.\n\n#### 2. Implement the Native SDK in Parallel\nDo not attempt to \"fix\" the hack in"
+        },
+        {
+          "delta_ms": 131.6510409815237,
+          "chunk": " place. Treat the native implementation as a new feature.\n*   **Action:** Install the official SDK as a formal"
+        },
+        {
+          "delta_ms": 139.01004195213318,
+          "chunk": " dependency.\n*   **Implementation:** Implement the native SDK inside the wrapper you created in Step 1. Because you are using an"
+        },
+        {
+          "delta_ms": 250.73762505780905,
+          "chunk": " abstraction layer, you can now toggle between the \"hacked\" version and the \"native\" version using a feature flag or a configuration toggle"
+        },
+        {
+          "delta_ms": 129.74524998571724,
+          "chunk": ". This allows you to test the native implementation in a staging environment without modifying the production execution path.\n\n#### 3"
+        },
+        {
+          "delta_ms": 149.47599999140948,
+          "chunk": ". Verification and \"Dark\" Launch\nBefore fully removing the hack, validate that the native SDK behaves identically to your custom patch under production load"
+        },
+        {
+          "delta_ms": 130.13062498066574,
+          "chunk": ".\n*   **Action:** Use \"Shadow Execution\" or \"Dark Launching.\"\n*   **Implementation:** Run both the hack"
+        },
+        {
+          "delta_ms": 149.98704206664115,
+          "chunk": " and the native implementation in production, but discard the results of one. Compare the return values and latency of both. Once"
+        },
+        {
+          "delta_ms": 159.87979096826166,
+          "chunk": " the native implementation consistently matches the expected outputs and performance metrics of the hack, perform a cutover by updating the configuration toggle"
+        },
+        {
+          "delta_ms": 191.78787502460182,
+          "chunk": ", then delete the monkey-patch code and the old library aliases entirely.\n\n**Architect’s Note:** *Documentation"
+        },
+        {
+          "delta_ms": 147.14224997442216,
+          "chunk": " is the final step. Always document why the hack was removed and ensure the new native implementation is included in your automated test suite to prevent future"
+        },
+        {
+          "delta_ms": 271.3437919737771,
+          "chunk": " regressions.*"
+        }
+      ],
+      "exception_boundary": {
+        "occurred": false,
+        "error_type": null,
+        "message": null
+      }
+    }
+  }
+}

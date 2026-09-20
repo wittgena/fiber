@@ -7,11 +7,15 @@ import os
 import runpy
 import typer
 import threading
+import tomllib
+import importlib.metadata
+import re
+from pathlib import Path
 from typing import Annotated, Optional
 
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("fiber.cli.sandbox")
+log = get_emitter("cli.sandbox")
 
 """Environment Fencing (Local Dev Only)"""
 class EnvironmentViolationError(Exception):
@@ -37,11 +41,80 @@ def verify_local_dev_environment(allow_ci: bool = False):
         raise EnvironmentViolationError(f"Cannot run VCR on production node profile ({node_profile}).")
 
 
+"""Dynamic Dependency Resolution (TOML Based)"""
+def _resolve_transitive_dependencies() -> list[str]:
+    current_dir = Path.cwd()
+    toml_path = None
+    for _ in range(3):
+        if (current_dir / "pyproject.toml").exists():
+            toml_path = current_dir / "pyproject.toml"
+            break
+        current_dir = current_dir.parent
+
+    if not toml_path:
+        log.warning("[Fiber VCR] ⚠️ pyproject.toml not found. Strict sandbox might block valid modules.")
+        return []
+
+    # 2. TOML에서 1차 의존성(Base Dependencies) 추출
+    base_deps = []
+    try:
+        with open(toml_path, "rb") as f:
+            data = tomllib.load(f)
+            
+        # project.dependencies 및 tool.hatch...base_dependencies 모두 수용
+        base_deps.extend(data.get("project", {}).get("dependencies", []))
+        base_deps.extend(
+            data.get("tool", {}).get("hatch", {}).get("metadata", {})
+            .get("hooks", {}).get("custom", {}).get("base_dependencies", [])
+        )
+    except Exception as e:
+        log.error(f"[Fiber VCR] ⚠️ Failed to parse pyproject.toml: {e}")
+        return []
+
+    # 3. 하위 의존성 재귀적 추적 (BFS)
+    resolved_pkgs = set()
+    queue = list(base_deps)
+
+    while queue:
+        raw_pkg = queue.pop(0)
+        # PEP 508 문자열 정리: 'mcp==2.0.0a3; python_version < "3.12"' -> 'mcp'
+        # <, >, =, !, ~, ;, 공백 등을 기준으로 자르고 첫 번째 단어만 취함
+        clean_pkg = re.split(r'[<>=!~;\s]', raw_pkg)[0].strip().lower()
+        
+        if not clean_pkg or clean_pkg in resolved_pkgs:
+            continue
+            
+        resolved_pkgs.add(clean_pkg)
+
+        try:
+            # 현재 환경에 설치된 패키지 메타데이터 조회
+            reqs = importlib.metadata.requires(clean_pkg) or []
+            for req in reqs:
+                # extra/optional 의존성 마커 무시하고 순수 패키지명만 큐에 추가
+                queue.append(re.split(r'[<>=!~;\s]', req)[0].strip())
+        except importlib.metadata.PackageNotFoundError:
+            # 환경에 미설치된 패키지는 스킵
+            pass
+
+    # 4. 샌드박스 경로 포맷(site-packages/패키지명)으로 변환 (하이픈/언더스코어 변형 모두 포함)
+    allowed_paths = set()
+    for pkg in resolved_pkgs:
+        pkg_dash = pkg.replace('_', '-')
+        pkg_under = pkg.replace('-', '_')
+        allowed_paths.add(f"site-packages/{pkg_dash}")
+        allowed_paths.add(f"site-packages/{pkg_under}")
+        allowed_paths.add(f"dist-packages/{pkg_under}") # CI 우분투 환경 대비
+
+    return list(allowed_paths)
+
+
 """Enhanced Security Sandbox"""
-AUTHORIZED_FIBER_PATHS = (
+# 정적 코어 경로 + 동적 TOML 의존성 경로 결합
+AUTHORIZED_FIBER_PATHS = [
     "fiber/dev/trace", "xphi/kernel", "fiber/llm/entry", "fiber/phase/cli",
-    "site-packages/opentelemetry", "site-packages/redis", "lib/python"
-)
+    "lib/python"
+] + _resolve_transitive_dependencies()
+
 _audit_hook_local = threading.local()
 
 def get_caller_origin(limit: int = 15) -> str:
@@ -102,7 +175,7 @@ def create_security_sandbox(vcr_mode: str):
             _audit_hook_local.in_hook = False
 
     sys.addaudithook(audit_hook)
-    log.info("[Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active).")
+    log.info("[Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active, Strict TOML Bound).")
 
 
 """VCR Execution Core Logic"""
