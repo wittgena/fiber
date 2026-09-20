@@ -1,5 +1,4 @@
 # fiber.gateway.rest.serv.llm
-## @lineage: fiber.dphi.edge.serv.llm
 import time
 import orjson
 from typing import Dict, Any, List, Optional, Union
@@ -10,8 +9,8 @@ from pydantic import BaseModel, Field
 from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.param import ModelResponse, EmbeddingResponse
 from fiber.llm.router.stream.wrapper import StreamWrapper
-
 from fiber.phase.contract.router import ContractRouter
+
 from xphi.arch.model.dphi.auth import DphiKey, DphiAction, KernelAuthPayload
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
@@ -32,12 +31,10 @@ class ChatCompletionRequest(BaseModel):
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = None
     tools: Optional[List[Dict[str, Any]]] = None
-
     model_config = {
         "extra": "allow" 
     }
 
-"""LLM Gateway Endpoints (DPHI 코어 바인딩)"""
 @llm_edge.post(
     "/chat/completions",
     summary="Create Chat Completion (OpenAI Compatible)",
@@ -49,7 +46,6 @@ async def public_chat_completions(
     x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="Payment/Audit proof"),
 ):
     req_id = f"llm_chat_{int(time.time() * 1000)}"
-    
     with flow_scope(phase="LLM_ORCHESTRATION", bound="edge.llm", req_id=req_id):
         try:
             broker: DphiBroker = request.app.state.broker
@@ -62,7 +58,6 @@ async def public_chat_completions(
             }
             
             auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
-            
             if not auth_res.success:
                 raise HTTPException(
                     status_code=status.HTTP_402_PAYMENT_REQUIRED, 

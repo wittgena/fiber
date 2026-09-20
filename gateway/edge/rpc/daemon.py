@@ -5,13 +5,16 @@ import json
 import uuid
 import httpx
 import asyncio
+import time
+import hashlib
+import random
+from dataclasses import dataclass
 from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
 
 from fiber.gateway.edge.rpc.registry import build_internal_rpc_registry
 from fiber.gateway.edge.rpc.handler import WorkerContext
-from fiber.gateway.edge.rpc.legacy.validator import AuthValidatorService
-from fiber.gateway.policy.routing import IngressPolicyEngine, ToposSequencer, FuelAllocator, HealthMonitor
+from fiber.gateway.edge.rpc.validator import ValidatorService
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
@@ -33,6 +36,55 @@ from xphi.arch.model.edge.stream import (
 )
 
 log = get_emitter("daemon.rpc")
+
+@dataclass
+class IngressContext:
+    topo_id: int
+    press_limit: int
+    is_ruptured: bool
+    reason: str = ""
+
+class ToposSequencer:
+    async def get_next_sequence(self, client_id: str) -> int:
+        ts = int(time.time() * 1000)
+        hash_val = int(hashlib.sha256(client_id.encode()).hexdigest()[:8], 16)
+        return (ts % 100000000) + (hash_val % 1000)
+
+class FuelAllocator:
+    async def calculate_press_limit(self, client_id: str, action_type: str) -> int:
+        seed_str = f"{client_id}:{action_type}"
+        base_press = int(hashlib.md5(seed_str.encode()).hexdigest()[:4], 16) % 90
+        return max(10, base_press)
+
+class HealthMonitor:
+    async def is_ruptured(self) -> tuple[bool, str]:
+        # 낮은 확률로 네트워크 균열(Byzantine 장애 등) 상태를 모사
+        if random.random() < 0.01:
+            return True, "Byzantine divergence detected in consensus layer."
+        return False, ""
+
+class IngressPolicyEngine:
+    """Facade for managing incoming request limits, sequences, and node health."""
+    def __init__(self, sequencer: ToposSequencer, allocator: FuelAllocator, monitor: HealthMonitor):
+        self.sequencer = sequencer
+        self.allocator = allocator
+        self.monitor = monitor
+
+    async def resolve_context(self, client_id: str, action: str) -> IngressContext:
+        ruptured, reason = await self.monitor.is_ruptured()
+        topo_id = await self.sequencer.get_next_sequence(client_id)
+        press_limit = await self.allocator.calculate_press_limit(client_id, action)
+
+        return IngressContext(
+            topo_id=topo_id,
+            press_limit=press_limit,
+            is_ruptured=ruptured,
+            reason=reason
+        )
+
+# ============================================================================
+# Base Store & Worker Components
+# ============================================================================
 
 class LogStreamStore:
     def __init__(self, gateway: StoreGateway = None, storage_endpoint: str = "http://internal-store:8000"):
@@ -114,6 +166,7 @@ class LogStreamStore:
     async def close(self):
         await self._client.aclose()
 
+
 @contract.daemon("rpc_worker")
 class RpcWorkerDaemon(AbstractDaemon):
     def __init__(self, ctx):
@@ -140,6 +193,7 @@ class RpcWorkerDaemon(AbstractDaemon):
         exchange_adapter = ClearingAdapter(clearing_house_pub_key=node_pubkey)
         pta_adapter = PtaAdapter(broker=broker)
         
+        # 내부화된 클래스를 직접 사용
         policy_engine = IngressPolicyEngine(
             sequencer=ToposSequencer(), allocator=FuelAllocator(), monitor=HealthMonitor()
         )
@@ -155,7 +209,7 @@ class RpcWorkerDaemon(AbstractDaemon):
             profile_service=profile_service
         )
 
-        prod_validator = AuthValidatorService()
+        prod_validator = ValidatorService()
         self.routes = build_internal_rpc_registry(validator_service=prod_validator)
         log.info(f"[{self.name}] Dynamic RPC Registry mounted with {len(self.routes)} routes.")
 

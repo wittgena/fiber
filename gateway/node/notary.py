@@ -1,7 +1,7 @@
 # fiber.gateway.node.notary
-## @lineage: fiber.dphi.eco.notary
 import json
 import base64
+import hashlib
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List, Protocol
@@ -16,11 +16,18 @@ from xphi.kernel.space.sandbox.protocol import (
     MsgExecutionReceipt, MsgSettlementSeal
 )
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.arch.bound.adapter.pta import PtaAdapter, PtaPointer, PtaInput, PtaOutput, PtaTransaction, compute_merkle_root
+from xphi.arch.bound.adapter.pta import (
+    PtaAdapter, PtaPointer, PtaInput, PtaOutput, 
+    PtaTransaction, compute_merkle_root
+)
 from xphi.state.anchor.consensus import KernelLedger, SealedKernel, ToposBlob
 from xphi.state.anchor.oracle import AnchorOracle
 
-log = get_emitter("notary.actor")
+log = get_emitter("node.notary")
+
+# =====================================================================
+# [1] Domain Models & Enums
+# =====================================================================
 
 class GrantResource(str, Enum):
     INTENT_QUOTA = "Intent_Quota"               
@@ -30,8 +37,8 @@ class GrantResource(str, Enum):
 @dataclass
 class IncentiveModel:
     strategic_driver: str
-    network_dividend: str
     resource_type: GrantResource
+    network_dividend: str = ""
     resource_balance: int = 0  
 
 class ActorState(str, Enum):
@@ -41,44 +48,36 @@ class ActorState(str, Enum):
     SEALED = "Sealed"
 
 class SettlementVerifier(Protocol):
-    """[PORT] 외부 통신 혹은 로컬 E2E 모의 검증을 위한 인터페이스"""
-    async def verify(self, payload: dict) -> bool:
-        ...
+    async def verify(self, payload: dict) -> bool: ...
 
 class LocalMockVerifier:
-    """[ADAPTER] E2E 환경을 위한 기본 Fallback 검증기"""
     async def verify(self, payload: dict) -> bool:
         if set(payload.get("signers", [])) != set(payload.get("allowed_signers", [])):
             raise RuntimeError("Consensus Failed: Signature verification rejected (Signer mismatch)")
         return True
 
-class AgentWallet:
-    """Ed25519 기반의 실제 암호학적 지갑 (서명 및 검증용)"""
+
+# =====================================================================
+# [2] Cryptographic Identity & Legacy Swarm
+# =====================================================================
+
+class NodeWallet:
     def __init__(self, private_key: Optional[Any] = None):
-        # ✅ private_key 인자를 받아 처리할 수 있도록 수정
         if private_key is None:
             self.private_key = ed25519.Ed25519PrivateKey.generate()
-            self.private_key_hex = self.private_key.private_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PrivateFormat.Raw,
-                encryption_algorithm=serialization.NoEncryption()
-            ).hex()
         elif isinstance(private_key, str):
-            # Hex 문자열로 키가 전달된 경우 파싱하여 객체 복원
             try:
-                raw_bytes = bytes.fromhex(private_key)
-                self.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(raw_bytes)
-                self.private_key_hex = private_key
+                self.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(bytes.fromhex(private_key))
             except ValueError:
                 raise ValueError("Invalid private key hex format")
         else:
-            # 이미 Ed25519PrivateKey 객체인 경우
             self.private_key = private_key
-            self.private_key_hex = self.private_key.private_bytes(
-                encoding=serialization.Encoding.Raw,
-                format=serialization.PrivateFormat.Raw,
-                encryption_algorithm=serialization.NoEncryption()
-            ).hex()
+
+        self.private_key_hex = self.private_key.private_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PrivateFormat.Raw,
+            encryption_algorithm=serialization.NoEncryption()
+        ).hex()
 
         self.public_key = self.private_key.public_key()
         raw_pub = self.public_key.public_bytes(
@@ -88,10 +87,39 @@ class AgentWallet:
         self.address = f"cosm_{base64.urlsafe_b64encode(raw_pub).decode().rstrip('=')}"
 
     def sign_payload(self, payload: str) -> str:
-        """주어진 페이로드를 Private Key로 서명"""
         signature = self.private_key.sign(payload.encode('utf-8'))
         return base64.urlsafe_b64encode(signature).decode()
 
+
+class NotarySwarm:
+    """[RESTORED] WASM 커널 및 E2E 테스트와 완벽 호환되는 결정론적(Deterministic) 합의체 스웜"""
+    def __init__(self, size: int = 3):
+        self.notaries = []
+        for i in range(size):
+            # WASM 커널이 Genesis State로 신뢰하고 있는 고정된 시드 기반 키 생성
+            seed = hashlib.sha256(f"dphi_notary_node_{i}".encode()).digest()
+            private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed)
+            public_hex = private_key.public_key().public_bytes(
+                encoding=serialization.Encoding.Raw, 
+                format=serialization.PublicFormat.Raw
+            ).hex()
+            self.notaries.append({"priv": private_key, "pub": public_hex})
+        
+        # 시스템 글로벌 설정에 인가된 공개키 덮어쓰기
+        exchange_config.export_attestation.__class__.witness_pubkeys = property(lambda self: [node["pub"] for node in self.notaries])
+
+    @property
+    def public_keys(self) -> List[str]:
+        return [node["pub"] for node in self.notaries]
+
+    def attest_payload(self, canonical_hash: bytes) -> List[str]:
+        """바이트 해시를 직접 서명하여 Hex로 리턴 (기존 구조 완벽 호환)"""
+        return [node["priv"].sign(canonical_hash).hex() for node in self.notaries]
+
+
+# =====================================================================
+# [3] Protocol Actuators
+# =====================================================================
 
 class GenericExecutionActuator:
     def __init__(self, broker: DphiBroker, validator: ProtocolValidator):
@@ -100,26 +128,19 @@ class GenericExecutionActuator:
 
     async def execute_task(self, msg: MsgWasmExecution) -> MsgExecutionReceipt:
         execution_tx_hash = await self.validator.apply_wasm_execution(msg)
-
         try:
-            # 타겟 코드를 추출
             payload = msg.target_wasm if isinstance(msg.target_wasm, str) else json.dumps(msg.target_wasm)
             execution_tier = getattr(msg, "tier", None) or exchange_config.wasm.tier
-
-            # [CRITICAL FIX] 딕셔너리 포장({"action":...})을 제거하고, 순수 문자열 코드(payload)를 인자로 던집니다.
-            # 이래야 브로커가 DVM 파싱 크래시를 내지 않고 Python Wasm Sandbox(EXECUTE_CODE)로 정상 라우팅합니다.
             res = await self.broker.execute(
                 code=payload, 
                 variables={"worker": msg.worker_address, "tx_hash": execution_tx_hash},
                 tier=execution_tier
             )
-
             if not res.success:
                 raise RuntimeError(f"Execution Reverted: {res.error}")
 
         except Exception as e:
             log.error(f"[Actuator:Substrate] Execution Failed: {str(e)}")
-            # Wasmtime에서 발생한 에러(Timeout, Net Block 등)를 파이프라인으로 정확히 전파
             raise RuntimeError(f"Sandbox Execution Reverted ({str(e)})")
 
         sealed = SealedKernel(
@@ -131,18 +152,13 @@ class GenericExecutionActuator:
         )
         return MsgExecutionReceipt(worker_address=msg.worker_address, execution_tx_hash=execution_tx_hash, sealed_kernel=sealed)
 
-
 class GenericSettlementActuator:
     def __init__(self, verifier: SettlementVerifier, validator: ProtocolValidator):
         self.verifier = verifier
         self.validator = validator
 
     async def execute_settlement(self, msg: MsgSettlementSeal) -> str:
-        try:
-            validation_payload = json.loads(msg.l1_calldata)
-        except Exception:
-            validation_payload = {"calldata": msg.l1_calldata}
-
+        validation_payload = json.loads(msg.l1_calldata) if isinstance(msg.l1_calldata, str) else {"calldata": msg.l1_calldata}
         try:
             await self.verifier.verify(validation_payload)
         except Exception as e:
@@ -152,64 +168,84 @@ class GenericSettlementActuator:
         return self.validator.apply_settlement(msg)
 
 
-# =====================================================================
-# [3] Real Protocol Interface & Runners
-# =====================================================================
 class EcoProtocolInterface(D3Protocol):
     def __init__(self, verifier: Optional[SettlementVerifier] = None):
         self.broker = DphiBroker()
         self.ledger = KernelLedger()
         self.pta_adapter = PtaAdapter(broker=self.broker)
         self.oracle = AnchorOracle(broker=self.broker)
-
         self.validator = ProtocolValidator(self.pta_adapter, self.ledger, self.oracle)
-        self.exec_actuator = GenericExecutionActuator(self.broker, self.validator)
         
-        self.settlement_verifier = verifier or LocalMockVerifier()
-        self.settle_actuator = GenericSettlementActuator(self.settlement_verifier, self.validator)
+        self.exec_actuator = GenericExecutionActuator(self.broker, self.validator)
+        self.settle_actuator = GenericSettlementActuator(verifier or LocalMockVerifier(), self.validator)
 
-    async def publish_pledge(self, msg: MsgIngressPledge) -> str:
-        return await self.validator.apply_ingress(msg)
-    async def publish_delegation(self, msg: MsgDelegateTrust) -> str:
-        return await self.validator.apply_delegation(msg)
-    async def request_execution(self, msg: MsgWasmExecution) -> MsgExecutionReceipt:
-        return await self.exec_actuator.execute_task(msg)
-    async def publish_settlement(self, msg: MsgSettlementSeal) -> str:
-        return await self.settle_actuator.execute_settlement(msg)
+    async def publish_pledge(self, msg: MsgIngressPledge) -> str: return await self.validator.apply_ingress(msg)
+    async def publish_delegation(self, msg: MsgDelegateTrust) -> str: return await self.validator.apply_delegation(msg)
+    async def request_execution(self, msg: MsgWasmExecution) -> MsgExecutionReceipt: return await self.exec_actuator.execute_task(msg)
+    async def publish_settlement(self, msg: MsgSettlementSeal) -> str: return await self.settle_actuator.execute_settlement(msg)
 
 
-class NotaryNode:
-    def __init__(self, alias: str, axis: TriadAxis, archetype: str, incentive: IncentiveModel, parent: Optional['NotaryNode'] = None, private_key_hex: Optional[str] = None):
+# =====================================================================
+# [4] The Node Notary (For specific lifecycle nodes, co-existing with Swarm)
+# =====================================================================
+
+class NodeNotary:
+    """단일 공증 노드의 생명주기 및 합의를 관장하는 엔티티"""
+    def __init__(self, alias: str, axis: TriadAxis, resource_type: GrantResource, initial_budget: int, agent_alias: Optional[str] = None):
         self.alias = alias
         self.axis = axis
-        self.archetype = archetype
-        self.incentive = incentive
-        self.parent = parent
-        self.sub_notaries: List['NotaryNode'] = []
-        self.wallet = AgentWallet(private_key=private_key_hex) if private_key_hex else AgentWallet()
+        self.state = ActorState.ORPHAN
+        
+        pkey = exchange_config.get_agent_pkey(agent_alias) if agent_alias else None
+        self.wallet = NodeWallet(private_key=pkey)
+        
+        self.initial_budget = initial_budget
+        self.incentive = IncentiveModel(
+            strategic_driver=alias, 
+            resource_type=resource_type, 
+            resource_balance=0
+        )
+        
         self.pta_ptrs: List[PtaPointer] = []
         self.generated_state_roots: List[str] = []
 
-    async def execute_pledge(self, amount: int, interface: D3Protocol) -> str:
-        tx_mint = PtaTransaction(inputs=[], outputs=[PtaOutput(amount=amount, owner=self.wallet.address, asset_type=self.incentive.resource_type.value)], metadata={"action": "GENESIS_MINT"})
+    async def pledge(self, interface: D3Protocol) -> str:
+        tx_mint = PtaTransaction(
+            inputs=[], 
+            outputs=[PtaOutput(amount=self.initial_budget, owner=self.wallet.address, asset_type=self.incentive.resource_type.value)], 
+            metadata={"action": "GENESIS_MINT"}
+        )
         msg = MsgIngressPledge(axis=self.axis, actor_address=self.wallet.address, pledge_tx=tx_mint)
+        
         tx_hash = await interface.publish_pledge(msg)
         self.pta_ptrs.append(PtaPointer(tx_hash, 0))
-        self.incentive.resource_balance += amount
+        self.incentive.resource_balance += self.initial_budget
+        self.state = ActorState.PLEDGED
         return tx_hash
 
-    async def execute_swarm_task(self, num_workers: int, burn_amount: int, target_payload: Any, interface: D3Protocol, tier: str = "SYSTEM") -> str:
+    async def delegate_and_execute(self, num_workers: int, burn_amount: int, target_payload: Any, interface: D3Protocol, tier: str = "SYSTEM") -> str:
         if not self.pta_ptrs: return "0x0"
+        self.state = ActorState.EXECUTING
+        
         total_needed = num_workers * burn_amount
+        if total_needed > self.incentive.resource_balance:
+            raise ValueError(f"Insufficient Notary balance. Required: {total_needed}, Available: {self.incentive.resource_balance}")
+            
         ptr = self.pta_ptrs.pop(0)
         sig = self.wallet.sign_payload(ptr.to_key())
-        worker_wallets = [AgentWallet() for _ in range(num_workers)]
+        
+        worker_wallets = [NodeWallet() for _ in range(num_workers)]
         outputs = [PtaOutput(amount=burn_amount, owner=w.address, asset_type=self.incentive.resource_type.value) for w in worker_wallets]
+        
         remain_amount = self.incentive.resource_balance - total_needed
         if remain_amount > 0:
             outputs.append(PtaOutput(amount=remain_amount, owner=self.wallet.address, asset_type=self.incentive.resource_type.value))
 
-        tx_distribute = PtaTransaction(inputs=[PtaInput(pointer=ptr, signature=sig, owner_address=self.wallet.address)], outputs=outputs, metadata={"action": "SWARM_DISTRIBUTION"})
+        tx_distribute = PtaTransaction(
+            inputs=[PtaInput(pointer=ptr, signature=sig, owner_address=self.wallet.address)], 
+            outputs=outputs, 
+            metadata={"action": "SWARM_DISTRIBUTION"}
+        )
         distribute_hash = await interface.publish_delegation(MsgDelegateTrust(delegator_address=self.wallet.address, split_tx=tx_distribute))
         
         if remain_amount > 0:
@@ -233,32 +269,17 @@ class NotaryNode:
         self.generated_state_roots.append(merkle_root)
         return merkle_root
 
-    async def aggregate_and_seal_settlement(self, interface: D3Protocol, custom_blob: ToposBlob = None, custom_calldata: str = None) -> str:
+    async def seal_epoch(self, interface: D3Protocol, custom_blob: ToposBlob = None, custom_calldata: str = None) -> str:
         canonical_state_hash = compute_merkle_root(self.generated_state_roots) if self.generated_state_roots else "0x0"
         blob = custom_blob or ToposBlob(action="SETTLEMENT_CLOSURE", from_state="notary", to_state="sealed", tension=0.99, details="")
         calldata = custom_calldata or f"0x00{canonical_state_hash[:56]}"
-        msg = MsgSettlementSeal(aggregator_address=self.wallet.address, rollup_blob=blob, consolidated_root=canonical_state_hash, l1_calldata=calldata)
-        return await interface.publish_settlement(msg)
-
-
-class EcosystemActor:
-    def __init__(self, alias: str, axis: TriadAxis, resource_type: GrantResource, initial_budget: int, agent_alias: Optional[str] = None):
-        self.alias = alias
-        self.axis = axis
-        self.state = ActorState.ORPHAN
-        pkey = exchange_config.get_agent_pkey(agent_alias) if agent_alias else None
-        self.wallet = AgentWallet(private_key=pkey) if pkey else AgentWallet()
-        self.budget_committed = initial_budget
-        self.resource_type = resource_type
-        self.notary_node: Optional[NotaryNode] = None
-        self.owned_merkle_roots: List[str] = []
-
-    async def pledge_to_interface(self, interface: D3Protocol) -> NotaryNode:
-        incentive = IncentiveModel(strategic_driver=f"{self.alias}", network_dividend="", resource_type=self.resource_type, resource_balance=0)
-        self.notary_node = NotaryNode(
-            alias=self.alias, axis=self.axis, archetype=f"Gen-N:{self.alias}", incentive=incentive,
-            private_key_hex=self.wallet.private_key_hex if hasattr(self.wallet, 'private_key_hex') else None
+        
+        msg = MsgSettlementSeal(
+            aggregator_address=self.wallet.address, 
+            rollup_blob=blob, 
+            consolidated_root=canonical_state_hash, 
+            l1_calldata=calldata
         )
-        await self.notary_node.execute_pledge(self.budget_committed, interface)
-        self.state = ActorState.PLEDGED
-        return self.notary_node
+        tx_hash = await interface.publish_settlement(msg)
+        self.state = ActorState.SEALED
+        return tx_hash

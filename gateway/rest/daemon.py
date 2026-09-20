@@ -1,5 +1,4 @@
 # fiber.gateway.rest.daemon
-## @lineage: fiber.dphi.daemon.rest
 import os
 import asyncio
 import json
@@ -12,7 +11,6 @@ from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.policy.routing import RoutingPolicyEngine, ClusterStateMesh, ExtProcStreamHandler
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
@@ -22,11 +20,9 @@ from phase.contract.server import SecureMCPServer
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import KernelLedger
 
-log = get_emitter("daemon.edge")
+log = get_emitter("daemon.rest")
 
-# =========================================================================
-# Shared Utility: Port Reaper
-# =========================================================================
+
 async def clear_zombie_ports(ports: List[int], tag: str):
     """지정된 포트들을 점유하고 있는 기존 프로세스를 정리하는 공통 유틸리티"""
     reaper = SystemOps(redis_conn=None, tag=tag)
@@ -50,15 +46,15 @@ async def clear_zombie_ports(ports: List[int], tag: str):
                     log.error(f"[{tag}] Failed to terminate PID {pid} (Permission/OS restriction): {kill_err}")
             
             if pids:
-                # [안정화 수정] OS가 소켓 자원을 완전히 회수할 확실한 시간 확보 (0.5s -> 1.5s)
                 await asyncio.sleep(1.5)
         except Exception as e:
             log.warning(f"[{tag}] Error scanning port {port}: {e}")
 
 
-# =========================================================================
-# Internal Component: Gateway Core Server (aiohttp)
-# =========================================================================
+# ============================================================================
+# Gateway Core Server Component (Aiohttp Reverse Proxy + MCP)
+# ============================================================================
+
 class GatewaySettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GATEWAY_")
     host: str = "0.0.0.0"
@@ -66,6 +62,7 @@ class GatewaySettings(BaseSettings):
     mcp_port: int = int(os.getenv("GATEWAY_MCP_PORT", 8084))
     upstream_url: str = "http://127.0.0.1:8000"
     transport_mode: Literal["stdio", "sse"] = "sse"
+
 
 class DphiGatewayServer:
     def __init__(self, settings: GatewaySettings):
@@ -105,6 +102,7 @@ class DphiGatewayServer:
         headers['X-Forwarded-For'] = client_ip
         headers['X-Gateway-Passed'] = "true"
 
+        # NOTE: 향후 동적 라우팅이 필요하다면 여기서 broker를 호출하여 target_url을 가져오면 됩니다.
         target_url = f"{self.settings.upstream_url}{path}"
         data = await request.read()
         
@@ -148,7 +146,6 @@ class DphiGatewayServer:
         await proxy_runner.setup()
         await mcp_runner.setup()
         
-        # [안정화 수정] 강제 바인딩(SO_REUSEADDR/PORT)을 통해 TIME_WAIT 포트 충돌 원천 차단
         proxy_site = web.TCPSite(
             proxy_runner, self.settings.host, self.settings.proxy_port, 
             reuse_address=True, reuse_port=True
@@ -172,9 +169,10 @@ class DphiGatewayServer:
         }), file=sys.stderr)
 
 
-# =========================================================================
-# 1. Gateway Edge Daemon (Public / External Traffic)
-# =========================================================================
+# ============================================================================
+# Gateway Edge Daemon (Public / External Traffic)
+# ============================================================================
+
 @contract.daemon("gateway_edge")
 class GatewayEdgeDaemon(AbstractDaemon):
     def __init__(self, ctx):
@@ -183,31 +181,11 @@ class GatewayEdgeDaemon(AbstractDaemon):
         self.settings = GatewaySettings()
         self.gateway_server: Optional[DphiGatewayServer] = None
         self._tasks = set()
-        
-    async def _setup_routing_mesh(self):
-        topology = os.getenv("GATEWAY_TOPOLOGY", "EMBEDDED_BYPASS")
-        log.info(f"[{self.name}] Configuring routing mesh in {topology} mode.")
-
-        broker_facade = getattr(self.ctx, 'tunnel', None)
-        if not broker_facade:
-            raise RuntimeError("Tunnel dependencies not injected in RuntimeContext.")
-
-        policy_engine = RoutingPolicyEngine(broker_facade)
-        state_mesh = ClusterStateMesh(broker_facade)
-        
-        await policy_engine.synchronize_initial_state()
-        self._tasks.add(asyncio.create_task(policy_engine.watch_policy_updates()))
-        self._tasks.add(asyncio.create_task(state_mesh.start_mesh_sync()))
-        
-        if topology == "EXT_PROC":
-            stream_handler = ExtProcStreamHandler(policy_engine, state_mesh)
-            self._tasks.add(asyncio.create_task(stream_handler.serve()))
 
     async def run(self):
         log.info(f"[{self.name}] Starting Gateway Edge Daemon...")
         try:
             await clear_zombie_ports([self.settings.proxy_port, self.settings.mcp_port], tag=self.name)
-            await self._setup_routing_mesh()
             
             log.info(f"[{self.name}] Starting Public Gateway & MCP Control Plane...")
             self.gateway_server = DphiGatewayServer(self.settings)
@@ -237,7 +215,7 @@ class GatewayEdgeDaemon(AbstractDaemon):
             with suppress(Exception):
                 await self.gateway_server.client_session.close()
         
-        for task in self._tasks:
+        for task in list(self._tasks):
             if not task.done():
                 task.cancel()
         if self._tasks:
@@ -245,9 +223,10 @@ class GatewayEdgeDaemon(AbstractDaemon):
         log.info(f"[{self.name}] Gateway Edge resource cleanup complete.")
 
 
-# =========================================================================
-# 2. REST Edge Daemon (Internal / Microservice Traffic)
-# =========================================================================
+# ============================================================================
+# REST Edge Daemon (Internal / Microservice Traffic)
+# ============================================================================
+
 @contract.daemon("rest_edge")
 class RestEdgeDaemon(AbstractDaemon):
     def __init__(self, ctx):
@@ -257,7 +236,6 @@ class RestEdgeDaemon(AbstractDaemon):
         self.server: Optional[uvicorn.Server] = None
         self._server_task: Optional[asyncio.Task] = None
         
-        # 인프라 자원 상태 변수
         self._tunnel = None
 
     async def run(self):
@@ -265,9 +243,6 @@ class RestEdgeDaemon(AbstractDaemon):
         try:
             await clear_zombie_ports([self.target_port], tag=self.name)
             
-            # ---------------------------------------------------------
-            # 1. 리소스 선점 (데몬 주도 인프라 초기화)
-            # ---------------------------------------------------------
             self._tunnel = await TunnelFactory.get_default()
             
             ledger = getattr(self.ctx, "ledger", None)
@@ -275,9 +250,6 @@ class RestEdgeDaemon(AbstractDaemon):
                 log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger.")
                 ledger = KernelLedger()
 
-            # ---------------------------------------------------------
-            # 2. 환경변수 캡슐화 및 하향식 Config 구성
-            # ---------------------------------------------------------
             resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
                 internal_edge_url=resolved_internal_url,
@@ -287,9 +259,6 @@ class RestEdgeDaemon(AbstractDaemon):
                 pubsub_channel=os.getenv("PUBSUB_CHANNEL", "audit_channel")
             )
 
-            # ---------------------------------------------------------
-            # 3. 의존성 주입 (DI) 기반 API 애플리케이션 생성
-            # ---------------------------------------------------------
             injected_app = create_app(
                 config=runtime_config,
                 tunnel=self._tunnel,

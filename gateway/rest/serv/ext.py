@@ -1,5 +1,4 @@
 # fiber.gateway.rest.serv.ext
-## @lineage: fiber.dphi.edge.serv.ext
 import json
 import time
 from typing import Dict, Any, Optional
@@ -155,7 +154,6 @@ async def process_x402_payment(
             )
             
             if req.use_ledger:
-                # 🌟 [교정] DVM 지연 정산: 청산소(RollupAdapter)가 에이전트(eth_wallet)의 자금을 차감 (transferFrom 연산)
                 agent_payer_address = eth_wallet.wallet_address
                 tx_hash = await ledger_wallet.process_deferred_charge(
                     agent_address=agent_payer_address,
@@ -253,7 +251,6 @@ async def wrap_native_to_weth(req: WrapRequest, web3: Web3Adapter = Depends(get_
             private_key=private_key
         )
         return WrapResponse(status="SUCCESS", tx_hash=tx_hash, message="Successfully wrapped WETH.")
-        
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=f"Invalid amount format: {ve}")
     except RuntimeError as re:

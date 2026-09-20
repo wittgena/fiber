@@ -1,5 +1,4 @@
 # fiber.gateway.rest.serv.gateway
-## @lineage: fiber.dphi.edge.serv.gateway
 import json
 import asyncio
 import time
@@ -8,7 +7,7 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
+from fiber.gateway.edge.rpc.client import InternalRpcClient, RpcException
 from fiber.gateway.rest.serv.depend import get_rpc_client
 
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
@@ -106,13 +105,13 @@ class TransitionBridge:
 
         if identity.receipt:
             try:
-                await rpc.call("eco.billing.receipt.validate", {
+                await rpc.call("validate.billing.receipt", {
                     "target_server_id": identity.target_server_id,
                     "action": payload.get("name", "unknown_tool"),
                     "payment_receipt": identity.receipt
                 })
                 is_authenticated = True
-            except HTTPException as e:
+            except RpcException as e:
                 log.warning(f"[Bridge:Billing] Payment rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
                 raise HTTPException(status_code=e.status_code, detail=f"Payment/Intent Rejected: {e.detail}")
 

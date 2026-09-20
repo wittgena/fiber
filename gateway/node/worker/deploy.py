@@ -1,5 +1,5 @@
-# fiber.gateway.node.worker.legacy.deploy
-## @lineage: fiber.dphi.worker.legacy.deploy
+# fiber.gateway.node.worker.deploy
+## @lineage: fiber.gateway.node.worker.legacy.deploy
 import os
 import sys
 import json
@@ -22,9 +22,6 @@ class ExecutionDeployer(AsyncAgentProtocol):
     """
     def __init__(self):
         super().__init__(agent_name="agent.deploy")
-        
-        # [Zero-Trust] 오직 서명 검증을 위한 Public Key만 환경 변수에서 로드합니다.
-        # Private Key 통신 등 백엔드 접근 기능은 모두 제거되었습니다. (Connector 위임)
         pub_key_hex = os.environ.get("DPHI_VALIDATOR_PUBLIC_KEY")
         if not pub_key_hex:
             self.log.error("⚠️ DPHI_VALIDATOR_PUBLIC_KEY is missing. Execution will fail.")
@@ -35,10 +32,7 @@ class ExecutionDeployer(AsyncAgentProtocol):
         self.pending_prompts: Dict[str, asyncio.Future] = {}
 
     async def _route_request_async(self, req: Dict[str, Any]):
-        """
-        부모 클래스의 라우터를 오버라이드하여, Gateway로부터 반환된 
-        Multiplex 제어 메시지(RESUME) 및 순수 JSON-RPC Response를 가로채어 처리합니다.
-        """
+        """부모 클래스의 라우터를 오버라이드하여, Gateway로부터 반환된 Multiplex 제어 메시지(RESUME) 및 순수 JSON-RPC Response를 가로채어 처리"""
         # 1. Multiplex Intent 제어 메시지 (RESUME) 언래핑 처리
         if req.get("action") == "RESUME":
             payload = req.get("payload", {})
@@ -107,7 +101,7 @@ class ExecutionDeployer(AsyncAgentProtocol):
                 req_id=delegate_req_id,
                 method="rpc_delegate",
                 params={
-                    "target_method": "validator.attest",  # 백엔드 핸들러 레지스트리에 등록된 타겟 메서드명
+                    "target_method": "validate.attest",  # 백엔드 핸들러 레지스트리에 등록된 타겟 메서드명
                     "data": {
                         "user_id": user_id,
                         "otp_code": otp_code,

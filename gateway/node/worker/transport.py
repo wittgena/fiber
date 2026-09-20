@@ -1,5 +1,4 @@
 # fiber.gateway.node.worker.transport
-## @lineage: fiber.dphi.worker.transport
 import json
 import asyncio
 from pathlib import Path
@@ -10,25 +9,15 @@ from fiber.phase.cli.network import WorkerRuntimeBootstrapper
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.tunnel.surface import EchoListener, SurfaceClient
 
-# 통합된 모듈로 로거 네임스페이스 통일
 log = get_emitter("worker.transport")
 
-# =====================================================================
-# 1. Dummy Process (For Backward Compatibility)
-# =====================================================================
+"""1. Dummy Process (For Backward Compatibility)"""
 class DummyProcess:
-    """
-    기존 WorkerConnector가 transport.process.pid에 접근하여 로깅하는 
-    하위 호환성을 유지하기 위한 초경량 더미 객체입니다.
-    """
     def __init__(self, pid: int = -1):
         self.pid = pid
         self.returncode = None
 
-
-# =====================================================================
-# 2. Network Transport (Async HTTP Multiplexing)
-# =====================================================================
+"""Network Transport (Async HTTP Multiplexing)"""
 class NetworkTransport:
     """
     Asynchronous HTTP/Network multiplexing transport layer for WorkerConnector.

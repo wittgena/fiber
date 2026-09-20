@@ -1,5 +1,4 @@
 # fiber.llm.model.registry.llm
-## @lineage: fiber.llm.router.registry.llm
 import importlib
 import inspect
 import pkgutil

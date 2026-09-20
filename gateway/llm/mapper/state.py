@@ -1,6 +1,4 @@
 # fiber.gateway.llm.mapper.state
-## @lineage: fiber.llm.mapper.state
-## @lineage: fiber.llm.router.mapper.state
 import os
 import json
 import asyncio

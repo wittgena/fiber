@@ -1,5 +1,4 @@
 # fiber.llm.types.provider.core
-## @lineage: fiber.llm.types.model.core
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Required, TypedDict

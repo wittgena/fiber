@@ -1,5 +1,4 @@
 # fiber.gateway.node.worker.connector
-## @lineage: fiber.dphi.worker.connector
 import os
 import sys
 import json

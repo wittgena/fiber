@@ -1,6 +1,4 @@
 # fiber.llm.router.stream.pipeline
-## @lineage: fiber.llm.stream.pipeline
-## @lineage: llm.stream.pipeline
 import time
 import asyncio
 from typing import Any

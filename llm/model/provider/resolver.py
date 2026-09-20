@@ -23,6 +23,7 @@ PROVIDER_REGISTRY = {
     "cohere_chat": ("https://api.cohere.ai/v1", ["COHERE_API_KEY"]),
     "meta_llama": ("https://api.llama.com/compat/v1", ["LLAMA_API_KEY"]),
     "ollama": ("http://localhost:11434", ["OLLAMA_API_KEY"]),
+    "llama_server": ("http://localhost:8080/v1", ["OPENAI_API_KEY"]),
     "vllm": ("http://localhost:8000/v1", ["VLLM_API_KEY"]),
     "hosted_vllm": ("http://localhost:8000/v1", ["VLLM_API_KEY"]),
     "lm_studio": ("http://localhost:1234/v1", ["LM_STUDIO_API_KEY"]),
@@ -195,7 +196,7 @@ class LLMProviderResolver:
         model, custom_llm_provider = self._resolve_by_model_name(model, custom_llm_provider)
         if not custom_llm_provider:
             raise GateBadRequestError(
-                message=f"LLM Provider NOT provided. Pass model as E.g. `completion(model='huggingface/starcoder',..)`. You passed model={model}",
+                message=f"LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model={model}",
                 model=model
             )
         return model, custom_llm_provider, api_key, api_base
@@ -334,10 +335,6 @@ class LLMProviderResolver:
                 
         return None
 
-
-    # ==========================================
-    # Internal Helpers (기존 _resolve_* 로직)
-    # ==========================================
     def _resolve_special_cases(self, model: str, custom_llm_provider: Optional[str]) -> Tuple[str, Optional[str], bool]:
         if model.startswith("azure/"):
             model_name = model.split("/", 1)[1]
