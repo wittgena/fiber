@@ -7,7 +7,7 @@ import json
 
 """[Runtime Switch] Environment-based module aliasing Integration (Drop-in Block)"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
-FIXTURE_DIR = "./fixtures"
+FIXTURE_DIR = "./fiber/phase/abc/fixture"
 
 def _init_bridge(mode: str, fixture_dir: str):
     """Initializes the VCR sandbox and direct sys.modules aliasing"""
@@ -42,6 +42,9 @@ print("🛡️  FIBER INTEGRATION & SANDBOX")
 print("=" * 80)
 
 if VCR_MODE in ("record", "replay"):
+    from xphi.kernel.space.bind.resolver import resolve_path
+
+
     _init_bridge(mode=VCR_MODE, fixture_dir=FIXTURE_DIR)
 else:
     print(f" 🟢 [Integration] Status: BYPASSED (Live Mode)")
