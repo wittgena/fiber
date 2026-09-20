@@ -20,7 +20,7 @@ dev = ["pytest", "pytest-asyncio"]
 path = "phase/hatch.py"
 base_dependencies = [
     "uvloop", "fastapi", "redis", "networkx", "pyyaml", "orjson", "typer", "numpy", "canonicaljson", "aiohttp",
-    "watchdog", "rocksdict", "libcst", "datamodel-code-generator", 
+    "watchdog", "rocksdict", "libcst", "datamodel-code-generator",
     "openai", "mcp==2.0.0a3", "tyro", "pydantic", "httpx", "wasmtime"
 ]
 
