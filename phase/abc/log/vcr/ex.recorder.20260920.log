@@ -1,0 +1,107 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.ex.recorder             
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+ LOG | SYSTEM | INFO  |  fiber.cli.sandbox: [Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active).
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  ex.recorder: 🔒 [Sandbox] Strict Security Policy Injected
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.proxy: 🔌 VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ LOG | SYSTEM | INFO  |  ex.recorder: 🔌 [VCR] Status: ENGAGED (RECORD) | Speed: max | Chaos: 0.0ms | Tick: 100.0ms
+ LOG | SYSTEM | INFO  |  ex.recorder: 📂 [VCR] Fixture Storage: /Users/wittgena/Library/CloudStorage/Dropbox/fixture
+
+ LOG | SYSTEM | INFO  |  ex.recorder: 🚀 Fiber VCR Utility Interactive Demonstration
+ LOG | SYSTEM | INFO  |  ex.recorder: 
+--- Starting Scenario: Long Stream Document ---
+ LOG | SYSTEM | INFO  |  ex.recorder: Payload: model=gemini/gemini-3.1-flash-lite, stream=True
+ LOG | SYSTEM | INFO  |  ex.recorder: Receiving stream...
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'api_base', 'extended_thinking_budget', 'extra_body', 'timeout'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+AFC is enabled with max remote calls: 10.
+
+[🔍 DUCK-TYPING INSPECTOR - First Chunk]
+   ├─ Actual Type  : <class 'fiber.llm.types.provider.stream.ModelResponseStream'>
+   ├─ isinstance() : ✅ PASS
+----------------------------------------
+
+As enterprises accelerate the integration of Generative AI into production workflows, the "Wild West" approach of hardcoding vendor-specific SDKs into microservices creates significant technical debt. From an architectural perspective, implementing a **Facade pattern**—often referred to as an "AI Gateway" or "Model Abstraction Layer"—is the industry-standard approach for decoupling business logic from the rapidly evolving LLM provider ecosystem. By exposing a unified, vendor-agnostic interface, you encapsulate the idiosyncratic API structures of OpenAI, Anthropic, or Google Gemini behind a consistent contract. This abstraction allows your internal services to interact with a standard `CompletionRequest` and `CompletionResponse` interface, effectively shielding your domain logic from the breaking changes inherent in beta-stage vendor APIs.
+
+The most critical strategic benefit of this pattern is the mitigation of vendor lock-in. LLM capabilities are currently shifting at a pace that renders static vendor choices obsolete within months. By utilizing a Facade, you gain the ability to perform "model hot-swapping" or multi-model routing via configuration rather than refactoring. For example, if a specific use case is better served by Claude 3.5 Sonnet for reasoning but GPT-4o for code generation, your Facade can route requests based on metadata tags without the calling microservice ever knowing the underlying provider. This architectural agility is essential for maintaining a competitive edge and negotiating pricing leverage, as you can shift traffic between providers based on performance benchmarks or service-level agreements (SLAs) without deploying a single line of application code.
+
+Furthermore, the Facade pattern serves as the centralized nexus for observability, cost allocation, and token governance. In a decentralized microservice architecture, tracking token consumption across disparate teams is notoriously difficult if each service calls vendor APIs directly. By centralizing requests through the Facade, you can implement a unified middleware layer that intercepts every request and response to calculate fine-grained token usage, apply cost-per-token multipliers, and emit structured telemetry to your APM (e.g., Datadog, Honeycomb). This provides the FinOps organization with a single source of truth for AI expenditure, enabling automated chargebacks and preventing "runaway" model costs through centralized circuit breakers that enforce budget caps across the enterprise.
+
+Security and compliance are significantly hardened when an AI Gateway acts as a gatekeeper. By centralizing the interaction layer, you create a mandatory control point for PII/PHI redaction and prompt injection filtering. Instead of implementing security logic in every microservice, you embed it within the Facade's pipeline. This ensures that sensitive data is scrubbed or tokenized before it ever leaves the network boundary, and that all requests are validated against organizational safety policies (e.g., blocking requests to providers that do not meet your data residency requirements). This "secure-by-default" posture simplifies audits and ensures that security patches to prompt-injection defenses can be rolled out globally across the enterprise in a single deployment.
+
+Finally, the Facade pattern excels at operational resilience through sophisticated rate-limit management and fallback strategies. Vendor APIs frequently impose strict, fluctuating rate limits and occasionally experience outages. A robust Facade implements a distributed queueing mechanism and exponential backoff, effectively smoothing out traffic spikes and preventing your services from hitting 429 (Too Many Requests) errors. More importantly, it enables "failover-to-secondary" logic; if the primary provider’s API returns a 5xx error, the Facade can transparently reroute the request to a secondary provider (e.g., switching from OpenAI to Azure OpenAI or Gemini) without the end-user experiencing a service disruption. This architectural pattern transforms fragile, direct-to-vendor integrations into a resilient, enterprise-grade AI infrastructure. LOG | SYSTEM | INFO  |  trace.llm.vcr.manager: 💾 [VCR RECORD] Saved readable fixture to: /Users/wittgena/Library/CloudStorage/Dropbox/fixture/fixture_fiber_dev_ex_recorder_long_stream_document.json (Trace: 1917f736)
+ LOG | SYSTEM | INFO  |  driver.observer: 🟢 [FLOW: SUCCESS] Model: gemini/gemini-3.1-flash-lite | Latency: 9.474s | Cost: $0.000467 | Tokens: [P:93 / C:755 / R:0]
+ LOG | SYSTEM | SIGNAL |  facade.driver: LLM Request Completed
+
+
+----------------------------------------
+ LOG | SYSTEM | INFO  |  ex.recorder: ✅ [STREAM CLOSED] Duration: 9475.75ms
+ LOG | SYSTEM | INFO  |  ex.recorder:    ├─ Total Chunks Received : 33
+ LOG | SYSTEM | INFO  |  ex.recorder:    ├─ Direct Extracted      : 32
+ LOG | SYSTEM | INFO  |  ex.recorder:    ├─ Fiber Mapper Extracted: 32
+ LOG | SYSTEM | INFO  |  ex.recorder:    └─ Data Mismatch Count   : 0
+
+ LOG | SYSTEM | INFO  |  ex.recorder: 💰 Cost: $0.000467
+ LOG | SYSTEM | INFO  |  ex.recorder: 📊 Tokens: [Prompt: 93 / Completion: 755 / Total: 848]
+ LOG | SYSTEM | INFO  |  ex.recorder: --- Scenario: Long Stream Document finished ---
+
+ LOG | SYSTEM | INFO  |  ex.recorder: 
+================================================================================
+ LOG | SYSTEM | INFO  |  ex.recorder: ✅ [RECORD COMPLETE] Network I/O has been frozen into fixtures.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] ex.recorder: 👉 Next Step: python -m dev.ex.recorder -m gemini/gemini-3.1-flash-lite --vcr replay --vcr-speed real
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] ex.recorder: ================================================================================
+
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.ex.recorder --vcr replay
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+ LOG | SYSTEM | INFO  |  fiber.cli.sandbox: [Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active).
+ LOG | SYSTEM | INFO  |  ex.recorder: 🔒 [Sandbox] Strict Security Policy Injected
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.proxy: 🔌 VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+ LOG | SYSTEM | INFO  |  ex.recorder: 🔌 [VCR] Status: ENGAGED (REPLAY) | Speed: max | Chaos: 0.0ms | Tick: 100.0ms
+ LOG | SYSTEM | INFO  |  ex.recorder: 📂 [VCR] Fixture Storage: /Users/wittgena/Library/CloudStorage/Dropbox/fixture
+
+ LOG | SYSTEM | INFO  |  ex.recorder: 🚀 Fiber VCR Utility Interactive Demonstration
+ LOG | SYSTEM | INFO  |  ex.recorder: 
+--- Starting Scenario: Long Stream Document ---
+ LOG | SYSTEM | INFO  |  ex.recorder: Payload: model=gemini/gemini-3.1-flash-lite, stream=True
+ LOG | SYSTEM | INFO  |  ex.recorder: Receiving stream...
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+
+[🔍 DUCK-TYPING INSPECTOR - First Chunk]
+   ├─ Actual Type  : <class 'fiber.llm.types.provider.stream.ModelResponseStream'>
+   ├─ isinstance() : ✅ PASS
+----------------------------------------
+
+As enterprises accelerate the integration of Generative AI into production workflows, the "Wild West" approach of hardcoding vendor-specific SDKs into microservices creates significant technical debt. From an architectural perspective, implementing a **Facade pattern**—often referred to as an "AI Gateway" or "Model Abstraction Layer"—is the industry-standard approach for decoupling business logic from the rapidly evolving LLM provider ecosystem. By exposing a unified, vendor-agnostic interface, you encapsulate the idiosyncratic API structures of OpenAI, Anthropic, or Google Gemini behind a consistent contract. This abstraction allows your internal services to interact with a standard `CompletionRequest` and `CompletionResponse` interface, effectively shielding your domain logic from the breaking changes inherent in beta-stage vendor APIs.
+
+The most critical strategic benefit of this pattern is the mitigation of vendor lock-in. LLM capabilities are currently shifting at a pace that renders static vendor choices obsolete within months. By utilizing a Facade, you gain the ability to perform "model hot-swapping" or multi-model routing via configuration rather than refactoring. For example, if a specific use case is better served by Claude 3.5 Sonnet for reasoning but GPT-4o for code generation, your Facade can route requests based on metadata tags without the calling microservice ever knowing the underlying provider. This architectural agility is essential for maintaining a competitive edge and negotiating pricing leverage, as you can shift traffic between providers based on performance benchmarks or service-level agreements (SLAs) without deploying a single line of application code.
+
+Furthermore, the Facade pattern serves as the centralized nexus for observability, cost allocation, and token governance. In a decentralized microservice architecture, tracking token consumption across disparate teams is notoriously difficult if each service calls vendor APIs directly. By centralizing requests through the Facade, you can implement a unified middleware layer that intercepts every request and response to calculate fine-grained token usage, apply cost-per-token multipliers, and emit structured telemetry to your APM (e.g., Datadog, Honeycomb). This provides the FinOps organization with a single source of truth for AI expenditure, enabling automated chargebacks and preventing "runaway" model costs through centralized circuit breakers that enforce budget caps across the enterprise.
+
+Security and compliance are significantly hardened when an AI Gateway acts as a gatekeeper. By centralizing the interaction layer, you create a mandatory control point for PII/PHI redaction and prompt injection filtering. Instead of implementing security logic in every microservice, you embed it within the Facade's pipeline. This ensures that sensitive data is scrubbed or tokenized before it ever leaves the network boundary, and that all requests are validated against organizational safety policies (e.g., blocking requests to providers that do not meet your data residency requirements). This "secure-by-default" posture simplifies audits and ensures that security patches to prompt-injection defenses can be rolled out globally across the enterprise in a single deployment.
+
+Finally, the Facade pattern excels at operational resilience through sophisticated rate-limit management and fallback strategies. Vendor APIs frequently impose strict, fluctuating rate limits and occasionally experience outages. A robust Facade implements a distributed queueing mechanism and exponential backoff, effectively smoothing out traffic spikes and preventing your services from hitting 429 (Too Many Requests) errors. More importantly, it enables "failover-to-secondary" logic; if the primary provider’s API returns a 5xx error, the Facade can transparently reroute the request to a secondary provider (e.g., switching from OpenAI to Azure OpenAI or Gemini) without the end-user experiencing a service disruption. This architectural pattern transforms fragile, direct-to-vendor integrations into a resilient, enterprise-grade AI infrastructure. LOG | SYSTEM | INFO  |  driver.observer: 🟢 [FLOW: SUCCESS] Model: gemini/gemini-3.1-flash-lite | Latency: 0.084s | Cost: $0.000467 | Tokens: [P:93 / C:755 / R:0]
+ LOG | SYSTEM | SIGNAL |  facade.driver: LLM Request Completed
+
+
+----------------------------------------
+ LOG | SYSTEM | INFO  |  ex.recorder: ✅ [STREAM CLOSED] Duration: 467.79ms
+ LOG | SYSTEM | INFO  |  ex.recorder:    ├─ Total Chunks Received : 30
+ LOG | SYSTEM | INFO  |  ex.recorder:    ├─ Direct Extracted      : 30
+ LOG | SYSTEM | INFO  |  ex.recorder:    ├─ Fiber Mapper Extracted: 30
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.5] ex.recorder:    └─ Data Mismatch Count   : 0
+
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.6] ex.recorder: 💰 Cost: $0.000467
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.7] ex.recorder: 📊 Tokens: [Prompt: 93 / Completion: 755 / Total: 848]
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.8] ex.recorder: --- Scenario: Long Stream Document finished ---
+
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.9] ex.recorder: 
+================================================================================
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.0] ex.recorder: ✅ [REPLAY COMPLETE] Time-travel API mocking successful.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.1] ex.recorder: ================================================================================

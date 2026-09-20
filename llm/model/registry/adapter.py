@@ -14,10 +14,10 @@ from fiber.llm.model.provider.resolver import get_llm_provider
 
 from fiber.llm.exception.mapping import exception_type
 from fiber.gateway.llm.mapper.state import StateMapper
-# ✅ 추가됨: 스트림 데이터 텍스트 추출을 위한 Traverser 모듈 임포트
 from fiber.gateway.llm.mapper.traverser import StateTraverseRule, StateTraverser
-from xphi.arch.bound.client.http import get_client
+from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 
+from xphi.arch.bound.client.http import get_client
 from xphi.arch.bound.event.next import uuid4 
 from xphi.kernel.space.bind.resolver import find_current_self, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
@@ -39,14 +39,15 @@ class BaseProviderAdapter:
 class GenericHTTPAdapter(BaseProviderAdapter):
     """순수 HTTP 통신(OpenAI 호환 포맷 등)을 통해 LLM과 직접 통신하는 경량 폴백 어댑터"""
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
-        adapter_log.debug(f"[GenericHTTP] 🚀 execute START | model={ctx.model}, provider={ctx.custom_llm_provider}")
+        # 시스템 전역의 req_id와 유사한 용도로 고유 ID 생성 (청크 ID 묶음용)
+        req_id = str(uuid4())[:8]
+        adapter_log.debug(f"[GenericHTTP-{req_id}] 🚀 execute START | model={ctx.model}, provider={ctx.custom_llm_provider}")
         
         headers = ctx.headers or {}
         if ctx.custom_llm_provider == "ollama" and ctx.api_key and "Authorization" not in headers:
             headers["Authorization"] = f"Bearer {ctx.api_key}"
 
         client = ctx.client_instance
-        # AsyncHTTPClient 대신 기본 httpx.AsyncClient로 타입 체크
         if not isinstance(client, httpx.AsyncClient):
             client = get_client(
                 is_async=True,
@@ -61,14 +62,19 @@ class GenericHTTPAdapter(BaseProviderAdapter):
         if ctx.optional_params:
             payload.update(ctx.optional_params)
 
+        target_url = StateTraverseRule.resolve_chat_endpoint(
+            provider=ctx.custom_llm_provider,
+            base_url=ctx.api_base or ""
+        )
+        adapter_log.debug(f"[GenericHTTP-{req_id}] Resolved Target URL: {target_url}")
+
         if ctx.stream:
-            adapter_log.debug("[GenericHTTP] 🌊 Initiating STREAM Execution")
+            adapter_log.debug(f"[GenericHTTP-{req_id}] 🌊 Initiating STREAM Execution")
             
-            # httpx의 네이티브 스트리밍 방식 (Context Manager) 사용
             async def stream_generator():
                 async with client.stream(
                     "POST",
-                    url=ctx.api_base, 
+                    url=target_url,
                     headers=headers, 
                     json=payload, 
                     timeout=ctx.timeout
@@ -77,14 +83,41 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                     async for line in response.aiter_lines():
                         if line:
                             adapter_log.debug(f"[DEBUG ADAPTER - GenericHTTP] Yielding chunk type: {type(line)} | content: {repr(line[:100])}")
-                            yield line
+                            
+                            # [1단계: 추출] 기존 파서를 유틸리티로 사용하여 날것의 문자열에서 데이터 추출
+                            parsed_dict = StreamChunkParser.parse(ctx.custom_llm_provider, line)
+                            
+                            if parsed_dict is not None:
+                                # [2단계: 교정 및 표준화] VCR과 하위 파이프라인이 기대하는 'OpenAI 호환 Dict' 규격으로 포장
+                                text_content = parsed_dict.get("text", "")
+                                finish_reason = parsed_dict.get("finish_reason")
+                                chunk_id = parsed_dict.get("id") or f"chatcmpl-{req_id}"
+                                
+                                normalized_chunk = {
+                                    "id": chunk_id,
+                                    "object": "chat.completion.chunk",
+                                    "model": ctx.model,
+                                    "choices": [{
+                                        "index": 0,
+                                        # 텍스트가 있을 때만 content 필드 포함, 아니면 role만 (표준 규격 준수)
+                                        "delta": {"content": text_content, "role": "assistant"} if text_content else {"role": "assistant"},
+                                        "finish_reason": finish_reason
+                                    }]
+                                }
+                                
+                                # 메타데이터(Usage 등)가 존재하면 병합
+                                if parsed_dict.get("usage"):
+                                    normalized_chunk["usage"] = parsed_dict["usage"]
+                                if parsed_dict.get("logprobs"):
+                                    normalized_chunk["choices"][0]["logprobs"] = parsed_dict["logprobs"]
+
+                                yield normalized_chunk
                             
             return stream_generator()
-
         else:
-            adapter_log.debug("[GenericHTTP] ⚡ Initiating SINGULAR Execution")
+            adapter_log.debug(f"[GenericHTTP-{req_id}] ⚡ Initiating SINGULAR Execution")
             response = await client.post(
-                url=ctx.api_base, 
+                url=target_url, 
                 headers=headers, 
                 json=payload, 
                 timeout=ctx.timeout
@@ -100,7 +133,6 @@ class GenericHTTPAdapter(BaseProviderAdapter):
             if "id" in data:
                 model_response.id = data["id"]
             return model_response
-
 
 # ==========================================
 # 2. Inter Framework Adapters
@@ -169,7 +201,6 @@ class InterLLMAdapter(BaseProviderAdapter):
             else:
                 response_stream = llm.stream_chat(llama_messages, **execution_kwargs)
             
-            # ✅ 수정됨: 단순 raw 방출을 넘어, 다중 위상 데이터를 OpenAI 규격으로 정규화하여 방출
             async def stream_generator():
                 def normalize_chunk(raw_chunk: Any) -> dict:
                     """Gemini, LlamaIndex 등 이기종 Chunk를 OpenAI 표준 Dict 스키마로 강제 캐스팅"""
@@ -216,7 +247,6 @@ class InterLLMAdapter(BaseProviderAdapter):
             ctx.model_response.choices = [choice_data]
             
             return ctx.model_response
-
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     def __init__(self):
@@ -318,7 +348,7 @@ class AdapterRegistry:
             cls._adapters[task_type] = {}
         
         cls._adapters[task_type][provider_name] = adapter
-        registry_log.debug(f"[Registry] '{task_type}' 위상에 '{provider_name}' 어댑터 동적 등록됨.")
+        registry_log.debug(f"[Registry] '{task_type}'에 '{provider_name}' 어댑터 동적 등록됨.")
 
     @classmethod
     def get_adapter(cls, task_type: str, provider_name: str) -> BaseProviderAdapter:

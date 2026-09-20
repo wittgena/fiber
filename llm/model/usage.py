@@ -53,6 +53,11 @@ class TokenUsage(BaseModel):
     context_window: int = Field(default=0, ge=0, description="Context window must be non-negative")
     per_turn_token: int = Field(default=0, ge=0, description="Per turn tokens must be non-negative")
     response_id: str = Field(default="")
+    
+    @property
+    def total_tokens(self) -> int:
+        """Dynamically calculates the total tokens used."""
+        return self.prompt_tokens + self.completion_tokens
 
     def __add__(self, other: "TokenUsage") -> "TokenUsage":
         """Add two TokenUsage instances together."""

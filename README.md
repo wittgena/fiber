@@ -10,6 +10,7 @@ This document provides a practical guide on how to integrate and deploy Fiber ac
 * **[1.2] LLM VCR (Record & Replay Engine):** How to serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency profiling.
 * **[1.3] Secure Agentic Bridge (MCP Gateway):** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
 * **[1.4] Audit Log & Compliance Engine:** How to record verifiable Merkle-proof receipts for agent actions.
+* **[1.5] Universal State Traverser:** How to seamlessly integrate proprietary LLMs and local inference servers using declarative JSON extraction rules instead of custom parsing logic.
 
 Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (connect, daemon, e2e)** to help you quickly provision your infrastructure.
 
@@ -79,25 +80,42 @@ Fiber provides two approaches for VCR integration:
 
 **[1] Native Integration**
 
-If using Fiber's SDK, the VCR can be injected globally. It wraps the `AdapterRegistry`, making standard `acompletion` calls recordable.
+If using Fiber's SDK, the VCR can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee 100% idempotent replay matching.
 
 ```python
 import os, asyncio
 from fiber.llm.entry import acompletion
-from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
 
-# 1. Inject VCR globally
-config = VCRPlaybackConfig(mode=os.environ.get("VCR_MODE", "live"), speed="real")
+# Decoupled VCR architecture: Storage (manager) & Interceptor (proxy)
+from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
+from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+from xphi.arch.bound.event.next import next_trace_id
+
+# 1. Inject VCR globally with Time-Window Coalescing (Tick: 100ms)
+vcr_mode = os.environ.get("VCR_MODE", "live").lower()
+config = VCRPlaybackConfig(mode=vcr_mode, speed="real", record_tick_ms=100.0)
 VCRInjector.apply(config=config, fixture_dir="./fixtures")
 
 async def main():
-    # 2. Execute. Explicit `trace_id` binds the execution to a specific fixture.
+    scenario = "native_demo"
+    messages = [{"role": "user", "content": "Count from 1 to 5."}]
+    
+    # 2. Generate deterministic Trace ID to ensure Record & Replay target the exact same fixture
+    seed = VCRIdentityRule.generate_seed(scenario_name=scenario, messages=messages, invoker="readme.app")
+    trace_id = next_trace_id(seed) if vcr_mode in ("record", "replay") else next_trace_id()
+
+    # 3. Execute with explicit context tunneling
     response = await acompletion(
         model="gemini/gemini-3.1-flash-lite",
-        messages=[{"role": "user", "content": "Count from 1 to 5."}],
+        messages=messages,
         stream=True,
-        metadata={"trace_id": "native_demo"}
+        trace_id=trace_id,  # Explicit ID binding
+        metadata={
+            "vcr_scenario": scenario,
+            "vcr_invoker": "readme.app"
+        }
     )
+    
     async for chunk in response:
         print(chunk.choices[0].delta.content or "", end="", flush=True)
 
@@ -105,76 +123,87 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-**[2] Zero-Code Integration (Module Aliasing & State Mapping)**
+**[2] Transparent Integration for Legacy Codebases (Module Aliasing)**
 
-For legacy codebases tightly coupled to third-party SDKs (e.g., LiteLLM), Fiber uses **Zero-Code Integration**. By aliasing `sys.modules` at runtime, Fiber proxies legacy I/O calls.
+For existing applications heavily coupled to third-party SDKs (e.g., LiteLLM), migrating to a new gateway or establishing offline tests can be challenging. Fiber provides a Transparent Integration Path via standard sys.modules aliasing. This creates a safe, drop-in sandbox that grants your legacy codebase immediate access to the VCR engine and time-window stream coalescing—without requiring a massive refactoring of your business logic.
 
-Crucially, the adapter layer autonomously normalizes heterogeneous stream payloads (like Gemini's native JSON) into strict OpenAI-compliant formats. This ensures rigid legacy parsers do not fail, while offering a 1-line declarative migration path via `StateTraverseRule`.
+Crucially, the application code remains completely undisturbed. By simply including standard metadata in your existing API calls, Fiber's adapter gracefully routes the payload to the VCR engine. It ensures 100% duck-typing parity, returning perfect mock objects during offline replays so that strict legacy type checks never fail.
 
 ```python
 import os, sys, asyncio
 
-# 1. Alias module namespaces before business logic loads
+"""1. Integration Bridge (Executes before legacy business logic loads)"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
+
 if VCR_MODE in ("record", "replay"):
     import fiber.llm.entry as litellm_entry
-    sys.modules["litellm"] = litellm_entry
+    import fiber.llm.param as fiber_param
     
-    from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
-    VCRInjector.apply(config=VCRPlaybackConfig(mode=VCR_MODE), fixture_dir="./fixtures")
+    # Transparently route legacy SDK imports to Fiber's gateway
+    sys.modules["litellm"] = litellm_entry
+    sys.modules["litellm.types.utils"] = fiber_param
+    
+    from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
+    from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+    
+    config = VCRPlaybackConfig(mode=VCR_MODE, speed="real", record_tick_ms=100.0)
+    VCRInjector.apply(config=config, fixture_dir="./fixtures")
 
-# 2. Legacy Business Logic
+"""2. Legacy Business Logic (Unmodified)"""
 import litellm 
-from fiber.llm.mapper.traverser import StateTraverseRule
+from litellm.types.utils import ModelResponseStream
 
 async def main():
+    # Fiber gracefully processes this standard call. The `metadata` acts as a bridge, 
+    # guiding the VCR engine to manage deterministic fixture files for testing.
     response = await litellm.acompletion(
         model="gemini/gemini-3.1-flash-lite",
         messages=[{"role": "user", "content": "Explain migration."}],
         stream=True,
-        metadata={"trace_id": "tech_debt_migration"} 
+        metadata={
+            "vcr_scenario": "tech_debt_migration",
+            "vcr_invoker": "legacy_app"
+        }
     )
     
     async for chunk in response:
-        # [Method A] Legacy Approach: Rigid, schema-bound defensive parsing
-        legacy_content = ""
-        try:
-            choices = getattr(chunk, "choices", None) or (chunk.get("choices", []) if isinstance(chunk, dict) else [])
-            if choices:
-                delta = getattr(choices[0], "delta", None) or (choices[0].get("delta", {}) if isinstance(choices[0], dict) else {})
-                legacy_content = getattr(delta, "content", None) or (delta.get("content", "") if isinstance(delta, dict) else "")
-        except Exception:
-            pass
-            
-        # [Method B] Fiber Approach: Declarative multi-topology traversal
-        # Reliably extracts data whether the chunk is an Object/Dict or OpenAI/Gemini schema
-        fiber_content = StateTraverseRule.extract_stream_content(chunk, default="")
+        # VCR Engine guarantees duck-typing parity. Even during offline replay, 
+        # `chunk` acts as a perfect mock of ModelResponseStream.
+        assert isinstance(chunk, ModelResponseStream)
         
-        # Behavioral Equivalency Guaranteed: Adapter normalization ensures 100% parity
-        assert legacy_content == fiber_content  
-        print(fiber_content, end="", flush=True)
+        # Standard legacy parsing continues to work flawlessly
+        if hasattr(chunk, "choices") and chunk.choices:
+            print(chunk.choices[0].delta.content or "", end="", flush=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+---
+
 **[3] The Record & Replay Flow**
 
-* **Step 1: Record (Capture Network I/O)**
-Executes live API calls, persisting stream timing (`delta_ms`) and normalized payloads to local fixtures.
+* **Step 1: Record (Capture & Coalesce Network I/O)**
+Executes live API calls to the target LLM. The engine autonomously coalesces micro-chunks using a time-window (e.g., 100ms) and persists the normalized payloads and network metrics into strict, human-readable local fixtures.
 
 ```bash
-VCR_MODE=record python -m fiber.dev.ex.switch
+# Record with 100ms chunk coalescing to optimize future playback
+python -m fiber.dev.ex.recorder --vcr record --vcr-tick 100.0
+
 ```
 
-* **Step 2: Replay (Offline Emulation)**
-Streams the cached response using exact historical latency. Add `--vcr-chaos` (in CLI) or `chaos_latency_ms` (in config) to inject artificial jitter for timeout resilience testing.
+* **Step 2: Replay (Offline Emulation & Chaos Injection)**
+Streams the cached response fully offline with zero network I/O. You can emulate exact historical latencies (`--vcr-speed real`), run at maximum velocity for CI/CD pipelines (`--vcr-speed max`), or inject artificial latency jitter (`--vcr-chaos`) to validate your application's timeout resilience.
 
 ```bash
-VCR_MODE=replay python -m fiber.dev.ex.switch
+# Replay in real-time with a 500ms artificial chaos jitter
+python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
+
 ```
 
-*(Note: In `live` mode, the VCR wrapper and aliases are bypassed entirely, introducing zero overhead.)*
+*(Note: Executing with `--vcr live` bypasses the VCR interceptors entirely, ensuring zero overhead in production environments.)*
+
+---
 
 ### 1.3. Secure Agentic Bridge (MCP Gateway)
 
@@ -232,8 +261,36 @@ receipt = await client.record_audit_event(
 
 print("Notarized Hash:", receipt["hash"])
 print("Merkle Proof:", receipt["membership_proof"])
-
 ```
+
+---
+
+### 1.5. Universal State Traverser (Declarative Integration)
+
+The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks. Fiber eliminates the need for messy `if/elif` parsing blocks through its `StateTraverser` and unified `StreamChunkParser`. 
+
+Powered by dot-notation, the traverser safely navigates mixed topologies (Dicts, Lists, Pydantic Objects), silently absorbing missing keys or index errors without crashing the pipeline.
+
+**Extending Fiber for a New Provider:**
+While dynamic runtime registration is not yet exposed, integrating a non-OpenAI-compliant provider simply requires forking the repo and appending its schema to the internal declarative rulesets. No custom parsing logic is needed.
+
+```python
+# 1. Map the custom JSON topology in: fiber/llm/router/stream/parser/chunk.py
+STREAM_EXTRACTION_RULES["nova-ai"] = {
+    "text": "outputs.0.message.delta",      # Safely resolves obj["outputs"][0].message.delta
+    "finish_reason": "meta.stop_reason", 
+    "is_finished_cond": {"path": "status", "value": "DONE"},
+    "usage": {
+        "prompt_tokens": "stats.input_count",
+        "completion_tokens": "stats.output_count"
+    }
+}
+
+# 2. Register the alias to route the parser
+PROVIDER_RULE_ALIAS["nova-ai"] = "nova-ai"
+```
+
+Once mapped, the `StreamChunkParser` autonomously normalizes the proprietary stream into Fiber's strict `ParsedChunk` format. This guarantees that your application logic, metrics, and VCR coalescing engine support the new model flawlessly on day one.
 
 ---
 
@@ -281,5 +338,5 @@ The infrastructure guarantees execution determinism and security through end-to-
 * 🔗 **[dphi.clearing.log](./phase/abc/log/dphi/clearing.20260916.log):** Validates the WASM-based Clearing FSM and transaction pipeline, confirming deterministic edge defenses against invalid EIP-712 signatures, zero balances, and corrupted calldata via chaos injection.
 * 🔗 **[edge.sandbox.log](./phase/abc/log/gateway/sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience.
 * 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming physical Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
-* 🔗 **[llm.vcr.log](./phase/abc/log/llm/vcr.replay.20260917.log):** Validates the VCR (Record & Replay) network interceptor, confirming zero-latency offline execution, precise latency breakdown (Network I/O vs Framework Overhead), and absolute Tracer shielding during idempotent fallbacks.
-* 🔗 **[ex.switch.log](./phase/abc/log/ex/switch.20260919.log):** Validates the Sandbox zero-code integration, confirming runtime module aliasing, seamless multi-topology stream normalization via the State Mapper, and precise historical TTFB emulation during VCR playback.
+* 🔗 **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming zero-network offline emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for extreme playback optimization.
+* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.20260920.log):** Validates the zero-code legacy migration, confirming that `sys.modules` aliasing seamlessly intercepts legacy SDK calls (`litellm`), normalizes heterogeneous streams, and achieves 100% duck-typing parity during real-time VCR playback.

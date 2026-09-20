@@ -1,5 +1,4 @@
 # fiber.gateway.llm.channel
-## @lineage: fiber.llm.channel
 from __future__ import annotations
 
 import os
@@ -21,6 +20,7 @@ from fiber.llm.router.stream.wrapper import StreamWrapper
 from fiber.llm.router.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.llm.model.registry.adapter import AdapterRegistry
 
+from xphi.arch.bound.event.next import next_trace_id
 from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
 from xphi.state.phase.channel import ChannelPipeline, ChannelContext, DuplexChannel, RpcBridge
 from xphi.watcher.plane.emitter import get_emitter
@@ -77,6 +77,39 @@ class DphiFuelInterceptor(DuplexChannel):
             log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
             raise
 
+# class ContextBinder(DuplexChannel):
+#     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
+#         # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
+#         if "call_id" not in msg:
+#             msg["call_id"] = os.urandom(8).hex()
+
+#         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
+#         metadata = msg.get("metadata", {})
+        
+#         # 2. 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
+#         raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
+        
+#         # 외부에서 유효한 OTel 규격(32자리)이 안 들어오면 새로 발급 (uuid4.hex는 완벽한 32자리 16진수)
+#         if raw_trace_id and len(raw_trace_id) == 32:
+#             resolved_trace_id = raw_trace_id
+#         else:
+#             resolved_trace_id = uuid.uuid4().hex
+        
+#         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
+
+#         system_meta = ExecutionMetadata(
+#             session_id=resolved_session_id,
+#             trace_id=resolved_trace_id,
+#             call_id=msg["call_id"],
+#             metadata=metadata,
+#             base_model=msg.get("model", "unknown")
+#         )
+        
+#         ctx.set_attr("system_meta", system_meta)
+#         ctx.set_attr("request_kwargs", msg)
+#         msg["system_meta"] = system_meta
+#         await ctx.fire_write(msg)
+
 class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
         # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
@@ -88,12 +121,16 @@ class ContextBinder(DuplexChannel):
         
         # 2. 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
         raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
-        
-        # 외부에서 유효한 OTel 규격(32자리)이 안 들어오면 새로 발급 (uuid4.hex는 완벽한 32자리 16진수)
-        if raw_trace_id and len(raw_trace_id) == 32:
-            resolved_trace_id = raw_trace_id
+        if raw_trace_id:
+            # 전달받은 ID가 이미 32자리 OTLP 규격이라면 그대로 수용 (Datadog, Jaeger 연동 시)
+            if len(raw_trace_id) == 32:
+                resolved_trace_id = raw_trace_id
+            # 32자리가 아니라면(Ex. VCR 시나리오 이름), 이를 시드로 삼아 32자리 OTLP Hex로 결정론적 변환!
+            else:
+                resolved_trace_id = next_trace_id(deterministic_seed=str(raw_trace_id))
         else:
-            resolved_trace_id = uuid.uuid4().hex
+            # 아무런 ID도 전달되지 않은 일반적인 경우, Topos 기반의 신규 OTLP ID 생성
+            resolved_trace_id = next_trace_id(deterministic_seed=None)
         
         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
 
@@ -248,9 +285,65 @@ class FallbackHandler(DuplexChannel):
         ## (This breaks the error chain and re-enters the PayloadTranslator cleanly)
         await ctx.fire_write(retry_msg)
 
+# class PayloadTranslator(DuplexChannel):
+#     async def write(self, ctx: ChannelContext, msg: dict):
+#         try:
+#             ## 1. Payload Pre-processing
+#             prompt_id = msg.get("prompt_id")
+#             if prompt_id:
+#                 try:
+#                     log_handlers.debug("Prompt Management requested", prompt_id=prompt_id)
+#                 except Exception as e:
+#                     log_handlers.error("Failed to resolve dynamic prompt", error=str(e))
+#                     await ctx.fire_exception_caught(e)
+#                     return
+            
+#             # Tools 정규화 로직 통합
+#             if msg.get("tools") is not None:
+#                 if len(msg.get("tools", [])) == 0:
+#                     log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] 빈 tools 리스트가 감지되어 None으로 초기화합니다.")
+#                     msg["tools"] = None
+#                 else:
+#                     log_handlers.debug(f"[DEBUG-PAYLOAD-TRANSLATOR] {len(msg.get('tools'))}개의 tool이 감지되었습니다.")
+            
+#             ## 2. Core Translation (Processor 빌드)
+#             model = msg.get("model")
+#             tools_data = msg.get("tools")
+#             if tools_data:
+#                 log_handlers.debug(
+#                     "[DEBUG-PAYLOAD-TRANSLATOR] 전달된 원시 tools 스키마:\n"
+#                     f"{json.dumps(tools_data, ensure_ascii=False, indent=2)}"
+#                 )
+            
+#             if msg.get("aembedding") is True:
+#                 input_data = msg.get("input", [])
+#                 processor = EmbeddingProcessor(model=model, input_data=input_data, kwargs=msg)
+#                 processed_ctx = processor.build()
+#             else:
+#                 messages = msg.get("messages", [])
+#                 processor = CompletionProcessor(model=model, messages=messages, kwargs=msg)
+#                 processed_ctx = processor.build()
+                
+#             if not msg.get("aembedding") and hasattr(processed_ctx, "original_kwargs"):
+#                 post_tools = processed_ctx.original_kwargs.get("tools")
+#                 if post_tools:
+#                     log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] CompletionProcessor 빌드 성공. Tools 속성 유지됨.")
+
+#             # 다음 파이프라인으로 Context 전달
+#             ctx.set_attr("processed_context", processed_ctx)
+#             await ctx.fire_write(processed_ctx)
+
+#         except Exception as e:
+#             show_trace = ctx.get_attr("trace_errors", False)
+#             log_handlers.error("Payload translation failed", error=str(e), exc_info=show_trace)
+#             await ctx.fire_exception_caught(e)
+
 class PayloadTranslator(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
         try:
+            # API Payload(msg)에서 내부 메타데이터를 완전히 팝(pop)하여 격리
+            system_meta = msg.pop("system_meta", None) or ctx.get_attr("system_meta")
+
             ## 1. Payload Pre-processing
             prompt_id = msg.get("prompt_id")
             if prompt_id:
@@ -291,6 +384,12 @@ class PayloadTranslator(DuplexChannel):
                 post_tools = processed_ctx.original_kwargs.get("tools")
                 if post_tools:
                     log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] CompletionProcessor 빌드 성공. Tools 속성 유지됨.")
+                # [안전 장치] Processor 내부 복사 과정에서 잔존할 수 있는 메타데이터 2차 제거
+                processed_ctx.original_kwargs.pop("system_meta", None)
+
+            # 격리해둔 메타데이터를 반환 객체의 '독립된 속성'으로 주입 -> VCRAdapterProxy 등 다른 파이프라인 요소들이 getattr(ctx, "system_meta")로 정상 접근 가능
+            if system_meta:
+                processed_ctx.system_meta = system_meta
 
             # 다음 파이프라인으로 Context 전달
             ctx.set_attr("processed_context", processed_ctx)

@@ -1,12 +1,4 @@
 # fiber.llm.router.stream.parser.chunk
-## @lineage: fiber.llm.stream.parser.chunk
-## @lineage: llm.stream.parser.chunk
-## @lineage: agent.llm.stream.parser.chunk
-## @lineage: ator.driver.llm.stream.parser.chunk
-## @lineage: phase.llm.stream.parser.chunk
-## @lineage: phase.stream.parser.chunk
-## @lineage: engine.stream.parser.chunk
-## @lineage: engine.parser.stream.chunk
 import json
 from typing import Any, Dict, List, Optional, Union
 from typing_extensions import TypedDict
@@ -21,6 +13,16 @@ STREAM_EXTRACTION_RULES = {
         "logprobs": "choices.0.logprobs",
         "usage": "usage",
         "tool_calls": "choices.0.delta.tool_calls"
+    },
+    # Ollama Native API 대응 룰
+    "ollama": {
+        "text": "message.content",
+        "finish_reason": "done_reason",
+        "is_finished_cond": {"path": "done", "value": True},
+        "usage": {
+            "prompt_tokens": "prompt_eval_count",
+            "completion_tokens": "eval_count"
+        }
     },
     "text-completion-openai": {
         "text": "choices.0.text",
@@ -79,6 +81,7 @@ STREAM_EXTRACTION_RULES = {
     }
 }
 
+# 💡 [개선] llama_server 및 generic 어댑터 호환 매핑 추가
 PROVIDER_RULE_ALIAS = {
     "azure": "openai",
     "azure_ai": "openai",
@@ -86,8 +89,9 @@ PROVIDER_RULE_ALIAS = {
     "sagemaker_chat": "openai",
     "nlp_cloud": "openai",
     "gemini": "vertex_ai",
+    "llama_server": "openai",   # llama.cpp 서버는 OpenAI SSE 포맷을 따름
+    "generic": "openai",        # 범용 어댑터 기본값
 }
-
 
 class ParsedChunk(TypedDict):
     """Parser가 Accumulator로 넘겨주는 단일화된 표준 데이터 규격입니다."""
@@ -169,8 +173,8 @@ class StreamChunkParser:
                 return {"_internal_signal": "DONE"}
                 
             # 2. SSE Prefix 제거 (data: 또는 data: )
-            # 다중 스트림 이벤트 방어를 위해 첫 번째 유효 JSON 포맷만 추출 시도
             if chunk.startswith("data:"):
+                # 공백 무시를 위해 .strip() 추가
                 chunk = chunk.replace("data:", "", 1).strip()
                 
             # 3. JSON 파싱 시도
@@ -192,14 +196,20 @@ class StreamChunkParser:
             return STREAM_EXTRACTION_RULES["openai"]
             
         rule_key = PROVIDER_RULE_ALIAS.get(provider, provider)
-        return STREAM_EXTRACTION_RULES.get(rule_key, STREAM_EXTRACTION_RULES["openai"])
+        return STREAM_EXTRACTION_RULES.get(rule_key, STREAM_EXTRACTION_RULES.get("openai")) # 폴백은 openai
 
     @classmethod
     def parse(cls, provider: Optional[str], raw_chunk: Any) -> Optional[ParsedChunk]:
         """
         [핵심 라우터] 원시 청크를 받아 Accumulator가 소비할 수 있는 순수 데이터(ParsedChunk)로 변환합니다.
         """
-        # 1. 원시 데이터 전처리
+        # 💡 [핵심 방어막: 멱등성 보장]
+        # 앞단 어댑터에서 이미 파서를 거쳐 'ParsedChunk' 형태(또는 dict)로 들어온 데이터라면,
+        # 이중 파싱을 시도하지 않고 즉시 반환하여 하위 파이프라인의 붕괴를 막습니다.
+        if isinstance(raw_chunk, dict) and "original_chunk" in raw_chunk:
+            return raw_chunk
+
+        # 1. 원시 데이터 전처리 (SSE 파싱 및 JSON 디코딩)
         obj = cls._preprocess_chunk(raw_chunk)
         
         # 빈 데이터 방어

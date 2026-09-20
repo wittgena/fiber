@@ -130,7 +130,7 @@ def execute_vcr_logic(
     )
     
     if mode in ("record", "replay"):
-        from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
+        from fiber.dev.trace.llm.vcr.manager import VCRInjector, VCRPlaybackConfig
         from xphi.kernel.space.bind.resolver import resolve_path
         
         config = VCRPlaybackConfig(mode=mode, speed=speed, chaos_latency_ms=chaos)

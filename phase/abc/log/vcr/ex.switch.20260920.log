@@ -1,0 +1,152 @@
+(self) wittgena@wittgenas-MacBook-Pro self % VCR_MODE=record python -m dev.ex.switch
+================================================================================
+🛡️  FIBER INTEGRATION & SANDBOX
+================================================================================
+ LOG | SYSTEM | INFO  |  fiber.cli.sandbox: [Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active).
+ 🔒 [Sandbox] Strict Security Policy INJECTED
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.proxy: 🔌 VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ 🔌 [Integration] Status: ENGAGED (RECORD) | Tick: 100.0ms
+ 🔄 [Integration] Aliased 'litellm' -> 'fiber.llm.entry'
+ 📦 [Integration] Aliased 'litellm.types.utils' -> 'fiber.llm.param'
+--------------------------------------------------------------------------------
+
+▶️ [BUSINESS LOGIC] Initiating LLM Call
+   ├─ Scenario: tech_debt_migration
+   ├─ Model: gemini/gemini-3.1-flash-lite
+   └─ Prompt: As a senior software architect, explain why relyin...
+
+ LOG | SYSTEM | WARN  |  registry.llm: [Router] Filtered unsupported kwargs for gemini (gemini-3.1-flash-lite): {'timeout', 'api_base'}
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+📡 [STREAM OPENED] Awaiting chunks...
+
+🤖 [AI RESPONSE] 
+----------------------------------------
+
+AFC is enabled with max remote calls: 10.
+[🔍 DUCK-TYPING INSPECTOR - First Chunk]
+   ├─ Actual Type  : <class 'fiber.llm.types.provider.stream.ModelResponseStream'>
+   ├─ isinstance() : ✅ PASS
+
+----------------------------------------
+
+As a senior software architect, I see "zero-code" integration hacks—such as monkey-patching external libraries or dynamically aliasing Python modules—as **technical debt with high interest rates.** While they provide immediate velocity, they fundamentally subvert the language’s runtime safety and the architecture’s predictability.
+
+### Why Temporary Hacks are Dangerous for Production
+
+*   **Runtime Fragility (The "Ghost in the Machine"):** Monkey-patching modifies the internal state of a library at runtime. If the underlying library updates its internal API or changes its class structure, your patch will likely trigger a `TypeError` or `AttributeError` that is invisible to static analysis tools (like Mypy or Pyright).
+*   **Broken Dependency Contracts:** When you alias modules or override methods, you break the contract between the library and your code. You effectively create a "hidden fork" of the third-party code that is impossible to audit during security patching or dependency upgrades.
+*   **Debugging Nightmares:** Standard debugging tools rely on stack traces and source code mapping. When you modify objects in memory, the stack trace no longer matches the source code on disk. This significantly increases "Mean Time to Recovery" (MTTR) during a production incident.
+*   **Hidden Side Effects:** Python modules are often imported across the entire application. A monkey-patch applied for one specific use case may unintentionally alter the behavior of that library in a completely different part of your system, leading to non-deterministic, intermittent bugs.
+
+---
+
+### 3-Step Action Plan for Native Migration
+
+To move from a "hack" to a robust, native implementation, follow this architectural transition:
+
+#### 1. Define the Abstraction Layer (The Adapter Pattern)
+Instead of calling the library directly (or your hacked version of it), create an internal interface (a Python `Protocol` or `Abstract Base Class`).
+*   **Action:** Define exactly what your application needs from the integration.
+*   **Implementation:** Create a wrapper class that defines these requirements. Your application code should only ever interact with this wrapper, never the third-party library directly. This decouples your business logic from the integration implementation.
+
+#### 2. Implement the Native SDK in Parallel
+Do not attempt to "fix" the hack in place. Treat the native implementation as a new feature.
+*   **Action:** Install the official SDK as a formal dependency.
+*   **Implementation:** Implement the native SDK inside the wrapper you created in Step 1. Because you are using an abstraction layer, you can now toggle between the "hacked" version and the "native" version using a feature flag or a configuration toggle. This allows you to test the native implementation in a staging environment without modifying the production execution path.
+
+#### 3. Verification and "Dark" Launch
+Before fully removing the hack, validate that the native SDK behaves identically to your custom patch under production load.
+*   **Action:** Use "Shadow Execution" or "Dark Launching."
+*   **Implementation:** Run both the hack and the native implementation in production, but discard the results of one. Compare the return values and latency of both. Once the native implementation consistently matches the expected outputs and performance metrics of the hack, perform a cutover by updating the configuration toggle, then delete the monkey-patch code and the old library aliases entirely.
+
+**Architect’s Note:** *Documentation is the final step. Always document why the hack was removed and ensure the new native implementation is included in your automated test suite to prevent future regressions.* LOG | SYSTEM | INFO  |  trace.llm.vcr.manager: 💾 [VCR RECORD] Saved readable fixture to: ./fixtures/fixture_ex_switch_tech_debt_migration.json (Trace: 0151fd94)
+
+
+----------------------------------------
+
+✅ [STREAM CLOSED] Duration: 8896.68ms
+   ├─ Total Chunks Received : 32
+   └─ Legacy Extracted      : 31
+
+================================================================================
+💾 [VCR FIXTURE INSPECTOR]
+   ├─ Path: ./fixtures/fixture_ex_switch_tech_debt_migration.json
+⏱️  [METRICS] TTFB: 3731.48ms | Total Duration: 8891.33ms
+================================================================================
+
+(self) wittgena@wittgenas-MacBook-Pro self % VCR_MODE=replay python -m dev.ex.switch
+================================================================================
+🛡️  FIBER INTEGRATION & SANDBOX
+================================================================================
+ LOG | SYSTEM | INFO  |  fiber.cli.sandbox: [Fiber VCR] 🛡️ PEP-578 Audit Hooks Injected (Local Sandbox Active).
+ 🔒 [Sandbox] Strict Security Policy INJECTED
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.proxy: 🔌 VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+ 🔌 [Integration] Status: ENGAGED (REPLAY) | Tick: 100.0ms
+ 🔄 [Integration] Aliased 'litellm' -> 'fiber.llm.entry'
+ 📦 [Integration] Aliased 'litellm.types.utils' -> 'fiber.llm.param'
+--------------------------------------------------------------------------------
+
+▶️ [BUSINESS LOGIC] Initiating LLM Call
+   ├─ Scenario: tech_debt_migration
+   ├─ Model: gemini/gemini-3.1-flash-lite
+   └─ Prompt: As a senior software architect, explain why relyin...
+
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+📡 [STREAM OPENED] Awaiting chunks...
+
+🤖 [AI RESPONSE] 
+----------------------------------------
+
+[🔍 DUCK-TYPING INSPECTOR - First Chunk]
+   ├─ Actual Type  : <class 'fiber.llm.types.provider.stream.ModelResponseStream'>
+   ├─ isinstance() : ✅ PASS
+
+----------------------------------------
+
+As a senior software architect, I see "zero-code" integration hacks—such as monkey-patching external libraries or dynamically aliasing Python modules—as **technical debt with high interest rates.** While they provide immediate velocity, they fundamentally subvert the language’s runtime safety and the architecture’s predictability.
+
+### Why Temporary Hacks are Dangerous for Production
+
+*   **Runtime Fragility (The "Ghost in the Machine"):** Monkey-patching modifies the internal state of a library at runtime. If the underlying library updates its internal API or changes its class structure, your patch will likely trigger a `TypeError` or `AttributeError` that is invisible to static analysis tools (like Mypy or Pyright).
+*   **Broken Dependency Contracts:** When you alias modules or override methods, you break the contract between the library and your code. You effectively create a "hidden fork" of the third-party code that is impossible to audit during security patching or dependency upgrades.
+*   **Debugging Nightmares:** Standard debugging tools rely on stack traces and source code mapping. When you modify objects in memory, the stack trace no longer matches the source code on disk. This significantly increases "Mean Time to Recovery" (MTTR) during a production incident.
+*   **Hidden Side Effects:** Python modules are often imported across the entire application. A monkey-patch applied for one specific use case may unintentionally alter the behavior of that library in a completely different part of your system, leading to non-deterministic, intermittent bugs.
+
+---
+
+### 3-Step Action Plan for Native Migration
+
+To move from a "hack" to a robust, native implementation, follow this architectural transition:
+
+#### 1. Define the Abstraction Layer (The Adapter Pattern)
+Instead of calling the library directly (or your hacked version of it), create an internal interface (a Python `Protocol` or `Abstract Base Class`).
+*   **Action:** Define exactly what your application needs from the integration.
+*   **Implementation:** Create a wrapper class that defines these requirements. Your application code should only ever interact with this wrapper, never the third-party library directly. This decouples your business logic from the integration implementation.
+
+#### 2. Implement the Native SDK in Parallel
+Do not attempt to "fix" the hack in place. Treat the native implementation as a new feature.
+*   **Action:** Install the official SDK as a formal dependency.
+*   **Implementation:** Implement the native SDK inside the wrapper you created in Step 1. Because you are using an abstraction layer, you can now toggle between the "hacked" version and the "native" version using a feature flag or a configuration toggle. This allows you to test the native implementation in a staging environment without modifying the production execution path.
+
+#### 3. Verification and "Dark" Launch
+Before fully removing the hack, validate that the native SDK behaves identically to your custom patch under production load.
+*   **Action:** Use "Shadow Execution" or "Dark Launching."
+*   **Implementation:** Run both the hack and the native implementation in production, but discard the results of one. Compare the return values and latency of both. Once the native implementation consistently matches the expected outputs and performance metrics of the hack, perform a cutover by updating the configuration toggle, then delete the monkey-patch code and the old library aliases entirely.
+
+**Architect’s Note:** *Documentation is the final step. Always document why the hack was removed and ensure the new native implementation is included in your automated test suite to prevent future regressions.*
+
+----------------------------------------
+
+✅ [STREAM CLOSED] Duration: 12677.30ms
+   ├─ Total Chunks Received : 31
+   └─ Legacy Extracted      : 31

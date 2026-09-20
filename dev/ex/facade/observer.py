@@ -21,10 +21,7 @@ class ParsedUsage:
     is_meaningful: bool = False
 
 def extract_usage(response: ModelResponse, manifest: dict | None = None) -> ParsedUsage:
-    """
-    순수 함수(Stateless): ModelResponse 객체에서 토큰 사용량을 추출하고 
-    주어진 manifest(단가표)를 바탕으로 비용을 계산합니다.
-    """
+    """ModelResponse 객체에서 토큰 사용량을 추출하고 주어진 manifest(단가표)를 바탕으로 비용을 계산"""
     usage = getattr(response, "usage", None)
     if not usage:
         return ParsedUsage()
@@ -69,10 +66,7 @@ def extract_usage(response: ModelResponse, manifest: dict | None = None) -> Pars
     )
 
 def llm_metric_interceptor(event: LogEvent) -> None:
-    """
-    [Interceptor] xphi.watcher의 이벤트 파이프라인에서 SIGNAL 레벨 중 
-    'llm_metric' 타입의 이벤트를 가로채어 로깅 및 전역 메트릭 수집을 수행합니다.
-    """
+    """[Interceptor] xphi.watcher의 이벤트 파이프라인에서 SIGNAL 레벨 중 'llm_metric' 타입의 이벤트를 가로채어 로깅 및 전역 메트릭 수집"""
     ctx = event.context
     
     # 관심 없는 이벤트는 빠르게 패스
@@ -86,8 +80,6 @@ def llm_metric_interceptor(event: LogEvent) -> None:
         latency = ctx.get("latency_sec", 0.0)
         cost = ctx.get("cost", 0.0)
         usage: dict = ctx.get("usage", {})
-        
-        # 내부 콜(Internal sub-call) 필터링 - 메인 텔레메트리 로깅
         if not ctx.get("is_internal_call", False):
             log.info(
                 f"🟢 [FLOW: SUCCESS] Model: {model_name} | "
@@ -109,13 +101,7 @@ def llm_metric_interceptor(event: LogEvent) -> None:
                 f"Error: {error_msg}"
             )
 
-
-# =====================================================================
-# [Module Auto-Registration]
-# 파이썬 모듈 시스템(Import)의 특성을 활용하여, 이 모듈이 메모리에 로드(Scan)될 때 
-# 단 한 번만 register_interceptor를 전역 파이프라인에 주입합니다.
-# 이로 인해 런타임(agent.runtime) 초기화 코드에서 명시적으로 호출할 필요가 사라집니다.
-# =====================================================================
+"""[Module Auto-Registration]"""
 _IS_REGISTERED = False
 
 def _auto_register():

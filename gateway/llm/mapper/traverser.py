@@ -1,11 +1,10 @@
 # fiber.gateway.llm.mapper.traverser
-## @lineage: fiber.llm.mapper.traverser
 import os
 import json
 import asyncio
 import functools
 from pathlib import Path
-from typing import AsyncGenerator, Generator, Any, List
+from typing import AsyncGenerator, Generator, Any, List, Optional
 
 from fiber.llm.types.llm.block import ChatMessage, MessageRole
 
@@ -30,6 +29,17 @@ STATE_EXTRACTION_RULES = {
             "choices.0.delta.content",   # OpenAI/LiteLLM 표준 경로
             "content.parts.0.text"       # Gemini Native JSON 경로
         ]
+    }
+}
+
+ENDPOINT_ROUTING_RULES = {
+    "ollama": {
+        "native_suffix": "/api/chat",
+        "openai_suffix": "/chat/completions",
+        "v1_indicator": "/v1"
+    },
+    "defaults": {
+        "openai_suffix": "/chat/completions"
     }
 }
 
@@ -64,6 +74,29 @@ class StateTraverser:
 class StateTraverseRule:
     """@delegate: Declarative State Translation Engine"""
     
+    @staticmethod
+    def resolve_chat_endpoint(provider: Optional[str], base_url: str) -> str:
+        """Provider 토폴로지와 Base URL을 분석하여 정확한 API 엔드포인트를 반환"""
+        if not base_url:
+            return ""
+            
+        clean_base = base_url.rstrip("/")
+        
+        # 1. 이미 엔드포인트가 명시적으로 결합된 경우 우회 (멱등성 보장)
+        if clean_base.endswith("/api/chat") or clean_base.endswith("/chat/completions"):
+            return clean_base
+            
+        # 2. Provider별 선언적 룰 적용
+        if provider == "ollama":
+            rules = ENDPOINT_ROUTING_RULES["ollama"]
+            if clean_base.endswith(rules["v1_indicator"]):
+                return f"{clean_base}{rules['openai_suffix']}"
+            return f"{clean_base}{rules['v1_indicator']}{rules['openai_suffix']}"
+            
+        # 3. 그 외 Generic Provider (OpenAI 규격 호환이 기본)
+        default_suffix = ENDPOINT_ROUTING_RULES["defaults"]["openai_suffix"]
+        return f"{clean_base}{default_suffix}"
+
     @staticmethod
     def extract_stream_content(chunk: Any, default: str = "") -> str:
         # 실제 추출 시도

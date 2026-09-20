@@ -109,6 +109,9 @@ class DriverIO:
         has_tools_flag = bool(cc_tools) and driver.native_tool_calling
         kwargs["tools"] = cc_tools if has_tools_flag else None
         
+        trace_id = kwargs.pop("trace_id", None)
+        metadata = kwargs.pop("metadata", None)
+        
         raw_intent = {
             "top_k": driver.top_k,
             "top_p": driver.top_p,
@@ -123,6 +126,7 @@ class DriverIO:
             "extra_body": driver.extra_body,
         }
         
+        # 순수 LLM 파라미터만 raw_intent에 병합
         for k, v in kwargs.items():
             if v is not None:
                 raw_intent[k] = v
@@ -141,8 +145,6 @@ class DriverIO:
         @retry_wrapper
         async def _one_attempt(**retry_kwargs) -> ModelResponse:
             final_kwargs = {**call_kwargs, **retry_kwargs}
-            
-            # VendorConfig 제거 (순수 DTO 처리)
             vendor_config = getattr(driver, "vendor_config", None)
             vendor_kwargs = vendor_config.get_vendor_transport_kwargs() if vendor_config else {}
             
@@ -170,6 +172,11 @@ class DriverIO:
                 k: v for k, v in completion_payload.items() 
                 if v is not None or k not in ["api_key", "api_base", "api_version"]
             }
+            
+            if trace_id:
+                completion_payload["trace_id"] = trace_id
+            if metadata:
+                completion_payload["metadata"] = metadata
             
             ctx_manager = getattr(driver, "_brane_modify_params_ctx", None)
             
@@ -224,9 +231,7 @@ class DriverIO:
                 raise LLMNoResponseError("Response choices is less than 1. Response: " + str(resp))
             return resp
 
-        # =======================================================
-        # [핵심] Stateless Metric 파이프라인 연동
-        # =======================================================
+        # Stateless Metric 파이프라인 연동
         req_start = time.time()
         is_internal = _flow_context.get().get("is_internal_call", False) if _flow_context else False
         

@@ -15,7 +15,7 @@ MIN_CONTEXT_WINDOW_TOKENS: Final[int] = 16384
 ENV_ALLOW_SHORT_CONTEXT_WINDOWS: Final[str] = "ALLOW_SHORT_CONTEXT_WINDOWS"
 
 class BaseLLMProfile(BaseModel):
-    model: str = Field(default="claude-sonnet-4-20250514")
+    model: str = Field(default="gemini/gemini-3.1-flash-lite")
     api_key: str | SecretStr | None = Field(default=None)
     base_url: str | None = Field(default=None)
     api_version: str | None = Field(default=None)

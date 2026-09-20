@@ -5,13 +5,12 @@ import time
 import sys
 import json
 
-"""[Runtime Switch] Environment-based module aliasing Integration"""
+"""[Runtime Switch] Environment-based module aliasing Integration (Drop-in Block)"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 FIXTURE_DIR = "./fixtures"
 
-
 def _init_bridge(mode: str, fixture_dir: str):
-    """Initializes the VCR sandbox, environment fencing, and direct sys.modules aliasing."""
+    """Initializes the VCR sandbox and direct sys.modules aliasing"""
     from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
     
     try:
@@ -25,14 +24,15 @@ def _init_bridge(mode: str, fixture_dir: str):
     import fiber.llm.entry as litellm_entry
     import fiber.llm.param as fiber_param
     
-    sys.modules["litellm"] = litellm_entry                # Proxy functions
-    sys.modules["litellm.types.utils"] = fiber_param       # Proxy objects
+    sys.modules["litellm"] = litellm_entry
+    sys.modules["litellm.types.utils"] = fiber_param
 
-    from fiber.dev.trace.llm.vcr import VCRInjector, VCRPlaybackConfig
-    config = VCRPlaybackConfig(mode=mode, speed="real")
+    from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
+    from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+    config = VCRPlaybackConfig(mode=mode, speed="real", record_tick_ms=100.0)
     VCRInjector.apply(config=config, fixture_dir=fixture_dir)
     
-    print(f" 🔌 [Integration] Status: ENGAGED ({mode.upper()})")
+    print(f" 🔌 [Integration] Status: ENGAGED ({mode.upper()}) | Tick: 100.0ms")
     print(f" 🔄 [Integration] Aliased 'litellm' -> 'fiber.llm.entry'")
     print(f" 📦 [Integration] Aliased 'litellm.types.utils' -> 'fiber.llm.param'")
 
@@ -48,30 +48,34 @@ else:
 
 print("-" * 80 + "\n")
 
-"""[Legacy Business Logic] modification boundary"""
+
+# ==============================================================================
+# """[Legacy Business Logic] modification boundary"""
+# 이 아래로는 사용자의 기존 비즈니스 로직입니다. xphi/fiber 패키지에 직접 의존하지 않습니다.
+# ==============================================================================
 import litellm
 from litellm.types.utils import ModelResponseStream
 
-# Import Fiber Mapper/Traverser utilities for legacy migration demo
-from fiber.gateway.llm.mapper.traverser import StateTraverseRule
-
 async def analyze_and_extract_stream(scenario_id: str, prompt: str):
-    trace_id = f"fixture_obj_{scenario_id}"
-    
     print(f"▶️ [BUSINESS LOGIC] Initiating LLM Call")
     print(f"   ├─ Scenario: {scenario_id}")
     print(f"   ├─ Model: gemini/gemini-3.1-flash-lite")
-    print(f"   └─ Prompt: {prompt}\n")
+    print(f"   └─ Prompt: {prompt[:50]}...\n")
     
     try:
         start_time = time.perf_counter()
         
+        # 💡 [핵심 개선] 프레임워크 전용 ID 생성 함수를 제거하고, 표준 LiteLLM 스펙인 metadata만 활용.
+        # 하단에 숨어있는 Fiber VCR 엔진이 이 메타데이터를 낚아채어 파일명과 Trace ID를 완벽히 통제합니다.
         response = await litellm.acompletion(
             model="gemini/gemini-3.1-flash-lite",
             messages=[{"role": "user", "content": prompt}],
             stream=True,
             temperature=0.7,
-            metadata={"trace_id": trace_id}
+            metadata={
+                "vcr_scenario": scenario_id.replace(" ", "_").lower(),
+                "vcr_invoker": "ex.switch"
+            }
         )
 
         print(f"📡 [STREAM OPENED] Awaiting chunks...\n")
@@ -79,8 +83,6 @@ async def analyze_and_extract_stream(scenario_id: str, prompt: str):
         
         chunk_count = 0
         legacy_valid_count = 0
-        fiber_valid_count = 0
-        mismatch_count = 0
         
         async for chunk in response:
             chunk_count += 1
@@ -95,51 +97,44 @@ async def analyze_and_extract_stream(scenario_id: str, prompt: str):
             # [Method A] Legacy Parsing: Manual, hardcoded defensive approach
             legacy_content = ""
             try:
-                choices = getattr(chunk, "choices", None) or (chunk.get("choices", []) if isinstance(chunk, dict) else [])
-                if choices and len(choices) > 0:
-                    first_choice = choices[0]
-                    delta = getattr(first_choice, "delta", None) or (first_choice.get("delta", {}) if isinstance(first_choice, dict) else {})
-                    legacy_content = getattr(delta, "content", None) or (delta.get("content", "") if isinstance(delta, dict) else "")
+                if hasattr(chunk, "choices") and chunk.choices:
+                    legacy_content = chunk.choices[0].delta.content or ""
+                elif isinstance(chunk, dict) and "choices" in chunk:
+                    legacy_content = chunk["choices"][0].get("delta", {}).get("content", "")
                     
-                    if legacy_content:
-                        legacy_valid_count += 1
+                if legacy_content:
+                    legacy_valid_count += 1
             except Exception:
-                pass  # Legacy silently ignores errors
+                pass  
                 
-            # [Method B] Fiber Parsing: Declarative traversal with multi-topology support
-            try:
-                # Flawlessly extracts content in one line, regardless of object/dict or OpenAI/Gemini schema
-                fiber_content = StateTraverseRule.extract_stream_content(chunk, default="")
-                
-                if fiber_content:
-                    fiber_valid_count += 1
-            except Exception:
-                fiber_content = ""
-                
-            # Validation & Output
-            if legacy_content != fiber_content:
-                mismatch_count += 1
-                
-            # Output text extracted using the Fiber method to the screen (identical output assumed)
-            if fiber_content:
-                print(fiber_content, end="", flush=True)
+            if legacy_content:
+                print(legacy_content, end="", flush=True)
 
         duration = (time.perf_counter() - start_time) * 1000
         print("\n\n" + "-"*40)
         print(f"\n✅ [STREAM CLOSED] Duration: {duration:.2f}ms")
         print(f"   ├─ Total Chunks Received : {chunk_count}")
-        print(f"   ├─ Legacy Extracted      : {legacy_valid_count}")
-        print(f"   ├─ Fiber Mapper Extracted: {fiber_valid_count}")
-        print(f"   └─ Data Mismatch Count   : {mismatch_count}\n")
-        return trace_id
+        print(f"   └─ Legacy Extracted      : {legacy_valid_count}\n")
+        
+        return scenario_id
     except Exception as e:
         print(f"\n🚨 [FATAL ERROR] Execution Fault: {type(e).__name__} - {e}\n")
         return None
 
-def inspect_fixture(trace_id: str):
-    """Parses and visualizes the generated VCR fixture file."""
-    filepath = os.path.join(FIXTURE_DIR, f"fixture_{trace_id}.json")
+def inspect_fixture(scenario_id: str):
+    """Parses and visualizes the generated VCR fixture file (Local scoped tools)"""
+    # 💡 [핵심] 인스펙터용 유틸리티도 함수 내부에서만 임포트하여 오염을 막습니다.
+    from fiber.dev.trace.llm.vcr.manager import VCRIdentityRule
+    
+    class MockCtx:
+        system_meta = type('Meta', (), {'metadata': {'vcr_scenario': scenario_id, 'vcr_invoker': "ex.switch"}})()
+        
+    # Trace ID를 몰라도 메타데이터(시나리오명)만으로 올바른 파일명을 찾아내는 VCR 룰 활용
+    filename = VCRIdentityRule.get_fixture_filename("unknown", MockCtx())
+    filepath = os.path.join(FIXTURE_DIR, filename)
+    
     if not os.path.exists(filepath):
+        print(f"⚠️ [VCR] Fixture file not found at: {filepath}")
         return
 
     print("=" * 80)
@@ -149,7 +144,10 @@ def inspect_fixture(trace_id: str):
     with open(filepath, "r", encoding="utf-8") as f:
         data = json.load(f)
         
-    metrics = data.get("network_metrics", {})
+    latest_trace_id = data.get("latest_trace_id")
+    target_fixture = data.get("traces", {}).get(latest_trace_id, {})
+    metrics = target_fixture.get("network_metrics", {})
+    
     print(f"⏱️  [METRICS] TTFB: {metrics.get('ttfb_ms', 0):.2f}ms | Total Duration: {metrics.get('total_duration_ms', 0):.2f}ms")
     print("=" * 80 + "\n")
 
@@ -162,9 +160,11 @@ async def main():
         "to a native SDK implementation. Use bullet points."
     )
     
-    trace_id = await analyze_and_extract_stream("tech_debt_migration", prompt)
-    if VCR_MODE == "record" and trace_id:
-        inspect_fixture(trace_id)
+    scenario_name = "tech_debt_migration"
+    returned_scenario = await analyze_and_extract_stream(scenario_name, prompt)
+    
+    if VCR_MODE == "record" and returned_scenario:
+        inspect_fixture(returned_scenario.replace(" ", "_").lower())
 
 if __name__ == "__main__":
     asyncio.run(main())
