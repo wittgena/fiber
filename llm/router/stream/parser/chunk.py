@@ -81,7 +81,6 @@ STREAM_EXTRACTION_RULES = {
     }
 }
 
-# 💡 [개선] llama_server 및 generic 어댑터 호환 매핑 추가
 PROVIDER_RULE_ALIAS = {
     "azure": "openai",
     "azure_ai": "openai",
