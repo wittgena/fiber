@@ -12,8 +12,6 @@ try:
 except ImportError:
     dotenv = None
 
-from fiber.phase.cli.sandbox import execute_vcr_logic
-
 from xphi.kernel.ops.shell.entry import EcosystemShell
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.ops.boot import main_async, teardown
@@ -52,22 +50,6 @@ def boot_kernel(mode_name: str):
     except Exception as e:
         log.error(f"[Fiber] FATAL Kernel panic: {e}", exc_info=True)
         sys.exit(1)
-
-# =========================================================================
-# 명령어 정의
-# =========================================================================
-@app.command("vcr", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
-def run_vcr(
-    ctx: typer.Context,
-    target_script: Annotated[str, typer.Argument(help="Target legacy python script (e.g., target.py)")],
-    mode: Annotated[str, typer.Option("--mode", "-m", help="VCR mode: live, record, or replay")] = "record",
-    speed: Annotated[str, typer.Option("--speed", "-s", help="Replay speed: max or real")] = "real",
-    chaos: Annotated[float, typer.Option("--chaos", "-c", help="Inject artificial latency jitter (ms)")] = 0.0,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    """Execute a legacy LiteLLM script safely inside the Fiber VCR Reality Distortion Field."""
-    _load_env(env_file)
-    execute_vcr_logic(ctx, target_script, mode, speed, chaos)
 
 @app.command("daemon")
 def run_daemon(
