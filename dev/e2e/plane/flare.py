@@ -14,8 +14,6 @@ from xphi.kernel.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.flare.tunnel import FlareTunnelFactory
 from xphi.watcher.plane.flare.controller import FlareController
-
-# [수정됨] flow_scope를 추가로 import 합니다.
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("e2e.plane.flare")
@@ -83,27 +81,22 @@ class FlareFlow:
         edge_url = "http://127.0.0.1:8787" if self.mode == "dev" else f"https://{worker_name}.workers.dev"
 
         self.log.info(f"[PHASE 2] Connecting to Edge Endpoint: {edge_url}")
-        
-        self.log.debug("[FlareFlow:test] Awaiting FlareTunnelFactory.get_default()...") # [LOG ADDED]
-        t0 = time.time() # [LOG ADDED]
+        self.log.debug("[FlareFlow:test] Awaiting FlareTunnelFactory.get_default()...")
+
+        t0 = time.time()
         await FlareTunnelFactory.get_default(mq_url=edge_url)
-        self.log.debug(f"[FlareFlow:test] FlareTunnelFactory initialized in {time.time() - t0:.3f}s") # [LOG ADDED]
-        
-        # =========================================================================
-        # [핵심 개선] 60초 강제 확장을 제거하여 다이내믹 타임아웃 존중 (Fast-Fail 복원)
-        # =========================================================================
-        self.log.debug("[FlareFlow:test] Instantiating DphiBroker with timeout=15.0s (Dynamic Timeout Enable)") # [LOG ADDED]
+
+        self.log.debug(f"[FlareFlow:test] FlareTunnelFactory initialized in {time.time() - t0:.3f}s")
+        self.log.debug("[FlareFlow:test] Instantiating DphiBroker with timeout=15.0s (Dynamic Timeout Enable)")
         broker = DphiBroker(
             tunnel_factory=FlareTunnelFactory,
             request_stream="wasm:execute:stream:tester_isolated",
-            timeout=15.0  # [FIX] 60.0에서 15.0(기본값)으로 롤백. 이제 5초짜리 테스트는 8초 시점에 깔끔하게 끊어집니다.
+            timeout=15.0
         )
         broker.control_channel = "wasm:control:req:tester_isolated"
-        self.log.debug(f"[FlareFlow:test] Broker instantiated. Request stream: {broker.request_stream}, Control: {broker.control_channel}") # [LOG ADDED]
-
+        self.log.debug(f"[FlareFlow:test] Broker instantiated. Request stream: {broker.request_stream}, Control: {broker.control_channel}")
         self.log.info("[PHASE 3] Handing over execution to FlareController...")
-        
-        self.log.debug("[FlareFlow:test] Instantiating FlareController...") # [LOG ADDED]
+        self.log.debug("[FlareFlow:test] Instantiating FlareController...")
         controller = FlareController(
             target_name=worker_name,
             mode=self.mode,
@@ -112,10 +105,10 @@ class FlareFlow:
         )
         controller.keep_workspace = self.keep_workspace
         
-        self.log.debug("[FlareFlow:test] Yielding execution to controller.execute() -> Will block until orchestration/tests complete.") # [LOG ADDED]
-        t1 = time.time() # [LOG ADDED]
+        self.log.debug("[FlareFlow:test] Yielding execution to controller.execute() -> Will block until orchestration/tests complete.")
+        t1 = time.time()
         success, err_msg = await controller.execute(broker=broker)
-        self.log.debug(f"[FlareFlow:test] controller.execute() returned in {time.time() - t1:.3f}s. Success={success}") # [LOG ADDED]
+        self.log.debug(f"[FlareFlow:test] controller.execute() returned in {time.time() - t1:.3f}s. Success={success}")
         
         log.info("\n" + "="*75)
         log.info("🚀 CLOUDFLARE EDGE PIPELINE EXECUTION REPORT 🚀".center(75))
@@ -151,9 +144,7 @@ class FlareFlow:
             sys.exit(1)
 
     async def run(self):
-        self.log.debug("[FlareFlow:run] Entrypoint triggered, awaiting test()...") # [LOG ADDED]
-        # [수정됨] 하위 전체 트리에 적용되도록 flow_scope(mode="RAW") 블록으로 감쌉니다.
-        # 이로 인해 하위 로거들(터널, 스페이스 러너 등)이 Burst Control을 우회하게 됩니다.
+        self.log.debug("[FlareFlow:run] Entrypoint triggered, awaiting test()...")
         with flow_scope(mode="RAW"):
             await self.test()
 
@@ -165,8 +156,6 @@ def main(args_list: list[str] = None):
     parser.add_argument("--keep-workspace", action="store_true", help="Prevent teardown of the workspace on failure for post-mortem analysis.")
     
     args, _ = parser.parse_known_args(args_list)
-    
-    # [LOG ADDED] 기본 로거 포맷이 세팅되기 전일 수 있으나 print 형태로 남기거나 세팅 직후 남김
     if args.debug:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
@@ -175,10 +164,10 @@ def main(args_list: list[str] = None):
         
         logging.getLogger("auditor.flare.dev").setLevel(logging.DEBUG)
         log.info("🐛 [DEBUG MODE] Internal stream logging is ENABLED.")
-        log.debug(f"[main] Parsed CLI arguments: mode={args.mode}, suites={args.suites}, keep_workspace={args.keep_workspace}") # [LOG ADDED]
+        log.debug(f"[main] Parsed CLI arguments: mode={args.mode}, suites={args.suites}, keep_workspace={args.keep_workspace}")
 
     config = FlarePipelineConfig()
-    log.debug("[main] Instantiating FlareFlow pipeline app...") # [LOG ADDED]
+    log.debug("[main] Instantiating FlareFlow pipeline app...")
     app = FlareFlow(
         mode=args.mode, 
         command="test", 
@@ -186,7 +175,6 @@ def main(args_list: list[str] = None):
         config=config,
         keep_workspace=args.keep_workspace
     )
-    
     log.debug("[main] Igniting PhaseReactor with app.run coroutine...")
     PhaseReactor.ignite(main_coro_func=app.run)
 

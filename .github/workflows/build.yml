@@ -46,6 +46,14 @@ jobs:
         with:
           deno-version: v1.x
 
+      - name: 🟢 Setup Node.js (for Wrangler)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 🌩️ Install Cloudflare Wrangler
+        run: npm install -g wrangler
+
+
       - name: ⚙️ Install dependencies
         run: |
           pip install uv hatch
@@ -62,3 +70,4 @@ jobs:
         run: |
           fiber e2e dphi.wasm.entry
           VCR_MODE=replay python -m fiber.dev.ex.switch
+          fiber e2e plane.flare --mode dev

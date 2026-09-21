@@ -1,6 +1,4 @@
 # fiber.dev.e2e.edge.compliance
-## @lineage: fiber.phase.dev.e2e.edge.compliance
-## @lineage: fiber.phase.e2e.edge.compliance
 import asyncio
 import random
 import uvicorn
