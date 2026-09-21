@@ -18,8 +18,8 @@ log = get_emitter("e2e.plane.compose")
 # Pure test intent for USER mode.
 # Dependencies are natively bound to site-packages via git installation in the Dockerfile.
 DEFAULT_E2E_SUITE = [
-    "fiber e2e dphi.wasm.entry",
-    "VCR_MODE=replay python -m fiber.dev.ex.switch" 
+    "VCR_MODE=replay python -m fiber.dev.ex.switch",
+    "fiber e2e dphi.wasm.entry"
 ]
 
 class ComposeWorkflowScene:

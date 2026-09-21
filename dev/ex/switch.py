@@ -7,7 +7,6 @@ import json
 
 """[Runtime Switch] Environment-based module aliasing Integration (Drop-in Block)"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
-FIXTURE_DIR = "./fiber/phase/abc/fixture"
 
 def _init_bridge(mode: str, fixture_dir: str):
     """Initializes the VCR sandbox and direct sys.modules aliasing"""
@@ -41,11 +40,18 @@ print("=" * 80)
 print("🛡️  FIBER INTEGRATION & SANDBOX")
 print("=" * 80)
 
+# [핵심 변경] 전역 네임스페이스 오염 방지를 위해 변수 초기화 (Fixture Inspector에서 사용)
+_resolved_fixture_dir = None
+
 if VCR_MODE in ("record", "replay"):
+    # 💡 로컬 임포트를 사용하여 레거시 영역으로 xphi 노출 방지
     from xphi.kernel.space.bind.resolver import resolve_path
-
-
-    _init_bridge(mode=VCR_MODE, fixture_dir=FIXTURE_DIR)
+    
+    # DEV 모드(로컬 상대경로)와 USER 모드(site-packages 절대경로) 상관없이 
+    # bound.json 매핑을 통해 동적으로 정확한 절대 경로를 계산
+    _resolved_fixture_dir = str(resolve_path("abc") / "fixture")
+    
+    _init_bridge(mode=VCR_MODE, fixture_dir=_resolved_fixture_dir)
 else:
     print(f" 🟢 [Integration] Status: BYPASSED (Live Mode)")
 
@@ -126,7 +132,10 @@ async def analyze_and_extract_stream(scenario_id: str, prompt: str):
 
 def inspect_fixture(scenario_id: str):
     """Parses and visualizes the generated VCR fixture file (Local scoped tools)"""
-    # 💡 [핵심] 인스펙터용 유틸리티도 함수 내부에서만 임포트하여 오염을 막습니다.
+    if not _resolved_fixture_dir:
+        print("⚠️ [VCR] Fixture directory was not initialized.")
+        return
+
     from fiber.dev.trace.llm.vcr.manager import VCRIdentityRule
     
     class MockCtx:
@@ -134,7 +143,7 @@ def inspect_fixture(scenario_id: str):
         
     # Trace ID를 몰라도 메타데이터(시나리오명)만으로 올바른 파일명을 찾아내는 VCR 룰 활용
     filename = VCRIdentityRule.get_fixture_filename("unknown", MockCtx())
-    filepath = os.path.join(FIXTURE_DIR, filename)
+    filepath = os.path.join(_resolved_fixture_dir, filename) # 동적 경로 사용
     
     if not os.path.exists(filepath):
         print(f"⚠️ [VCR] Fixture file not found at: {filepath}")
