@@ -69,10 +69,7 @@ class FlareScene(SandboxRunner):
         self.node_b = ActorIdentity("Validator_B")
         self.node_rogue = ActorIdentity("Rogue_Node")
 
-        # [PTA Model] Pool for transaction hashes
         self.collected_edge_hashes = []
-        
-        # [PTA Model] Hook Broker methods to auto-collect returned Edge Hashes
         self._original_invoke = self.broker.invoke
         self._original_execute = self.broker.execute
         

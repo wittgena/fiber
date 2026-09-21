@@ -15,7 +15,7 @@ from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.kernel.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("scene.anchor")
+log = get_emitter("scene.eco")
 
 class EcoContext:
     def __init__(self):
@@ -344,12 +344,7 @@ class ProvAlignScene(EpochBase):
     async def hook_build_phase_root(self, commit_hash: str, repos: dict) -> dict:
         return StateAdapter.adapt_provenance_to_phase_root(commit_hash, repos_dict=repos)
 
-
-# =========================================================================
-# 4. Global Orchestrator (Unified Anchor Scene)
-# =========================================================================
 class AnchorScene(SchemeRunner):
-    """Eco와 Anchor를 모두 통합한 완전한 파이프라인 진입점입니다."""
     async def run_all(self):
         log.info("\n=== [START] Unified Master Pipeline (Eco + Anchor) ===")
         

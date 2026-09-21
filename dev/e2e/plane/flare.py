@@ -46,7 +46,7 @@ class FlareFlow:
 
     def _resolve_suite_class(self, suite_name_or_path: str):
         module_path_str = self.config.suites_registry.get(suite_name_or_path, suite_name_or_path)
-        self.log.debug(f"[FlareFlow:_resolve_suite_class] Resolving suite '{suite_name_or_path}' -> '{module_path_str}'") # [LOG ADDED]
+        self.log.debug(f"[FlareFlow:_resolve_suite_class] Resolving suite '{suite_name_or_path}' -> '{module_path_str}'")
         try:
             if ":" not in module_path_str:
                 raise ValueError(f"Invalid suite format '{module_path_str}'. Expected 'module.path:ClassName'")
@@ -54,7 +54,7 @@ class FlareFlow:
             mod_name, cls_name = module_path_str.split(":")
             module = importlib.import_module(mod_name)
             suite_cls = getattr(module, cls_name)
-            self.log.debug(f"[FlareFlow:_resolve_suite_class] Successfully loaded class {cls_name} from {mod_name}") # [LOG ADDED]
+            self.log.debug(f"[FlareFlow:_resolve_suite_class] Successfully loaded class {cls_name} from {mod_name}")
             return suite_cls
         except Exception as e:
             self.log.error(f"[CLI] Failed to load suite '{suite_name_or_path}': {e}")
@@ -62,8 +62,8 @@ class FlareFlow:
 
     async def test(self):
         self.log.info(f"\n[PHASE 1] Initializing Cloudflare Edge Orchestrator in [{self.mode.upper()}] mode")
-        
-        self.log.debug("[FlareFlow:test] Validating and mapping requested suites...") # [LOG ADDED]
+        self.log.debug("[FlareFlow:test] Validating and mapping requested suites...")
+
         suite_map = {}
         for suite_name in self.suites:
             if suite_name not in self.config.suites_registry:
@@ -75,8 +75,7 @@ class FlareFlow:
             self.log.error("❌ [CLI] No valid test suites found to execute.")
             sys.exit(1)
             
-        self.log.debug(f"[FlareFlow:test] Suite map constructed: {list(suite_map.keys())}") # [LOG ADDED]
-
+        self.log.debug(f"[FlareFlow:test] Suite map constructed: {list(suite_map.keys())}")
         worker_name = "dphi-edge-sandbox"
         edge_url = "http://127.0.0.1:8787" if self.mode == "dev" else f"https://{worker_name}.workers.dev"
 
