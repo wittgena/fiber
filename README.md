@@ -1,6 +1,6 @@
 # fiber.README
 
-@desc: AI Agent Gateway
+@desc: LLM Agent Gateway
 
 Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
 
@@ -33,12 +33,12 @@ from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.llm.pipeline import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
-# [1] PRE_OBSERVER: Fire-and-forget telemetry (Zero-latency)
+# PRE_OBSERVER: Fire-and-forget telemetry
 class DatadogTracer(BaseLLMTracer):
     async def on_llm_end(self, meta, response, duration_ms):
         datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}"])
 
-# [2] PRE_TRANSLATE: Intercept raw dict payload for instant Semantic Caching
+# PRE_TRANSLATE: Intercept raw dict payload for instant Semantic Caching
 class SemanticCache(DuplexChannel):
     target_slot = PipelineSlot.PRE_TRANSLATE
     async def write(self, ctx, msg: dict):
@@ -46,7 +46,7 @@ class SemanticCache(DuplexChannel):
             return await ctx.fire_channel_read(mock_response) # Short-circuit physical I/O
         await ctx.fire_write(msg)
 
-# [3] POST_TRANSLATE: Enforce Security Policies on strict Pydantic objects
+# POST_TRANSLATE: Enforce Security Policies on strict Pydantic objects
 class PIIGuardrail(DuplexChannel):
     target_slot = PipelineSlot.POST_TRANSLATE
     async def write(self, ctx, processed_msg):
@@ -61,24 +61,24 @@ class PIIGuardrail(DuplexChannel):
 from fiber.llm.entry import acompletion
 
 # The framework autonomously restructures the flat list into the strict pipeline:
-# [Cache] ➔ [Translator Core] ➔ [PII Guardrail] ➔ [Tracer] ➔ [Network I/O]
+# [Cache] ➔ [Translator] ➔ [PII Guardrail] ➔ [Tracer] ➔ [Network I/O]
 response = await acompletion(
     model="gemini-3.5-flash",
     messages=[{"role": "user", "content": "Analyze this data."}],
-    interceptors=[DatadogTracer(), PIIGuardrail(), SemanticCache()], # Clean injection
+    interceptors=[DatadogTracer(), PIIGuardrail(), SemanticCache()],
     metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
 )
 ```
 
 ---
 
-### 1.2. LLM VCR (Record & Replay Engine)
+### 1.2. LLM VCR (Record & Replay)
 
 The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables deterministic offline testing and precise historical latency emulation without altering business logic.
 
 Fiber provides two approaches for VCR integration:
 
-**[1] Native Integration**
+**Native Integration**
 
 If using Fiber's SDK, the VCR can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee 100% idempotent replay matching.
 
@@ -91,7 +91,7 @@ from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
 from fiber.dev.trace.llm.vcr.proxy import VCRInjector
 from xphi.arch.bound.event.next import next_trace_id
 
-# 1. Inject VCR globally with Time-Window Coalescing (Tick: 100ms)
+# Inject VCR globally with Time-Window Coalescing (Tick: 100ms)
 vcr_mode = os.environ.get("VCR_MODE", "live").lower()
 config = VCRPlaybackConfig(mode=vcr_mode, speed="real", record_tick_ms=100.0)
 VCRInjector.apply(config=config, fixture_dir="./fixtures")
@@ -100,16 +100,16 @@ async def main():
     scenario = "native_demo"
     messages = [{"role": "user", "content": "Count from 1 to 5."}]
     
-    # 2. Generate deterministic Trace ID to ensure Record & Replay target the exact same fixture
+    # Generate deterministic Trace ID to ensure Record & Replay target the exact same fixture
     seed = VCRIdentityRule.generate_seed(scenario_name=scenario, messages=messages, invoker="readme.app")
     trace_id = next_trace_id(seed) if vcr_mode in ("record", "replay") else next_trace_id()
 
-    # 3. Execute with explicit context tunneling
+    # Execute with explicit context tunneling
     response = await acompletion(
         model="gemini/gemini-3.1-flash-lite",
         messages=messages,
         stream=True,
-        trace_id=trace_id,  # Explicit ID binding
+        trace_id=trace_id,
         metadata={
             "vcr_scenario": scenario,
             "vcr_invoker": "readme.app"
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-**[2] Transparent Integration for Legacy Codebases (Module Aliasing)**
+**Transparent Integration for Legacy Codebases**
 
 For existing applications heavily coupled to third-party SDKs (e.g., LiteLLM), migrating to a new gateway or establishing offline tests can be challenging. Fiber provides a Transparent Integration Path via standard sys.modules aliasing. This creates a safe, drop-in sandbox that grants your legacy codebase immediate access to the VCR engine and time-window stream coalescing—without requiring a massive refactoring of your business logic.
 
@@ -132,7 +132,7 @@ Crucially, the application code remains completely undisturbed. By simply includ
 ```python
 import os, sys, asyncio
 
-"""1. Integration Bridge (Executes before legacy business logic loads)"""
+"""Integration Bridge (Executes before legacy business logic loads)"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 
 if VCR_MODE in ("record", "replay"):
@@ -149,7 +149,7 @@ if VCR_MODE in ("record", "replay"):
     config = VCRPlaybackConfig(mode=VCR_MODE, speed="real", record_tick_ms=100.0)
     VCRInjector.apply(config=config, fixture_dir="./fixtures")
 
-"""2. Legacy Business Logic (Unmodified)"""
+"""Legacy Business Logic (Unmodified)"""
 import litellm 
 from litellm.types.utils import ModelResponseStream
 
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
 ---
 
-**[3] The Record & Replay Flow**
+**The Record & Replay Flow**
 
 * **Step 1: Record (Capture & Coalesce Network I/O)**
 Executes live API calls to the target LLM. The engine autonomously coalesces micro-chunks using a time-window (e.g., 100ms) and persists the normalized payloads and network metrics into strict, human-readable local fixtures.
@@ -198,7 +198,6 @@ Streams the cached response fully offline with zero network I/O. You can emulate
 ```bash
 # Replay in real-time with a 500ms artificial chaos jitter
 python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
-
 ```
 
 *(Note: Executing with `--vcr live` bypasses the VCR interceptors entirely, ensuring zero overhead in production environments.)*
@@ -233,7 +232,7 @@ In an agentic economy, standard logging is insufficient; actions must be cryptog
 * **Telemetry Audit:** Protected by a rigorous zero-trust pipeline. Payloads must pass strict Pydantic schema typing and the `OtlpExtractionEngine` before being cryptographically sealed into the unalterable Core Ledger.
 * **Audit Trails:** Powered by a KMS-backed `SecretAuditor` (integrating with Azure Key Vault, AWS KMS, etc.), the gateway automatically intercepts and encrypts sensitive PII/financial data in memory. It issues an `AuditReceipt` containing a **Merkle Membership Proof**, proving to auditors that an action occurred exactly as claimed without exposing raw data.
 
-**Example: Generating an Immutable Audit Proof (Client-Side Fail-Fast)**
+**Example: Generating an Immutable Audit Proof**
 
 ```python
 from fiber.dphi.eco.client.sdk import DphiPublicClient, StrictPayloadFactory
@@ -265,7 +264,7 @@ print("Merkle Proof:", receipt["membership_proof"])
 
 ---
 
-### 1.5. Universal State Traverser (Declarative Integration)
+### 1.5. Universal State Traverser
 
 The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks. Fiber eliminates the need for messy `if/elif` parsing blocks through its `StateTraverser` and unified `StreamChunkParser`. 
 
