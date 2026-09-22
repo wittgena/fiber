@@ -1,6 +1,7 @@
 # fiber.dev.ex.agent.protocol.executor
 ## @lineage: fiber.dev.ex.agent.protocol
 from __future__ import annotations
+
 import os
 import sys
 import shlex
@@ -14,6 +15,7 @@ import functools
 from collections.abc import Callable, Sequence, Generator, Mapping
 from contextlib import contextmanager
 from typing import Any, Final, Protocol, runtime_checkable, TypeVar, Generic
+
 import anyio
 from anyio.from_thread import start_blocking_portal
 
@@ -29,7 +31,7 @@ T_ToolDef = TypeVar("T_ToolDef")
 
 @runtime_checkable
 class AsyncExecutorProtocol(Protocol):
-    def run_async(self, awaitable_or_fn: Callable[..., Any] | Any, *args, timeout: float | None = None, **kwargs) -> Any: ...
+    def run_async(self, awaitable_or_fn: Callable[..., Any] | Any, *args: Any, timeout: float | None = None, **kwargs: Any) -> Any: ...
     def close(self) -> None: ...
 
 @runtime_checkable
@@ -42,7 +44,7 @@ class BatchExecutorProtocol(Protocol, Generic[T_Action, T_Event, T_ToolDef]):
     ) -> list[list[T_Event]]: ...
 
 """Execution Utilities"""
-_SENSITIVE_ENV_VARS = frozenset({"SESSION_API_KEY"})
+_SENSITIVE_ENV_VARS: Final = frozenset({"SESSION_API_KEY"})
 
 def sanitized_env(env: Mapping[str, str] | None = None) -> dict[str, str]:
     base_env: dict[str, str] = dict(os.environ) if env is None else dict(env)
@@ -50,8 +52,10 @@ def sanitized_env(env: Mapping[str, str] | None = None) -> dict[str, str]:
         base_env.pop(key, None)
     if "LD_LIBRARY_PATH_ORIG" in base_env:
         origin = base_env["LD_LIBRARY_PATH_ORIG"]
-        if origin: base_env["LD_LIBRARY_PATH"] = origin
-        else: base_env.pop("LD_LIBRARY_PATH", None)
+        if origin:
+            base_env["LD_LIBRARY_PATH"] = origin
+        else:
+            base_env.pop("LD_LIBRARY_PATH", None)
     return base_env
 
 def execute_command(
@@ -72,10 +76,13 @@ def execute_command(
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         text=True, bufsize=1, shell=use_shell,
     )
-    if proc is None: raise RuntimeError("Failed to start process")
+    if proc is None:
+        raise RuntimeError("Failed to start process")
+
+    if proc.stdout is None or proc.stderr is None:
+        raise RuntimeError("Failed to capture stdout/stderr streams")
 
     stdout_lines, stderr_lines = [], []
-    if proc.stdout is None or proc.stderr is None: raise RuntimeError("Failed to capture stdout/stderr")
 
     def read_stream(stream, lines, output_stream):
         try:
@@ -89,29 +96,29 @@ def execute_command(
 
     stdout_thread = threading.Thread(target=read_stream, args=(proc.stdout, stdout_lines, sys.stdout))
     stderr_thread = threading.Thread(target=read_stream, args=(proc.stderr, stderr_lines, sys.stderr))
-    stdout_thread.start(); stderr_thread.start()
+    
+    stdout_thread.start()
+    stderr_thread.start()
 
     try:
         proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
-        stdout_thread.join(); stderr_thread.join()
+        stdout_thread.join()
+        stderr_thread.join()
         return subprocess.CompletedProcess(cmd_to_run, -1, "".join(stdout_lines), "".join(stderr_lines))
 
     stdout_thread.join(timeout=timeout)
     stderr_thread.join(timeout=timeout)
+    
     return subprocess.CompletedProcess(cmd_to_run, proc.returncode, "".join(stdout_lines), "".join(stderr_lines))
 
 @functools.lru_cache(maxsize=1)
 def _is_tmux_available() -> bool:
-    """Check if tmux is available on the system."""
     try:
         result = subprocess.run(
             ["tmux", "-V"],
-            capture_output=True,
-            text=True,
-            timeout=5.0,
-            env=sanitized_env(),
+            capture_output=True, text=True, timeout=5.0, env=sanitized_env()
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -119,26 +126,18 @@ def _is_tmux_available() -> bool:
 
 @functools.lru_cache(maxsize=1)
 def _is_powershell_available() -> bool:
-    """Check if PowerShell is available on the system."""
-    if platform.system() == "Windows":
-        powershell_cmd = "powershell"
-    else:
-        powershell_cmd = "pwsh"
-
+    powershell_cmd = "powershell" if platform.system() == "Windows" else "pwsh"
     try:
         result = subprocess.run(
             [powershell_cmd, "-Command", "Write-Host 'PowerShell Available'"],
-            capture_output=True,
-            text=True,
-            timeout=5.0,
-            env=sanitized_env(),
+            capture_output=True, text=True, timeout=5.0, env=sanitized_env()
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return False
 
 # =============================================================================
-# 3. Resource & Lock Management
+# Resource & Lock Management
 # =============================================================================
 
 DEFAULT_TIMEOUTS: Final[dict[str, float]] = {"file": 30.0, "terminal": 300.0, "mcp": 300.0, "tool": 60.0}
@@ -199,7 +198,12 @@ class ResourceLockManager:
             for key in reversed(acquired):
                 self._release_lock(key)
 
+# =============================================================================
+# Async Execution Engine
+# =============================================================================
+
 class AsyncExecutor(AsyncExecutorProtocol):
+    """Provides a safe bridge to execute coroutines in a background thread."""
     def __init__(self):
         self._portal = None
         self._portal_cm = None
@@ -224,14 +228,15 @@ class AsyncExecutor(AsyncExecutorProtocol):
                     self._atexit_registered = True
             return self._portal
 
-    def run_async(self, awaitable_or_fn: Callable[..., Any] | Any, *args, timeout: float | None = None, **kwargs) -> Any:
+    def run_async(self, awaitable_or_fn: Callable[..., Any] | Any, *args: Any, timeout: float | None = None, **kwargs: Any) -> Any:
         portal = self._ensure_portal()
+        
         if inspect.iscoroutine(awaitable_or_fn):
             coro = awaitable_or_fn
         elif inspect.iscoroutinefunction(awaitable_or_fn):
             coro = awaitable_or_fn(*args, **kwargs)
         else:
-            raise TypeError("run_async expects a coroutine or async function")
+            raise TypeError("run_async expects a coroutine or an async function")
 
         if timeout is not None:
             async def _with_timeout():
@@ -255,10 +260,15 @@ class AsyncExecutor(AsyncExecutorProtocol):
             except Exception as e:
                 log.warning(f"Error closing BlockingPortal: {e}")
 
-    def __enter__(self): return self
+    def __enter__(self): 
+        return self
+        
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
         return False
+        
     def __del__(self):
-        try: self.close()
-        except Exception: pass
+        try: 
+            self.close()
+        except Exception: 
+            pass

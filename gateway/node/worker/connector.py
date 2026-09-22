@@ -16,23 +16,14 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("worker.connector")
 
-# ==========================================
-# 1. Transport Protocol (Interface)
-# ==========================================
 class WorkerTransport(Protocol):
-    """WorkerConnector가 통신 방식을 몰라도 되도록 보장하는 Duck-Typing 인터페이스"""
     async def start(self) -> None: ...
     async def send_payload(self, safe_payload: Dict[str, Any]) -> None: ...
     async def receive_raw(self) -> str: ...
-    async def read_egress_stream(self) -> bytes: ...  # [개선/추가] 표준 출력 다형성 인터페이스
+    async def read_egress_stream(self) -> bytes: ...
     async def close(self) -> None: ...
-    
-    # Process 모니터링 및 로깅을 위한 속성 (PID 등) - 하위 호환성 유지
     process: Any 
 
-# ==========================================
-# 2. Worker Connector
-# ==========================================
 class WorkerConnector:
     def __init__(self, target_id: str, execution_target: str, mode: str = "ephemeral", transport_type: str = "stdio"):
         self.target_id = target_id
@@ -60,7 +51,6 @@ class WorkerConnector:
 
     def _create_transport(self, handle_id: str) -> WorkerTransport:
         """Transport 팩토리: 설정된 타입에 따라 적절한 전송 계층 객체를 동적으로 생성"""
-        # [개선] 통합된 fiber.dphi.worker.transport 모듈에서 로드
         if self.transport_type == "network":
             from fiber.gateway.node.worker.transport import NetworkTransport
             return NetworkTransport(execution_target=self.execution_target, handle_id=handle_id)

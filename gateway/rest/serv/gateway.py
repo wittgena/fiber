@@ -2,6 +2,7 @@
 import json
 import asyncio
 import time
+import uuid
 from typing import Dict, Any, Optional, Union
 
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
@@ -95,25 +96,37 @@ class TransitionBridge:
             log.warning(f"[Bridge:Conflict] Transaction already in progress but state not queryable", extra=trace_ctx)
             return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
 
+        # MCP 표준 공시 및 초기화 메서드 식별
+        mcp_method = payload.get("method", "")
+        is_discovery_phase = mcp_method in ("initialize", "tools/list", "prompts/list", "resources/list")
+
         # 4. 보안 및 결제 검증 (DPoP & x402)
         is_authenticated = False
-        if identity.proof_of_possession:
-            if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
-                log.warning(f"[Bridge:Auth] DPoP Verification Failed", extra=trace_ctx)
-                raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
+        
+        if is_discovery_phase:
+            # 공시 단계는 결제/서명 없이 통과 허용 (Bypass)
+            log.debug(f"[Bridge:Auth] Bypassing strict auth for discovery method: {mcp_method}", extra=trace_ctx)
             is_authenticated = True
-
-        if identity.receipt:
-            try:
-                await rpc.call("validate.billing.receipt", {
-                    "target_server_id": identity.target_server_id,
-                    "action": payload.get("name", "unknown_tool"),
-                    "payment_receipt": identity.receipt
-                })
+        else:
+            # 실제 도구 실행 단계는 엄격한 서명 및 영수증 검증 수행
+            if identity.proof_of_possession:
+                if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
+                    log.warning(f"[Bridge:Auth] DPoP Verification Failed", extra=trace_ctx)
+                    raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
                 is_authenticated = True
-            except RpcException as e:
-                log.warning(f"[Bridge:Billing] Payment rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
-                raise HTTPException(status_code=e.status_code, detail=f"Payment/Intent Rejected: {e.detail}")
+
+            if identity.receipt:
+                try:
+                    await rpc.call("validate.billing.receipt", {
+                        "target_server_id": identity.target_server_id,
+                        # [버그 픽스] nested dict에서 action 이름 정확히 추출
+                        "action": payload.get("params", {}).get("name", "unknown_tool"),
+                        "payment_receipt": identity.receipt
+                    })
+                    is_authenticated = True
+                except RpcException as e:
+                    log.warning(f"[Bridge:Billing] Payment rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
+                    raise HTTPException(status_code=e.status_code, detail=f"Payment/Intent Rejected: {e.detail}")
 
         if not is_authenticated:
             log.warning(f"[Bridge:Auth] Missing Authentication or Receipt", extra=trace_ctx)
@@ -233,3 +246,51 @@ async def invoke_mcp_stateless(
     except Exception as e:
         log.error(f"[Bridge:Ingress:Fatal] Internal Facade Fracture", extra={"error": str(e), "idempotency_key": str(x_idempotency_key)}, exc_info=True)
         raise HTTPException(status_code=500, detail="Internal Edge Communication Failure")
+
+
+@mcp_bridge.get("/{target_server_id}/tools")
+async def discover_tools(
+    request: Request,
+    target_server_id: str,
+    rpc: InternalRpcClient = Depends(get_rpc_client)
+):
+    """
+    @desc: [REST Facade] Client의 편의를 위한 툴 공시 전용 엔드포인트
+    - Gateway가 내부적으로 MCP 표준 JSON-RPC Intent를 조립하여 Worker에 질의
+    """
+    adapter: TransitionBridge = request.app.state.mcp_transition_adapter
+    
+    # Gateway가 자체적으로 일회성 식별자 생성 (클라이언트의 헤더 구성 부담 완화)
+    ephemeral_identity = AgentIdentity(
+        target_server_id=target_server_id,
+        agent_uri="spiffe://gateway/internal_discovery",
+        proof_of_possession=None,
+        receipt=None,
+        client_ip=request.client.host if request.client else "127.0.0.1",
+        nonce=uuid.uuid4().hex,
+        idempotency_key=uuid.uuid4().hex
+    )
+    
+    # 순수 MCP 표준 payload(tools/list) 조립
+    discovery_payload = {
+        "jsonrpc": "2.0",
+        "id": "discovery_" + ephemeral_identity.idempotency_key[:8],
+        "method": "tools/list",
+        "params": {}
+    }
+    
+    try:
+        # invoke_mcp_sync의 is_discovery_phase 조건에 의해 자동 Bypass 처리됨
+        result = await adapter.invoke_mcp_sync(
+            identity=ephemeral_identity,
+            payload=discovery_payload,
+            target_uri=str(request.url),
+            target_method="POST", # 워커 통신을 위해 내부적으로는 POST 인텐트로 전환
+            rpc=rpc
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"[Gateway:Discovery] Failed to fetch tools for {target_server_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=502, detail="Tool discovery failed due to internal error.")

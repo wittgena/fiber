@@ -206,7 +206,7 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ### 1.3. Secure Agentic Bridge (MCP Gateway)
 
-As agent protocols shift to stateless architectures, they push heavy complexities onto the client. The gateway's **Transition Bridge** absorbs this burden by decoupling HTTP ingress from physical execution.
+As agent protocols shift to stateless architectures, they push heavy complexities onto the client. The gateway's **Transition Bridge** absorbs this burden by decoupling HTTP ingress from physical execution. The gateway fundamentally relies on a symbiotic pair: an **Edge Node** (`rest_edge`) for HTTP ingress, and a **Compute Node** (`rpc_worker`) for state and auth management.
 
 Instead of exposing host systems to unvalidated raw REST payloads, it translates intents into deterministic events routed via **Tri-Track Concurrency**:
 
@@ -215,12 +215,15 @@ Instead of exposing host systems to unvalidated raw REST payloads, it translates
 * **`Multiplex` Mode:** Unleashes extreme lock-free concurrency for thousands of I/O-bound operations.
 
 ```bash
-## 1. Boot the Gateway Daemon
-fiber daemon -s rest_edge
+## 1. Boot the Core Gateway (Autostarts both 'rest_edge' and 'rpc_worker' by default)
+fiber daemon
+
+## Optional: Enable autonomic extensions (e.g., dynamic_pricing, risk_vault) via -s preset
+# fiber daemon -s eco
+# fiber daemon -s full
 
 ## 2. Wrap and boot your legacy script as an autonomous worker 
 fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py"
-
 ```
 
 ---
@@ -320,7 +323,7 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 | Mode | Description | Example |
 | --- | --- | --- |
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python app.py"` |
-| **`daemon`** | **[Production Host]** Provisions a subordinate node (K8s/Docker) and applies topology profiles. | `fiber daemon -s rest_edge` |
+| **`daemon`** | **[Production Host]** Boots core gateway daemons (Edge + RPC) by default. Use `-s` to apply presets (`eco`, `full`). | `fiber daemon -s eco` |
 | **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.trace --model gemini/gemini-3.1-flash-lite` |
 
 > **Note on X402 Protocol Scaling:**

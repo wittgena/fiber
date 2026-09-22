@@ -1,17 +1,22 @@
 # fiber.dev.ex.agent.mcp.client
 import asyncio
-import inspect
+import warnings
 from collections.abc import Callable
 from contextlib import AsyncExitStack
 from typing import Any
 
-from pydantic import ValidationError
+from deprecation import (
+    DeprecatedWarning,
+    deprecated as _deprecated,
+)
 
 import mcp_types
 from mcp_types import LoggingMessageNotificationParams
 from mcp.client.client import Client as AnchorClient
 from mcp.client.session import ClientSession
 from mcp.client.stdio import stdio_client, StdioServerParameters
+from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamable_http_client
 
 from fiber.dev.ex.agent.protocol.executor import AsyncExecutorProtocol
 from fiber.dev.ex.agent.config.mcp import MCPConfig
@@ -27,9 +32,6 @@ class MCPError(Exception):
 
 class MCPTimeoutError(MCPError):
     """Exception raised when MCP operations timeout."""
-    timeout: float
-    config: dict | None
-
     def __init__(self, message: str, timeout: float, config: dict | None = None):
         self.timeout = timeout
         self.config = config
@@ -58,29 +60,87 @@ class MCPClient(AnchorClient):
         self._config = config
 
         kwargs.pop("log_handler", None)
-        target_server = server if server is not None else "stdio_config_override"
+        target_server = server if server is not None else "mcp_config_override"
         super().__init__(server=target_server, **kwargs)
 
+    @_deprecated(
+        deprecated_in="1.0.0", 
+        removed_in="2.0.0", 
+        details="Legacy SSE transport is stateful and unsupported by modern Zero-Trust Gateways. Use transport='stateless' instead."
+    )
+    async def _enter_legacy_sse(self, exit_stack: AsyncExitStack, headers: dict):
+        """Connect to legacy stateful SSE stream (Deprecated)."""
+        return await exit_stack.enter_async_context(
+            sse_client(url=self._config.server_url, headers=headers)
+        )
+
     async def __aenter__(self) -> "MCPClient":
-        """Enter the async context manager and establish transport"""
+        """Enter the async context manager and establish transport dynamically."""
         if self._session is not None:
             raise RuntimeError("Client is already entered; cannot reenter")
 
-        if self._config and self._config.mcpServers:
-            server_name = list(self._config.mcpServers.keys())[0]
-            server_cfg = self._config.mcpServers[server_name]
-            
-            server_params = StdioServerParameters(
-                command=server_cfg.command,
-                args=server_cfg.args,
-                env=server_cfg.env
-            )
-
+        if self._config:
             async with AsyncExitStack() as exit_stack:
-                read_stream, write_stream = await exit_stack.enter_async_context(
-                    stdio_client(server_params)
-                )
+                # 1. Transport Routing
+                if self._config.transport == "stdio":
+                    if not self._config.mcpServers:
+                        raise ValueError("mcpServers required for stdio transport")
+                    
+                    server_name = list(self._config.mcpServers.keys())[0]
+                    server_cfg = self._config.mcpServers[server_name]
+                    
+                    server_params = StdioServerParameters(
+                        command=server_cfg.command,
+                        args=server_cfg.args,
+                        env=server_cfg.env
+                    )
+                    read_stream, write_stream = await exit_stack.enter_async_context(
+                        stdio_client(server_params)
+                    )
 
+                elif self._config.transport in ("legacy_http", "sse"):
+                    # Emit legacy warning
+                    warnings.warn(
+                        "transport='legacy_http' or 'sse' is deprecated and may cause HTTP 405 errors "
+                        "when connecting to modern MCP Gateways. Please migrate to transport='stateless'.",
+                        category=DeprecatedWarning,
+                        stacklevel=2
+                    )
+                    # Inject headers only once for legacy transport
+                    headers = {}
+                    if self._config.headers_factory:
+                        headers.update(self._config.headers_factory())
+                    if self._config.auth_token:
+                        headers["Authorization"] = f"Bearer {self._config.auth_token}"
+
+                    read_stream, write_stream = await self._enter_legacy_sse(exit_stack, headers)
+
+                elif self._config.transport == "stateless":
+                    # Use native stateless transport from MCP SDK
+                    if not self._config.server_url:
+                        raise ValueError("server_url required for stateless transport")
+
+                    # Pre-assemble headers dict for streamable_http_client
+                    headers = {}
+                    if self._config.headers_factory:
+                        headers.update(self._config.headers_factory())
+                    if self._config.auth_token:
+                        headers["Authorization"] = f"Bearer {self._config.auth_token}"
+
+                    # Unpack streams safely using tuple slicing to avoid ValueError 
+                    # if the SDK returns more than 2 elements (e.g., internal context).
+                    stream_result = await exit_stack.enter_async_context(
+                        streamable_http_client(
+                            url=self._config.server_url,
+                            headers=headers
+                        )
+                    )
+                    read_stream, write_stream = stream_result[0], stream_result[1]
+                    
+                else:
+                    raise ValueError(f"Unknown transport type: {self._config.transport}")
+
+                # 2. Session Initialization (SDK abstracts away the network layer behind streams)
                 self._session = await exit_stack.enter_async_context(
                     ClientSession(
                         read_stream=read_stream,
@@ -142,13 +202,8 @@ class MCPClient(AnchorClient):
     def __exit__(self, *args: object) -> None:
         self.sync_close()
 
-
-# ============================================================================
-# Core MCP Interaction Logic (No Theoria Action Models)
-# ============================================================================
-
 async def mcp_log_callback(params: LoggingMessageNotificationParams) -> None:
-    """Transforms logs transmitted from the MCP server"""
+    """Transforms logs transmitted from the MCP server."""
     level_map = {
         "error": "ERROR",
         "warning": "WARNING",
@@ -188,7 +243,7 @@ async def call_mcp_tool_raw(
     tool_name: str, 
     arguments: dict[str, Any]
 ) -> mcp_types.CallToolResult:
-    """Executes a raw MCP tool call without wrapping in Theoria domain objects."""
+    """Executes a raw MCP tool call."""
     if not client.is_connected():
         raise RuntimeError(
             f"MCP client not connected for tool '{tool_name}'. "
@@ -202,12 +257,12 @@ def fetch_mcp_tools_sync(
 ) -> list[mcp_types.Tool]:
     """Synchronously fetches raw MCP tools, handling timeouts and cleanup."""
     try:
-        tools = client.call_async_from_sync(_connect_and_list_mcp_tools, timeout=timeout, client=client)
-        return tools
+        return client.call_async_from_sync(_connect_and_list_mcp_tools, timeout=timeout, client=client)
     except TimeoutError as e:
         client.sync_close()
         error_msg = f"MCP tool listing timed out after {timeout} seconds...\n"
-        raise MCPTimeoutError(error_msg, timeout=timeout, config=client._config.model_dump() if client._config else None) from e
+        config_dump = client._config.model_dump() if client._config else None
+        raise MCPTimeoutError(error_msg, timeout=timeout, config=config_dump) from e
     except BaseException:
         try:
             client.sync_close()

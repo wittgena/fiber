@@ -1,5 +1,4 @@
 # fiber.dev.e2e.worker.gateway
-## @lineage: fiber.phase.dev.e2e.worker.gateway
 import sys
 import time
 import uuid
@@ -18,7 +17,7 @@ import fiber.gateway.node.worker.mcp.finlib as agent_finlib
 import fiber.gateway.node.worker.mcp.margin as agent_margin
 import fiber.gateway.node.worker.search.archive as agent_search
 
-from fiber.gateway.node.daemon.pricing import DynamicPricingDaemon
+from fiber.gateway.daemon.economy.pricing import DynamicPricingDaemon
 from fiber.gateway.edge.rpc.client import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 
@@ -260,13 +259,7 @@ class CoreSuiteRunner:
         self._print_report()
 
     def _print_report(self):
-        """
-        [개선] Log Burst Limiter 우회를 위한 Aggregation 방출 패러다임.
-        루프 안에서 반복 로깅하지 않고, 하나의 거대한 문자열 블록으로 조립한 후 단 한 번만 방출(Emit)합니다.
-        """
         all_passed = all(r.passed for r in self.results)
-        
-        # 1. 버퍼에 리포트 라인 적재
         report_buffer = [
             "\n" + "=" * 80,
             "⚡ [CORE ROUTING BENCHMARK REPORT]",
@@ -286,10 +279,7 @@ class CoreSuiteRunner:
             report_buffer.append("💥 CORE ROUTING FAILURE DETECTED. Check logs for details.")
             
         report_buffer.append("=" * 80 + "\n")
-
-        # 2. 하나의 로그 이벤트로 통합 방출 (원자성 보장)
         aggregated_report = "\n".join(report_buffer)
-        
         if all_passed:
             self.log.info(aggregated_report)
         else:

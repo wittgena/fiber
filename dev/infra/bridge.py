@@ -19,7 +19,7 @@ from fiber.dev.infra.config import (
 )
 
 import fiber.gateway.edge.rpc.registry as rpc_registry
-from fiber.gateway.edge.rpc.daemon import RpcWorkerDaemon
+from fiber.gateway.daemon.rpc import RpcWorkerDaemon
 from fiber.gateway.rest.payload import create_app, Config
 
 from xphi.kernel.space.tunnel.factory import TunnelFactory
@@ -189,7 +189,7 @@ class BaseBridgePipeline(PipelineRunner):
 
         # [핵심 방어] 데몬 모듈 자체에 패치된 빌더를 명시적으로 주입하여,
         # 데몬이 원본이 아닌 완벽하게 조합된 라우팅 테이블(Mock Ledger + Real Receipt)을 사용하도록 강제합니다.
-        import fiber.gateway.edge.rpc.daemon as daemon_module
+        import fiber.gateway.daemon.rpc as daemon_module
         daemon_module.build_internal_rpc_registry = bridge_mock_registry_builder
 
         # Daemon 컨텍스트 및 워커 기동

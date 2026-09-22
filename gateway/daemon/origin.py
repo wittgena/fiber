@@ -1,6 +1,5 @@
-# fiber.gateway.edge.origin.daemon
-## @lineage: fiber.dphi.daemon.origin
-## @lineage: fiber.dphi.infra.daemon.origin
+# fiber.gateway.daemon.origin
+## @lineage: fiber.gateway.edge.origin.daemon
 import os
 import json
 import time
