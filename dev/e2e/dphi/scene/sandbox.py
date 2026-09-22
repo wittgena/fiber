@@ -46,10 +46,6 @@ class TestConstants:
 
 CONST = TestConstants()
 
-
-# =========================================================================
-# 1. CertProofScene (Master System Certification Pipeline)
-# =========================================================================
 class CertProofScene(SandboxRunner):
     def __init__(self, broker: Any):
         super().__init__(broker)
@@ -149,10 +145,6 @@ print(f"{val:.15f}")
             expected_success=True 
         )
 
-
-# =========================================================================
-# 2. SandboxScene (Core Sandbox & Compute Scenarios)
-# =========================================================================
 class SandboxScene(SandboxRunner):
     async def run_all(self):
         log.info("\n=== [START] Executing Sandbox & Compute Scenarios ===")
@@ -232,7 +224,6 @@ class SandboxScene(SandboxRunner):
             validator=validate_injection
         )
         
-        # PRNG 결정론 검증
         r1 = await self.broker.execute(code=TestScripts.PRNG_IDEMPOTENT.code)
         r2 = await self.broker.execute(code=TestScripts.PRNG_IDEMPOTENT.code)
         if r1.success and r2.success and (r1.output == r2.output):
@@ -271,10 +262,6 @@ class SandboxScene(SandboxRunner):
             expected_match=None
         )
 
-
-# =========================================================================
-# 3. DynamicsScene (Field Dynamics & Math Kernels)
-# =========================================================================
 class DynamicsScene(SandboxRunner):
     """
     @spec: Tests the Rust-native O(N^2) Math Kernels for correct Phase calculations,
@@ -288,9 +275,7 @@ class DynamicsScene(SandboxRunner):
         log.info("🌌 [START] Field Dynamics & Continuous Math Kernel Suite")
         log.info("=======================================================\n")
 
-        # 고비용 연산이므로 SYSTEM Tier 사용
         await self._set_worker_policy("SYSTEM")
-
         await self._test_kuramoto_sync()
         await self._test_fitzhugh_spiking()
         await self._test_attractor_reflector_bypass()
@@ -298,12 +283,9 @@ class DynamicsScene(SandboxRunner):
 
         self.report()
 
-    # -------------------------------------------------------------------------
-    # Domain A: Kuramoto Model (Phase Sync & Tension)
-    # -------------------------------------------------------------------------
+    ## Domain A: Kuramoto Model (Phase Sync & Tension)
     async def _test_kuramoto_sync(self):
         log.info("\n--- [Kernel] Kuramoto Oscillator Sync ---")
-        
         payload = {
             "states": {
                 "node_1": {"phase": 0.0, "omega": 1.0, "state": "NORMAL", "tension": 0.0, "is_spiking": False},
@@ -332,12 +314,9 @@ class DynamicsScene(SandboxRunner):
         else:
             self._record_fail(0, f"WASM execution failed: {res.error}", "Kuramoto Sync")
 
-    # -------------------------------------------------------------------------
     # Domain B: FitzHugh-Nagumo Model (Spiking & Recovery)
-    # -------------------------------------------------------------------------
     async def _test_fitzhugh_spiking(self):
         log.info("\n--- [Kernel] FitzHugh-Nagumo Action Potential ---")
-        
         payload = {
             "states": {
                 # 높은 Phase(V)를 주어 강제 스파이킹 유발 (v = phase - pi > 1.0 이 되도록)
@@ -362,9 +341,7 @@ class DynamicsScene(SandboxRunner):
         else:
             self._record_fail(0, f"WASM execution failed: {res.error}", "FitzHugh-Nagumo Spike")
 
-    # -------------------------------------------------------------------------
     # Domain C: Topological Roles (Bypass Math)
-    # -------------------------------------------------------------------------
     async def _test_attractor_reflector_bypass(self):
         log.info("\n--- [Topology] Attractor / Reflector Bypass ---")
         
@@ -394,9 +371,7 @@ class DynamicsScene(SandboxRunner):
         else:
             self._record_fail(0, f"Execution failed: {res.error}", "Role Bypass")
 
-    # -------------------------------------------------------------------------
     # Domain D: Robustness & FFI Guard
-    # -------------------------------------------------------------------------
     async def _test_dynamics_payload_robustness(self):
         log.info("\n--- [Guard] Dynamics Payload FFI Boundary ---")
         

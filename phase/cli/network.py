@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from xphi.kernel.space.tunnel.surface import EchoListener, SurfaceClient
-from xphi.arch.bound.xor.parser.ruleset.engine import LifecycleRegexParser, AuditRulesetParser, CompiledEngine
+from xphi.arch.bound.xor.parser.ruleset.engine import StreamTaggingParser, AuditRulesetParser, CompiledEngine
 from xphi.arch.contract.space.state import Contract, CoherenceState
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.arch.dev.tracer.base import SystemBound, log_streamer
@@ -81,7 +81,8 @@ class WorkerRuntimeBootstrapper:
         self.ready_event = asyncio.Event()
 
         active_ruleset = ruleset or DEFAULT_WORKER_RULESET
-        self.rule_engine = LifecycleRegexParser().parse_ruleset(active_ruleset)
+        # [변경됨] LifecycleRegexParser() -> StreamTaggingParser(engine_type="regex")
+        self.rule_engine = StreamTaggingParser(engine_type="regex").parse_ruleset(active_ruleset)
 
     def _resolve_executable(self) -> str:
         bins = sorted(self.bin_root.glob(self.executable_pattern))
