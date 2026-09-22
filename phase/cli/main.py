@@ -14,7 +14,7 @@ except ImportError:
 
 from fiber.phase.cli.observer import run_observer
 
-from xphi.kernel.ops.shell.entry import EcosystemShell
+from xphi.kernel.ops.shell import ShellEntry
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
@@ -99,7 +99,7 @@ def run_shell(
     _load_env(env_file)
     async def _launch_console():
         tunnel = await TunnelFactory.get_default()
-        shell = EcosystemShell(tunnel)
+        shell = ShellEntry(tunnel)
         try:
             await shell.run()
         finally:

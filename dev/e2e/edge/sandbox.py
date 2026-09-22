@@ -19,7 +19,7 @@ from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult
 from xphi.arch.bound.client.http import VerifiedHttpClient
 from fiber.gateway.edge.origin.registry import OriginRegistry
 
-from xphi.kernel.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
+from xphi.kernel.node.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.arch.dev.tracer.transport import SceneConfig, HttpFlowTracer
