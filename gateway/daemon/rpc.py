@@ -195,9 +195,7 @@ class RpcWorkerDaemon(AbstractDaemon):
         policy_engine = IngressPolicyEngine(
             sequencer=ToposSequencer(), allocator=FuelAllocator(), monitor=HealthMonitor()
         )
-        profile_service = BenchProfile()
-
-        # 1. 내부 워커 컨텍스트 초기화
+        profile_service = BenchProfile(broker=broker)
         self.worker_ctx = WorkerContext(
             broker=broker,
             store=store,
@@ -208,10 +206,7 @@ class RpcWorkerDaemon(AbstractDaemon):
             profile_service=profile_service
         )
 
-        # 2. 외부 연동(EVM, Wallet) 통합 서비스 초기화
         self.ext_service = ExtRpcService()
-
-        # 3. RPC 라우터 레지스트리 마운트
         prod_validator = ValidatorService()
         self.routes = build_internal_rpc_registry(
             validator_service=prod_validator,

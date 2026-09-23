@@ -30,7 +30,6 @@ class EdgeWorkflow(Workflow):
         self.base_url = base_url
         
         self.rpc = InternalRpcClient()
-        # [개선] 기존 rpc 클라이언트를 공유하는 Ext SDK 클라이언트 마운트
         self.ext_client = ExtClient(rpc_client=self.rpc)
 
     async def execute(self, start_event: StartIntentEvent):

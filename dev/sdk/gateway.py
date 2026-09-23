@@ -18,8 +18,7 @@ from xphi.arch.model.edge.receipt import (
 from xphi.arch.model.edge.receptor import EdgeHeader
 
 class Endpoints:
-    """Backend routing prefixes and endpoints for DPHI Gateway."""
-    # --- edge.public (prefix: /v1/public) ---
+    """Backend routing prefixes and endpoints for Edge Gateway"""
     KEYS              = "/v1/public/keys"
     SANDBOX_QUOTE     = "/v1/public/sandbox/quote"
     SANDBOX_HANDSHAKE = "/v1/public/sandbox/handshake"
@@ -30,7 +29,6 @@ class Endpoints:
     AUDIT_EVENT       = "/v1/public/audit/event"
     AUDIT_VERIFY      = "/v1/public/audit/verify"
 
-    # --- edge.llm (prefix: /v1) ---
     LLM_CHAT        = "/v1/chat/completions"
     LLM_EMBEDDING   = "/v1/embeddings"
     MCP_STATE       = "/v1/mcp-gateway/state"
@@ -203,10 +201,6 @@ class DphiPublicClient:
                 headers=headers
             )
             response.raise_for_status()
-            
-            # [해결됨] xphi.arch.model.dphi.receptor.EdgeHeader 상수를 사용하여 
-            # 서버가 보낸 헤더 키(X-Kernel-Fingerprint 등)와 완벽히 일치시킴. 
-            # httpx.Headers는 Case-Insensitive 하므로 상수값(.value)을 그대로 써도 매칭됨.
             headers_dict = response.headers
             content_hash = headers_dict.get(EdgeHeader.CONTENT_HASH.value, "N/A")
             fingerprint = headers_dict.get(EdgeHeader.FINGERPRINT.value, "N/A")
@@ -245,9 +239,7 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    # -------------------------------------------------------------------------
     # LLM & Enterprise MCP
-    # -------------------------------------------------------------------------
     async def execute_secure_llm_intent(self, intent: LLMIntent) -> Dict[str, Any]:
         verifier = self._get_verified_client()
         payload = {

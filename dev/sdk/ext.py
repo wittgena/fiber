@@ -32,19 +32,10 @@ class EvmWrapPayload(BaseModel):
     amount_wei: str  # JSON 직렬화를 위해 내부적으로 str 변환 허용
     agent_alias: str = "beta"
 
-# =====================================================================
-# 2. ExtClient Implementation
-# =====================================================================
-
 class ExtSdkException(Exception):
-    """Base exception for ExtClient SDK errors."""
     pass
 
 class ExtClient:
-    """
-    SDK Client for interacting with the ExtRpcService.
-    Provides strictly typed, async methods for wallet operations, EVM queries, and settlements.
-    """
     def __init__(
         self, 
         rpc_queue_topic: str = "internal.rpc.queue", 

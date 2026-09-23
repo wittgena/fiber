@@ -31,9 +31,9 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.edge")
 
-class GatewayTracerPipeline(PipelineRunner):
+class EdgeTracerPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig):
-        super().__init__(name="Public Gateway & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")
+        super().__init__(name="Public Edge & Network Isolation Trace", scope_name="EDGE_INGRESS_PIPELINE")
         self.config = config
         self.tracer = HttpFlowTracer()
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
@@ -273,7 +273,7 @@ class EdgeSuiteRunner:
 
     async def _run_gateway_pipeline(self):
         net_config = E2EConfig(host="127.0.0.1", port=8353, protocol="http")
-        self.results.extend(await GatewayTracerPipeline(config=net_config).run_pipeline())
+        self.results.extend(await EdgeTracerPipeline(config=net_config).run_pipeline())
 
     def _print_report(self):
         self.log.info("\n" + "="*80)
