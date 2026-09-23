@@ -1,4 +1,5 @@
-# fiber.gateway.edge.rpc.daemon
+# fiber.gateway.daemon.rpc
+## @lineage: fiber.gateway.edge.rpc.daemon
 ## @lineage: fiber.dphi.daemon.rpc
 import os
 import json

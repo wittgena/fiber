@@ -1,7 +1,4 @@
 # fiber.gateway.node.worker.mcp.oracle
-## @lineage: fiber.dphi.worker.mcp.oracle
-## @lineage: fiber.agent.worker.mcp.oracle
-## @lineage: fiber.dphi.worker.oracle
 import sys
 import json
 import time
@@ -71,7 +68,6 @@ class OracleMcpServer(AsyncAgentProtocol):
                 )
                 self._sealed_cache[cache_key] = {'payload': sealed_payload, 'ts': time.time()}
 
-            # 에이전트는 어떠한 가짜 영수증도 만들지 않고, 순수하게 증명된 데이터만 반환
             await self.send_response(req_id, {
                 "content": [{"type": "text", "text": json.dumps(sealed_payload)}],
                 "isError": False

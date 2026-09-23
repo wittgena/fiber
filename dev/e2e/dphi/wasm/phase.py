@@ -1,4 +1,5 @@
-# fiber.dev.e2e.dphi.wasm.entry
+# fiber.dev.e2e.dphi.wasm.phase
+## @lineage: fiber.dev.e2e.dphi.wasm.entry
 import sys
 import argparse
 import importlib
@@ -34,7 +35,7 @@ class PipelineConfig:
         "cert",        # 3. 극한 환경 엣지 케이스 방어 및 무결성 최종 인증 (L4)
         "dynamics",    # 4. [NEW] O(N^2) 수학 연산 무결성 및 성능, 위상 변이 검증 (L2)
     ])
-    wasm_filename: str = "dphi.wasm"
+    wasm_filename: str = "phase.wasm"
 
 
 class DphiFlow:

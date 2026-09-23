@@ -1,5 +1,4 @@
 # fiber.gateway.node.worker.search.archive
-## @lineage: fiber.dphi.worker.search.archive
 import os
 import sys
 import json

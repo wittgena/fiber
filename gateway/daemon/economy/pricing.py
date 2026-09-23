@@ -1,5 +1,4 @@
-# fiber.gateway.node.daemon.pricing
-## @lineage: fiber.dphi.daemon.pricing
+# fiber.gateway.daemon.economy.pricing
 import asyncio
 import json
 from typing import Dict, Any

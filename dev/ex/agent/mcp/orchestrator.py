@@ -1,6 +1,8 @@
 # fiber.dev.ex.agent.mcp.orchestrator
 import asyncio
 import json
+import uuid
+import contextvars
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field
@@ -11,7 +13,8 @@ from fiber.dev.ex.agent.mcp.client import (
     create_mcp_client,
     fetch_mcp_tools_sync,
     call_mcp_tool_raw,
-    MCPConfig
+    MCPConfig,
+    MCPError
 )
 from fiber.dev.ex.agent.protocol.executor import AsyncExecutor
 from fiber.dev.ex.facade.driver import LLMFacade, OpenAIToolConvertible
@@ -25,15 +28,22 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("agent.mcp.orchestrator")
 
+# [2026-07-28 핵심] 네트워크 계층(mcp.client)으로 멱등성 키를 전달하기 위한 컨텍스트 변수
+# SecurityProvider나 headers_factory가 이 값을 읽어 HTTP 헤더에 주입합니다.
+current_idempotency_key: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "current_idempotency_key", default=None
+)
+
+
 class MCPAgentConfig(BaseModel):
     mcp_config: MCPConfig
-    llm_profile: BaseLLMProfile = Field(..., description="LLMFacade 통신에 사용할 LLM 프로필")
-    system_prompt: str = Field(default="You are a helpful assistant.", description="기본 시스템 프롬프트")
-    max_iterations: int = Field(default=5, description="최대 도구 호출 반복 횟수")
+    llm_profile: BaseLLMProfile = Field(..., description="LLM profile for LLMFacade communication")
+    system_prompt: str = Field(default="You are a helpful enterprise assistant.", description="Base system prompt")
+    max_iterations: int = Field(default=5, description="Maximum iterations for LLM reasoning and tool calls")
 
 
 class MCPToolWrapper(OpenAIToolConvertible):
-    """@desc: mcp_types.Tool을 fiber.dev.ex.facade의 OpenAIToolConvertible 규격으로 래핑"""
+    """Wraps raw MCP tools to make them compatible with OpenAI tool schemas."""
     def __init__(self, raw_tool: mcp_types.Tool):
         self.raw_tool = raw_tool
 
@@ -51,8 +61,11 @@ class MCPToolWrapper(OpenAIToolConvertible):
             }
         }
 
+
 class MCPOrchestrator:
-    """LLMFacade와 통신하고 MCP 클라이언트를 제어하는 순수 에이전트"""
+    """
+    [2026-07-28 Aligned] Agent that orchestrates LLM reasoning and strictly stateless MCP Client interactions.
+    """
     def __init__(self, config: MCPAgentConfig):
         self.config = config
         self._is_initialized = False
@@ -66,7 +79,7 @@ class MCPOrchestrator:
         return self.__class__.__name__
 
     async def initialize(self) -> None:
-        """MCP 클라이언트를 초기화하고 사용할 도구들을 래핑"""
+        """Initializes the MCP client and fetches available tools via the stateless bridge."""
         if self._is_initialized:
             return
 
@@ -78,19 +91,24 @@ class MCPOrchestrator:
         )
         
         loop = asyncio.get_running_loop()
-        raw_mcp_tools = await loop.run_in_executor(
-            None, 
-            fetch_mcp_tools_sync, 
-            self._mcp_client, 
-            30.0
-        )
-        
-        self._runtime_tools = [MCPToolWrapper(t) for t in raw_mcp_tools]
-        self._is_initialized = True
-        log.info(f"[{self.name}] Initialization complete. Loaded {len(self._runtime_tools)} tools.")
+        try:
+            # 2026-07-28 Gateway의 공시(Discovery) 엔드포인트를 타격하여 도구 목록 확보
+            raw_mcp_tools = await loop.run_in_executor(
+                None, 
+                fetch_mcp_tools_sync, 
+                self._mcp_client, 
+                30.0
+            )
+            
+            self._runtime_tools = [MCPToolWrapper(t) for t in raw_mcp_tools]
+            self._is_initialized = True
+            log.info(f"[{self.name}] Initialization complete. Loaded {len(self._runtime_tools)} tools.")
+        except Exception as e:
+            log.error(f"[{self.name}] Failed to discover tools from Gateway: {e}")
+            raise
 
     async def run_worker(self, tunnel: UniversalFacade, conversation_id: str) -> None:
-        """터널에서 이벤트를 수신하는 메인 워커 루프"""
+        """Main worker loop to consume events from the tunnel and process them."""
         if not self._is_initialized:
             await self.initialize()
 
@@ -127,9 +145,10 @@ class MCPOrchestrator:
                 await asyncio.sleep(1)
 
     async def process_task(self, task_payload: dict, tunnel: UniversalFacade, response_topic: str) -> None:
-        """LLMFacade와 MCP 도구 간의 교차 호출 시퀀스"""
+        """Executes the cross-invocation sequence adapting to Stateless Gateway responses."""
         log.info(f"[{self.name}] Processing new task...")
         user_message_text = task_payload.get("prompt", "")
+        
         messages = [
             Message(role="system", content=[TextContent(text=self.config.system_prompt)]),
             Message(role="user", content=[TextContent(text=user_message_text)])
@@ -138,7 +157,10 @@ class MCPOrchestrator:
         for iteration in range(self.config.max_iterations):
             log.info(f"[{self.name}] Iteration {iteration + 1}")
             
-            # 1. LLMFacade를 통해 실제 LLM 호출 수행
+            # [핵심] 턴(Turn) 단위의 고유 ID 발급 (LLM 환각에 의한 멱등성 키 충돌 방지용)
+            turn_id = uuid.uuid4().hex
+            
+            # 1. Request completion from LLM via LLMFacade
             try:
                 llm_response: LLMResponse = await LLMFacade.make_completion(
                     llm=self.config.llm_profile,
@@ -150,81 +172,84 @@ class MCPOrchestrator:
                 await self._emit_response(tunnel, response_topic, {"type": "error", "message": str(e)})
                 break
 
-            # 메트릭 로깅
             usage = llm_response.metrics.accumulated_token_usage
             log.info(f"LLM Reply Tokens: P:{usage.prompt_tokens} / C:{usage.completion_tokens}")
             
             response_msg: Message = llm_response.message
             messages.append(response_msg)
 
-            # 도구 호출(Tool Call) 여부 확인
+            # Check if LLM requested any tool calls
             tool_calls = self._extract_tool_calls(response_msg)
             
             if not tool_calls:
-                # 일반 텍스트 응답이면 종료
                 content_text = "".join(c.text for c in response_msg.content if isinstance(c, TextContent))
                 await self._emit_response(tunnel, response_topic, {"type": "final_answer", "content": content_text})
                 break
 
-            # 2. MCP 도구 실행 파이프라인
+            # 2. Execute MCP Tools Pipeline (Stateless execution with Cognitive Resilience)
             for tool_call in tool_calls:
                 tool_name = tool_call.function.name
                 arguments_str = tool_call.function.arguments
                 
                 try:
                     arguments = json.loads(arguments_str) if arguments_str else {}
-                except json.JSONDecodeError:
-                    arguments = {}
+                except json.JSONDecodeError as e:
+                    error_msg = f"JSON decode error for arguments: {e}"
+                    messages.append(Message(role="tool", tool_call_id=tool_call.id, content=[TextContent(text=error_msg)]))
+                    await self._emit_response(tunnel, response_topic, {
+                        "type": "tool_result", "tool_name": tool_name, "status": "error", "message": error_msg
+                    })
+                    continue
 
                 await self._emit_response(tunnel, response_topic, {"type": "tool_start", "tool_name": tool_name})
                 
+                # [핵심 정렬] Fiber의 턴 ID와 LLM의 Tool Call ID를 결합한 완벽한 합성 멱등성 키 생성
+                composite_idempotency_key = f"{turn_id}::{tool_call.id}"
+                token = current_idempotency_key.set(composite_idempotency_key)
+                
                 try:
-                    # fiber.dev.ex.agent.mcp.call_mcp_tool_raw 실행
+                    # Gateway 타격 (mcp.client 내부에서 SDK가 HTTP POST 발송)
                     result = await call_mcp_tool_raw(
                         client=self._mcp_client,
                         tool_name=tool_name,
                         arguments=arguments
                     )
                     
-                    # MCP의 mcp_types.CallToolResult(보통 텍스트 묶음 반환) 처리
+                    # 툴 응답 결과가 Gateway의 거절(에러)을 포함하는지 확인
                     result_dump = result.model_dump()
-                    result_str = json.dumps(result_dump)
+                    is_error = result.isError if hasattr(result, 'isError') else False
                     
-                    # 도구 호출 결과를 LLM History에 추가
-                    tool_result_msg = Message(
-                        role="tool", 
-                        tool_call_id=tool_call.id,
-                        content=[TextContent(text=result_str)]
-                    )
-                    messages.append(tool_result_msg)
-                    await self._emit_response(tunnel, response_topic, {
-                        "type": "tool_result", 
-                        "tool_name": tool_name, 
-                        "status": "success", 
-                        "result": result_dump
-                    })
+                    if is_error:
+                        # Gateway가 반환한 로직/권한 에러를 LLM이 인지할 수 있도록 피드백
+                        error_str = f"Gateway Execution Error: {result_dump.get('content', 'Unknown infrastructure error')}"
+                        log.warning(f"[{self.name}] Gateway denied tool '{tool_name}': {error_str}")
+                        
+                        messages.append(Message(role="tool", tool_call_id=tool_call.id, content=[TextContent(text=error_str)]))
+                        await self._emit_response(tunnel, response_topic, {
+                            "type": "tool_result", "tool_name": tool_name, "status": "error", "message": error_str
+                        })
+                    else:
+                        # 정상 응답
+                        result_str = json.dumps(result_dump)
+                        messages.append(Message(role="tool", tool_call_id=tool_call.id, content=[TextContent(text=result_str)]))
+                        await self._emit_response(tunnel, response_topic, {
+                            "type": "tool_result", "tool_name": tool_name, "status": "success", "result": result_dump
+                        })
+                        
                 except Exception as e:
-                    log.error(f"Tool {tool_name} failed: {e}")
-                    error_str = f"Error executing tool: {str(e)}"
-                    messages.append(Message(
-                        role="tool", 
-                        tool_call_id=tool_call.id,
-                        content=[TextContent(text=error_str)]
-                    ))
+                    # 네트워크 단절 등 치명적 에러 발생 시 처리
+                    log.error(f"[{self.name}] Tool '{tool_name}' failed to execute: {e}")
+                    error_str = f"System Error executing tool via Gateway: {str(e)}"
+                    messages.append(Message(role="tool", tool_call_id=tool_call.id, content=[TextContent(text=error_str)]))
                     await self._emit_response(tunnel, response_topic, {
-                        "type": "tool_result", 
-                        "tool_name": tool_name, 
-                        "status": "error", 
-                        "message": str(e)
+                        "type": "tool_result", "tool_name": tool_name, "status": "error", "message": error_str
                     })
+                finally:
+                    # 다음 도구 실행을 위해 멱등성 키 컨텍스트 초기화
+                    current_idempotency_key.reset(token)
 
     def _extract_tool_calls(self, message: Message) -> list[MessageToolCall]:
-        """LLM 응답에서 MessageToolCall 인스턴스를 필터링하여 추출"""
-        tool_calls = []
-        for c in message.content:
-            if isinstance(c, MessageToolCall):
-                tool_calls.append(c)
-        return tool_calls
+        return [c for c in message.content if isinstance(c, MessageToolCall)]
 
     async def _emit_response(self, tunnel: UniversalFacade, topic: str, payload: dict) -> None:
         try:

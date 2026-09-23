@@ -52,20 +52,36 @@ def boot_kernel(mode_name: str):
 
 @app.command("daemon")
 def run_daemon(
-    start: Annotated[str, typer.Option("--start", "-s", help="Comma separated daemons to start")],
+    start: Annotated[str, typer.Option("--start", "-s", help="Daemons to start or topology preset (e.g., core, eco)")] = "core",
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
+    """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
     _load_env(env_file)
-    os.environ["KERNEL_DAEMONS"] = start
+    
+    # 1. Expand topology presets into explicit daemon lists
+    PRESETS = {
+        "core": "rest_edge,rpc_worker",                           # Base MCP Bridge
+        "eco": "rest_edge,rpc_worker,dynamic_pricing",            # Bridge + Pricing
+        "full": "rest_edge,rpc_worker,dynamic_pricing,risk_vault",# Entire Eco-system
+        "edge_only": "rest_edge",                                 # API Ingress only
+        "compute_only": "rpc_worker"                              # Headless RPC only
+    }
+    
+    resolved_daemons = PRESETS.get(start.lower(), start)
+    daemons_list = [d.strip() for d in resolved_daemons.split(",")]
+    
+    os.environ["KERNEL_DAEMONS"] = resolved_daemons
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
-    daemons = [d.strip() for d in start.split(",")]
-    if all(d in ["gateway_edge", "rest_edge"] for d in daemons):
+    
+    # 2. Simplified NODE_PROFILE routing: EDGE (lightweight) vs ALL (spawns workers)
+    is_edge_only = all(d in ["gateway_edge", "rest_edge"] for d in daemons_list)
+    
+    if is_edge_only:
         os.environ["NODE_PROFILE"] = "EDGE"
-    elif "risk_vault" in daemons or "rpc_worker" in daemons:
-        os.environ["NODE_PROFILE"] = "COMPUTE"
     else:
         os.environ["NODE_PROFILE"] = "ALL"
-    boot_kernel("Subordinate Daemon")
+        
+    boot_kernel("Gateway Daemon")
 
 @app.command("trace")
 def run_trace(
@@ -119,7 +135,7 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["llm.trace", "edge.compliance", "dphi.clearing", "dphi.wasm.entry", "plane.flare"]
+    KNOWN_SUITES = ["llm.trace", "edge.compliance", "dphi.clearing", "dphi.wasm.phase", "plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] 🧪 Igniting E2E Test Suite(s): {', '.join(targets)}")
@@ -178,7 +194,7 @@ def start_observer(
     target: Annotated[str, typer.Option("--target", "-t", help="Observation target or scenario name (e.g., kube, kube_oom)")] = "kube",
     namespace: Annotated[str, typer.Option("--namespace", "-n", help="Namespace to observe")] = "fiber-topos",
     delay: Annotated[int, typer.Option("--delay", "-d", help="Polling interval in seconds")] = 5,
-    chaos: Annotated[bool, typer.Option("--chaos", "-c", help="Enable Active Chaos Injection")] = False, # 💡 추가된 플래그
+    chaos: Annotated[bool, typer.Option("--chaos", "-c", help="Enable Active Chaos Injection")] = False,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     """Starts a real-time observer daemon to stream infrastructure status, optionally injecting chaos."""

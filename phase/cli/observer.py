@@ -68,7 +68,7 @@ class KubeTracerRegistry:
             "verify_type": "wasm_trap",
             "desc": "Chaos Test: WASM Sandbox Resource Trap Monitor",
             "ruleset": _RULESET_WASM_SANDBOX,
-            "chaos_cmd": ["fiber", "e2e", "dphi.wasm.entry", "--force-trap"]
+            "chaos_cmd": ["fiber", "e2e", "dphi.wasm.phase", "--force-trap"]
         },
         "kube_bus_deadlock": {
             "namespace": "fiber-topos",

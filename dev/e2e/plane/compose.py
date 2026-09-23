@@ -7,7 +7,8 @@ import asyncio
 from pathlib import Path
 from typing import Any, List, Dict
 
-from xphi.watcher.plane.infra.compose import ComposeOrchestrator, ComposeContext
+from fiber.dev.infra.plane.compose import ComposeOrchestrator, ComposeContext
+
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
@@ -15,11 +16,9 @@ from xphi.kernel.space.bind.resolver import resolve_path
 FIBER_ROOT = resolve_path("fiber")
 log = get_emitter("e2e.plane.compose")
 
-# Pure test intent for USER mode.
-# Dependencies are natively bound to site-packages via git installation in the Dockerfile.
 DEFAULT_E2E_SUITE = [
     "VCR_MODE=replay python -m fiber.dev.ex.switch",
-    "fiber e2e dphi.wasm.entry"
+    "fiber e2e dphi.wasm.phase"
 ]
 
 class ComposeWorkflowScene:

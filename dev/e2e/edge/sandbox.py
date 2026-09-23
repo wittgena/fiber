@@ -14,7 +14,7 @@ from eth_account.messages import encode_defunct
 
 from fiber.dev.infra.workflow.edge import EdgeWorkflow
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.edge.rpc.daemon import RpcWorkerDaemon
+from fiber.gateway.daemon.rpc import RpcWorkerDaemon
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from xphi.arch.bound.client.http import VerifiedHttpClient
 from fiber.gateway.edge.origin.registry import OriginRegistry

@@ -1,6 +1,4 @@
-# fiber.gateway.node.daemon.risk
-## @lineage: fiber.dphi.daemon.risk
-## @lineage: fiber.dphi.infra.daemon.risk
+# fiber.gateway.daemon.economy.risk
 import time
 import asyncio
 from typing import Dict, Any, List, Optional
