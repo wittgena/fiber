@@ -1,5 +1,4 @@
-# fiber.gateway.node.worker.mcp.margin
-## @lineage: fiber.dphi.worker.mcp.margin
+# fiber.dev.ex.worker.legacy.margin
 import sys
 import json
 import logging

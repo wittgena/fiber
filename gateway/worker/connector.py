@@ -1,4 +1,4 @@
-# fiber.gateway.node.worker.connector
+# fiber.gateway.worker.connector
 import os
 import sys
 import json
@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Protocol
 
 from fiber.gateway.edge.rpc.client import InternalRpcClient
-from fiber.gateway.node.worker.registry.quarantine import QuarantineRegistry
+from fiber.gateway.worker.registry.quarantine import QuarantineRegistry
 
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
@@ -52,10 +52,10 @@ class WorkerConnector:
     def _create_transport(self, handle_id: str) -> WorkerTransport:
         """Transport 팩토리: 설정된 타입에 따라 적절한 전송 계층 객체를 동적으로 생성"""
         if self.transport_type == "network":
-            from fiber.gateway.node.worker.transport import NetworkTransport
+            from fiber.gateway.worker.transport import NetworkTransport
             return NetworkTransport(execution_target=self.execution_target, handle_id=handle_id)
         else:
-            from fiber.gateway.node.worker.transport import StdioTransport
+            from fiber.gateway.worker.transport import StdioTransport
             return StdioTransport(command=self.execution_target, handle_id=handle_id)
 
     async def run(self):
@@ -86,9 +86,16 @@ class WorkerConnector:
         except Exception as e:
             log.error(f"[Connector] Fatal Bus Error: {e}", exc_info=True)
         finally:
+            self.running = False
             await pubsub.unsubscribe(self.listen_channel)
             await pubsub.close()
             
+            ## cancel - pending future
+            for future in self.pending_requests.values():
+                if not future.done():
+                    future.cancel()
+            self.pending_requests.clear()
+
             if self.shared_transport:
                 await self.shared_transport.close()
             for transport in self.active_sandboxes.values():
@@ -96,11 +103,8 @@ class WorkerConnector:
 
     async def _shared_stdout_listener(self):
         """linear/multiplex 모드에서 백그라운드로 Egress Stream을 수신하여 Future를 Resolve"""
-        # [개선] self.shared_transport.process 체크를 제거하고 프로토콜 자체에 의존
         while self.running and self.shared_transport:
             try:
-                # [개선] process.stdout.readline() 에 직접 접근하는 추상화 누수 제거
-                # 다형성 인터페이스인 read_egress_stream()을 사용하여 데이터를 읽음
                 raw_output = await self.shared_transport.read_egress_stream()
                 if not raw_output:
                     break
@@ -193,8 +197,11 @@ class WorkerConnector:
                     if transport:
                         log.warning(f"⚠️ [Connector] Sentinel enforced ROLLBACK on {handle_id}")
                         await self._cycle_io(handle_id, payload, transport, is_rollback=True)
-
         except Exception as e:
+            if not self.running:
+                log.debug(f"[Connector] Intent {handle_id} aborted cleanly due to graceful shutdown (Expected EOF).")
+                return
+
             log.error(f"[Connector] Lifecycle Crash for {handle_id}: {e}", exc_info=True)
             await self._report_fault(handle_id, str(e))
             if self.mode == "ephemeral":
@@ -329,9 +336,6 @@ class WorkerConnector:
         except Exception as rpc_e:
             log.critical(f"[Connector] Failed to report FAULT to Core: {rpc_e}")
 
-# ==========================================
-# 3. CLI Entry Point
-# ==========================================
 def main():
     parser = argparse.ArgumentParser(description="Fiber Worker Egress Sidecar Connector")
     parser.add_argument("--target", required=True, help="Target ID (e.g., db-server-01)")

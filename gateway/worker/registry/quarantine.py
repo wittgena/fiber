@@ -1,4 +1,6 @@
-# fiber.gateway.node.worker.registry.quarantine
+# fiber.gateway.worker.registry.quarantine
+## @lineage: fiber.gateway.node.registry.quarantine
+## @lineage: fiber.gateway.node.worker.registry.quarantine
 ## @lineage: fiber.dphi.worker.registry.quarantine
 import json
 import logging

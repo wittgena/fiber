@@ -1,4 +1,5 @@
-# fiber.gateway.node.worker.mcp.finlib
+# fiber.dev.ex.worker.legacy.finlib
+## @lineage: fiber.gateway.node.worker.mcp.finlib
 import sys
 import json
 import logging

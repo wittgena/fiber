@@ -9,7 +9,7 @@ from contextlib import suppress
 
 from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.node.worker.connector import WorkerConnector
+from fiber.gateway.worker.connector import WorkerConnector
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor

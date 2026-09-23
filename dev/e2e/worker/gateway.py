@@ -11,11 +11,11 @@ import httpx
 from fiber.dev.infra.config import Phase, E2EConfig, TestResult
 from fiber.dev.infra.bridge import BaseBridgePipeline, log
 
-from fiber.gateway.node.worker.connector import WorkerConnector
-import fiber.gateway.node.worker.mcp.oracle as agent_oracle
-import fiber.gateway.node.worker.mcp.finlib as agent_finlib
-import fiber.gateway.node.worker.mcp.margin as agent_margin
-import fiber.gateway.node.worker.search.archive as agent_search
+from fiber.gateway.worker.connector import WorkerConnector
+import fiber.dev.ex.worker.legacy.oracle as worker_oracle
+import fiber.dev.ex.worker.legacy.finlib as worker_finlib
+import fiber.dev.ex.worker.legacy.margin as worker_margin
+import fiber.dev.ex.worker.search.archive as worker_search
 
 from fiber.gateway.daemon.economy.pricing import DynamicPricingDaemon
 from fiber.gateway.edge.rpc.client import InternalRpcClient
@@ -73,22 +73,22 @@ class CoreRoutingPipeline(BaseBridgePipeline):
             self._pricing_task.cancel()
             
     async def setup_workers(self):
-        oracle_cmd = f"{sys.executable} -m {agent_oracle.__name__}"
+        oracle_cmd = f"{sys.executable} -m {worker_oracle.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
         )
 
-        finlib_cmd = f"{sys.executable} -m {agent_finlib.__name__}"
+        finlib_cmd = f"{sys.executable} -m {worker_finlib.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
         )
 
-        margin_cmd = f"{sys.executable} -m {agent_margin.__name__}"
+        margin_cmd = f"{sys.executable} -m {worker_margin.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.margin_id, execution_target=margin_cmd, mode="multiplex")
         )
 
-        search_cmd = f"{sys.executable} -m {agent_search.__name__}"
+        search_cmd = f"{sys.executable} -m {worker_search.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
         )

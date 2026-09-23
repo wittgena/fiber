@@ -1,4 +1,4 @@
-# fiber.gateway.node.worker.mcp.oracle
+# fiber.dev.ex.worker.legacy.oracle
 import sys
 import json
 import time
@@ -40,7 +40,6 @@ class OracleMcpServer(AsyncAgentProtocol):
 
     async def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
         if tool_name == "fetch_aggregated_kline":
-            # 이벤트 루프 안에서 코루틴으로 비동기 실행됨
             await self._execute_kline_fetch(req_id, arguments)
         else:
             await self.send_error(req_id, code=-32601, message=f"Method not found: Unknown tool '{tool_name}'")

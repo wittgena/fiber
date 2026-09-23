@@ -1,4 +1,4 @@
-# fiber.gateway.node.worker.transport
+# fiber.gateway.worker.transport
 import json
 import asyncio
 from pathlib import Path

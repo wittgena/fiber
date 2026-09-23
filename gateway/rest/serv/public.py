@@ -11,7 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from fiber.gateway.node.notary import NotarySwarm
+from fiber.gateway.worker.notary import NotarySwarm
 from fiber.gateway.rest.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 

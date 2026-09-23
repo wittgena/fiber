@@ -1,6 +1,5 @@
-# fiber.gateway.node.worker.sentinel
-## @lineage: fiber.dphi.worker.sentinel
-## @lineage: fiber.dphi.worker.mcp.sentinel
+# fiber.dev.ex.worker.sentinel
+## @lineage: fiber.gateway.node.sentinel
 import asyncio
 import time
 import json

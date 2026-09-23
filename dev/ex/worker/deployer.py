@@ -1,5 +1,4 @@
-# fiber.gateway.node.worker.deploy
-## @lineage: fiber.gateway.node.worker.legacy.deploy
+# fiber.dev.ex.worker.deployer
 import os
 import sys
 import json
@@ -13,15 +12,11 @@ from cryptography.exceptions import InvalidSignature
 
 from xphi.arch.contract.protocol.agent import AsyncAgentProtocol
 
-log = logging.getLogger("worker.deploy")
+log = logging.getLogger("worker.deployer")
 
 class ExecutionDeployer(AsyncAgentProtocol):
-    """
-    [PEP: Policy Enforcement Point] 
-    DB 접속 권한이나 마스터 키가 없습니다. Validator의 서명을 검증한 후 쿼리를 실행합니다.
-    """
     def __init__(self):
-        super().__init__(agent_name="agent.deploy")
+        super().__init__(agent_name="execution.deployer")
         pub_key_hex = os.environ.get("DPHI_VALIDATOR_PUBLIC_KEY")
         if not pub_key_hex:
             self.log.error("⚠️ DPHI_VALIDATOR_PUBLIC_KEY is missing. Execution will fail.")
