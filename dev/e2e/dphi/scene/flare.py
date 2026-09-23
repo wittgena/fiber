@@ -128,7 +128,7 @@ class FlareScene(SandboxRunner):
         res = await self.broker.invoke(
             target_func="hack_system_memory", 
             payload={}, 
-            wasm_path="dphi.wasm"
+            wasm_path="phase.wasm"
         )
         if not res.success:
             self._record_success(0, f"WasmCG successfully blocked unregistered API: {getattr(res, 'error', 'Unknown Error')}")

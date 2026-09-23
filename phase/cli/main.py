@@ -135,7 +135,7 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["llm.trace", "edge.compliance", "dphi.clearing", "dphi.wasm.entry", "plane.flare"]
+    KNOWN_SUITES = ["llm.trace", "edge.compliance", "dphi.clearing", "dphi.wasm.phase", "plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] 🧪 Igniting E2E Test Suite(s): {', '.join(targets)}")

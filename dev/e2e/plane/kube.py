@@ -15,9 +15,9 @@ from pathlib import Path
 from typing import Any, List, Dict
 
 from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.infra.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
-from xphi.watcher.plane.infra.kube import KubeOrchestrator, KubeContext
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
@@ -27,7 +27,7 @@ log = get_emitter("e2e.plane.kube")
 
 DEFAULT_E2E_SUITE = [
     "VCR_MODE=replay python -m fiber.dev.ex.switch",
-    "fiber e2e dphi.wasm.entry"
+    "fiber e2e dphi.wasm.phase"
 ]
 
 class KubeWorkflowScene:
