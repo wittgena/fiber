@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 
 import aiohttp
 
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.infra.adapter.config.exchange import exchange_config
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.arch.bound.adapter.pta import NodeSigner

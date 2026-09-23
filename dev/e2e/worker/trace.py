@@ -11,10 +11,10 @@ from contextlib import suppress
 
 from fastapi import Request
 
-from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
+from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.dev.trace.llm.interceptor import LlmTraceProfile
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.node.worker.connector import WorkerConnector
+from fiber.gateway.worker.connector import WorkerConnector
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor

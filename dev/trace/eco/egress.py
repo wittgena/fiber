@@ -5,7 +5,7 @@ import uvicorn
 from typing import List
 from contextlib import suppress
 
-from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
+from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.gateway.rest.payload import create_app, Config
 
 from xphi.state.phase.reactor import PhaseReactor

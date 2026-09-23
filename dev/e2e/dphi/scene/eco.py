@@ -6,7 +6,7 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dev.infra.sandbox import EpochBase
+from fiber.infra.e2e.sandbox import EpochBase
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from xphi.state.anchor.nexus import ActorIdentity
 

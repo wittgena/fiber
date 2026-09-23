@@ -7,16 +7,15 @@ from typing import List
 
 import httpx
 
-from fiber.dev.infra.config import Phase, E2EConfig, TestResult
-from fiber.dev.infra.bridge import BaseBridgePipeline, log
+from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
-from fiber.gateway.node.worker.connector import WorkerConnector
-import fiber.gateway.node.worker.mcp.finlib as agent_finlib
-import fiber.gateway.node.worker.mcp.oracle as agent_oracle
-# [추가] DuckDB 기반 Search Worker 임포트
-import fiber.gateway.node.worker.search.archive as agent_search
+from fiber.gateway.worker.connector import WorkerConnector
+import fiber.dev.ex.worker.legacy.finlib as worker_finlib
+import fiber.dev.ex.worker.legacy.oracle as worker_oracle
+import fiber.dev.ex.worker.search.archive as worker_archive_search
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
+from fiber.infra.rpc.client import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 
@@ -54,18 +53,17 @@ class ToolDiscoveryPipeline(BaseBridgePipeline):
 
     async def setup_workers(self):
         """테스트할 워커 부팅 (Oracle, FinLib, Search)"""
-        oracle_cmd = f"{sys.executable} -m {agent_oracle.__name__}"
+        oracle_cmd = f"{sys.executable} -m {worker_oracle.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
         )
 
-        finlib_cmd = f"{sys.executable} -m {agent_finlib.__name__}"
+        finlib_cmd = f"{sys.executable} -m {worker_finlib.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
         )
 
-        # [추가] Search Worker 샌드박스 부팅
-        search_cmd = f"{sys.executable} -m {agent_search.__name__}"
+        search_cmd = f"{sys.executable} -m {worker_archive_search.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
         )

@@ -6,7 +6,7 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from fiber.dev.infra.sandbox import SandboxRunner, TestScripts
+from fiber.infra.e2e.sandbox import SandboxRunner, TestScripts
 from xphi.state.anchor.nexus import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter

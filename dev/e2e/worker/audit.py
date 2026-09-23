@@ -20,14 +20,14 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from fiber.dev.infra.config import Phase, E2EConfig, TestResult
-from fiber.dev.infra.bridge import BaseBridgePipeline, log
-from fiber.gateway.node.worker.connector import WorkerConnector
-import fiber.gateway.node.worker.sentinel as agent_sentinel
+from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+import fiber.dev.ex.worker.deployer as worker_deployer
+import fiber.dev.ex.worker.sentinel as worker_sentinel
 
-from fiber.gateway.edge.rpc.legacy.validator import ValidatorService
-import fiber.gateway.edge.rpc.registry as rpc_registry
-import fiber.gateway.node.worker.deploy as agent_deploy
+from fiber.gateway.worker.connector import WorkerConnector
+from fiber.infra.rpc.validator import ValidatorService
+import fiber.infra.rpc.registry as rpc_registry
 
 from xphi.state.phase.reactor import PhaseReactor
 
@@ -53,9 +53,9 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         self.temp_db_path = None
 
         self.set_phases([
-            Phase("Phase 7: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
-            Phase("Phase 8: MCP 2026-07-28 Stateless Re-issue & Resume", self.phase_stateless_otp_resume),
-            Phase("Phase 9: Autonomous Reconciliation (Sentinel)", self.phase_sentinel_reconciliation)
+            Phase("Phase 1: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
+            Phase("Phase 2: MCP 2026-07-28 Stateless Re-issue & Resume", self.phase_stateless_otp_resume),
+            Phase("Phase 3: Autonomous Reconciliation (Sentinel)", self.phase_sentinel_reconciliation)
         ])
 
     async def setup_custom_context(self):
@@ -120,13 +120,13 @@ class AuditSecurityPipeline(BaseBridgePipeline):
 
     async def setup_workers(self):
         """Worker Connector 및 Sentinel 데몬 기동"""
-        deploy_cmd = f"{sys.executable} -m fiber.dphi.worker.deploy"
+        deploy_cmd = f"{sys.executable} -m {worker_deployer.__name__}"
         self.connectors.append(
             WorkerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
         )
 
         # Sentinel 시작
-        self.sentinel = agent_sentinel.AgentSentinel(ledger=self.mock_ledger, rpc_client=self.rpc, sweep_interval=1.0)
+        self.sentinel = worker_sentinel.AgentSentinel(ledger=self.mock_ledger, rpc_client=self.rpc, sweep_interval=1.0)
         self._sentinel_task = asyncio.create_task(self.sentinel.ignite())
         log.info("[AuditPipeline] Sentinel Autonomous Daemon & Worker Connectors Ignited. Environment Sanitized.")
 
@@ -143,9 +143,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
             
         log.info("[AuditPipeline] Sentinel Autonomous Daemon Shutdown & Temp DB Cleared.")
 
-    # =====================================================================
-    # Test Phases (7 ~ 9)
-    # =====================================================================
+    ## Test Phases
     async def phase_idempotency_defense(self):
         self.idem_key_otp = uuid.uuid4().hex
         self.deploy_payload = {

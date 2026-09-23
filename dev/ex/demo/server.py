@@ -3,10 +3,10 @@ import os
 import sys
 import asyncio
 
-from fiber.gateway.node.worker.connector import WorkerConnector
-import fiber.gateway.node.worker.mcp.oracle as agent_oracle
-import fiber.gateway.node.worker.mcp.finlib as agent_finlib
-import fiber.gateway.node.worker.search.archive as agent_search
+from fiber.gateway.worker.connector import WorkerConnector
+import fiber.dev.ex.worker.legacy.oracle as worker_oracle
+import fiber.dev.ex.worker.legacy.finlib as worker_finlib
+import fiber.dev.ex.worker.search.archive as worker_search
 
 from xphi.kernel.ops.boot import main_async, teardown
 from xphi.state.phase.reactor import PhaseReactor
@@ -21,17 +21,17 @@ async def run_integrated_server():
     connectors = [
         WorkerConnector(
             target_id="oracle-01", 
-            execution_target=f"{sys.executable} -m {agent_oracle.__name__}", 
+            execution_target=f"{sys.executable} -m {worker_oracle.__name__}", 
             mode="multiplex"
         ),
         WorkerConnector(
             target_id="finlib-01", 
-            execution_target=f"{sys.executable} -m {agent_finlib.__name__}", 
+            execution_target=f"{sys.executable} -m {worker_finlib.__name__}", 
             mode="linear"
         ),
         WorkerConnector(
             target_id="search-archive-01", 
-            execution_target=f"{sys.executable} -m {agent_search.__name__}", 
+            execution_target=f"{sys.executable} -m {worker_search.__name__}", 
             mode="multiplex"
         )
     ]

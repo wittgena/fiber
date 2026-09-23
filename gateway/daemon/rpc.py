@@ -1,6 +1,4 @@
 # fiber.gateway.daemon.rpc
-## @lineage: fiber.gateway.edge.rpc.daemon
-## @lineage: fiber.dphi.daemon.rpc
 import os
 import json
 import uuid
@@ -13,9 +11,9 @@ from dataclasses import dataclass
 from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
 
-from fiber.gateway.edge.rpc.registry import build_internal_rpc_registry
-from fiber.gateway.edge.rpc.handler import WorkerContext
-from fiber.gateway.edge.rpc.validator import ValidatorService
+from fiber.infra.rpc.registry import build_internal_rpc_registry
+from fiber.infra.rpc.handler import WorkerContext
+from fiber.infra.rpc.validator import ValidatorService
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon

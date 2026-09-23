@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient, RpcException
+from fiber.infra.rpc.client import InternalRpcClient, RpcException
 from fiber.gateway.rest.serv.depend import get_rpc_client
 
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
@@ -217,9 +217,9 @@ async def invoke_mcp_stateless(
     request: Request,
     target_server_id: str,
     payload: Dict[str, Any] = Body(...),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     x_idempotency_key: str = Header(..., alias="x-idempotency-key"),
     x_nonce: str = Header(..., alias="x-nonce"),
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),
     x_spiffe_id: Optional[str] = Header(None, alias="x-spiffe-id"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
@@ -229,7 +229,7 @@ async def invoke_mcp_stateless(
             target_server_id=target_server_id,
             agent_uri=x_spiffe_id or "spiffe://public/agent",
             proof_of_possession=x_dpop_proof,
-            receipt=x_x402_receipt,
+            receipt=x402_receipt,
             client_ip=request.client.host if request.client else "0.0.0.0",
             nonce=x_nonce,
             idempotency_key=x_idempotency_key
@@ -254,13 +254,7 @@ async def discover_tools(
     target_server_id: str,
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
-    """
-    @desc: [REST Facade] Client의 편의를 위한 툴 공시 전용 엔드포인트
-    - Gateway가 내부적으로 MCP 표준 JSON-RPC Intent를 조립하여 Worker에 질의
-    """
     adapter: TransitionBridge = request.app.state.mcp_transition_adapter
-    
-    # Gateway가 자체적으로 일회성 식별자 생성 (클라이언트의 헤더 구성 부담 완화)
     ephemeral_identity = AgentIdentity(
         target_server_id=target_server_id,
         agent_uri="spiffe://gateway/internal_discovery",

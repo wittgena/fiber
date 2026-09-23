@@ -7,7 +7,7 @@ from typing import List
 
 from fiber.gateway.rest.payload import create_app, Config
 from fiber.gateway.daemon.rpc import RpcWorkerDaemon
-from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
+from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 
 from xphi.state.phase.reactor import PhaseReactor
