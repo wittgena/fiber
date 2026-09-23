@@ -58,7 +58,7 @@ def run_daemon(
     """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
     _load_env(env_file)
     
-    # 1. Expand topology presets into explicit daemon lists
+    # Expand topology presets into explicit daemon lists
     PRESETS = {
         "core": "rest_edge,rpc_worker",                           # Base MCP Bridge
         "eco": "rest_edge,rpc_worker,dynamic_pricing",            # Bridge + Pricing
@@ -73,7 +73,7 @@ def run_daemon(
     os.environ["KERNEL_DAEMONS"] = resolved_daemons
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
     
-    # 2. Simplified NODE_PROFILE routing: EDGE (lightweight) vs ALL (spawns workers)
+    # Simplified NODE_PROFILE routing: EDGE (lightweight) vs ALL (spawns workers)
     is_edge_only = all(d in ["gateway_edge", "rest_edge"] for d in daemons_list)
     
     if is_edge_only:

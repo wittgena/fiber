@@ -9,26 +9,21 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
+from fiber.infra.rpc.client import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.gateway.rest.serv.public import public_edge
 from fiber.gateway.rest.serv.llm import llm_edge
 from fiber.phase.contract.origin import OriginRegistry
-from fiber.infra.rpc.client import RpcException
+from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
+from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
-from xphi.kernel.space.tunnel.subs import DistributedPubSub
-from xphi.kernel.wasm.broker import DphiBroker
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
-from phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
-from phase.contract.server import (
-    AttestationMiddleware,
-    LocalMiddleware,
-    WasTelemetry,
-)
-from xphi.watcher.plane.emitter import get_emitter
-
 from xphi.arch.bound.xor.secret.cipher import Cipher
 from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
+from xphi.kernel.space.tunnel.subs import DistributedPubSub
+from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.receptor.warden import SecretAuditor
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 

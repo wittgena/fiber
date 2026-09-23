@@ -11,14 +11,14 @@ from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fiber.gateway.rest.payload import create_app, Config
+from fiber.phase.contract.server import SecureMCPServer
 
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
-from xphi.watcher.plane.emitter import get_emitter
-from phase.contract.server import SecureMCPServer
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import KernelLedger
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.rest")
 
