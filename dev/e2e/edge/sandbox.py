@@ -12,12 +12,12 @@ import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from fiber.dev.infra.workflow.edge import EdgeWorkflow
+from fiber.infra.e2e.edge import EdgeWorkflow
 from fiber.gateway.rest.payload import create_app, Config
 from fiber.gateway.daemon.rpc import RpcWorkerDaemon
-from fiber.dev.infra.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
+from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from xphi.arch.bound.client.http import VerifiedHttpClient
-from fiber.gateway.edge.origin.registry import OriginRegistry
+from fiber.phase.contract.origin.registry import OriginRegistry
 
 from xphi.kernel.node.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.state.phase.reactor import PhaseReactor

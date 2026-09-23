@@ -1,4 +1,6 @@
-# fiber.gateway.edge.rpc.validator
+# fiber.infra.rpc.validator
+## @lineage: fiber.dev.infra.rpc.validator
+## @lineage: fiber.gateway.edge.rpc.validator
 import os
 import json
 import time
@@ -16,7 +18,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.gateway.edge.rpc.handler import WorkerContext, _build_error
+from fiber.infra.rpc.handler import WorkerContext, _build_error
 from xphi.arch.bound.adapter.settlement import (
     MandateAdapter, 
     Ap2MandateResult, 
@@ -44,7 +46,6 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
     try:
         target = params.get("target") or params.get("target_worker", "unknown_worker")
         
-        # DuckDB 등 레거시 워커의 특정 메트릭을 범용 클라우드 메트릭으로 안전하게 자동 치환
         compute_time = params.get("compute_time_sec", 0.0)
         if "duckdb_sql_time_sec" in params:
             compute_time += params.get("duckdb_sql_time_sec", 0.0) + params.get("python_regex_time_sec", 0.0)

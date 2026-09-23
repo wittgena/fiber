@@ -8,7 +8,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, Any, Optional, Protocol
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
+from fiber.infra.rpc.client import InternalRpcClient
 from fiber.gateway.worker.registry.quarantine import QuarantineRegistry
 
 from xphi.kernel.space.tunnel.factory import TunnelFactory

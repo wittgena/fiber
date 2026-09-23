@@ -1,10 +1,4 @@
-# fiber.phase.abc.gateway.mcp.bridge
-제시해주신 원본 문서의 기술적 우수성과 아키텍처의 의도를 훼손하지 않으면서, 과장된 수식어와 문학적 메타포를 제거하여 객관적이고 전문적인 엔터프라이즈급 스펙 문서(Specification)로 재작성한 전체 문서입니다.
-
----
-
-# fiber.phase.abc.gateway.mcp.bridge
-
+# fiber.phase.abc.dev.gateway.mcp.bridge
 **@desc:** Fiber MCP Transition Bridge & A2A Egress Connector Specification
 
 ## 0. Executive Summary

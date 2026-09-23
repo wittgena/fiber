@@ -7,7 +7,7 @@ import asyncio
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.dev.infra.plane.compose import ComposeOrchestrator, ComposeContext
+from fiber.infra.plane.compose import ComposeOrchestrator, ComposeContext
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter

@@ -1,16 +1,14 @@
-# fiber.gateway.edge.ext.wallet
-## @lineage: fiber.dphi.eco.ext.wallet
-## @lineage: fiber.dphi.eco.client.ext.wallet
+# fiber.infra.adapter.wallet
 import os
 import asyncio
 import time
 from typing import Optional
 
-from fiber.gateway.edge.ext.evm import Web3Adapter
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.infra.adapter.evm import Web3Adapter
+from fiber.infra.adapter.config.exchange import exchange_config
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("wallet.eth")
+log = get_emitter("adapter.wallet")
 
 class EthWalletAdapter:
     def __init__(

@@ -10,8 +10,6 @@ Without requiring modifications to existing codebases relying on OpenAI-compatib
 
 ## 2. Core API
 
-The module exposes four global entrypoints. The synchronous functions utilize `nest_asyncio` internally to handle execution within existing active event loops.
-
 ### Completion
 
 ```python

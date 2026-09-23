@@ -1,5 +1,6 @@
-# fiber.gateway.edge.transaction.pipeline
-## @lineage: fiber.dphi.eco.transaction.pipeline
+# fiber.infra.transaction.pipeline
+## @lineage: fiber.dev.infra.transaction.pipeline
+## @lineage: fiber.gateway.edge.transaction.pipeline
 import json
 import uuid
 import time
@@ -7,7 +8,7 @@ import asyncio
 import base64
 from typing import Any, Dict, Optional, List
 
-from fiber.gateway.edge.transaction.rollup import ShadowAdapter
+from fiber.infra.transaction.rollup import ShadowAdapter
 
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.arch.bound.adapter.dphi.dvm import DvmAdapter

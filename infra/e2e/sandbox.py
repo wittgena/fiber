@@ -1,4 +1,4 @@
-# fiber.dev.infra.sandbox
+# fiber.infra.e2e.sandbox
 import os
 import time
 import json
@@ -13,11 +13,9 @@ from pydantic import BaseModel, Field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-# --- Edge / Client / Config ---
-from fiber.gateway.edge.ext.client import ExtClient
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.dev.sdk.ext import ExtClient
+from fiber.infra.adapter.config.exchange import exchange_config
 
-# --- xPhi Domain Adapters & Models ---
 from xphi.arch.bound.adapter.settlement import (
     MandateAdapter, 
     Ap2MandateResult, 
@@ -39,11 +37,7 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.sandbox")
 
-
-# ============================================================================
 # 1. Sandbox Payload Builders (Migrated from node.builder)
-# ============================================================================
-
 class NotarySwarm:
     def __init__(self, size: int = 3):
         self.notaries = []

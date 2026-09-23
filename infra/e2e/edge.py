@@ -1,10 +1,12 @@
-# fiber.dev.infra.workflow.edge
+# fiber.infra.e2e.edge
+## @lineage: fiber.infra.workflow.edge
+## @lineage: fiber.dev.infra.workflow.edge
 ## @lineage: fiber.dev.infra.edge.workflow
 import uuid
 import httpx
 from typing import Any
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
+from fiber.infra.rpc.client import InternalRpcClient
 from xphi.kernel.node.fsm.edge import (
     EdgePhaseFSM, StartIntentEvent, PhaseFailedEvent,
     ComputePhaseCompletedEvent, CompliancePhaseCompletedEvent, SettlementPhaseCompletedEvent,

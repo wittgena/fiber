@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
-from fiber.dev.infra.sandbox import SandboxRunner, ScriptDef, TestScripts
+from fiber.infra.e2e.sandbox import SandboxRunner, ScriptDef, TestScripts
 from xphi.state.anchor.nexus import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter

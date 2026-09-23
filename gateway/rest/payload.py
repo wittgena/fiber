@@ -13,7 +13,7 @@ from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtec
 from fiber.gateway.rest.serv.public import public_edge
 from fiber.gateway.rest.serv.ext import ext_router
 from fiber.gateway.rest.serv.llm import llm_edge
-from fiber.gateway.edge.origin.registry import OriginRegistry
+from fiber.phase.contract.origin import OriginRegistry
 
 from xphi.kernel.space.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker

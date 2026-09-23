@@ -20,14 +20,14 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from fiber.dev.infra.config import Phase, E2EConfig, TestResult
-from fiber.dev.infra.bridge import BaseBridgePipeline, log
+from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 import fiber.dev.ex.worker.deployer as worker_deployer
 import fiber.dev.ex.worker.sentinel as worker_sentinel
 
 from fiber.gateway.worker.connector import WorkerConnector
-from fiber.gateway.edge.rpc.validator import ValidatorService
-import fiber.gateway.edge.rpc.registry as rpc_registry
+from fiber.infra.rpc.validator import ValidatorService
+import fiber.infra.rpc.registry as rpc_registry
 
 from xphi.state.phase.reactor import PhaseReactor
 

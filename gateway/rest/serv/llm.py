@@ -43,18 +43,17 @@ class ChatCompletionRequest(BaseModel):
 async def public_chat_completions(
     request: Request,
     payload: ChatCompletionRequest = Body(...),
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="Payment/Audit proof"),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="Payment/Audit proof"),
 ):
     req_id = f"llm_chat_{int(time.time() * 1000)}"
     with flow_scope(phase="LLM_ORCHESTRATION", bound="edge.llm", req_id=req_id):
         try:
             broker: DphiBroker = request.app.state.broker
-            
             intent_payload = {
                 "action": DphiAction.LLM_COMPUTE.value,
                 "model": payload.model,
                 "max_tokens_requested": payload.max_tokens,
-                "receipt": x_x402_receipt
+                "receipt": x402_receipt
             }
             
             auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
@@ -69,7 +68,7 @@ async def public_chat_completions(
             kwargs = payload.model_dump(exclude={"model", "messages"}, exclude_none=True)
             metadata = kwargs.get("metadata", {})
             
-            metadata[DphiKey.X402_RECEIPT.value] = x_x402_receipt
+            metadata[DphiKey.X402_RECEIPT.value] = x402_receipt
             metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
             metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
             kwargs["metadata"] = metadata
@@ -109,14 +108,14 @@ async def public_embeddings(
     model: str = Body(...),
     input: Union[str, List[str]] = Body(...),
     kwargs: Dict[str, Any] = Body(default={}),
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
 ):
     try:
         broker: DphiBroker = request.app.state.broker
         intent_payload = {
             "action": DphiAction.LLM_EMBEDDING.value,
             "model": model,
-            "receipt": x_x402_receipt
+            "receipt": x402_receipt
         }
         
         auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
@@ -129,7 +128,7 @@ async def public_embeddings(
         kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
         
         metadata = kwargs.get("metadata", {})
-        metadata[DphiKey.X402_RECEIPT.value] = x_x402_receipt
+        metadata[DphiKey.X402_RECEIPT.value] = x402_receipt
         metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
         metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
         kwargs["metadata"] = metadata

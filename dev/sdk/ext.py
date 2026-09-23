@@ -1,6 +1,5 @@
-# fiber.gateway.edge.ext.client
-## @lineage: fiber.dphi.eco.client.ext
-## @lineage: fiber.dphi.eco.client.wallet
+# fiber.dev.sdk.ext
+## @lineage: fiber.gateway.ext.client
 import json
 import hashlib
 from typing import Any, Dict, Optional

@@ -1,5 +1,4 @@
-# fiber.phase.abc.gateway.connector
-
+# fiber.phase.abc.dev.gateway.connector
 **@desc:** Fiber Protocol Specification: Egress Architecture & Canonical A2A Workload Topologies
 
 ## 0. 개요 (Abstract)

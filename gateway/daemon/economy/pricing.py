@@ -4,7 +4,7 @@ import json
 from typing import Dict, Any
 from contextlib import suppress
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
+from fiber.infra.rpc.client import InternalRpcClient
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.space.tunnel.factory import TunnelFactory

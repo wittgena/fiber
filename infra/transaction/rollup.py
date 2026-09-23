@@ -1,6 +1,6 @@
-# fiber.gateway.edge.transaction.rollup
-## @lineage: fiber.dphi.eco.transaction.rollup
-## @lineage: fiber.dphi.infra.transaction.rollup
+# fiber.infra.transaction.rollup
+## @lineage: fiber.dev.infra.transaction.rollup
+## @lineage: fiber.gateway.edge.transaction.rollup
 import os
 import time
 import hashlib
@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Optional
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.infra.adapter.config.exchange import exchange_config
 
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.kernel.wasm.broker import DphiBroker

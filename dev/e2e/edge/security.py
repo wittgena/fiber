@@ -1,9 +1,9 @@
-# fiber.dev.e2e.dphi.security
-## @lineage: fiber.phase.dev.e2e.dphi.security
-## @lineage: fiber.phase.e2e.dphi.security
+# fiber.dev.e2e.edge.security
+# fiber/dev/e2e/edge/security.py
 import asyncio
 import random
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
@@ -11,13 +11,18 @@ import httpx
 import uvicorn
 
 from fiber.gateway.rest.payload import create_app, Config
+
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
-
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.watcher.plane.emitter import get_emitter
+from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.state.anchor.consensus import KernelLedger
 
-log = get_emitter("server.security")
+# [개선] SDK의 Endpoints 상수 임포트
+from fiber.dev.sdk.gateway import Endpoints
+
+log = get_emitter("rest.security")
 
 """Workflow Messages (Phase Transitions)"""
 class StartSecuritySweepMsg(WorkflowMessage): pass
@@ -82,12 +87,13 @@ class SecurityBoundWorkflow(Workflow):
         self.log.info("\n--- [Phase 1] Volumetric & Chunked Shell Defense (OOM Prevention) ---")
         
         large_payload = b"A" * (6 * 1024 * 1024)
-        res_large = await self.client.post("/v1/public/telemetry/logs", content=large_payload)
+        # [수정] URL 하드코딩 제거 -> Endpoints 참조
+        res_large = await self.client.post(Endpoints.TELEMETRY_LOGS, content=large_payload)
         self._record("Volumetric Exceed", "OOM Bomb", (413, 413), res_large.status_code, "Payload > 5MB successfully rejected by Middleware.")
 
         try:
             res_chunk = await self.client.post(
-                "/v1/public/telemetry/logs", 
+                Endpoints.TELEMETRY_LOGS, 
                 content=b"malicious_chunk", 
                 headers={"Transfer-Encoding": "chunked"}
             )
@@ -108,7 +114,8 @@ class SecurityBoundWorkflow(Workflow):
     async def phase_x402_bypass(self, msg: X402BypassAttackMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 2] x402 Economic Firewall Bypass ---")
         
-        res_unauth = await self.client.post("/v1/public/agent/execute", json={"action": "test"})
+        # [수정] Endpoints.SANDBOX_EXECUTE 참조
+        res_unauth = await self.client.post(Endpoints.SANDBOX_EXECUTE, json={"action": "test"})
         self._record("Auth Bypass", "x402 Evasion", (402, 402), res_unauth.status_code, "Access to restricted endpoint blocked. HTTP 402 Payment Required enforced.")
 
         if "x402_signed_proof" in res_unauth.headers.get("WWW-Authenticate", ""):
@@ -125,7 +132,7 @@ class SecurityBoundWorkflow(Workflow):
         smuggling_vectors = ChaosPayloadLibrary.SMUGGLING + ChaosPayloadLibrary.INVALID_STATE
         for idx, payload_func in enumerate(smuggling_vectors):
             payload = payload_func()
-            res = await self.client.post("/v1/public/telemetry/logs", content=payload, headers={"X-X402-Receipt": "dummy_receipt"})
+            res = await self.client.post(Endpoints.TELEMETRY_LOGS, content=payload, headers={"X-X402-Receipt": "dummy_receipt"})
             self._record(f"Smuggling/Corruption {idx}", "Malformed JSON/Protocol", (400, 422), res.status_code, "Malformed payload rejected by SpecValidator.")
 
         return McpPoisoningMsg()
@@ -134,6 +141,7 @@ class SecurityBoundWorkflow(Workflow):
     async def phase_mcp_poisoning(self, msg: McpPoisoningMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 4] MCP Privilege Escalation & Injection ---")
         
+        # 참고: /mcp/messages 는 SDK에 정의되지 않은 Core Gateway 고유 경로이므로 하드코딩 유지
         rce_payload = ChaosPayloadLibrary.MCP_COMMAND_INJECTION[0]()
         res_rce = await self.client.post("/mcp/messages", content=rce_payload, headers={"Content-Type": "application/json"})
         
@@ -154,7 +162,8 @@ class SecurityBoundWorkflow(Workflow):
         self.log.info("\n--- [Phase 5] Cryptographic Attestation Tampering ---")
         
         headers = {"X-X402-Receipt": "valid_dummy", "X-Dphi-Signature": "0xdeadbeef_invalid_signature"}
-        res = await self.client.post("/v1/public/agent/execute", json={"action": "test"}, headers=headers)
+        # [수정] 404 오류를 발생시켰던 /agent/execute 경로를 Endpoints.SANDBOX_EXECUTE 로 안전하게 교체
+        res = await self.client.post(Endpoints.SANDBOX_EXECUTE, json={"action": "test"}, headers=headers)
         self._record("Crypto Tamper", "Invalid Signature", (401, 422), res.status_code, "Cryptographic signature mismatch accurately detected and blocked.")
 
         return McpEnterpriseGatewayMsg()
@@ -171,25 +180,26 @@ class SecurityBoundWorkflow(Workflow):
             "X-Nonce": "sec_nonce_9999"
         }
         
-        res_init = await self.client.post("/v1/mcp-gateway/state", json={"action": "INITIALIZE", "payload": {"target": "legacy_erp"}}, headers=headers)
+        # [수정] Endpoints.MCP_STATE 참조
+        res_init = await self.client.post(Endpoints.MCP_STATE, json={"action": "INITIALIZE", "payload": {"target": "legacy_erp"}}, headers=headers)
         self._record("Gateway Init", "X402 Bypass / Init", (200, 200), res_init.status_code, "Enterprise Gateway successfully initialized state WITHOUT X402 receipt.")
         handle_id = res_init.json().get("handle") if res_init.status_code == 200 else "dummy"
 
         idem_headers = headers.copy()
         idem_headers["X-Idempotency-Key"] = "duplicate-key-123"
-        await self.client.post("/v1/mcp-gateway/state", json={"action": "MUTATE", "handle_id": handle_id, "payload": {"cmd": "A"}}, headers=idem_headers)
-        res_idem = await self.client.post("/v1/mcp-gateway/state", json={"action": "MUTATE", "handle_id": handle_id, "payload": {"cmd": "B"}}, headers=idem_headers)
+        await self.client.post(Endpoints.MCP_STATE, json={"action": "MUTATE", "handle_id": handle_id, "payload": {"cmd": "A"}}, headers=idem_headers)
+        res_idem = await self.client.post(Endpoints.MCP_STATE, json={"action": "MUTATE", "handle_id": handle_id, "payload": {"cmd": "B"}}, headers=idem_headers)
         self._record("Gateway Idem", "Idempotency Attack", (200, 200), res_idem.status_code, "Idempotency Key recognized. Duplicate processing blocked.")
 
         bad_headers = headers.copy()
         bad_headers["X-Dpop-Proof"] = "invalid_dpop"
         bad_headers["X-Idempotency-Key"] = f"test-idem-mut-{time.time()}"
-        res_tamper = await self.client.post("/v1/mcp-gateway/state", json={"action": "MUTATE", "handle_id": handle_id, "payload": {"cmd": "delete_all"}}, headers=bad_headers)
+        res_tamper = await self.client.post(Endpoints.MCP_STATE, json={"action": "MUTATE", "handle_id": handle_id, "payload": {"cmd": "delete_all"}}, headers=bad_headers)
         self._record("Gateway Crypto", "DPoP Tampering", (403, 403), res_tamper.status_code, "Blocked malicious state mutation due to invalid DPoP signature.")
 
         idem_evap = headers.copy()
         idem_evap["X-Idempotency-Key"] = f"test-idem-evap-{time.time()}"
-        res_evap = await self.client.post("/v1/mcp-gateway/state", json={"action": "QUERY", "handle_id": "stream-evaporated-1234"}, headers=idem_evap)
+        res_evap = await self.client.post(Endpoints.MCP_STATE, json={"action": "QUERY", "handle_id": "stream-evaporated-1234"}, headers=idem_evap)
         self._record("Gateway Evap", "Cache Miss Handling", (410, 410), res_evap.status_code, "Properly requested client re-hydration (HTTP 410 Gone) for evaporated state.")
 
         return StopMessage(result=True)
@@ -214,17 +224,11 @@ class SecuritySuiteRunner:
             internal_edge_url=self.base_url,
             max_payload_size=5 * 1024 * 1024  
         )
-        self.rest_app = create_app(self.test_config)
         
-        u_config = uvicorn.Config(
-            app=self.rest_app, 
-            host=self.host, 
-            port=self.port, 
-            log_level="error", 
-            access_log=False
-        )
-        self.server = ManagedTestServer(u_config)
+        self.rest_app = None 
+        self.server = None
         self._server_task = None
+        
         self.workflow = SecurityBoundWorkflow(base_url=self.base_url)
 
     async def _wait_for_server(self):
@@ -272,6 +276,25 @@ class SecuritySuiteRunner:
         self.log.info("🧪 [DPHI SECURITY BOUND] Igniting Chaos Sentinel Integration Test")
         self.log.info("="*80)
         
+        self.log.info("[Boot] Provisioning Core Infrastructure...")
+        tunnel = await TunnelFactory.get_default()
+        ledger = KernelLedger()
+        
+        self.rest_app = create_app(
+            config=self.test_config,
+            tunnel=tunnel,
+            ledger=ledger
+        )
+        
+        u_config = uvicorn.Config(
+            app=self.rest_app, 
+            host=self.host, 
+            port=self.port, 
+            log_level="error", 
+            access_log=False
+        )
+        self.server = ManagedTestServer(u_config)
+        
         self.log.info(f"[Boot] Spinning up Embedded REST Gateway on {self.base_url}...")
         self._server_task = asyncio.create_task(self.server.serve())
         await self._wait_for_server()
@@ -285,6 +308,9 @@ class SecuritySuiteRunner:
             if self._server_task:
                 await self._server_task
             await self.workflow.client.aclose()
+            with suppress(Exception):
+                await TunnelFactory.close_all()
+                
         self._print_report()
 
 if __name__ == "__main__":

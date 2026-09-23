@@ -19,7 +19,7 @@ from fiber.gateway.rest.serv.depend import (
     get_secret_auditor, 
     get_rpc_client
 )
-from fiber.gateway.edge.rpc.client import InternalRpcClient, RpcException
+from fiber.infra.rpc.client import InternalRpcClient, RpcException
 from fiber.phase.contract.router import ContractRouter
 from xphi.arch.model.edge.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
@@ -66,11 +66,8 @@ class SandboxHandshakeResponse(BaseModel):
     next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
 
 
-"""BASE INFRASTRUCTURE (TRUST ANCHOR)"""
-@public_edge.get(
-    "/keys", 
-    summary="Get Trusted Signer Keys (Strictly Pre-Signed)"
-)
+"""TRUST ANCHOR"""
+@public_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
 async def get_public_keys(request: Request):
     registry = getattr(request.app.state, "origin_registry", None)
     
@@ -92,23 +89,20 @@ async def get_public_keys(request: Request):
 
 
 """COMPUTE SYMMETRY (QUOTE ↔ EXECUTE)"""
-@public_edge.post(
-    "/sandbox/quote", 
-    summary="Get Pre-flight Execution Quotation (Dry-run)"
-)
+@public_edge.post("/sandbox/quote", summary="Get Pre-flight Execution Quotation (Dry-run)")
 async def public_sandbox_quote(
     intent: SandboxIntent,
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
-    if x_x402_receipt:
+    if x402_receipt:
         val_req = IntentValidationRequest(
             requester_id=intent.client_id,
             responder_id=intent.responder_id or "edge-gateway-01",
             action=intent.action,
             max_fuel_budget=intent.max_fuel,
             signature=intent.signature,
-            payment_receipt=x_x402_receipt
+            payment_receipt=x402_receipt
         )
         try:
             await rpc.call("validate.compute.intent", val_req.model_dump(exclude_none=True))
@@ -135,7 +129,7 @@ async def public_sandbox_quote(
 )
 async def public_sandbox_execute(
     intent: SandboxIntent,
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     rpc: InternalRpcClient = Depends(get_rpc_client),
     broker: DphiBroker = Depends(get_wasm_broker)
 ):
@@ -147,7 +141,7 @@ async def public_sandbox_execute(
             action=intent.action,
             max_fuel_budget=intent.max_fuel,
             signature=intent.signature,
-            payment_receipt=x_x402_receipt
+            payment_receipt=x402_receipt
         )
 
         try:
@@ -298,7 +292,7 @@ async def public_get_balance(
 )
 async def public_otlp_logs_export(
     payload: ExportLogsServiceRequest = Body(...),
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
     broker: DphiBroker = Depends(get_wasm_broker),
@@ -322,7 +316,7 @@ async def public_otlp_logs_export(
         kernel_req_dict = KernelOtlpRecord(
             content_hash=content_hash,
             metrics_summary=extracted_metrics,
-            receipt_ref=x_x402_receipt
+            receipt_ref=x402_receipt
         ).model_dump(exclude_none=True)
         
         evo_ctx = StateAdapter.build_evolution_context(phase_root={})
@@ -364,7 +358,7 @@ async def public_otlp_logs_export(
 )
 async def public_audit_log(
     payload: AuditLogRequest,
-    x_x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
@@ -380,7 +374,7 @@ async def public_audit_log(
             detail=f"Audit event validation failed: {str(e)}."
         )
 
-    sanitized_event["_billing_ref"] = x_x402_receipt
+    sanitized_event["_billing_ref"] = x402_receipt
     
     evo_ctx = StateAdapter.build_evolution_context(phase_root={})
     transition_payload = StateAdapter.build_transition_payload(

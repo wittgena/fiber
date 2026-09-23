@@ -1,5 +1,6 @@
-# fiber.gateway.edge.rpc.handler
-## @lineage: fiber.dphi.rpc.handler
+# fiber.infra.rpc.handler
+## @lineage: fiber.dev.infra.rpc.handler
+## @lineage: fiber.gateway.edge.rpc.handler
 import json
 import time
 import uuid
@@ -107,7 +108,7 @@ async def handle_mcp_state_resolve(params: dict, ctx: WorkerContext) -> dict:
     
     return {"success": True, "status": status}
 
-"""[Core Ledger] Infrastructure & Consensus"""
+"""Infrastructure & Consensus"""
 async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
     try: req = StreamAppendRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
@@ -161,7 +162,7 @@ async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
     
     return {"status": "SUCCESS", "is_valid": is_valid, "message": "Cryptographically verified via Ledger/Oracle" if is_valid else "Mathematical verification failed (Tampered or Orphaned)"}
 
-"""[Eco Compute & Billing] Validation"""
+"""Eco Compute & Billing Validation"""
 async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
     receipt = params.get("payment_receipt")
     if not receipt: return _build_error(401, "Payment receipt is missing")

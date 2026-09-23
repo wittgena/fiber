@@ -1,6 +1,4 @@
-# fiber.gateway.edge.ext.evm
-## @lineage: fiber.dphi.eco.ext.evm
-## @lineage: fiber.dphi.eco.client.ext.evm
+# fiber.infra.adapter.evm
 import os
 import time
 import random
@@ -11,10 +9,10 @@ from dataclasses import dataclass, field, asdict
 from web3 import AsyncWeb3, AsyncHTTPProvider
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.infra.adapter.config.exchange import exchange_config
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("web3.adapter")
+log = get_emitter("adapter.evm")
 
 @dataclass
 class EvmIntent:

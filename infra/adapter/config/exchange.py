@@ -1,6 +1,4 @@
-# fiber.gateway.edge.ext.config.exchange
-## @lineage: fiber.dphi.eco.config.exchange
-## @lineage: fiber.dphi.infra.config
+# fiber.infra.adapter.config.exchange
 import os
 from enum import Enum
 from typing import Dict, List, Union

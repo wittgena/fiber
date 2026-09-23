@@ -7,15 +7,15 @@ from typing import List
 
 import httpx
 
-from fiber.dev.infra.config import Phase, E2EConfig, TestResult
-from fiber.dev.infra.bridge import BaseBridgePipeline, log
+from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.gateway.worker.connector import WorkerConnector
 import fiber.dev.ex.worker.legacy.finlib as worker_finlib
 import fiber.dev.ex.worker.legacy.oracle as worker_oracle
 import fiber.dev.ex.worker.search.archive as worker_archive_search
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
+from fiber.infra.rpc.client import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 

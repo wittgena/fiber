@@ -6,10 +6,10 @@ from typing import Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, Field
 
-from fiber.gateway.edge.ext.evm import Web3Adapter
-from fiber.gateway.edge.ext.wallet import EthWalletAdapter
-from fiber.gateway.edge.transaction.rollup import RollupAdapter
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.infra.adapter.evm import Web3Adapter
+from fiber.infra.adapter.wallet import EthWalletAdapter
+from fiber.infra.transaction.rollup import RollupAdapter
+from fiber.infra.adapter.config.exchange import exchange_config
 
 from fiber.phase.contract.router import ContractRouter
 from xphi.arch.bound.adapter.settlement import MandateAdapter, X402Invoice, X402SettlementReceipt

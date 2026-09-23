@@ -1,4 +1,6 @@
-# fiber.gateway.edge.rpc.client
+# fiber.infra.rpc.client
+## @lineage: fiber.dev.infra.rpc.client
+## @lineage: fiber.gateway.edge.rpc.client
 import json
 import asyncio
 from typing import Dict, Any
@@ -9,30 +11,18 @@ from xphi.arch.bound.event.next import uuid4 as topos_uuid4
 
 log = get_emitter("rpc.client")
 
-# ============================================================================
-# Custom Exceptions
-# ============================================================================
-
 class RpcException(Exception):
     def __init__(self, status_code: int, detail: str):
         self.status_code = status_code
         self.detail = detail
         super().__init__(f"[{status_code}] {detail}")
 
-
-# ============================================================================
-# RPC Client Core
-# ============================================================================
-
 class InternalRpcClient:
-    def __init__(self, queue_name: str = "internal.rpc.queue"):
+    def __init__(self, queue_name: str = "rpc.client"):
         self.queue_name = queue_name
 
     async def call(self, method: str, params: Dict[str, Any], timeout: float = 15.0) -> Dict[str, Any]:
         tunnel = await TunnelFactory.get_default()
-        
-        # stdlib uuid 대체: Topos ID 기반의 시간순 정렬 가능한 고유 ID (128bit) 사용
-        # hex[:12] 대신 전체 길이를 사용하거나 필요한 길이만큼 슬라이싱 가능
         job_id = f"rpc_{topos_uuid4().hex[:16]}"
         reply_channel = f"reply.{job_id}"
         

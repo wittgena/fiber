@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List, Protocol
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.gateway.edge.ext.config.exchange import exchange_config
+from fiber.infra.adapter.config.exchange import exchange_config
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.sandbox.protocol import (
     TriadAxis, ProtocolValidator, D3Protocol,

@@ -1,6 +1,4 @@
-# fiber.dev.infra.bridge
-## @lineage: fiber.phase.dev.infra.bridge
-## @lineage: fiber.phase.e2e.infra.bridge
+# fiber.infra.e2e.pipeline
 import os
 import sys
 import time
@@ -10,15 +8,15 @@ from typing import Any, List, Dict
 
 import uvicorn
 
-from fiber.gateway.edge.rpc.client import InternalRpcClient
-from fiber.dev.infra.config import (
+from fiber.infra.rpc.client import InternalRpcClient
+from fiber.infra.e2e.config import (
     PipelineRunner, 
     ManagedTestServer, 
     TestResult, 
     E2EConfig
 )
 
-import fiber.gateway.edge.rpc.registry as rpc_registry
+import fiber.infra.rpc.registry as rpc_registry
 from fiber.gateway.daemon.rpc import RpcWorkerDaemon
 from fiber.gateway.rest.payload import create_app, Config
 

@@ -1,5 +1,4 @@
 # fiber.dev.sdk.gateway
-## @lineage: fiber.dphi.eco.client.sdk
 import time
 import logging
 from dataclasses import dataclass, asdict

@@ -1,6 +1,8 @@
-# fiber.gateway.edge.rpc.registry
+# fiber.infra.rpc.registry
+## @lineage: fiber.dev.infra.rpc.registry
+## @lineage: fiber.gateway.edge.rpc.registry
 from typing import Dict, Callable, Any, Optional
-from fiber.gateway.edge.rpc.handler import (
+from fiber.infra.rpc.handler import (
     handle_ledger_stream_append,
     handle_anchor_seal,
     handle_ledger_verify,
@@ -17,7 +19,7 @@ from fiber.gateway.edge.rpc.handler import (
     handle_profile_execute_billed,
     WorkerContext
 )
-from fiber.gateway.edge.rpc.validator import handle_billing_receipt_validate, handle_compute_margin_calculate, ValidatorService
+from fiber.infra.rpc.validator import handle_billing_receipt_validate, handle_compute_margin_calculate, ValidatorService
 
 def build_internal_rpc_registry(
     validator_service: Optional[ValidatorService] = None

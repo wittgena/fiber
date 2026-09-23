@@ -1,5 +1,4 @@
-# fiber.gateway.edge.origin.registry
-## @lineage: fiber.dphi.eco.config.origin
+# fiber.phase.contract.origin
 import os
 import json
 import hashlib
@@ -29,7 +28,6 @@ class OriginRegistry:
     안전한 읽기 전용 상태를 Edge 애플리케이션에 제공하는 레지스트리
     """
     def __init__(self, config_path: Optional[str] = None):
-        # [개선] 하드코딩된 OS 절대경로 제거, 프레임워크 표준 ORIGIN_ROOT 활용
         if not config_path:
             self.config_path = os.path.join(str(ORIGIN_ROOT), "config.json")
         else:
@@ -38,12 +36,8 @@ class OriginRegistry:
         self._state: Optional[TrustedOriginState] = None
 
     def load_and_verify(self) -> TrustedOriginState:
-        """
-        JSON 파일을 읽고, Ed25519 서명을 검증한 뒤 메모리에 캐싱
-        (Fail-Fast: 서명 불일치 시 즉각 예외 발생)
-        """
+        """JSON 파일을 읽고, Ed25519 서명을 검증한 뒤 메모리에 캐싱"""
         log.info(f"Loading and verifying Origin Config from: {self.config_path}")
-        
         if not os.path.exists(self.config_path):
             log.critical(f"[Security] Origin config file not found: {self.config_path}")
             raise FileNotFoundError(f"Missing mandatory origin config: {self.config_path}")
@@ -62,16 +56,15 @@ class OriginRegistry:
             if not root_pubkey_hex or not root_signature_hex:
                 raise ValueError("Attestation payload (root_pubkey, pre_signed_root_sig) is missing.")
 
-            # 1. 서명 원본 데이터 복원 (CLI와 동일하게 Canonicalization)
+            # 서명 원본 데이터 복원 (CLI와 동일하게 Canonicalization)
             val_pubs = [v["pubkey"] for v in validators]
             payload_dict = {"active_signers": val_pubs}
             
             canonical_bytes = StateAdapter.to_canonical_bytes(payload_dict)
             payload_hash_str = hashlib.sha256(canonical_bytes).hexdigest()
 
-            # 2. PyNaCl (Ed25519) 서명 자가 검증
+            # PyNaCl (Ed25519) 서명 자가 검증
             verify_key = nacl.signing.VerifyKey(root_pubkey_hex, encoder=nacl.encoding.HexEncoder)
-            
             try:
                 verify_key.verify(
                     payload_hash_str.encode('utf-8'),
@@ -81,17 +74,15 @@ class OriginRegistry:
                 log.critical("[SECURITY_ALERT] Origin config tampering detected! Signature mismatch.")
                 raise ValueError("Cryptographic verification failed. File has been tampered with.")
 
-            # 3. 검증 통과 후 상태 락(Lock)
+            # 검증 통과 후 상태 락(Lock)
             self._state = TrustedOriginState(
                 network=network,
                 active_signers=val_pubs,
                 root_signature=root_signature_hex,
                 root_pubkey=root_pubkey_hex
             )
-            
             log.info(f"✅ Origin Config cryptographically verified. (Network: {network}, Signers: {len(val_pubs)})")
             return self._state
-
         except Exception as e:
             log.error(f"Failed to initialize OriginRegistry: {e}")
             raise RuntimeError(f"Zero-Trust Policy Enforced: {e}")
