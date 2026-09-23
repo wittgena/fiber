@@ -1,6 +1,4 @@
 # fiber.infra.rpc.client
-## @lineage: fiber.dev.infra.rpc.client
-## @lineage: fiber.gateway.edge.rpc.client
 import json
 import asyncio
 from typing import Dict, Any
@@ -18,7 +16,7 @@ class RpcException(Exception):
         super().__init__(f"[{status_code}] {detail}")
 
 class InternalRpcClient:
-    def __init__(self, queue_name: str = "rpc.client"):
+    def __init__(self, queue_name: str = "internal.rpc.queue"):
         self.queue_name = queue_name
 
     async def call(self, method: str, params: Dict[str, Any], timeout: float = 15.0) -> Dict[str, Any]:

@@ -1,6 +1,4 @@
 # fiber.infra.plane.kube
-## @lineage: fiber.dev.infra.plane.kube
-## @lineage: xphi.watcher.plane.infra.kube
 import os
 import shutil
 import socket
@@ -18,9 +16,6 @@ from xphi.kernel.space.bind.resolver import resolve_path
 
 COMPOSE_ROOT = resolve_path("time") / "compose"
 
-# -------------------------------------------------------------------------
-# Minikube Native Adapter (명령어 실행 및 프로세스 관리 대행)
-# -------------------------------------------------------------------------
 class MinikubeNativeAdapter:
     def __init__(self, workspace: Path, boundary: SystemBound, artifact_dir: Path, 
                  namespace: str = "fiber-topos", rebuild: bool = False, base_env: Optional[Dict[str, str]] = None):
@@ -31,7 +26,6 @@ class MinikubeNativeAdapter:
         self.namespace = namespace
         self.rebuild = rebuild
         
-        # ExecutorOp의 동적 렌더링을 위한 문자열 속성
         self.workspace_str = str(self.workspace)
         self.manifest_file = self.workspace / "gateway.yaml"
         self.manifest_file_str = str(self.manifest_file)
@@ -68,7 +62,6 @@ class MinikubeNativeAdapter:
         code, out, _ = await self.boundary.run_command(cmd, capture=True)
         return out.strip().replace("'", "") if code == 0 else ""
 
-    # (이전 코드에서 누락되었던 포트포워딩 기능 완벽 복구)
     async def start_port_forward(self, local_port: int = 8000, target_port: int = 8000, service_name: str = "fiber-gateway") -> bool:
         if local_port in self._port_forward_processes:
             self.log.warning(f"  ├─ [PortForward] Local port {local_port} is already being forwarded.")
@@ -162,9 +155,6 @@ class MinikubeNativeAdapter:
         cmd = ["kubectl", "delete", "namespace", self.namespace, "--ignore-not-found=true"]
         await self.boundary.run_command(cmd, capture=False)
 
-# -------------------------------------------------------------------------
-# Auditors
-# -------------------------------------------------------------------------
 class DeterminismAuditor:
     def __init__(self, target_dir: Path, boundary: SystemBound):
         self.target_dir = target_dir
@@ -210,12 +200,8 @@ class KubeContext:
     adapter: MinikubeNativeAdapter
     auditors: Dict[str, Any]
 
-# -------------------------------------------------------------------------
-# Orchestrator (지휘자: KubeTracer 상속)
-# -------------------------------------------------------------------------
 class KubeOrchestrator(KubeTracer):
     def __init__(self, mode: str = "dev", suites: Dict[str, Type] = None, rebuild: bool = False, base_env: Dict[str, str] = None):
-        # KubeTracer 초기화
         super().__init__(tracer_name="kube_orchestrator", timeout=600)
         
         self.mode = mode
@@ -227,8 +213,6 @@ class KubeOrchestrator(KubeTracer):
         
         self.artifact_dir = Path(tempfile.mkdtemp(prefix="fiber-kube-artifacts-"))
         os.environ["FIBER_ARTIFACT_MOUNT"] = str(self.artifact_dir)
-        
-        # Adapter 초기화 및 Boundary 전달
         self.adapter = MinikubeNativeAdapter(
             workspace=self.workspace, 
             boundary=self.boundary, 
@@ -237,13 +221,10 @@ class KubeOrchestrator(KubeTracer):
             base_env=base_env
         )
         self.determinism_auditor = DeterminismAuditor(self.artifact_dir, self.boundary)
-        
-        # ExecutorOp용 렌더링 속성을 클래스 최상위에 할당
         self.workspace_str = self.adapter.workspace_str
         self.manifest_file_str = self.adapter.manifest_file_str
         self.namespace_str = self.adapter.namespace
         
-        # 백그라운드 Kube Status 감시 Auditor 등록
         self.status_auditor = KubeStatusAuditor(
             target="kube_pods", 
             boundary=self.boundary, 
@@ -281,10 +262,7 @@ class KubeOrchestrator(KubeTracer):
                 auditors={"determinism": self.determinism_auditor}
             )
             
-            # 1. 매니페스트 렌더링
             self.adapter.render_manifest()
-
-            # 2. 인프라 프로비저닝 (ExecutorOp를 활용하여 시퀀스 실행)
             dockerfile_path = self.workspace / "Dockerfile.xphi" if (self.workspace / "Dockerfile.xphi").exists() else self.workspace / "Dockerfile"
             self.dockerfile_path_str = str(dockerfile_path)
 
@@ -298,11 +276,9 @@ class KubeOrchestrator(KubeTracer):
                 ["kubectl", "apply", "-f", "{manifest_file_str}", "-n", "{namespace_str}"]
             ]
 
-            # 명령어가 실패하면 self.rupture_confirmed가 True로 바뀜
             if not await ExecutorOp.run_sequence(self, apply_cmds, phase_name="K8s.Provision", cwd=self.workspace_str, strict=True):
                 return False, "Infrastructure provisioning sequence failed."
 
-            # 3. Pod 가용성 대기
             self.log.info("  ├─ [K8s] Awaiting Pod Readiness (Timeout: 180s)...")
             wait_cmd = ["kubectl", "wait", "--for=condition=Ready", "pod", "--all", "-n", self.namespace_str, "--timeout=180s"]
             code, _, _ = await self.boundary.run_command(wait_cmd, capture=False)
@@ -312,8 +288,6 @@ class KubeOrchestrator(KubeTracer):
                 return False, "Pods failed to reach Ready state within timeout."
                 
             self.log.info("  ├─ Runtime Topology (KUBE Mode) Ready ✅")
-
-            # 4. E2E 테스트 스위트 구동
             if self.suites:
                 with flow_scope(phase="TEST_EXECUTION"):
                     total_fails = await self._run_all_suites(broker=None, context=context)
@@ -332,8 +306,6 @@ class KubeOrchestrator(KubeTracer):
         finally:
             self.log.info("\n[SYSTEM] Initiating Teardown Sequence...")
             self.determinism_auditor.detach()
-            
-            # Tracer의 collapse 로직과 함께 명시적 teardown 호출
             if not self.keep_workspace:
                 await self.adapter.teardown()
                 if self.artifact_dir.exists():

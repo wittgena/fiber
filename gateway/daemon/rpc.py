@@ -11,28 +11,28 @@ from dataclasses import dataclass
 from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
 
+from fiber.infra.rpc.ext import ExtRpcService
 from fiber.infra.rpc.registry import build_internal_rpc_registry
 from fiber.infra.rpc.handler import WorkerContext
 from fiber.infra.rpc.validator import ValidatorService
 
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.gateway import StoreGateway
-
-from xphi.state.anchor.nexus import NexusAnchor
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
-from xphi.kernel.space.sandbox.resolver import BenchProfile
-from xphi.kernel.wasm.broker import DphiBroker
 from xphi.arch.bound.adapter.pta import PtaAdapter
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.model.edge.receipt import LogstEvent
-from xphi.watcher.receptor.warden import AuditWarden
+from xphi.arch.model.edge.stream import LogicStream, StreamMetadata, StreamIdentity, LogicPayload, ActionIntent, ProtocolSource
 
-from xphi.arch.model.edge.stream import (
-    LogicStream, StreamMetadata, StreamIdentity, LogicPayload, ActionIntent, ProtocolSource
-)
+from xphi.state.anchor.gateway import StoreGateway
+from xphi.state.anchor.nexus import NexusAnchor
+
+from xphi.kernel.ops.daemon.base import AbstractDaemon
+from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.kernel.space.sandbox.resolver import BenchProfile
+from xphi.kernel.wasm.broker import DphiBroker
+
+from xphi.watcher.receptor.warden import AuditWarden
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.rpc")
 
@@ -80,10 +80,6 @@ class IngressPolicyEngine:
             is_ruptured=ruptured,
             reason=reason
         )
-
-# ============================================================================
-# Base Store & Worker Components
-# ============================================================================
 
 class LogStreamStore:
     def __init__(self, gateway: StoreGateway = None, storage_endpoint: str = "http://internal-store:8000"):
@@ -175,10 +171,14 @@ class RpcWorkerDaemon(AbstractDaemon):
         self.topic = os.getenv("RPC_QUEUE_TOPIC", "internal.rpc.queue")
         self.group = os.getenv("RPC_QUEUE_GROUP", "internal_workers")
         self.worker_id = os.getenv("RPC_WORKER_ID", f"worker-{os.getpid()}")
+
+        max_workers = int(os.getenv("RPC_MAX_CONCURRENCY", "100"))
+        self.semaphore = asyncio.Semaphore(max_workers)
         
         self.routes: Dict[str, Callable] = {}
         self.tunnel = None
         self.worker_ctx: Optional[WorkerContext] = None
+        self.ext_service: Optional[ExtRpcService] = None
         self._tasks = set()
 
     async def _init_context(self):
@@ -192,12 +192,12 @@ class RpcWorkerDaemon(AbstractDaemon):
         exchange_adapter = ClearingAdapter(clearing_house_pub_key=node_pubkey)
         pta_adapter = PtaAdapter(broker=broker)
         
-        # 내부화된 클래스를 직접 사용
         policy_engine = IngressPolicyEngine(
             sequencer=ToposSequencer(), allocator=FuelAllocator(), monitor=HealthMonitor()
         )
         profile_service = BenchProfile()
 
+        # 1. 내부 워커 컨텍스트 초기화
         self.worker_ctx = WorkerContext(
             broker=broker,
             store=store,
@@ -208,8 +208,15 @@ class RpcWorkerDaemon(AbstractDaemon):
             profile_service=profile_service
         )
 
+        # 2. 외부 연동(EVM, Wallet) 통합 서비스 초기화
+        self.ext_service = ExtRpcService()
+
+        # 3. RPC 라우터 레지스트리 마운트
         prod_validator = ValidatorService()
-        self.routes = build_internal_rpc_registry(validator_service=prod_validator)
+        self.routes = build_internal_rpc_registry(
+            validator_service=prod_validator,
+            ext_service=self.ext_service
+        )
         log.info(f"[{self.name}] Dynamic RPC Registry mounted with {len(self.routes)} routes.")
 
     async def run(self):
@@ -227,7 +234,10 @@ class RpcWorkerDaemon(AbstractDaemon):
                     
                     for stream_name, msg_list in messages:
                         for message_id, msg_data in msg_list:
-                            task = asyncio.create_task(self.process_message(message_id, msg_data))
+                            # 큐 소비 속도 조절 (Backpressure)
+                            await self.semaphore.acquire()
+                            
+                            task = asyncio.create_task(self._process_and_release(message_id, msg_data))
                             self._tasks.add(task)
                             task.add_done_callback(self._tasks.discard)
                             
@@ -245,14 +255,30 @@ class RpcWorkerDaemon(AbstractDaemon):
         finally:
             await self._teardown()
 
+    async def _process_and_release(self, message_id: str, msg_data: dict):
+        """태스크 완료/실패 여부와 관계없이 반드시 Semaphore를 반환하도록 보장"""
+        try:
+            await self.process_message(message_id, msg_data)
+        finally:
+            self.semaphore.release()
+
     async def process_message(self, message_id: str, msg_data: dict):
         reply_to = request_id = None
         try:
-            payload_str = msg_data.get("payload") or msg_data.get(b"payload")
-            if not payload_str: 
+            payload_raw = msg_data.get("payload") or msg_data.get(b"payload")
+            if not payload_raw: 
+                await self.tunnel.stream_ack(self.topic, self.group, message_id)
                 return
 
-            payload = json.loads(payload_str)
+            # 독약 메시지(Poison Pill) 방어: JSON 디코딩 실패 시 즉시 폐기 및 감사 로그
+            try:
+                payload = json.loads(payload_raw)
+            except json.JSONDecodeError as e:
+                log.error(f"[{self.name}] Invalid JSON payload. Discarding msg {message_id}: {e}")
+                AuditWarden.record_anomaly(action="rpc.invalid_payload", details=str(payload_raw))
+                await self.tunnel.stream_ack(self.topic, self.group, message_id)
+                return
+
             method = payload.get("method")
             params = payload.get("params", {})
             reply_to = payload.get("reply_to") 
@@ -270,11 +296,14 @@ class RpcWorkerDaemon(AbstractDaemon):
                     response = {"error": True, "code": 500, "message": f"Internal Worker Execution Error: {str(handler_exc)}"}
                 
             if reply_to:
-                await self.tunnel.publish(reply_to, json.dumps({
-                    "id": request_id,
-                    "result": response if not response.get("error") else None,
-                    "error": response if response.get("error") else None
-                }))
+                try:
+                    await self.tunnel.publish(reply_to, json.dumps({
+                        "id": request_id,
+                        "result": response if not response.get("error") else None,
+                        "error": response if response.get("error") else None
+                    }))
+                except Exception as pub_exc:
+                    log.error(f"[{self.name}] Failed to publish reply to {reply_to}: {pub_exc}")
                 
             await self.tunnel.stream_ack(self.topic, self.group, message_id)
             
@@ -286,13 +315,16 @@ class RpcWorkerDaemon(AbstractDaemon):
     async def _teardown(self):
         log.info(f"[{self.name}] Releasing RPC Worker resources...")
         
-        for task in list(self._tasks):
-            if not task.done():
-                task.cancel()
-                
+        # Graceful Shutdown: 즉시 취소하지 않고 활성 트랜잭션 완료 대기
         if self._tasks:
-            await asyncio.gather(*self._tasks, return_exceptions=True)
-            
+            log.info(f"[{self.name}] Waiting for {len(self._tasks)} active tasks to finish...")
+            done, pending = await asyncio.wait(self._tasks, timeout=5.0)
+            if pending:
+                log.warning(f"[{self.name}] {len(pending)} tasks did not finish in time. Canceling...")
+                for task in pending:
+                    task.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+                
         if self.worker_ctx and self.worker_ctx.store:
             await self.worker_ctx.store.close()
             

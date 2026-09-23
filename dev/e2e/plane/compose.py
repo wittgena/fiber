@@ -17,6 +17,7 @@ FIBER_ROOT = resolve_path("fiber")
 log = get_emitter("e2e.plane.compose")
 
 DEFAULT_E2E_SUITE = [
+    "fiber e2e edge.sandbox",
     "VCR_MODE=replay python -m fiber.dev.ex.switch",
     "fiber e2e dphi.wasm.phase"
 ]
@@ -51,11 +52,9 @@ class ComposeWorkflowScene:
             )
             
             if not success:
-                # [개선] 실패 시 어디를 봐야 할지 명확히 안내
                 raise RuntimeError("System E2E job fractured. Check the streamed Docker Compose logs above for specific traceback.")
                 
             self.log.info("  └─ System E2E Test Passed ✅ (Services & Binding OK)")
-                
         except Exception as e:
             self.fail_count += 1
             self.failed_cases.append({"title": "System E2E Test Job", "error": str(e)})
@@ -140,7 +139,6 @@ class ComposeFlow:
                 log.info("="*75 + "\n")
             else:
                 log.critical(f"🔴 [FAILED] COMPOSE CI Test execution terminated with errors.")
-                # [개선] 실패 원인 요약을 출력
                 if err_msg:
                      log.error(f"Reason: {err_msg}")
                 sys.exit(1)

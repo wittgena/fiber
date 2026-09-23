@@ -1,6 +1,4 @@
 # fiber.infra.rpc.registry
-## @lineage: fiber.dev.infra.rpc.registry
-## @lineage: fiber.gateway.edge.rpc.registry
 from typing import Dict, Callable, Any, Optional
 from fiber.infra.rpc.handler import (
     handle_ledger_stream_append,
@@ -17,14 +15,17 @@ from fiber.infra.rpc.handler import (
     handle_pta_balance,
     handle_profile_quote,
     handle_profile_execute_billed,
-    WorkerContext
 )
 from fiber.infra.rpc.validator import handle_billing_receipt_validate, handle_compute_margin_calculate, ValidatorService
+from fiber.infra.rpc.ext import ExtRpcService
 
 def build_internal_rpc_registry(
-    validator_service: Optional[ValidatorService] = None
+    validator_service: Optional[ValidatorService] = None,
+    ext_service: Optional[ExtRpcService] = None
 ) -> Dict[str, Callable]:
     """내부 RPC 라우팅 테이블을 동적으로 생성하여 반환"""
+    
+    # 상태가 필요 없거나 WorkerContext에 의존하는 기본 핸들러들
     registry = {
         # Ledger & State
         "core.ledger.append": handle_ledger_stream_append,
@@ -54,8 +55,24 @@ def build_internal_rpc_registry(
         "validate.compute.intent": handle_intent_validate,
     }
 
-    ## 2. 상태를 유지하는 외부 서비스(External Service) 동적 바인딩
+    # 상태를 유지하는 외부 서비스(External Service) 동적 바인딩
     if validator_service:
         registry["validate.attest"] = validator_service.handle_attestation
+
+    # Ext(Wallet/EVM) 서비스 동적 바인딩
+    if ext_service:
+        registry.update({
+            # Wallet Edge
+            "ext.wallet.info": ext_service.handle_wallet_info,
+            "ext.wallet.pay.x402": ext_service.handle_pay_x402,
+            "ext.wallet.settle.deferred": ext_service.handle_deferred_settlement,
+            
+            # EVM Edge
+            "ext.evm.balance": ext_service.handle_evm_balance,
+            "ext.evm.wrap": ext_service.handle_evm_wrap,
+            
+            # Identity Edge (필요시 추가)
+            # "ext.identity.verify": ext_service.handle_identity_verify,
+        })
 
     return registry

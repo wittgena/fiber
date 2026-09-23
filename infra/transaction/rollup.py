@@ -1,6 +1,4 @@
 # fiber.infra.transaction.rollup
-## @lineage: fiber.dev.infra.transaction.rollup
-## @lineage: fiber.gateway.edge.transaction.rollup
 import os
 import time
 import hashlib
@@ -10,7 +8,7 @@ from typing import Dict, Any, List, Optional
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.infra.adapter.config.exchange import exchange_config
+from fiber.infra.adapter.config.exchange import exchange_config, NetEnv
 
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.kernel.wasm.broker import DphiBroker
@@ -138,9 +136,9 @@ class ShadowAdapter:
 # ==========================================
 
 class RollupAdapter:
-    def __init__(self, agent_alias: str = "system_clearing", simulate: bool = False):
+    # [개선] simulate 파라미터 삭제
+    def __init__(self, agent_alias: str = "system_clearing"):
         self.agent_alias = agent_alias
-        self.simulate = simulate
         
         agent_config = getattr(exchange_config.agents, agent_alias)
         self.clearing_address = agent_config.evm_address.lower()
@@ -149,12 +147,15 @@ class RollupAdapter:
         
         self.ledger = KernelLedger()
         self.broker = DphiBroker()
-        log.info(f"[RollupAdapter] Initialized for {agent_alias}: {self.clearing_address} (Simulate: {simulate})")
+        
+        mode_str = exchange_config.mode.value.upper()
+        log.info(f"[RollupAdapter] Initialized for {agent_alias}: {self.clearing_address} (Mode: {mode_str})")
 
     async def transfer(self, to_address: str, amount_str: str, asset: str = "usdc") -> str:
-        if self.simulate:
-            log.warning(f"[RollupAdapter] Simulated transfer: {amount_str} {asset} to {to_address}")
-            return f"0x_simulated_transfer_{os.urandom(8).hex()}"
+        # [개선] NetEnv.LOCAL 환경에서만 Mock 처리 (안전 장치)
+        if exchange_config.mode == NetEnv.LOCAL:
+            log.info(f"[LOCAL] Mocking Rollup transfer: {amount_str} {asset} to {to_address}")
+            return f"0x_local_transfer_{os.urandom(8).hex()}"
 
         log.info(f"[RollupAdapter] Initiating DVM Transfer for {amount_str} {asset.upper()} to {to_address}...")
 
@@ -245,9 +246,10 @@ class RollupAdapter:
         )
 
     async def process_deferred_charge(self, agent_address: str, amount_str: str, asset: str = "usdc") -> str:
-        if self.simulate:
-            log.warning(f"[RollupAdapter] Simulated deferred charge: {amount_str} {asset} from {agent_address}")
-            return f"0x_simulated_charge_{os.urandom(8).hex()}"
+        # [개선] NetEnv.LOCAL 환경에서만 Mock 처리 (안전 장치)
+        if exchange_config.mode == NetEnv.LOCAL:
+            log.info(f"[LOCAL] Mocking Rollup deferred charge: {amount_str} {asset} from {agent_address}")
+            return f"0x_local_charge_{os.urandom(8).hex()}"
 
         log.info(f"[RollupAdapter] Initiating DVM Deferred Charge for {amount_str} {asset.upper()} from {agent_address}...")
 

@@ -4,8 +4,6 @@ import httpx
 from typing import Any
 
 from fiber.infra.rpc.client import InternalRpcClient
-from fiber.dev.sdk.ext import ExtClient
-
 from xphi.kernel.node.fsm.edge import (
     EdgePhaseFSM, StartIntentEvent, PhaseFailedEvent,
     ComputePhaseCompletedEvent, CompliancePhaseCompletedEvent, SettlementPhaseCompletedEvent,
@@ -28,10 +26,7 @@ class EdgeWorkflow(Workflow):
         self.fsm = fsm
         self.client = client
         self.base_url = base_url
-        
         self.rpc = InternalRpcClient()
-        # [개선] 기존 rpc 클라이언트를 공유하는 Ext SDK 클라이언트 마운트
-        self.ext_client = ExtClient(rpc_client=self.rpc)
 
     async def execute(self, start_event: StartIntentEvent):
         log.info(f"\n=== [START] {self.name} ===")
@@ -138,12 +133,12 @@ class EdgeWorkflow(Workflow):
             "verbose": False
         })
 
-        res = await self.ext_client.process_x402_payment(
-            payee_address="0x000000000000000000000000000000000000dEaD", 
-            amount_usdc=str(cmd.cost_usd), 
-            resource_id=f"res_{uuid.uuid4().hex[:8]}", 
-            use_ledger=True
-        )
+        res = await self.rpc.call("ext.wallet.pay.x402", {
+            "payee_address": "0x000000000000000000000000000000000000dEaD", 
+            "amount_usdc": str(cmd.cost_usd), 
+            "resource_id": f"res_{uuid.uuid4().hex[:8]}", 
+            "use_ledger": True
+        })
 
         receipt = res.get("receipt", {})
         tx_hash = receipt.get("tx_hash") or res.get("tx_hash") or "0x_cleared"

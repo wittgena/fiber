@@ -16,18 +16,18 @@ from fiber.infra.e2e.edge import EdgeWorkflow
 from fiber.gateway.rest.payload import create_app, Config
 from fiber.gateway.daemon.rpc import RpcWorkerDaemon
 from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
-from xphi.arch.bound.client.http import VerifiedHttpClient
-from fiber.phase.contract.origin.registry import OriginRegistry
+from fiber.phase.contract.origin import OriginRegistry
 
-from xphi.kernel.node.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
-from xphi.state.phase.reactor import PhaseReactor
+from xphi.arch.bound.client.http import VerifiedHttpClient
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.arch.dev.tracer.transport import SceneConfig, HttpFlowTracer
-from xphi.watcher.plane.emitter import get_emitter
 
+from xphi.kernel.node.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
 from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.phase.reactor import PhaseReactor
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.edge")
 
@@ -163,32 +163,32 @@ class GatewayTracerPipeline(PipelineRunner):
         origin_root = resolve_path("origin")
         real_config_path = os.path.join(str(origin_root), "config.json")
         
-        # 1. 실제 설정 읽기
+        # 실제 설정 읽기
         with open(real_config_path, "r", encoding="utf-8") as f:
             tampered_config = json.load(f)
             
-        # 2. 서명(Signature) 1바이트 훼손 시뮬레이션
+        # 서명(Signature) 1바이트 훼손 시뮬레이션
         sig = tampered_config["attestation"]["pre_signed_root_sig"]
         tampered_sig = ("0" if sig[0] != "0" else "1") + sig[1:]  # 첫 글자 강제 변경
         tampered_config["attestation"]["pre_signed_root_sig"] = tampered_sig
         
-        # 3. 임시 파일에 변조된 설정 저장
+        # 임시 파일에 변조된 설정 저장
         with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
             json.dump(tampered_config, tmp)
             tmp_path = tmp.name
             
         try:
-            # 4. 변조된 파일로 OriginRegistry 로딩 시도
+            # 변조된 파일로 OriginRegistry 로딩 시도
             registry = OriginRegistry(config_path=tmp_path)
             try:
                 registry.load_and_verify()
                 # 에러 없이 통과해버리면 무결성 방어가 뚫린 것임
                 raise RuntimeError("SECURITY BYPASS! OriginRegistry accepted a cryptographically tampered config.")
             
-            # [핵심 수정] ValueError가 아닌 RuntimeError 내부의 정책 강제 메시지를 잡아서 검증
+            # ValueError가 아닌 RuntimeError 내부의 정책 강제 메시지를 잡아서 검증
             except RuntimeError as e:
                 if "Zero-Trust Policy Enforced" in str(e):
-                    # [성공] 변조를 감지하고 즉각 차단함
+                    # 변조를 감지하고 즉각 차단함
                     log.info(f"Tamper Resistance Verified. Attack blocked successfully: {e}")
                 else:
                     # 예상치 못한 다른 RuntimeError의 경우 다시 던짐
@@ -197,9 +197,6 @@ class GatewayTracerPipeline(PipelineRunner):
             os.remove(tmp_path)
 
     async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
-        """
-        [정합성이 회복된 E2E 시나리오 러너]
-        """
         async with httpx.AsyncClient(base_url=self.config.base_url, timeout=15.0) as client:
             response_hooks = [self.tracer.trace_response]
             if attestation_injector:

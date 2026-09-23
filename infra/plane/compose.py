@@ -1,6 +1,4 @@
 # fiber.infra.plane.compose
-## @lineage: fiber.dev.infra.plane.compose
-## @lineage: xphi.watcher.plane.infra.compose
 import os
 import shutil
 import asyncio
@@ -95,7 +93,6 @@ class DockerComposeAdapter(BaseComposeAdapter):
         
         os.environ["COMPOSE_ROOT"] = str(COMPOSE_ROOT)
         
-        # --- NEW CACHE-BUSTING LOGIC ---
         # If rebuild is requested, forcefully build without cache before bringing up
         if self.rebuild:
             log.info(f"  ├─ [Force Rebuild] Igniting topology build without cache...")
@@ -110,10 +107,8 @@ class DockerComposeAdapter(BaseComposeAdapter):
                 log.error("  └─ 💥 Topology Build (no-cache) Failed. Inspect Docker logs.")
                 return False
             log.info("  ├─ Clean Build Completed.")
-        # -------------------------------
 
         log.info(f"  ├─ Provisioning Topology from {self.compose_file.name}...")
-        
         cmd = [
             "docker-compose", 
             "-f", str(self.compose_file), 
@@ -123,7 +118,6 @@ class DockerComposeAdapter(BaseComposeAdapter):
         
         log.info("  ├─ [Streaming Infrastructure Provisioning Logs...]")
         code, _, _ = await self.boundary.run_command(cmd, cwd=str(self.workspace), capture=False)
-        
         if code != 0:
             log.error("  └─ 💥 Topology Boot Failed. Inspect Docker logs.")
             return False
