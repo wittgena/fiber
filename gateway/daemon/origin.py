@@ -1,5 +1,4 @@
 # fiber.gateway.daemon.origin
-## @lineage: fiber.gateway.edge.origin.daemon
 import os
 import json
 import time
@@ -139,9 +138,7 @@ class OriginDelegatorDaemon(AbstractDaemon):
         dpop_message = f"POST:{target_url}:{payload_hash}:{nonce}:{timestamp}"
         signature = self.signer.sign_payload(dpop_message.encode())
         
-        # 게이트웨이 법인의 마스터 결제 영수증 (설정에서 주입)
         master_receipt = os.getenv("GATEWAY_MASTER_X402_RECEIPT", "gateway_sponsored_x402_mock")
-
         return {
             "Content-Type": "application/json",
             "x-spiffe-id": f"spiffe://gateway/{self.signer.pubkey_hex[:16]}",
@@ -170,7 +167,6 @@ class OriginDelegatorDaemon(AbstractDaemon):
 
         # 3. 서명 검증 (로컬에 저장된 위원회 공개키 활용)
         is_valid = False
-        # (Mock) 실제 암호학적 검증 로직은 xphi.kernel.adapter.sign 에 의존
         for pubkey in self.trusted_witnesses:
             if self.signer.verify_signature_static(canonical_root.encode(), signature, pubkey):
                 is_valid = True

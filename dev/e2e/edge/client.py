@@ -96,7 +96,6 @@ class EdgeTracerPipeline(PipelineRunner):
 
     async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
         async with httpx.AsyncClient(base_url=self.local_url, timeout=15.0) as client:
-            # (기존 HTTP Trace 및 Workflow Execute 로직 - 변경 없음)
             response_hooks = [self.tracer.trace_response]
             if attestation_injector:
                 async def apply_tamper(response: httpx.Response):
@@ -111,12 +110,21 @@ class EdgeTracerPipeline(PipelineRunner):
             client.event_hooks['request'] = [self.tracer.trace_request]
             client.event_hooks['response'] = response_hooks
 
+            # 일회성 지갑(클라이언트 신원) 생성
             wallet = Account.create()
+            
+            # [추가된 로그]: 클라이언트 지갑 주소 명시적 출력
+            log.info(f"🔑 [Client Identity] Generated Ephemeral Wallet: {wallet.address}")
+
             if inject_faults:
                 signature = "0x_tampered_invalid_signature"
+                # [추가된 로그]: 변조된 서명 기록
+                log.info(f"✍️ [Client Signature] Intentional fault injected. Signature: {signature}")
             else:
                 msg = encode_defunct(text=f"EXECUTE:{wallet.address}:EXECUTE_PYTHON:1000000")
                 signature = wallet.sign_message(msg).signature.hex()
+                # [추가된 로그]: 정상적으로 생성된 서명의 앞부분 기록
+                log.info(f"✍️ [Client Signature] Payload signed. Signature: {signature[:16]}...")
 
             start_event = StartIntentEvent(
                 client_id=wallet.address, action="EXECUTE_PYTHON", max_fuel=1000000,
@@ -128,13 +136,13 @@ class EdgeTracerPipeline(PipelineRunner):
             await workflow.execute(start_event) 
             
             # ---------------------------------------------------------
-            # [버그 픽스 구역]: 결과 Assertion 로직 수정
+            # 결과 Assertion 로직
             # ---------------------------------------------------------
             # 1. 응답 변조 테스트를 수행했는데 방어 실패(통과) 시 에러
             if attestation_injector and fsm.state != EdgePhaseState.FAILED:
                 raise RuntimeError("Attestation Bypass!")
             
-            # 2. Golden Path 체크: 요청 조작(inject_faults)도 없고 응답 조작(attestation_injector)도 없을 때만 확인
+            # 2. Golden Path 체크: 요청 조작도 없고 응답 조작도 없을 때만 확인
             if not inject_faults and not attestation_injector and fsm.state != EdgePhaseState.COMPLETED:
                 raise RuntimeError(f"Golden Path Failed! Final state: {fsm.state.name}")
             

@@ -36,7 +36,7 @@ class Config(BaseModel):
     allow_cors_origins: list[str] = ["http://localhost:3000"] 
     session_api_keys: list[str] = []
     pubsub_channel: str = "audit_channel"
-    wasm_timeout: float = 10.0
+    wasm_timeout: float = 30.0
     committee_pubs: list[str] = []
     
     redis_url: str = "redis://localhost:6379"

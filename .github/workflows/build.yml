@@ -63,19 +63,17 @@ jobs:
         run: |
           python -m xphi.kernel.space.bind.around
       
-      # -------------------------------------------------------------
-      # 변경점: 불필요해진 '🔑 Set up Node Identity (SSH Key)' 스텝 삭제
-      # -------------------------------------------------------------
+      - name: 🔑 Set up Node Identity (SSH Key)
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
       - name: 🚀 Boot Kernel (Background)
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
           XPHI_WORKERS: "1"
-          # -------------------------------------------------------------
-          # 변경점: Github Secrets에서 가져온 마스터 키를 1순위 인증 수단으로 주입
-          # -------------------------------------------------------------
-          XPHI_NODE_SEED: ${{ secrets.XPHI_NODE_SEED }}
         run: |
           echo "Starting Kernel in background..."
           nohup python -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
