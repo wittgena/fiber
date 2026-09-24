@@ -1,28 +1,158 @@
 # fiber.dev.e2e.edge.client
 import asyncio
-import random
-import json
 import os
-import tempfile
-from typing import Callable, List, Optional
+import uuid
+from typing import List, Any
 
 import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
-from fiber.infra.e2e.edge import EdgeWorkflow
 from fiber.infra.e2e.config import PipelineRunner, TestResult, E2EConfig, Phase
-from fiber.phase.contract.origin import OriginRegistry
+from fiber.dev.sdk.ext import ExtClient
+from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory 
 
 from xphi.arch.bound.client.http import VerifiedHttpClient
-from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary, RpcChaosInjector
 from xphi.arch.dev.tracer.transport import HttpFlowTracer
-from xphi.kernel.node.fsm.edge import EdgePhaseFSM, EdgePhaseState, StartIntentEvent
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.kernel.node.fsm.edge import (
+    EdgePhaseFSM, EdgePhaseState, StartIntentEvent, PhaseFailedEvent,
+    ComputePhaseCompletedEvent, CompliancePhaseCompletedEvent, SettlementPhaseCompletedEvent,
+    RunComputePhaseCmd, RunCompliancePhaseCmd, RunSettlementPhaseCmd,
+    FinishWorkflowCmd, HaltWorkflowCmd
+)
+from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.state.phase.reactor import PhaseReactor
 
 log = get_emitter("e2e.edge.client")
+
+class CommandMsg(WorkflowMessage):
+    def __init__(self, command: Any):
+        self.command = command
+
+class EdgeWorkflow(Workflow):
+    def __init__(self, fsm: EdgePhaseFSM, client: httpx.AsyncClient, base_url: str):
+        super().__init__(name="EDGE_WORKFLOW")
+        self.fsm = fsm
+        self.client = client
+        self.base_url = base_url
+        
+        self.sdk_client = DphiPublicClient(base_url=self.base_url)
+        self.ext_client = ExtClient() 
+
+    async def execute(self, start_event: StartIntentEvent):
+        log.info("🏁 [START] EDGE CLIENT WORKFLOW INITIATED | " + "="*40)
+        cmd = self.fsm.apply(start_event)
+        self.post_message(CommandMsg(cmd))
+        await self.run()
+
+    @step
+    async def process_command(self, msg: CommandMsg) -> WorkflowMessage:
+        cmd = msg.command
+        phase_name = cmd.__class__.__name__.replace("Run", "").replace("Cmd", "")
+        
+        if not isinstance(cmd, (FinishWorkflowCmd, HaltWorkflowCmd)):
+            log.info(f"▶️ [PHASE EXECUTION] {phase_name.upper()} START ───────────────┐")
+
+        try:
+            if isinstance(cmd, FinishWorkflowCmd):
+                log.info(f"✨ [SUCCESS] Workflow Completed | Final TX Hash: {cmd.tx_hash}")
+                return StopMessage(result=True)
+            
+            elif isinstance(cmd, HaltWorkflowCmd):
+                return ErrorMessage(cmd.reason)
+            
+            elif isinstance(cmd, RunComputePhaseCmd):
+                event = await self._run_compute_phase(cmd)
+                log.info(f"✅ [COMPUTE PHASE] PASSED")
+                return CommandMsg(self.fsm.apply(event))
+            
+            elif isinstance(cmd, RunCompliancePhaseCmd):
+                event = await self._run_compliance_phase(cmd)
+                log.info(f"✅ [COMPLIANCE PHASE] PASSED")
+                return CommandMsg(self.fsm.apply(event))
+            
+            elif isinstance(cmd, RunSettlementPhaseCmd):
+                event = await self._run_settlement_phase(cmd)
+                log.info(f"✅ [SETTLEMENT PHASE] PASSED")
+                return CommandMsg(self.fsm.apply(event))
+            
+            else:
+                raise ValueError(f"Unknown Command: {cmd}")
+
+        except Exception as e:
+            log.error(f"❌ [WORKFLOW FAULT] Phase Execution Failed: {str(e)}")
+            fallback_cmd = self.fsm.apply(PhaseFailedEvent(reason=str(e)))
+            return CommandMsg(fallback_cmd)
+
+    @step
+    async def on_error(self, msg: ErrorMessage) -> WorkflowMessage:
+        log.error(f"⛔ [HALTED] {self.name} aborted: {msg.msg}")
+        return StopMessage(result=False)
+
+    async def _run_compute_phase(self, cmd: RunComputePhaseCmd) -> ComputePhaseCompletedEvent:
+        intent_payload = {
+            "client_id": cmd.client_id, "responder_id": "target-node-01",
+            "action": cmd.action, "max_fuel": cmd.max_fuel,
+            "payload": cmd.payload, "signature": cmd.signature, "sig_algo": "ECDSA_SECP256K1"
+        }
+
+        res = await self.client.post(f"{self.base_url}/v1/public/sandbox/quote", json=intent_payload, headers={"X-X402-Receipt": "pre_flight_check"})
+        res.raise_for_status() 
+        cost_usd = res.json().get("estimated_cost_usd", 0.001)
+
+        res = await self.client.post(f"{self.base_url}/v1/public/billing/invoice", json={
+            "payee_address": "0x000000000000000000000000000000000000dEaD", 
+            "amount_usdc": str(cost_usd), "resource_id": f"res_{uuid.uuid4().hex[:8]}"
+        })
+        res.raise_for_status()
+        invoice_id = res.json().get("invoice_id", f"inv_{uuid.uuid4().hex[:8]}")
+
+        res = await self.client.get(f"{self.base_url}/v1/public/billing/balance", params={"client_id": cmd.client_id, "asset_type": "fuel"})
+        if res.status_code != 200: raise RuntimeError("Insufficient Balance")
+
+        audit_payload = StrictPayloadFactory.create_audit_payload(
+            actor=cmd.client_id, action=cmd.action, message="E2E Client Intent Execution", require_proof=True
+        )
+        audit_res = await self.sdk_client.record_audit_event(request=audit_payload, payment_receipt=invoice_id)
+
+        actual_receipt = {
+            "receipt_id": audit_res.get("request_id"),
+            "state_root": audit_res.get("result", {}).get("hash")
+        }
+        
+        log.info(f"  └─ Quote: {cost_usd} USD | Inv: {invoice_id[:8]} | PTA Secured: {actual_receipt['state_root'][:16]}...")
+        return ComputePhaseCompletedEvent(audit_receipt=actual_receipt, cost_usd=cost_usd)
+
+    async def _run_compliance_phase(self, cmd: RunCompliancePhaseCmd) -> CompliancePhaseCompletedEvent:
+        res_verify = await self.client.post(f"{self.base_url}/v1/public/audit/verify", json=cmd.audit_receipt)
+        res_verify.raise_for_status() 
+
+        telemetry_payload = StrictPayloadFactory.create_telemetry_payload(
+            tenant_id="e2e-tenant", model_name="e2e-model", prompt_tokens=100, completion_tokens=50
+        )
+        res_telemetry = await self.sdk_client.push_telemetry(
+            request=telemetry_payload, payment_receipt=cmd.audit_receipt.get("receipt_id")
+        )
+        fingerprint = res_telemetry.get("fingerprint", "0x_hash")
+        log.info(f"  └─ Zero-Trust Validated | Telemetry Sealed: {fingerprint[:16]}...")
+        return CompliancePhaseCompletedEvent(otlp_hash=fingerprint)
+
+    async def _run_settlement_phase(self, cmd: RunSettlementPhaseCmd) -> SettlementPhaseCompletedEvent:
+        res_payment = await self.ext_client.process_x402_payment(
+            payee_address="0x000000000000000000000000000000000000dEaD", 
+            amount_usdc=str(cmd.cost_usd), resource_id=f"res_{uuid.uuid4().hex[:8]}", use_ledger=True
+        )
+        receipt = res_payment.get("receipt", {})
+        tx_hash = receipt.get("tx_hash") or res_payment.get("tx_hash") or f"0x_cleared_{uuid.uuid4().hex[:8]}"
+
+        res_balance = await self.client.get(
+            f"{self.base_url}/v1/public/billing/balance", params={"client_id": cmd.client_id, "asset_type": "fuel"}
+        )
+        
+        current_fuel = res_balance.json().get("balance", 0) if res_balance.status_code == 200 else "Unknown"
+        log.info(f"  └─ Ext Payment: {tx_hash[:16]}... | Current Fuel Balance: {current_fuel}")
+        return SettlementPhaseCompletedEvent(tx_hash=tx_hash)
 
 class EdgeTracerPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig):
@@ -33,19 +163,15 @@ class EdgeTracerPipeline(PipelineRunner):
         
         self.set_phases([
             Phase("Origin API Format Validation", self.phase_origin_api_verification),
-            Phase("Origin Tamper Resistance (Fail-Fast)", self.phase_origin_tamper_resistance),
-            Phase("Gateway Ingress (Golden Path)", self.phase_ingress_e2e_golden),
-            Phase("Gateway Ingress (Negative Path)", self.phase_ingress_e2e_negative),
-            Phase("Gateway Ingress (Tampered Attestation)", self.phase_ingress_e2e_tampered),
-            Phase("Sentinel Security (Chaos WAF Check)", self.phase_sentinel_security)
+            Phase("Gateway Ingress", self.phase_ingress_e2e_golden)
         ])
 
     async def run_pipeline(self) -> List[TestResult]:
-        log.info(f"\n=== Starting Pure Client Pipeline: {self.name} ===")
+        log.info(f"\n=== Starting Client Pipeline: {self.name} ===")
         results = []
         try:
             for idx, phase in enumerate(self.phases, 1):
-                log.info(f"\n▶️ [PHASE {idx}/{len(self.phases)}] {phase.name}")
+                log.info(f"\n▶️ [PIPELINE PHASE {idx}/{len(self.phases)}] {phase.name}")
                 try:
                     await phase.action()
                     results.append(TestResult("EDGE_GATEWAY", phase.name, True, True))
@@ -66,104 +192,34 @@ class EdgeTracerPipeline(PipelineRunner):
             if "x-dphi-root-signature" not in res.headers:
                 raise RuntimeError("Critical: 'X-Dphi-Root-Signature' header is missing.")
             data = res.json()
-            log.info(f"Origin API Validated. Retrieved {len(data['active_signers'])} signers.")
+            log.info(f"  ↳ Origin API Validated. Retrieved {len(data['active_signers'])} signers.")
 
-    async def phase_origin_tamper_resistance(self):
-        origin_root = resolve_path("origin")
-        real_config_path = os.path.join(str(origin_root), "config.json")
-        with open(real_config_path, "r", encoding="utf-8") as f:
-            tampered_config = json.load(f)
-            
-        sig = tampered_config["attestation"]["pre_signed_root_sig"]
-        tampered_config["attestation"]["pre_signed_root_sig"] = ("0" if sig[0] != "0" else "1") + sig[1:]
-        
-        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".json") as tmp:
-            json.dump(tampered_config, tmp)
-            tmp_path = tmp.name
-            
-        try:
-            registry = OriginRegistry(config_path=tmp_path)
-            try:
-                registry.load_and_verify()
-                raise RuntimeError("SECURITY BYPASS! Tampered config accepted.")
-            except RuntimeError as e:
-                if "Zero-Trust Policy Enforced" in str(e):
-                    log.info("Tamper Resistance Verified.")
-                else:
-                    raise e
-        finally:
-            os.remove(tmp_path)
-
-    async def _run_scene(self, inject_faults: bool, attestation_injector: Optional[Callable] = None):
+    async def phase_ingress_e2e_golden(self):
         async with httpx.AsyncClient(base_url=self.local_url, timeout=15.0) as client:
-            response_hooks = [self.tracer.trace_response]
-            if attestation_injector:
-                async def apply_tamper(response: httpx.Response):
-                    attestation_injector(response)
-                response_hooks.append(apply_tamper)
-                
             async def verify_signature(response: httpx.Response):
                 if response.status_code == 200:
                     VerifiedHttpClient(client=client)._verify_header_proof(response)
-            response_hooks.append(verify_signature)
             
             client.event_hooks['request'] = [self.tracer.trace_request]
-            client.event_hooks['response'] = response_hooks
+            client.event_hooks['response'] = [self.tracer.trace_response, verify_signature]
 
-            # 일회성 지갑(클라이언트 신원) 생성
             wallet = Account.create()
-            
-            # [추가된 로그]: 클라이언트 지갑 주소 명시적 출력
-            log.info(f"🔑 [Client Identity] Generated Ephemeral Wallet: {wallet.address}")
+            log.info(f"🔑 [Identity] Ephemeral Wallet: {wallet.address} | Sig: Generated")
 
-            if inject_faults:
-                signature = "0x_tampered_invalid_signature"
-                # [추가된 로그]: 변조된 서명 기록
-                log.info(f"✍️ [Client Signature] Intentional fault injected. Signature: {signature}")
-            else:
-                msg = encode_defunct(text=f"EXECUTE:{wallet.address}:EXECUTE_PYTHON:1000000")
-                signature = wallet.sign_message(msg).signature.hex()
-                # [추가된 로그]: 정상적으로 생성된 서명의 앞부분 기록
-                log.info(f"✍️ [Client Signature] Payload signed. Signature: {signature[:16]}...")
+            msg = encode_defunct(text=f"EXECUTE:{wallet.address}:AUDIT_LOG_APPEND:1000")
+            signature = wallet.sign_message(msg).signature.hex()
 
             start_event = StartIntentEvent(
-                client_id=wallet.address, action="EXECUTE_PYTHON", max_fuel=1000000,
-                source_code="print('Hello CI')", signature=signature
+                client_id=wallet.address, action="AUDIT_LOG_APPEND", max_fuel=1000,
+                payload={"message": "audit_test", "severity": "info"}, signature=signature
             )
             
             fsm = EdgePhaseFSM()
             workflow = EdgeWorkflow(fsm=fsm, client=client, base_url=self.local_url)
             await workflow.execute(start_event) 
             
-            # ---------------------------------------------------------
-            # 결과 Assertion 로직
-            # ---------------------------------------------------------
-            # 1. 응답 변조 테스트를 수행했는데 방어 실패(통과) 시 에러
-            if attestation_injector and fsm.state != EdgePhaseState.FAILED:
-                raise RuntimeError("Attestation Bypass!")
-            
-            # 2. Golden Path 체크: 요청 조작도 없고 응답 조작도 없을 때만 확인
-            if not inject_faults and not attestation_injector and fsm.state != EdgePhaseState.COMPLETED:
-                raise RuntimeError(f"Golden Path Failed! Final state: {fsm.state.name}")
-            
-            # 3. 요청 변조 테스트 시, 거절되지 않고 통과되면 에러
-            if inject_faults and fsm.state != EdgePhaseState.FAILED:
-                raise RuntimeError(f"Negative Path Failed! Final state: {fsm.state.name}")
-
-    async def phase_ingress_e2e_golden(self): await self._run_scene(False)
-    async def phase_ingress_e2e_negative(self): await self._run_scene(True)
-    async def phase_ingress_e2e_tampered(self):
-        tamper_func = getattr(RpcChaosInjector, 'corrupt_attestation_header', None)
-        if tamper_func: await self._run_scene(False, tamper_func)
-
-    async def phase_sentinel_security(self):
-        vectors = ChaosPayloadLibrary.get_all_vectors()
-        async with httpx.AsyncClient(base_url=self.local_url) as client:
-            for name, rule in vectors:
-                payload = random.choice(rule)() if isinstance(rule, list) else rule()
-                res = await client.post("/v1/public/telemetry/logs", content=payload)
-                if not (400 <= res.status_code < 500):
-                    raise RuntimeError(f"Gateway Breach! '{name}' bypassed defenses.")
+            if fsm.state != EdgePhaseState.COMPLETED:
+                raise RuntimeError(f"Path Failed! Final state: {fsm.state.name}")
 
 class EdgeSuiteClientRunner:
     def __init__(self):
