@@ -76,7 +76,7 @@ jobs:
           XPHI_WORKERS: "1"
         run: |
           echo "Starting Kernel in background..."
-          nohup python -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
+          nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
           echo "KERNEL_PID=\(!" >>\)GITHUB_ENV
 
           echo "Waiting for Kernel to become ready on port 8000..."
