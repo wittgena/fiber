@@ -9,8 +9,7 @@ This document provides a practical guide on how to integrate and deploy Fiber ac
 * **[1.1] LLM Routing, Trace:** How to use Fiber as a drop-in replacement for standard LLM SDKs to route traffic, enforce network-level budget limits, and manage execution traces.
 * **[1.2] LLM VCR (Record & Replay Engine):** How to serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency profiling.
 * **[1.3] Secure Agentic Bridge (MCP Gateway):** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
-* **[1.4] Audit Log & Compliance Engine:** How to record verifiable Merkle-proof receipts for agent actions.
-* **[1.5] Universal State Traverser:** How to seamlessly integrate proprietary LLMs and local inference servers using declarative JSON extraction rules instead of custom parsing logic.
+* **[1.4] Universal State Traverser:** How to seamlessly integrate proprietary LLMs and local inference servers using declarative JSON extraction rules instead of custom parsing logic.
 
 Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (connect, daemon, e2e)** to help you quickly provision your infrastructure.
 
@@ -228,46 +227,7 @@ fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py
 
 ---
 
-### 1.4. Audit Log & Compliance Engine
-
-In an agentic economy, standard logging is insufficient; actions must be cryptographically verifiable. Fiber exposes public endpoints that act as a decentralized notary for agent telemetry and critical events, enabling absolute legal and technical accountability.
-
-* **Telemetry Audit:** Protected by a rigorous zero-trust pipeline. Payloads must pass strict Pydantic schema typing and the `OtlpExtractionEngine` before being cryptographically sealed into the unalterable Core Ledger.
-* **Audit Trails:** Powered by a KMS-backed `SecretAuditor` (integrating with Azure Key Vault, AWS KMS, etc.), the gateway automatically intercepts and encrypts sensitive PII/financial data in memory. It issues an `AuditReceipt` containing a **Merkle Membership Proof**, proving to auditors that an action occurred exactly as claimed without exposing raw data.
-
-**Example: Generating an Immutable Audit Proof**
-
-```python
-from fiber.dphi.eco.client.sdk import DphiPublicClient, StrictPayloadFactory
-
-client = DphiPublicClient(base_url="http://127.0.0.1:8000")
-
-# 1. Generate a schema-validated audit payload
-# The factory ensures strict zero-trust schema compliance before transmission
-audit_payload = StrictPayloadFactory.create_audit_payload(
-    message="Executed financial trade: 500 AAPL @ Market",
-    actor="agent-node-007",
-    action="trade_execution",
-    require_proof=True
-)
-
-# 2. Provide the cryptographic payment receipt (X402 Capability Token)
-# Required for executing state-mutating actions in the decentralized economy
-x402_receipt = "x402_cap_AgEEZGF0Y..."
-
-# 3. Record the event and receive an immutable Merkle Proof
-receipt = await client.record_audit_event(
-    request=audit_payload,
-    payment_receipt=x402_receipt
-)
-
-print("Notarized Hash:", receipt["hash"])
-print("Merkle Proof:", receipt["membership_proof"])
-```
-
----
-
-### 1.5. Universal State Traverser
+### 1.4. Universal State Traverser
 
 The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks. Fiber eliminates the need for messy `if/elif` parsing blocks through its `StateTraverser` and unified `StreamChunkParser`. 
 

@@ -14,7 +14,6 @@ from xphi.kernel.space.bind.resolver import resolve_path
 COMPOSE_ROOT = resolve_path("time") / "compose"
 log = get_emitter("infra.compose")
 
-# Self-bootstrapping Topology Blueprint (Local source mounts removed for pure USER mode)
 DOCKER_COMPOSE_BLUEPRINT = """\
 services:
   redis:
@@ -33,6 +32,9 @@ services:
       - ${FIBER_ARTIFACT_MOUNT:-/tmp}:/artifact_mount
     environment:
       - XPHI_ENV=ci
+      - XPHI_WORKERS=1          # CI 환경 동기화
+      - PYTHONUNBUFFERED=1      # 로그 덤프용 버퍼링 해제
+      - DPHI_ENV=local
     
     network_mode: "service:redis"
     depends_on:
@@ -48,10 +50,6 @@ class ComposeBlueprint:
             "system-e2e-test": {
                 "env": {"XPHI_ENV": "ci", "VCR_MODE": "replay"}, 
                 "description": "System E2E validation via Docker Compose (USER Mode)"
-            },
-            "build-release": {
-                "env": {"FIBER_BUILD_DIST": "1"}, 
-                "description": "Deterministic remote binding for Wheel artifact"
             }
         }
 
@@ -93,7 +91,6 @@ class DockerComposeAdapter(BaseComposeAdapter):
         
         os.environ["COMPOSE_ROOT"] = str(COMPOSE_ROOT)
         
-        # If rebuild is requested, forcefully build without cache before bringing up
         if self.rebuild:
             log.info(f"  ├─ [Force Rebuild] Igniting topology build without cache...")
             build_cmd = [
@@ -138,11 +135,6 @@ class DockerComposeAdapter(BaseComposeAdapter):
 
         if job_name == "system-e2e-test" or "FIBER_E2E_STEPS" in env:
             exec_command = env.get("FIBER_E2E_STEPS", "fiber e2e dphi.wasm.phase && VCR_MODE=replay fiber ex switch")
-        elif job_name == "build-release":
-            exec_command = (
-                "python -m build --wheel && "
-                "cp dist/*.whl /artifact_mount/"
-            )
         else:
             log.error(f"  └─ Unknown job phase: {job_name}")
             return False
@@ -173,45 +165,6 @@ class DockerComposeAdapter(BaseComposeAdapter):
         ]
         await self.boundary.run_command(cmd, cwd=str(self.workspace), capture=True)
 
-class DeterminismAuditor:
-    """Audits built artifacts for dependency integrity to prevent local path leakage."""
-    def __init__(self, target_dir: Path, boundary: SystemBound):
-        self.target_dir = target_dir
-        self.boundary = boundary
-        self.is_clean = False
-
-    def attach(self): pass 
-    def detach(self): pass
-
-    async def verify(self) -> bool:
-        log.info(f"[Auditor:Determinism] Inspecting extracted Artifacts in {self.target_dir}...")
-        wheel_files = list(self.target_dir.rglob("fiber-*.whl"))
-        
-        if not wheel_files:
-            log.error("  └─ 💥 Artifact missing. Wheel not found in the shared volume.")
-            return False
-            
-        target_wheel = wheel_files[0]
-        cmd = f"unzip -p {target_wheel} fiber-*/METADATA | grep 'Requires-Dist: xphi'"
-        code, out, _ = await self.boundary.run_command(["bash", "-c", cmd], capture=True)
-        
-        if code != 0:
-            log.error("  └─ 💥 Metadata extraction failed. Zip structure might be corrupted.")
-            return False
-            
-        metadata_line = out.strip()
-        log.info(f"  ├─ Target Wheel: {target_wheel.name}")
-        log.info(f"  ├─ Extracted Dependency: {metadata_line}")
-        
-        if "file://" in metadata_line:
-            log.error("  └─ 💥 FATAL BREACH: Local absolute path leaked into Distribution Artifact!")
-            self.is_clean = False
-            return False
-            
-        log.info("  └─ ✨ AUDIT PASSED: Remote Binding Enforced mathematically.")
-        self.is_clean = True
-        return True
-
 @dataclass
 class ComposeContext:
     boundary: SystemBound
@@ -231,7 +184,6 @@ class ComposeOrchestrator:
         os.environ["FIBER_ARTIFACT_MOUNT"] = str(self.artifact_dir)
         
         self.adapter = DockerComposeAdapter(self.workspace, self.boundary, self.artifact_dir, rebuild)
-        self.determinism_auditor = DeterminismAuditor(self.artifact_dir, self.boundary)
         self.suite_runners = {}
 
     async def _run_all_suites(self, broker: Any, context: ComposeContext) -> int:
@@ -253,11 +205,10 @@ class ComposeOrchestrator:
         log.info(f"[SYSTEM] Artifact Extraction Target: {self.artifact_dir}")
         
         try:
-            self.determinism_auditor.attach()
             context = ComposeContext(
                 boundary=self.boundary,
                 adapter=self.adapter,
-                auditors={"determinism": self.determinism_auditor}
+                auditors={}  # Auditor 기능 완전 제거 (호환성을 위해 빈 Dict 유지)
             )
             
             if self.suites:
@@ -274,7 +225,6 @@ class ComposeOrchestrator:
             
         finally:
             log.info("\n[SYSTEM] Initiating Teardown Sequence...")
-            self.determinism_auditor.detach()
             
             if self.adapter:
                 await self.adapter.teardown()
