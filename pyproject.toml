@@ -19,9 +19,9 @@ dev = ["pytest", "pytest-asyncio"]
 [tool.hatch.metadata.hooks.custom]
 path = "phase/hatch.py"
 base_dependencies = [
-    "uvloop", "fastapi", "redis", "pyyaml", "orjson", "typer", "canonicaljson", "aiohttp", "requests",
+    "uvloop", "psutil", "fastapi", "redis", "pyyaml", "orjson", "typer", "canonicaljson", "aiohttp", "requests",
     "watchdog", "rocksdict", "filetype", "openai", "mcp==2.0.0a3", "pydantic", "httpx", "wasmtime",
-    "tinytag", "typing_extensions"
+    "tinytag", "typing_extensions", "eth_account", "web3"
 ]
 
 [tool.hatch.version]

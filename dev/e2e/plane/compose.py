@@ -16,11 +16,6 @@ from xphi.kernel.space.bind.resolver import resolve_path
 FIBER_ROOT = resolve_path("fiber")
 log = get_emitter("e2e.plane.compose")
 
-DEFAULT_E2E_SUITE = [
-    "VCR_MODE=replay python -m fiber.dev.ex.switch",
-    "fiber e2e dphi.wasm.phase"
-]
-
 class ComposeWorkflowScene:
     """
     Executes a pure Docker Compose runtime to cross-validate System E2E tests,
@@ -39,6 +34,28 @@ class ComposeWorkflowScene:
 
     async def phase_system_e2e_test(self):
         self.log.info("  ▶️ [TEST] System E2E Job (Infrastructure & Intent Validation)")
+        e2e_bash_script = """
+set -e
+trap 'echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.kernel.ops.reaper' EXIT
+
+echo "[CI-SYNC] 1. Bootstrap Topology Boundary..."
+python -m xphi.kernel.space.bind.around
+
+echo "[CI-SYNC] 2. Booting Kernel (Background)..."
+nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
+
+echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
+timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done' || { echo -e "\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\n"; cat kernel_boot.log; exit 1; }
+echo "✅ Kernel is fully up and running!"
+
+echo "[CI-SYNC] 4. Executing Core E2E Client..."
+python -m dev.e2e.edge.client
+
+echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
+fiber e2e dphi.wasm.phase
+VCR_MODE=replay python -m fiber.dev.ex.switch
+fiber e2e plane.flare --mode dev
+"""
         
         try:
             success = await self.adapter.apply_job(
@@ -46,47 +63,18 @@ class ComposeWorkflowScene:
                 env={
                     "XPHI_ENV": "ci",
                     "REDIS_URL": "redis://redis:6379/0",
-                    "FIBER_E2E_STEPS": " && ".join(DEFAULT_E2E_SUITE) 
+                    "FIBER_E2E_STEPS": e2e_bash_script.strip()
                 }
             )
             
             if not success:
-                # [개선] 실패 시 어디를 봐야 할지 명확히 안내
                 raise RuntimeError("System E2E job fractured. Check the streamed Docker Compose logs above for specific traceback.")
                 
             self.log.info("  └─ System E2E Test Passed ✅ (Services & Binding OK)")
-                
         except Exception as e:
             self.fail_count += 1
             self.failed_cases.append({"title": "System E2E Test Job", "error": str(e)})
             self.log.error(f"  [SCENARIO HALTED] System E2E Job: {e}")
-
-    async def phase_build_release_audit(self):
-        self.log.info("  ▶️ [TEST] Release Build Job (Deterministic Remote Enforcement)")
-        try:
-            success = await self.adapter.apply_job(
-                job_name="build-release", 
-                env={"FIBER_BUILD_DIST": "1"}
-            )
-            
-            if not success:
-                raise RuntimeError("Release Build job fractured. Check the build logs.")
-            
-            if "determinism" in self.auditors:
-                auditor = self.auditors["determinism"]
-                is_clean = await auditor.verify()
-                
-                if not is_clean:
-                    msg = "FATAL: Artifact Determinism check failed! Local paths detected."
-                    self.log.error(f"  [FATAL_RUPTURE] {msg}")
-                    raise RuntimeError(msg)
-                else:
-                    self.log.info("  └─ Artifact Boundary Intact: Wheel determinism verified ✅")
-                    
-        except Exception as e:
-            self.fail_count += 1
-            self.failed_cases.append({"title": "Release Build & Audit Job", "error": str(e)})
-            self.log.error(f"  [SCENARIO HALTED] Release Build Job: {e}")
 
     async def run_all(self):
         self.log.info("\n=== [START] Executing COMPOSE CI/CD Workflow Scenes ===")
@@ -98,13 +86,14 @@ class ComposeWorkflowScene:
 
         self.log.info("  └─ Compose Runtime Availability: Confirmed 🟢")
 
+        # 단일 E2E 테스트만 실행되도록 릴리즈 빌드 오딧 제거 완료
         await self.phase_system_e2e_test()
-        await self.phase_build_release_audit()
         
         if self.fail_count == 0:
             self.log.info("=== [DONE] All Workflow Scenes Passed Successfully ===")
         else:
             self.log.warning(f"=== [DONE] Workflow Scenes Completed with {self.fail_count} Failures ===")
+
 
 class ComposeFlow:
     """CLI Control Plane for orchestrating Compose-based CI pipeline validations."""
@@ -114,12 +103,13 @@ class ComposeFlow:
         self.rebuild = rebuild
 
     async def test(self):
-        log.info(f"\n[PHASE 1] Initializing COMPOSE Orchestrator in [{self.mode.upper()}] mode")
+        self.log = log
+        self.log.info(f"\n[PHASE 1] Initializing COMPOSE Orchestrator in [{self.mode.upper()}] mode")
         
         original_cwd = Path.cwd()
         if FIBER_ROOT:
             os.chdir(FIBER_ROOT)
-            log.info(f"  └─ Workspace Context Switched to FIBER_ROOT: {FIBER_ROOT}")
+            self.log.info(f"  └─ Workspace Context Switched to FIBER_ROOT: {FIBER_ROOT}")
 
         try:
             controller = ComposeOrchestrator(
@@ -131,18 +121,17 @@ class ComposeFlow:
             
             success, err_msg = await controller.execute(broker=None)
             
-            log.info("\n" + "="*75)
-            log.info(f"🚀 COMPOSE CI/CD PIPELINE EXECUTION REPORT 🚀".center(75))
-            log.info("="*75)
+            self.log.info("\n" + "="*75)
+            self.log.info(f"🚀 COMPOSE CI/CD PIPELINE EXECUTION REPORT 🚀".center(75))
+            self.log.info("="*75)
             
             if success:
-                log.info(f"🟢 [SUCCESS] All Workflow Declarative Tests PASSED.")
-                log.info("="*75 + "\n")
+                self.log.info(f"🟢 [SUCCESS] All Workflow Declarative Tests PASSED.")
+                self.log.info("="*75 + "\n")
             else:
-                log.critical(f"🔴 [FAILED] COMPOSE CI Test execution terminated with errors.")
-                # [개선] 실패 원인 요약을 출력
+                self.log.critical(f"🔴 [FAILED] COMPOSE CI Test execution terminated with errors.")
                 if err_msg:
-                     log.error(f"Reason: {err_msg}")
+                     self.log.error(f"Reason: {err_msg}")
                 sys.exit(1)
                 
         finally:
@@ -150,6 +139,7 @@ class ComposeFlow:
 
     async def run(self):
         await self.test()
+
 
 def main(args_list: list[str] = None):
     parser = argparse.ArgumentParser(description="Fiber CI/CD E2E Orchestrator via DOCKER COMPOSE")

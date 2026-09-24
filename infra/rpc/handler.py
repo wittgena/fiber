@@ -1,6 +1,4 @@
 # fiber.infra.rpc.handler
-## @lineage: fiber.dev.infra.rpc.handler
-## @lineage: fiber.gateway.edge.rpc.handler
 import json
 import time
 import uuid

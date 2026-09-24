@@ -9,26 +9,21 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
+from fiber.infra.rpc.client import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.gateway.rest.serv.public import public_edge
-from fiber.gateway.rest.serv.ext import ext_router
 from fiber.gateway.rest.serv.llm import llm_edge
 from fiber.phase.contract.origin import OriginRegistry
+from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
+from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
-from xphi.kernel.space.tunnel.subs import DistributedPubSub
-from xphi.kernel.wasm.broker import DphiBroker
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
-from phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
-from phase.contract.server import (
-    AttestationMiddleware,
-    LocalMiddleware,
-    WasTelemetry,
-)
-from xphi.watcher.plane.emitter import get_emitter
-
 from xphi.arch.bound.xor.secret.cipher import Cipher
 from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
+from xphi.kernel.space.tunnel.subs import DistributedPubSub
+from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.receptor.warden import SecretAuditor
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
 
@@ -41,7 +36,7 @@ class Config(BaseModel):
     allow_cors_origins: list[str] = ["http://localhost:3000"] 
     session_api_keys: list[str] = []
     pubsub_channel: str = "audit_channel"
-    wasm_timeout: float = 10.0
+    wasm_timeout: float = 30.0
     committee_pubs: list[str] = []
     
     redis_url: str = "redis://localhost:6379"
@@ -99,7 +94,6 @@ async def lifespan(app: FastAPI):
     config: Config = getattr(app.state, "config", get_default_config())
     
     try:
-        # [CRITICAL SECURITY INITIALIZATION]
         log.info("Initializing Origin Registry and verifying cryptographic state...")
         registry = OriginRegistry()
         trusted_state = registry.load_and_verify()
@@ -112,7 +106,7 @@ async def lifespan(app: FastAPI):
         secret_key = get_secret_from_vendor(
             client=None,
             key_manager=KMSVendor.LOCAL,  # 추후 AWS_KMS 등으로 변경 가능
-            secret_name="LEDGER_CIPHER_KEY"
+            secret_name="DPHI_CIPHER_KEY"
         )
         if not secret_key:
             log.warning("KMS returned no key. Using ephemeral testing key.")
@@ -120,7 +114,6 @@ async def lifespan(app: FastAPI):
             
         app.state.secret_auditor = SecretAuditor(cipher=Cipher(secret_key=secret_key))
         log.info("SecretAuditor mounted successfully to app.state.")
-        # -------------------------------------------------------------------
 
         tunnel = app.state.tunnel
         ledger = app.state.ledger
@@ -172,9 +165,7 @@ async def lifespan(app: FastAPI):
         log.info("API Payload Teardown complete. Goodbye.")
 
 
-# =====================================================================
 # App Factory
-# =====================================================================
 def _get_root_path(config: Config) -> str:
     if config.web_url:
         return urlparse(config.web_url).path.rstrip("/")
@@ -204,7 +195,7 @@ def create_app(
     app.include_router(public_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
     app.include_router(mcp_bridge)  
-    app.include_router(ext_router) 
+    # app.include_router(ext_router) 
 
     # Readiness Probe
     @app.get("/_health", tags=["system"], include_in_schema=False)
@@ -213,18 +204,14 @@ def create_app(
             return {"status": "ok", "message": "API Payload is ready"}
         raise HTTPException(status_code=503, detail="Service Not Ready")
 
-    # [보안 개선] 통제된 정보 누출 (Controlled Information Leakage) 적용
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         client_host = request.client.host if request.client else 'unknown'
-        
-        # 내부 구조(Tree)는 숨기고, 문제가 된 '마지막 필드명(Leaf Node)'만 추출
         safe_hints = []
         for err in exc.errors():
             loc = err.get("loc", [])
             if len(loc) > 0:
                 field_name = str(loc[-1])
-                # 인덱스 번호(리스트 위치)는 제거하고 실제 키 이름만 수집
                 if not field_name.isdigit(): 
                     safe_hints.append(field_name)
         
@@ -243,13 +230,23 @@ def create_app(
             }
         )
 
-    # Middlewares
+    @app.exception_handler(RpcException)
+    async def rpc_exception_handler(request: Request, exc: RpcException):
+        log.warning(f"[Gateway] Upstream RPC Error on {request.url.path}: {exc.detail}")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": True,
+                "detail": exc.detail,
+                "resolution": "Check the upstream RPC worker or payload requirements."
+            }
+        )
+
     app.add_middleware(SentinelFirewallMiddleware, max_body_size=config.max_payload_size)
     app.add_middleware(LocalMiddleware, allow_origins=config.allow_cors_origins)
     app.add_middleware(AttestationMiddleware)
     app.add_middleware(WasTelemetry)
 
-    # Legacy Secure MCP Server Mount
     log.info("Initializing Secure MCP Server (Native Gateway)...")
     mcp = SecureMCPServer(name="MCP-Server", version="1.0.0")
     mcp.bind_fastapi(app, allowed_tags=["mcp-exposed"])

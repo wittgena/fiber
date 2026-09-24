@@ -50,7 +50,6 @@ async def get_secret_auditor(request: Request) -> SecretAuditor:
         
     log.warning("[DI Warning] 'secret_auditor' not found in app.state. Provisioning ephemeral KMS-backed fallback.")
     try:
-        # KMSVendor를 통해 시크릿 키 획득
         secret_key = get_secret_from_vendor(
             client=None,
             key_manager=KMSVendor.LOCAL,

@@ -18,19 +18,16 @@ from xphi.arch.model.edge.receipt import (
 from xphi.arch.model.edge.receptor import EdgeHeader
 
 class Endpoints:
-    """Backend routing prefixes and endpoints for DPHI Gateway."""
-    # --- edge.public (prefix: /v1/public) ---
+    """Backend routing prefixes and endpoints for Edge Gateway"""
     KEYS              = "/v1/public/keys"
     SANDBOX_QUOTE     = "/v1/public/sandbox/quote"
     SANDBOX_HANDSHAKE = "/v1/public/sandbox/handshake"
-    SANDBOX_EXECUTE   = "/v1/public/sandbox/execute"
     BILLING_INVOICE   = "/v1/public/billing/invoice"
     BILLING_BALANCE   = "/v1/public/billing/balance"
     TELEMETRY_LOGS    = "/v1/public/telemetry/logs"
     AUDIT_EVENT       = "/v1/public/audit/event"
     AUDIT_VERIFY      = "/v1/public/audit/verify"
 
-    # --- edge.llm (prefix: /v1) ---
     LLM_CHAT        = "/v1/chat/completions"
     LLM_EMBEDDING   = "/v1/embeddings"
     MCP_STATE       = "/v1/mcp-gateway/state"
@@ -40,7 +37,7 @@ class Endpoints:
 class SandboxIntent:
     client_id: str
     action: str
-    source_code: str
+    payload: Any
     max_fuel: int
     signature: str
 
@@ -135,9 +132,7 @@ class DphiPublicClient:
         )
         return VerifiedHttpClient(client=base_client, max_age_seconds=60)
 
-    # -------------------------------------------------------------------------
-    # Public Edge (Sandbox & Economy)
-    # -------------------------------------------------------------------------
+    # Public Edge (Economy)
     async def request_handshake(self, intent: SandboxIntent) -> Dict[str, Any]:
         verifier = self._get_verified_client()
         try:
@@ -162,25 +157,7 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def execute_sandbox_intent(self, intent: SandboxIntent, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
-        verifier = self._get_verified_client()
-        headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
-        try:
-            response = await verifier.async_post_verified(Endpoints.SANDBOX_EXECUTE, json=asdict(intent), headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as he:
-            self.log.error(f"[SDK] Execution Rejected (Status {he.response.status_code}): {he.response.text}")
-            raise
-        except Exception as e:
-            self.log.error(f"[SDK] Execution Failed: {e}")
-            raise
-        finally:
-            await verifier._client.aclose()
-
-    # -------------------------------------------------------------------------
     # Compliance & Audit Methods
-    # -------------------------------------------------------------------------
     async def verify_audit_receipt(self, receipt: Dict[str, Any]) -> Dict[str, Any]:
         verifier = self._get_verified_client()
         try:
@@ -203,10 +180,6 @@ class DphiPublicClient:
                 headers=headers
             )
             response.raise_for_status()
-            
-            # [해결됨] xphi.arch.model.dphi.receptor.EdgeHeader 상수를 사용하여 
-            # 서버가 보낸 헤더 키(X-Kernel-Fingerprint 등)와 완벽히 일치시킴. 
-            # httpx.Headers는 Case-Insensitive 하므로 상수값(.value)을 그대로 써도 매칭됨.
             headers_dict = response.headers
             content_hash = headers_dict.get(EdgeHeader.CONTENT_HASH.value, "N/A")
             fingerprint = headers_dict.get(EdgeHeader.FINGERPRINT.value, "N/A")
@@ -226,6 +199,10 @@ class DphiPublicClient:
             await verifier._client.aclose()
 
     async def record_audit_event(self, request: AuditLogRequest, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
+        """
+        API: POST /v1/public/audit/event
+        Gateway returns AuditLogResponse schema containing 'request_id' and 'result.hash'.
+        """
         verifier = self._get_verified_client()
         headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
         try:
@@ -235,7 +212,12 @@ class DphiPublicClient:
                 headers=headers
             )
             response.raise_for_status()
-            return response.json().get("result", {})
+            
+            # [핵심 개선]: 데이터 유실(Information Loss) 방지. 
+            # response.json().get("result", {}) 로 알맹이만 파싱하던 잘못된 관행을 버리고, 
+            # Gateway API의 명세(AuditLogResponse)를 클라이언트에게 투명하게 1:1로 전달합니다.
+            return response.json()
+            
         except httpx.HTTPStatusError as he:
             self.log.error(f"[SDK] Audit Rejected (Status {he.response.status_code}): {he.response.text}")
             raise
@@ -245,9 +227,7 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    # -------------------------------------------------------------------------
     # LLM & Enterprise MCP
-    # -------------------------------------------------------------------------
     async def execute_secure_llm_intent(self, intent: LLMIntent) -> Dict[str, Any]:
         verifier = self._get_verified_client()
         payload = {
@@ -263,7 +243,7 @@ class DphiPublicClient:
             if response.status_code == 402:
                 self.log.warning("[SDK] 402 Payment Required. Initiating auto x402 Handshake...")
                 hs_res = await self.request_handshake(SandboxIntent(
-                    client_id=intent.client_id, action="LLM_COMPUTE", source_code="", max_fuel=intent.max_tokens, signature="sig"
+                    client_id=intent.client_id, action="LLM_COMPUTE", payload="", max_fuel=intent.max_tokens, signature="sig"
                 ))
                 x402_receipt = hs_res.get("x402_receipt")
                 if not x402_receipt:

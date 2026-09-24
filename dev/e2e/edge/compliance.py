@@ -26,9 +26,7 @@ class ComplianceTracerPipeline(PipelineRunner):
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
         self.test_config = Config()
         
-        # [SDK 인스턴스 초기화] E2E 테스트 시뮬레이션을 위한 SDK 클라이언트
         self.sdk_client = DphiPublicClient(base_url=self.local_url)
-        
         self.rest_app = None
         self.server = None
         self._server_task = None
@@ -203,7 +201,6 @@ class ComplianceSuiteRunner:
         self.results.extend(await ComplianceTracerPipeline(config=net_config).run_pipeline())
 
     def _print_report(self):
-        # [Burst 방지] 연속 logging 호출 대신 단일 문자열 버퍼로 결합하여 1회 발행
         lines = [
             "\n" + "=" * 80,
             "📜 [EDGE COMPLIANCE TEST SUITE REPORT]",

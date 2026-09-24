@@ -1,5 +1,4 @@
 # fiber.phase.contract.server
-## @lineage: xphi.arch.contract.server
 import os
 import time
 import json
@@ -27,10 +26,6 @@ from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.adapter.state import StateAdapter
 
 log = get_emitter("arch.contract.server", phase="NETWORK")
-
-# ============================================================================
-# 1. MIDDLEWARES (Security, Telemetry, CORS, Attestation)
-# ============================================================================
 
 class SentinelFirewallMiddleware:
     """ASGI Middleware integrating strict validation and Volumetric defense."""
@@ -175,11 +170,6 @@ class AttestationMiddleware(BaseHTTPMiddleware):
         response.body_iterator = new_body_iterator()
         return response
 
-
-# ============================================================================
-# 2. PROTOCOL ADAPTERS (MCP Bridge & Server)
-# ============================================================================
-
 class FastAPIMCPAdapter:
     """Automated Bridge with strict auth propagation and context retention."""
     def __init__(self, mcp_server: "SecureMCPServer", fastapi_app: FastAPI):
@@ -247,7 +237,6 @@ class FastAPIMCPAdapter:
 
         self.mcp_server.tool()(dynamic_tool_handler)
         log.debug(f"[MCP Adapter] Tool mapped safely: {tool_name} -> [{http_method}] {path}")
-
 
 class SecureMCPServer(MCPServer):
     def __init__(self, *args, **kwargs):

@@ -5,7 +5,7 @@ import time
 from typing import Optional
 
 from fiber.infra.adapter.evm import Web3Adapter
-from fiber.infra.adapter.config.exchange import exchange_config
+from fiber.infra.adapter.config.exchange import exchange_config, NetEnv
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("adapter.wallet")
@@ -14,11 +14,10 @@ class EthWalletAdapter:
     def __init__(
         self,
         web3_adapter: Web3Adapter,
-        agent_alias: str = "alpha",
-        simulate: bool = False
+        agent_alias: str = "alpha"
+        # ❌ 파라미터에서 simulate: bool 제거
     ):
         self.w3 = web3_adapter.w3
-        self.simulate = simulate
         self.agent_alias = agent_alias
         
         self.private_key = exchange_config.get_agent_pkey(agent_alias)
@@ -32,13 +31,16 @@ class EthWalletAdapter:
             {"constant": True, "inputs": [], "name": "decimals", "outputs": [{"name": "", "type": "uint8"}], "type": "function"}
         ]
         
-        log.info(f"[Wallet] Native Wallet initialized for {agent_alias}: {self.wallet_address} (Simulate: {simulate})")
+        # [개선] 현재 구동되는 네트워크 환경 모드(mode)를 로그에 명시
+        mode_str = exchange_config.mode.value.upper()
+        log.info(f"[Wallet] Native Wallet initialized for {agent_alias}: {self.wallet_address} (Mode: {mode_str})")
 
     async def approve(self, spender_address: str, amount_str: str, asset: str = "usdc") -> str:
         """자신의 지갑에서 다른 지갑(spender)이 자금을 Pull 할 수 있도록 한도를 허용(Approve)"""
-        if self.simulate:
-            log.warning(f"[Wallet] Simulated approve: {amount_str} {asset} for {spender_address}")
-            return f"0x_simulated_approve_{os.urandom(8).hex()}"
+        # [개선] NetEnv.LOCAL 환경일 경우에만 Mock 처리 (안전 장치)
+        if exchange_config.mode == NetEnv.LOCAL:
+            log.info(f"[LOCAL] Mocking approve: {amount_str} {asset} for {spender_address}")
+            return f"0x_local_approve_{os.urandom(8).hex()}"
 
         try:
             asset_contract_addr = getattr(exchange_config.contracts, f"target_{asset.lower()}", exchange_config.contracts.target_erc20)
@@ -95,9 +97,10 @@ class EthWalletAdapter:
 
     async def transfer(self, to_address: str, amount_str: str, asset: str = "usdc") -> str:
         """자신의 지갑에서 다른 지갑(to_address)으로 자금을 전송 (Push)"""
-        if self.simulate:
-            log.warning(f"[Wallet] Simulated transfer: {amount_str} {asset} to {to_address}")
-            return f"0x_simulated_tx_{os.urandom(8).hex()}"
+        # [개선] NetEnv.LOCAL 환경일 경우에만 Mock 처리
+        if exchange_config.mode == NetEnv.LOCAL:
+            log.info(f"[LOCAL] Mocking transfer: {amount_str} {asset} to {to_address}")
+            return f"0x_local_tx_{os.urandom(8).hex()}"
 
         try:
             asset_contract_addr = getattr(exchange_config.contracts, f"target_{asset.lower()}", exchange_config.contracts.target_erc20)
@@ -156,9 +159,11 @@ class EthWalletAdapter:
     async def transfer_from(self, from_address: str, amount_str: str, asset: str = "usdc", to_address: Optional[str] = None) -> str:
         """사전에 approve된 외부 지갑(from)에서 지정된 지갑(to)으로 자금을 강제 징수 (Pull)"""
         target_to_address = to_address if to_address else self.wallet_address
-        if self.simulate:
-            log.warning(f"[Wallet] Simulated transfer_from: Pulling {amount_str} {asset} from {from_address} to {target_to_address}")
-            return f"0x_simulated_transferfrom_{os.urandom(8).hex()}"
+        
+        # [개선] NetEnv.LOCAL 환경일 경우에만 Mock 처리
+        if exchange_config.mode == NetEnv.LOCAL:
+            log.info(f"[LOCAL] Mocking transfer_from: Pulling {amount_str} {asset} from {from_address} to {target_to_address}")
+            return f"0x_local_transferfrom_{os.urandom(8).hex()}"
 
         try:
             asset_contract_addr = getattr(exchange_config.contracts, f"target_{asset.lower()}", exchange_config.contracts.target_erc20)

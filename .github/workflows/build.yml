@@ -8,7 +8,7 @@ on:
     types: [opened, synchronize, reopened]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: \({{ github.workflow }}-\){{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: "pip"
 
       - name: 🦕 Setup Deno
@@ -50,9 +50,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          
       - name: 🌩️ Install Cloudflare Wrangler
         run: npm install -g wrangler
-
 
       - name: ⚙️ Install dependencies
         run: |
@@ -62,11 +62,59 @@ jobs:
       - name: 🗺️ Bootstrap Topology Boundary
         run: |
           python -m xphi.kernel.space.bind.around
+      
+      - name: 🔑 Set up Node Identity (SSH Key)
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEV_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
-      - name: 🧪 Run System E2E Suite
+      - name: 🚀 Boot Kernel (Background)
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
+          XPHI_WORKERS: "1"
+        run: |
+          echo "Starting Kernel in background..."
+          nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
+          echo "KERNEL_PID=\(!" >>\)GITHUB_ENV
+
+          echo "Waiting for Kernel to become ready on port 8000..."
+          timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done'
+          echo "✅ Kernel is fully up and running!"
+
+      - name: 🧪 Run E2E Edge Client
+        env:
+          REDIS_URL: "redis://localhost:6379/0" 
+          DPHI_ENV: "local"
+        run: |
+          python -m dev.e2e.edge.client
+
+      - name: 🧹 Execute Reaper (Teardown)
+        if: always()
+        env:
+          REDIS_URL: "redis://localhost:6379/0" 
+          XPHI_ENV: "ci"
+        run: |
+          echo "Executing Kernel Reaper..."
+          python -m xphi.kernel.ops.reaper
+          
+          if kill -0 ${{ env.KERNEL_PID }} 2>/dev/null; then
+            echo "Reaper did not terminate the process. Forcing kill..."
+            kill ${{ env.KERNEL_PID }} || true
+          fi
+          echo "✅ Kernel reaped cleanly."
+
+      - name: 📄 Upload Kernel Log on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-error-logs
+          path: kernel_boot.log
+
+      - name: 🧪 Run Remaining E2E Tests
+        env:
+          REDIS_URL: "redis://localhost:6379/0" 
         run: |
           fiber e2e dphi.wasm.phase
           VCR_MODE=replay python -m fiber.dev.ex.switch

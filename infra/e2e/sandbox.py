@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dev.sdk.ext import ExtClient
 from fiber.infra.adapter.config.exchange import exchange_config
 
 from xphi.arch.bound.adapter.settlement import (
@@ -67,9 +66,6 @@ class EcoBuilder:
         "anchor_proposal": "Ethereum L2 (OP Stack) Sequencer. Rollup of state roots (Merkle Parity) for global consensus."
     }
 
-    @staticmethod
-    def get_testnet_wallet(edge_server_url: str = "http://localhost:8000/v1/ext") -> ExtClient:
-        return ExtClient(base_url=edge_server_url)
 
     @staticmethod
     def ap2_mandate_params(
@@ -433,7 +429,7 @@ class SandboxRunner(SchemeRunner):
 
 
 class EpochBase(SchemeRunner):
-    def __init__(self, broker: Any, scenario_name: str, simulate_wallet: bool = True):
+    def __init__(self, broker: Any, scenario_name: str):
         super().__init__(broker)
         self.scenario_name = scenario_name
         self.committee_keys = [ed25519.Ed25519PrivateKey.generate() for _ in range(3)]
@@ -443,9 +439,6 @@ class EpochBase(SchemeRunner):
             ).hex() for k in self.committee_keys
         ]
         
-        self.wallet_client: ExtClient = EcoBuilder.get_testnet_wallet()
-        self.wallet_client.simulate = simulate_wallet
-
     def _sign_multisig(self, signers: List[ed25519.Ed25519PrivateKey], commit_dict: Dict[str, Any]) -> List[str]:
         canonical_bytes = StateAdapter.to_canonical_bytes(commit_dict)
         commit_hash = hashlib.sha256(canonical_bytes).hexdigest().encode('utf-8')

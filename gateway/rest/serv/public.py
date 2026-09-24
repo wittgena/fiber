@@ -57,14 +57,13 @@ class InvoiceIssueRequest(BaseModel):
     amount_usdc: str
     resource_id: str
 
-class SandboxHandshakeResponse(BaseModel):
+class HandshakeResponse(BaseModel):
     status: str
     estimated_fuel: int
     estimated_cost_usd: float
     invoice: Dict[str, Any]
     x402_receipt: Optional[str] = None
     next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
-
 
 """TRUST ANCHOR"""
 @public_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
@@ -112,7 +111,7 @@ async def public_sandbox_quote(
     exec_req = {
         "sandbox_schema": {
             "runtime": "python3.11-wasm",
-            "files": {"main.py": intent.source_code}, 
+            "files": {"main.py": intent.payload}, 
             "limits": {"max_fuel": intent.max_fuel}
         },
         "target_entry": "main.py",
@@ -121,97 +120,11 @@ async def public_sandbox_quote(
     
     return await rpc.call("eco.profile.quote", exec_req)
 
-
-@public_edge.post(
-    "/sandbox/execute", 
-    summary="Execute Billed AI Sandbox Intent & Issue Cryptographic Proof-of-Action",
-    response_model=AuditReceipt
-)
-async def public_sandbox_execute(
-    intent: SandboxIntent,
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
-    rpc: InternalRpcClient = Depends(get_rpc_client),
-    broker: DphiBroker = Depends(get_wasm_broker)
-):
-    request_id = f"sandbox_{uuid.uuid4().hex[:8]}" 
-    with flow_scope(phase="GATEWAY_ORCHESTRATION", bound="edge.public", req_id=request_id):
-        val_req = IntentValidationRequest(
-            requester_id=intent.client_id,
-            responder_id=intent.responder_id or "edge-gateway-01",
-            action=intent.action,
-            max_fuel_budget=intent.max_fuel,
-            signature=intent.signature,
-            payment_receipt=x402_receipt
-        )
-
-        try:
-            await rpc.call("validate.compute.intent", val_req.model_dump(exclude_none=True))
-        except RpcException as e:
-            raise HTTPException(status_code=401, detail=f"Intent Rejected: {{\"detail\":\"{e.detail}\"}}")
-
-        exec_req = BilledExecutionRequest(
-            sandbox_schema={
-                "runtime": "python3.11-wasm",
-                "files": {"main.py": intent.source_code}, 
-                "limits": {"max_fuel": intent.max_fuel}
-            },
-            target_entry="main.py",
-            context_depth=2
-        )
-
-        try:
-            exec_data = await rpc.call("eco.profile.execute.billed", exec_req.model_dump())
-        except RpcException as e:
-            raise HTTPException(status_code=422, detail=f"Compute Failed: {{\"detail\":\"{e.detail}\"}}")
-        
-        fuel_metered = exec_data.get("fuel_billed", 0)
-        cost_usd = exec_data.get("billed_cost_usd", 0.0)
-        exec_hash = hashlib.sha256(json.dumps(exec_data).encode()).hexdigest()
-        repos = {"vm_trace_hash": exec_hash, "metered_fuel": str(fuel_metered)}
-
-        swarm = NotarySwarm(size=3)
-        canonical_hash = StateAdapter.to_canonical_bytes(repos)
-        commit_hash_bytes = hashlib.sha256(canonical_hash).digest()
-        attested_signatures = swarm.attest_payload(commit_hash_bytes)
-
-        kernel_req_dict = KernelExecutionRecord(
-            receipt_id=request_id,
-            repos=repos,
-            signatures=attested_signatures,
-            timestamp=float(time.time() * 1000)
-        ).model_dump(exclude_none=True)
-        
-        evo_ctx = StateAdapter.build_evolution_context(phase_root={})
-        transition_payload = StateAdapter.build_transition_payload(
-            intent_action="record_sandbox_execution", 
-            intent_payload=kernel_req_dict,
-            evolution_ctx=evo_ctx
-        )
-
-        canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
-        fp_res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
-        
-        if not fp_res.success:
-            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Kernel Record Failed: {fp_res.error}")
-            
-        commit_hash = json.loads(fp_res.output).get("fingerprint", "0x_sealed_root")
-        
-        return AuditReceipt(
-            receipt_id=request_id,
-            receipt_type="Proof-of-Sandbox-Action", 
-            status="SUCCESS",
-            fuel_consumed=fuel_metered,
-            metered_cost_usd=cost_usd,
-            state_root=commit_hash,
-            audit_trail=["Gateway", "PolicyEngine", "WasmSandbox", "CoreLedger"]
-        )
-
-
 """ECONOMY SYMMETRY (INVOICE ↔ BALANCE & HANDSHAKE)"""
 @public_edge.post(
     "/sandbox/handshake", 
     summary="Client Pre-flight Handshake (Quote & Invoice)",
-    response_model=SandboxHandshakeResponse
+    response_model=HandshakeResponse
 )
 async def public_sandbox_handshake(
     intent: SandboxIntent,
@@ -220,7 +133,7 @@ async def public_sandbox_handshake(
     quote_req = {
         "sandbox_schema": {
             "runtime": "python3.11-wasm",
-            "files": {"main.py": intent.source_code}, 
+            "files": {"main.py": intent.payload}, 
             "limits": {"max_fuel": intent.max_fuel}
         },
         "target_entry": "main.py",
@@ -245,7 +158,7 @@ async def public_sandbox_handshake(
     except RpcException as e:
         raise HTTPException(status_code=500, detail=f"Invoice Issue Failed: {e.detail}")
 
-    return SandboxHandshakeResponse(
+    return HandshakeResponse(
         status="HANDSHAKE_READY",
         estimated_fuel=fuel,
         estimated_cost_usd=cost_usd,
@@ -349,7 +262,6 @@ async def public_otlp_logs_export(
     except Exception as e:
         log.error(f"[Public OTLP] Processing failed: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stream processing error")
-
 
 @public_edge.post(
     "/audit/event", 

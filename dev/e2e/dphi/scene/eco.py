@@ -282,7 +282,7 @@ class LedgerSecuritySuite(SchemeRunner):
 # =========================================================================
 class SwarmConsensusScene(EpochBase):
     def __init__(self, broker: Any, simulate_wallet: bool = True):
-        super().__init__(broker, "AI Agent Swarm Consensus (M-of-N)", simulate_wallet)
+        super().__init__(broker, "AI Agent Swarm Consensus (M-of-N)")
         
     async def hook_inscribe_nodes(self, parity_triplet: dict[str, Any]) -> dict[str, str]:
         nexus_id = parity_triplet["nexus_id"]
@@ -313,7 +313,7 @@ class SwarmConsensusScene(EpochBase):
 
 class ProvAlignScene(EpochBase):
     def __init__(self, broker: Any, simulate_wallet: bool = True):
-        super().__init__(broker, "Cross-Repo Provenance Alignment (M-of-N)", simulate_wallet)
+        super().__init__(broker, "Cross-Repo Provenance Alignment (M-of-N)")
         
     async def hook_inscribe_nodes(self, parity_triplet: dict[str, Any]) -> dict[str, str]:
         nexus_id = parity_triplet["nexus_id"]
