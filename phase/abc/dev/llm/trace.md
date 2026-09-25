@@ -9,40 +9,43 @@ Fiber enforces strict, Netty-style physical pipeline stability while providing d
 
 ## 1. Pipeline Flow & Slots (Architecture Overview)
 
-When an array of interceptors is passed to the entry point, the UX Facade extracts the self-declared `target_slot` from each plugin and deterministically auto-routes them to designated lifecycle execution zones.
+Fiber enforces strict, Netty-style pipeline stability while providing developers with a simple, flat-list injection interface (`interceptors=[]`). The UX Facade deterministically auto-routes your plugins into three logical Execution Zones.
 
-### Internal Pipeline Flow (Deterministic Execution)
+### 3-Zone Pipeline Architecture
+
+*Outbound Request Flow (Tail ➔ Head)*
 
 ```
 [User Request] ➔ acompletion(..., interceptors=[Cache(), Guardrail(), Tracer()])
        │
-       ▼ (Entry Facade: Auto-Routing)
+       ▼ (Entry Facade: Auto-Routing & Injection)
        │
- ┌─────▼──────────────────────────────────────────────┐
- │ [Core: ContextBinder]  ➔ (Trace ID / Metadata injected)        │
+ ┌─────┴──────────────────────────────────────────────┐
+ │ === OBSERVABILITY & IDENTITY (Tail) ===            │
+ │ [Core] Trace ID / Metadata Binding                 │
+ │ [PRE_OBSERVER Slot] ➔ (ex: Datadog Tracer)         │ Runs first. Zero-latency async telemetry.
  ├────────────────────────────────────────────────────┤
- │ [Slot: PRE_OBSERVER]   ➔ (ex: Datadog Tracer)                  │ Runs first. Emits async telemetry before any logic.
+ │ === ROUTING & TRANSLATION (Middle) ===             │
+ │ [Core] VCR Mocking & Fallback Retries              │
+ │ [PRE_TRANSLATE Slot] ➔ (ex: Semantic Cache)        │ Raw dict state. Ideal for short-circuiting.
+ │ [Core] Schema Translation (Dict ➔ Pydantic)        │
+ │ [POST_TRANSLATE Slot] ➔ (ex: PII Guardrail)        │ Validated state. Enforces security policies.
  ├────────────────────────────────────────────────────┤
- │ [Slot: PRE_TRANSLATE]  ➔ (ex: Semantic Cache)                  │ Raw dict state. Intercepts for cache hits to bypass I/O.
- ├────────────────────────────────────────────────────┤
- │ [Core: Translator]     ➔ (dict ➔ Pydantic object)              │ Enforces strict schema normalization.
- ├────────────────────────────────────────────────────┤
- │ [Slot: POST_TRANSLATE] ➔ (ex: PII Guardrail)                   │ Validated state. Enforces security policies.
- ├────────────────────────────────────────────────────┤
- │ [Core: Fuel Breaker]   ➔ (Budget Exhaustion Breaker)           │ Terminates socket physically on budget overrun.
- ├────────────────────────────────────────────────────┤
- │ [Core: Transport]      ➔ (Actual LLM Network I/O)              │ Edge boundary / Network transit.
+ │ === GOVERNANCE & NETWORK (Head) ===                │
+ │ [Core] Fuel Breaker (Budget Exhaustion Trap)       │
+ │ [Core] Transport (Physical LLM Network I/O)        │
  └────────────────────────────────────────────────────┘
+
 ```
 
-### Pipeline Security
-This Netty-style duplex architecture inherently defends against modern gateway vulnerabilities (such as payload injections and observability bypasses) across three critical chokepoints:
+### Pipeline Security (Architectural Chokepoints)
 
-* Entry (Translator): Strict Pydantic normalization drops unverified/malformed payloads instantly, radically reducing the attack surface.
+By categorizing execution into strict zones, Fiber mathematically guarantees security and operational integrity:
 
-* Middle (Un-bypassable Slots): Data and error flows are decoupled. If a Guardrail (POST_TRANSLATE) ruptures the pipeline due to a policy violation, the exception deterministically flows back up to the Tracer (PRE_OBSERVER), guaranteeing zero blind spots in audit logs.
+1. **Absolute Observability:** Telemetry runs at the absolute Tail. Even if a request is short-circuited by a cache or blocked by a guardrail in Zone 2, Zone 1 always captures the initial intent and the final outcome. Zero blind spots.
+2. **Strict Normalization:** Physical network I/O cannot occur until the `Translator` normalizes unpredictable heterogeneous JSON payloads into strict Pydantic structures. Malformed payloads are dropped before reaching security guardrails.
+3. **Physical Governance:** Before the data leaves the edge boundary, the `Fuel Breaker` executes a hard TCP socket evaluation. This physically prevents malicious agents from initiating infinite streaming loops or bypassing token budgets.
 
-* Exit (Fuel Breaker): A hard, network-level socket termination mathematically prevents malicious agents from causing infinite streaming loops and billing runaways.
 
 ---
 
@@ -50,7 +53,7 @@ This Netty-style duplex architecture inherently defends against modern gateway v
 
 Plugins operate decoupled from the core framework. Developers strictly define the operational scope by assigning the appropriate `target_slot`.
 
-### 📍 [Slot: PRE_OBSERVER] - Asynchronous Telemetry
+### [Slot: PRE_OBSERVER] - Asynchronous Telemetry
 
 **Purpose:** Emits observability metrics (Datadog, LangSmith, etc.) without introducing latency to the primary business logic. Inheriting from `BaseLLMTracer` automatically binds the component to the `PRE_OBSERVER` slot.
 
@@ -85,7 +88,7 @@ class EnterpriseDatadogTracer(BaseLLMTracer):
 
 ```
 
-### 📍 [Slot: PRE_TRANSLATE] - Semantic Caching
+### [Slot: PRE_TRANSLATE] - Semantic Caching
 
 **Purpose:** Intercepts the raw payload (`dict` phase) prior to heavy Pydantic serialization or network I/O. Resolves cache hits by short-circuiting the pipeline.
 
@@ -121,7 +124,7 @@ class FastRedisCache(DuplexChannel):
 
 ```
 
-### 📍 [Slot: POST_TRANSLATE] - Security & PII Guardrails
+### [Slot: POST_TRANSLATE] - Security & PII Guardrails
 
 **Purpose:** Evaluates the immutable, validated Pydantic object against strict enterprise security policies prior to physical network egress.
 
