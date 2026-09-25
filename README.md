@@ -72,6 +72,11 @@ response = await acompletion(
 )
 ```
 
+> **Note on Drop-in Replacement:** Fiber operates as a drop-in replacement by maintaining compatibility with OpenAI/LiteLLM entrypoints, Pydantic return objects, and local token utilities. The following specifications detail how to preserve your existing application logic while integrating asynchronous telemetry and cost tracking.
+> 🔗 **[Entrypoint & Pydantic Spec](./phase/abc/dev/llm/entry.md)** 
+> 🔗 **[Token Utilities Spec](./phase/abc/dev/llm/token.md)** 
+> 🔗 **[Cost Tracker Spec](./phase/abc/dev/llm/cost.tracker.md)**
+
 ---
 
 ### 1.2. LLM Record & Replay
