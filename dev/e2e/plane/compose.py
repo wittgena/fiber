@@ -34,22 +34,37 @@ class ComposeWorkflowScene:
 
     async def phase_system_e2e_test(self):
         self.log.info("  ▶️ [TEST] System E2E Job (Infrastructure & Intent Validation)")
+        
         e2e_bash_script = """
 set -e
-trap 'echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.kernel.ops.reaper' EXIT
+trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ] && [ -f kernel_boot.log ]; then echo -e "\\n🔥 [FATAL] E2E CLIENT FAILED! DUMPING KERNEL LOG: 🔥\\n"; cat kernel_boot.log; echo -e "\\n[CI-SYNC] 💾 Saving kernel log to artifact mount..."; cp kernel_boot.log /artifact_mount/kernel_error_dump.log || true; fi; echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.kernel.ops.reaper; exit $EXIT_CODE' EXIT
 
 echo "[CI-SYNC] 1. Bootstrap Topology Boundary..."
 python -m xphi.kernel.space.bind.around
+
+echo "[CI-SYNC] 1.5. Injecting Mock Node Identity..."
+mkdir -p ~/.ssh
+cat << 'EOF' > ~/.ssh/id_ed25519
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACC3e9qbo208kLZIK53Q9rso+2oqHzQGP5bqpKkQer1exgAAAKirLcH+qy3B
+/gAAAAtzc2gtZWQyNTUxOQAAACC3e9qbo208kLZIK53Q9rso+2oqHzQGP5bqpKkQer1exg
+AAAEBvdGKojS3foXcxfI4iAcxsuYLXS7w/X7K7VKaJt7yNd7d72pujbTyQtkgrndD2uyj7
+aiofNAY/luqkqRB6vV7GAAAAJHdpdHRnZW5hQHdpdHRnZW5hcy1NYWNCb29rLVByby5sb2
+NhbAE=
+-----END OPENSSH PRIVATE KEY-----
+EOF
+chmod 600 ~/.ssh/id_ed25519
 
 echo "[CI-SYNC] 2. Booting Kernel (Background)..."
 nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
 
 echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
-timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done' || { echo -e "\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\n"; cat kernel_boot.log; exit 1; }
+timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
 echo "✅ Kernel is fully up and running!"
 
 echo "[CI-SYNC] 4. Executing Core E2E Client..."
-python -m dev.e2e.edge.client
+python -m fiber.dev.e2e.edge.client
 
 echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
 fiber e2e dphi.wasm.phase
@@ -85,15 +100,11 @@ fiber e2e plane.flare --mode dev
             return
 
         self.log.info("  └─ Compose Runtime Availability: Confirmed 🟢")
-
-        # 단일 E2E 테스트만 실행되도록 릴리즈 빌드 오딧 제거 완료
         await self.phase_system_e2e_test()
-        
         if self.fail_count == 0:
             self.log.info("=== [DONE] All Workflow Scenes Passed Successfully ===")
         else:
             self.log.warning(f"=== [DONE] Workflow Scenes Completed with {self.fail_count} Failures ===")
-
 
 class ComposeFlow:
     """CLI Control Plane for orchestrating Compose-based CI pipeline validations."""
@@ -124,7 +135,6 @@ class ComposeFlow:
             self.log.info("\n" + "="*75)
             self.log.info(f"🚀 COMPOSE CI/CD PIPELINE EXECUTION REPORT 🚀".center(75))
             self.log.info("="*75)
-            
             if success:
                 self.log.info(f"🟢 [SUCCESS] All Workflow Declarative Tests PASSED.")
                 self.log.info("="*75 + "\n")

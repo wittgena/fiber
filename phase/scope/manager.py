@@ -12,7 +12,12 @@ from typing import Type, Optional, Callable, Any
 from contextlib import asynccontextmanager, AsyncExitStack
 
 import httpx
-import redis
+# [변경됨] 동기 redis 임포트 제거
+# import redis
+
+# [추가됨] 중앙 집중형 환경 변수 및 비동기 터널 팩토리 도입
+from xphi.arch.contract.config import env
+from xphi.kernel.space.tunnel.factory import TunnelFactory
 
 from fiber.phase.scope.local.engine import LLMEngine
 from xphi.watcher.plane.emitter import get_emitter
@@ -95,9 +100,8 @@ class SandboxSurface(BaseSurface):
         self.threads = []
         self.llm_engine = LLMEngine()
         
-        redis_host = os.getenv("REDIS_HOST", "localhost")
-        self.redis = redis.Redis(host=redis_host, decode_responses=True)
-        
+        # [변경됨] 초기화 시점의 블로킹 Redis 커넥션 생성 제거. 
+        # 터널은 비동기 메서드(up/down) 내부에서 지연 로딩(Lazy load)됨.
         self.process_name = "sandbox.surface"
         self._launcher_module = None 
         self.registry_key = "system:sandbox:pids"
@@ -126,20 +130,23 @@ class SandboxSurface(BaseSurface):
         cmd_str = f"exec -a {self.process_name} {sys.executable} -m {self._launcher_module} --host {self.config.host} --port {self.config.port}"
         cmd = ["bash", "-c", cmd_str]
         
-        env = {**os.environ, "LOG_JSON": "true", "PYTHONUNBUFFERED": "1"}
+        env_vars = {**os.environ, "LOG_JSON": "true", "PYTHONUNBUFFERED": "1"}
         self.process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE if self.config.show_logs else subprocess.DEVNULL,
             stderr=subprocess.PIPE if self.config.show_logs else subprocess.DEVNULL,
-            text=True, env=env, bufsize=1
+            text=True, env=env_vars, bufsize=1
         )
 
         pid = self.process.pid
+        
+        # [변경됨] 비동기 터널(Facade)을 통한 상태 앵커링
         try:
-            self.redis.sadd(self.registry_key, pid)
-            log_sandbox.info(f"[*] Registered Sandbox PID {pid} to {self.registry_key}")
+            tunnel = await TunnelFactory.get_default()
+            await tunnel.sadd(self.registry_key, pid)
+            log_sandbox.info(f"[*] Registered Sandbox PID {pid} to {self.registry_key} via Tunnel")
         except Exception as e:
-            log_sandbox.warning(f"[-] Failed to register Sandbox PID to Redis: {e}")
+            log_sandbox.warning(f"[-] Failed to register Sandbox PID to State Store: {e}")
 
         if self.config.show_logs and self.process.stdout and self.process.stderr:
             t1 = threading.Thread(target=self.stream_output, args=(self.process.stdout, "SURFACE:OUT"), daemon=True)
@@ -185,11 +192,14 @@ class SandboxSurface(BaseSurface):
             except asyncio.TimeoutError:
                 self.process.kill()
             
+            # [변경됨] 비동기 터널(Facade)을 통한 앵커 해제
             try:
-                self.redis.srem(self.registry_key, self.process.pid)
+                tunnel = await TunnelFactory.get_default()
+                await tunnel.srem(self.registry_key, self.process.pid)
                 log_sandbox.info(f"[+] Unregistered Sandbox PID {self.process.pid} from {self.registry_key}")
-            except Exception:
-                pass
+            except Exception as e:
+                log_sandbox.debug(f"[-] State Store cleanup skipped or failed: {e}")
+                
             log_sandbox.info("[+] Sandbox Surface process terminated.")
 
     @abstractmethod

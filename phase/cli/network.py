@@ -10,11 +10,13 @@ from typing import Optional, Dict, Any, AsyncGenerator, List, Union
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from xphi.kernel.space.tunnel.surface import EchoListener, SurfaceClient
 from xphi.arch.bound.xor.parser.ruleset.engine import StreamTaggingParser, AuditRulesetParser, CompiledEngine
 from xphi.arch.contract.space.state import Contract, CoherenceState
-from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.arch.dev.tracer.base import SystemBound, log_streamer
+from xphi.arch.contract.config import env
+
+from xphi.kernel.space.tunnel.surface import EchoListener, SurfaceClient
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log_flow = get_emitter("cli.dev")
@@ -23,9 +25,11 @@ log_contract = get_emitter("stream.contract")
 # --- Constants & Rulesets ---
 KEY_STATE_PIDS = "system:xphi:pids"
 PROCESS_NAME = "xphi-dev-node"
-XPHI_BASE = os.getenv("XPHI_BASE", "http://localhost:8079")
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+
+XPHI_BASE = env.XPHI_BASE
+REDIS_HOST = env.REDIS_HOST
+REDIS_PORT = env.REDIS_PORT
+
 LIB_ROOT = resolve_path("lib")
 SOURCE_NAME = "flow.executor"
 

@@ -1,15 +1,14 @@
 # fiber.README
-
-@desc: LLM Agent Gateway
+**Zero Trust Gateway for LLMs & Agentic AI**
 
 Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
 
 This document provides a practical guide on how to integrate and deploy Fiber across its core operational pillars:
 
-* **[1.1] LLM Routing, Trace:** How to use Fiber as a drop-in replacement for standard LLM SDKs to route traffic, enforce network-level budget limits, and manage execution traces.
-* **[1.2] LLM VCR (Record & Replay Engine):** How to serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency profiling.
-* **[1.3] Secure Agentic Bridge (MCP Gateway):** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
-* **[1.4] Universal State Traverser:** How to seamlessly integrate proprietary LLMs and local inference servers using declarative JSON extraction rules instead of custom parsing logic.
+* **[1.1] The Drop-In LLM Pipeline:** Replace standard OpenAI/LiteLLM SDKs with a strict, Netty-driven asynchronous core to transparently orchestrate execution traces and enforce hard budget limits.
+* **[1.2] LLM Record & Replay:** How to serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency profiling.
+* **[1.3] Secure MCP Gateway:** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
+* **[1.4] Universal State Traverser**: Instantly support any new LLM provider without writing custom parsers. Just map their JSON topology `{"text": "message.content"}` and let the Traverser autonomously normalize streams, responses, and tool-calls.
 
 Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (connect, daemon, e2e)** to help you quickly provision your infrastructure.
 
@@ -17,9 +16,13 @@ Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (c
 
 ## 1. Core Pillars in Action
 
-### 1.1. LLM Routing, Trace
+### 1.1. The Drop-In LLM Pipeline (Netty-Driven Routing & Trace)
 
-The fiber.llm.entry module is a high-performance LLM router that provides a drop-in replacement for the OpenAI SDK and LiteLLM. Beyond simple routing, it utilizes a strict, Netty-style asynchronous pipeline to seamlessly integrate execution tracing, network recording, and budget controls without compromising the developer-friendly UX.
+Fiber fundamentally reimagines LLM routing by marrying a **developer-friendly Python facade** with a **strict, Netty-style asynchronous pipeline** under the hood. 
+
+Serving as a flawless **drop-in replacement** for standard OpenAI and LiteLLM SDKs, this architecture achieves unprecedented execution transparency without altering a single line of your business logic. It effortlessly orchestrates deep execution tracing, network recording, and budget controls. 
+
+Furthermore, because the core pipeline is completely decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Universal State Traverser **[1.4]**.
 
 * **Fuel Breaker:** Strictly prevents unexpected billing spikes by physically terminating the TCP connection if a streaming response exceeds its predefined token budget.
 * **Declarative Tool Recovery:** Dynamically detects and normalizes malformed tool calls from heterogeneous LLMs (e.g., Gemini) into the strict OpenAI standard format.
@@ -71,7 +74,7 @@ response = await acompletion(
 
 ---
 
-### 1.2. LLM VCR (Record & Replay)
+### 1.2. LLM Record & Replay
 
 The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables deterministic offline testing and precise historical latency emulation without altering business logic.
 
@@ -203,7 +206,7 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ---
 
-### 1.3. Secure Agentic Bridge (MCP Gateway)
+### 1.3. Secure MCP Gateway
 
 As agent protocols shift to stateless architectures, they push heavy complexities onto the client. The gateway's **Transition Bridge** absorbs this burden by decoupling HTTP ingress from physical execution. The gateway fundamentally relies on a symbiotic pair: an **Edge Node** (`rest_edge`) for HTTP ingress, and a **Compute Node** (`rpc_worker`) for state and auth management.
 
@@ -221,42 +224,55 @@ fiber daemon
 # fiber daemon -s eco
 # fiber daemon -s full
 
-## 2. Wrap and boot your legacy script as an autonomous worker 
-fiber connect --target oracle-01 --mode multiplex --exec "python legacy_agent.py"
+## 2. Wrap and boot your legacy server script as an mcp server
+fiber connect --target oracle-01 --mode multiplex --exec "python legacy_server.py"
 ```
 
 ---
 
 ### 1.4. Universal State Traverser
 
-The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks. Fiber eliminates the need for messy `if/elif` parsing blocks through its `StateTraverser` and unified `StreamChunkParser`. 
+The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks and tool calls. Fiber eliminates the need for messy `if/elif` parsing blocks through its `StateTraverser` engine.
 
 Powered by dot-notation, the traverser safely navigates mixed topologies (Dicts, Lists, Pydantic Objects), silently absorbing missing keys or index errors without crashing the pipeline.
 
 **Extending Fiber for a New Provider:**
-While dynamic runtime registration is not yet exposed, integrating a non-OpenAI-compliant provider simply requires forking the repo and appending its schema to the internal declarative rulesets. No custom parsing logic is needed.
+Integrating a non-OpenAI-compliant provider requires zero custom parsing logic. Simply append their JSON topology to the internal declarative rulesets, and Fiber will autonomously normalize streams, responses, and tool calls into strict OpenAI standards.
 
 ```python
-# 1. Map the custom JSON topology in: fiber/llm/router/stream/parser/chunk.py
-STREAM_EXTRACTION_RULES["nova-ai"] = {
-    "text": "outputs.0.message.delta",      # Safely resolves obj["outputs"][0].message.delta
-    "finish_reason": "meta.stop_reason", 
-    "is_finished_cond": {"path": "status", "value": "DONE"},
+# Map Stream Chunks (e.g., fiber/llm/router/stream/parser/chunk.py)
+# Safely resolve deeply nested lists and objects using dot-notation:
+STREAM_EXTRACTION_RULES["ollama"] = {
+    "text": "message.content",
+    "finish_reason": "done_reason",
+    "is_finished_cond": {"path": "done", "value": True},
     "usage": {
-        "prompt_tokens": "stats.input_count",
-        "completion_tokens": "stats.output_count"
+        "prompt_tokens": "prompt_eval_count",
+        "completion_tokens": "eval_count"
     }
 }
 
-# 2. Register the alias to route the parser
-PROVIDER_RULE_ALIAS["nova-ai"] = "nova-ai"
+# Map State & Tool-Call Recovery (e.g., fiber/gateway/llm/mapper/traverser.py)
+# Reconstruct complex tool calls from proprietary schemas without imperative code:
+STATE_EXTRACTION_RULES["gemini"] = {
+    "fallback_tool_name": "content.parts.0.function_call.name",
+    "fallback_tool_args": "content.parts.0.function_call.args"
+}
+
+# Register routing aliases
+PROVIDER_RULE_ALIAS["llama_server"] = "openai"
 ```
 
-Once mapped, the `StreamChunkParser` autonomously normalizes the proprietary stream into Fiber's strict `ParsedChunk` format. This guarantees that your application logic, metrics, and VCR coalescing engine support the new model flawlessly on day one.
+Once mapped, Fiber's core engine seamlessly parses the proprietary format. This guarantees that your business logic, metric tracers, and VCR coalescing engine support the new model flawlessly on day one.
 
 ---
 
 ## 2. Installation & Infra Provisioning
+
+**Prerequisites**
+* **Python**: `>= 3.12` (Required for strict asynchronous pipelines and dot-notation traversal)
+* **Redis**: Required as the core message broker (Tunnel) for asynchronous event streaming, pub/sub routing, and distributed state management.
+* *Note: Infrastructure routing (Host/Port) is safely managed via `xphi/arch/contract/config/env.py` using collision-safe prefixes (e.g., `XPHI_REDIS_HOST`).*
 
 Fiber utilizes an integrated installation pipeline where `fiber` and its core dependency `xphi` are tightly coupled. We recommend using `uv pip` for strict dependency resolution.
 
