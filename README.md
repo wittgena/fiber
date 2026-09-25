@@ -1,4 +1,4 @@
-# fiber.README
+# README
 **Zero Trust Gateway for LLMs & Agentic AI**
 
 Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
@@ -82,18 +82,18 @@ Fiber provides two approaches for VCR integration:
 
 **Native Integration**
 
-If using Fiber's SDK, the VCR can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee 100% idempotent replay matching.
+If using Fiber's SDK, the VCR can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee idempotent replay matching.
 
 ```python
 import os, asyncio
 from fiber.llm.entry import acompletion
 
-# Decoupled VCR architecture: Storage (manager) & Interceptor (proxy)
+# Decoupled VCR architecture: Storage & Interceptor
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
 from fiber.dev.trace.llm.vcr.proxy import VCRInjector
 from xphi.arch.bound.event.next import next_trace_id
 
-# Inject VCR globally with Time-Window Coalescing (Tick: 100ms)
+# Inject VCR globally with Time-Window Coalescing
 vcr_mode = os.environ.get("VCR_MODE", "live").lower()
 config = VCRPlaybackConfig(mode=vcr_mode, speed="real", record_tick_ms=100.0)
 VCRInjector.apply(config=config, fixture_dir="./fixtures")
@@ -129,12 +129,12 @@ if __name__ == "__main__":
 
 For existing applications heavily coupled to third-party SDKs (e.g., LiteLLM), migrating to a new gateway or establishing offline tests can be challenging. Fiber provides a Transparent Integration Path via standard sys.modules aliasing. This creates a safe, drop-in sandbox that grants your legacy codebase immediate access to the VCR engine and time-window stream coalescing—without requiring a massive refactoring of your business logic.
 
-Crucially, the application code remains completely undisturbed. By simply including standard metadata in your existing API calls, Fiber's adapter gracefully routes the payload to the VCR engine. It ensures 100% duck-typing parity, returning perfect mock objects during offline replays so that strict legacy type checks never fail.
+Crucially, the application code remains completely undisturbed. By simply including standard metadata in your existing API calls, Fiber's adapter gracefully routes the payload to the VCR engine. It ensures duck-typing parity, returning perfect mock objects during offline replays so that strict legacy type checks never fail.
 
 ```python
 import os, sys, asyncio
 
-"""Integration Bridge (Executes before legacy business logic loads)"""
+"""Integration Bridge - Executes before legacy business logic loads"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 
 if VCR_MODE in ("record", "replay"):
@@ -169,8 +169,6 @@ async def main():
     )
     
     async for chunk in response:
-        # VCR Engine guarantees duck-typing parity. Even during offline replay, 
-        # `chunk` acts as a perfect mock of ModelResponseStream.
         assert isinstance(chunk, ModelResponseStream)
         
         # Standard legacy parsing continues to work flawlessly
@@ -202,8 +200,6 @@ Streams the cached response fully offline with zero network I/O. You can emulate
 python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 ```
 
-*(Note: Executing with `--vcr live` bypasses the VCR interceptors entirely, ensuring zero overhead in production environments.)*
-
 ---
 
 ### 1.3. Secure MCP Gateway
@@ -217,14 +213,14 @@ Instead of exposing host systems to unvalidated raw REST payloads, it translates
 * **`Multiplex` Mode:** Unleashes extreme lock-free concurrency for thousands of I/O-bound operations.
 
 ```bash
-## 1. Boot the Core Gateway (Autostarts both 'rest_edge' and 'rpc_worker' by default)
+## Boot the Core Gateway (Autostarts both 'rest_edge' and 'rpc_worker' by default)
 fiber daemon
 
 ## Optional: Enable autonomic extensions (e.g., dynamic_pricing, risk_vault) via -s preset
 # fiber daemon -s eco
 # fiber daemon -s full
 
-## 2. Wrap and boot your legacy server script as an mcp server
+## Wrap and boot your legacy server script as an mcp server
 fiber connect --target oracle-01 --mode multiplex --exec "python legacy_server.py"
 ```
 
@@ -298,12 +294,9 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 
 | Mode | Description | Example |
 | --- | --- | --- |
-| **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python app.py"` |
+| **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python legacy_server.py"` |
 | **`daemon`** | **[Production Host]** Boots core gateway daemons (Edge + RPC) by default. Use `-s` to apply presets (`eco`, `full`). | `fiber daemon -s eco` |
 | **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.trace --model gemini/gemini-3.1-flash-lite` |
-
-> **Note on X402 Protocol Scaling:**
-> Fiber naturally scales from Standalone (local testing) to Enterprise (internal API chargebacks) to Commercial (external metered billing and routing) using the exact same CLI commands. No architectural teardowns are required.
 
 ---
 
@@ -317,4 +310,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * 🔗 **[edge.sandbox.log](./phase/abc/log/gateway/sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience.
 * 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming physical Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
 * 🔗 **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming zero-network offline emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for extreme playback optimization.
-* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.20260920.log):** Validates the zero-code legacy migration, confirming that `sys.modules` aliasing seamlessly intercepts legacy SDK calls (`litellm`), normalizes heterogeneous streams, and achieves 100% duck-typing parity during real-time VCR playback.
+* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.20260920.log):** Validates the zero-code legacy migration, confirming that `sys.modules` aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
