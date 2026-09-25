@@ -13,16 +13,14 @@ from fiber.infra.rpc.client import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.gateway.rest.serv.public import public_edge
 from fiber.gateway.rest.serv.llm import llm_edge
+from fiber.gateway.rest.security import SecurityProvisioner
 from fiber.phase.contract.origin import OriginRegistry
 from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
-from xphi.arch.bound.xor.secret.cipher import Cipher
-from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
 from xphi.kernel.space.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
-from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
@@ -101,18 +99,7 @@ async def lifespan(app: FastAPI):
         app.state.origin_registry = registry
         log.info(f"Origin Registry integrated successfully. Active signers: {len(trusted_state.active_signers)}")
 
-        # KMS 기반 SecretAuditor 싱글톤 초기화 (Fail-Fast)
-        log.info("Provisioning Cryptographic Secret Auditor via KMS...")
-        secret_key = get_secret_from_vendor(
-            client=None,
-            key_manager=KMSVendor.LOCAL,  # 추후 AWS_KMS 등으로 변경 가능
-            secret_name="DPHI_CIPHER_KEY"
-        )
-        if not secret_key:
-            log.warning("KMS returned no key. Using ephemeral testing key.")
-            secret_key = "dphi-ephemeral-test-key-32bytes!"
-            
-        app.state.secret_auditor = SecretAuditor(cipher=Cipher(secret_key=secret_key))
+        app.state.secret_auditor = SecurityProvisioner.provision_secret_auditor()
         log.info("SecretAuditor mounted successfully to app.state.")
 
         tunnel = app.state.tunnel
@@ -195,7 +182,6 @@ def create_app(
     app.include_router(public_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
     app.include_router(mcp_bridge)  
-    # app.include_router(ext_router) 
 
     # Readiness Probe
     @app.get("/_health", tags=["system"], include_in_schema=False)

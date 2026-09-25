@@ -102,7 +102,6 @@ class DphiGatewayServer:
         headers['X-Forwarded-For'] = client_ip
         headers['X-Gateway-Passed'] = "true"
 
-        # NOTE: 향후 동적 라우팅이 필요하다면 여기서 broker를 호출하여 target_url을 가져오면 됩니다.
         target_url = f"{self.settings.upstream_url}{path}"
         data = await request.read()
         

@@ -208,9 +208,8 @@ class ComposeOrchestrator:
             context = ComposeContext(
                 boundary=self.boundary,
                 adapter=self.adapter,
-                auditors={}  # Auditor 기능 완전 제거 (호환성을 위해 빈 Dict 유지)
+                auditors={}
             )
-            
             if self.suites:
                 with flow_scope(phase="TEST_EXECUTION"):
                     total_fails = await self._run_all_suites(broker, context)

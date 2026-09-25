@@ -9,8 +9,6 @@ from xphi.kernel.space.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.bound.xor.secret.cipher import Cipher
-from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
 
 log = get_emitter("dphi.depend")
 
@@ -43,29 +41,5 @@ async def get_otlp_engine(request: Request) -> OtlpExtractionEngine:
     return _get_state_attr(request, "otlp_engine")
 
 async def get_secret_auditor(request: Request) -> SecretAuditor:
-    """PII 마스킹 및 감사 로그 기록기 주입 - 앱 상태에 등록된 인스턴스가 없으면 KMS Vendor를 통해 동적으로 암호화 모듈을 조립"""
-    auditor = getattr(request.app.state, "secret_auditor", None)
-    if auditor:
-        return auditor
-        
-    log.warning("[DI Warning] 'secret_auditor' not found in app.state. Provisioning ephemeral KMS-backed fallback.")
-    try:
-        secret_key = get_secret_from_vendor(
-            client=None,
-            key_manager=KMSVendor.LOCAL,
-            secret_name="LEDGER_CIPHER_KEY"
-        )
-        
-        # 환경 변수에도 없을 경우의 Fallback
-        if not secret_key:
-            secret_key = "dphi-ephemeral-test-key-32bytes!"
-            
-        # Cipher 객체를 조립하여 SecretAuditor에 명시적으로 주입
-        cipher_instance = Cipher(secret_key=secret_key)
-        return SecretAuditor(cipher=cipher_instance)
-    except Exception as e:
-        log.critical(f"[Security] SecretAuditor provisioning failed: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Cryptographic audit module unavailable."
-        )
+    """PII 마스킹 및 감사 로그 기록기"""
+    return _get_state_attr(request, "secret_auditor")
