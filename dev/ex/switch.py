@@ -11,6 +11,7 @@ VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 def _init_bridge(mode: str, fixture_dir: str):
     """Initializes the VCR sandbox and direct sys.modules aliasing"""
     from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
+    from fiber.dev.ex.space.bind.redirector import PhaseAirlock
     
     try:
         verify_local_dev_environment(allow_ci=True)
@@ -20,11 +21,14 @@ def _init_bridge(mode: str, fixture_dir: str):
         print(f"\n🚨 [SANDBOX VIOLATION] Execution Denied: {e}")
         sys.exit(1)
 
-    import fiber.llm.entry as litellm_entry
-    import fiber.llm.param as fiber_param
+    import fiber.llm.entry as llm_entry
+    import fiber.llm.param as llm_param
     
-    sys.modules["litellm"] = litellm_entry
-    sys.modules["litellm.types.utils"] = fiber_param
+    PhaseAirlock.alias({
+        "litellm": llm_entry.__name__,
+        "litellm.types.utils": llm_param.__name__
+    })
+
 
     from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
     from fiber.dev.trace.llm.vcr.proxy import VCRInjector

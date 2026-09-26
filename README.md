@@ -1,4 +1,4 @@
-# README
+# fiber.README
 **Zero Trust Gateway for LLMs & Agentic AI**
 
 Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
@@ -20,13 +20,7 @@ Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (c
 
 Fiber fundamentally reimagines LLM routing by marrying a **developer-friendly Python facade** with a **strict, Netty-style asynchronous pipeline** under the hood. 
 
-Serving as a flawless **drop-in replacement** for standard OpenAI and LiteLLM SDKs, this architecture achieves unprecedented execution transparency without altering a single line of your business logic. It effortlessly orchestrates deep execution tracing, network recording, and budget controls. 
-
-Furthermore, because the core pipeline is completely decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Universal State Traverser **[1.4]**.
-
-* **Fuel Breaker:** Strictly prevents unexpected billing spikes by physically terminating the TCP connection if a streaming response exceeds its predefined token budget.
-* **Declarative Tool Recovery:** Dynamically detects and normalizes malformed tool calls from heterogeneous LLMs (e.g., Gemini) into the strict OpenAI standard format.
-* **Slot-based Middleware (UX Facade):** Safely inject custom plugins (e.g., Datadog Tracers, Semantic Caches, PII Guardrails) using a simple flat list (`interceptors=[]`). The Entry Facade autonomously routes them to designated lifecycle slots without blocking the main I/O or risking core pipeline corruption.
+Serving as a flawless **drop-in replacement** for standard OpenAI and LiteLLM SDKs, this architecture achieves unprecedented execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Universal State Traverser **[1.4]**.
 
 **1. Define Middleware by Target Slot:**
 
@@ -132,40 +126,52 @@ if __name__ == "__main__":
 
 **Transparent Integration for Legacy Codebases**
 
-For existing applications heavily coupled to third-party SDKs (e.g., LiteLLM), migrating to a new gateway or establishing offline tests can be challenging. Fiber provides a Transparent Integration Path via standard sys.modules aliasing. This creates a safe, drop-in sandbox that grants your legacy codebase immediate access to the VCR engine and time-window stream coalescing—without requiring a massive refactoring of your business logic.
+For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishing offline tests often requires complex refactoring. Fiber eliminates this friction via PhaseAirlock runtime routing.
 
-Crucially, the application code remains completely undisturbed. By simply including standard metadata in your existing API calls, Fiber's adapter gracefully routes the payload to the VCR engine. It ensures duck-typing parity, returning perfect mock objects during offline replays so that strict legacy type checks never fail.
+By declaring explicit aliases at the boot sequence, PhaseAirlock seamlessly intercepts legacy imports and routes traffic to Fiber's VCR engine. This grants your existing codebase immediate access to deterministic playback and time-window stream coalescing—without altering a single line of business logic. Fiber ensures perfect duck-typing parity, returning exact mock objects so that strict legacy type checks continue to function flawlessly.
+
+To guarantee absolute offline determinism, Fiber simultaneously injects a PEP-578 Security Sandbox at the CPython boundary. This low-level audit hook physically intercepts OS-level operations, instantly blocking unexpected external network connections (socket.connect) or subprocess executions from upstream dependencies during replay.
 
 ```python
-import os, sys, asyncio
+import os
+import sys
+import asyncio
 
-"""Integration Bridge - Executes before legacy business logic loads"""
+"""Boot Sequence: Establishing the Isolation Layer"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 
 if VCR_MODE in ("record", "replay"):
-    import fiber.llm.entry as litellm_entry
-    import fiber.llm.param as fiber_param
+    from fiber.phase.cli.sandbox import create_security_sandbox
+    from fiber.dev.ex.space.bind.redirector import PhaseAirlock
+    import fiber.llm.entry as llm_entry
+    import fiber.llm.param as llm_param
+    
+    # Enforce strict PEP-578 security boundaries
+    create_security_sandbox(vcr_mode=VCR_MODE)
     
     # Transparently route legacy SDK imports to Fiber's gateway
-    sys.modules["litellm"] = litellm_entry
-    sys.modules["litellm.types.utils"] = fiber_param
+    PhaseAirlock.alias({
+        "litellm": llm_entry.__name__,
+        "litellm.types.utils": llm_param.__name__
+    })
     
+    # Mount the VCR engine for deterministic testing and traffic coalescing
     from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
     from fiber.dev.trace.llm.vcr.proxy import VCRInjector
     
     config = VCRPlaybackConfig(mode=VCR_MODE, speed="real", record_tick_ms=100.0)
     VCRInjector.apply(config=config, fixture_dir="./fixtures")
 
-"""Legacy Business Logic (Unmodified)"""
+"""Legacy Business Logic (Unmodified Boundary)"""
 import litellm 
 from litellm.types.utils import ModelResponseStream
 
 async def main():
     # Fiber gracefully processes this standard call. The `metadata` acts as a bridge, 
-    # guiding the VCR engine to manage deterministic fixture files for testing.
+    # guiding the underlying engine to manage deterministic fixture routing.
     response = await litellm.acompletion(
         model="gemini/gemini-3.1-flash-lite",
-        messages=[{"role": "user", "content": "Explain migration."}],
+        messages=[{"role": "user", "content": "Explain migration strategies."}],
         stream=True,
         metadata={
             "vcr_scenario": "tech_debt_migration",
@@ -174,9 +180,10 @@ async def main():
     )
     
     async for chunk in response:
+        # Duck-typing parity: Legacy type-checks continue to pass
         assert isinstance(chunk, ModelResponseStream)
         
-        # Standard legacy parsing continues to work flawlessly
+        # Standard legacy parsing remains flawless
         if hasattr(chunk, "choices") and chunk.choices:
             print(chunk.choices[0].delta.content or "", end="", flush=True)
 
@@ -194,7 +201,6 @@ Executes live API calls to the target LLM. The engine autonomously coalesces mic
 ```bash
 # Record with 100ms chunk coalescing to optimize future playback
 python -m fiber.dev.ex.recorder --vcr record --vcr-tick 100.0
-
 ```
 
 * **Step 2: Replay (Offline Emulation & Chaos Injection)**
@@ -209,9 +215,9 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ### 1.3. Secure MCP Gateway
 
-As agent protocols shift to stateless architectures, they push heavy complexities onto the client. The gateway's **Transition Bridge** absorbs this burden by decoupling HTTP ingress from physical execution. The gateway fundamentally relies on a symbiotic pair: an **Edge Node** (`rest_edge`) for HTTP ingress, and a **Compute Node** (`rpc_worker`) for state and auth management.
+As agent protocols shift to stateless architectures, they push heavy complexities onto the client. The gateway's **Transition Bridge** absorbs this burden by decoupling HTTP ingress from physical execution.
 
-Instead of exposing host systems to unvalidated raw REST payloads, it translates intents into deterministic events routed via **Tri-Track Concurrency**:
+Instead of exposing host systems to unvalidated raw REST Gateway, it translates intents into deterministic events routed via **Tri-Track Concurrency**:
 
 * **`Ephemeral` Mode:** Instantiates single-use, fault-isolated sandboxes per request, ensuring zero memory leaks.
 * **`Linear` Mode:** Routes CPU-heavy workloads sequentially to eliminate cold starts.
@@ -264,8 +270,6 @@ STATE_EXTRACTION_RULES["gemini"] = {
 PROVIDER_RULE_ALIAS["llama_server"] = "openai"
 ```
 
-Once mapped, Fiber's core engine seamlessly parses the proprietary format. This guarantees that your business logic, metric tracers, and VCR coalescing engine support the new model flawlessly on day one.
-
 ---
 
 ## 2. Installation & Infra Provisioning
@@ -273,7 +277,6 @@ Once mapped, Fiber's core engine seamlessly parses the proprietary format. This 
 **Prerequisites**
 * **Python**: `>= 3.12` (Required for strict asynchronous pipelines and dot-notation traversal)
 * **Redis**: Required as the core message broker (Tunnel) for asynchronous event streaming, pub/sub routing, and distributed state management.
-* *Note: Infrastructure routing (Host/Port) is safely managed via `xphi/arch/contract/config/env.py` using collision-safe prefixes (e.g., `XPHI_REDIS_HOST`).*
 
 Fiber utilizes an integrated installation pipeline where `fiber` and its core dependency `xphi` are tightly coupled. We recommend using `uv pip` for strict dependency resolution.
 
