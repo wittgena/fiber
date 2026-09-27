@@ -10,11 +10,11 @@ from typing import Dict, Any
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.exceptions import InvalidSignature
 
-from xphi.arch.contract.protocol.agent import AsyncAgentProtocol
+from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
 log = logging.getLogger("worker.deployer")
 
-class ExecutionDeployer(AsyncAgentProtocol):
+class ExecutionDeployer(AsyncWorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="execution.deployer")
         pub_key_hex = os.environ.get("DPHI_VALIDATOR_PUBLIC_KEY")

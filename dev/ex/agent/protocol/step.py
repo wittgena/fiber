@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Awaitable, Protocol
 from dataclasses import dataclass
 
-from fiber.dev.ex.facade.response import LLMResponse
+from fiber.dev.ex.agent.llm.response import LLMResponse
 from xphi.watcher.plane.emitter import get_emitter
 
 logger = get_emitter(__name__)

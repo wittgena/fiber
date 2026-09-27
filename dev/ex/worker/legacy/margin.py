@@ -12,7 +12,7 @@ from xphi.watcher.receptor.trajectory import (
     SpreadSnapshot,
     ArbitrageIntent
 )
-from xphi.arch.contract.protocol.agent import AsyncAgentProtocol
+from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
 """Pydantic Schemas (Financial vs Compute)"""
 class ExecutionPricingModel(BaseModel):
@@ -43,7 +43,7 @@ class ComputeMarginRequestParams(BaseModel):
 # =====================================================================
 # 2. Asynchronous Margin Calculation Agent (MCP Proxy)
 # =====================================================================
-class MarginCalcAgent(AsyncAgentProtocol):
+class MarginCalcAgent(AsyncWorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="agent.margin")
         

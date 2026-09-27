@@ -6,10 +6,10 @@ import json
 from typing import List, Dict, Any
 
 from fiber.infra.rpc.client import InternalRpcClient
-from xphi.arch.contract.protocol.agent import AgentProtocol
+from xphi.arch.contract.protocol.worker import WorkerProtocol
 from xphi.state.anchor.consensus import KernelLedger
 
-class AgentSentinel(AgentProtocol):
+class AgentSentinel(WorkerProtocol):
     def __init__(self, ledger: KernelLedger, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):
         super().__init__(agent_name="agent.sentinel")
         

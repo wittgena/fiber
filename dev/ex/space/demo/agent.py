@@ -1,4 +1,4 @@
-# fiber.dev.ex.demo.agent
+# fiber.dev.ex.space.demo.agent
 import asyncio
 import uuid
 import json
@@ -9,8 +9,8 @@ from fiber.dev.ex.agent.mcp.client import (
     MCPClient, create_mcp_client, fetch_mcp_tools_sync, call_mcp_tool_raw, MCPConfig
 )
 from fiber.dev.ex.agent.protocol.executor import AsyncExecutor
-from fiber.dev.ex.facade.driver import LLMFacade
-from fiber.dev.ex.facade.response import LLMResponse
+from fiber.dev.ex.agent.llm.driver import LLMFacade
+from fiber.dev.ex.agent.llm.response import LLMResponse
 from fiber.llm.model.message import TextContent
 from fiber.llm.model.profile import BaseLLMProfile
 from fiber.dev.ex.agent.mcp.orchestrator import MCPToolWrapper

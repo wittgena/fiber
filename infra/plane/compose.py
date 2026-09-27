@@ -54,7 +54,10 @@ class ComposeBlueprint:
         }
 
 class BaseComposeAdapter:
-    async def apply_job(self, job_name: str, env: Dict[str, str]) -> bool:
+    # 🎯 변경점: detach 인자 추가 (기본값 False로 E2E 호환성 유지)
+    async def apply_job(self, job_name: str, env: Dict[str, str], detach: bool = False) -> bool:
+        raise NotImplementedError
+    async def teardown(self):
         raise NotImplementedError
 
 class DockerComposeAdapter(BaseComposeAdapter):
@@ -122,8 +125,9 @@ class DockerComposeAdapter(BaseComposeAdapter):
         log.info("  ├─ Runtime Topology (USER Mode) Ready ✅")
         return True
 
-    async def apply_job(self, job_name: str, env: Dict[str, str]) -> bool:
-        log.info(f"[Adapter:COMPOSE] Executing Job Phase: {job_name}")
+    # 🎯 변경점: detach 인자 수신 및 명령어 주입
+    async def apply_job(self, job_name: str, env: Dict[str, str], detach: bool = False) -> bool:
+        log.info(f"[Adapter:COMPOSE] Executing Job Phase: {job_name} (Detach: {detach})")
         
         if not await self._provision_topology():
             return False
@@ -144,7 +148,13 @@ class DockerComposeAdapter(BaseComposeAdapter):
             "-f", str(self.compose_file), 
             "--project-directory", str(self.workspace),
             "exec", "-T"
-        ] + env_vars + ["test-runner", "bash", "-c", exec_command]
+        ]
+        
+        # Detach 플래그가 넘어오면 백그라운드 모드로 실행
+        if detach:
+            cmd.append("-d")
+            
+        cmd = cmd + env_vars + ["test-runner", "bash", "-c", exec_command]
         
         code, _, err = await self.boundary.run_command(cmd, cwd=str(self.workspace), capture=False)
         
@@ -172,10 +182,12 @@ class ComposeContext:
     auditors: Dict[str, Any]
 
 class ComposeOrchestrator:
-    def __init__(self, mode: str = "dev", suites: Dict[str, Any] = None, rebuild: bool = False):
+    # 🎯 변경점: auto_teardown 인자 추가 (기본값 True로 E2E 호환성 유지)
+    def __init__(self, mode: str = "dev", suites: Dict[str, Any] = None, rebuild: bool = False, auto_teardown: bool = True):
         self.mode = mode
         self.suites = suites or {}
         self.keep_workspace = False
+        self.auto_teardown = auto_teardown
         
         self.workspace = Path.cwd()
         self.boundary = SystemBound()
@@ -223,10 +235,13 @@ class ComposeOrchestrator:
             return False, str(e)
             
         finally:
-            log.info("\n[SYSTEM] Initiating Teardown Sequence...")
-            
-            if self.adapter:
-                await self.adapter.teardown()
+            # 🎯 변경점: auto_teardown이 참일 때만 컨테이너를 부수도록 제어
+            if self.auto_teardown:
+                log.info("\n[SYSTEM] Initiating Teardown Sequence...")
+                if self.adapter:
+                    await self.adapter.teardown()
+            else:
+                log.info("\n[SYSTEM] Auto-teardown disabled. Topology remains LIVE.")
             
             if not self.keep_workspace:
                 if self.artifact_dir.exists():
@@ -235,4 +250,5 @@ class ComposeOrchestrator:
             else:
                 log.info(f"  └─ Artifacts preserved at: {self.artifact_dir}")
             
-            log.info("[SYSTEM] CI Orchestration finalized.")
+            if self.auto_teardown:
+                log.info("[SYSTEM] CI Orchestration finalized.")

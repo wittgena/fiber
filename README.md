@@ -1,26 +1,24 @@
 # fiber.README
-**Zero Trust Gateway for LLMs & Agentic AI**
+**Zero Trust Gateway for LLMs and Agents**
 
-Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities inherent in modern stateless protocols (like MCP)—such as memory leaks (OOM), confused deputy attacks, and API billing runaways.
+Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic execution environment that unifies heterogeneous LLM integrations and enables idempotent offline testing.
 
 This document provides a practical guide on how to integrate and deploy Fiber across its core operational pillars:
 
-* **[1.1] The Drop-In LLM Pipeline:** Replace standard OpenAI/LiteLLM SDKs with a strict, Netty-driven asynchronous core to transparently orchestrate execution traces and enforce hard budget limits.
-* **[1.2] LLM Record & Replay:** How to serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency profiling.
-* **[1.3] Secure MCP Gateway:** How to safely connect legacy REST systems to AI agents using zero-trust execution sandboxes—without altering existing code.
-* **[1.4] Universal State Traverser**: Instantly support any new LLM provider without writing custom parsers. Just map their JSON topology `{"text": "message.content"}` and let the Traverser autonomously normalize streams, responses, and tool-calls.
+* **[1] LLM VCR & Pipeline:** Serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**). Fiber operates as a drop-in asynchronous pipeline (**1.1**) that autonomously normalizes heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism without altering your business logic.
+* **[2] MCP Gateway:** Decouple external network ingress (Edge) from worker(mcp server) execution. Securely route high-concurrency I/O workloads, enforce cryptographic identity (DPoP), and gracefully handle Human-in-the-Loop (HITL) transaction suspensions using non-blocking asynchronous state management.
 
-Additionally, this guide covers **[2] Installation** and **[3] CLI Deployment (connect, daemon, e2e)** to help you quickly provision your infrastructure.
+Additionally, this guide covers **[3] Installation**, **[4] CLI Deployment (connect, daemon, e2e)**, and **[5] System Validation Logs**—focusing on verifiable execution proofs rather than raw speed benchmarks—to help you quickly provision and validate your infrastructure.
 
 ---
 
-## 1. Core Pillars in Action
+## 1. LLM VCR & Pipeline
 
-### 1.1. The Drop-In LLM Pipeline (Netty-Driven Routing & Trace)
+### 1.1. The Drop-In LLM Pipeline
 
-Fiber fundamentally reimagines LLM routing by marrying a **developer-friendly Python facade** with a **strict, Netty-style asynchronous pipeline** under the hood. 
+Fiber reimagines LLM routing by Python facade with a strict, netty style asynchronous pipeline under the hood. 
 
-Serving as a flawless **drop-in replacement** for standard OpenAI and LiteLLM SDKs, this architecture achieves unprecedented execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Universal State Traverser **[1.4]**.
+Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, this architecture achieves execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Universal State Traverser **[1.3]**.
 
 **1. Define Middleware by Target Slot:**
 
@@ -47,11 +45,11 @@ class PIIGuardrail(DuplexChannel):
     target_slot = PipelineSlot.POST_TRANSLATE
     async def write(self, ctx, processed_msg):
         if "SECRET-SSN" in str(getattr(processed_msg, "original_kwargs", {})):
-            raise PermissionError("Guardrail Block: PII detected.") # Active pipeline rupture
+            raise PermissionError("Guardrail Block: PII detected.") # Active pipeline break
         await ctx.fire_write(processed_msg)
 ```
 
-**2. Execute via Drop-in Facade (Order-Agnostic Injection):**
+**2. Execute via Drop-in Facade:**
 
 ```python
 from fiber.llm.entry import acompletion
@@ -67,13 +65,13 @@ response = await acompletion(
 ```
 
 > **Note on Drop-in Replacement:** Fiber operates as a drop-in replacement by maintaining compatibility with OpenAI/LiteLLM entrypoints, Pydantic return objects, and local token utilities. The following specifications detail how to preserve your existing application logic while integrating asynchronous telemetry and cost tracking.
-> 🔗 **[Entrypoint & Pydantic Spec](./phase/abc/dev/llm/entry.md)** 
+> 🔗 **[Entrypoint Spec](./phase/abc/dev/llm/entry.md)** 
 > 🔗 **[Token Utilities Spec](./phase/abc/dev/llm/token.md)** 
 > 🔗 **[Cost Tracker Spec](./phase/abc/dev/llm/cost.tracker.md)**
 
 ---
 
-### 1.2. LLM Record & Replay
+### 1.2. LLM VCR
 
 The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables deterministic offline testing and precise historical latency emulation without altering business logic.
 
@@ -128,9 +126,9 @@ if __name__ == "__main__":
 
 For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishing offline tests often requires complex refactoring. Fiber eliminates this friction via PhaseAirlock runtime routing.
 
-By declaring explicit aliases at the boot sequence, PhaseAirlock seamlessly intercepts legacy imports and routes traffic to Fiber's VCR engine. This grants your existing codebase immediate access to deterministic playback and time-window stream coalescing—without altering a single line of business logic. Fiber ensures perfect duck-typing parity, returning exact mock objects so that strict legacy type checks continue to function flawlessly.
+By declaring explicit aliases at the boot sequence, PhaseAirlock intercepts legacy imports and routes traffic to Fiber's VCR engine. This grants your existing codebase immediate access to deterministic playback and time-window stream coalescing—without altering a single line of business logic. Fiber ensures duck-typing parity, returning exact mock objects so that strict legacy type checks continue to function.
 
-To guarantee absolute offline determinism, Fiber simultaneously injects a PEP-578 Security Sandbox at the CPython boundary. This low-level audit hook physically intercepts OS-level operations, instantly blocking unexpected external network connections (socket.connect) or subprocess executions from upstream dependencies during replay.
+To guarantee offline determinism, Fiber simultaneously injects a PEP-578 Security Sandbox at the CPython boundary. This low-level audit hook physically intercepts OS-level operations, instantly blocking unexpected external network connections (socket.connect) or subprocess executions from upstream dependencies during replay.
 
 ```python
 import os
@@ -167,7 +165,7 @@ import litellm
 from litellm.types.utils import ModelResponseStream
 
 async def main():
-    # Fiber gracefully processes this standard call. The `metadata` acts as a bridge, 
+    # Fiber processes this standard call. The `metadata` acts as a bridge, 
     # guiding the underlying engine to manage deterministic fixture routing.
     response = await litellm.acompletion(
         model="gemini/gemini-3.1-flash-lite",
@@ -213,38 +211,14 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ---
 
-### 1.3. Secure MCP Gateway
+### 1.3. Universal State Traverser
 
-As agent protocols shift to stateless architectures, they push heavy complexities onto the client. The gateway's **Transition Bridge** absorbs this burden by decoupling HTTP ingress from physical execution.
+The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks and tool calls. Fiber eliminates the need for `if/elif` parsing blocks through its `StateTraverser` engine.
 
-Instead of exposing host systems to unvalidated raw REST Gateway, it translates intents into deterministic events routed via **Tri-Track Concurrency**:
-
-* **`Ephemeral` Mode:** Instantiates single-use, fault-isolated sandboxes per request, ensuring zero memory leaks.
-* **`Linear` Mode:** Routes CPU-heavy workloads sequentially to eliminate cold starts.
-* **`Multiplex` Mode:** Unleashes extreme lock-free concurrency for thousands of I/O-bound operations.
-
-```bash
-## Boot the Core Gateway (Autostarts both 'rest_edge' and 'rpc_worker' by default)
-fiber daemon
-
-## Optional: Enable autonomic extensions (e.g., dynamic_pricing, risk_vault) via -s preset
-# fiber daemon -s eco
-# fiber daemon -s full
-
-## Wrap and boot your legacy server script as an mcp server
-fiber connect --target oracle-01 --mode multiplex --exec "python legacy_server.py"
-```
-
----
-
-### 1.4. Universal State Traverser
-
-The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks and tool calls. Fiber eliminates the need for messy `if/elif` parsing blocks through its `StateTraverser` engine.
-
-Powered by dot-notation, the traverser safely navigates mixed topologies (Dicts, Lists, Pydantic Objects), silently absorbing missing keys or index errors without crashing the pipeline.
+Powered by dot-notation, the traverser safely navigates mixed topologies (Dicts, Lists, Pydantic Objects), absorbing missing keys or index errors without crashing the pipeline.
 
 **Extending Fiber for a New Provider:**
-Integrating a non-OpenAI-compliant provider requires zero custom parsing logic. Simply append their JSON topology to the internal declarative rulesets, and Fiber will autonomously normalize streams, responses, and tool calls into strict OpenAI standards.
+Integrating a non-OpenAI-compliant provider doesn't requires custom parsing logic. Simply append their JSON topology to the internal declarative rulesets, and Fiber will autonomously normalize streams, responses, and tool calls into strict OpenAI standards.
 
 ```python
 # Map Stream Chunks (e.g., fiber/llm/router/stream/parser/chunk.py)
@@ -272,13 +246,83 @@ PROVIDER_RULE_ALIAS["llama_server"] = "openai"
 
 ---
 
-## 2. Installation & Infra Provisioning
+## 2. MCP Gateway
+
+Fiber decouples external HTTP ingress (Edge) from worker(mcp server) execution to securely manage state without burdening the client. Executions are routed via **Tri-Track Concurrency**:
+
+* **`Ephemeral`**: Single-use, fault-isolated sandboxes per request (prevents OOM).
+* **`Linear`**: Sequential execution for CPU-heavy workloads.
+* **`Multiplex`**: High-concurrency for I/O-bound operations using non-blocking asynchronous routing.
+
+### 2.1. The Edge Control Plane (`serv.edge`)
+The Core Gateway acts as the network perimeter, handling distributed state and security autonomously:
+* **Stateful Suspend & Resume:** Parks transactions awaiting human input (`YIELD`) and automatically injects a `RESUME` intent to the worker upon receiving the OTP.
+* **Edge-Level Security:** Blocks replay attacks and validates agent identity via DPoP (Demonstrating Proof-of-Possession).
+
+### 2.2. The Execution Worker (`AsyncWorkerProtocol`)
+By inheriting `AsyncWorkerProtocol`, your standard scripts become robust MCP servers. The protocol abstracts away complex non-blocking asynchronous operations—such as prompting users for input or delegating RPC calls—so you can focus entirely on business logic.
+
+Below is a worker (`deployer.py`) handling a Human-in-the-Loop (HITL) database migration, demonstrating how easily you can pause execution for user confirmation and verify cryptographic attestations:
+
+```python
+# fiber.dev.ex.worker.deplyer
+import asyncio
+from cryptography.hazmat.primitives.asymmetric import ed25519
+from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
+
+class ExecutionDeployer(AsyncWorkerProtocol):
+    def __init__(self):
+        super().__init__(agent_name="execution.deployer")
+        self.validator_pub_key = ed25519.Ed25519PublicKey.from_public_bytes(...)
+        self.pending_prompts = {}
+
+    async def _route_request_async(self, req):
+        req_id = req.get("id") or req.get("payload", {}).get("id")
+        if req.get("action") == "RESUME" or ("method" not in req and "result" in req):
+            if req_id in self.pending_prompts:
+                self.pending_prompts.pop(req_id).set_result(req.get("payload", req))
+            return
+            
+        await super()._route_request_async(req)
+
+    async def handle_tools_call(self, req_id, tool_name, args, meta):
+        if tool_name == "execute_db_migration":
+            sql = args.get("sql_script", "").upper()
+            if "DROP" in sql:
+                # Park transaction via Elicitation (Yields execution back to Edge)
+                self.pending_prompts[req_id] = asyncio.get_running_loop().create_future()
+                await self.send_request(req_id, "elicitation/createMessage", {"message": "Enter TOTP:"})
+                otp_res = await asyncio.wait_for(self.pending_prompts[req_id], timeout=300.0)
+                
+                # Delegate attestation to backend Validator via Connector RPC
+                del_id = f"delegate_{req_id}"
+                self.pending_prompts[del_id] = asyncio.get_running_loop().create_future()
+                await self.send_request(del_id, "rpc_delegate", {
+                    "target_method": "validate.attest", 
+                    "data": {"otp_code": otp_res.get("value")}
+                })
+                delegate_res = await asyncio.wait_for(self.pending_prompts[del_id], timeout=20.0)
+                self.validator_pub_key.verify(
+                    signature=bytes.fromhex(delegate_res["result"]["signature"]), 
+                    data=payload_hash
+                )
+
+            # Execute upon successful verification
+            await self.send_response(req_id, {"content": "Migration executed."})
+
+if __name__ == "__main__":
+    asyncio.run(ExecutionDeployer().serve_forever_async())
+```
+
+---
+
+## 3. Installation & Infra Provisioning
 
 **Prerequisites**
-* **Python**: `>= 3.12` (Required for strict asynchronous pipelines and dot-notation traversal)
-* **Redis**: Required as the core message broker (Tunnel) for asynchronous event streaming, pub/sub routing, and distributed state management.
+* **Python**: `>= 3.12`
+* **Redis**: Required as the core message broker for asynchronous event streaming, pub/sub routing.
 
-Fiber utilizes an integrated installation pipeline where `fiber` and its core dependency `xphi` are tightly coupled. We recommend using `uv pip` for strict dependency resolution.
+We recommend using `uv pip` for strict dependency resolution.
 
 ```bash
 ## 1. Create a dedicated sandbox environment
@@ -291,14 +335,13 @@ uv pip install /path/to/local/self/fiber
 
 ## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help
-
 ```
 
 ---
 
-## 3. Fiber CLI Tool
+## 4. Fiber CLI Tool
 
-The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the appropriate node profile and delegating execution. It transparently forwards unknown arguments directly to the target module to ensure zero-friction scalability.
+The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the appropriate node profile and delegating execution. It transparently forwards unknown arguments directly to the target module to ensure low friction scalability.
 
 | Mode | Description | Example |
 | --- | --- | --- |
@@ -308,14 +351,12 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 
 ---
 
-## 4. System Validation Logs
+## 5. System Validation Logs
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
-* 🔗 **[phase.wasm.log](./phase/abc/log/dphi/phase.wasm.20260923.logw):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), Distributed Execution Determinism recovery, Tripartite Parity recovery, and Cryptographic Proof generation (3bb93907...).
-* 🔗 **[plane.flare.log](./phase/abc/log/plane/flare.20260917.log):** Validates V8 isolation sandboxing within Cloudflare Edge microservices, confirming absolute containment against host filesystem/socket breaches and ensuring Parity/FP determinism across distributed JS-Python workers.
-* 🔗 **[dphi.clearing.log](./phase/abc/log/dphi/clearing.20260916.log):** Validates the WASM-based Clearing FSM and transaction pipeline, confirming deterministic edge defenses against invalid EIP-712 signatures, zero balances, and corrupted calldata via chaos injection.
-* 🔗 **[edge.sandbox.log](./phase/abc/log/gateway/sandbox.20260911.log):** Validates the Edge Gateway's absolute perimeter defenses, confirming cryptographic Tamper-Resistance (Fail-Fast) of the origin state, zero-trust ingress signature validation, and Sentinel Chaos WAF resilience.
-* 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming physical Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
-* 🔗 **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming zero-network offline emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for extreme playback optimization.
-* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.20260920.log):** Validates the zero-code legacy migration, confirming that `sys.modules` aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
+* 🔗 **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming offline network emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for playback optimization.
+* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.20260920.log):** Validates the zero-code legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
+* 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* 🔗 **[gateway.worker.log](./phase/abc/log/gateway/worker.log.20260912.log):** Validates the Zero-Trust MCP Gateway's core routing pipeline, confirming native async multiplexing, high-throughput linear queue stress resilience, precise error isolation, and autonomic dynamic pricing with strict x402 billing defense.
+* 🔗 **[phase.wasm.log](./phase/abc/log/dphi/phase.wasm.20260923.logw):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), and Execution Receits generation.

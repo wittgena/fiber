@@ -56,8 +56,8 @@ async def run_scenario(
     stream: bool = True
 ):
     from fiber.llm.model.message import Message
-    from fiber.dev.ex.facade.driver import LLMFacade
-    import fiber.dev.ex.facade.observer 
+    from fiber.dev.ex.agent.llm.driver import LLMFacade
+    import fiber.dev.ex.agent.llm.observer 
     from fiber.gateway.llm.mapper.traverser import StateTraverseRule
     
     try:
