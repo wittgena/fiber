@@ -3,7 +3,9 @@ from abc import abstractmethod
 from typing import Any, List, Optional, Sequence
 from fiber.gateway.llm.mapper.pydantic import ConfigDict, Field, model_validator
 from fiber.llm.router.manager import CallbackManager
-from fiber.llm.types.llm.block import (
+
+from fiber.llm.types.llm.block import TextBlock
+from fiber.llm.types.llm.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -11,8 +13,7 @@ from fiber.llm.types.llm.block import (
     CompletionResponse,
     CompletionResponseAsyncGen,
     CompletionResponseGen,
-    LLMMetadata,
-    TextBlock,
+    LLMMetadata
 )
 from fiber.llm.types.inter.component import BaseComponent
 

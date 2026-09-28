@@ -11,7 +11,7 @@ from fiber.llm.router.stream.wrapper import StreamWrapper
 from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge
 
 from fiber.gateway.llm.channel import (
-    CompletionTransport, EmbeddingTransport, DphiFuelInterceptor, 
+    CompletionTransport, EmbeddingTransport, FuelInterceptor, 
     StreamAggregator, PayloadTranslator, FallbackHandler, 
     MockBypass, ChannelObserver, ContextBinder
 )
@@ -39,7 +39,7 @@ class PipelineBootstrap:
         
         ## Head
         pipeline.add_last(CompletionTransport())
-        pipeline.add_last(DphiFuelInterceptor())
+        pipeline.add_last(FuelInterceptor())
 
         ## Middle
         pipeline.add_last(StreamAggregator())       
@@ -79,7 +79,7 @@ class PipelineBootstrap:
         
         ## Head
         pipeline.add_last(EmbeddingTransport())
-        pipeline.add_last(DphiFuelInterceptor())
+        pipeline.add_last(FuelInterceptor())
         
         ## Middle
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.POST_TRANSLATE, []), PipelineSlot.POST_TRANSLATE.name)

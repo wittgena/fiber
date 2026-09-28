@@ -21,7 +21,8 @@ from typing import (
     Literal,
 )
 from fiber.llm.router.handle.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.llm.block import MessageRole, ToolCallBlock
+from fiber.llm.types.llm.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -29,10 +30,9 @@ from fiber.llm.types.llm.block import (
     CompletionResponse,
     CompletionResponseAsyncGen,
     CompletionResponseGen,
-    LLMMetadata,
-    MessageRole,
-    ToolCallBlock,
+    LLMMetadata
 )
+from xphi.arch.contract.config import env
 from fiber.gateway.llm.mapper.pydantic import BaseModel, Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
@@ -194,12 +194,7 @@ class GoogleGenAI(LLM):
             config_params["api_key"] = None
             config_params["vertexai"] = True
 
-        try:
-            package_v = version("llama-index-llms-google-genai")
-        except PackageNotFoundError:
-            package_v = "0.0.0"
-        client_hdr = {"x-goog-api-client": f"llamaindex/{package_v}"}
-
+        client_hdr = {"x-goog-api-client": env.USER_AGENT}
         if isinstance(http_options, dict):
             http_opts = http_options
         elif isinstance(http_options, types.HttpOptions):

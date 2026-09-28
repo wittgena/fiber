@@ -19,19 +19,18 @@ from typing import (
     cast,
 )
 from fiber.llm.router.util import parse_partial_json
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.llm.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
     CompletionResponse,
     LLMMetadata,
-    MessageRole,
-    ContentBlock,
-    ToolCallBlock,
 )
+from fiber.llm.types.llm.block import MessageRole, ContentBlock, ToolCallBlock
 from fiber.llm.types.llm.block import TextBlock as LITextBlock
 from fiber.llm.types.llm.block import CitationBlock as LICitationBlock
 from fiber.llm.types.llm.block import ThinkingBlock as LIThinkingBlock
+
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE

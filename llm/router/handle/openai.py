@@ -22,16 +22,16 @@ import openai
 from fiber.llm.router.handle.converter import get_from_param_or_env
 from fiber.llm.types.llm.block import (
     AudioBlock,
-    ChatMessage,
     ContentBlock,
     DocumentBlock,
     ImageBlock,
-    LogProb,
     MessageRole,
     TextBlock,
     ThinkingBlock,
     ToolCallBlock,
 )
+from fiber.llm.types.llm.response import ChatMessage, LogProb
+
 from fiber.gateway.llm.mapper.pydantic import BaseModel
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion_chunk import ChoiceDeltaToolCall

@@ -44,19 +44,16 @@ from fiber.gateway.llm.mapper.pydantic import (
 )
 from xphi.arch.contract.config import env
 
-# =========================================================
-# [순환 참조 방지] 정적 타입 검사(IDE) 시점에만 로드
-# =========================================================
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.block import (
+    from fiber.llm.types.llm.response import (
         ChatMessage,
         ChatResponseAsyncGen,
         ChatResponseGen,
         CompletionResponseAsyncGen,
         CompletionResponseGen,
-        ContentBlock,
-        TextBlock,
     )
+    from fiber.llm.types.llm.block import ContentBlock, TextBlock
+
     from fiber.llm.types.inter.base import TokenAsyncGen, TokenGen
 
 

@@ -6,7 +6,8 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Optional
 
-from fiber.llm.types.llm.block import ChatMessage, MessageRole
+from fiber.llm.types.llm.block import MessageRole
+from fiber.llm.types.llm.response import ChatMessage
 
 from xphi.arch.bound.event.next import uuid4 
 from xphi.kernel.space.bind.resolver import get_invoker

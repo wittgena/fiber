@@ -34,7 +34,8 @@ from fiber.llm.router.handle.converter import (
     stream_chat_to_completion_decorator,
     stream_completion_to_chat_decorator,
 )
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.llm.block import MessageRole, ThinkingBlock, ToolCallBlock, TextBlock
+from fiber.llm.types.llm.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -43,11 +44,8 @@ from fiber.llm.types.llm.block import (
     CompletionResponseAsyncGen,
     CompletionResponseGen,
     LLMMetadata,
-    MessageRole,
-    ThinkingBlock,
-    ToolCallBlock,
-    TextBlock,
 )
+
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE

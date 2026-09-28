@@ -26,8 +26,6 @@ from google.genai import errors
 
 from fiber.gateway.llm.mapper.pydantic import BaseModel, ValidationError
 from fiber.llm.types.llm.block import (
-    ChatMessage,
-    ChatResponse,
     ImageBlock,
     MessageRole,
     TextBlock,
@@ -37,6 +35,7 @@ from fiber.llm.types.llm.block import (
     ToolCallBlock,
     ContentBlock,
 )
+from fiber.llm.types.llm.response import ChatMessage, ChatResponse
 from tenacity import (
     before_sleep_log,
     retry,

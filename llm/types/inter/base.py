@@ -20,7 +20,8 @@ from typing import (
     Union,
 )
 
-from fiber.llm.types.llm.block import ChatMessage, MessageRole, TextBlock
+from fiber.llm.types.llm.block import MessageRole, TextBlock
+from fiber.llm.types.llm.response import ChatMessage
 from fiber.gateway.llm.mapper.pydantic import (
     BaseModel,
     GetCoreSchemaHandler,

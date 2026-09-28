@@ -6,19 +6,7 @@ from abc import ABC
 from enum import Enum
 from io import IOBase, BytesIO
 from pathlib import Path
-from typing import (
-    Annotated,
-    Any,
-    AsyncGenerator,
-    Dict,
-    Generator,
-    List,
-    Literal,
-    Optional,
-    Union,
-    cast,
-    Sequence,
-)
+from typing import Annotated, Any, AsyncGenerator, Dict, Generator, List, Literal, Optional, Union, cast, Sequence
 
 try:
     # Python 3.10+
@@ -61,16 +49,11 @@ class MessageRole(str, Enum):
     CHATBOT = "chatbot"
     MODEL = "model"
 
-
 class BaseContentBlock(ABC, BaseModel):
     @classmethod
     async def amerge(
         cls, splits: Sequence[Self], chunk_size: int, tokenizer: Any | None = None
     ) -> Sequence[Self]:
-        """
-        Async merge smaller content blocks into larger blocks up to chunk_size tokens.
-        Default implementation returns splits without merging, should be overridden by subclasses that support merging.
-        """
         return splits
 
     @classmethod
@@ -83,11 +66,6 @@ class BaseContentBlock(ABC, BaseModel):
         )
 
     async def aestimate_tokens(self, tokenizer: Any | None = None) -> int:
-        """
-        Async estimate the number of tokens in this content block.
-
-        Default implementation returns 0, should be overridden by subclasses to provide meaningful estimates.
-        """
         return 0
 
     def estimate_tokens(self, tokenizer: Any | None = None) -> int:
@@ -97,11 +75,6 @@ class BaseContentBlock(ABC, BaseModel):
     async def asplit(
         self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None
     ) -> List[Self]:
-        """
-        Async split the content block into smaller blocks with up to max_tokens tokens each.
-
-        Default implementation returns self in a list, should be overridden by subclasses that support splitting.
-        """
         return [self]
 
     def split(
@@ -134,30 +107,10 @@ class BaseContentBlock(ABC, BaseModel):
 
     @property
     def templatable_attributes(self) -> List[str]:
-        """
-        List of attributes that can be templated.
-
-        Can be overridden by subclasses.
-        """
         return []
 
     @staticmethod
     def _get_template_str_from_attribute(attribute: Any) -> str | None:
-        """
-        Helper function to get template string from attribute.
-
-        It primarily enables cases of template_vars in binary strings for non text types such as:
-            - ImageBlock(image=b'{image_bytes}')
-            - AudioBlock(audio=b'{audio_bytes}')
-            - VideoBlock(video=b'{video_bytes}')
-            - DocumentBlock(data=b'{document_bytes}')
-
-        However, it could in theory also work with other attributes like:
-            - ImageBlock(path=b'{image_path}')
-            - AudioBlock(url=b'{audio_url}')
-
-        For that to work, the validation on those fields would need to be updated though.
-        """
         if attribute is None:
             return None
         if isinstance(attribute, str):
@@ -171,9 +124,6 @@ class BaseContentBlock(ABC, BaseModel):
             return str(attribute)
 
     def get_template_vars(self) -> list[str]:
-        """
-        Get template variables from the content block.
-        """
         from fiber.llm.router.util import get_template_vars
 
         for attribute_name in self.templatable_attributes:
@@ -184,21 +134,6 @@ class BaseContentBlock(ABC, BaseModel):
         return []
 
     def format_vars(self, **kwargs: Any) -> "BaseContentBlock":
-        """
-        Format the content block with the given keyword arguments.
-
-        This function primarily enables formatting of template_vars in Textblocks and binary strings for non text:
-            - ImageBlock(image=b'{image_bytes}')
-            - AudioBlock(audio=b'{audio_bytes}')
-            - VideoBlock(video=b'{video_bytes}')
-            - DocumentBlock(data=b'{document_bytes}')
-
-        However, it could in theory also work with other attributes like:
-            - ImageBlock(path=b'{image_path}')
-            - AudioBlock(url=b'{audio_url}')
-
-        For that to work, the validation on those fields would need to be updated though.
-        """
         from fiber.llm.router.util import format_string
 
         formatted_attrs: Dict[str, Any] = {}
@@ -206,8 +141,6 @@ class BaseContentBlock(ABC, BaseModel):
             attribute = getattr(self, attribute_name, None)
             att_type = type(attribute)
             template_str = self._get_template_str_from_attribute(attribute)
-            # If the attribute is a binary string, we need to coerce to string for formatting,
-            # but then we need to re-encode to bytes after formatting, which is what the code below does.
             formatted_kwargs = {
                 k: resolve_binary(v, as_base64=True).read().decode()
                 if isinstance(v, bytes)
@@ -244,10 +177,7 @@ class BaseContentBlock(ABC, BaseModel):
                     return None
         return None
 
-
 class TextBlock(BaseContentBlock):
-    """A representation of text data to directly pass to/from the LLM."""
-
     block_type: Literal["text"] = "text"
     text: str
 
@@ -262,11 +192,8 @@ class TextBlock(BaseContentBlock):
         current_block_texts = []
         current_block_tokens = 0
 
-        # TODO: Think about separators when merging, since correctly joining them requires us to understand how they
-        #  were previously split. For now, we just universally join with spaces.
         for split in splits:
             split_tokens = await split.aestimate_tokens(tokenizer=tokenizer)
-
             if current_block_tokens + split_tokens <= chunk_size:
                 current_block_texts.append(split.text)
                 current_block_tokens += split_tokens
@@ -299,10 +226,7 @@ class TextBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["text"]
 
-
 class ImageBlock(BaseContentBlock):
-    """A representation of image data to directly pass to/from the LLM."""
-
     block_type: Literal["image"] = "image"
     image: bytes | IOBase | None = None
     path: FilePath | None = None
@@ -333,13 +257,6 @@ class ImageBlock(BaseContentBlock):
 
     @model_validator(mode="after")
     def image_to_base64(self) -> Self:
-        """
-        Store the image as base64 and guess the mimetype when possible.
-
-        In case the model was built passing image data but without a mimetype,
-        we try to guess it using the filetype library. To avoid resource-intense
-        operations, we won't load the path or the URL to guess the mimetype.
-        """
         if not self.image or not isinstance(self.image, bytes):
             if not self.image_mimetype:
                 path = self.path or self.url
@@ -363,13 +280,6 @@ class ImageBlock(BaseContentBlock):
             self.image_mimetype = guess.mime if guess else None
 
     def resolve_image(self, as_base64: bool = False) -> IOBase:
-        """
-        Resolve an image such that PIL can read it.
-
-        Args:
-            as_base64 (bool): whether the resolved image should be returned as base64-encoded bytes
-
-        """
         data_buffer = (
             self.image
             if isinstance(self.image, IOBase)
@@ -381,7 +291,6 @@ class ImageBlock(BaseContentBlock):
             )
         )
 
-        # Check size by seeking to end and getting position
         data_buffer.seek(0, 2)  # Seek to end
         size = data_buffer.tell()
         data_buffer.seek(0)  # Reset to beginning
@@ -396,13 +305,6 @@ class ImageBlock(BaseContentBlock):
         return f"data:{self.image_mimetype};base64,{b64_str}"
 
     async def aestimate_tokens(self, *args: Any, **kwargs: Any) -> int:
-        """
-        Many APIs measure images differently. Here, we take a large estimate.
-
-        This is based on a 2048 x 1536 image using OpenAI.
-
-        TODO: In the future, LLMs should be able to count their own tokens.
-        """
         try:
             self.resolve_image()
             return 2125
@@ -416,10 +318,7 @@ class ImageBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["image"]
 
-
 class AudioBlock(BaseContentBlock):
-    """A representation of audio data to directly pass to/from the LLM."""
-
     block_type: Literal["audio"] = "audio"
     audio: bytes | IOBase | None = None
     path: FilePath | None = None
@@ -448,13 +347,6 @@ class AudioBlock(BaseContentBlock):
 
     @model_validator(mode="after")
     def audio_to_base64(self) -> Self:
-        """
-        Store the audio as base64 and guess the mimetype when possible.
-
-        In case the model was built passing audio data but without a format,
-        we try to guess it using the filetype library. To avoid resource-intense
-        operations, we won't load the path or the URL to guess the format.
-        """
         if not self.audio or not isinstance(self.audio, bytes):
             if not self.format:
                 path = self.path or self.url
@@ -478,13 +370,6 @@ class AudioBlock(BaseContentBlock):
             self.format = guess.extension if guess else None
 
     def resolve_audio(self, as_base64: bool = False) -> IOBase:
-        """
-        Resolve an audio such that PIL can read it.
-
-        Args:
-            as_base64 (bool): whether the resolved audio should be returned as base64-encoded bytes
-
-        """
         data_buffer = (
             self.audio
             if isinstance(self.audio, IOBase)
@@ -495,7 +380,6 @@ class AudioBlock(BaseContentBlock):
                 as_base64=as_base64,
             )
         )
-        # Check size by seeking to end and getting position
         data_buffer.seek(0, 2)  # Seek to end
         size = data_buffer.tell()
         data_buffer.seek(0)  # Reset to beginning
@@ -514,15 +398,6 @@ class AudioBlock(BaseContentBlock):
         return f"data:audio;base64,{b64_str}"
 
     async def aestimate_tokens(self, *args: Any, **kwargs: Any) -> int:
-        """
-        Use TinyTag to estimate the duration of the audio file and convert to tokens.
-
-        Gemini estimates 32 tokens per second of audio
-        https://ai.google.dev/gemini-api/docs/tokens?lang=python
-
-        OpenAI estimates 1 token per 0.1 second for user input and 1 token per 0.05 seconds for assistant output
-        https://platform.openai.com/docs/guides/realtime-costs
-        """
         try:
             # First try tinytag
             try:
@@ -545,10 +420,7 @@ class AudioBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["audio"]
 
-
 class VideoBlock(BaseContentBlock):
-    """A representation of video data to directly pass to/from the LLM."""
-
     block_type: Literal["video"] = "video"
     video: bytes | IOBase | None = None
     path: FilePath | None = None
@@ -579,11 +451,6 @@ class VideoBlock(BaseContentBlock):
 
     @model_validator(mode="after")
     def video_to_base64(self) -> "VideoBlock":
-        """
-        Store the video as base64 and guess the mimetype when possible.
-
-        If video data is passed but no mimetype is provided, try to infer it.
-        """
         if not self.video or not isinstance(self.video, bytes):
             if not self.video_mimetype:
                 path = self.path or self.url
@@ -607,13 +474,6 @@ class VideoBlock(BaseContentBlock):
                 self.video_mimetype = guess.mime
 
     def resolve_video(self, as_base64: bool = False) -> IOBase:
-        """
-        Resolve a video file to a IOBase buffer.
-
-        Args:
-            as_base64 (bool): whether to return the video as base64-encoded bytes
-
-        """
         data_buffer = (
             self.video
             if isinstance(self.video, IOBase)
@@ -642,14 +502,7 @@ class VideoBlock(BaseContentBlock):
         return f"data:video;base64,{b64_str}"
 
     async def aestimate_tokens(self, *args: Any, **kwargs: Any) -> int:
-        """
-        Use TinyTag to estimate the duration of the video file and convert to tokens.
-
-        Gemini estimates 263 tokens per second of video
-        https://ai.google.dev/gemini-api/docs/tokens?lang=python
-        """
         try:
-            # First try tinytag
             try:
                 tag = TinyTag.get(file_obj=cast(BytesIO, self.resolve_video()))
                 if duration := tag.duration:
@@ -658,10 +511,8 @@ class VideoBlock(BaseContentBlock):
                 _logger.info(
                     "TinyTag does not support file type for video token estimation."
                 )
-            # fallback of roughly 8 times the fallback cost of audio (263 // 32; based on gemini pricing per sec)
             return 256 * 8
         except ValueError as e:
-            # Null case
             if str(e) == "resolve_video returned zero bytes":
                 return 0
             raise
@@ -670,10 +521,7 @@ class VideoBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["video"]
 
-
 class DocumentBlock(BaseContentBlock):
-    """A representation of a document to directly pass to the LLM."""
-
     block_type: Literal["document"] = "document"
     data: bytes | IOBase | None = None
     path: Optional[Union[FilePath | str]] = None
@@ -785,29 +633,17 @@ class DocumentBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["data"]
 
-
 class CacheControl(BaseContentBlock):
     type: str
     ttl: str = Field(default="5m")
 
-
 class CachePoint(BaseContentBlock):
-    """Used to set the point to cache up to, if the LLM supports caching."""
-
     block_type: Literal["cache"] = "cache"
     cache_control: CacheControl
 
-
 class BaseRecursiveContentBlock(BaseContentBlock):
-    """Base class for content blocks that can contain other content blocks."""
-
     @classmethod
     def nested_blocks_field_name(cls) -> str:
-        """
-        Return the name of the field that contains nested content blocks.
-
-        By default, this is "content", but subclasses can override this method
-        """
         return "content"
 
     @property
@@ -865,11 +701,6 @@ class BaseRecursiveContentBlock(BaseContentBlock):
         chunk_size: int,
         tokenizer: Any | None = None,
     ) -> Sequence["BaseRecursiveContentBlock"]:
-        """
-        First merge nested_blocks of consecutive BaseRecursiveContentBlock types based on token estimates
-
-        Then, merge consecutive nested content blocks of the same type.
-        """
         merged_blocks = []
         cur_blocks: list["BaseRecursiveContentBlock"] = []
         cur_block_tokens = 0
@@ -974,12 +805,7 @@ class BaseRecursiveContentBlock(BaseContentBlock):
             else:
                 remaining_tokens = max_tokens - current_tokens
                 if remaining_tokens > 0:
-                    truncated_block = await block.atruncate(
-                        max_tokens=remaining_tokens, tokenizer=tknizer, reverse=reverse
-                    )
-                    # For some block types, truncate may return a block larger than requested
-                    # However, we still want to include it if no other truncated blocks were added
-                    # We leave it the user to handle cases where even the truncated block exceeds max_tokens
+                    truncated_block = await block.atruncate(max_tokens=remaining_tokens, tokenizer=tknizer, reverse=reverse)
                     if (
                         await truncated_block.aestimate_tokens(tokenizer=tknizer)
                         <= remaining_tokens
@@ -1020,15 +846,10 @@ class BaseRecursiveContentBlock(BaseContentBlock):
         }
         return type(self)(**attributes)
 
-
 class CitableBlock(BaseRecursiveContentBlock):
-    """Supports providing citable content to LLMs that have built-in citation support."""
-
     block_type: Literal["citable"] = "citable"
     title: str
     source: str
-    # TODO: We could maybe expand the types here,
-    # limiting for now to known use cases
     content: List[
         Annotated[
             Union[TextBlock, ImageBlock, DocumentBlock],
@@ -1045,8 +866,6 @@ class CitableBlock(BaseRecursiveContentBlock):
 
 
 class CitationBlock(BaseRecursiveContentBlock):
-    """A representation of cited content from past messages."""
-
     block_type: Literal["citation"] = "citation"
     cited_content: Annotated[
         Union[TextBlock, ImageBlock], Field(discriminator="block_type")
@@ -1077,8 +896,6 @@ class CitationBlock(BaseRecursiveContentBlock):
         return "cited_content"
 
     def can_merge(self, other: Self) -> bool:
-        """Check if this block can be merged with another block of the same type."""
-        # Only merge if cited_content is of the same type and is a TextBlock
         if type(self.cited_content) is type(other.cited_content) and isinstance(
             self.cited_content, TextBlock
         ):
@@ -1091,16 +908,6 @@ class CitationBlock(BaseRecursiveContentBlock):
 
 
 class ThinkingBlock(BaseContentBlock):
-    """
-    A representation of the content streamed from reasoning/thinking processes by LLMs
-
-    Because of LLM provider's reliance on signatures for Thought Processes,
-    we do not support merging/splitting/truncating for this block, as we want to preserve the integrity of the content
-    provided by the LLM.
-
-    For the same reason, they are also not templatable.
-    """
-
     block_type: Literal["thinking"] = "thinking"
     content: Optional[str] = Field(
         description="Content of the reasoning/thinking process, if available",
@@ -1119,7 +926,6 @@ class ThinkingBlock(BaseContentBlock):
         return self.num_tokens or await TextBlock(
             text=self.content or ""
         ).aestimate_tokens(tokenizer=tokenizer)
-
 
 class ToolCallBlock(BaseContentBlock):
     block_type: Literal["tool_call"] = "tool_call"
@@ -1153,217 +959,3 @@ ContentBlock = Annotated[
     ],
     Field(discriminator="block_type"),
 ]
-
-
-class ChatMessage(BaseRecursiveContentBlock):
-    """Chat message."""
-
-    role: MessageRole = MessageRole.USER
-    additional_kwargs: dict[str, Any] = Field(default_factory=dict)
-    blocks: list[ContentBlock] = Field(default_factory=list)
-
-    def __init__(self, /, content: Any | None = None, **data: Any) -> None:
-        """
-        Keeps backward compatibility with the old `content` field.
-
-        If content was passed and contained text, store a single TextBlock.
-        If content was passed and it was a list, assume it's a list of content blocks and store it.
-        """
-        if content is not None:
-            if isinstance(content, str):
-                data["blocks"] = [TextBlock(text=content)]
-            elif isinstance(content, list):
-                data["blocks"] = content
-
-        super().__init__(**data)
-
-    @model_validator(mode="after")
-    def legacy_additional_kwargs_image(self) -> Self:
-        """
-        Provided for backward compatibility.
-
-        If `additional_kwargs` contains an `images` key, assume the value is a list
-        of ImageDocument and convert them into image blocks.
-        """
-        if documents := self.additional_kwargs.get("images"):
-            documents = cast(list[ImageDocument], documents)
-            for doc in documents:
-                img_base64_bytes = doc.resolve_image(as_base64=True).read()
-                self.blocks.append(ImageBlock(image=img_base64_bytes))
-        return self
-
-    @classmethod
-    def nested_blocks_field_name(self) -> str:
-        return "blocks"
-
-    @property
-    def content(self) -> str | None:
-        """
-        Keeps backward compatibility with the old `content` field.
-
-        Returns:
-            The cumulative content of the TextBlock blocks, None if there are none.
-
-        """
-        content_strs = []
-        for block in self.blocks:
-            if isinstance(block, TextBlock):
-                content_strs.append(block.text)
-
-        ct = "\n".join(content_strs) or None
-        if ct is None and len(content_strs) == 1:
-            return ""
-        return ct
-
-    @content.setter
-    def content(self, content: str) -> None:
-        """
-        Keeps backward compatibility with the old `content` field.
-
-        Raises:
-            ValueError: if blocks contains more than a block, or a block that's not TextBlock.
-
-        """
-        if not self.blocks:
-            self.blocks = [TextBlock(text=content)]
-        elif len(self.blocks) == 1 and isinstance(self.blocks[0], TextBlock):
-            self.blocks = [TextBlock(text=content)]
-        else:
-            raise ValueError(
-                "ChatMessage contains multiple blocks, use 'ChatMessage.blocks' instead."
-            )
-
-    def __str__(self) -> str:
-        return f"{self.role.value}: {self.content}"
-
-    @classmethod
-    def from_str(
-        cls,
-        content: str,
-        role: Union[MessageRole, str] = MessageRole.USER,
-        **kwargs: Any,
-    ) -> Self:
-        if isinstance(role, str):
-            role = MessageRole(role)
-        return cls(role=role, blocks=[TextBlock(text=content)], **kwargs)
-
-    def _recursive_serialization(self, value: Any) -> Any:
-        if isinstance(value, BaseModel):
-            value.model_rebuild()  # ensures all fields are initialized and serializable
-            return value.model_dump()  # type: ignore
-        if isinstance(value, dict):
-            return {
-                key: self._recursive_serialization(value)
-                for key, value in value.items()
-            }
-        if isinstance(value, list):
-            return [self._recursive_serialization(item) for item in value]
-
-        if isinstance(value, bytes):
-            return base64.b64encode(value).decode("utf-8")
-
-        return value
-
-    @field_serializer("additional_kwargs", check_fields=False)
-    def serialize_additional_kwargs(self, value: Any, _info: Any) -> Any:
-        return self._recursive_serialization(value)
-
-
-class LogProb(BaseModel):
-    """LogProb of a token."""
-
-    token: str = Field(default_factory=str)
-    logprob: float = Field(default_factory=float)
-    bytes: List[int] = Field(default_factory=list)
-
-
-# ===== Generic Model Output - Chat =====
-class ChatResponse(BaseModel):
-    """Chat response."""
-
-    message: ChatMessage
-    raw: Optional[Any] = None
-    delta: Optional[str] = None
-    logprobs: Optional[List[List[LogProb]]] = None
-    additional_kwargs: dict = Field(default_factory=dict)
-
-    def __str__(self) -> str:
-        return str(self.message)
-
-
-ChatResponseGen = Generator[ChatResponse, None, None]
-ChatResponseAsyncGen = AsyncGenerator[ChatResponse, None]
-
-
-# ===== Generic Model Output - Completion =====
-class CompletionResponse(BaseModel):
-    """
-    Completion response.
-
-    Fields:
-        text: Text content of the response if not streaming, or if streaming,
-            the current extent of streamed text.
-        additional_kwargs: Additional information on the response(i.e. token
-            counts, function calling information).
-        raw: Optional raw JSON that was parsed to populate text, if relevant.
-        delta: New text that just streamed in (only relevant when streaming).
-    """
-
-    text: str
-    additional_kwargs: dict = Field(default_factory=dict)
-    raw: Optional[Any] = None
-    logprobs: Optional[List[List[LogProb]]] = None
-    delta: Optional[str] = None
-
-    def __str__(self) -> str:
-        return self.text
-
-
-CompletionResponseGen = Generator[CompletionResponse, None, None]
-CompletionResponseAsyncGen = AsyncGenerator[CompletionResponse, None]
-
-
-class LLMMetadata(BaseModel):
-    model_config = ConfigDict(
-        protected_namespaces=("pydantic_model_",), arbitrary_types_allowed=True
-    )
-    context_window: int = Field(
-        default=DEFAULT_CONTEXT_WINDOW,
-        description=(
-            "Total number of tokens the model can be input and output for one response."
-        ),
-    )
-    num_output: int = Field(
-        default=DEFAULT_NUM_OUTPUTS,
-        description="Number of tokens the model can output when generating a response.",
-    )
-    is_chat_model: bool = Field(
-        default=False,
-        description=(
-            "Set True if the model exposes a chat interface (i.e. can be passed a"
-            " sequence of messages, rather than text), like OpenAI's"
-            " /v1/chat/completions endpoint."
-        ),
-    )
-    is_function_calling_model: bool = Field(
-        default=False,
-        description=(
-            "Set True if the model supports function calling messages, similar to"
-            " OpenAI's function calling API. For example, converting 'Email Anya to"
-            " see if she wants to get coffee next Friday' to a function call like"
-            " `send_email(to: string, body: string)`."
-        ),
-    )
-    model_name: str = Field(
-        default="unknown",
-        description=(
-            "The model's name used for logging, testing, and sanity checking. For some"
-            " models this can be automatically discerned. For other models, like"
-            " locally loaded models, this must be manually specified."
-        ),
-    )
-    system_role: MessageRole = Field(
-        default=MessageRole.SYSTEM,
-        description="The role this specific LLM provider"
-        "expects for system prompt. E.g. 'SYSTEM' for OpenAI, 'CHATBOT' for Cohere",
-    )

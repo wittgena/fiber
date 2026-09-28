@@ -14,16 +14,16 @@ from typing import (
     Sequence,
     Union,
 )
-from fiber.llm.types.llm.block import (
+
+from fiber.llm.types.llm.block import MessageRole, ImageBlock
+from fiber.llm.types.llm.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
     ChatResponseGen,
     CompletionResponse,
     CompletionResponseAsyncGen,
-    CompletionResponseGen,
-    ImageBlock,
-    MessageRole,
+    CompletionResponseGen
 )
 from fiber.llm.types.inter.component import ImageNode
 from fiber.llm.router.manager import CallbackManager

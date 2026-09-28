@@ -29,7 +29,7 @@ log = get_emitter("runtime.entry")
 log_handlers = get_emitter("executor.handlers")
 log_pipeline = get_emitter("executor.pipeline")
 
-class DphiFuelInterceptor(DuplexChannel):
+class FuelInterceptor(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Any):
         req_kwargs = ctx.get_attr("request_kwargs", {})
         metadata = req_kwargs.get("metadata", {})
@@ -68,47 +68,13 @@ class DphiFuelInterceptor(DuplexChannel):
             async for raw_chunk in raw_stream:
                 consumed += 1 
                 context.set_attr(DphiKey.FUEL_CONSUMED.value, consumed)
-                
                 if consumed > budget:
-                    log_pipeline.warning(f"[DPHI_TRAP] Fuel exhausted ({budget}). Killing stream physically.")
+                    log_pipeline.warning(f"[FuelTrap] Fuel exhausted ({budget}). Killing stream physically.")
                     break
                 yield raw_chunk
         except Exception as e:
             log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
             raise
-
-# class ContextBinder(DuplexChannel):
-#     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
-#         # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
-#         if "call_id" not in msg:
-#             msg["call_id"] = os.urandom(8).hex()
-
-#         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
-#         metadata = msg.get("metadata", {})
-        
-#         # 2. 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
-#         raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
-        
-#         # 외부에서 유효한 OTel 규격(32자리)이 안 들어오면 새로 발급 (uuid4.hex는 완벽한 32자리 16진수)
-#         if raw_trace_id and len(raw_trace_id) == 32:
-#             resolved_trace_id = raw_trace_id
-#         else:
-#             resolved_trace_id = uuid.uuid4().hex
-        
-#         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
-
-#         system_meta = ExecutionMetadata(
-#             session_id=resolved_session_id,
-#             trace_id=resolved_trace_id,
-#             call_id=msg["call_id"],
-#             metadata=metadata,
-#             base_model=msg.get("model", "unknown")
-#         )
-        
-#         ctx.set_attr("system_meta", system_meta)
-#         ctx.set_attr("request_kwargs", msg)
-#         msg["system_meta"] = system_meta
-#         await ctx.fire_write(msg)
 
 class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):

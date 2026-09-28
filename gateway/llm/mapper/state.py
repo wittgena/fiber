@@ -6,7 +6,7 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional
 
-from fiber.llm.types.llm.block import ChatMessage, MessageRole
+from fiber.llm.types.llm.response import ChatMessage, MessageRole
 from fiber.gateway.llm.mapper.traverser import StateTraverser, STATE_EXTRACTION_RULES
 
 from xphi.arch.bound.event.next import uuid4 

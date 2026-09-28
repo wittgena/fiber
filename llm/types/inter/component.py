@@ -483,9 +483,7 @@ class Node(BaseNode):
         return ""
 
     def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from fiber.llm.types.llm.block import (
-            TextBlock, ImageBlock, AudioBlock, VideoBlock,
-        )
+        from fiber.llm.types.llm.block import TextBlock, ImageBlock, AudioBlock, VideoBlock
         blocks: list[BaseContentBlock] = []
         blocks.extend(self.get_metadata_content_blocks(metadata_mode))
         if self.text_resource:
