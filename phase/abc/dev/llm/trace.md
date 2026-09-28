@@ -23,19 +23,18 @@ Fiber enforces strict, Netty-style pipeline stability while providing developers
  ┌─────┴──────────────────────────────────────────────┐
  │ === OBSERVABILITY & IDENTITY (Tail) ===            │
  │ [Core] Trace ID / Metadata Binding                 │
- │ [PRE_OBSERVER Slot] ➔ (ex: Datadog Tracer)         │ Runs first. Zero-latency async telemetry.
+ │ [PRE_OBSERVER Slot] ➔ (ex: Datadog Tracer)         │ 
  ├────────────────────────────────────────────────────┤
  │ === ROUTING & TRANSLATION (Middle) ===             │
  │ [Core] VCR Mocking & Fallback Retries              │
- │ [PRE_TRANSLATE Slot] ➔ (ex: Semantic Cache)        │ Raw dict state. Ideal for short-circuiting.
+ │ [PRE_TRANSLATE Slot] ➔ (ex: Semantic Cache)        │ 
  │ [Core] Schema Translation (Dict ➔ Pydantic)        │
- │ [POST_TRANSLATE Slot] ➔ (ex: PII Guardrail)        │ Validated state. Enforces security policies.
+ │ [POST_TRANSLATE Slot] ➔ (ex: PII Guardrail)        │ 
  ├────────────────────────────────────────────────────┤
  │ === GOVERNANCE & NETWORK (Head) ===                │
  │ [Core] Fuel Breaker (Budget Exhaustion Trap)       │
  │ [Core] Transport (Physical LLM Network I/O)        │
  └────────────────────────────────────────────────────┘
-
 ```
 
 ### Pipeline Security (Architectural Chokepoints)
@@ -45,7 +44,6 @@ By categorizing execution into strict zones, Fiber mathematically guarantees sec
 1. **Absolute Observability:** Telemetry runs at the absolute Tail. Even if a request is short-circuited by a cache or blocked by a guardrail in Zone 2, Zone 1 always captures the initial intent and the final outcome. Zero blind spots.
 2. **Strict Normalization:** Physical network I/O cannot occur until the `Translator` normalizes unpredictable heterogeneous JSON payloads into strict Pydantic structures. Malformed payloads are dropped before reaching security guardrails.
 3. **Physical Governance:** Before the data leaves the edge boundary, the `Fuel Breaker` executes a hard TCP socket evaluation. This physically prevents malicious agents from initiating infinite streaming loops or bypassing token budgets.
-
 
 ---
 

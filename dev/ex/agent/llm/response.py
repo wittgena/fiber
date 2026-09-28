@@ -1,4 +1,4 @@
-# fiber.dev.ex.facade.response
+# fiber.dev.ex.agent.llm.response
 import warnings
 from typing import ClassVar
 from pydantic import BaseModel, ConfigDict

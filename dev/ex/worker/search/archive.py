@@ -14,7 +14,7 @@ from typing import Dict, Any
 import httpx
 import duckdb
 
-from xphi.arch.contract.protocol.agent import AsyncAgentProtocol
+from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
 class SearchTelemetry:
     """데이터 처리량 및 구간별 소요 시간을 구조적으로 추적하는 계측기"""
@@ -54,7 +54,7 @@ class SearchTelemetry:
 # =====================================================================
 # Main Worker Class
 # =====================================================================
-class ArchiveSearchWorker(AsyncAgentProtocol):
+class ArchiveSearchWorker(AsyncWorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="search.archive.worker")
         

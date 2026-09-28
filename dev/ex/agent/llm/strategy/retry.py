@@ -1,4 +1,4 @@
-# fiber.dev.ex.facade.strategy.retry
+# fiber.dev.ex.agent.llm.strategy.retry
 from collections.abc import Callable, Iterable
 from typing import Any, cast
 from tenacity import (

@@ -6,9 +6,9 @@ import asyncio
 from typing import Dict, Any
 
 from xphi.arch.bound.xor.oracle.receptor import OracleReceptor
-from xphi.arch.contract.protocol.agent import AsyncAgentProtocol
+from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
-class OracleMcpServer(AsyncAgentProtocol):
+class OracleMcpServer(AsyncWorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="agent.oracle")
         

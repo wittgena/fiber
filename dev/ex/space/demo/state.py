@@ -1,4 +1,4 @@
-# fiber.dev.ex.demo.state
+# fiber.dev.ex.space.demo.state
 import uuid
 import json
 from datetime import datetime
@@ -7,10 +7,6 @@ from typing import List, Literal, Union
 from pydantic import BaseModel, Field
 
 from fiber.llm.model.message import Message, TextContent, MessageToolCall
-
-# =====================================================================
-# 1. Event Definitions (Event Sourcing)
-# =====================================================================
 
 class BaseStateEvent(BaseModel):
     """Base class for trajectory events."""

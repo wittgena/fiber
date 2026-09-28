@@ -9,7 +9,7 @@ import math
 import hashlib
 from typing import Dict, Any, List
 
-from xphi.arch.contract.protocol.agent import AgentProtocol
+from xphi.arch.contract.protocol.worker import WorkerProtocol
 
 log = logging.getLogger("agent.finlib")
 
@@ -28,7 +28,7 @@ except ImportError:
     HAS_QL = False
     log.warning("Optional dependency 'QuantLib' not found. 'resolve_dates' will use MOCK mode.")
 
-class FinLib(AgentProtocol):
+class FinLib(WorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="agent.finlib")
         
