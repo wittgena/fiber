@@ -35,7 +35,8 @@ from fiber.llm.types.llm.block import ThinkingBlock as LIThinkingBlock
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
-from fiber.gateway.llm.inter.base import LLM, ToolSelection
+from fiber.gateway.llm.inter.base import LLM
+from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
 from fiber.llm.router.handle.template import PromptTemplate
 

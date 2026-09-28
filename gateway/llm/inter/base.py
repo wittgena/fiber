@@ -1,7 +1,5 @@
 # fiber.gateway.llm.inter.base
 import asyncio
-import functools
-import inspect
 import logging
 from collections import ChainMap
 from typing import (
@@ -9,14 +7,10 @@ from typing import (
     Dict,
     List,
     Optional,
-    Protocol,
     Sequence,
-    Type,
     Union,
-    runtime_checkable,
     TYPE_CHECKING,
 )
-from typing_extensions import Annotated
 
 from fiber.llm.router.util import asyncio_run
 from fiber.llm.router.dispatcher import dispatcher
@@ -25,8 +19,6 @@ from fiber.llm.types.llm.block import (
     ChatResponse,
     ChatResponseAsyncGen,
     ChatResponseGen,
-    CompletionResponseAsyncGen,
-    CompletionResponseGen,
     MessageRole,
 )
 from fiber.llm.types.inter.llm import LLMBase
@@ -38,12 +30,9 @@ from fiber.llm.types.inter.base import (
 )
 
 from fiber.gateway.llm.mapper.pydantic import (
-    BaseModel,
-    WithJsonSchema,
     Field,
     field_validator,
     model_validator,
-    ValidationError,
 )
 
 # Template & Event Imports
@@ -56,91 +45,29 @@ from fiber.gateway.llm.context.cbevent import (
     LLMPredictStartEvent,
 )
 
+from fiber.llm.router.util import (
+    ToolSelection,
+    MessagesToPromptType,
+    CompletionToPromptType,
+    MessagesToPromptCallable,
+    CompletionToPromptCallable,
+    stream_completion_response_to_tokens,
+    stream_chat_response_to_tokens,
+    astream_completion_response_to_tokens,
+    astream_chat_response_to_tokens,
+    default_completion_to_prompt,
+    _supports_tool_required,
+)
+
 if TYPE_CHECKING:
     from fiber.llm.router.chat_engine.types import AgentChatResponse
     from fiber.llm.types.llm.tool import BaseTool
 
 logger = logging.getLogger(__name__)
 
-# ==========================================
-# Types, Protocols & Helper Functions
-# ==========================================
-class ToolSelection(BaseModel):
-    tool_id: str = Field(description="Tool ID to select.")
-    tool_name: str = Field(description="Tool name to select.")
-    tool_kwargs: Dict[str, Any] = Field(description="Keyword arguments for the tool.")
-
-    @field_validator("tool_kwargs", mode="wrap")
-    @classmethod
-    def ignore_non_dict_arguments(cls, v: Any, handler: Any) -> Dict[str, Any]:
-        try:
-            return handler(v)
-        except ValidationError:
-            return handler({})
-
-@runtime_checkable
-class MessagesToPromptType(Protocol):
-    def __call__(self, messages: Sequence[ChatMessage]) -> str:
-        pass
-
-@runtime_checkable
-class CompletionToPromptType(Protocol):
-    def __call__(self, prompt: str) -> str:
-        pass
-
-
-def stream_completion_response_to_tokens(
-    completion_response_gen: CompletionResponseGen,
-) -> TokenGen:
-    def gen() -> TokenGen:
-        for response in completion_response_gen:
-            yield response.delta or ""
-    return gen()
-
-
-def stream_chat_response_to_tokens(
-    chat_response_gen: ChatResponseGen,
-) -> TokenGen:
-    def gen() -> TokenGen:
-        for response in chat_response_gen:
-            yield response.delta or ""
-    return gen()
-
-
-async def astream_completion_response_to_tokens(
-    completion_response_gen: CompletionResponseAsyncGen,
-) -> TokenAsyncGen:
-    async def gen() -> TokenAsyncGen:
-        async for response in completion_response_gen:
-            yield response.delta or ""
-    return gen()
-
-
-async def astream_chat_response_to_tokens(
-    chat_response_gen: ChatResponseAsyncGen,
-) -> TokenAsyncGen:
-    async def gen() -> TokenAsyncGen:
-        async for response in chat_response_gen:
-            yield response.delta or ""
-    return gen()
-
-
-def default_completion_to_prompt(prompt: str) -> str:
-    return prompt
-
-
-MessagesToPromptCallable = Annotated[
-    Optional[MessagesToPromptType],
-    WithJsonSchema({"type": "string"}),
-]
-
-CompletionToPromptCallable = Annotated[
-    Optional[CompletionToPromptType],
-    WithJsonSchema({"type": "string"}),
-]
 
 # ==========================================
-# Core LLM Class (Merged with FcLLM)
+# Core LLM Class
 # ==========================================
 class LLM(LLMBase):
     """
@@ -149,7 +76,11 @@ class LLM(LLMBase):
     Automatically falls back to ReAct agent if native function calling is unsupported.
     """
     system_prompt: Optional[str] = Field(default=None, description="System prompt for LLM calls.")
-    messages_to_prompt: MessagesToPromptCallable = Field(description="Function to convert a list of messages to an LLM prompt.", default=None, exclude=True)
+    messages_to_prompt: MessagesToPromptCallable = Field(
+        description="Function to convert a list of messages to an LLM prompt.",
+        default=None,
+        exclude=True
+    )
     completion_to_prompt: CompletionToPromptCallable = Field(
         description="Function to convert a completion to an LLM prompt.",
         default=None,
@@ -687,15 +618,3 @@ class LLM(LLMBase):
                 response=f"An error occurred while running the tool via ReAct fallback: {str(e)}",
                 sources=[],
             )
-
-@functools.lru_cache(maxsize=1000)
-def _supports_tool_required(cls: Type[LLM], tool_required: bool) -> bool:
-    supported = (
-        "tool_required" in inspect.signature(cls._prepare_chat_with_tools).parameters
-    )
-    if not supported and tool_required:
-        logger.warning(
-            f"tool_required is not supported by this version of {cls.__name__}. "
-            "Upgrade it to the latest version."
-        )
-    return supported

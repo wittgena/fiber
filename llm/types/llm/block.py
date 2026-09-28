@@ -42,7 +42,7 @@ from fiber.gateway.llm.mapper.pydantic import (
     field_validator,
     model_validator,
 )
-from fiber.llm.types.inter.schema import ImageDocument
+from fiber.llm.types.inter.component import ImageDocument
 from fiber.llm.router.util import resolve_binary
 from fiber.llm.model.token.encoder import get_tokenizer
 from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS

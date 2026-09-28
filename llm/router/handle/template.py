@@ -1,5 +1,4 @@
 # fiber.llm.router.handle.template
-## @lineage: fiber.llm.router.llm.handle.template
 from abc import ABC, abstractmethod
 from enum import Enum
 from copy import deepcopy

@@ -14,7 +14,7 @@ from fiber.llm.types.llm.block import (
     LLMMetadata,
     TextBlock,
 )
-from fiber.llm.types.inter.schema import BaseComponent
+from fiber.llm.types.inter.component import BaseComponent
 
 class LLMBase(BaseComponent):
     model_config = ConfigDict(arbitrary_types_allowed=True)
