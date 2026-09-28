@@ -1,21 +1,4 @@
 # fiber.gateway.llm.inter.openlike
-## @lineage: fiber.llm.router.llm.openlike
-## @lineage: fiber.llm.router.ext.llm.openlike
-## @lineage: fiber.dphi.model.ext.llm.openlike
-## @lineage: dphi.model.ext.llm.openlike
-## @lineage: phase.client.model.llm.openlike
-## @lineage: phase.client.ext.llm.openlike
-## @lineage: bound.client.ext.llm.openlike
-## @lineage: ator.client.ext.llm.openlike
-## @lineage: bound.eco.agent.llm.openlike
-## @lineage: eco.bound.agent.llm.openlike
-## @lineage: bound.agent.llm.openlike
-## @lineage: ext.router.llm.openlike
-## @lineage: router.llm.openlike
-## @lineage: engine.router.llm.openlike
-## @lineage: engine.eco.llm.openlike
-## @lineage: runtime.engine.eco.llm.openlike
-## @lineage: eco.llms.openlike
 from typing import Any, Optional, Sequence, Union
 from fiber.llm.types.llm.block import (
     ChatMessage,
@@ -28,9 +11,9 @@ from fiber.llm.types.llm.block import (
     LLMMetadata,
 )
 from fiber.gateway.llm.mapper.pydantic import Field
-from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW
 from fiber.llm.router.handle.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
-from llama_index.llms.openai.base import OpenAI, Tokenizer
+from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW
+from fiber.gateway.llm.inter.openai import OpenAI, Tokenizer
 
 class OpenAILike(OpenAI):
     context_window: int = Field(
@@ -47,7 +30,6 @@ class OpenAILike(OpenAI):
     )
     should_use_structured_outputs: bool = Field(
         default=False,
-        # https://platform.openai.com/docs/guides/structured-outputs
         description=(
             "Set True if the model supports structured output through response_format."
         ),
@@ -65,7 +47,7 @@ class OpenAILike(OpenAI):
         super().model_post_init(__context)
         if isinstance(self.tokenizer, str):
             try:
-                import transformers  # noqa: F401
+                import transformers
             except ImportError:
                 raise ImportError(
                     "The `transformers` package is required when passing a string "

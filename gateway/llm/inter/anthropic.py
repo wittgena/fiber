@@ -1,5 +1,4 @@
 # fiber.gateway.llm.inter.anthropic
-## @lineage: fiber.llm.router.llm.anthropic
 import json
 import logging
 from importlib.metadata import version as get_version
@@ -80,11 +79,8 @@ from fiber.llm.router.dispatcher import dispatcher
 
 if TYPE_CHECKING:
     from fiber.llm.types.llm.tool import BaseTool
-    from fiber.llm.types.llm.flex import FlexibleModel
-
 
 logger = logging.getLogger(__name__)
-
 DEFAULT_ANTHROPIC_MODEL = "claude-2.1"
 DEFAULT_ANTHROPIC_MAX_TOKENS = 512
 
@@ -133,23 +129,6 @@ class AnthropicCompletionResponse(CompletionResponse):
 
 
 class Anthropic(FunctionCallingLLM):
-    """
-    Anthropic LLM.
-
-    Examples:
-        `pip install llama-index-llms-anthropic`
-
-        ```python
-        from llama_index.llms.anthropic import Anthropic
-
-        llm = Anthropic(model="claude-instant-1")
-        resp = llm.stream_complete("Paul Graham is ")
-        for r in resp:
-            print(r.delta, end="")
-        ```
-
-    """
-
     model: str = Field(
         default=DEFAULT_ANTHROPIC_MODEL, description="The anthropic model to use."
     )

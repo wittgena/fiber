@@ -1,23 +1,4 @@
 # fiber.llm.router.handle.openai
-## @lineage: fiber.llm.router.llm.handle.openai
-## @lineage: fiber.llm.router.ext.llm.handle.openai
-## @lineage: fiber.dphi.model.ext.llm.handle.openai
-## @lineage: dphi.model.ext.llm.handle.openai
-## @lineage: phase.client.model.llm.handle.openai
-## @lineage: phase.client.ext.llm.handle.openai
-## @lineage: bound.client.ext.llm.handle.openai
-## @lineage: ator.client.ext.llm.handle.openai
-## @lineage: bound.eco.agent.llm.handle.openai
-## @lineage: eco.bound.agent.llm.handle.openai
-## @lineage: bound.agent.llm.handle.openai
-## @lineage: ext.router.llm.handle.openai
-## @lineage: router.llm.handle.openai
-## @lineage: engine.router.llm.handle.openai
-## @lineage: engine.eco.llm.handle.openai
-## @lineage: runtime.engine.eco.llm.handle.openai
-## @lineage: eco.llms.handle.openai
-## @lineage: eco.llama.llms.handle.openai
-## @lineage: eco.llama.llms.openai.utils
 import json
 import logging
 import os

@@ -1,5 +1,4 @@
 # fiber.gateway.llm.inter.openai
-## @lineage: fiber.llm.router.llm.openai
 import functools
 import re
 from json.decoder import JSONDecodeError
@@ -57,7 +56,6 @@ from fiber.gateway.llm.inter.base import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.util import parse_partial_json
 from fiber.llm.router.handle.template import PromptTemplate
-from fiber.llm.types.llm.flex import FlexibleModel
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode
 from fiber.llm.router.handle.openai import (
     O1_MODELS,
@@ -129,7 +127,6 @@ def force_single_tool_call(response: ChatResponse) -> None:
             if not isinstance(block, ToolCallBlock)
         ] + [tool_calls[0]]
 
-
 class OpenAI(FunctionCallingLLM):
     """
     OpenAI LLM.
@@ -149,28 +146,7 @@ class OpenAI(FunctionCallingLLM):
         default_headers: override the default headers for API requests.
         http_client: pass in your own httpx.Client instance.
         async_http_client: pass in your own httpx.AsyncClient instance.
-
-    Examples:
-        `pip install llama-index-llms-openai`
-
-        ```python
-        import os
-        import openai
-
-        os.environ["OPENAI_API_KEY"] = "sk-..."
-        openai.api_key = os.environ["OPENAI_API_KEY"]
-
-        from llama_index.llms.openai import OpenAI
-
-        llm = OpenAI(model="gpt-3.5-turbo")
-
-        stream = llm.stream_complete("Hi, write a short story")
-
-        for r in stream:
-            print(r.delta, end="")
-        ```
     """
-
     model: str = Field(
         default=DEFAULT_OPENAI_MODEL, description="The OpenAI model to use."
     )

@@ -1,6 +1,4 @@
 # fiber.gateway.llm.inter.gemini
-## @lineage: fiber.llm.router.llm.gemini
-## @lineage: fiber.llm.router.ext.llm.gemini
 import asyncio
 import inspect
 import functools
@@ -42,8 +40,6 @@ from fiber.llm.types.llm.funcall import FunctionCallingLLM
 from fiber.gateway.llm.inter.base import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.handle.template import PromptTemplate
-from fiber.llm.types.llm.flex import FlexibleModel, create_flexible_model
-from fiber.llm.types.inter.base import PydanticProgramMode
 from fiber.llm.router.handle.gemini import (
     chat_from_gemini_response,
     chat_message_to_gemini,

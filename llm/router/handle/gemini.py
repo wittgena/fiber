@@ -1,20 +1,4 @@
 # fiber.llm.router.handle.gemini
-## @lineage: fiber.llm.router.llm.handle.gemini
-## @lineage: fiber.llm.router.ext.llm.handle.gemini
-## @lineage: fiber.dphi.model.ext.llm.handle.gemini
-## @lineage: dphi.model.ext.llm.handle.gemini
-## @lineage: phase.client.model.llm.handle.gemini
-## @lineage: phase.client.ext.llm.handle.gemini
-## @lineage: bound.client.ext.llm.handle.gemini
-## @lineage: ator.client.ext.llm.handle.gemini
-## @lineage: bound.eco.agent.llm.handle.gemini
-## @lineage: eco.bound.agent.llm.handle.gemini
-## @lineage: bound.agent.llm.handle.gemini
-## @lineage: ext.router.llm.handle.gemini
-## @lineage: router.llm.handle.gemini
-## @lineage: engine.router.llm.handle.gemini
-## @lineage: engine.eco.llm.handle.gemini
-## @lineage: runtime.engine.eco.llm.handle.gemini
 import asyncio
 import json
 import logging
@@ -53,7 +37,6 @@ from fiber.llm.types.llm.block import (
     ToolCallBlock,
     ContentBlock,
 )
-from fiber.llm.types.llm.flex import _repair_incomplete_json
 from tenacity import (
     before_sleep_log,
     retry,
@@ -86,6 +69,19 @@ ROLES_FROM_GEMINI: dict[str, MessageRole] = {
     "function": MessageRole.TOOL,
 }
 
+def repair_incomplete_json(json_str: str) -> str:
+    if not json_str.strip():
+        return "{}"
+
+    quote_count = json_str.count('"')
+    if quote_count % 2 == 1:
+        json_str += '"'
+
+    brace_count = json_str.count("{") - json_str.count("}")
+    if brace_count > 0:
+        json_str += "}" * brace_count
+
+    return json_str
 
 def merge_neighboring_same_role_messages(
     messages: Sequence[ChatMessage],
@@ -619,7 +615,7 @@ def handle_streaming_flexible_model(
         except ValidationError:
             try:
                 return flexible_model.model_validate_json(
-                    _repair_incomplete_json(current_json)
+                    repair_incomplete_json(current_json)
                 ), current_json
             except ValidationError:
                 return None, current_json

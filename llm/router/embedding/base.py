@@ -158,12 +158,10 @@ class BaseEmbedding(TransformComponent):
         default=None,
         description="The number of workers to use for async embedding calls.",
     )
-    # Use Any to avoid import loops
     embeddings_cache: Optional[Any] = Field(
         default=None,
         description="Cache for the embeddings: if None, the embeddings are not cached",
     )
-    # Expected type: BaseRateLimiter (from llama_index.core.rate_limiter)
     rate_limiter: Optional[Any] = Field(
         default=None,
         description="Rate limiter instance to throttle API calls.",
