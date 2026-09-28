@@ -25,7 +25,7 @@ from fiber.gateway.llm.mapper.pydantic import (
 
 from fiber.llm.types.llm.block import ChatMessage, MessageRole
 from fiber.gateway.llm.mapper.pydantic import BaseModel, ConfigDict
-from fiber.llm.types.inter.llm import BaseLLM
+from fiber.llm.types.inter.llm import LLMBase
 from fiber.llm.router.util import get_template_vars, format_string
 from fiber.llm.types.inter.base import BaseOutputParser
 
@@ -131,15 +131,15 @@ class BasePromptTemplate(BaseModel, ABC):
     def partial_format(self, **kwargs: Any) -> "BasePromptTemplate": ...
 
     @abstractmethod
-    def format(self, llm: Optional[BaseLLM] = None, **kwargs: Any) -> str: ...
+    def format(self, llm: Optional[LLMBase] = None, **kwargs: Any) -> str: ...
 
     @abstractmethod
     def format_messages(
-        self, llm: Optional[BaseLLM] = None, **kwargs: Any
+        self, llm: Optional[LLMBase] = None, **kwargs: Any
     ) -> List[ChatMessage]: ...
 
     @abstractmethod
-    def get_template(self, llm: Optional[BaseLLM] = None) -> str: ...
+    def get_template(self, llm: Optional[LLMBase] = None) -> str: ...
 
 class PromptTemplate(BasePromptTemplate):
     template: str
@@ -181,7 +181,7 @@ class PromptTemplate(BasePromptTemplate):
 
     def format(
         self,
-        llm: Optional[BaseLLM] = None,
+        llm: Optional[LLMBase] = None,
         completion_to_prompt: Optional[Callable[[str], str]] = None,
         **kwargs: Any,
     ) -> str:
@@ -204,14 +204,14 @@ class PromptTemplate(BasePromptTemplate):
         return prompt
 
     def format_messages(
-        self, llm: Optional[BaseLLM] = None, **kwargs: Any
+        self, llm: Optional[LLMBase] = None, **kwargs: Any
     ) -> List[ChatMessage]:
         """Format the prompt into a list of chat messages."""
         del llm  # unused
         prompt = self.format(**kwargs)
         return prompt_to_messages(prompt)
 
-    def get_template(self, llm: Optional[BaseLLM] = None) -> str:
+    def get_template(self, llm: Optional[LLMBase] = None) -> str:
         return self.template
 
 class ChatPromptTemplate(BasePromptTemplate):  # type: ignore[no-redef]
@@ -266,7 +266,7 @@ class ChatPromptTemplate(BasePromptTemplate):  # type: ignore[no-redef]
 
     def format(
         self,
-        llm: Optional[BaseLLM] = None,
+        llm: Optional[LLMBase] = None,
         messages_to_prompt: Optional[Callable[[Sequence[ChatMessage]], str]] = None,
         **kwargs: Any,
     ) -> str:
@@ -279,7 +279,7 @@ class ChatPromptTemplate(BasePromptTemplate):  # type: ignore[no-redef]
         return default_messages_to_prompt(messages)
 
     def format_messages(
-        self, llm: Optional[BaseLLM] = None, **kwargs: Any
+        self, llm: Optional[LLMBase] = None, **kwargs: Any
     ) -> List[ChatMessage]:
         del llm  # unused
         """Format the prompt into a list of chat messages."""
@@ -298,5 +298,5 @@ class ChatPromptTemplate(BasePromptTemplate):  # type: ignore[no-redef]
 
         return messages
 
-    def get_template(self, llm: Optional[BaseLLM] = None) -> str:
+    def get_template(self, llm: Optional[LLMBase] = None) -> str:
         return default_messages_to_prompt(self.message_templates)

@@ -51,7 +51,7 @@ from fiber.llm.types.llm.block import (
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
-from fiber.llm.types.llm.funcall import FunctionCallingLLM
+from fiber.gateway.llm.inter.base import LLM
 from fiber.gateway.llm.inter.base import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.util import parse_partial_json
@@ -127,26 +127,7 @@ def force_single_tool_call(response: ChatResponse) -> None:
             if not isinstance(block, ToolCallBlock)
         ] + [tool_calls[0]]
 
-class OpenAI(FunctionCallingLLM):
-    """
-    OpenAI LLM.
-
-    Args:
-        model: name of the OpenAI model to use.
-        temperature: a float from 0 to 1 controlling randomness in generation; higher will lead to more creative, less deterministic responses.
-        max_tokens: the maximum number of tokens to generate.
-        additional_kwargs: Add additional parameters to OpenAI request body.
-        max_retries: How many times to retry the API call if it fails.
-        timeout: How long to wait, in seconds, for an API call before failing.
-        reuse_client: Reuse the OpenAI client between requests. When doing anything with large volumes of async API calls, setting this to false can improve stability.
-        api_key: Your OpenAI api key
-        api_base: The base URL of the API to call
-        api_version: the version of the API to call
-        callback_manager: the callback manager is used for observability.
-        default_headers: override the default headers for API requests.
-        http_client: pass in your own httpx.Client instance.
-        async_http_client: pass in your own httpx.AsyncClient instance.
-    """
+class OpenAI(LLM):
     model: str = Field(
         default=DEFAULT_OPENAI_MODEL, description="The OpenAI model to use."
     )
@@ -258,7 +239,6 @@ class OpenAI(FunctionCallingLLM):
         audio_config: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
-        # TODO: Support deprecated max_new_tokens
         if "max_new_tokens" in kwargs:
             max_tokens = kwargs["max_new_tokens"]
             del kwargs["max_new_tokens"]
@@ -425,10 +405,8 @@ class OpenAI(FunctionCallingLLM):
     def _get_model_kwargs(self, **kwargs: Any) -> Dict[str, Any]:
         base_kwargs = {"model": self.model, "temperature": self.temperature, **kwargs}
         if self.max_tokens is not None:
-            # If max_tokens is None, don't include in the payload:
-            # https://platform.openai.com/docs/api-reference/chat
-            # https://platform.openai.com/docs/api-reference/completions
             base_kwargs["max_tokens"] = self.max_tokens
+
         if self.logprobs is not None and self.logprobs is True:
             if self.metadata.is_chat_model:
                 base_kwargs["logprobs"] = self.logprobs

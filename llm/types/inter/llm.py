@@ -1,19 +1,7 @@
 # fiber.llm.types.inter.llm
 from abc import abstractmethod
-from typing import (
-    Any,
-    List,
-    Optional,
-    Sequence,
-)
-
-# Pydantic Imports
-from fiber.gateway.llm.mapper.pydantic import (
-    ConfigDict,
-    Field,
-    model_validator,
-)
-
+from typing import Any, List, Optional, Sequence
+from fiber.gateway.llm.mapper.pydantic import ConfigDict, Field, model_validator
 from fiber.llm.router.manager import CallbackManager
 from fiber.llm.types.llm.block import (
     ChatMessage,
@@ -28,7 +16,7 @@ from fiber.llm.types.llm.block import (
 )
 from fiber.llm.types.inter.schema import BaseComponent
 
-class BaseLLM(BaseComponent):
+class LLMBase(BaseComponent):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     callback_manager: CallbackManager = Field(
         default_factory=lambda: CallbackManager([]), exclude=True

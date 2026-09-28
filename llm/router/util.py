@@ -32,6 +32,7 @@ import requests
 if TYPE_CHECKING:
     from fiber.llm.types.llm.block import ContentBlock, TextBlock
 
+from xphi.arch.contract.config import env
 
 T = TypeVar("T")
 DEFAULT_NUM_WORKERS = 4
@@ -153,9 +154,7 @@ def resolve_binary(
                     return BytesIO(base64.b64encode(url_data.encode("utf-8")))
                 return BytesIO(url_data.encode("utf-8"))
 
-        headers = {
-            "User-Agent": "surgent/0.0 (https://surgent.ai; info@surgent.ai) surgent-core/0.0"
-        }
+        headers = {"User-Agent": env.USER_AGENT}
         response = requests.get(url, headers=headers, timeout=(60, 60))
         response.raise_for_status()
         if as_base64:

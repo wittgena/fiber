@@ -35,7 +35,7 @@ from fiber.llm.types.llm.block import ThinkingBlock as LIThinkingBlock
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
-from fiber.llm.types.llm.funcall import FunctionCallingLLM, ToolSelection
+from fiber.gateway.llm.inter.base import LLM, ToolSelection
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
 from fiber.llm.router.handle.template import PromptTemplate
 
@@ -75,32 +75,23 @@ from anthropic.types import (
     TextCitation,
     SignatureDelta,
 )
-from fiber.llm.router.dispatcher import dispatcher
-
 if TYPE_CHECKING:
     from fiber.llm.types.llm.tool import BaseTool
+
+from xphi.arch.contract.config import env
 
 logger = logging.getLogger(__name__)
 DEFAULT_ANTHROPIC_MODEL = "claude-2.1"
 DEFAULT_ANTHROPIC_MAX_TOKENS = 512
 
-
 def _get_default_headers(
     user_headers: Optional[Dict[str, str]] = None,
 ) -> Dict[str, str]:
-    """Merge default User-Agent header with user-provided headers."""
-    try:
-        package_version = get_version("llama-index-core")
-    except Exception:
-        package_version = "unknown"
-
-    default_headers = {"User-Agent": f"llama-index/{package_version}"}
-
+    headers = {"User-Agent": env.USER_AGENT}
     if user_headers:
-        # Merge headers, with user-provided headers taking precedence
-        return {**default_headers, **user_headers}
+        return {**headers, **user_headers}
 
-    return default_headers
+    return headers
 
 
 class AnthropicTokenizer:
@@ -118,17 +109,13 @@ class AnthropicTokenizer:
 
 class AnthropicChatResponse(ChatResponse):
     """Extended ChatResponse for Anthropic with citation support."""
-
     citations: List[Dict[str, Any]] = Field(default_factory=list)
-
 
 class AnthropicCompletionResponse(CompletionResponse):
     """Extended CompletionResponse for Anthropic with citation support."""
-
     citations: List[Dict[str, Any]] = Field(default_factory=list)
 
-
-class Anthropic(FunctionCallingLLM):
+class Anthropic(LLM):
     model: str = Field(
         default=DEFAULT_ANTHROPIC_MODEL, description="The anthropic model to use."
     )
@@ -222,7 +209,6 @@ class Anthropic(FunctionCallingLLM):
     ) -> None:
         additional_kwargs = additional_kwargs or {}
         callback_manager = callback_manager or CallbackManager([])
-        # set the temperature to 1 when thinking is enabled, as per: https://docs.anthropic.com/en/docs/build-with-claude/extended-thinking#important-considerations-when-using-extended-thinking
         if thinking_dict and thinking_dict.get("type") == "enabled":
             temperature = 1
 
@@ -246,9 +232,7 @@ class Anthropic(FunctionCallingLLM):
             mcp_servers=mcp_servers,
         )
 
-        # Merge default User-Agent header with user-provided headers
         merged_headers = _get_default_headers(default_headers)
-
         if region and project_id and not aws_region:
             self._client = anthropic.AnthropicVertex(
                 region=region,

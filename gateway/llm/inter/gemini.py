@@ -36,8 +36,7 @@ from fiber.llm.types.llm.block import (
 from fiber.gateway.llm.mapper.pydantic import BaseModel, Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
-from fiber.llm.types.llm.funcall import FunctionCallingLLM
-from fiber.gateway.llm.inter.base import ToolSelection
+from fiber.gateway.llm.inter.base import LLM, ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.handle.template import PromptTemplate
 from fiber.llm.router.handle.gemini import (
@@ -54,7 +53,6 @@ from fiber.llm.router.handle.gemini import (
 import google.genai
 import google.auth
 import google.genai.types as types
-from fiber.llm.router.dispatcher import dispatcher
 
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
@@ -107,7 +105,7 @@ def llm_retry_decorator(f: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-class GoogleGenAI(FunctionCallingLLM):
+class GoogleGenAI(LLM):
     model: str = Field(default=DEFAULT_MODEL, description="The Gemini model to use.")
     temperature: float = Field(
         default=DEFAULT_TEMPERATURE,
@@ -169,8 +167,6 @@ class GoogleGenAI(FunctionCallingLLM):
                 temperature = 1.0
             else:
                 temperature = DEFAULT_TEMPERATURE
-        # API keys are optional. The API can be authorised via OAuth (detected
-        # environmentally) or by the GOOGLE_API_KEY environment variable.
         api_key = api_key or os.getenv("GOOGLE_API_KEY", None)
         vertexai = (
             vertexai_config is not None
@@ -531,9 +527,6 @@ class GoogleGenAI(FunctionCallingLLM):
             if isinstance(tool_choice, dict):
                 raise ValueError("Gemini does not support tool_choice as a dict")
 
-            # assume that the user wants a tool call to be made
-            # if the tool choice is not in the list of tools, then we will make a tool call to all tools
-            # otherwise, we will make a tool call to the tool choice
             tool_names = [tool.metadata.name for tool in tools if tool.metadata.name]
             if tool_choice not in tool_names:
                 function_calling_config.allowed_function_names = tool_names
