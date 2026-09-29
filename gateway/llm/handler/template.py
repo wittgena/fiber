@@ -1,4 +1,5 @@
-# fiber.llm.router.handle.template
+# fiber.gateway.llm.handler.template
+## @lineage: fiber.llm.router.handle.template
 from abc import ABC, abstractmethod
 from enum import Enum
 from copy import deepcopy
@@ -22,8 +23,8 @@ from fiber.gateway.llm.mapper.pydantic import (
     SerializeAsAny,
 )
 
-from fiber.llm.types.llm.block import MessageRole
-from fiber.llm.types.llm.response import ChatMessage
+from fiber.llm.types.inter.block import MessageRole
+from fiber.llm.types.inter.response import ChatMessage
 
 from fiber.gateway.llm.mapper.pydantic import BaseModel, ConfigDict
 from fiber.llm.types.inter.llm import LLMBase

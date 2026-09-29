@@ -54,7 +54,7 @@ from fiber.llm.router.util import truncate_text
 if TYPE_CHECKING:
     from haystack.schema import Document as HaystackDocument
     from semantic_kernel.memory.memory_record import MemoryRecord
-    from fiber.llm.types.llm.block import BaseContentBlock
+    from fiber.llm.types.inter.block import BaseBlock
 
 DEFAULT_TEXT_NODE_TMPL = "{metadata_str}\n\n{content}"
 DEFAULT_METADATA_TMPL = "{key}: {value}"
@@ -68,14 +68,9 @@ It offers data connectors, ways to structure your data, and an advanced retrieva
 
 ImageType = Union[str, BytesIO]
 logger = logging.getLogger(__name__)
-
-EnumNameSerializer = PlainSerializer(
-    lambda e: e.value, return_type="str", when_used="always"
-)
+EnumNameSerializer = PlainSerializer(lambda e: e.value, return_type="str", when_used="always")
 
 class BaseComponent(BaseModel):
-    """Base component object to capture class names."""
-
     @classmethod
     def __get_pydantic_json_schema__(
         cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
@@ -275,7 +270,7 @@ class BaseNode(BaseComponent):
     @abstractmethod
     def get_content_blocks(
         self, metadata_mode: MetadataMode = MetadataMode.ALL
-    ) -> list[BaseContentBlock]: ...
+    ) -> list[BaseBlock]: ...
 
     def get_metadata_str(self, mode: MetadataMode = MetadataMode.ALL) -> str:
         if mode == MetadataMode.NONE:
@@ -301,8 +296,8 @@ class BaseNode(BaseComponent):
 
     def get_metadata_content_blocks(
         self, metadata_mode: MetadataMode
-    ) -> list[BaseContentBlock]:
-        from fiber.llm.types.llm.block import TextBlock
+    ) -> list[BaseBlock]:
+        from fiber.llm.types.inter.block import TextBlock
 
         if metadata_mode == MetadataMode.NONE:
             return []
@@ -496,9 +491,9 @@ class Node(BaseNode):
             ).strip()
         return ""
 
-    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from fiber.llm.types.llm.block import TextBlock, ImageBlock, AudioBlock, VideoBlock
-        blocks: list[BaseContentBlock] = []
+    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseBlock]:
+        from fiber.llm.types.inter.block import TextBlock, ImageBlock, AudioBlock, VideoBlock
+        blocks: list[BaseBlock] = []
         blocks.extend(self.get_metadata_content_blocks(metadata_mode))
         if self.text_resource:
             blocks.append(TextBlock(text=self.text_resource.text or ""))
@@ -572,9 +567,9 @@ class TextNode(BaseNode):
             return self.text
         return self.text_template.format(content=self.text, metadata_str=metadata_str).strip()
 
-    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from fiber.llm.types.llm.block import TextBlock
-        blocks: list[BaseContentBlock] = []
+    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseBlock]:
+        from fiber.llm.types.inter.block import TextBlock
+        blocks: list[BaseBlock] = []
         blocks.extend(self.get_metadata_content_blocks(metadata_mode))
         blocks.append(TextBlock(text=self.text))
         return blocks
@@ -649,9 +644,9 @@ class ImageNode(TextNode):
         doc_identity = f"{image_str}-{image_path_str}-{image_url_str}-{image_text}"
         return str(sha256(doc_identity.encode("utf-8", "surrogatepass")).hexdigest())
 
-    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseContentBlock]:
-        from fiber.llm.types.llm.block import ImageBlock
-        blocks: list[BaseContentBlock] = []
+    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseBlock]:
+        from fiber.llm.types.inter.block import ImageBlock
+        blocks: list[BaseBlock] = []
         blocks.extend(self.get_metadata_content_blocks(metadata_mode))
         resolved = self.resolve_image()
         image_data = resolved.read() if isinstance(resolved, BytesIO) else None

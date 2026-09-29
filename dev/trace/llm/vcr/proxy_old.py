@@ -1,4 +1,5 @@
-# fiber.dev.trace.llm.vcr.proxy
+# fiber.dev.trace.llm.vcr.proxy_old
+## @lineage: fiber.dev.trace.llm.vcr.proxy
 import asyncio
 import time
 import copy
@@ -6,7 +7,7 @@ from typing import Optional, Any, AsyncGenerator
 
 from fiber.llm.param import ModelResponse
 from fiber.llm.types.provider.core import Usage
-from fiber.gateway.llm.mapper.traverser import StateTraverser, StateMapper
+from fiber.gateway.llm.mapper.traverser import StateTraverser
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 from fiber.llm.model.registry.adapter import AdapterRegistry
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRManager
@@ -32,19 +33,13 @@ async def stream_recorder_proxy(
     buffer_time = 0.0
     
     provider = getattr(ctx, "custom_llm_provider", "openai")
-    
-    def flush_buffer(f_reason: Optional[str] = None):
+    def flush_buffer():
         nonlocal buffer_text, buffer_time
-        if buffer_text or f_reason:
-            payload = {
+        if buffer_text:
+            fixture_data["response_timeline"].append({
                 "delta_ms": buffer_time,
                 "chunk": buffer_text
-            }
-            if f_reason:
-                payload["finish_reason"] = f_reason
-                
-            fixture_data["response_timeline"].append(payload)
-            
+            })
         buffer_text = ""
         buffer_time = 0.0
 
@@ -57,30 +52,25 @@ async def stream_recorder_proxy(
             parsed_chunk = StreamChunkParser.parse(provider, chunk)
             content = parsed_chunk.get("text", "") if parsed_chunk else ""
             chunk_usage = parsed_chunk.get("usage") if parsed_chunk else None
-            finish_reason = parsed_chunk.get("finish_reason") if parsed_chunk else None
             
             if chunk_usage:
-                has_real_value = any(v is not None for v in chunk_usage.values()) if isinstance(chunk_usage, dict) else True
-                if has_real_value:
-                    fixture_data["usage"] = chunk_usage
+                fixture_data["usage"] = chunk_usage
             
             if is_first:
                 fixture_data["network_metrics"]["ttfb_ms"] = (current_time - start_time) * 1000
                 is_first = False
-                if content or finish_reason:
-                    payload = {"delta_ms": delta_ms, "chunk": content}
-                    if finish_reason:
-                        payload["finish_reason"] = finish_reason
-                    fixture_data["response_timeline"].append(payload)
+                if content:
+                    fixture_data["response_timeline"].append({
+                        "delta_ms": delta_ms,
+                        "chunk": content
+                    })
                 yield chunk
                 continue
 
             buffer_text += content
             buffer_time += delta_ms
             
-            if finish_reason:
-                flush_buffer(f_reason=finish_reason)
-            elif tick_ms <= 0 or buffer_time >= tick_ms:
+            if tick_ms <= 0 or buffer_time >= tick_ms:
                 flush_buffer()
                 
             yield chunk
@@ -112,6 +102,7 @@ async def stream_player_emulator(
     if config.speed == "real" and metrics.get("ttfb_ms", 0) > 0:
         await asyncio.sleep(metrics["ttfb_ms"] / 1000.0)
 
+    # 텍스트 청크 순차 방출
     for item in timeline:
         if config.speed == "real" and item.get("delta_ms", 0) > 0:
             await asyncio.sleep(item["delta_ms"] / 1000.0)
@@ -119,13 +110,10 @@ async def stream_player_emulator(
         yield ModelResponse(
             id=f"vcr-{fixture_data.get('trace_id', 'mock')[:8]}",
             model=model_name,
-            choices=[{
-                "index": 0, 
-                "delta": {"content": item.get("chunk", "")},
-                "finish_reason": item.get("finish_reason")
-            }]
+            choices=[{"index": 0, "delta": {"content": item.get("chunk", "")}}]
         )
 
+    # 스트림 종료 시 원본 토큰(Usage) 데이터 주입
     usage_data = fixture_data.get("usage")
     if usage_data:
         safe_usage = {k: (v if v is not None else 0) for k, v in usage_data.items()}
@@ -158,7 +146,6 @@ class VCRAdapterProxy:
 
         is_stream = getattr(safe_ctx, "stream", False)
         model_name = getattr(safe_ctx, "model", "vcr-mock-model")
-        
         if self.config.mode == "replay":
             fixture = self.manager.get_fixture(trace_id, safe_ctx) 
             if not fixture:
@@ -207,17 +194,18 @@ class VCRAdapterProxy:
                     return stream_recorder_proxy(response, fixture_data, self.manager, trace_id, start_time, safe_ctx)
                 else:
                     duration = (time.perf_counter() - start_time) * 1000
+                    content = StateTraverser.resolve(
+                        response, 
+                        ["choices.0.message.content", "message.content", "content"], 
+                        default=""
+                    )
                     
-                    # ✨ [수정] Provider를 식별하고 StateMapper로 파싱을 위임 (하드코딩 제거)
-                    provider = getattr(safe_ctx, "custom_llm_provider", "openai")
-                    content, usage_dict = StateMapper.extract_sync_response(response, provider)
-                    
-                    if usage_dict:
-                        fixture_data["usage"] = usage_dict
+                    if hasattr(response, "usage") and response.usage:
+                        fixture_data["usage"] = response.usage.model_dump() if hasattr(response.usage, "model_dump") else dict(response.usage)
 
                     fixture_data["network_metrics"]["ttfb_ms"] = duration
                     fixture_data["network_metrics"]["total_duration_ms"] = duration
-                    fixture_data["response_timeline"].append({"delta_ms": 0, "chunk": content})
+                    fixture_data["response_timeline"].append({"delta_ms": 0, "chunk": content or ""})
                     self.manager.save_fixture(trace_id, fixture_data, safe_ctx)
                     
                     if system_meta and hasattr(system_meta, "metadata"):

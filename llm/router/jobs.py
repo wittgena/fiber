@@ -32,7 +32,7 @@ import requests
 from fiber.llm.router.dispatcher import dispatcher
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.block import ContentBlock, TextBlock
+    from fiber.llm.types.inter.block import ContentBlock, TextBlock
 
 
 T = TypeVar("T")

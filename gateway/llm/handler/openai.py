@@ -1,4 +1,5 @@
-# fiber.llm.router.handle.openai
+# fiber.gateway.llm.handler.openai
+## @lineage: fiber.llm.router.handle.openai
 import json
 import logging
 import os
@@ -19,8 +20,8 @@ from tenacity.stop import stop_base
 from tenacity.wait import wait_base
 
 import openai
-from fiber.llm.router.handle.converter import get_from_param_or_env
-from fiber.llm.types.llm.block import (
+from fiber.gateway.llm.handler.converter import get_from_param_or_env
+from fiber.llm.types.inter.block import (
     AudioBlock,
     ContentBlock,
     DocumentBlock,
@@ -30,7 +31,7 @@ from fiber.llm.types.llm.block import (
     ThinkingBlock,
     ToolCallBlock,
 )
-from fiber.llm.types.llm.response import ChatMessage, LogProb
+from fiber.llm.types.inter.response import ChatMessage, LogProb
 
 from fiber.gateway.llm.mapper.pydantic import BaseModel
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall

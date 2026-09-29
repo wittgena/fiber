@@ -14,15 +14,17 @@ STREAM_EXTRACTION_RULES = {
         "usage": "usage",
         "tool_calls": "choices.0.delta.tool_calls"
     },
-    # Ollama Native API 대응 룰
     "ollama": {
-        "text": "message.content",
-        "finish_reason": "done_reason",
+        "text": ["message.content", "choices.0.delta.content"],
+        "finish_reason": ["done_reason", "choices.0.finish_reason"],
         "is_finished_cond": {"path": "done", "value": True},
-        "usage": {
-            "prompt_tokens": "prompt_eval_count",
-            "completion_tokens": "eval_count"
-        }
+        "usage": [
+            "usage",  # 1순위: OpenAI 호환 방식 방어
+            {         # 2순위: Native 방식 커스텀 매핑
+                "prompt_tokens": "prompt_eval_count",
+                "completion_tokens": "eval_count"
+            }
+        ]
     },
     "text-completion-openai": {
         "text": "choices.0.text",
@@ -93,7 +95,7 @@ PROVIDER_RULE_ALIAS = {
 }
 
 class ParsedChunk(TypedDict):
-    """Parser가 Accumulator로 넘겨주는 단일화된 표준 데이터 규격입니다."""
+    """Parser가 Accumulator로 넘겨주는 단일화된 표준 데이터 규격"""
     id: Optional[str]
     text: str
     is_finished: bool
@@ -106,7 +108,7 @@ class ParsedChunk(TypedDict):
     original_chunk: Any
 
 class StateTraverser:
-    """Dict, List, Object 혼합 토폴로지를 Dot(.) 표기법으로 안전하게 탐색합니다."""
+    """Dict, List, Object 혼합 토폴로지를 Dot(.) 표기법으로 안전하게 탐색"""
     
     @staticmethod
     def resolve(obj: Any, paths: Union[str, List[str]], default: Any = None) -> Any:
@@ -151,32 +153,26 @@ class StateTraverser:
                 return current  # 매칭되는 첫 번째 유효 경로 반환
         return default
 
-
-# =====================================================================
-# 4. Stream Chunk Parser (통합 파서)
-# =====================================================================
 class StreamChunkParser:
-    """거대 분기문 없이 선언적 룰셋을 기반으로 스트림 청크를 파싱하는 통합 파서입니다."""
-
     @staticmethod
     def _preprocess_chunk(chunk: Any) -> Any:
-        """원시 Bytes/Str 데이터 및 SSE 포맷을 탐색 가능한 객체(Dict)로 변환합니다."""
+        """원시 Bytes/Str 데이터 및 SSE 포맷을 탐색 가능한 객체(Dict)로 변환"""
         if isinstance(chunk, bytes):
             chunk = chunk.decode("utf-8")
             
         if isinstance(chunk, str):
             chunk = chunk.strip()
             
-            # 1. SSE [DONE] 시그널 처리
+            # SSE [DONE] 시그널 처리
             if "data: [DONE]" in chunk or chunk == "[DONE]":
                 return {"_internal_signal": "DONE"}
                 
-            # 2. SSE Prefix 제거 (data: 또는 data: )
+            # SSE Prefix 제거 (data: 또는 data: )
             if chunk.startswith("data:"):
                 # 공백 무시를 위해 .strip() 추가
                 chunk = chunk.replace("data:", "", 1).strip()
                 
-            # 3. JSON 파싱 시도
+            # JSON 파싱 시도
             try:
                 if chunk.startswith("{") or chunk.startswith("["):
                     return json.loads(chunk)
@@ -199,31 +195,26 @@ class StreamChunkParser:
 
     @classmethod
     def parse(cls, provider: Optional[str], raw_chunk: Any) -> Optional[ParsedChunk]:
-        """
-        [핵심 라우터] 원시 청크를 받아 Accumulator가 소비할 수 있는 순수 데이터(ParsedChunk)로 변환합니다.
-        """
-        # 💡 [핵심 방어막: 멱등성 보장]
-        # 앞단 어댑터에서 이미 파서를 거쳐 'ParsedChunk' 형태(또는 dict)로 들어온 데이터라면,
-        # 이중 파싱을 시도하지 않고 즉시 반환하여 하위 파이프라인의 붕괴를 막습니다.
+        """원시 청크를 받아 Accumulator가 소비할 수 있는 순수 데이터(ParsedChunk)로 변환"""
         if isinstance(raw_chunk, dict) and "original_chunk" in raw_chunk:
             return raw_chunk
 
-        # 1. 원시 데이터 전처리 (SSE 파싱 및 JSON 디코딩)
+        # 원시 데이터 전처리 (SSE 파싱 및 JSON 디코딩)
         obj = cls._preprocess_chunk(raw_chunk)
         
         # 빈 데이터 방어
         if obj is None or obj == "":
             return cls._empty_parsed_chunk()
 
-        # 2. 시스템 종료 시그널 처리
+        # 시스템 종료 시그널 처리
         if isinstance(obj, dict) and obj.get("_internal_signal") == "DONE":
             return cls._empty_parsed_chunk(is_finished=True, finish_reason="stop")
 
-        # 3. 에러 감지 및 예외 발생
+        # 에러 감지 및 예외 발생
         if isinstance(obj, dict) and obj.get("error"):
             raise ValueError(f"Provider '{provider}' returned stream error: {obj.get('error')}")
 
-        # 4. 룰셋 로드 및 필드 추출
+        # 룰셋 로드 및 필드 추출
         rules = cls.get_ruleset(provider)
         
         # 텍스트 추출 (raw_chunk 자체가 순수 문자열인 경우 방어)
@@ -240,7 +231,7 @@ class StreamChunkParser:
         # Usage 특수 매핑
         usage = cls._extract_usage(obj, rules.get("usage"))
 
-        # 5. 상태(is_finished) 추론 로직
+        # 상태(is_finished) 추론 로직
         is_finished = False
         if "is_finished_static" in rules:
             is_finished = rules["is_finished_static"]
@@ -271,19 +262,31 @@ class StreamChunkParser:
 
     @staticmethod
     def _extract_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, Any]]:
-        """Usage 규칙이 복잡한 경우(사전 매핑)를 처리합니다."""
+        """✨ [개선] Usage 규칙이 복잡한 경우(사전 매핑 및 다중 폴백)를 안전하게 처리"""
         if not usage_rule:
             return None
+            
+        # 다중 룰(리스트)인 경우 순차적으로 탐색(Fallback)
+        if isinstance(usage_rule, list):
+            for rule in usage_rule:
+                res = StreamChunkParser._extract_usage(obj, rule)
+                if res and any(v is not None for v in res.values()):
+                    return res
+            return None
+
+        # 단일 Dict 룰인 경우
         if isinstance(usage_rule, dict):
             return {
                 "prompt_tokens": StateTraverser.resolve(obj, usage_rule.get("prompt_tokens")),
                 "completion_tokens": StateTraverser.resolve(obj, usage_rule.get("completion_tokens"))
             }
+            
+        # 단일 String 룰인 경우
         return StateTraverser.resolve(obj, usage_rule, None)
 
     @staticmethod
     def _empty_parsed_chunk(is_finished: bool = False, finish_reason: Optional[str] = None) -> ParsedChunk:
-        """기본값이 채워진 빈 ParsedChunk를 반환합니다."""
+        """기본값이 채워진 빈 ParsedChunk를 반환"""
         return ParsedChunk(
             id=None, text="", is_finished=is_finished, finish_reason=finish_reason,
             usage=None, logprobs=None, tool_calls=None,

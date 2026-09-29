@@ -1,4 +1,5 @@
-# fiber.llm.router.handle.utils
+# fiber.gateway.llm.handler.utils
+## @lineage: fiber.llm.router.handle.utils
 ## @lineage: fiber.llm.router.handler.utils
 import functools
 import inspect
@@ -14,7 +15,7 @@ from typing import (
 )
 from typing_extensions import Annotated
 
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponseAsyncGen,
     ChatResponseGen,

@@ -10,19 +10,15 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.vcr.manager")
 
-# Playback Controller Options
 @dataclass
 class VCRPlaybackConfig:
     mode: str = "live"
     speed: str = "max"
     chaos_latency_ms: float = 0.0
     target_traces: str = ""
-    record_tick_ms: float = 100.0  # 청크 병합 기준 시간 (기본 100ms)
+    record_tick_ms: float = 100.0
 
-# Identity & Naming Engine
 class VCRIdentityRule:
-    """@delegate: Declarative VCR Identity & Naming Engine"""
-    
     @staticmethod
     def _get_flattened_invoker(invoker_path: Optional[str]) -> str:
         """invoker 경로를 파일명에 안전한 형태로 변환"""
@@ -36,9 +32,7 @@ class VCRIdentityRule:
         messages: Optional[list] = None,
         invoker: Optional[str] = None
     ) -> str:
-        """결정론적 시드 생성기"""
         invoker_prefix = VCRIdentityRule._get_flattened_invoker(invoker)
-        
         if scenario_name:
             return f"vcr_seed_{invoker_prefix}_{scenario_name}"
             
@@ -64,7 +58,6 @@ class VCRIdentityRule:
         short_id = trace_id[:8]
         return f"fixture_{invoker_prefix}_auto_{short_id}.json"
 
-# VCR Manager (Storage & Caching)
 class VCRManager:
     MAX_HISTORY = 5
 
@@ -206,5 +199,6 @@ class VCRManager:
             },
             "network_metrics": {"ttfb_ms": 0.0, "total_duration_ms": 0.0},
             "response_timeline": [],
+            "usage": None,
             "exception_boundary": {"occurred": False, "error_type": None, "message": None}
         }

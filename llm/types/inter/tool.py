@@ -1,4 +1,5 @@
-# fiber.llm.types.llm.tool
+# fiber.llm.types.inter.tool
+## @lineage: fiber.llm.types.llm.tool
 import asyncio
 import json
 import re
@@ -6,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
-from fiber.llm.types.llm.block import ContentBlock, TextBlock
+from fiber.llm.types.inter.block import ContentBlock, TextBlock
 from fiber.gateway.llm.mapper.pydantic import BaseModel, PrivateAttr
 from deprecated import deprecated
 

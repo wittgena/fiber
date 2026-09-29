@@ -1,5 +1,4 @@
 # fiber.llm.model.token.counter
-## @lineage: llm.model.token.counter
 import json
 from typing import (
     Any,
@@ -317,12 +316,8 @@ def token_counter(
     use_default_image_token_count: Optional[bool] = False,
     default_token_count: Optional[int] = None,
 ) -> int:
-    """
-    @desc: 외부 호출을 위한 파사드입니다. 기존 서명을 완벽하게 유지합니다.
-    """
     from fiber.llm.model.token.encoder import convert_list_message_to_dict
-    from fiber.llm.model.token.encoder import encode # 정규화된 인코더 사용
-    
+    from fiber.llm.model.token.encoder import encode
     if text is not None and messages is not None:
         raise ValueError("text and messages cannot both be set")
 
@@ -368,9 +363,6 @@ def get_modified_max_tokens(
     buffer_perc: Optional[float] = None,
     buffer_num: Optional[float] = None,
 ) -> Optional[int]:
-    """
-    @desc: 기존 서명을 유지하면서 리팩토링된 순수 token_counter를 활용합니다.
-    """
     try:
         if user_max_tokens is None:
             return None

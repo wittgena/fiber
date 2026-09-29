@@ -1,4 +1,5 @@
-# fiber.llm.router.handle.gemini
+# fiber.gateway.llm.handler.gemini
+## @lineage: fiber.llm.router.handle.gemini
 import asyncio
 import json
 import logging
@@ -25,7 +26,7 @@ from google.genai import _transformers, Client
 from google.genai import errors
 
 from fiber.gateway.llm.mapper.pydantic import BaseModel, ValidationError
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.inter.block import (
     ImageBlock,
     MessageRole,
     TextBlock,
@@ -35,7 +36,7 @@ from fiber.llm.types.llm.block import (
     ToolCallBlock,
     ContentBlock,
 )
-from fiber.llm.types.llm.response import ChatMessage, ChatResponse
+from fiber.llm.types.inter.response import ChatMessage, ChatResponse
 from tenacity import (
     before_sleep_log,
     retry,
@@ -49,7 +50,7 @@ from tenacity import (
 from tenacity.stop import stop_base
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 logger = logging.getLogger(__name__)
 

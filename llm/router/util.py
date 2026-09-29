@@ -45,14 +45,14 @@ from fiber.gateway.llm.mapper.pydantic import (
 from xphi.arch.contract.config import env
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.response import (
+    from fiber.llm.types.inter.response import (
         ChatMessage,
         ChatResponseAsyncGen,
         ChatResponseGen,
         CompletionResponseAsyncGen,
         CompletionResponseGen,
     )
-    from fiber.llm.types.llm.block import ContentBlock, TextBlock
+    from fiber.llm.types.inter.block import ContentBlock, TextBlock
 
     from fiber.llm.types.inter.base import TokenAsyncGen, TokenGen
 
@@ -275,7 +275,7 @@ def format_content_blocks(
 ) -> List["ContentBlock"]:
     """Format content blocks with kwargs."""
     # 런타임 isinstance 체크를 위해 함수 내부 지연 임포트 사용
-    from fiber.llm.types.llm.block import TextBlock
+    from fiber.llm.types.inter.block import TextBlock
     
     formatter = SafeFormatter(format_dict=kwargs)
     formatted_blocks: List["ContentBlock"] = []

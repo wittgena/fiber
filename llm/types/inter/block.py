@@ -1,4 +1,4 @@
-# fiber.llm.types.llm.block
+# fiber.llm.types.inter.block
 from __future__ import annotations
 import base64
 import logging
@@ -49,46 +49,28 @@ class MessageRole(str, Enum):
     CHATBOT = "chatbot"
     MODEL = "model"
 
-class BaseContentBlock(ABC, BaseModel):
+class BaseBlock(ABC, BaseModel):
     @classmethod
-    async def amerge(
-        cls, splits: Sequence[Self], chunk_size: int, tokenizer: Any | None = None
-    ) -> Sequence[Self]:
+    async def amerge(cls, splits: Sequence[Self], chunk_size: int, tokenizer: Any | None = None) -> Sequence[Self]:
         return splits
 
     @classmethod
-    def merge(
-        cls, splits: Sequence[Self], chunk_size: int, tokenizer: Any | None = None
-    ) -> Sequence[Self]:
-        """Merge smaller content blocks into larger blocks up to chunk_size tokens."""
-        return asyncio_run(
-            cls.amerge(splits=splits, chunk_size=chunk_size, tokenizer=tokenizer)
-        )
+    def merge(cls, splits: Sequence[Self], chunk_size: int, tokenizer: Any | None = None) -> Sequence[Self]:
+        return asyncio_run(cls.amerge(splits=splits, chunk_size=chunk_size, tokenizer=tokenizer))
 
     async def aestimate_tokens(self, tokenizer: Any | None = None) -> int:
         return 0
 
     def estimate_tokens(self, tokenizer: Any | None = None) -> int:
-        """Estimate the number of tokens in this content block."""
         return asyncio_run(self.aestimate_tokens(tokenizer=tokenizer))
 
-    async def asplit(
-        self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None
-    ) -> List[Self]:
+    async def asplit(self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None) -> List[Self]:
         return [self]
 
-    def split(
-        self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None
-    ) -> List[Self]:
-        """Split the content block into smaller blocks with up to max_tokens tokens each."""
-        return asyncio_run(
-            self.asplit(max_tokens=max_tokens, overlap=overlap, tokenizer=tokenizer)
-        )
+    def split(self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None) -> List[Self]:
+        return asyncio_run(self.asplit(max_tokens=max_tokens, overlap=overlap, tokenizer=tokenizer))
 
-    async def atruncate(
-        self, max_tokens: int, tokenizer: Any | None = None, reverse: bool = False
-    ) -> Self:
-        """Async truncate the content block to up to max_tokens tokens."""
+    async def atruncate(self, max_tokens: int, tokenizer: Any | None = None, reverse: bool = False) -> Self:
         tknizer = tokenizer or get_tokenizer()
         estimated_tokens = await self.aestimate_tokens(tokenizer=tknizer)
         if estimated_tokens <= max_tokens:
@@ -97,13 +79,8 @@ class BaseContentBlock(ABC, BaseModel):
         split_blocks = await self.asplit(max_tokens=max_tokens, tokenizer=tknizer)
         return split_blocks[0] if not reverse else split_blocks[-1]
 
-    def truncate(
-        self, max_tokens: int, tokenizer: Any | None = None, reverse: bool = False
-    ) -> Self:
-        """Truncate the content block to up to max_tokens tokens."""
-        return asyncio_run(
-            self.atruncate(max_tokens=max_tokens, tokenizer=tokenizer, reverse=reverse)
-        )
+    def truncate(self, max_tokens: int, tokenizer: Any | None = None, reverse: bool = False) -> Self:
+        return asyncio_run(self.atruncate(max_tokens=max_tokens, tokenizer=tokenizer, reverse=reverse))
 
     @property
     def templatable_attributes(self) -> List[str]:
@@ -133,7 +110,7 @@ class BaseContentBlock(ABC, BaseModel):
                 return get_template_vars(template_str)
         return []
 
-    def format_vars(self, **kwargs: Any) -> "BaseContentBlock":
+    def format_vars(self, **kwargs: Any) -> "BaseBlock":
         from fiber.llm.router.util import format_string
 
         formatted_attrs: Dict[str, Any] = {}
@@ -177,7 +154,7 @@ class BaseContentBlock(ABC, BaseModel):
                     return None
         return None
 
-class TextBlock(BaseContentBlock):
+class TextBlock(BaseBlock):
     block_type: Literal["text"] = "text"
     text: str
 
@@ -226,7 +203,7 @@ class TextBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["text"]
 
-class ImageBlock(BaseContentBlock):
+class ImageBlock(BaseBlock):
     block_type: Literal["image"] = "image"
     image: bytes | IOBase | None = None
     path: FilePath | None = None
@@ -318,7 +295,7 @@ class ImageBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["image"]
 
-class AudioBlock(BaseContentBlock):
+class AudioBlock(BaseBlock):
     block_type: Literal["audio"] = "audio"
     audio: bytes | IOBase | None = None
     path: FilePath | None = None
@@ -420,7 +397,7 @@ class AudioBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["audio"]
 
-class VideoBlock(BaseContentBlock):
+class VideoBlock(BaseBlock):
     block_type: Literal["video"] = "video"
     video: bytes | IOBase | None = None
     path: FilePath | None = None
@@ -521,7 +498,7 @@ class VideoBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["video"]
 
-class DocumentBlock(BaseContentBlock):
+class DocumentBlock(BaseBlock):
     block_type: Literal["document"] = "document"
     data: bytes | IOBase | None = None
     path: Optional[Union[FilePath | str]] = None
@@ -633,21 +610,21 @@ class DocumentBlock(BaseContentBlock):
     def templatable_attributes(self) -> list[str]:
         return ["data"]
 
-class CacheControl(BaseContentBlock):
+class CacheControl(BaseBlock):
     type: str
     ttl: str = Field(default="5m")
 
-class CachePoint(BaseContentBlock):
+class CachePoint(BaseBlock):
     block_type: Literal["cache"] = "cache"
     cache_control: CacheControl
 
-class BaseRecursiveContentBlock(BaseContentBlock):
+class RecursiveBlock(BaseBlock):
     @classmethod
     def nested_blocks_field_name(cls) -> str:
         return "content"
 
     @property
-    def nested_blocks(self) -> List[BaseContentBlock]:
+    def nested_blocks(self) -> List[BaseBlock]:
         """Return the nested content blocks."""
         blocks = getattr(self, self.nested_blocks_field_name())
         if isinstance(blocks, str):
@@ -670,12 +647,12 @@ class BaseRecursiveContentBlock(BaseContentBlock):
 
     @staticmethod
     async def amerge_nested(
-        nested_blocks: list[BaseContentBlock],
+        nested_blocks: list[BaseBlock],
         chunk_size: int,
         tokenizer: Any | None = None,
-    ) -> list[BaseContentBlock]:
+    ) -> list[BaseBlock]:
         # make list of lists out of nested blocks of same type
-        nested_blocks_by_type: list[list[BaseContentBlock]] = []
+        nested_blocks_by_type: list[list[BaseBlock]] = []
         for nb in nested_blocks:
             if not nested_blocks_by_type or type(
                 nested_blocks_by_type[-1][0]
@@ -684,7 +661,7 @@ class BaseRecursiveContentBlock(BaseContentBlock):
             else:
                 nested_blocks_by_type[-1].append(nb)
 
-        new_nested_blocks: list[BaseContentBlock] = []
+        new_nested_blocks: list[BaseBlock] = []
         # merge nested blocks of same type
         for nbs in nested_blocks_by_type:
             new_nested_blocks.extend(
@@ -697,12 +674,12 @@ class BaseRecursiveContentBlock(BaseContentBlock):
     @classmethod
     async def amerge(
         cls,
-        splits: Sequence["BaseRecursiveContentBlock"],
+        splits: Sequence["RecursiveBlock"],
         chunk_size: int,
         tokenizer: Any | None = None,
-    ) -> Sequence["BaseRecursiveContentBlock"]:
+    ) -> Sequence["RecursiveBlock"]:
         merged_blocks = []
-        cur_blocks: list["BaseRecursiveContentBlock"] = []
+        cur_blocks: list["RecursiveBlock"] = []
         cur_block_tokens = 0
 
         for split in splits:
@@ -755,10 +732,7 @@ class BaseRecursiveContentBlock(BaseContentBlock):
             ]
         )
 
-    async def asplit(
-        self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None
-    ) -> List["BaseRecursiveContentBlock"]:
-        """Split the content block into smaller blocks with up to max_tokens tokens each."""
+    async def asplit(self, max_tokens: int, overlap: int = 0, tokenizer: Any | None = None) -> List["RecursiveBlock"]:
         splits = []
 
         cls = type(self)
@@ -783,10 +757,7 @@ class BaseRecursiveContentBlock(BaseContentBlock):
 
         return splits
 
-    async def atruncate(
-        self, max_tokens: int, tokenizer: Any | None = None, reverse: bool = False
-    ) -> "BaseRecursiveContentBlock":
-        """Truncate the content block to have at most max_tokens tokens."""
+    async def atruncate(self, max_tokens: int, tokenizer: Any | None = None, reverse: bool = False) -> "RecursiveBlock":
         tknizer = tokenizer or get_tokenizer()
         current_tokens = 0
         truncated_blocks = []
@@ -846,7 +817,7 @@ class BaseRecursiveContentBlock(BaseContentBlock):
         }
         return type(self)(**attributes)
 
-class CitableBlock(BaseRecursiveContentBlock):
+class CitableBlock(RecursiveBlock):
     block_type: Literal["citable"] = "citable"
     title: str
     source: str
@@ -865,7 +836,7 @@ class CitableBlock(BaseRecursiveContentBlock):
         return v
 
 
-class CitationBlock(BaseRecursiveContentBlock):
+class CitationBlock(RecursiveBlock):
     block_type: Literal["citation"] = "citation"
     cited_content: Annotated[
         Union[TextBlock, ImageBlock], Field(discriminator="block_type")
@@ -907,7 +878,7 @@ class CitationBlock(BaseRecursiveContentBlock):
         return False
 
 
-class ThinkingBlock(BaseContentBlock):
+class ThinkingBlock(BaseBlock):
     block_type: Literal["thinking"] = "thinking"
     content: Optional[str] = Field(
         description="Content of the reasoning/thinking process, if available",
@@ -927,7 +898,7 @@ class ThinkingBlock(BaseContentBlock):
             text=self.content or ""
         ).aestimate_tokens(tokenizer=tokenizer)
 
-class ToolCallBlock(BaseContentBlock):
+class ToolCallBlock(BaseBlock):
     block_type: Literal["tool_call"] = "tool_call"
     tool_call_id: Optional[str] = Field(
         default=None, description="ID of the tool call, if provided"

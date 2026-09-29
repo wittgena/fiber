@@ -1,6 +1,6 @@
 # fiber.gateway.llm.inter.openlike
 from typing import Any, Optional, Sequence, Union
-from fiber.llm.types.llm.response import (
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -11,7 +11,7 @@ from fiber.llm.types.llm.response import (
     LLMMetadata,
 )
 from fiber.gateway.llm.mapper.pydantic import Field
-from fiber.llm.router.handle.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
+from fiber.gateway.llm.handler.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
 from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW
 from fiber.gateway.llm.inter.openai import OpenAI, Tokenizer
 

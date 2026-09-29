@@ -1,18 +1,8 @@
-# fiber.llm.types.llm.response
+# fiber.llm.types.inter.response
 from __future__ import annotations
 
 import base64
-from typing import (
-    Any,
-    AsyncGenerator,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Union,
-    cast,
-    TYPE_CHECKING,
-)
+from typing import Any, AsyncGenerator, Dict, Generator, List, Optional, Union, cast, TYPE_CHECKING
 
 try:
     from typing import Self
@@ -27,9 +17,9 @@ from fiber.gateway.llm.mapper.pydantic import (
     model_validator,
 )
 
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.inter.block import (
     MessageRole,
-    BaseRecursiveContentBlock,
+    RecursiveBlock,
     ContentBlock,
     TextBlock,
     ImageBlock,
@@ -40,9 +30,7 @@ if TYPE_CHECKING:
     from fiber.llm.types.inter.component import ImageDocument
 
 
-# ==========================================
 # 1. Base Metadata & Logging Types
-# ==========================================
 class LogProb(BaseModel):
     """토큰별 로그 확률(Log probability) 정보"""
     token: str = Field(default_factory=str)
@@ -80,15 +68,8 @@ class LLMMetadata(BaseModel):
         description="해당 모델이 시스템 프롬프트에 사용하는 Role (예: SYSTEM, CHATBOT)",
     )
 
-
-# ==========================================
-# 2. Core Chat Message Type
-# ==========================================
-class ChatMessage(BaseRecursiveContentBlock):
-    """
-    단일 턴(Turn)의 채팅 메시지를 표현하는 객체.
-    내부적으로 텍스트, 이미지 등의 다중 블록(ContentBlock)을 포함할 수 있습니다.
-    """
+class ChatMessage(RecursiveBlock):
+    """단일 턴(Turn)의 채팅 메시지를 표현하는 객체"""
     role: MessageRole = Field(default=MessageRole.USER)
     additional_kwargs: dict[str, Any] = Field(default_factory=dict)
     blocks: list[ContentBlock] = Field(default_factory=list)
@@ -96,10 +77,6 @@ class ChatMessage(BaseRecursiveContentBlock):
     @model_validator(mode="before")
     @classmethod
     def _parse_legacy_content(cls, data: Any) -> Any:
-        """
-        [개선됨] 기존 Pydantic __init__ 오버라이딩을 대체.
-        `content` 필드로 들어오는 단일 문자열/리스트를 `blocks` 구조로 안전하게 변환합니다.
-        """
         if isinstance(data, dict) and "content" in data:
             content_val = data.pop("content")
             if content_val is not None:
@@ -115,7 +92,6 @@ class ChatMessage(BaseRecursiveContentBlock):
     def legacy_additional_kwargs_image(self) -> Self:
         """하위 호환성: additional_kwargs 내의 이미지를 ImageBlock으로 변환"""
         if documents := self.additional_kwargs.get("images"):
-            # ImageDocument 타입 추론
             from fiber.llm.types.inter.component import ImageDocument
             documents = cast(list[ImageDocument], documents)
             for doc in documents:
@@ -183,9 +159,7 @@ class ChatMessage(BaseRecursiveContentBlock):
         return self._recursive_serialization(value)
 
 
-# ==========================================
 # 3. Response DTOs
-# ==========================================
 class ChatResponse(BaseModel):
     """표준 LLM 채팅 응답"""
     message: ChatMessage
@@ -197,9 +171,7 @@ class ChatResponse(BaseModel):
     def __str__(self) -> str:
         return str(self.message)
 
-
 class CompletionResponse(BaseModel):
-    """단일 텍스트 완성(Completion) 응답"""
     text: str
     additional_kwargs: dict = Field(default_factory=dict)
     raw: Optional[Any] = Field(default=None, description="LLM 공급자(API)의 원본 응답 객체")
@@ -211,9 +183,6 @@ class CompletionResponse(BaseModel):
 
 
 class AgentChatResponse(BaseModel):
-    """
-    LLM 에이전트 워크플로우의 최종 결과물 컨테이너 (LlamaIndex 종속성 제거 완결)
-    """
     response: str = Field(
         description="LLM이 도구를 활용하여 최종적으로 도출한 사용자 대상 응답"
     )

@@ -1,0 +1,145 @@
+(self) wittgena@wittgenas-MacBook-Pro self % VCR_MODE=live LOG_LEVEL=debug python -m fiber.dev.e2e.llm.vcr -m ollama/gemma:2b
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | WARN  |  contract.path: ⚠️ [ShadowIO] Unmanaged path: 'registry' -> /usr/local/meta/anchor/registry
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 🚀 Igniting Launcher Workflow via KernelReactor...
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-92939
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Entered Trace Path: [logical:local]
+ LOG | SYSTEM | INFO  |  surface.local: [*] Initializing Local Direct Surface...
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ========================================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 🧪 [MASTER SUITE] Igniting LLM VCR Trace Suite (ollama/gemma:2b)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ⚙️  [VCR ENGINE] Mode: LIVE | Speed: MAX | Chaos Jitter: 0.0ms
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ========================================================================================================================
+ LOG | SYSTEM | DEBUG |  node.gan: [TraceSuiteApp] GanNode context activated (Started)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 1] SINGULAR TRACING: Synchronous I/O Isolation
+ LOG | SYSTEM | DEBUG |  runtime.entry: Core Completion Transport 진입
+ LOG | SYSTEM | DEBUG |  registry.adapter: [Registry] 시스템 코어 다중 위상(Multi-topology) 레지스트리 초기화 시작
+ LOG | SYSTEM | DEBUG |  registry.llm: [Router] Scanning for dynamically trans-ed modules...
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: Anthropic in fiber.gateway.llm.inter.anthropic
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: LLM in fiber.gateway.llm.inter.base
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: GoogleGenAI in fiber.gateway.llm.inter.gemini
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: OpenAI in fiber.gateway.llm.inter.openai
+ LOG | SYSTEM | DEBUG |  registry.llm: [+] Found installed LLM: OpenAILike in fiber.gateway.llm.inter.openlike
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | DEBUG |  registry.adapter: [Registry] 시스템 코어 레지스트리 초기화 완료
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4dc] 🚀 execute START | model=gemma:2b, provider=ollama
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4dc] Resolved Target URL: http://localhost:11434/v1/chat/completions
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4dc] ⚡ Initiating SINGULAR Execution
+ LOG | SYSTEM | DEBUG |  node.gan: [TraceSuiteApp] GanNode context activated (Started)
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : 015ca4dab5823000bff2c755783f7674
+ ├─ Model    : ollama/gemma:2b
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+HTTP Request: POST http://localhost:11434/v1/chat/completions "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | DEBUG |  llm.tracer: [🔍 DEBUG] Original Raw API payload contains usage data: {'prompt_tokens': 26, 'completion_tokens': 17, 'total_tokens': 43}
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[✅ LLM CALL COMPLETED] 
+ ├─ Trace ID : 015ca4dab5823000bff2c755783f7674
+ ├─ Latency  : 3431.09 ms
+ └─ Usage    : 43 tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Singular Tracing Isolation (Total: 3735.89ms | Tokens: 43)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 2] STREAM TRACING: Asynchronous Chunk Tracking
+ LOG | SYSTEM | DEBUG |  runtime.entry: Core Completion Transport 진입
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4de] 🚀 execute START | model=gemma:2b, provider=ollama
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4de] Resolved Target URL: http://localhost:11434/v1/chat/completions
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4de] 🌊 Initiating STREAM Execution
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : 015ca4de5b823002b869729acf48716c
+ ├─ Model    : ollama/gemma:2b
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[🌊 LLM STREAM ESTABLISHED] 
+ ├─ Trace ID : 015ca4de5b823002b869729acf48716c
+ ├─ Handshake: 1.04 ms
+ └─ Note     : Usage will be tracked dynamically at stream end.
+HTTP Request: POST http://localhost:11434/v1/chat/completions "HTTP/1.1 200 OK"
+ LOG | SYSTEM | DEBUG |  stream.wrapper: Provider did not yield usage. Calculating fallback tokens for ollama/gemma:2b...
+HTTP Request: GET https://huggingface.co/api/agent-harnesses "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/hf-internal-testing/llama-tokenizer/d02ad6cb9dd2c2296a6332199fa2fdca5938fef0/tokenizer.json "HTTP/1.1 200 OK"
+HTTP Request: GET https://huggingface.co/api/resolve-cache/models/hf-internal-testing/llama-tokenizer/d02ad6cb9dd2c2296a6332199fa2fdca5938fef0/tokenizer.json "HTTP/1.1 200 OK"
+tokenizer.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1.84M/1.84M [00:00<00:00, 42.7MB/s]
+HTTP Request: HEAD https://huggingface.co/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/hf-internal-testing/llama-tokenizer/d02ad6cb9dd2c2296a6332199fa2fdca5938fef0/tokenizer.json "HTTP/1.1 200 OK"
+HTTP Request: HEAD https://huggingface.co/hf-internal-testing/llama-tokenizer/resolve/main/tokenizer.json "HTTP/1.1 307 Temporary Redirect"
+HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/hf-internal-testing/llama-tokenizer/d02ad6cb9dd2c2296a6332199fa2fdca5938fef0/tokenizer.json "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[✅ STREAM COMPLETED] 
+ ├─ Trace ID : 015ca4de5b823002b869729acf48716c
+ ├─ Latency  : 5338.58 ms
+ └─ Usage    : 451 tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Asynchronous Stream Tracking (Total: 5484.05ms | Tokens: 451)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 3] ERROR TRACING: Exception Boundary Verification
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | LLM_CALL | ERROR |  channel.observer: LLM Request Failed: GateBadRequestError - LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model=invalid/fake
+ LOG | SYSTEM | DEBUG |  rpc.bridge: [RpcBridge] Propagated Exception to Request req_1: LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model=invalid/fake
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : 015ca4e3b6c23000c7b8a9627000066f
+ ├─ Model    : invalid/fake
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | ERROR |  llm.tracer: 
+[🚨 LLM CALL FAILED] 
+ ├─ Trace ID : 015ca4e3b6c23000c7b8a9627000066f
+ ├─ Latency  : 0.30 ms
+ └─ Error    : GateBadRequestError - LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model=invalid/fake
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Exception Boundary Verification (Total: 12.31ms | Tokens: N/A)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+[TraceSuiteApp] 🔄 [Phase 4] FALLBACK TRACING: Idempotent Retry & Deepcopy Shield
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | SYSTEM | WARN  |  executor.handlers: Fallback attempt triggered. Retrying with model: ollama/gemma:2b
+ LOG | SYSTEM | DEBUG |  runtime.entry: Core Completion Transport 진입
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4e3] 🚀 execute START | model=gemma:2b, provider=ollama
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4e3] Resolved Target URL: http://localhost:11434/v1/chat/completions
+ LOG | SYSTEM | DEBUG |  adapter.base: [GenericHTTP-015ca4e3] ⚡ Initiating SINGULAR Execution
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[🔍 LLM CALL INITIATED] 
+ ├─ Trace ID : 015ca4e3b9c230041baf06cc1c71de3c
+ ├─ Model    : invalid/will-fail
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+HTTP Request: POST http://localhost:11434/v1/chat/completions "HTTP/1.1 200 OK"
+ LOG | LLM_CALL | INFO  |  channel.observer: LLM Request Completed Successfully (Sealed)
+ LOG | SYSTEM | DEBUG |  llm.tracer: [🔍 DEBUG] Original Raw API payload contains usage data: {'prompt_tokens': 26, 'completion_tokens': 405, 'total_tokens': 431}
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[✅ LLM CALL COMPLETED] 
+ ├─ Trace ID : 015ca4e3b9c230041baf06cc1c71de3c
+ ├─ Latency  : 4542.33 ms
+ └─ Usage    : 431 tokens
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: [TraceSuiteApp] ✅ Passed: Fallback & Deepcopy Shielding (Total: 4556.53ms | Tokens: 431)
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 
+========================================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 📊 [LLM TRACE PIPELINE] E2E VCR LATENCY & USAGE BREAKDOWN REPORT
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ------------------------------------------------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 01. ✅ PASS | [PHASE 1]  | Singular Tracing Isolation               | Total: 3735.89ms (Overhead Only: 3735.89ms)                 | Tokens:    43
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 02. ✅ PASS | [PHASE 2]  | Asynchronous Stream Tracking             | Total: 5484.05ms (Overhead Only: 5484.05ms)                 | Tokens:   451
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 03. ✅ PASS | [PHASE 3]  | Exception Boundary Verification          | Total:   12.31ms (Overhead Only:   12.31ms)                 | Tokens:   N/A
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 04. ✅ PASS | [PHASE 4]  | Fallback & Deepcopy Shielding            | Total: 4556.53ms (Overhead Only: 4556.53ms)                 | Tokens:   431
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: ------------------------------------------------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  e2e.llm.vcr: 🎉 ALL LLM TRACE PIPELINE SCENARIOS EXECUTED SUCCESSFULLY.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] e2e.llm.vcr: ========================================================================================================================
+
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | DEBUG |  node.gan: [TraceSuiteApp] GanNode context terminated (Terminated)
+ LOG | SYSTEM | DEBUG |  node.gan: [TraceSuiteApp] GanNode context terminated (Terminated)
+ LOG | SYSTEM | INFO  |  scope.manager: [managed_scope] Triggering safe teardown sequence for infrastructure resources.
+ LOG | SYSTEM | INFO  |  surface.local: [*] Folding Local Surface...
+ LOG | SYSTEM | INFO  |  scope.manager: [+] Context Manager closed safely.
+[Reactor] 🧹 Executing user-defined teardown hook...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] e2e.llm.vcr: 🧹 Reclaiming trace suite resources...
+[Reactor] 🏁 Lifecycle terminated cleanly.

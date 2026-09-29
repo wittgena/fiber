@@ -20,9 +20,9 @@ from typing import (
     Callable,
     Literal,
 )
-from fiber.llm.router.handle.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
-from fiber.llm.types.llm.block import MessageRole, ToolCallBlock
-from fiber.llm.types.llm.response import (
+from fiber.gateway.llm.handler.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
+from fiber.llm.types.inter.block import MessageRole, ToolCallBlock
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -39,8 +39,8 @@ from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OU
 from fiber.gateway.llm.inter.base import LLM
 from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import Model
-from fiber.llm.router.handle.template import PromptTemplate
-from fiber.llm.router.handle.gemini import (
+from fiber.gateway.llm.handler.template import PromptTemplate
+from fiber.gateway.llm.handler.gemini import (
     chat_from_gemini_response,
     chat_message_to_gemini,
     convert_schema_to_function_declaration,
@@ -58,7 +58,7 @@ import google.genai.types as types
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 from xphi.arch.bound.event.next import uuid4 
 from xphi.watcher.plane.emitter import get_emitter

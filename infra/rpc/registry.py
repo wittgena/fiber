@@ -17,6 +17,7 @@ from fiber.infra.rpc.handler import (
     handle_profile_execute_billed,
 )
 from fiber.infra.rpc.validator import handle_billing_receipt_validate, handle_compute_margin_calculate, ValidatorService
+from fiber.infra.rpc.fuel import handle_fuel_deduction
 from fiber.infra.rpc.ext import ExtRpcService
 
 def build_internal_rpc_registry(
@@ -42,6 +43,8 @@ def build_internal_rpc_registry(
         "eco.exchange.clearing.receipt.generate": handle_clearing_receipt_generate,
         "eco.exchange.invoice.issue": handle_invoice_issue,
         "eco.exchange.balance": handle_pta_balance,
+
+        "eco.exchange.fuel.deduct": handle_fuel_deduction,
 
         "eco.compute.execute": handle_execute_compute,
         "eco.margin.calculate": handle_compute_margin_calculate,

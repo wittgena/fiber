@@ -14,8 +14,8 @@ from typing import (
 
 from fiber.llm.router.util import asyncio_run
 from fiber.llm.router.dispatcher import dispatcher
-from fiber.llm.types.llm.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, ChatResponseGen
-from fiber.llm.types.llm.block import MessageRole
+from fiber.llm.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, ChatResponseGen
+from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.llm import LLMBase
 from fiber.llm.types.inter.base import (
     BaseOutputParser,
@@ -30,8 +30,8 @@ from fiber.gateway.llm.mapper.pydantic import (
     model_validator,
 )
 
-from fiber.llm.router.handle.template import default_messages_to_prompt as generic_messages_to_prompt
-from fiber.llm.router.handle.template import BasePromptTemplate
+from fiber.gateway.llm.handler.template import default_messages_to_prompt as generic_messages_to_prompt
+from fiber.gateway.llm.handler.template import BasePromptTemplate
 from fiber.gateway.llm.context.cbevent import (
     CBEventType,
     EventPayload,
@@ -52,10 +52,10 @@ from fiber.llm.router.util import (
     default_completion_to_prompt,
     _supports_tool_required,
 )
-from fiber.llm.types.llm.response import AgentChatResponse
+from fiber.llm.types.inter.response import AgentChatResponse
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 logger = logging.getLogger(__name__)
 

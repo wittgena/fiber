@@ -19,17 +19,17 @@ from typing import (
     cast,
 )
 from fiber.llm.router.util import parse_partial_json
-from fiber.llm.types.llm.response import (
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
     CompletionResponse,
     LLMMetadata,
 )
-from fiber.llm.types.llm.block import MessageRole, ContentBlock, ToolCallBlock
-from fiber.llm.types.llm.block import TextBlock as LITextBlock
-from fiber.llm.types.llm.block import CitationBlock as LICitationBlock
-from fiber.llm.types.llm.block import ThinkingBlock as LIThinkingBlock
+from fiber.llm.types.inter.block import MessageRole, ContentBlock, ToolCallBlock
+from fiber.llm.types.inter.block import TextBlock as LITextBlock
+from fiber.llm.types.inter.block import CitationBlock as LICitationBlock
+from fiber.llm.types.inter.block import ThinkingBlock as LIThinkingBlock
 
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
@@ -37,11 +37,11 @@ from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
 from fiber.gateway.llm.inter.base import LLM
 from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
-from fiber.llm.router.handle.template import PromptTemplate
+from fiber.gateway.llm.handler.template import PromptTemplate
 
 from fiber.llm.model.token.encoder import Tokenizer
 
-from fiber.llm.router.handle.anthropic import (
+from fiber.gateway.llm.handler.anthropic import (
     ANTHROPIC_NO_TEMP_MODELS,
     anthropic_modelname_to_contextsize,
     force_single_tool_call,
@@ -76,7 +76,7 @@ from anthropic.types import (
     SignatureDelta,
 )
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 from xphi.arch.contract.config import env
 

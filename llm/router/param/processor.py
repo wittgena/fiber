@@ -1,10 +1,6 @@
 # fiber.llm.router.param.processor
-## @lineage: fiber.llm.router.llm.param.processor
-## @lineage: fiber.llm.router.ext.llm.param.processor
 from __future__ import annotations
 import copy
-import re
-import importlib
 from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional, Tuple, Union
 import httpx
@@ -30,7 +26,8 @@ FRAMEWORK_KWARGS = {
     "input_cost_per_second", "output_cost_per_second", "cost_per_query", "prompt_id", "prompt_variables",
     "timeout", "request_timeout", "client", "shared_session", "acompletion", "aembedding", "headers", 
     "extra_headers", "custom_llm_provider", "api_key", "api_base", "base_url", "deployment_id", "azure", 
-    "aws_region_name", "supports_system_message", "litellm_system_prompt", "base_model"
+    "aws_region_name", "supports_system_message", "litellm_system_prompt", "base_model",
+    "drop_params", "allowed_openai_params", "additional_drop_params", "context_management"
 }
 AUTH_PREFIXES = ("aws_", "azure_", "vertex_", "tenant_id", "client_id", "client_secret", "bucket_name")
 FLAG_KEYS = {
@@ -39,30 +36,49 @@ FLAG_KEYS = {
 }
 
 PROVIDER_ALIAS = {"vertex_ai_beta": "vertex_ai", "text-completion-openai": "openai", "azure_ai": "azure", "ollama_chat": "ollama"}
-CONFIG_MAP = {
-    "anthropic": ("anthropic", "AnthropicConfig"),
-    "huggingface": ("huggingface", "HuggingFaceChatConfig"), 
-    "gemini": ("gemini", "GoogleAIStudioGeminiConfig"), 
-    "ollama": ("ollama", "OllamaConfig"),
-    "openai": ("openai", "OpenAIConfig"),
-    "vertex_ai": ("vertex_ai", "VertexAIConfig"),
-}
 _OPENAI_REGIONAL_HOSTS = {"eu.api.openai.com": "eu", "us.api.openai.com": "us"}
 
+PROVIDER_PARAM_RULES = {
+    "defaults": {
+        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
+        "mapping": {},
+        "wrap_in": {},
+        "tool_format": "standard"
+    },
+    "gemini": {
+        "supported": ["temperature", "top_p", "top_k", "max_tokens", "max_completion_tokens", "stream", "tools", "tool_choice", "response_format", "n", "stop", "presence_penalty", "frequency_penalty"],
+        "mapping": {
+            "max_tokens": "max_output_tokens",
+            "max_completion_tokens": "max_output_tokens",
+            "stop": "stop_sequences"
+        },
+        "wrap_in": {},
+        "tool_format": "gemini_strict"
+    },
+    "ollama": {
+        "supported": ["temperature", "top_p", "top_k", "stream", "tools", "format", "options", "num_ctx", "seed"],
+        "mapping": {},
+        "wrap_in": {"options": ["temperature", "top_p", "top_k", "num_ctx", "seed"]},
+        "tool_format": "standard"
+    }
+}
 
 def _delete_nested_path(data: Dict, path: str):
     try:
-        segments = re.findall(r"[^\.\[]+|\[[^\]]*\]", path)
+        keys = path.split('.')
         curr = data
-        for i, seg in enumerate(segments):
-            is_last = (i == len(segments) - 1)
-            key = int(seg[1:-1]) if seg.startswith("[") else seg
-            if is_last:
-                if isinstance(curr, dict): curr.pop(key, None)
-                elif isinstance(curr, list) and isinstance(key, int) and 0 <= key < len(curr): curr.pop(key)
+        for i, k in enumerate(keys):
+            if i == len(keys) - 1:
+                if isinstance(curr, dict):
+                    curr.pop(k, None)
             else:
-                curr = curr[key]
-    except Exception: pass
+                if isinstance(curr, dict) and k in curr:
+                    curr = curr[k]
+                else:
+                    break  # 경로가 끊기면 안전하게 중단
+    except Exception:
+        pass
+
 
 def _to_json_schema(model_or_dict: Any) -> Optional[dict]:
     if not model_or_dict: return None
@@ -73,6 +89,20 @@ def _to_json_schema(model_or_dict: Any) -> Optional[dict]:
         "json_schema": {"schema": _pydantic.to_strict_json_schema(model_or_dict), "name": model_or_dict.__name__, "strict": True}
     }
 
+## for preserve for comparison
+# def _delete_nested_path(data: Dict, path: str):
+#     try:
+#         segments = re.findall(r"[^\.\[]+|\[[^\]]*\]", path)
+#         curr = data
+#         for i, seg in enumerate(segments):
+#             is_last = (i == len(segments) - 1)
+#             key = int(seg[1:-1]) if seg.startswith("[") else seg
+#             if is_last:
+#                 if isinstance(curr, dict): curr.pop(key, None)
+#                 elif isinstance(curr, list) and isinstance(key, int) and 0 <= key < len(curr): curr.pop(key)
+#             else:
+#                 curr = curr[key]
+#     except Exception: pass
 
 class BaseProcessor:
     def __init__(self, task_type: str, model: str, raw_kwargs: dict):
@@ -85,7 +115,7 @@ class BaseProcessor:
         
         self.provider, self.api_key, self.api_base, self.model = self._resolve_routing()
         self.provider_key = PROVIDER_ALIAS.get(self.provider, self.provider)
-        self.drop_flag = self.raw.pop("drop_params", getattr(config, "drop_params", False))
+        self.drop_flag = self.original_kwargs.get("drop_params", getattr(config, "drop_params", False))
         
     def _resolve_routing(self) -> Tuple[str, Optional[str], Optional[str], str]:
         custom_prov = self.original_kwargs.get("custom_llm_provider")
@@ -95,14 +125,11 @@ class BaseProcessor:
         target_model = deployment_id if deployment_id else self.original_model
 
         if self.original_kwargs.get("azure", False) or deployment_id: custom_prov = "azure"
-
-        # 개선: 인스턴스를 통해 직접 resolve 호출
         res_model, res_prov, dyn_key, res_base = _resolver_instance.resolve(
             model=target_model, custom_llm_provider=custom_prov, api_base=api_base, api_key=api_key
         )
         return res_prov, (dyn_key or api_key), res_base, res_model
 
-    # 개선: 전역 함수였던 _resolve_timeout을 클래스 메서드로 편입하여 self.provider를 활용
     def _resolve_timeout(self) -> Union[float, httpx.Timeout]:
         val = self.original_kwargs.get("timeout") or self.original_kwargs.get("request_timeout") or REQUEST_TIMEOUT
         if val in [None, DEFAULT_REQUEST_TIMEOUT_SECONDS]: return COMPLETION_HTTP_FALLBACK_SECONDS
@@ -122,108 +149,58 @@ class BaseProcessor:
             if k not in ignore_keys and k in defaults and v != defaults[k] and k not in add_drops
         }
 
-    def _get_vendor_config_class(self) -> Optional[Any]:
-        if self.provider_key not in CONFIG_MAP:
-            return getattr(config, "OpenAILikeChatConfig", None)
-
-        module_suffix, class_name = CONFIG_MAP[self.provider_key]
-        import fiber.llm.router.param.vendor as VENDOR_PARAM_PKG
-        
-        path = VENDOR_PARAM_PKG.__name__
-        search_paths = [f"{path}.{module_suffix}"]
-        loaded_class = None
-        for path in search_paths:
-            try:
-                module = importlib.import_module(path)
-                if hasattr(module, class_name):
-                    loaded_class = getattr(module, class_name)
-                    log.debug(f"[Vendor Config] Loaded custom mapper '{class_name}' from {path}")
-                    break
-            except ImportError:
-                continue
-
-        if loaded_class:
-            return loaded_class
-            
-        if self.provider_key == "gemini":
-            error_msg = f"[CRITICAL] Gemini 전용 매퍼({class_name})를 찾을 수 없습니다. LiteLLM Fallback을 강제 차단합니다. 검색 경로: {search_paths}"
-            log.error(error_msg)
-            raise RuntimeError(error_msg)
-
-        fallback_class = getattr(config, class_name, None)
-        if fallback_class:
-            log.debug(f"[Vendor Config] Using fallback configuration from LiteLLM for {self.provider_key}")
-            return fallback_class
-            
-        return getattr(config, "OpenAILikeChatConfig", None)
-
     def _build_optional_params(self, non_defaults: dict) -> dict:
-        req_type = "embeddings" if self.task_type == "embedding" else None
-        conf_class = self._get_vendor_config_class()
-        conf_inst = conf_class() if conf_class else None
-        
-        if conf_inst and hasattr(conf_inst, "get_supported_openai_params"):
-            supported = conf_inst.get_supported_openai_params(self.model)
-        else:
-            # 개선: 인스턴스 메서드를 직접 호출하여 이미 찾은 모델과 프로바이더 전달
-            supported = _resolver_instance.get_supported_openai_params(
-                model=self.model, custom_llm_provider=self.provider, 
-                base_model=self.original_kwargs.get("base_model"), request_type=req_type
-            ) or []
-            
+        rules = PROVIDER_PARAM_RULES.get(self.provider_key, PROVIDER_PARAM_RULES["defaults"])
+        supported_keys = set(rules.get("supported", []))
         allowed_openai = self.original_kwargs.get("allowed_openai_params", [])
-        supported.extend(allowed_openai + ["user", "stream_options", "stream", "max_retries"])
-        
-        unsupported = {k: v for k, v in non_defaults.items() if k not in supported}
+        supported_keys.update(allowed_openai)
+        supported_keys.update(["user", "stream_options", "stream", "max_retries", "extra_body", "extra_headers"])
+
+        unsupported = {k: v for k, v in non_defaults.items() if k not in supported_keys}
         if "n" in unsupported and unsupported["n"] == 1: unsupported.pop("n")
         
         if unsupported:
             if self.drop_flag:
-                for k in unsupported.keys(): non_defaults.pop(k, None)
+                for k in list(unsupported.keys()): non_defaults.pop(k, None)
             else:
                 raise UnsupportedParamsError(status_code=500, message=f"{self.provider} does not support parameters: {list(unsupported.keys())} for model={self.model}.")
 
         optional_params = {}
+        mapping_rule = rules.get("mapping", {})
         
-        if conf_inst:
-            if hasattr(conf_inst, "map_special_auth_params"):
-                optional_params = conf_inst.map_special_auth_params(non_default_params=self.raw, optional_params=optional_params)
-            
-            if self.provider_key == "ollama":
-                if any(k in non_defaults for k in ["functions", "function_call", "tools"]):
-                    optional_params["format"] = "json"
-                    if "tools" in non_defaults:
-                        optional_params["functions_unsupported_model"] = non_defaults.pop("tools")
-                        non_defaults.pop("tool_choice", None)
+        # 선언적 1:1 맵핑
+        for key, val in non_defaults.items():
+            mapped_key = mapping_rule.get(key, key)
+            optional_params[mapped_key] = val
 
-            if hasattr(conf_inst, "map_openai_params"):
-                optional_params = conf_inst.map_openai_params(non_default_params=non_defaults, optional_params=optional_params, model=self.model, drop_params=self.drop_flag)
+        # 선언적 구조화 (Wrap in Dict - 예: Ollama의 options)
+        wrap_rule = rules.get("wrap_in", {})
+        for wrap_key, target_keys in wrap_rule.items():
+            wrap_dict = optional_params.get(wrap_key, {})
+            for tk in target_keys:
+                if tk in optional_params:
+                    wrap_dict[tk] = optional_params.pop(tk)
+            if wrap_dict:
+                optional_params[wrap_key] = wrap_dict
 
+        # Ollama 특수 룰 (Tools 존재 시 JSON 포맷 강제)
+        if self.provider_key == "ollama" and any(k in optional_params for k in ["functions", "tools", "function_call"]):
+            optional_params["format"] = "json"
+
+        # Passthrough (extra_body) 처리
         is_openai_compatible = self.provider in ["openai", "azure"] + getattr(config, "openai_compatible_providers", [])
-        defaults = DEFAULT_CHAT_COMPLETION_PARAM_VALUES if self.task_type == "chat" else DEFAULT_EMBEDDING_PARAM_VALUES
-        add_drops = self.original_kwargs.get("additional_drop_params", [])
-
-        if is_openai_compatible and "extra_body" not in add_drops:
-            extra = self.original_kwargs.get("extra_body") or {}
-            for k, v in self.raw.items():
-                if k not in defaults and v is not None and k not in add_drops:
-                    extra[k] = v
+        if is_openai_compatible:
+            extra = self.original_kwargs.get("extra_body", {})
             if extra:
                 optional_params["extra_body"] = {**optional_params.get("extra_body", {}), **extra}
-                if "metadata" in optional_params["extra_body"] and "prompt" in optional_params["extra_body"]["metadata"]:
-                    p = optional_params["extra_body"]["metadata"]["prompt"]
-                    if p and hasattr(p, "__dict__"): optional_params["extra_body"]["metadata"]["prompt"] = p.__dict__
-        else:
-            for k, v in self.raw.items():
-                if k not in defaults and v is not None and k not in add_drops:
-                    optional_params[k] = v
 
-        for k in allowed_openai:
-            if k in non_defaults and k not in optional_params:
-                optional_params[k] = non_defaults.pop(k)
-
-        for path in [p for p in add_drops if "." in p or "[" in p]:
-            _delete_nested_path(optional_params, path)
+        # 6. ✨ 명시적 드롭 경로 처리 (단순화된 삭제 로직 적용)
+        add_drops = self.original_kwargs.get("additional_drop_params", [])
+        for path in add_drops:
+            if "." in path:
+                _delete_nested_path(optional_params, path)
+            else:
+                optional_params.pop(path, None)
 
         return optional_params
 
@@ -233,26 +210,80 @@ class CompletionProcessor(BaseProcessor):
         super().__init__(task_type="chat", model=model, raw_kwargs=kwargs)
         self.original_messages = messages
 
-    def _normalize_tools(self, non_defaults: dict):
-        if "tools" in non_defaults:
-            # 개선: 인스턴스 메서드를 통해 검증 로직 단순화
-            is_supported = _resolver_instance.supports_function_calling(self.model, self.provider)
-            if self.provider == "gemini" or self.provider_key == "gemini":
-                is_supported = True
-                
-            if not is_supported:
-                if self.drop_flag: non_defaults.pop("tools", None); non_defaults.pop("tool_choice", None)
-                else: raise UnsupportedParamsError(status_code=500, message=f"Function calling unsupported by {self.provider} ({self.model}).")
-            else:
-                tools = non_defaults["tools"]
-                non_defaults["tools"] = [t.model_dump(exclude_none=True) if isinstance(t, BaseModel) else (t.copy() if isinstance(t, dict) else t) for t in tools]
-                for t in non_defaults["tools"]:
-                    t.pop("input_examples", None)
-                    if "function" in t: t["function"].pop("input_examples", None)
-                    params = t.get("function", {}).get("parameters")
-                    if params and "additionalProperties" in params and not params["additionalProperties"]:
-                        params.pop("additionalProperties", None)
-                if not non_defaults["tools"]: non_defaults.pop("tools")
+    @staticmethod
+    def _gemini_strict_tool_transform(schema: Any):
+        if not isinstance(schema, dict): return
+        
+        if "type" in schema and isinstance(schema["type"], str):
+            schema["type"] = schema["type"].upper()
+        
+        for k in ["summary", "title", "required", "additionalProperties"]:
+            schema.pop(k, None)
+            
+        for key, value in schema.items():
+            if isinstance(value, dict):
+                CompletionProcessor._gemini_strict_tool_transform(value)
+            elif isinstance(value, list):
+                for item in value:
+                    CompletionProcessor._gemini_strict_tool_transform(item)
+
+    def _normalize_tools(self, non_defaults: dict, rules: dict):
+        if "tools" not in non_defaults:
+            return
+
+        is_supported = _resolver_instance.supports_function_calling(self.model, self.provider)
+        if self.provider_key == "gemini": is_supported = True
+            
+        if not is_supported:
+            if self.drop_flag: 
+                non_defaults.pop("tools", None)
+                non_defaults.pop("tool_choice", None)
+            else: 
+                raise UnsupportedParamsError(status_code=500, message=f"Function calling unsupported by {self.provider} ({self.model}).")
+            return
+
+        tools = non_defaults["tools"]
+        formatted_tools = [t.model_dump(exclude_none=True) if isinstance(t, BaseModel) else (t.copy() if isinstance(t, dict) else t) for t in tools]
+        
+        # 기본 OpenAI 표준 클리닝
+        for t in formatted_tools:
+            t.pop("input_examples", None)
+            if "function" in t: t["function"].pop("input_examples", None)
+            params = t.get("function", {}).get("parameters")
+            if params and "additionalProperties" in params and not params["additionalProperties"]:
+                params.pop("additionalProperties", None)
+
+        tool_format = rules.get("tool_format", "standard")
+        
+        # 🚨 [특수 룰] Gemini Protobuf 규격 변환 트리거
+        if tool_format == "gemini_strict":
+            gemini_declarations = []
+            for t in formatted_tools:
+                if t.get("type") == "function" and "function" in t:
+                    func = dict(t["function"]) 
+                    func.pop("summary", None)
+                    params = func.get("parameters", {})
+                    if params:
+                        self._gemini_strict_tool_transform(params)
+                        func["parameters"] = params
+                    gemini_declarations.append(func)
+            
+            non_defaults["tools"] = [{"function_declarations": gemini_declarations}] if gemini_declarations else []
+            
+            # tool_choice 구조 매핑
+            tc = non_defaults.pop("tool_choice", None)
+            if tc and tc != "auto" and isinstance(tc, dict) and tc.get("function", {}).get("name"):
+                non_defaults["tool_config"] = {
+                    "function_calling_config": {
+                        "mode": "ANY",
+                        "allowed_function_names": [tc["function"]["name"]]
+                    }
+                }
+        else:
+            non_defaults["tools"] = formatted_tools
+
+        if not non_defaults.get("tools"): 
+            non_defaults.pop("tools", None)
 
     def _prepare_messages(self) -> List[dict]:
         msgs = []
@@ -270,9 +301,11 @@ class CompletionProcessor(BaseProcessor):
 
     def build(self) -> CompletionContext:
         msgs = self._prepare_messages()
-        
         non_defaults = self._extract_non_defaults()
-        self._normalize_tools(non_defaults)
+        
+        # 룰 레지스트리 획득 및 툴 정규화 주입
+        rules = PROVIDER_PARAM_RULES.get(self.provider_key, PROVIDER_PARAM_RULES["defaults"])
+        self._normalize_tools(non_defaults, rules)
         
         if "response_format" in non_defaults:
             non_defaults["response_format"] = _to_json_schema(non_defaults["response_format"])

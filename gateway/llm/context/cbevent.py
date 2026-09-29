@@ -6,13 +6,13 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from fiber.gateway.llm.mapper.pydantic import BaseModel, SerializeAsAny, ConfigDict
-from fiber.llm.types.llm.response import (
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     CompletionResponse,
 )
 from fiber.gateway.llm.mapper.pydantic import ConfigDict, Field
-from fiber.llm.router.handle.template import BasePromptTemplate
+from fiber.gateway.llm.handler.template import BasePromptTemplate
 from xphi.arch.bound.event.next import uuid4
 
 class BaseEvent(BaseModel):

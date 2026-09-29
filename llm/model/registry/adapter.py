@@ -13,8 +13,7 @@ from fiber.llm.model.registry.embedding import EmbeddingRouter
 from fiber.llm.model.provider.resolver import get_llm_provider
 
 from fiber.llm.exception.mapping import exception_type
-from fiber.gateway.llm.mapper.state import StateMapper
-from fiber.gateway.llm.mapper.traverser import StateTraverseRule, StateTraverser
+from fiber.gateway.llm.mapper.traverser import StateMapper, StateTraverser
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 
 from xphi.arch.bound.client.http import get_client
@@ -39,7 +38,6 @@ class BaseProviderAdapter:
 class GenericHTTPAdapter(BaseProviderAdapter):
     """순수 HTTP 통신(OpenAI 호환 포맷 등)을 통해 LLM과 직접 통신하는 경량 폴백 어댑터"""
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
-        # 시스템 전역의 req_id와 유사한 용도로 고유 ID 생성 (청크 ID 묶음용)
         req_id = str(uuid4())[:8]
         adapter_log.debug(f"[GenericHTTP-{req_id}] 🚀 execute START | model={ctx.model}, provider={ctx.custom_llm_provider}")
         
@@ -62,7 +60,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
         if ctx.optional_params:
             payload.update(ctx.optional_params)
 
-        target_url = StateTraverseRule.resolve_chat_endpoint(
+        target_url = StateMapper.resolve_chat_endpoint(
             provider=ctx.custom_llm_provider,
             base_url=ctx.api_base or ""
         )
@@ -82,36 +80,9 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                     response.raise_for_status()
                     async for line in response.aiter_lines():
                         if line:
-                            adapter_log.debug(f"[DEBUG ADAPTER - GenericHTTP] Yielding chunk type: {type(line)} | content: {repr(line[:100])}")
-                            
-                            # [1단계: 추출] 기존 파서를 유틸리티로 사용하여 날것의 문자열에서 데이터 추출
-                            parsed_dict = StreamChunkParser.parse(ctx.custom_llm_provider, line)
-                            
-                            if parsed_dict is not None:
-                                # [2단계: 교정 및 표준화] VCR과 하위 파이프라인이 기대하는 'OpenAI 호환 Dict' 규격으로 포장
-                                text_content = parsed_dict.get("text", "")
-                                finish_reason = parsed_dict.get("finish_reason")
-                                chunk_id = parsed_dict.get("id") or f"chatcmpl-{req_id}"
-                                
-                                normalized_chunk = {
-                                    "id": chunk_id,
-                                    "object": "chat.completion.chunk",
-                                    "model": ctx.model,
-                                    "choices": [{
-                                        "index": 0,
-                                        # 텍스트가 있을 때만 content 필드 포함, 아니면 role만 (표준 규격 준수)
-                                        "delta": {"content": text_content, "role": "assistant"} if text_content else {"role": "assistant"},
-                                        "finish_reason": finish_reason
-                                    }]
-                                }
-                                
-                                # 메타데이터(Usage 등)가 존재하면 병합
-                                if parsed_dict.get("usage"):
-                                    normalized_chunk["usage"] = parsed_dict["usage"]
-                                if parsed_dict.get("logprobs"):
-                                    normalized_chunk["choices"][0]["logprobs"] = parsed_dict["logprobs"]
-
-                                yield normalized_chunk
+                            # ✨ [개선] 불필요한 이중 파싱 및 Telemetry Burst 유발 로그 제거. 
+                            # Raw Chunk(문자열) 그대로 방출하여 StreamWrapper가 Native하게 파싱 및 Usage 추출을 하도록 위임
+                            yield line
                             
             return stream_generator()
         else:
@@ -125,6 +96,9 @@ class GenericHTTPAdapter(BaseProviderAdapter):
             response.raise_for_status()
             data = response.json()
             
+            # ✨ [개선] 'response.raw is missing' 버그 수정: API 응답 JSON 전체를 raw 속성으로 복제
+            ctx.model_response.raw = data.copy()
+            
             model_response = ctx.model_response
             if "choices" in data:
                 model_response.choices = data["choices"]
@@ -133,6 +107,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
             if "id" in data:
                 model_response.id = data["id"]
             return model_response
+
 
 # ==========================================
 # 2. Inter Framework Adapters
@@ -192,7 +167,7 @@ class InterLLMAdapter(BaseProviderAdapter):
                 completion_kwargs=llama_kwargs
             )
 
-        llama_messages = self.mapper.to_llama_messages(ctx.messages)
+        llama_messages = self.mapper.to_chat_messages(ctx.messages)
 
         if ctx.stream:
             llm_log.debug(f"[InterLLM-{req_id}] 🌊 Initiating STREAM Execution")
@@ -203,11 +178,9 @@ class InterLLMAdapter(BaseProviderAdapter):
             
             async def stream_generator():
                 def normalize_chunk(raw_chunk: Any) -> dict:
-                    """Gemini, LlamaIndex 등 이기종 Chunk를 OpenAI 표준 Dict 스키마로 강제 캐스팅"""
-                    content = StateTraverseRule.extract_stream_content(raw_chunk, default="")
+                    content = StateMapper.extract_stream_content(raw_chunk, default="")
                     raw_finish_reason = StateTraverser.resolve(raw_chunk, "finish_reason")
                     
-                    # Enum 객체 방어적 파싱 (예: <FinishReason.STOP: 'STOP'> -> 'stop')
                     finish_reason = None
                     if raw_finish_reason:
                         finish_reason = str(raw_finish_reason).split(".")[-1].lower() if hasattr(raw_finish_reason, "value") else str(raw_finish_reason).lower()
@@ -222,15 +195,23 @@ class InterLLMAdapter(BaseProviderAdapter):
                             "finish_reason": finish_reason
                         }]
                     }
+                    
+                    # ✨ [개선] 누락되었던 usage 및 logprobs 필드를 추출하여 패키징에 추가
+                    usage = StateTraverser.resolve(raw_chunk, "usage") or StateTraverser.resolve(raw_chunk, "usage_metadata")
+                    if usage:
+                        normalized["usage"] = usage
+                        
+                    logprobs = StateTraverser.resolve(raw_chunk, "logprobs")
+                    if logprobs:
+                        normalized["choices"][0]["logprobs"] = logprobs
+
                     return normalized
 
                 if ctx.acompletion:
                     async for chunk in response_stream:
-                        adapter_log.debug(f"[DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: {type(chunk.raw)}")
                         yield normalize_chunk(chunk.raw)
                 else:
                     for chunk in response_stream:
-                        adapter_log.debug(f"[DEBUG ADAPTER - InterLLM] Normalizing chunk.raw type: {type(chunk.raw)}")
                         yield normalize_chunk(chunk.raw)
 
             return stream_generator()
@@ -246,7 +227,12 @@ class InterLLMAdapter(BaseProviderAdapter):
             choice_data = self.mapper.to_openai_choice(response, req_id, llm_log)
             ctx.model_response.choices = [choice_data]
             
+            # ✨ [개선] 원본 응답 복제 유지 (Tracer/디버그 용도)
+            if hasattr(response, "raw"):
+                ctx.model_response.raw = response.raw
+            
             return ctx.model_response
+
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     def __init__(self):

@@ -24,7 +24,7 @@ from typing import (
 import httpx
 import tiktoken
 
-from fiber.llm.router.handle.converter import (
+from fiber.gateway.llm.handler.converter import (
     achat_to_completion_decorator,
     acompletion_to_chat_decorator,
     astream_chat_to_completion_decorator,
@@ -34,8 +34,8 @@ from fiber.llm.router.handle.converter import (
     stream_chat_to_completion_decorator,
     stream_completion_to_chat_decorator,
 )
-from fiber.llm.types.llm.block import MessageRole, ThinkingBlock, ToolCallBlock, TextBlock
-from fiber.llm.types.llm.response import (
+from fiber.llm.types.inter.block import MessageRole, ThinkingBlock, ToolCallBlock, TextBlock
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -53,9 +53,9 @@ from fiber.gateway.llm.inter.base import LLM
 from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.util import parse_partial_json
-from fiber.llm.router.handle.template import PromptTemplate
+from fiber.gateway.llm.handler.template import PromptTemplate
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode
-from fiber.llm.router.handle.openai import (
+from fiber.gateway.llm.handler.openai import (
     O1_MODELS,
     create_retry_decorator,
     from_openai_completion_logprobs,
@@ -82,7 +82,7 @@ from openai.types.chat.chat_completion_chunk import (
 from fiber.llm.router.dispatcher import dispatcher
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 DEFAULT_OPENAI_MODEL = "gpt-3.5-turbo"
 
