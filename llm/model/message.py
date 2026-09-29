@@ -9,7 +9,7 @@ from pydantic import ConfigDict, Field, model_validator
 
 from xphi.arch.bound.xor.parser.mark import DEFAULT_TEXT_CONTENT_LIMIT, maybe_truncate, handle_deprecated_model_fields
 
-from fiber.llm.param import (
+from fiber.llm.response import (
     ChatCompletionMessageToolCall,
     ResponseFunctionToolCall,
     OutputFunctionToolCall,

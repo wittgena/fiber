@@ -1,7 +1,7 @@
 # fiber.llm.types.inter.llm
 from abc import abstractmethod
 from typing import Any, List, Optional, Sequence
-from fiber.gateway.llm.mapper.pydantic import ConfigDict, Field, model_validator
+from fiber.gateway.llm.state.pydantic import ConfigDict, Field, model_validator
 from fiber.llm.router.manager import CallbackManager
 
 from fiber.llm.types.inter.block import TextBlock

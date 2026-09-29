@@ -33,7 +33,7 @@ from fiber.llm.types.inter.block import (
 )
 from fiber.llm.types.inter.response import ChatMessage, LogProb
 
-from fiber.gateway.llm.mapper.pydantic import BaseModel
+from fiber.gateway.llm.state.pydantic import BaseModel
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion_chunk import ChoiceDeltaToolCall
 from openai.types.chat.chat_completion_message import ChatCompletionMessage

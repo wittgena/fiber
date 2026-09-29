@@ -32,7 +32,7 @@ from deprecated import deprecated
 from typing_extensions import Self
 from PIL import Image
 
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,
@@ -48,7 +48,7 @@ from fiber.gateway.llm.mapper.pydantic import (
     field_validator,
     model_serializer,
 )
-from fiber.gateway.llm.mapper.pydantic import CoreSchema
+from fiber.gateway.llm.state.pydantic import CoreSchema
 from fiber.llm.router.util import truncate_text
 
 if TYPE_CHECKING:

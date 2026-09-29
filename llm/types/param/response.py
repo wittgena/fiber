@@ -1,17 +1,4 @@
 # fiber.llm.types.param.response
-## @lineage: fiber.llm.model.types.param.response
-## @lineage: llm.model.types.param.response
-## @lineage: agent.anchor.model.types.param.response
-## @lineage: bound.xor.model.types.param.response
-## @lineage: eco.model.types.param.response
-## @lineage: engine.model.types.param.response
-## @lineage: bound.model.types.param.response
-## @lineage: llm.types.param.response
-## @lineage: eco.mesh.model.types.param.response
-## @lineage: runtime.mesh.model.types.param.response
-## @lineage: mesh.model.types.param.response
-## @lineage: mesh.mapper.param.response
-## @lineage: bound.mapper.param.response
 from typing import List, Literal, Optional, Union
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from pydantic import PrivateAttr

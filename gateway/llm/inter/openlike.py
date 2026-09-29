@@ -10,7 +10,7 @@ from fiber.llm.types.inter.response import (
     CompletionResponseGen,
     LLMMetadata,
 )
-from fiber.gateway.llm.mapper.pydantic import Field
+from fiber.gateway.llm.state.pydantic import Field
 from fiber.gateway.llm.handler.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
 from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW
 from fiber.gateway.llm.inter.openai import OpenAI, Tokenizer

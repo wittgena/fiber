@@ -29,7 +29,7 @@ from deprecated import deprecated
 from typing_extensions import Self
 from PIL import Image
 
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,

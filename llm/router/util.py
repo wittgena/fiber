@@ -35,7 +35,7 @@ import platformdirs
 import requests
 from typing_extensions import Annotated
 
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     BaseModel,
     WithJsonSchema,
     Field,

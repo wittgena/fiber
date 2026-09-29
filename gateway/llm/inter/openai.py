@@ -46,7 +46,7 @@ from fiber.llm.types.inter.response import (
     LLMMetadata,
 )
 
-from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
+from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
 from fiber.gateway.llm.inter.base import LLM

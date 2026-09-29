@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, Tuple
 
 from fiber.gateway.llm.pipeline import PipelineSlot
 from fiber.llm.entry import acompletion
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext

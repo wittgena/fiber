@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Optional, Union
 
 from fiber.llm.router.embedding.base import BaseEmbedding
-from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
+from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
 from xphi.arch.bound.client.constants import DEFAULT_EMBED_BATCH_SIZE
 from fiber.llm.router.manager import CallbackManager
 from ollama import Client, AsyncClient

@@ -23,7 +23,7 @@ from fiber.llm.types.inter.response import (
     CompletionResponseGen,
 )
 from fiber.llm.types.inter.base import TokenAsyncGen, TokenGen
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     BaseModel,
     WithJsonSchema,
     Field,

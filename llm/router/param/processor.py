@@ -7,61 +7,18 @@ import httpx
 from pydantic import BaseModel
 from openai.lib import _parsing, _pydantic
 
-from xphi.arch.bound.client.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
+from xphi.arch.bound.client.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT
 from fiber.llm.model.provider.resolver import _resolver_instance
 from fiber.llm.types.provider.core import Usage
 from fiber.llm.exception.eco import UnsupportedParamsError
 from fiber.llm.types.provider.openai import ValidUserMessageContentTypes
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import ExecutionMetadata, CompletionContext, EmbeddingContext
-
+from fiber.llm.compat.param import FRAMEWORK_KWARGS, AUTH_PREFIXES, FLAG_KEYS, PROVIDER_ALIAS, OPENAI_REGIONAL_HOSTS, PROVIDER_PARAM_RULES, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
 from xphi.arch.contract.config.resolver import config
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("param.processor")
-
-FRAMEWORK_KWARGS = {
-    "metadata", "session_id", "trace_id", "call_id", "completion_call_id", "preset_cache_key", "model_info", 
-    "model_alias_map", "proxy_server_request", "input_cost_per_token", "output_cost_per_token", 
-    "input_cost_per_second", "output_cost_per_second", "cost_per_query", "prompt_id", "prompt_variables",
-    "timeout", "request_timeout", "client", "shared_session", "acompletion", "aembedding", "headers", 
-    "extra_headers", "custom_llm_provider", "api_key", "api_base", "base_url", "deployment_id", "azure", 
-    "aws_region_name", "supports_system_message", "litellm_system_prompt", "base_model",
-    "drop_params", "allowed_openai_params", "additional_drop_params", "context_management"
-}
-AUTH_PREFIXES = ("aws_", "azure_", "vertex_", "tenant_id", "client_id", "client_secret", "bucket_name")
-FLAG_KEYS = {
-    "no_log", "no-log", "custom_prompt_dict", "async_call", "ssl_verify", "merge_reasoning_content_in_choices", 
-    "use_litellm_proxy", "logger_fn", "verbose", "disable_add_transform_inline_image_block", "log_delegator"
-}
-
-PROVIDER_ALIAS = {"vertex_ai_beta": "vertex_ai", "text-completion-openai": "openai", "azure_ai": "azure", "ollama_chat": "ollama"}
-_OPENAI_REGIONAL_HOSTS = {"eu.api.openai.com": "eu", "us.api.openai.com": "us"}
-
-PROVIDER_PARAM_RULES = {
-    "defaults": {
-        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
-        "mapping": {},
-        "wrap_in": {},
-        "tool_format": "standard"
-    },
-    "gemini": {
-        "supported": ["temperature", "top_p", "top_k", "max_tokens", "max_completion_tokens", "stream", "tools", "tool_choice", "response_format", "n", "stop", "presence_penalty", "frequency_penalty"],
-        "mapping": {
-            "max_tokens": "max_output_tokens",
-            "max_completion_tokens": "max_output_tokens",
-            "stop": "stop_sequences"
-        },
-        "wrap_in": {},
-        "tool_format": "gemini_strict"
-    },
-    "ollama": {
-        "supported": ["temperature", "top_p", "top_k", "stream", "tools", "format", "options", "num_ctx", "seed"],
-        "mapping": {},
-        "wrap_in": {"options": ["temperature", "top_p", "top_k", "num_ctx", "seed"]},
-        "tool_format": "standard"
-    }
-}
 
 def _delete_nested_path(data: Dict, path: str):
     try:
@@ -321,7 +278,7 @@ class CompletionProcessor(BaseProcessor):
         
         meta = ExecutionMetadata(
             session_id=sid, trace_id=tid, metadata=md, preset_cache_key=self.original_kwargs.get("preset_cache_key"),
-            data_residency=(_OPENAI_REGIONAL_HOSTS.get(urlparse(self.api_base).hostname.lower()) if self.provider == "openai" and self.api_base else None),
+            data_residency=(OPENAI_REGIONAL_HOSTS.get(urlparse(self.api_base).hostname.lower()) if self.provider == "openai" and self.api_base else None),
             base_model=self.original_kwargs.get("base_model") or self.original_kwargs.get("model_info", {}).get("base_model"),
             prompt_id=self.original_kwargs.get("prompt_id"), framework_flags={k: v for k, v in self.original_kwargs.items() if k in FLAG_KEYS}
         )

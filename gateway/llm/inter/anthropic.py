@@ -31,7 +31,7 @@ from fiber.llm.types.inter.block import TextBlock as LITextBlock
 from fiber.llm.types.inter.block import CitationBlock as LICitationBlock
 from fiber.llm.types.inter.block import ThinkingBlock as LIThinkingBlock
 
-from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
+from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
 from fiber.gateway.llm.inter.base import LLM

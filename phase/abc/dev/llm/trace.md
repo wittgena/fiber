@@ -92,8 +92,8 @@ class EnterpriseDatadogTracer(BaseLLMTracer):
 
 ```python
 from fiber.llm.pipeline import PipelineSlot
+from fiber.llm.response import ModelResponse
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
-from fiber.llm.param import ModelResponse
 import uuid
 
 class FastRedisCache(DuplexChannel):

@@ -4,9 +4,9 @@ import time
 import copy
 from typing import Optional, Any, AsyncGenerator
 
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.core import Usage
-from fiber.gateway.llm.mapper.traverser import StateTraverser, StateMapper
+from fiber.gateway.llm.state.traverser import StateTraverser, StateMapper
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 from fiber.llm.model.registry.adapter import AdapterRegistry
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRManager

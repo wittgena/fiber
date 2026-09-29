@@ -157,7 +157,7 @@ if VCR_MODE in ("record", "replay"):
     from fiber.phase.cli.sandbox import create_security_sandbox
     from fiber.dev.ex.space.bind.redirector import PhaseAirlock
     import fiber.llm.entry as llm_entry
-    import fiber.llm.param as llm_param
+    import fiber.llm.response as llm_response
     
     # Enforce strict PEP-578 security boundaries
     create_security_sandbox(vcr_mode=VCR_MODE)
@@ -165,7 +165,7 @@ if VCR_MODE in ("record", "replay"):
     # Transparently route legacy SDK imports to Fiber's gateway
     PhaseAirlock.alias({
         "litellm": llm_entry.__name__,
-        "litellm.types.utils": llm_param.__name__
+        "litellm.types.utils": llm_response.__name__
     })
     
     # Mount the VCR engine for deterministic testing and traffic coalescing

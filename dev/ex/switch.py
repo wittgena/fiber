@@ -23,11 +23,11 @@ def _init_bridge(mode: str, fixture_dir: str):
         sys.exit(1)
 
     import fiber.llm.entry as llm_entry
-    import fiber.llm.param as llm_param
+    import fiber.llm.response as llm_reponse
     
     PhaseAirlock.alias({
         "litellm": llm_entry.__name__,
-        "litellm.types.utils": llm_param.__name__
+        "litellm.types.utils": llm_reponse.__name__
     })
 
 
@@ -38,7 +38,7 @@ def _init_bridge(mode: str, fixture_dir: str):
     
     print(f" 🔌 [Integration] Status: ENGAGED ({mode.upper()}) | Tick: 100.0ms")
     print(f" 🔄 [Integration] Aliased 'litellm' -> 'fiber.llm.entry'")
-    print(f" 📦 [Integration] Aliased 'litellm.types.utils' -> 'fiber.llm.param'")
+    print(f" 📦 [Integration] Aliased 'litellm.types.utils' -> 'fiber.llm.response'")
 
 """Boot Sequence"""
 print("=" * 80)

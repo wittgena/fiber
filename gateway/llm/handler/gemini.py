@@ -25,7 +25,7 @@ import httpx
 from google.genai import _transformers, Client
 from google.genai import errors
 
-from fiber.gateway.llm.mapper.pydantic import BaseModel, ValidationError
+from fiber.gateway.llm.state.pydantic import BaseModel, ValidationError
 from fiber.llm.types.inter.block import (
     ImageBlock,
     MessageRole,

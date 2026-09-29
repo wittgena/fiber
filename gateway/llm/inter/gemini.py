@@ -33,7 +33,7 @@ from fiber.llm.types.inter.response import (
     LLMMetadata
 )
 from xphi.arch.contract.config import env
-from fiber.gateway.llm.mapper.pydantic import BaseModel, Field, PrivateAttr
+from fiber.gateway.llm.state.pydantic import BaseModel, Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
 from fiber.gateway.llm.inter.base import LLM

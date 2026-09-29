@@ -6,14 +6,14 @@ import httpx
 from pathlib import Path
 from typing import Dict, AsyncGenerator, Generator, Any, List, Union
 
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import CompletionContext, EmbeddingContext
 from fiber.llm.model.registry.llm import LLMRouter, ModuleMissingError
 from fiber.llm.model.registry.embedding import EmbeddingRouter
 from fiber.llm.model.provider.resolver import get_llm_provider
 
 from fiber.llm.exception.mapping import exception_type
-from fiber.gateway.llm.mapper.traverser import StateMapper, StateTraverser
+from fiber.gateway.llm.state.traverser import StateMapper, StateTraverser
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 
 from xphi.arch.bound.client.http import get_client

@@ -13,7 +13,7 @@ from xphi.arch.bound.event.next import uuid
 
 from fiber.llm.exception.mapping import exception_type
 from fiber.llm.exception.eco import OpenAIError, APIResponseValidationError, MidStreamFallbackError
-from fiber.llm.param import ModelResponseStream
+from fiber.llm.response import ModelResponseStream
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser, ParsedChunk
 from fiber.llm.types.provider.core import (
     Choices, Delta, Message, ModelResponse, Usage, Function,

@@ -6,7 +6,7 @@ import os
 import time
 
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.mapper.traverser import StateTraverser
+from fiber.gateway.llm.state.traverser import StateTraverser
 from fiber.dev.trace.llm.base import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 

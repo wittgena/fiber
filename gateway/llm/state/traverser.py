@@ -1,4 +1,4 @@
-# fiber.gateway.llm.mapper.traverser
+# fiber.gateway.llm.state.traverser
 import os
 import json
 import asyncio
@@ -6,6 +6,7 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional, Union, Dict
 
+from fiber.llm.compat.state import STATE_EXTRACTION_RULES, ENDPOINT_ROUTING_RULES
 from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
 
@@ -15,49 +16,6 @@ from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
-
-STATE_EXTRACTION_RULES = {
-    "gemini": {
-        "fallback_tool_name": "content.parts.0.function_call.name",
-        "fallback_tool_args": "content.parts.0.function_call.args",
-        "sync_content_paths": ["candidates.0.content.parts.0.text", "choices.0.message.content"],
-        "sync_usage_paths": ["usageMetadata", "usage"]
-    },
-    "ollama": {
-        "sync_content_paths": ["message.content", "response", "choices.0.message.content"],
-        "sync_usage_paths": ["prompt_eval_count", "usage"]
-    },
-    "defaults": {
-        "role": "assistant",
-        "finish_stop": "stop",
-        "finish_tool": "tool_calls",
-        "stream_content_paths": [
-            "delta",                     # Default
-            "choices.0.delta.content",   # OpenAI/LiteLLM 표준 경로
-            "content.parts.0.text"       # Gemini Native JSON 경로
-        ],
-        "sync_content_paths": [
-            "choices.0.message.content", # Default
-            "message.content",           # Generic
-            "output"                     # Replicate 등
-        ],
-        "sync_usage_paths": [
-            "usage",                     # Default
-            "meta.usage"
-        ]
-    }
-}
-
-ENDPOINT_ROUTING_RULES = {
-    "ollama": {
-        "native_suffix": "/api/chat",
-        "openai_suffix": "/chat/completions",
-        "v1_indicator": "/v1"
-    },
-    "defaults": {
-        "openai_suffix": "/chat/completions"
-    }
-}
 
 class StateTraverser:
     @staticmethod
@@ -142,21 +100,17 @@ class ImperativeFallbackRule:
 class StateMapper:
     @staticmethod
     def extract_sync_response(response: Any, provider: Optional[str] = None) -> Tuple[str, Optional[Dict]]:
-        """
-        [신규] Non-stream(Sync) 응답에서 Provider 룰에 맞춰 Content와 Usage를 우아하게 추출합니다.
-        하위호환성(Backward Compatibility)을 보장하기 위해 기본값은 OpenAI 규격을 따릅니다.
-        """
-        # 1. Provider에 맞는 룰셋 로드 (없으면 defaults)
+        # Provider에 맞는 룰셋 로드 (없으면 defaults)
         rules = STATE_EXTRACTION_RULES.get(provider) or STATE_EXTRACTION_RULES["defaults"]
         
-        # 2. 다중 경로 탐색을 통한 텍스트 안전 추출
+        # 다중 경로 탐색을 통한 텍스트 안전 추출
         content_paths = rules.get("sync_content_paths", STATE_EXTRACTION_RULES["defaults"]["sync_content_paths"])
         raw_content = StateTraverser.resolve(response, content_paths)
         
-        # 3. 텍스트 블록 정규화 (Claude 등 복합 블록이 들어올 경우를 대비한 2차 안전망)
+        # 텍스트 블록 정규화 (Claude 등 복합 블록이 들어올 경우를 대비한 2차 안전망)
         content = ImperativeFallbackRule.parse_content_blocks(raw_content) or ""
 
-        # 4. Usage 추출 및 정규화 (Pydantic V1/V2, Dict, Object 혼용 방어)
+        # Usage 추출 및 정규화 (Pydantic V1/V2, Dict, Object 혼용 방어)
         usage_paths = rules.get("sync_usage_paths", STATE_EXTRACTION_RULES["defaults"]["sync_usage_paths"])
         usage_obj = StateTraverser.resolve(response, usage_paths)
         usage_dict = None
@@ -173,7 +127,7 @@ class StateMapper:
                 try:
                     usage_dict = dict(usage_obj)
                 except Exception:
-                    # Dict 변환 불가능한 원시 타입일 경우 방어
+                    # Dict 변환 불가능한 원시 타입일 경우
                     pass 
 
         return content, usage_dict

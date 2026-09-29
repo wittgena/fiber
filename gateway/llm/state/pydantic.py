@@ -1,8 +1,4 @@
-# fiber.gateway.llm.mapper.pydantic
-## @lineage: fiber.llm.mapper.pydantic
-## @lineage: fiber.llm.router.mapper.pydantic
-## @lineage: fiber.dphi.model.mapper.pydantic
-## @lineage: dphi.model.mapper.pydantic
+# fiber.gateway.llm.state.pydantic
 import pydantic
 from pydantic import (
     AnyUrl,

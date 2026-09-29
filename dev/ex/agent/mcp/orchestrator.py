@@ -21,7 +21,7 @@ from fiber.dev.ex.agent.llm.driver import LLMFacade, OpenAIToolConvertible
 from fiber.dev.ex.agent.llm.response import LLMResponse
 from fiber.llm.model.message import Message, TextContent, MessageToolCall
 from fiber.llm.model.profile import BaseLLMProfile
-from fiber.llm.param import ChatCompletionToolParam
+from fiber.llm.response import ChatCompletionToolParam
 
 from xphi.kernel.space.tunnel.factory import UniversalFacade
 from xphi.watcher.plane.emitter import get_emitter
