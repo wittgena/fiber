@@ -1,17 +1,4 @@
 # fiber.llm.types.provider.call
-## @lineage: fiber.llm.types.model.call
-## @lineage: fiber.llm.model.types.call
-## @lineage: llm.model.types.call
-## @lineage: agent.anchor.model.types.call
-## @lineage: bound.xor.model.types.call
-## @lineage: eco.model.types.call
-## @lineage: engine.model.types.call
-## @lineage: bound.model.types.call
-## @lineage: llm.types.call
-## @lineage: eco.mesh.model.types.call
-## @lineage: runtime.mesh.model.types.call
-## @lineage: mesh.model.types.call
-## @lineage: mesh.model.calltype
 from enum import Enum
 from typing import Literal
 

@@ -20,7 +20,8 @@ from typing import (
     Union,
 )
 
-from fiber.llm.types.llm.block import ChatMessage, MessageRole, TextBlock
+from fiber.llm.types.inter.block import MessageRole, TextBlock
+from fiber.llm.types.inter.response import ChatMessage
 from fiber.gateway.llm.mapper.pydantic import (
     BaseModel,
     GetCoreSchemaHandler,
@@ -33,9 +34,6 @@ Model = TypeVar("Model", bound=BaseModel)
 TokenGen = Generator[str, None, None]
 TokenAsyncGen = AsyncGenerator[str, None]
 RESPONSE_TEXT_TYPE = Union[BaseModel, str, TokenGen, TokenAsyncGen]
-
-if TYPE_CHECKING:
-    from fiber.llm.types.llm.flex import FlexibleModel
 
 class BaseOutputParser(ABC):
     """Output parser class."""
@@ -119,14 +117,14 @@ class BasePydanticProgram(ABC, Generic[Model]):
     def stream_call(
         self, *args: Any, **kwargs: Any
     ) -> Generator[
-        Union[Model, List[Model], "FlexibleModel", List["FlexibleModel"]], None, None
+        Union[Model, List[Model]], None, None
     ]:
         raise NotImplementedError("stream_call is not supported by default.")
 
     async def astream_call(
         self, *args: Any, **kwargs: Any
     ) -> AsyncGenerator[
-        Union[Model, List[Model], "FlexibleModel", List["FlexibleModel"]], None
+        Union[Model, List[Model]], None
     ]:
         raise NotImplementedError("astream_call is not supported by default.")
 

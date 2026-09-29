@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, Set, List, Union
 from dataclasses import dataclass, field, asdict
 
 from fiber.llm.model.provider.registry import get_model_cost_registry
-from fiber.llm.types.inter.llm import BaseLLM
+from fiber.llm.types.inter.llm import LLMBase
 import fiber.gateway.llm.inter as llm_pkg 
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -45,7 +45,7 @@ DEFAULT_RULESET = {
         "raw": "raw",
         "prefix": "prefix"
     },
-    "base_class": { "BaseLLM", "LLM", "CustomLLM",  "FunctionCallingLLM", "OpenAILike", "MultiModalLLM"}
+    "base_class": { "LLMBase", "LLM", "FcLLM", "OpenAILike"}
 }
 
 class ExtResolver:
@@ -174,7 +174,7 @@ class LLMInstalledScanner:
                 continue
                 
             base_names = {b.__name__ for b in inspect.getmro(obj)}
-            is_target = (issubclass(obj, BaseLLM) and obj is not BaseLLM) or \
+            is_target = (issubclass(obj, LLMBase) and obj is not LLMBase) or \
                         (bool(base_names & self.known_bases) and name not in self.known_bases)
 
             if is_target:

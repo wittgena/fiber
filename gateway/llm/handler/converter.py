@@ -1,18 +1,5 @@
-# fiber.llm.router.handle.converter
-## @lineage: fiber.llm.router.llm.handle.converter
-## @lineage: fiber.llm.router.ext.llm.handle.converter
-## @lineage: fiber.dphi.model.ext.llm.handle.converter
-## @lineage: dphi.model.ext.llm.handle.converter
-## @lineage: phase.client.model.llm.handle.converter
-## @lineage: phase.client.ext.llm.handle.converter
-## @lineage: bound.client.ext.llm.handle.converter
-## @lineage: ator.client.ext.llm.handle.converter
-## @lineage: bound.eco.agent.llm.handle.converter
-## @lineage: eco.bound.agent.llm.handle.converter
-## @lineage: bound.agent.llm.handle.converter
-## @lineage: ext.router.llm.handle.converter
-## @lineage: router.llm.handle.converter
-## @lineage: engine.router.llm.handle.converter
+# fiber.gateway.llm.handler.converter
+## @lineage: fiber.llm.router.handle.converter
 import base64
 import json
 import os
@@ -28,18 +15,18 @@ from typing import (
     Sequence,
     Union,
 )
-from fiber.llm.types.llm.block import (
+
+from fiber.llm.types.inter.block import MessageRole, ImageBlock
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
     ChatResponseGen,
     CompletionResponse,
     CompletionResponseAsyncGen,
-    CompletionResponseGen,
-    ImageBlock,
-    MessageRole,
+    CompletionResponseGen
 )
-from fiber.llm.types.inter.schema import ImageNode
+from fiber.llm.types.inter.component import ImageNode
 from fiber.llm.router.manager import CallbackManager
 
 def parse_partial_json(s: str) -> Dict:

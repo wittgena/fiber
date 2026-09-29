@@ -17,7 +17,9 @@ Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (conn
 
 Fiber reimagines LLM routing by Python facade with a strict, netty style asynchronous pipeline under the hood. 
 
-Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, this architecture achieves execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Universal State Traverser **[1.3]**.
+Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, this architecture achieves execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's State Traverser **[1.3]**.
+
+> **Unlike passive callbacks, this event-driven pipeline empowers middleware to actively short-circuit I/O, physically intercept streams, and tunnel deep infrastructural states.**
 
 **1. Define Middleware by Target Slot:**
 
@@ -26,10 +28,24 @@ from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.llm.pipeline import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
-# PRE_OBSERVER: Fire-and-forget telemetry
+# PRE_OBSERVER: Asynchronous Telemetry with Stream-Aware Lifecycle
 class DatadogTracer(BaseLLMTracer):
     async def on_llm_end(self, meta, response, duration_ms):
-        datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}"])
+        # Stream Mode: Defer telemetry until the inner pipeline exhausts the chunks
+        if hasattr(response, "__aiter__"):
+            def on_stream_complete(total_tokens: int):
+                # Calculate the true end-to-end latency when the last chunk arrives
+                real_duration_ms = (time.time() - meta.framework_flags["start_time"]) * 1000
+                datadog.gauge("llm.latency", real_duration_ms, tags=[f"model:{meta.base_model}", "type:stream"])
+                datadog.count("llm.tokens", total_tokens, tags=[f"model:{meta.base_model}"])
+            
+            # Piggyback the callback onto the framework's hook lifecycle
+            hooks = meta.framework_flags.setdefault("on_stream_complete_hooks", [])
+            hooks.append(on_stream_complete)
+            return
+
+        # Singular Mode: Instant physical I/O completion
+        datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}", "type:singular"])
 
 # PRE_TRANSLATE: Intercept raw dict payload for instant Semantic Caching
 class SemanticCache(DuplexChannel):
@@ -56,7 +72,7 @@ from fiber.llm.entry import acompletion
 # The framework autonomously restructures the flat list into the strict pipeline:
 # [Cache] ➔ [Translator] ➔ [PII Guardrail] ➔ [Tracer] ➔ [Network I/O]
 response = await acompletion(
-    model="gemini-3.5-flash",
+    model="gemini/gemini-3.1-flash-lite", # ex: ollama/gemma:2b, llama_server/gemma-3-1b-it-Q4_K_M.gguf
     messages=[{"role": "user", "content": "Analyze this data."}],
     interceptors=[DatadogTracer(), PIIGuardrail(), SemanticCache()],
     metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
@@ -210,36 +226,47 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ---
 
-### 1.3. Universal State Traverser
+네, 과도하게 들어갔던 힘(수식어, 거창한 표현)을 빼고 개발자 친화적으로 담백하고 간결하게 덜어냈습니다. "알 사람은 아는" 직관적인 코드 예제를 중심으로 서술을 다이어트했습니다.
 
-The LLM ecosystem is highly fragmented. Local inference servers and new providers often introduce proprietary JSON schemas for streaming chunks and tool calls. Fiber eliminates the need for `if/elif` parsing blocks through its `StateTraverser` engine.
+수정된 마크다운은 다음과 같습니다.
 
-Powered by dot-notation, the traverser safely navigates mixed topologies (Dicts, Lists, Pydantic Objects), absorbing missing keys or index errors without crashing the pipeline.
+---
+
+### 1.3. State Traverser
+
+The LLM ecosystem is fragmented. Providers often introduce proprietary JSON schemas while simultaneously maintaining partial OpenAI-compatibility.
+
+Fiber eliminates brittle `if/elif` parsing logic through its `StateTraverser`. Using dot-notation and **Path Fallbacks**, it navigates mixed topologies (Dicts, Lists, Pydantic Objects) by evaluating an array of extraction paths sequentially.
 
 **Extending Fiber for a New Provider:**
-Integrating a non-OpenAI-compliant provider doesn't requires custom parsing logic. Simply append their JSON topology to the internal declarative rulesets, and Fiber will autonomously normalize streams, responses, and tool calls into strict OpenAI standards.
+To integrate a new provider, simply map their JSON topology in the declarative rulesets. Fiber handles the rest.
 
 ```python
 # Map Stream Chunks (e.g., fiber/llm/router/stream/parser/chunk.py)
-# Safely resolve deeply nested lists and objects using dot-notation:
+# Use arrays to support both Native and OpenAI-compatible responses seamlessly.
 STREAM_EXTRACTION_RULES["ollama"] = {
-    "text": "message.content",
-    "finish_reason": "done_reason",
+    "text": ["message.content", "choices.0.delta.content"],
+    "finish_reason": ["done_reason", "choices.0.finish_reason"],
     "is_finished_cond": {"path": "done", "value": True},
-    "usage": {
-        "prompt_tokens": "prompt_eval_count",
-        "completion_tokens": "eval_count"
-    }
+    "usage": [
+        "usage",  # 1st: Standard OpenAI Usage
+        {         # 2nd: Native Custom Mapping
+            "prompt_tokens": "prompt_eval_count",
+            "completion_tokens": "eval_count"
+        }
+    ]
 }
 
-# Map State & Tool-Call Recovery (e.g., fiber/gateway/llm/mapper/traverser.py)
-# Reconstruct complex tool calls from proprietary schemas without imperative code:
+# Map State & Tool Calls (e.g., fiber/gateway/llm/mapper/traverser.py)
 STATE_EXTRACTION_RULES["gemini"] = {
+    "sync_content_paths": ["candidates.0.content.parts.0.text", "choices.0.message.content"],
+    "sync_usage_paths": ["usageMetadata", "usage"],
     "fallback_tool_name": "content.parts.0.function_call.name",
     "fallback_tool_args": "content.parts.0.function_call.args"
 }
 
-# Register routing aliases
+# Register Routing Aliases
+# E.g., Alias llama.cpp server to reuse the standard OpenAI parser.
 PROVIDER_RULE_ALIAS["llama_server"] = "openai"
 ```
 
@@ -260,7 +287,7 @@ pyenv local fiber-user
 
 ## 2. Install via local source OR remote git reference
 uv pip install /path/to/local/self/fiber
-# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.2
+# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4
 
 ## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help
@@ -276,7 +303,7 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 | --- | --- | --- |
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python legacy_server.py"` |
 | **`daemon`** | **[Production Host]** Boots core gateway daemons (Edge + RPC) by default. Use `-s` to apply presets (`eco`, `full`). | `fiber daemon -s eco` |
-| **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.trace --model gemini/gemini-3.1-flash-lite` |
+| **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.trace --model ollama/gemma:2b` |
 
 ---
 
@@ -285,6 +312,6 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
 * 🔗 **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming offline network emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for playback optimization.
-* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.20260920.log):** Validates the zero-code legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
+* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the zero-code legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
-* 🔗 **[phase.wasm.log](./phase/abc/log/dphi/phase.wasm.20260923.logw):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), and Execution Receits generation.
+* 🔗 **[phase.wasm.log](./phase/abc/log/dphi/phase.wasm.20260923.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), and Execution Receits generation.

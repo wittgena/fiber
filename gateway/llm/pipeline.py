@@ -1,5 +1,4 @@
 # fiber.gateway.llm.pipeline
-## @lineage: fiber.llm.pipeline
 from __future__ import annotations
 
 from enum import Enum
@@ -11,7 +10,7 @@ from fiber.llm.router.stream.wrapper import StreamWrapper
 from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge
 
 from fiber.gateway.llm.channel import (
-    CompletionTransport, EmbeddingTransport, DphiFuelInterceptor, 
+    CompletionTransport, EmbeddingTransport, FuelInterceptor, 
     StreamAggregator, PayloadTranslator, FallbackHandler, 
     MockBypass, ChannelObserver, ContextBinder
 )
@@ -39,29 +38,29 @@ class PipelineBootstrap:
         
         ## Head
         pipeline.add_last(CompletionTransport())
-        pipeline.add_last(DphiFuelInterceptor())
+        pipeline.add_last(FuelInterceptor())
 
         ## Middle
         pipeline.add_last(StreamAggregator())       
         
-        # [✨ Slot: POST_TRANSLATE] - (Request 흐름상 Translator 통과 직후)
+        # [Slot: POST_TRANSLATE]
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.POST_TRANSLATE, []), PipelineSlot.POST_TRANSLATE.name)
         
-        # 🔒 Legacy Core: 절대 순서 유지
+        # Core: 절대 순서 유지
         pipeline.add_last(PayloadTranslator())
         
-        # [✨ Slot: PRE_TRANSLATE] - (Request 흐름상 Translator 진입 직전)
+        # [Slot: PRE_TRANSLATE]
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.PRE_TRANSLATE, []), PipelineSlot.PRE_TRANSLATE.name)
         
-        # 🔒 Legacy Core: 절대 순서 유지
+        # Core: 절대 순서 유지
         pipeline.add_last(FallbackHandler())
         pipeline.add_last(MockBypass())
         
-        # [✨ Slot: PRE_OBSERVER] - (기존 llm_tracers 가 주입되던 정확히 그 위치)
+        # [Slot: PRE_OBSERVER]
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.PRE_OBSERVER, []), PipelineSlot.PRE_OBSERVER.name)
             
         ## Tail
-        # 🔒 Legacy Core: 절대 순서 유지
+        # Legacy Core: 절대 순서 유지
         pipeline.add_last(ChannelObserver())        
         pipeline.add_last(ContextBinder())          
         pipeline.add_last(bridge)
@@ -79,25 +78,25 @@ class PipelineBootstrap:
         
         ## Head
         pipeline.add_last(EmbeddingTransport())
-        pipeline.add_last(DphiFuelInterceptor())
+        pipeline.add_last(FuelInterceptor())
         
         ## Middle
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.POST_TRANSLATE, []), PipelineSlot.POST_TRANSLATE.name)
         
-        # 🔒 Legacy Core: 절대 순서 유지
+        # Core: 절대 순서 유지
         pipeline.add_last(PayloadTranslator())
         
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.PRE_TRANSLATE, []), PipelineSlot.PRE_TRANSLATE.name)
         
-        # 🔒 Legacy Core: 절대 순서 유지
+        # Core: 절대 순서 유지
         pipeline.add_last(FallbackHandler())
         pipeline.add_last(MockBypass())
         
-        # [Slot: PRE_OBSERVER] - (기존 llm_tracers 주입 위치)
+        # [Slot: PRE_OBSERVER]
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.PRE_OBSERVER, []), PipelineSlot.PRE_OBSERVER.name)
             
         ## Tail
-        # 🔒 Legacy Core: 절대 순서 유지
+        # Core: 절대 순서 유지
         pipeline.add_last(ChannelObserver())
         pipeline.add_last(ContextBinder())
         pipeline.add_last(bridge)

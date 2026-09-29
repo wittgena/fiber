@@ -2,7 +2,7 @@
 import asyncio
 import math
 import uuid
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from typing import (
@@ -40,7 +40,9 @@ from fiber.gateway.llm.context.cbevent import (
     SparseEmbeddingStartEvent,
 )
 from xphi.arch.bound.client.constants import DEFAULT_EMBED_BATCH_SIZE
-from fiber.llm.types.inter.schema import BaseNode, MetadataMode, TransformComponent
+
+# [핵심 변경점] TransformComponent를 여기서 직접 정의하므로 임포트하지 않음
+from fiber.llm.types.inter.component import BaseComponent, BaseNode, MetadataMode
 
 from fiber.llm.router.util import get_tqdm_iterable
 from fiber.llm.router.jobs import run_jobs
@@ -134,7 +136,28 @@ def sparse_mean_agg(embeddings: List[SparseEmbedding]) -> SparseEmbedding:
 
 
 # ==========================================
-# 4. Dense BaseEmbedding Component
+# 4. Pipeline Components
+# ==========================================
+class TransformComponent(BaseComponent, ABC):
+    """
+    Base class for transform components in standalone systems.
+    Moved here to act as the foundation for Embeddings and other node processors.
+    """
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @abstractmethod
+    def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:
+        """Transform nodes."""
+
+    async def acall(
+        self, nodes: Sequence[BaseNode], **kwargs: Any
+    ) -> Sequence[BaseNode]:
+        """Async transform nodes."""
+        return self.__call__(nodes, **kwargs)
+
+
+# ==========================================
+# 5. Dense BaseEmbedding Component
 # ==========================================
 class BaseEmbedding(TransformComponent):
     """Base class for dense embeddings."""
@@ -158,12 +181,10 @@ class BaseEmbedding(TransformComponent):
         default=None,
         description="The number of workers to use for async embedding calls.",
     )
-    # Use Any to avoid import loops
     embeddings_cache: Optional[Any] = Field(
         default=None,
         description="Cache for the embeddings: if None, the embeddings are not cached",
     )
-    # Expected type: BaseRateLimiter (from llama_index.core.rate_limiter)
     rate_limiter: Optional[Any] = Field(
         default=None,
         description="Rate limiter instance to throttle API calls.",
@@ -605,7 +626,7 @@ class BaseEmbedding(TransformComponent):
 
 
 # ==========================================
-# 5. Sparse BaseEmbedding Component
+# 6. Sparse BaseEmbedding Component
 # ==========================================
 class BaseSparseEmbedding(BaseModel):
     """Base class for sparse embeddings."""

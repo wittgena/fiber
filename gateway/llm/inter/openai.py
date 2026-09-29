@@ -1,5 +1,4 @@
 # fiber.gateway.llm.inter.openai
-## @lineage: fiber.llm.router.llm.openai
 import functools
 import re
 from json.decoder import JSONDecodeError
@@ -25,7 +24,7 @@ from typing import (
 import httpx
 import tiktoken
 
-from fiber.llm.router.handle.converter import (
+from fiber.gateway.llm.handler.converter import (
     achat_to_completion_decorator,
     acompletion_to_chat_decorator,
     astream_chat_to_completion_decorator,
@@ -35,7 +34,8 @@ from fiber.llm.router.handle.converter import (
     stream_chat_to_completion_decorator,
     stream_completion_to_chat_decorator,
 )
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.inter.block import MessageRole, ThinkingBlock, ToolCallBlock, TextBlock
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -44,22 +44,18 @@ from fiber.llm.types.llm.block import (
     CompletionResponseAsyncGen,
     CompletionResponseGen,
     LLMMetadata,
-    MessageRole,
-    ThinkingBlock,
-    ToolCallBlock,
-    TextBlock,
 )
+
 from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
-from fiber.llm.types.llm.funcall import FunctionCallingLLM
-from fiber.gateway.llm.inter.base import ToolSelection
+from fiber.gateway.llm.inter.base import LLM
+from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.util import parse_partial_json
-from fiber.llm.router.handle.template import PromptTemplate
-from fiber.llm.types.llm.flex import FlexibleModel
+from fiber.gateway.llm.handler.template import PromptTemplate
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode
-from fiber.llm.router.handle.openai import (
+from fiber.gateway.llm.handler.openai import (
     O1_MODELS,
     create_retry_decorator,
     from_openai_completion_logprobs,
@@ -86,7 +82,7 @@ from openai.types.chat.chat_completion_chunk import (
 from fiber.llm.router.dispatcher import dispatcher
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 DEFAULT_OPENAI_MODEL = "gpt-3.5-turbo"
 
@@ -129,48 +125,7 @@ def force_single_tool_call(response: ChatResponse) -> None:
             if not isinstance(block, ToolCallBlock)
         ] + [tool_calls[0]]
 
-
-class OpenAI(FunctionCallingLLM):
-    """
-    OpenAI LLM.
-
-    Args:
-        model: name of the OpenAI model to use.
-        temperature: a float from 0 to 1 controlling randomness in generation; higher will lead to more creative, less deterministic responses.
-        max_tokens: the maximum number of tokens to generate.
-        additional_kwargs: Add additional parameters to OpenAI request body.
-        max_retries: How many times to retry the API call if it fails.
-        timeout: How long to wait, in seconds, for an API call before failing.
-        reuse_client: Reuse the OpenAI client between requests. When doing anything with large volumes of async API calls, setting this to false can improve stability.
-        api_key: Your OpenAI api key
-        api_base: The base URL of the API to call
-        api_version: the version of the API to call
-        callback_manager: the callback manager is used for observability.
-        default_headers: override the default headers for API requests.
-        http_client: pass in your own httpx.Client instance.
-        async_http_client: pass in your own httpx.AsyncClient instance.
-
-    Examples:
-        `pip install llama-index-llms-openai`
-
-        ```python
-        import os
-        import openai
-
-        os.environ["OPENAI_API_KEY"] = "sk-..."
-        openai.api_key = os.environ["OPENAI_API_KEY"]
-
-        from llama_index.llms.openai import OpenAI
-
-        llm = OpenAI(model="gpt-3.5-turbo")
-
-        stream = llm.stream_complete("Hi, write a short story")
-
-        for r in stream:
-            print(r.delta, end="")
-        ```
-    """
-
+class OpenAI(LLM):
     model: str = Field(
         default=DEFAULT_OPENAI_MODEL, description="The OpenAI model to use."
     )
@@ -282,7 +237,6 @@ class OpenAI(FunctionCallingLLM):
         audio_config: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
-        # TODO: Support deprecated max_new_tokens
         if "max_new_tokens" in kwargs:
             max_tokens = kwargs["max_new_tokens"]
             del kwargs["max_new_tokens"]
@@ -449,10 +403,8 @@ class OpenAI(FunctionCallingLLM):
     def _get_model_kwargs(self, **kwargs: Any) -> Dict[str, Any]:
         base_kwargs = {"model": self.model, "temperature": self.temperature, **kwargs}
         if self.max_tokens is not None:
-            # If max_tokens is None, don't include in the payload:
-            # https://platform.openai.com/docs/api-reference/chat
-            # https://platform.openai.com/docs/api-reference/completions
             base_kwargs["max_tokens"] = self.max_tokens
+
         if self.logprobs is not None and self.logprobs is True:
             if self.metadata.is_chat_model:
                 base_kwargs["logprobs"] = self.logprobs

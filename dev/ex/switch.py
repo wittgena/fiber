@@ -4,12 +4,13 @@ import asyncio
 import time
 import sys
 import json
+import argparse
 
 """[Runtime Switch] Environment-based module aliasing Integration (Drop-in Block)"""
 VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 
 def _init_bridge(mode: str, fixture_dir: str):
-    """Initializes the VCR sandbox and direct sys.modules aliasing"""
+    """Initializes the VCR sandbox and direct modules aliasing"""
     from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
     from fiber.dev.ex.space.bind.redirector import PhaseAirlock
     
@@ -44,17 +45,11 @@ print("=" * 80)
 print("🛡️  FIBER INTEGRATION & SANDBOX")
 print("=" * 80)
 
-# [핵심 변경] 전역 네임스페이스 오염 방지를 위해 변수 초기화 (Fixture Inspector에서 사용)
 _resolved_fixture_dir = None
 
 if VCR_MODE in ("record", "replay"):
-    # 💡 로컬 임포트를 사용하여 레거시 영역으로 xphi 노출 방지
     from xphi.kernel.space.bind.resolver import resolve_path
-    
-    # DEV 모드(로컬 상대경로)와 USER 모드(site-packages 절대경로) 상관없이 
-    # bound.json 매핑을 통해 동적으로 정확한 절대 경로를 계산
     _resolved_fixture_dir = str(resolve_path("abc") / "fixture")
-    
     _init_bridge(mode=VCR_MODE, fixture_dir=_resolved_fixture_dir)
 else:
     print(f" 🟢 [Integration] Status: BYPASSED (Live Mode)")
@@ -63,25 +58,22 @@ print("-" * 80 + "\n")
 
 
 # ==============================================================================
-# """[Legacy Business Logic] modification boundary"""
-# 이 아래로는 사용자의 기존 비즈니스 로직입니다. xphi/fiber 패키지에 직접 의존하지 않습니다.
+# [Legacy Business Logic] modification boundary
 # ==============================================================================
 import litellm
 from litellm.types.utils import ModelResponseStream
 
-async def analyze_and_extract_stream(scenario_id: str, prompt: str):
+# ✨ model 매개변수 추가 (기본값 설정으로 하위 호환성 유지)
+async def analyze_and_extract_stream(scenario_id: str, prompt: str, model_name: str = "gemini/gemini-3.1-flash-lite"):
     print(f"▶️ [BUSINESS LOGIC] Initiating LLM Call")
     print(f"   ├─ Scenario: {scenario_id}")
-    print(f"   ├─ Model: gemini/gemini-3.1-flash-lite")
+    print(f"   ├─ Model: {model_name}") # ✨ 동적 모델명 출력
     print(f"   └─ Prompt: {prompt[:50]}...\n")
     
     try:
         start_time = time.perf_counter()
-        
-        # 💡 [핵심 개선] 프레임워크 전용 ID 생성 함수를 제거하고, 표준 LiteLLM 스펙인 metadata만 활용.
-        # 하단에 숨어있는 Fiber VCR 엔진이 이 메타데이터를 낚아채어 파일명과 Trace ID를 완벽히 통제합니다.
         response = await litellm.acompletion(
-            model="gemini/gemini-3.1-flash-lite",
+            model=model_name, # ✨ 동적 모델 주입
             messages=[{"role": "user", "content": prompt}],
             stream=True,
             temperature=0.7,
@@ -96,7 +88,6 @@ async def analyze_and_extract_stream(scenario_id: str, prompt: str):
         
         chunk_count = 0
         legacy_valid_count = 0
-        
         async for chunk in response:
             chunk_count += 1
             
@@ -169,6 +160,15 @@ def inspect_fixture(scenario_id: str):
 
 
 async def main():
+    parser = argparse.ArgumentParser(description="Runtime Switch VCR Test Suite")
+    parser.add_argument(
+        "-m", "--model", 
+        type=str, 
+        default="gemini/gemini-3.1-flash-lite", 
+        help="Target LLM model to execute (e.g., ollama/gemma:2b)"
+    )
+    args = parser.parse_args()
+
     prompt = (
         "As a senior software architect, explain why relying on a temporary 'Zero-Code "
         "Integration' (like Python module aliasing or monkey-patching) is dangerous as a "
@@ -177,8 +177,7 @@ async def main():
     )
     
     scenario_name = "tech_debt_migration"
-    returned_scenario = await analyze_and_extract_stream(scenario_name, prompt)
-    
+    returned_scenario = await analyze_and_extract_stream(scenario_name, prompt, model_name=args.model)
     if VCR_MODE == "record" and returned_scenario:
         inspect_fixture(returned_scenario.replace(" ", "_").lower())
 

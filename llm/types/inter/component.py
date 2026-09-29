@@ -1,4 +1,4 @@
-# fiber.llm.types.inter.schema
+# fiber.llm.types.inter.component
 from __future__ import annotations
 import base64
 import json
@@ -6,9 +6,8 @@ import logging
 import pickle
 import textwrap
 import uuid
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from binascii import Error as BinasciiError
-from dataclasses import dataclass
 from enum import Enum, auto
 from hashlib import sha256
 from io import BytesIO
@@ -21,13 +20,11 @@ from typing import (
     List,
     Literal,
     Optional,
-    Sequence,
     Union,
 )
 
 import filetype
 import requests
-from dataclasses_json import DataClassJsonMixin
 from deprecated import deprecated
 from typing_extensions import Self
 from PIL import Image
@@ -41,36 +38,37 @@ from fiber.gateway.llm.mapper.pydantic import (
     JsonSchemaValue,
     PlainSerializer,
     SerializationInfo,
-    SerializeAsAny,
     SerializerFunctionWrapHandler,
     ValidationInfo,
     field_serializer,
     field_validator,
     model_serializer,
+    CoreSchema,
 )
-from fiber.gateway.llm.mapper.pydantic import CoreSchema
 from fiber.llm.router.util import truncate_text
 
 if TYPE_CHECKING:
-    from haystack.schema import Document as HaystackDocument
-    from semantic_kernel.memory.memory_record import MemoryRecord
     from fiber.llm.types.inter.block import BaseBlock
 
 DEFAULT_TEXT_NODE_TMPL = "{metadata_str}\n\n{content}"
 DEFAULT_METADATA_TMPL = "{key}: {value}"
 TRUNCATE_LENGTH = 350
 WRAP_WIDTH = 70
-SAMPLE_TEXT = """
-LLMs are a phenomenal piece of technology for knowledge generation and reasoning.
-LlamaIndex is a "data framework" to help you build LLM apps by augmenting them with your own private data.
-It offers data connectors, ways to structure your data, and an advanced retrieval/query interface.
-"""
 
 ImageType = Union[str, BytesIO]
 logger = logging.getLogger(__name__)
-EnumNameSerializer = PlainSerializer(lambda e: e.value, return_type="str", when_used="always")
 
+EnumNameSerializer = PlainSerializer(
+    lambda e: e.value, return_type="str", when_used="always"
+)
+
+
+# ==========================================
+# 1. Base Components
+# ==========================================
 class BaseComponent(BaseModel):
+    """Base component object to capture class names."""
+
     @classmethod
     def __get_pydantic_json_schema__(
         cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler
@@ -160,22 +158,10 @@ class BaseComponent(BaseModel):
         data = json.loads(data_str)
         return cls.from_dict(data, **kwargs)
 
-class TransformComponent(BaseComponent, ABC):
-    """Base class for transform components in standalone systems."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    @abstractmethod
-    def __call__(self, nodes: Sequence[BaseNode], **kwargs: Any) -> Sequence[BaseNode]:
-        """Transform nodes."""
-
-    async def acall(
-        self, nodes: Sequence[BaseNode], **kwargs: Any
-    ) -> Sequence[BaseNode]:
-        """Async transform nodes."""
-        return self.__call__(nodes, **kwargs)
-
-
+# ==========================================
+# 2. Enums & Node Relationships
+# ==========================================
 class NodeRelationship(str, Enum):
     SOURCE = auto()
     PREVIOUS = auto()
@@ -220,6 +206,9 @@ class RelatedNodeInfo(BaseComponent):
 RelatedNodeType = Union[RelatedNodeInfo, List[RelatedNodeInfo]]
 
 
+# ==========================================
+# 3. Base Node Interface
+# ==========================================
 class BaseNode(BaseComponent):
     """Base node Object interface."""
 
@@ -401,8 +390,10 @@ class BaseNode(BaseComponent):
         )
 
 
+# ==========================================
+# 4. Media & Concrete Node Implementations
+# ==========================================
 EmbeddingKind = Literal["sparse", "dense"]
-
 
 class MediaResource(BaseModel):
     embeddings: dict[EmbeddingKind, list[float]] | None = Field(default=None)
@@ -452,7 +443,7 @@ class MediaResource(BaseModel):
     def hash(self) -> str:
         bits: list[str] = []
         if self.text is not None:
-            bits.append("<empty_string>" if self.text == "" else self.text)
+            bits.append("" if self.text == "" else self.text)
         if self.data is not None:
             bits.append(str(sha256(self.data).hexdigest()))
         if self.path is not None:
@@ -589,182 +580,6 @@ class TextNode(BaseNode):
         return self.get_node_info()
 
 
-class ImageNode(TextNode):
-    image: Optional[str] = None
-    image_path: Optional[str] = None
-    image_url: Optional[str] = None
-    image_mimetype: Optional[str] = None
-    text_embedding: Optional[List[float]] = Field(default=None)
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if "image_resource" in kwargs:
-            ir = kwargs.pop("image_resource")
-            if isinstance(ir, MediaResource):
-                kwargs["image_path"] = ir.path.as_posix() if ir.path else None
-                kwargs["image_url"] = ir.url
-                kwargs["image_mimetype"] = ir.mimetype
-            else:
-                kwargs["image_path"] = ir.get("path", None)
-                kwargs["image_url"] = ir.get("url", None)
-                kwargs["image_mimetype"] = ir.get("mimetype", None)
-
-        mimetype = kwargs.get("image_mimetype")
-        if not mimetype and kwargs.get("image_path") is not None:
-            extension = Path(kwargs["image_path"]).suffix.replace(".", "")
-            if ftype := filetype.get_type(ext=extension):
-                kwargs["image_mimetype"] = ftype.mime
-        super().__init__(*args, **kwargs)
-
-    @classmethod
-    def get_type(cls) -> str:
-        return ObjectType.IMAGE
-
-    @classmethod
-    def class_name(cls) -> str:
-        return "ImageNode"
-
-    def resolve_image(self) -> ImageType:
-        if self.image is not None:
-            import base64
-            return BytesIO(base64.b64decode(self.image))
-        elif self.image_path is not None:
-            return self.image_path
-        elif self.image_url is not None:
-            response = requests.get(self.image_url, timeout=(60, 60))
-            return BytesIO(response.content)
-        else:
-            raise ValueError("No image found in node.")
-
-    @property
-    def hash(self) -> str:
-        image_str = self.image or "None"
-        image_path_str = self.image_path or "None"
-        image_url_str = self.image_url or "None"
-        image_text = self.text or "None"
-        doc_identity = f"{image_str}-{image_path_str}-{image_url_str}-{image_text}"
-        return str(sha256(doc_identity.encode("utf-8", "surrogatepass")).hexdigest())
-
-    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseBlock]:
-        from fiber.llm.types.inter.block import ImageBlock
-        blocks: list[BaseBlock] = []
-        blocks.extend(self.get_metadata_content_blocks(metadata_mode))
-        resolved = self.resolve_image()
-        image_data = resolved.read() if isinstance(resolved, BytesIO) else None
-        blocks.append(ImageBlock(
-            image=image_data, url=self.image_url, path=self.image_path, image_mimetype=self.image_mimetype,
-        ))
-        return blocks
-
-
-class IndexNode(TextNode):
-    index_id: str
-    obj: Any = None
-
-    def _serialize_obj(self) -> Any:
-        from fiber.llm.router.storage.docstore.utils import doc_to_json
-        try:
-            if self.obj is None:
-                return None
-            elif isinstance(self.obj, BaseNode):
-                return doc_to_json(self.obj)
-            elif isinstance(self.obj, BaseModel):
-                return self.obj.model_dump()
-            else:
-                return json.dumps(self.obj)
-        except Exception:
-            raise ValueError("IndexNode obj is not serializable: " + str(self.obj))
-
-    @model_serializer(mode="wrap")
-    def custom_model_dump(self, handler: SerializerFunctionWrapHandler, info: SerializationInfo) -> Dict[str, Any]:
-        data = super().custom_model_dump(handler, info)
-        data["obj"] = self._serialize_obj()
-        return data
-
-    def dict(self, **kwargs: Any) -> Dict[str, Any]:
-        data = super().dict(**kwargs)
-        data["obj"] = self._serialize_obj()
-        return data
-
-    @classmethod
-    def from_text_node(cls, node: TextNode, index_id: str) -> IndexNode:
-        return cls(**node.dict(), index_id=index_id)
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any], **kwargs: Any) -> Self:  # type: ignore
-        output = super().from_dict(data, **kwargs)
-        obj = data.get("obj")
-        parsed_obj = None
-
-        if isinstance(obj, str):
-            parsed_obj = TextNode(text=obj)
-        elif isinstance(obj, dict):
-            from fiber.llm.router.storage.docstore.utils import json_to_doc
-            try:
-                parsed_obj = json_to_doc(obj)
-            except Exception:
-                parsed_obj = TextNode(text=str(obj))
-        output.obj = parsed_obj
-        return output
-
-    @classmethod
-    def get_type(cls) -> str:
-        return ObjectType.INDEX
-
-    @classmethod
-    def class_name(cls) -> str:
-        return "IndexNode"
-
-
-class NodeWithScore(BaseComponent):
-    node: SerializeAsAny[BaseNode]
-    score: Optional[float] = None
-
-    def __str__(self) -> str:
-        score_str = "None" if self.score is None else f"{self.score: 0.3f}"
-        return f"{self.node}\nScore: {score_str}\n"
-
-    def get_score(self, raise_error: bool = False) -> float:
-        if self.score is None:
-            if raise_error:
-                raise ValueError("Score not set.")
-            return 0.0
-        return self.score
-
-    @classmethod
-    def class_name(cls) -> str:
-        return "NodeWithScore"
-
-    @property
-    def node_id(self) -> str: return self.node.node_id
-
-    @property
-    def id_(self) -> str: return self.node.id_
-
-    @property
-    def text(self) -> str:
-        if isinstance(self.node, TextNode):
-            return self.node.text
-        raise ValueError("Node must be a TextNode to get text.")
-
-    @property
-    def metadata(self) -> Dict[str, Any]: return self.node.metadata
-
-    @property
-    def embedding(self) -> Optional[List[float]]: return self.node.embedding
-
-    def get_text(self) -> str:
-        if isinstance(self.node, TextNode):
-            return self.node.get_text()
-        raise ValueError("Node must be a TextNode to get text.")
-
-    def get_content(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> str:
-        return self.node.get_content(metadata_mode=metadata_mode)
-
-    def get_embedding(self) -> List[float]:
-        return self.node.get_embedding()
-
-
-# Document Classes for Readers
 class Document(Node):
     """Generic interface for a data document mapped to standalone core repositories."""
 
@@ -829,54 +644,14 @@ class Document(Node):
     def get_doc_id(self) -> str:
         return self.id_
 
-    def to_haystack_format(self) -> HaystackDocument:
-        from haystack import Document as HaystackDocument
-        return HaystackDocument(content=self.text, meta=self.metadata, embedding=self.embedding, id=self.id_)
-
-    @classmethod
-    def from_haystack_format(cls, doc: HaystackDocument) -> Document:
-        return cls(text=doc.content, metadata=doc.meta, embedding=doc.embedding, id_=doc.id)
-
-    def to_embedchain_format(self) -> Dict[str, Any]:
-        return {"doc_id": self.id_, "data": {"content": self.text, "meta_data": self.metadata}}
-
-    @classmethod
-    def from_embedchain_format(cls, doc: Dict[str, Any]) -> Document:
-        return cls(text=doc["data"]["content"], metadata=doc["data"]["meta_data"], id_=doc["doc_id"])
-
-    def to_semantic_kernel_format(self) -> MemoryRecord:
-        import numpy as np
-        from semantic_kernel.memory.memory_record import MemoryRecord
-        return MemoryRecord(
-            id=self.id_, text=self.text, additional_metadata=self.get_metadata_str(),
-            embedding=np.array(self.embedding) if self.embedding else None,
-        )
-
-    @classmethod
-    def from_semantic_kernel_format(cls, doc: MemoryRecord) -> Document:
-        return cls(
-            text=doc._text, metadata={"additional_metadata": doc._additional_metadata},
-            embedding=doc._embedding.tolist() if doc._embedding is not None else None, id_=doc._id,
-        )
-
-    def to_vectorflow(self, client: Any) -> None:
-        import tempfile
-        with tempfile.NamedTemporaryFile() as f:
-            f.write(self.text.encode("utf-8"))
-            f.flush()
-            client.embed(f.name)
-
-    @classmethod
-    def example(cls) -> Document:
-        return Document(text=SAMPLE_TEXT, metadata={"filename": "README.md", "category": "codebase"})
-
     @classmethod
     def class_name(cls) -> str:
         return "Document"
 
-    # [정렬 1] 의존성이 완벽하게 오염되었던 LlamaCloud 관련 폐쇄형(SaaS) Mapper API 완전 삭제 완료
 
-
+# ==========================================
+# 5. Image & Vision Nodes
+# ==========================================
 def is_image_pil(file_path: str) -> bool:
     try:
         with Image.open(file_path) as img:
@@ -897,6 +672,73 @@ def is_image_url_pil(url: str) -> bool:
         return False
 
 
+class ImageNode(TextNode):
+    image: Optional[str] = None
+    image_path: Optional[str] = None
+    image_url: Optional[str] = None
+    image_mimetype: Optional[str] = None
+    text_embedding: Optional[List[float]] = Field(default=None)
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        if "image_resource" in kwargs:
+            ir = kwargs.pop("image_resource")
+            if isinstance(ir, MediaResource):
+                kwargs["image_path"] = ir.path.as_posix() if ir.path else None
+                kwargs["image_url"] = ir.url
+                kwargs["image_mimetype"] = ir.mimetype
+            else:
+                kwargs["image_path"] = ir.get("path", None)
+                kwargs["image_url"] = ir.url if hasattr(ir, "url") else ir.get("url", None)
+                kwargs["image_mimetype"] = ir.get("mimetype", None)
+
+        mimetype = kwargs.get("image_mimetype")
+        if not mimetype and kwargs.get("image_path") is not None:
+            extension = Path(kwargs["image_path"]).suffix.replace(".", "")
+            if ftype := filetype.get_type(ext=extension):
+                kwargs["image_mimetype"] = ftype.mime
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def get_type(cls) -> str:
+        return ObjectType.IMAGE
+
+    @classmethod
+    def class_name(cls) -> str:
+        return "ImageNode"
+
+    def resolve_image(self) -> ImageType:
+        if self.image is not None:
+            import base64
+            return BytesIO(base64.b64decode(self.image))
+        elif self.image_path is not None:
+            return self.image_path
+        elif self.image_url is not None:
+            response = requests.get(str(self.image_url), timeout=(60, 60))
+            return BytesIO(response.content)
+        else:
+            raise ValueError("No image found in node.")
+
+    @property
+    def hash(self) -> str:
+        image_str = self.image or "None"
+        image_path_str = self.image_path or "None"
+        image_url_str = str(self.image_url) if self.image_url else "None"
+        image_text = self.text or "None"
+        doc_identity = f"{image_str}-{image_path_str}-{image_url_str}-{image_text}"
+        return str(sha256(doc_identity.encode("utf-8", "surrogatepass")).hexdigest())
+
+    def get_content_blocks(self, metadata_mode: MetadataMode = MetadataMode.NONE) -> list[BaseBlock]:
+        from fiber.llm.types.inter.block import ImageBlock
+        blocks: list[BaseBlock] = []
+        blocks.extend(self.get_metadata_content_blocks(metadata_mode))
+        resolved = self.resolve_image()
+        image_data = resolved.read() if isinstance(resolved, BytesIO) else None
+        blocks.append(ImageBlock(
+            image=image_data, url=self.image_url, path=self.image_path, image_mimetype=self.image_mimetype,
+        ))
+        return blocks
+
+
 class ImageDocument(Document):
     def __init__(self, **kwargs: Any) -> None:
         image = kwargs.pop("image", None)
@@ -912,7 +754,7 @@ class ImageDocument(Document):
                 raise ValueError("The specified file path is not an accessible image")
             kwargs["image_resource"] = MediaResource(path=image_path, mimetype=image_mimetype)
         elif image_url:
-            if not is_image_url_pil(image_url):
+            if not is_image_url_pil(str(image_url)):
                 raise ValueError("The specified URL is not an accessible image")
             kwargs["image_resource"] = MediaResource(url=image_url, mimetype=image_mimetype)
         super().__init__(**kwargs)
@@ -982,28 +824,4 @@ class ImageDocument(Document):
             img_bytes = response.content
             return BytesIO(base64.b64encode(img_bytes)) if as_base64 else BytesIO(img_bytes)
         else:
-            raise ValueError("No image found in the chat message!")
-
-
-@dataclass
-class QueryBundle(DataClassJsonMixin):
-    query_str: str
-    image_path: Optional[str] = None
-    custom_embedding_strs: Optional[List[str]] = None
-    embedding: Optional[List[float]] = None
-
-    @property
-    def embedding_strs(self) -> List[str]:
-        if self.custom_embedding_strs is None:
-            return [] if len(self.query_str) == 0 else [self.query_str]
-        return self.custom_embedding_strs
-
-    @property
-    def embedding_image(self) -> List[ImageType]:
-        return [] if self.image_path is None else [self.image_path]
-
-    def __str__(self) -> str:
-        return self.query_str
-
-
-QueryType = Union[str, QueryBundle]
+            raise ValueError("No image found in the document!")

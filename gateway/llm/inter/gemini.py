@@ -1,6 +1,4 @@
 # fiber.gateway.llm.inter.gemini
-## @lineage: fiber.llm.router.llm.gemini
-## @lineage: fiber.llm.router.ext.llm.gemini
 import asyncio
 import inspect
 import functools
@@ -22,8 +20,9 @@ from typing import (
     Callable,
     Literal,
 )
-from fiber.llm.router.handle.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
-from fiber.llm.types.llm.block import (
+from fiber.gateway.llm.handler.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
+from fiber.llm.types.inter.block import MessageRole, ToolCallBlock
+from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -31,20 +30,17 @@ from fiber.llm.types.llm.block import (
     CompletionResponse,
     CompletionResponseAsyncGen,
     CompletionResponseGen,
-    LLMMetadata,
-    MessageRole,
-    ToolCallBlock,
+    LLMMetadata
 )
+from xphi.arch.contract.config import env
 from fiber.gateway.llm.mapper.pydantic import BaseModel, Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
-from fiber.llm.types.llm.funcall import FunctionCallingLLM
-from fiber.gateway.llm.inter.base import ToolSelection
+from fiber.gateway.llm.inter.base import LLM
+from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import Model
-from fiber.llm.router.handle.template import PromptTemplate
-from fiber.llm.types.llm.flex import FlexibleModel, create_flexible_model
-from fiber.llm.types.inter.base import PydanticProgramMode
-from fiber.llm.router.handle.gemini import (
+from fiber.gateway.llm.handler.template import PromptTemplate
+from fiber.gateway.llm.handler.gemini import (
     chat_from_gemini_response,
     chat_message_to_gemini,
     convert_schema_to_function_declaration,
@@ -58,12 +54,11 @@ from fiber.llm.router.handle.gemini import (
 import google.genai
 import google.auth
 import google.genai.types as types
-from fiber.llm.router.dispatcher import dispatcher
 
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
 if TYPE_CHECKING:
-    from fiber.llm.types.llm.tool import BaseTool
+    from fiber.llm.types.inter.tool import BaseTool
 
 from xphi.arch.bound.event.next import uuid4 
 from xphi.watcher.plane.emitter import get_emitter
@@ -111,7 +106,7 @@ def llm_retry_decorator(f: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-class GoogleGenAI(FunctionCallingLLM):
+class GoogleGenAI(LLM):
     model: str = Field(default=DEFAULT_MODEL, description="The Gemini model to use.")
     temperature: float = Field(
         default=DEFAULT_TEMPERATURE,
@@ -173,8 +168,6 @@ class GoogleGenAI(FunctionCallingLLM):
                 temperature = 1.0
             else:
                 temperature = DEFAULT_TEMPERATURE
-        # API keys are optional. The API can be authorised via OAuth (detected
-        # environmentally) or by the GOOGLE_API_KEY environment variable.
         api_key = api_key or os.getenv("GOOGLE_API_KEY", None)
         vertexai = (
             vertexai_config is not None
@@ -201,12 +194,7 @@ class GoogleGenAI(FunctionCallingLLM):
             config_params["api_key"] = None
             config_params["vertexai"] = True
 
-        try:
-            package_v = version("llama-index-llms-google-genai")
-        except PackageNotFoundError:
-            package_v = "0.0.0"
-        client_hdr = {"x-goog-api-client": f"llamaindex/{package_v}"}
-
+        client_hdr = {"x-goog-api-client": env.USER_AGENT}
         if isinstance(http_options, dict):
             http_opts = http_options
         elif isinstance(http_options, types.HttpOptions):
@@ -535,9 +523,6 @@ class GoogleGenAI(FunctionCallingLLM):
             if isinstance(tool_choice, dict):
                 raise ValueError("Gemini does not support tool_choice as a dict")
 
-            # assume that the user wants a tool call to be made
-            # if the tool choice is not in the list of tools, then we will make a tool call to all tools
-            # otherwise, we will make a tool call to the tool choice
             tool_names = [tool.metadata.name for tool in tools if tool.metadata.name]
             if tool_choice not in tool_names:
                 function_calling_config.allowed_function_names = tool_names

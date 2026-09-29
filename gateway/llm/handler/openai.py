@@ -1,23 +1,5 @@
-# fiber.llm.router.handle.openai
-## @lineage: fiber.llm.router.llm.handle.openai
-## @lineage: fiber.llm.router.ext.llm.handle.openai
-## @lineage: fiber.dphi.model.ext.llm.handle.openai
-## @lineage: dphi.model.ext.llm.handle.openai
-## @lineage: phase.client.model.llm.handle.openai
-## @lineage: phase.client.ext.llm.handle.openai
-## @lineage: bound.client.ext.llm.handle.openai
-## @lineage: ator.client.ext.llm.handle.openai
-## @lineage: bound.eco.agent.llm.handle.openai
-## @lineage: eco.bound.agent.llm.handle.openai
-## @lineage: bound.agent.llm.handle.openai
-## @lineage: ext.router.llm.handle.openai
-## @lineage: router.llm.handle.openai
-## @lineage: engine.router.llm.handle.openai
-## @lineage: engine.eco.llm.handle.openai
-## @lineage: runtime.engine.eco.llm.handle.openai
-## @lineage: eco.llms.handle.openai
-## @lineage: eco.llama.llms.handle.openai
-## @lineage: eco.llama.llms.openai.utils
+# fiber.gateway.llm.handler.openai
+## @lineage: fiber.llm.router.handle.openai
 import json
 import logging
 import os
@@ -38,19 +20,19 @@ from tenacity.stop import stop_base
 from tenacity.wait import wait_base
 
 import openai
-from fiber.llm.router.handle.converter import get_from_param_or_env
-from fiber.llm.types.llm.block import (
+from fiber.gateway.llm.handler.converter import get_from_param_or_env
+from fiber.llm.types.inter.block import (
     AudioBlock,
-    ChatMessage,
     ContentBlock,
     DocumentBlock,
     ImageBlock,
-    LogProb,
     MessageRole,
     TextBlock,
     ThinkingBlock,
     ToolCallBlock,
 )
+from fiber.llm.types.inter.response import ChatMessage, LogProb
+
 from fiber.gateway.llm.mapper.pydantic import BaseModel
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion_chunk import ChoiceDeltaToolCall

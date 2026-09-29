@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import uuid
+import time
 from typing import Any, Dict
 
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.gateway.llm.pipeline import PipelineSlot
 from fiber.llm.param import ModelResponse
+from fiber.llm.types.provider.core import Usage
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.gateway.llm.mapper.traverser import StateTraverser
 
@@ -22,9 +24,12 @@ class DebugTracer(BaseLLMTracer):
         self.ended = False
         self.error = False
         self.duration = 0.0
+        self.start_time = 0.0
 
     async def on_llm_start(self, meta: ExecutionMetadata, kwargs: Dict[str, Any]):
         self.started = True
+        self.start_time = time.time()
+        
         safe_kwargs = {k: v for k, v in kwargs.items() if k not in ["api_key", "headers", "interceptors", "pipeline_hooks"]}
         tracer_log.info(
             f"\n[🔍 LLM CALL INITIATED] \n"
@@ -38,8 +43,42 @@ class DebugTracer(BaseLLMTracer):
         self.ended = True
         self.duration = duration_ms
         
-        # StateTraverser를 이용한 우아한 데이터 추출
+        is_stream = hasattr(response, "__aiter__")
+        if is_stream:
+            tracer_log.info(
+                f"\n[🌊 LLM STREAM ESTABLISHED] \n"
+                f" ├─ Trace ID : {meta.trace_id}\n"
+                f" ├─ Handshake: {duration_ms:.2f} ms\n"
+                f" └─ Note     : Usage will be tracked dynamically at stream end."
+            )
+            
+            def deferred_stream_log(total_tokens: int, **kwargs):
+                real_duration = (time.time() - self.start_time) * 1000
+                tracer_log.info(
+                    f"\n[✅ STREAM COMPLETED] \n"
+                    f" ├─ Trace ID : {meta.trace_id}\n"
+                    f" ├─ Latency  : {real_duration:.2f} ms\n"
+                    f" └─ Usage    : {total_tokens} tokens"
+                )
+
+            hooks = meta.framework_flags.setdefault("on_stream_complete_hooks", [])
+            hooks.append(deferred_stream_log)
+            return
+
         total_tokens = StateTraverser.resolve(response, "usage.total_tokens", "N/A")
+        raw_resp = getattr(response, "raw", None)
+        
+        if raw_resp is not None:
+            raw_usage = StateTraverser.resolve(raw_resp, "usage_metadata")
+            if not raw_usage:
+                raw_usage = StateTraverser.resolve(raw_resp, "usage")
+
+            if raw_usage:
+                tracer_log.debug(f"[🔍 DEBUG] Original Raw API payload contains usage data: {raw_usage}")
+            else:
+                tracer_log.debug(f"[🔍 DEBUG] Original Raw API payload DOES NOT contain usage metadata. (Token usage is purely 0 from Provider: {meta.base_model})")
+        else:
+            tracer_log.debug(f"[🔍 DEBUG] 'response.raw' is missing for model {meta.base_model}. Cannot inspect original API payload.")
         
         tracer_log.info(
             f"\n[✅ LLM CALL COMPLETED] \n"
@@ -69,7 +108,7 @@ class DummySemanticCache(DuplexChannel):
                 id=f"cache-{uuid.uuid4()}",
                 model=msg.get("model", "cached-model"),
                 choices=[{"index": 0, "message": {"role": "assistant", "content": "[CACHED] Hit!"}, "finish_reason": "stop"}],
-                usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+                usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
             )
             await ctx.fire_channel_read(cached_response)
             return

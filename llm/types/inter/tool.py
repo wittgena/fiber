@@ -1,27 +1,5 @@
-# fiber.llm.types.llm.tool
-## @lineage: fiber.llm.router.llm.model.types.tool
-## @lineage: fiber.llm.router.ext.llm.model.types.tool
-## @lineage: fiber.dphi.model.ext.llm.model.types.tool
-## @lineage: dphi.model.ext.llm.model.types.tool
-## @lineage: phase.client.model.llm.model.types.tool
-## @lineage: phase.client.ext.llm.model.types.tool
-## @lineage: bound.client.ext.llm.model.types.tool
-## @lineage: ator.client.ext.llm.model.types.tool
-## @lineage: bound.eco.agent.llm.model.types.tool
-## @lineage: eco.bound.agent.llm.model.types.tool
-## @lineage: bound.agent.llm.model.types.tool
-## @lineage: ext.router.llm.model.types.tool
-## @lineage: router.llm.model.types.tool
-## @lineage: engine.router.llm.model.types.tool
-## @lineage: engine.eco.llm.model.types.tool
-## @lineage: runtime.engine.eco.llm.model.types.tool
-## @lineage: eco.llms.model.types.tool
-## @lineage: eco.adapter.types.tool
-## @lineage: eco.runtime.types.tool
-## @lineage: eco.llama.types.tool
-## @lineage: runtime.bound.llama.tools.types
-## @lineage: eco.bound.tools.types
-## @lineage: eco.llama.bound.tools.types
+# fiber.llm.types.inter.tool
+## @lineage: fiber.llm.types.llm.tool
 import asyncio
 import json
 import re
@@ -29,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
-from fiber.llm.types.llm.block import ContentBlock, TextBlock
+from fiber.llm.types.inter.block import ContentBlock, TextBlock
 from fiber.gateway.llm.mapper.pydantic import BaseModel, PrivateAttr
 from deprecated import deprecated
 

@@ -1,28 +1,8 @@
-# fiber.llm.router.handle.anthropic
-## @lineage: fiber.llm.router.llm.handle.anthropic
-## @lineage: fiber.llm.router.ext.llm.handle.anthropic
-## @lineage: fiber.dphi.model.ext.llm.handle.anthropic
-## @lineage: dphi.model.ext.llm.handle.anthropic
-## @lineage: phase.client.model.llm.handle.anthropic
-## @lineage: phase.client.ext.llm.handle.anthropic
-## @lineage: bound.client.ext.llm.handle.anthropic
-## @lineage: ator.client.ext.llm.handle.anthropic
-## @lineage: bound.eco.agent.llm.handle.anthropic
-## @lineage: eco.bound.agent.llm.handle.anthropic
-## @lineage: bound.agent.llm.handle.anthropic
-## @lineage: ext.router.llm.handle.anthropic
-## @lineage: router.llm.handle.anthropic
-## @lineage: engine.router.llm.handle.anthropic
-## @lineage: engine.eco.llm.handle.anthropic
-## @lineage: runtime.engine.eco.llm.handle.anthropic
-## @lineage: eco.llms.handle.anthropic
-## @lineage: eco.llama.llms.handle.anthropic
-## @lineage: eco.llama.llms.anthropic.utils
+# fiber.gateway.llm.handler.anthropic
+## @lineage: fiber.llm.router.handle.anthropic
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union, cast
-from fiber.llm.types.llm.block import (
+from fiber.llm.types.inter.block import (
     CachePoint,
-    ChatMessage,
-    ChatResponse,
     CitableBlock,
     CitationBlock,
     ContentBlock,
@@ -33,6 +13,8 @@ from fiber.llm.types.llm.block import (
     ThinkingBlock,
     ToolCallBlock,
 )
+
+from fiber.llm.types.inter.response import ChatMessage, ChatResponse
 
 from anthropic.types import (
     Base64PDFSourceParam,
