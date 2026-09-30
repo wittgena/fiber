@@ -226,12 +226,6 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ---
 
-기존의 핵심 철학(Dot-notation, Path Fallback)을 유지하면서, 새롭게 도입된 Zero-code JSON 주입 방식과 안전성(Validation)을 사용자가 직관적으로 이해할 수 있도록 스펙(Spec)에 가깝게 건조하고 압축적으로 재작성했습니다.
-
-기존 분량 대비 약 30% 정도만 늘려 가독성을 극대화한 개선안입니다.
-
----
-
 ### 1.3. State Traverser & Compat Registry
 
 The LLM ecosystem is fragmented. Fiber eliminates brittle `if/elif` parsing logic through its **Rule-based Traverser**. Using dot-notation and **Path Fallbacks**, it seamlessly navigates mixed topologies (Dicts, Lists, Pydantic Objects) across request parameters, sync responses, and async stream chunks.
@@ -239,10 +233,11 @@ The LLM ecosystem is fragmented. Fiber eliminates brittle `if/elif` parsing logi
 **Provider Extension:**
 To integrate a new provider or override existing parsing logic, you no longer need to modify Python code. Simply map their schema in an external JSON file and inject it via the `FIBER_COMPAT_RULES_PATH` environment variable.
 
-Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules. Invalid formats are safely ignored with a warning (Partial Update), ensuring your gateway never crashes at runtime.
+Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules. Invalid formats are safely ignored with a warning (Partial Update).
+
+**Ex: Export env - FIBER_COMPAT_RULES_PATH=/etc/fiber/compat_rules.json**
 
 ```json
-// Export env: FIBER_COMPAT_RULES_PATH=/etc/fiber/compat_rules.json
 {
   "provider_param_rules": {
     "my_custom_llm": {
