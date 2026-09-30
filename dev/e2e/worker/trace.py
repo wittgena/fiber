@@ -94,19 +94,15 @@ class AgentNetworkTracePipeline(PipelineRunner):
             req_id = req_data.get("id")
             
             try:
-                # 1. 워커가 임무를 완료했다고 가정하고 SDK를 통해 엄격한 DTO 규격의 Audit Event 방출 (출구로 배출)
                 audit_payload = StrictPayloadFactory.create_audit_payload(
                     actor="network-loopback-worker-01",
                     action="trace_execution",
                     message=f"Successfully processed trace intent: {req_id}"
                 )
-                await sdk_client.record_audit_event(audit_payload, payment_receipt=self.mock_receipt)
-                
-                # 2. NetworkTransport 에게 정상적인 JSON-RPC 성공 결과를 반환
+                await sdk_client.record_audit_event(audit_payload, fuel_receipt=self.mock_receipt)
                 return {"jsonrpc": "2.0", "id": req_id, "result": {"status": "SDK Audit Emitted and Resolved"}}
             except Exception as e:
                 return {"jsonrpc": "2.0", "id": req_id, "error": {"code": -32000, "message": str(e)}}
-        # =========================================================================
         
         u_config = uvicorn.Config(app=self.rest_app, host=self.config.host, port=self.config.port, log_level="error", access_log=False)
         self.server = ManagedTestServer(u_config)
@@ -122,7 +118,7 @@ class AgentNetworkTracePipeline(PipelineRunner):
 
         log.info(f"[{self.scope_name}] Igniting WorkerConnector with NetworkTransport...")
         
-        # [수정] 무한 루프(Recursion)를 방지하기 위해 NetworkTransport의 타겟을 방금 만든 가짜 워커로 지정
+        # 무한 루프(Recursion)를 방지하기 위해 NetworkTransport의 타겟을 방금 만든 가짜 워커로 지정
         loopback_url = f"{self.local_url}/mock-agent-trace"
         
         self.connector = WorkerConnector(

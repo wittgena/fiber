@@ -76,10 +76,8 @@ class EdgeWorkflow(Workflow):
                 event = await self._run_settlement_phase(cmd)
                 log.info(f"✅ [SETTLEMENT PHASE] PASSED")
                 return CommandMsg(self.fsm.apply(event))
-            
             else:
                 raise ValueError(f"Unknown Command: {cmd}")
-
         except Exception as e:
             log.error(f"❌ [WORKFLOW FAULT] Phase Execution Failed: {str(e)}")
             fallback_cmd = self.fsm.apply(PhaseFailedEvent(reason=str(e)))
@@ -97,10 +95,7 @@ class EdgeWorkflow(Workflow):
             "payload": cmd.payload, "signature": cmd.signature, "sig_algo": "ECDSA_SECP256K1"
         }
 
-        res = await self.client.post(f"{self.base_url}/v1/public/sandbox/quote", json=intent_payload, headers={"X-X402-Receipt": "pre_flight_check"})
-        res.raise_for_status() 
-        cost_usd = res.json().get("estimated_cost_usd", 0.001)
-
+        cost_usd = 0.001
         res = await self.client.post(f"{self.base_url}/v1/public/billing/invoice", json={
             "payee_address": "0x000000000000000000000000000000000000dEaD", 
             "amount_usdc": str(cost_usd), "resource_id": f"res_{uuid.uuid4().hex[:8]}"
@@ -114,7 +109,7 @@ class EdgeWorkflow(Workflow):
         audit_payload = StrictPayloadFactory.create_audit_payload(
             actor=cmd.client_id, action=cmd.action, message="E2E Client Intent Execution", require_proof=True
         )
-        audit_res = await self.sdk_client.record_audit_event(request=audit_payload, payment_receipt=invoice_id)
+        audit_res = await self.sdk_client.record_audit_event(request=audit_payload, fuel_receipt=invoice_id)
 
         actual_receipt = {
             "receipt_id": audit_res.get("request_id"),
@@ -131,9 +126,7 @@ class EdgeWorkflow(Workflow):
         telemetry_payload = StrictPayloadFactory.create_telemetry_payload(
             tenant_id="e2e-tenant", model_name="e2e-model", prompt_tokens=100, completion_tokens=50
         )
-        res_telemetry = await self.sdk_client.push_telemetry(
-            request=telemetry_payload, payment_receipt=cmd.audit_receipt.get("receipt_id")
-        )
+        res_telemetry = await self.sdk_client.push_telemetry(request=telemetry_payload, fuel_receipt=cmd.audit_receipt.get("receipt_id"))
         fingerprint = res_telemetry.get("fingerprint", "0x_hash")
         log.info(f"  └─ Zero-Trust Validated | Telemetry Sealed: {fingerprint[:16]}...")
         return CompliancePhaseCompletedEvent(otlp_hash=fingerprint)
@@ -228,7 +221,7 @@ class EdgeSuiteClientRunner:
 
     async def execute(self):
         self.log.info("\n" + "="*80)
-        self.log.info("🧪 [DPHI EDGE MASTER SUITE] Executing Pure Client Tests against CI Kernel")
+        self.log.info("🧪 [Fiber EDGE SUITE] Executing Pure Client Tests against CI Kernel")
         self.log.info("="*80)
         
         port = int(os.getenv("GATEWAY_PORT", 8000))

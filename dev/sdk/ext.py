@@ -5,10 +5,6 @@ from pydantic import BaseModel, Field, ValidationError
 
 from fiber.infra.rpc.client import InternalRpcClient, RpcException
 
-# =====================================================================
-# 1. Payload Models (Strict Validation for SDK Consumers)
-# =====================================================================
-
 class WalletInfoRequest(BaseModel):
     use_ledger: bool = False
 

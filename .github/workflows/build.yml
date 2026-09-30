@@ -89,6 +89,7 @@ jobs:
           DPHI_ENV: "local"
         run: |
           python -m dev.e2e.edge.client
+          python -m dev.e2e.edge.security
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()

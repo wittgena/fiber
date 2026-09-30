@@ -160,21 +160,21 @@ async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
     
     return {"status": "SUCCESS", "is_valid": is_valid, "message": "Cryptographically verified via Ledger/Oracle" if is_valid else "Mathematical verification failed (Tampered or Orphaned)"}
 
-"""Eco Compute & Billing Validation"""
-async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
-    receipt = params.get("payment_receipt")
-    if not receipt: return _build_error(401, "Payment receipt is missing")
+"""Eco Compute & Receipt Validation"""
+async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
+    receipt = params.get("fuel_receipt")
+    if not receipt: return _build_error(401, "Fuel receipt is missing")
         
     try:
         # TODO: Implement actual receipt validation logic here
         is_valid_receipt = True 
-        if not is_valid_receipt: return _build_error(402, "x402 Payment Required: Receipt is invalid or depleted.")
+        if not is_valid_receipt: return _build_error(402, "x402 Fuel Receipt Required: Receipt is invalid or depleted.")
         return {"status": "VALIDATED", "clearance": "GRANTED"}
     except Exception as e:
         log.error(f"Receipt Validation crashed: {e}")
         return _build_error(500, "Internal Billing Validation Error")
 
-async def handle_intent_validate(params: dict, ctx: WorkerContext) -> dict:
+async def handle_compute_intent_validate(params: dict, ctx: WorkerContext) -> dict:
     try: req = IntentValidationRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
@@ -259,13 +259,20 @@ async def handle_pta_balance(params: dict, ctx: WorkerContext) -> dict:
         log.error(f"PTA Balance check failed for {client_id}: {str(e)}")
         return _build_error(500, "Failed to read hot state balance.")
 
-async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
+async def handle_intent_estimate(params: dict, ctx: WorkerContext) -> dict:
     try: req = BilledExecutionRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-
     client_id = params.get("client_id", getattr(req, "client_id", "anonymous_agent"))
+
     try:
-        result = await ctx.profile_service.execute(client_id=client_id, schema=req.sandbox_schema, entry=req.target_entry, depth=req.context_depth, tier=Tier.STANDARD, dry_run=True)
+        result = await ctx.profile_service.execute(
+            client_id=client_id, 
+            schema=req.sandbox_schema, 
+            entry=req.target_entry,
+            depth=req.context_depth,
+            tier=Tier.STANDARD,
+            dry_run=True
+        )
         if result.status != "COHERENCE":
             log.warning(f"[Quote] Execution Divergence: {result.reason}")
             return _build_error(422, f"Quotation Rejected: {result.reason}")

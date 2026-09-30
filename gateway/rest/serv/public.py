@@ -28,7 +28,7 @@ from xphi.kernel.space.tunnel.subs import DistributedPubSub
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (
-    SandboxIntent,
+    HandshakeIntent,
     AuditReceipt,
     ExportLogsServiceRequest, 
     AuditLogRequest, 
@@ -86,48 +86,14 @@ async def get_public_keys(request: Request):
         headers={"X-Dphi-Root-Signature": trusted_state.root_signature}
     )
 
-
-"""COMPUTE SYMMETRY (QUOTE ↔ EXECUTE)"""
-@public_edge.post("/sandbox/quote", summary="Get Pre-flight Execution Quotation (Dry-run)")
-async def public_sandbox_quote(
-    intent: SandboxIntent,
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
-    rpc: InternalRpcClient = Depends(get_rpc_client)
-):
-    if x402_receipt:
-        val_req = IntentValidationRequest(
-            requester_id=intent.client_id,
-            responder_id=intent.responder_id or "edge-gateway-01",
-            action=intent.action,
-            max_fuel_budget=intent.max_fuel,
-            signature=intent.signature,
-            payment_receipt=x402_receipt
-        )
-        try:
-            await rpc.call("validate.compute.intent", val_req.model_dump(exclude_none=True))
-        except RpcException as e:
-            raise HTTPException(status_code=422, detail=f"Intent Validation Failed: {{\"detail\":\"{e.detail}\"}}")
-
-    exec_req = {
-        "sandbox_schema": {
-            "runtime": "python3.11-wasm",
-            "files": {"main.py": intent.payload}, 
-            "limits": {"max_fuel": intent.max_fuel}
-        },
-        "target_entry": "main.py",
-        "context_depth": 2
-    }
-    
-    return await rpc.call("eco.profile.quote", exec_req)
-
-"""ECONOMY SYMMETRY (INVOICE ↔ BALANCE & HANDSHAKE)"""
+"""INVOICE ↔ BALANCE & HANDSHAKE"""
 @public_edge.post(
-    "/sandbox/handshake", 
+    "/intent/handshake", 
     summary="Client Pre-flight Handshake (Quote & Invoice)",
     response_model=HandshakeResponse
 )
-async def public_sandbox_handshake(
-    intent: SandboxIntent,
+async def public_intent_handshake(
+    intent: HandshakeIntent,
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     quote_req = {

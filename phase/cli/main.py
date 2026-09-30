@@ -74,7 +74,7 @@ def run_daemon(
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
     
     # Simplified NODE_PROFILE routing: EDGE (lightweight) vs ALL (spawns workers)
-    is_edge_only = all(d in ["gateway_edge", "rest_edge"] for d in daemons_list)
+    is_edge_only = all(d in ["rest_edge"] for d in daemons_list)
     
     if is_edge_only:
         os.environ["NODE_PROFILE"] = "EDGE"

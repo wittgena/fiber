@@ -1,18 +1,59 @@
 # fiber.infra.rpc.ext
 import time
 from typing import Dict, Any, Optional
-from pydantic import ValidationError
+from pydantic import ValidationError, BaseModel, Field
 
 from fiber.infra.adapter.evm import Web3Adapter
 from fiber.infra.adapter.wallet import EthWalletAdapter
 from fiber.infra.transaction.rollup import RollupAdapter
 from fiber.infra.adapter.config.exchange import exchange_config, NetEnv
-from fiber.gateway.rest.serv.ext import X402PaymentRequest, DeferredSettlementRequest, WrapRequest
-
 from xphi.arch.bound.adapter.settlement import MandateAdapter, X402SettlementReceipt
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("rpc.ext")
+
+class WalletInfoResponse(BaseModel):
+    network_id: str
+    wallet_address: str
+    is_simulated: bool
+    mode: str
+
+class X402PaymentRequest(BaseModel):
+    payee_address: str
+    amount_usdc: str
+    resource_id: str
+    use_ledger: bool = False
+
+class PaymentStatusResponse(BaseModel):
+    status: str
+    message: str
+    receipt: Optional[Dict[str, Any]] = None
+
+class BalanceResponse(BaseModel):
+    address: str
+    eth_wei: str
+    weth_wei: str
+
+class WrapRequest(BaseModel):
+    caller_address: str
+    amount_wei: str
+    agent_alias: str = "beta"
+
+class WrapResponse(BaseModel):
+    status: str
+    tx_hash: str
+    message: str
+
+class DeferredSettlementRequest(BaseModel):
+    agent_address: str = Field(..., description="과금을 승인했던 에이전트의 L1 지갑 주소")
+    accrued_debt_usdc: str = Field(..., description="징수할 누적 금액 (예: '15.5')")
+    receipt_id: str = Field(..., description="부채가 기록된 X402 내부 영수증 ID")
+
+class DeferredSettlementResponse(BaseModel):
+    status: str
+    message: str
+    tx_hash: Optional[str] = None
+    settled_amount: str
 
 class ExtRpcService:
     def __init__(self):

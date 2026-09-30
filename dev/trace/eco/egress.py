@@ -64,7 +64,7 @@ class EcoEgressTracer(PipelineRunner):
             completion_tokens=50
         )
         
-        res = await self.sdk_client.push_telemetry(otlp_payload, payment_receipt=self.mock_receipt)
+        res = await self.sdk_client.push_telemetry(otlp_payload, fuel_receipt=self.mock_receipt)
         if res.get("status") == "success" and res.get("fingerprint") != "N/A":
             log.info(f"✅ OTLP Telemetry sealed and mapped to kernel fingerprint: {res['fingerprint']}")
         else:
@@ -78,7 +78,7 @@ class EcoEgressTracer(PipelineRunner):
             message="Audit egress path trace verification."
         )
         
-        res = await self.sdk_client.record_audit_event(audit_payload, payment_receipt=self.mock_receipt)
+        res = await self.sdk_client.record_audit_event(audit_payload, fuel_receipt=self.mock_receipt)
         if "hash" in res:
             log.info(f"✅ Audit Event sealed securely. Hash: {res['hash']}")
         else:

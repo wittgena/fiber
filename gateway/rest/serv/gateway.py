@@ -19,7 +19,6 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("serv.gateway")
 
 def _extract_error_message(error_detail: Any) -> str:
-    """Sandbox나 RPC에서 반환된 다양한 형태의 에러 객체에서 안전하게 메시지를 추출합니다."""
     if isinstance(error_detail, dict):
         return error_detail.get("message", str(error_detail))
     return str(error_detail) if error_detail else "Unknown Execution Fault"
@@ -41,21 +40,18 @@ class TransitionBridge:
         }
         log.info(f"[Bridge:Start] Ingress request received", extra=trace_ctx)
 
-        # 1. 외곽 망 보안 (Replay Attack 원천 차단)
+        # Perimeter security: Block replay attacks
         if not await self.nonce_protector.validate_and_lock_nonce(identity.nonce):
             log.warning(f"[Bridge:Security] REPLAY_ATTACK_DETECTED - Nonce lock failed", extra={"nonce": str(identity.nonce), **trace_ctx})
             raise HTTPException(status_code=423, detail="REPLAY_ATTACK_DETECTED")
 
-        # 2. 레거시 스키마 배려 제거. 오직 MCP 표준 _meta에만 신원 기록.
+        # Remove legacy schema fallbacks; enforce identity strictly via MCP _meta
         if "params" not in payload: payload["params"] = {}
         if "_meta" not in payload["params"]: payload["params"]["_meta"] = {}
         payload["params"]["_meta"]["user_id"] = str(identity.agent_uri)
 
-        # 3. 멱등성 매핑 (Idempotency Handling)
-        handle_id, is_new = await self.mapper.get_or_create_handle(
-            identity.target_server_id, identity.idempotency_key
-        )
-        
+        # Idempotency handling
+        handle_id, is_new = await self.mapper.get_or_create_handle(identity.target_server_id, identity.idempotency_key)
         trace_ctx["handle_id"] = str(handle_id)
         log.debug(f"[Bridge:Idempotency] Handle mapped", extra={"is_new": is_new, **trace_ctx})
 
@@ -96,19 +92,19 @@ class TransitionBridge:
             log.warning(f"[Bridge:Conflict] Transaction already in progress but state not queryable", extra=trace_ctx)
             return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
 
-        # MCP 표준 공시 및 초기화 메서드 식별
+        # Identify MCP discovery and initialization methods
         mcp_method = payload.get("method", "")
         is_discovery_phase = mcp_method in ("initialize", "tools/list", "prompts/list", "resources/list")
 
-        # 4. 보안 및 결제 검증 (DPoP & x402)
+        # Authentication & Fuel Validation (DPoP & X402)
+        # X402 and HTTP 402 are utilized strictly for execution fuel/quota management
         is_authenticated = False
-        
         if is_discovery_phase:
-            # 공시 단계는 결제/서명 없이 통과 허용 (Bypass)
+            # Bypass strict auth and fuel checks for discovery phases
             log.debug(f"[Bridge:Auth] Bypassing strict auth for discovery method: {mcp_method}", extra=trace_ctx)
             is_authenticated = True
         else:
-            # 실제 도구 실행 단계는 엄격한 서명 및 영수증 검증 수행
+            # Enforce strict DPoP signature and fuel receipt validation for execution phases
             if identity.proof_of_possession:
                 if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
                     log.warning(f"[Bridge:Auth] DPoP Verification Failed", extra=trace_ctx)
@@ -117,22 +113,21 @@ class TransitionBridge:
 
             if identity.receipt:
                 try:
-                    await rpc.call("validate.billing.receipt", {
+                    await rpc.call("validate.fuel.receipt", {
                         "target_server_id": identity.target_server_id,
-                        # [버그 픽스] nested dict에서 action 이름 정확히 추출
                         "action": payload.get("params", {}).get("name", "unknown_tool"),
-                        "payment_receipt": identity.receipt
+                        "fuel_receipt": identity.receipt
                     })
                     is_authenticated = True
                 except RpcException as e:
-                    log.warning(f"[Bridge:Billing] Payment rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
-                    raise HTTPException(status_code=e.status_code, detail=f"Payment/Intent Rejected: {e.detail}")
+                    log.warning(f"[Bridge:Fuel] Fuel validation rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
+                    raise HTTPException(status_code=e.status_code, detail=f"Fuel/Intent Rejected: {e.detail}")
 
         if not is_authenticated:
             log.warning(f"[Bridge:Auth] Missing Authentication or Receipt", extra=trace_ctx)
-            raise HTTPException(status_code=401, detail="Authentication (DPoP) or Payment Receipt (X402) missing.")
+            raise HTTPException(status_code=401, detail="Authentication (DPoP) or Fuel Receipt (X402) missing.")
 
-        # 5. 상태 씰링 및 실행 지시 (EXECUTE Intent)
+        # Seal state and dispatch EXECUTE Intent
         await rpc.call("mcp.state.pending.seal", {
             "handle_id": handle_id,
             "payload": payload,
@@ -144,7 +139,6 @@ class TransitionBridge:
             payload={"handle_id": handle_id, "action": "EXECUTE", "payload": payload}
         )
         log.info(f"[Bridge:Intent] EXECUTE Intent published to queue", extra=trace_ctx)
-
         return await self._wait_for_resolution(handle_id, identity.target_server_id, rpc, trace_ctx)
 
     async def _wait_for_resolution(self, handle_id: str, target_server_id: str, rpc: InternalRpcClient, trace_ctx: Dict[str, Any]) -> Union[Dict[str, Any], JSONResponse]:
@@ -264,8 +258,6 @@ async def discover_tools(
         nonce=uuid.uuid4().hex,
         idempotency_key=uuid.uuid4().hex
     )
-    
-    # 순수 MCP 표준 payload(tools/list) 조립
     discovery_payload = {
         "jsonrpc": "2.0",
         "id": "discovery_" + ephemeral_identity.idempotency_key[:8],
@@ -274,12 +266,11 @@ async def discover_tools(
     }
     
     try:
-        # invoke_mcp_sync의 is_discovery_phase 조건에 의해 자동 Bypass 처리됨
         result = await adapter.invoke_mcp_sync(
             identity=ephemeral_identity,
             payload=discovery_payload,
             target_uri=str(request.url),
-            target_method="POST", # 워커 통신을 위해 내부적으로는 POST 인텐트로 전환
+            target_method="POST",
             rpc=rpc
         )
         return result
