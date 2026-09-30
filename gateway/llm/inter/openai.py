@@ -49,7 +49,7 @@ from fiber.llm.types.inter.response import (
 from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
-from fiber.gateway.llm.inter.base import LLM
+from fiber.gateway.llm.inter.base import InterLLM
 from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.llm.router.util import parse_partial_json
@@ -79,7 +79,6 @@ from openai.types.chat.chat_completion_chunk import (
     ChoiceDelta,
     ChoiceDeltaToolCall,
 )
-from fiber.llm.router.dispatcher import dispatcher
 
 if TYPE_CHECKING:
     from fiber.llm.types.inter.tool import BaseTool
@@ -125,7 +124,7 @@ def force_single_tool_call(response: ChatResponse) -> None:
             if not isinstance(block, ToolCallBlock)
         ] + [tool_calls[0]]
 
-class OpenAI(LLM):
+class OpenAI(InterLLM):
     model: str = Field(
         default=DEFAULT_OPENAI_MODEL, description="The OpenAI model to use."
     )

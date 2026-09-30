@@ -14,7 +14,10 @@ FLAG_KEYS = {
     "use_litellm_proxy", "logger_fn", "verbose", "disable_add_transform_inline_image_block", "log_delegator"
 }
 
-PROVIDER_ALIAS = {"vertex_ai_beta": "vertex_ai", "text-completion-openai": "openai", "azure_ai": "azure", "ollama_chat": "ollama"}
+PROVIDER_ALIAS = {
+    "vertex_ai_beta": "vertex_ai", "text-completion-openai": "openai", "azure_ai": "azure", "ollama_chat": "ollama",
+    "claude": "anthropic", "anthropic_chat": "anthropic"
+}
 OPENAI_REGIONAL_HOSTS = {"eu.api.openai.com": "eu", "us.api.openai.com": "us"}
 
 PROVIDER_PARAM_RULES = {
@@ -22,23 +25,50 @@ PROVIDER_PARAM_RULES = {
         "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
         "mapping": {},
         "wrap_in": {},
-        "tool_format": "standard"
+        "tool_format": "standard",
+        "role_mapping": {"developer": "system"}, 
+        "system_param": None 
+    },
+    "openai": {
+        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
+        "mapping": {},
+        "wrap_in": {},
+        "tool_format": "standard",
+        "role_mapping": {}, 
+        "system_param": None
+    },
+    "azure": {
+        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
+        "mapping": {},
+        "wrap_in": {},
+        "tool_format": "standard",
+        "role_mapping": {},
+        "system_param": None
     },
     "gemini": {
         "supported": ["temperature", "top_p", "top_k", "max_tokens", "max_completion_tokens", "stream", "tools", "tool_choice", "response_format", "n", "stop", "presence_penalty", "frequency_penalty"],
-        "mapping": {
-            "max_tokens": "max_output_tokens",
-            "max_completion_tokens": "max_output_tokens",
-            "stop": "stop_sequences"
-        },
+        "mapping": {"max_tokens": "max_output_tokens", "max_completion_tokens": "max_output_tokens", "stop": "stop_sequences"},
         "wrap_in": {},
-        "tool_format": "gemini_strict"
+        "tool_format": "gemini_strict",
+        "role_mapping": {"developer": "system"},
+        "system_param": None,
+        "supports_tools": True 
+    },
+    "anthropic": {
+        "supported": ["temperature", "top_p", "top_k", "stop", "stream", "max_tokens", "max_completion_tokens", "tools", "tool_choice", "thinking", "metadata", "user"],
+        "mapping": {"max_completion_tokens": "max_tokens", "stop": "stop_sequences"},
+        "wrap_in": {},
+        "tool_format": "anthropic",
+        "role_mapping": {"developer": "system"},
+        "system_param": None 
     },
     "ollama": {
         "supported": ["temperature", "top_p", "top_k", "stream", "tools", "format", "options", "num_ctx", "seed"],
         "mapping": {},
         "wrap_in": {"options": ["temperature", "top_p", "top_k", "num_ctx", "seed"]},
-        "tool_format": "standard"
+        "tool_format": "standard",
+        "role_mapping": {"developer": "system"},
+        "system_param": None
     }
 }
 

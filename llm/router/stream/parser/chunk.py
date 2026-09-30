@@ -2,7 +2,8 @@
 import json
 from typing import Any, Dict, List, Optional, Union
 from typing_extensions import TypedDict
-from fiber.llm.compat.stream import STREAM_EXTRACTION_RULES, PROVIDER_RULE_ALIAS
+from fiber.llm.compat.registry import STREAM_EXTRACTION_RULES
+from fiber.llm.compat.stream import PROVIDER_RULE_ALIAS
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("chunk.parser")
@@ -175,7 +176,6 @@ class StreamChunkParser:
 
     @staticmethod
     def _extract_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, Any]]:
-        """✨ [개선] Usage 규칙이 복잡한 경우(사전 매핑 및 다중 폴백)를 안전하게 처리"""
         if not usage_rule:
             return None
             

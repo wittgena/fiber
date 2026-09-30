@@ -297,14 +297,7 @@ def get_template_vars(template_str: str) -> List[str]:
             variables.append(variable_name)
     return variables
 
-
-# ==========================================
-# 4. LLM Domain Data Models
-# ==========================================
 class ToolSelection(BaseModel):
-    """
-    LLM이 선택한 도구(Tool)와 매개변수를 담는 표준 데이터 모델.
-    """
     tool_id: str = Field(description="Tool ID to select.")
     tool_name: str = Field(description="Tool name to select.")
     tool_kwargs: Dict[str, Any] = Field(description="Keyword arguments for the tool.")
@@ -312,10 +305,6 @@ class ToolSelection(BaseModel):
     @field_validator("tool_kwargs", mode="wrap")
     @classmethod
     def ignore_non_dict_arguments(cls, v: Any, handler: Any) -> Dict[str, Any]:
-        """
-        LLM이 잘못된 타입(예: 문자열 등)으로 인자를 반환할 경우, 
-        에러를 발생시키지 않고 빈 딕셔너리로 안전하게 치환(Fail-safe).
-        """
         try:
             return handler(v)
         except ValidationError:
@@ -331,7 +320,6 @@ class MessagesToPromptType(Protocol):
     """채팅 메시지 리스트를 단일 문자열 프롬프트로 변환하는 함수의 프로토콜"""
     def __call__(self, messages: Sequence[ChatMessage]) -> str:
         pass
-
 
 @runtime_checkable
 class CompletionToPromptType(Protocol):
@@ -350,24 +338,17 @@ CompletionToPromptCallable = Annotated[
     WithJsonSchema({"type": "string"}),
 ]
 
-
-# ==========================================
-# 6. LLM Stream Generator Utilities
-# ==========================================
 def stream_completion_response_to_tokens(
     completion_response_gen: CompletionResponseGen,
 ) -> TokenGen:
-    """Completion 응답 제너레이터를 단순 텍스트 토큰 제너레이터로 변환"""
     def gen() -> TokenGen:
         for response in completion_response_gen:
             yield response.delta or ""
     return gen()
 
-
 def stream_chat_response_to_tokens(
     chat_response_gen: ChatResponseGen,
 ) -> TokenGen:
-    """Chat 응답 제너레이터를 단순 텍스트 토큰 제너레이터로 변환"""
     def gen() -> TokenGen:
         for response in chat_response_gen:
             yield response.delta or ""
@@ -377,40 +358,27 @@ def stream_chat_response_to_tokens(
 async def astream_completion_response_to_tokens(
     completion_response_gen: CompletionResponseAsyncGen,
 ) -> TokenAsyncGen:
-    """(비동기) Completion 응답 제너레이터를 단순 텍스트 토큰 제너레이터로 변환"""
     async def gen() -> TokenAsyncGen:
         async for response in completion_response_gen:
             yield response.delta or ""
     return gen()
 
-
 async def astream_chat_response_to_tokens(
     chat_response_gen: ChatResponseAsyncGen,
 ) -> TokenAsyncGen:
-    """(비동기) Chat 응답 제너레이터를 단순 텍스트 토큰 제너레이터로 변환"""
     async def gen() -> TokenAsyncGen:
         async for response in chat_response_gen:
             yield response.delta or ""
     return gen()
 
-
 def default_completion_to_prompt(prompt: str) -> str:
-    """별도의 변환 없이 프롬프트를 그대로 반환하는 기본 콜백"""
     return prompt
 
-
-# ==========================================
-# 7. Reflection & Compatibility Utilities
-# ==========================================
 @functools.lru_cache(maxsize=1000)
 def _supports_tool_required(cls: Type[Any], tool_required: bool) -> bool:
-    """
-    주어진 클래스(LLM)가 `tool_required` 인자를 네이티브로 지원하는지 검사합니다.
-    """
     supported = (
         "tool_required" in inspect.signature(cls._prepare_chat_with_tools).parameters
     )
-    
     if not supported and tool_required:
         logger.warning(
             f"The 'tool_required' parameter is not supported by this version of {cls.__name__}. "

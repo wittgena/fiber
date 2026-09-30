@@ -2,6 +2,7 @@
 import asyncio
 import time
 import copy
+import re
 from typing import Optional, Any, AsyncGenerator
 
 from fiber.llm.response import ModelResponse
@@ -11,10 +12,57 @@ from fiber.llm.router.stream.parser.chunk import StreamChunkParser
 from fiber.llm.model.registry.adapter import AdapterRegistry
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRManager
 
+# --- Exception Mapping Imports ---
+from fiber.llm.exception.mapping import STATUS_CODE_MAPPING, SEMANTIC_ERROR_REGEX
+import fiber.llm.exception.eco as eco_exceptions
+
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.bound.event.next import next_trace_id
 
 log = get_emitter("llm.vcr.proxy")
+
+def _reconstruct_vcr_exception(exc_data: dict, provider: str, model: str) -> Exception:
+    """
+    VCR에 기록된 텍스트 기반 에러 데이터를 프레임워크 표준 에러 객체로 복원합니다.
+    """
+    error_type = exc_data.get("error_type", "Exception")
+    message = exc_data.get("message", "")
+    replay_msg = f"[VCR Replay] {message}"
+    
+    # 1. 텍스트 내에서 상태 코드(4xx, 5xx) 추출
+    status_code = None
+    match = re.search(r"\b([45]\d{2})\b", message)
+    if match:
+        status_code = int(match.group(1))
+
+    # 2. Semantic 정규식 맵핑 시도
+    for pattern, exception_class in SEMANTIC_ERROR_REGEX:
+        if pattern.search(message):
+            try:
+                return exception_class(message=replay_msg, model=model, llm_provider=provider)
+            except Exception:
+                pass # 파라미터 시그니처 미스매치 시 다음 단계로 폴백
+
+    # 3. 상태 코드 기반 맵핑 시도
+    if status_code and status_code in STATUS_CODE_MAPPING:
+        exception_class = STATUS_CODE_MAPPING[status_code]
+        try:
+            return exception_class(message=replay_msg, model=model, llm_provider=provider)
+        except Exception:
+            pass
+
+    # 4. 프레임워크 표준 예외 클래스(eco 모듈) 직접 매칭 시도
+    if hasattr(eco_exceptions, error_type):
+        exception_class = getattr(eco_exceptions, error_type)
+        try:
+            return exception_class(message=replay_msg, llm_provider=provider, model=model)
+        except Exception:
+            pass
+
+    # 5. 최후의 보루 (파이썬 내장 에러 또는 기본 Exception)
+    error_class = __builtins__.get(error_type, Exception)
+    return error_class(replay_msg)
+
 
 async def stream_recorder_proxy(
     original_stream: AsyncGenerator, 
@@ -31,7 +79,11 @@ async def stream_recorder_proxy(
     buffer_text = ""
     buffer_time = 0.0
     
-    provider = getattr(ctx, "custom_llm_provider", "openai")
+    # Provider 추출 로직 (변수명 오류 교정: safe_ctx -> ctx)
+    provider = getattr(ctx, "custom_llm_provider", None)
+    if not provider:
+        model_name = getattr(ctx, "model", "")
+        provider = model_name.split("/")[0] if "/" in model_name else "openai"
     
     def flush_buffer(f_reason: Optional[str] = None):
         nonlocal buffer_text, buffer_time
@@ -138,8 +190,10 @@ async def stream_player_emulator(
 
     exc = fixture_data.get("exception_boundary", {})
     if exc.get("occurred"):
-        error_class = __builtins__.get(exc["error_type"], Exception) 
-        raise error_class(exc["message"])
+        # ✨ 프레임워크 표준 예외 복원 로직 적용
+        provider = fixture_data.get("request_context", {}).get("provider", "unknown")
+        raise _reconstruct_vcr_exception(exc, provider, model_name)
+
 
 class VCRAdapterProxy:
     def __init__(self, original_adapter: Any, manager: VCRManager):
@@ -171,8 +225,12 @@ class VCRAdapterProxy:
             if not is_stream and fixture["exception_boundary"]["occurred"]:
                 if self.config.chaos_latency_ms > 0:
                     await asyncio.sleep(self.config.chaos_latency_ms / 1000.0)
-                exc = fixture["exception_boundary"]
-                raise __builtins__.get(exc["error_type"], Exception)(exc["message"])
+                
+                # ✨ 프레임워크 표준 예외 복원 로직 적용
+                provider = getattr(safe_ctx, "custom_llm_provider", None)
+                if not provider:
+                    provider = model_name.split("/")[0] if "/" in model_name else "openai"
+                raise _reconstruct_vcr_exception(fixture["exception_boundary"], provider, model_name)
 
             if is_stream:
                 return stream_player_emulator(fixture, self.config, model_name)
@@ -207,13 +265,19 @@ class VCRAdapterProxy:
                     return stream_recorder_proxy(response, fixture_data, self.manager, trace_id, start_time, safe_ctx)
                 else:
                     duration = (time.perf_counter() - start_time) * 1000
-                    
-                    # ✨ [수정] Provider를 식별하고 StateMapper로 파싱을 위임 (하드코딩 제거)
-                    provider = getattr(safe_ctx, "custom_llm_provider", "openai")
+                    provider = getattr(safe_ctx, "custom_llm_provider", None)
+                    if not provider:
+                        model_name = getattr(safe_ctx, "model", "")
+                        provider = model_name.split("/")[0] if "/" in model_name else "openai"
+
                     content, usage_dict = StateMapper.extract_sync_response(response, provider)
                     
                     if usage_dict:
                         fixture_data["usage"] = usage_dict
+                        if hasattr(response, "usage"):
+                            for k, v in usage_dict.items():
+                                if hasattr(response.usage, k):
+                                    setattr(response.usage, k, v)
 
                     fixture_data["network_metrics"]["ttfb_ms"] = duration
                     fixture_data["network_metrics"]["total_duration_ms"] = duration
@@ -234,7 +298,6 @@ class VCRAdapterProxy:
                 }
                 self.manager.save_fixture(trace_id, fixture_data, safe_ctx)
             raise
-
 
 class VCRInjector:
     @staticmethod

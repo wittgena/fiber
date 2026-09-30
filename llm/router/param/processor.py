@@ -2,20 +2,22 @@
 from __future__ import annotations
 import copy
 from urllib.parse import urlparse
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, Callable
 import httpx
 from pydantic import BaseModel
 from openai.lib import _parsing, _pydantic
 
-from xphi.arch.bound.client.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT
 from fiber.llm.model.provider.resolver import _resolver_instance
 from fiber.llm.types.provider.core import Usage
 from fiber.llm.exception.eco import UnsupportedParamsError
 from fiber.llm.types.provider.openai import ValidUserMessageContentTypes
 from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import ExecutionMetadata, CompletionContext, EmbeddingContext
-from fiber.llm.compat.param import FRAMEWORK_KWARGS, AUTH_PREFIXES, FLAG_KEYS, PROVIDER_ALIAS, OPENAI_REGIONAL_HOSTS, PROVIDER_PARAM_RULES, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
+from fiber.llm.compat.param import FRAMEWORK_KWARGS, AUTH_PREFIXES, FLAG_KEYS, PROVIDER_ALIAS, OPENAI_REGIONAL_HOSTS, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
+from fiber.llm.compat.registry import PROVIDER_PARAM_RULES
+
 from xphi.arch.contract.config.resolver import config
+from xphi.arch.bound.client.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("param.processor")
@@ -36,7 +38,6 @@ def _delete_nested_path(data: Dict, path: str):
     except Exception:
         pass
 
-
 def _to_json_schema(model_or_dict: Any) -> Optional[dict]:
     if not model_or_dict: return None
     if isinstance(model_or_dict, dict): return model_or_dict
@@ -46,21 +47,64 @@ def _to_json_schema(model_or_dict: Any) -> Optional[dict]:
         "json_schema": {"schema": _pydantic.to_strict_json_schema(model_or_dict), "name": model_or_dict.__name__, "strict": True}
     }
 
-## for preserve for comparison
-# def _delete_nested_path(data: Dict, path: str):
-#     try:
-#         segments = re.findall(r"[^\.\[]+|\[[^\]]*\]", path)
-#         curr = data
-#         for i, seg in enumerate(segments):
-#             is_last = (i == len(segments) - 1)
-#             key = int(seg[1:-1]) if seg.startswith("[") else seg
-#             if is_last:
-#                 if isinstance(curr, dict): curr.pop(key, None)
-#                 elif isinstance(curr, list) and isinstance(key, int) and 0 <= key < len(curr): curr.pop(key)
-#             else:
-#                 curr = curr[key]
-#     except Exception: pass
+# -------------------------------------------------------------
+# Tool Formatters (선언적 디스패치 전략)
+# -------------------------------------------------------------
+def _format_standard_tools(tools: List[dict], choice: Any) -> Dict[str, Any]:
+    res: Dict[str, Any] = {"tools": tools}
+    if choice: res["tool_choice"] = choice
+    return res
 
+def _format_anthropic_tools(tools: List[dict], choice: Any) -> Dict[str, Any]:
+    anthropic_tools = []
+    for t in tools:
+        if t.get("type") == "function" and "function" in t:
+            func = t["function"]
+            anthropic_tools.append({
+                "name": func.get("name", ""),
+                "description": func.get("description", ""),
+                "input_schema": func.get("parameters", {"type": "object", "properties": {}})
+            })
+    res: Dict[str, Any] = {"tools": anthropic_tools}
+    if choice:
+        if isinstance(choice, str):
+            res["tool_choice"] = {"type": choice}
+        elif isinstance(choice, dict) and choice.get("function", {}).get("name"):
+            res["tool_choice"] = {"type": "tool", "name": choice["function"]["name"]}
+    return res
+
+def _format_gemini_strict_tools(tools: List[dict], choice: Any) -> Dict[str, Any]:
+    declarations = []
+    for t in tools:
+        if t.get("type") == "function" and "function" in t:
+            func = dict(t["function"]) 
+            func.pop("summary", None)
+            params = func.get("parameters", {})
+            if params:
+                CompletionProcessor._gemini_strict_tool_transform(params)
+                func["parameters"] = params
+            declarations.append(func)
+    
+    res: Dict[str, Any] = {"tools": [{"function_declarations": declarations}] if declarations else []}
+    
+    if choice and choice != "auto" and isinstance(choice, dict) and choice.get("function", {}).get("name"):
+        res["tool_config"] = {
+            "function_calling_config": {
+                "mode": "ANY",
+                "allowed_function_names": [choice["function"]["name"]]
+            }
+        }
+    return res
+
+TOOL_FORMATTERS: Dict[str, Callable[[List[dict], Any], Dict[str, Any]]] = {
+    "standard": _format_standard_tools,
+    "anthropic": _format_anthropic_tools,
+    "gemini_strict": _format_gemini_strict_tools,
+}
+
+# -------------------------------------------------------------
+# Base Processor
+# -------------------------------------------------------------
 class BaseProcessor:
     def __init__(self, task_type: str, model: str, raw_kwargs: dict):
         self.task_type = task_type
@@ -125,12 +169,12 @@ class BaseProcessor:
         optional_params = {}
         mapping_rule = rules.get("mapping", {})
         
-        # 선언적 1:1 맵핑
+        # 1. 선언적 1:1 맵핑
         for key, val in non_defaults.items():
             mapped_key = mapping_rule.get(key, key)
             optional_params[mapped_key] = val
 
-        # 선언적 구조화 (Wrap in Dict - 예: Ollama의 options)
+        # 2. 선언적 구조화 (Wrap in Dict)
         wrap_rule = rules.get("wrap_in", {})
         for wrap_key, target_keys in wrap_rule.items():
             wrap_dict = optional_params.get(wrap_key, {})
@@ -140,18 +184,18 @@ class BaseProcessor:
             if wrap_dict:
                 optional_params[wrap_key] = wrap_dict
 
-        # Ollama 특수 룰 (Tools 존재 시 JSON 포맷 강제)
+        # 3. Ollama 특수 룰
         if self.provider_key == "ollama" and any(k in optional_params for k in ["functions", "tools", "function_call"]):
             optional_params["format"] = "json"
 
-        # Passthrough (extra_body) 처리
+        # 4. Passthrough (extra_body) 처리
         is_openai_compatible = self.provider in ["openai", "azure"] + getattr(config, "openai_compatible_providers", [])
         if is_openai_compatible:
             extra = self.original_kwargs.get("extra_body", {})
             if extra:
                 optional_params["extra_body"] = {**optional_params.get("extra_body", {}), **extra}
 
-        # 6. ✨ 명시적 드롭 경로 처리 (단순화된 삭제 로직 적용)
+        # 5. 명시적 드롭 경로 처리
         add_drops = self.original_kwargs.get("additional_drop_params", [])
         for path in add_drops:
             if "." in path:
@@ -161,7 +205,9 @@ class BaseProcessor:
 
         return optional_params
 
-
+# -------------------------------------------------------------
+# Completion Processor
+# -------------------------------------------------------------
 class CompletionProcessor(BaseProcessor):
     def __init__(self, model: str, messages: List, kwargs: dict):
         super().__init__(task_type="chat", model=model, raw_kwargs=kwargs)
@@ -188,9 +234,8 @@ class CompletionProcessor(BaseProcessor):
         if "tools" not in non_defaults:
             return
 
-        is_supported = _resolver_instance.supports_function_calling(self.model, self.provider)
-        if self.provider_key == "gemini": is_supported = True
-            
+        # 룰셋 기반의 Function Calling 지원 여부 파악
+        is_supported = rules.get("supports_tools", _resolver_instance.supports_function_calling(self.model, self.provider))
         if not is_supported:
             if self.drop_flag: 
                 non_defaults.pop("tools", None)
@@ -199,7 +244,8 @@ class CompletionProcessor(BaseProcessor):
                 raise UnsupportedParamsError(status_code=500, message=f"Function calling unsupported by {self.provider} ({self.model}).")
             return
 
-        tools = non_defaults["tools"]
+        tools = non_defaults.pop("tools")
+        choice = non_defaults.pop("tool_choice", None)
         formatted_tools = [t.model_dump(exclude_none=True) if isinstance(t, BaseModel) else (t.copy() if isinstance(t, dict) else t) for t in tools]
         
         # 기본 OpenAI 표준 클리닝
@@ -210,43 +256,23 @@ class CompletionProcessor(BaseProcessor):
             if params and "additionalProperties" in params and not params["additionalProperties"]:
                 params.pop("additionalProperties", None)
 
+        # 전략 패턴(Strategy)을 이용한 선언적 디스패치
         tool_format = rules.get("tool_format", "standard")
+        formatter = TOOL_FORMATTERS.get(tool_format, _format_standard_tools)
+        transformed = formatter(formatted_tools, choice)
         
-        # 🚨 [특수 룰] Gemini Protobuf 규격 변환 트리거
-        if tool_format == "gemini_strict":
-            gemini_declarations = []
-            for t in formatted_tools:
-                if t.get("type") == "function" and "function" in t:
-                    func = dict(t["function"]) 
-                    func.pop("summary", None)
-                    params = func.get("parameters", {})
-                    if params:
-                        self._gemini_strict_tool_transform(params)
-                        func["parameters"] = params
-                    gemini_declarations.append(func)
-            
-            non_defaults["tools"] = [{"function_declarations": gemini_declarations}] if gemini_declarations else []
-            
-            # tool_choice 구조 매핑
-            tc = non_defaults.pop("tool_choice", None)
-            if tc and tc != "auto" and isinstance(tc, dict) and tc.get("function", {}).get("name"):
-                non_defaults["tool_config"] = {
-                    "function_calling_config": {
-                        "mode": "ANY",
-                        "allowed_function_names": [tc["function"]["name"]]
-                    }
-                }
-        else:
-            non_defaults["tools"] = formatted_tools
-
+        non_defaults.update(transformed)
         if not non_defaults.get("tools"): 
             non_defaults.pop("tools", None)
 
-    def _prepare_messages(self) -> List[dict]:
+    def _prepare_messages(self, rules: dict) -> List[dict]:
         msgs = []
+        role_map = rules.get("role_mapping", {})
+
         for i, m in enumerate(copy.deepcopy(self.original_messages)):
-            if not m.get("role"): m["role"] = "assistant"
-            if self.provider_key not in ("openai", "azure") and m.get("role") == "developer": m["role"] = "system"
+            role = m.get("role", "assistant")
+            role = role_map.get(role, role) # 룰 기반 역할 치환 (하드코딩 제거)
+            m["role"] = role
             
             cleaned = {k: v for k, v in (m.model_dump(exclude_none=True) if isinstance(m, BaseModel) else m).items() if v is not None}
             if cleaned["role"] == "user" and isinstance(cleaned.get("content"), list):
@@ -257,11 +283,10 @@ class CompletionProcessor(BaseProcessor):
         return msgs
 
     def build(self) -> CompletionContext:
-        msgs = self._prepare_messages()
+        rules = PROVIDER_PARAM_RULES.get(self.provider_key, PROVIDER_PARAM_RULES["defaults"])
+        msgs = self._prepare_messages(rules)
         non_defaults = self._extract_non_defaults()
         
-        # 룰 레지스트리 획득 및 툴 정규화 주입
-        rules = PROVIDER_PARAM_RULES.get(self.provider_key, PROVIDER_PARAM_RULES["defaults"])
         self._normalize_tools(non_defaults, rules)
         
         if "response_format" in non_defaults:
@@ -297,6 +322,9 @@ class CompletionProcessor(BaseProcessor):
             deployment_id=self.original_kwargs.get("deployment_id"), original_kwargs=self.original_kwargs
         )
 
+# -------------------------------------------------------------
+# Embedding Processor
+# -------------------------------------------------------------
 class EmbeddingProcessor(BaseProcessor):
     def __init__(self, model: str, input_data: Union[str, List[str]], kwargs: dict):
         super().__init__(task_type="embedding", model=model, raw_kwargs=kwargs)

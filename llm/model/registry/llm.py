@@ -2,9 +2,7 @@
 import importlib
 import inspect
 import pkgutil
-import json
-from pathlib import Path
-from typing import Dict, Any, Optional, Set, List, Union
+from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
 from fiber.llm.model.provider.registry import get_model_cost_registry
@@ -13,126 +11,11 @@ import fiber.gateway.llm.inter as llm_pkg
 from xphi.watcher.plane.emitter import get_emitter
 
 registry_log = get_emitter("registry.llm")
-resolver_log = get_emitter("resolver.ext")
 
 _LLM_PKG_NAME = llm_pkg.__name__
 
-DEFAULT_RULESET = {
-    "constants": {
-        "owner": "ext-phase",
-        "tag": "v0.14.22",
-        "repo_name": "inter-llama",
-        "core_namespace": "llama_index",
-        "api_base": "https://api.github.com/repos",
-        "raw_base": "https://raw.githubusercontent.com",
-        "local_path": "anchor/ext/inter-llama"
-    },
-    "templates": {
-        "local": "{local_path}/llama-index-integrations/{category}",
-        "repo": "https://github.com/{owner}/{repo_name}.git",
-        "source": "llama-index-integrations/{category_pkg}/llama-index-{category_dir}-{name_dir}/{core_namespace}/{category_pkg}/{name_pkg}",
-        "api": "{api_base}/{owner}/{repo_name}/contents/llama-index-integrations/{category}",
-        "api_content": "{api_base}/{owner}/{repo_name}/contents/llama-index-integrations/{category_pkg}/llama-index-{category_dir}-{name_dir}/{core_namespace}/{category_pkg}/{name_pkg}",
-        "raw": "{raw_base}/{owner}/llama_index/{tag}/llama-index-integrations/{category}/llama-index-{category_dir}-{name_dir}",
-        "prefix": "llama-index-{category_dir}-"
-    },
-    "routes": {
-        "local": "local",
-        "repo": "repo",
-        "source": "source",
-        "api": "api",
-        "api_content": "api_content",
-        "raw": "raw",
-        "prefix": "prefix"
-    },
-    "base_class": { "LLMBase", "LLM", "FcLLM", "OpenAILike"}
-}
+KNOWN_BASE_CLASSES = {"LLMBase", "LLM", "InterLLM", "OpenAILike"}
 
-class ExtResolver:
-    _RULESET_PATH = Path(__file__).parent / "ruleset.json"
-    RULES = DEFAULT_RULESET.copy()
-    
-    try:
-        if _RULESET_PATH.exists():
-            with open(_RULESET_PATH, "r", encoding="utf-8") as f:
-                RULES.update(json.load(f))
-                resolver_log.debug(f"[init] Successfully loaded custom ruleset from {_RULESET_PATH}")
-    except (json.JSONDecodeError, IOError) as e:
-        resolver_log.warning(f"Failed to load {_RULESET_PATH}. Using DEFAULT_RULESET. Error: {e}")
-
-    @classmethod
-    def _ctx(cls, **kwargs) -> Dict[str, Any]:
-        ctx = {**cls.RULES["constants"], **kwargs}
-        category = ctx.setdefault("category", "llms")
-
-        ctx["category_pkg"] = category.replace("-", "_")
-        ctx["category_dir"] = category.replace("_", "-")
-        if "name" in ctx:
-            name = ctx["name"]
-            ctx["name_pkg"] = name.replace("-", "_")
-            ctx["name_dir"] = name.replace("_", "-")
-            
-        resolver_log.debug(f"[_ctx] Generated context keys: {list(ctx.keys())}")
-        return ctx
-
-    @classmethod
-    def _fmt(cls, template_key: str, **kwargs) -> str:
-        template = cls.RULES["templates"].get(template_key)
-        if not template:
-            resolver_log.warning(f"[_fmt] Missing template for key: '{template_key}'")
-            return ""
-            
-        formatted_result = template.format(**cls._ctx(**kwargs))
-        resolver_log.debug(f"[_fmt] Template [{template_key}] resolved to -> {formatted_result}")
-        return formatted_result
-
-    @classmethod
-    def get(cls, route: str, override: Optional[str] = None, **kwargs) -> Union[str, Path, None]:
-        resolver_log.debug(f"[get] Requested route: '{route}', override: {override}, kwargs: {kwargs}")
-        
-        template_key = cls.RULES.get("routes", {}).get(route)
-        if not template_key:
-            resolver_log.error(f"[get] Unrecognized route requested: '{route}'")
-            return None
-
-        formatted_str = cls._fmt(template_key, **kwargs)
-        
-        if route == "local":
-            final_path = Path.cwd() / (override or formatted_str)
-            resolver_log.debug(f"[get] Returning Path object: {final_path}")
-            return final_path
-        
-        return formatted_str
-
-    @classmethod
-    def inspect_route(cls, route: str, override: Optional[str] = None, **kwargs) -> Dict[str, Any]:
-        template_key = cls.RULES.get("routes", {}).get(route)
-        debug_data = {
-            "requested_route": route,
-            "mapped_template_key": template_key,
-            "raw_template": cls.RULES.get("templates", {}).get(template_key) if template_key else None,
-            "injected_kwargs": kwargs,
-            "resolved_context": cls._ctx(**kwargs),
-            "override_path": override,
-            "final_output": str(cls.get(route, override=override, **kwargs))
-        }
-        
-        resolver_log.debug(f"[inspect_route] Route Dump:\n{json.dumps(debug_data, indent=2, ensure_ascii=False)}")
-        return debug_data
-
-    @classmethod
-    def context(cls, category: str = "llms", tag: Optional[str] = None) -> Dict[str, str]:
-        return {
-            "local_path": str(cls.get("local", category=category)),
-            "api_url": str(cls.get("api", category=category)),
-            "tag": tag or cls.RULES["constants"]["tag"],
-            "ext_repo": cls.RULES["constants"]["owner"]
-        }
-
-
-# ==========================================
-# 3. Registry Metadata & Data Classes
-# ==========================================
 @dataclass
 class LLMCapabilities:
     is_function_calling: bool = False
@@ -151,7 +34,7 @@ class LLMInfo:
 class LLMInstalledScanner:
     def __init__(self, base_pkg: str = _LLM_PKG_NAME):
         self.base_pkg = base_pkg
-        self.known_bases = set(ExtResolver.RULES.get("base_class", []))
+        self.known_bases = KNOWN_BASE_CLASSES
 
     def _extract_meta(self, obj: Any) -> Dict[str, Any]:
         mro = inspect.getmro(obj)
@@ -212,11 +95,12 @@ class LLMInstalledScanner:
                 
         return {k: asdict(v) for k, v in registry.items()}
 
-
+# ==========================================
+# 3. Core Router Engine
+# ==========================================
 class ModuleMissingError(Exception):
     """해당 모듈이 시스템에 존재하지 않을 때 발생하는 치명적 오류"""
     pass
-
 
 ## @state: Core topological boundaries (Batteries-included)
 DEFAULT_LLM_REGISTRY = {
@@ -269,7 +153,6 @@ DEFAULT_LLM_REGISTRY = {
         ]
     }
 }
-
 
 class LLMRouter:
     def __init__(self, base_pkg: str = _LLM_PKG_NAME):
@@ -330,7 +213,6 @@ class LLMRouter:
             raise ModuleMissingError(
                 f"\n[Brane Integration Error] Module '{provider}' is missing from the manifold.\n"
                 f"This topology is not natively embedded.\n"
-                f"Dynamically transduce via CLI: `python -m trans.llama --category llms --name {provider}`\n"
             )
 
         module_path = meta["module"]

@@ -1,5 +1,4 @@
 # fiber.llm.exception.types
-## @lineage: fiber.llm.types.exception.types
 from xphi.arch.bound.event.next import ToposId
 ConversationID = ToposId
 
@@ -126,12 +125,9 @@ class LLMBadRequestError(DriverError):
     def __init__(self, message: str = "Bad request to LLM provider") -> None:
         super().__init__(message)
 
-
-# Other
 class UserCancelledError(Exception):
     def __init__(self, message: str = "User cancelled the request") -> None:
         super().__init__(message)
-
 
 class OperationCancelled(Exception):
     def __init__(self, message: str = "Operation was cancelled") -> None:
@@ -151,7 +147,6 @@ class WebSocketConnectionError(RuntimeError):
             f"for conversation {conversation_id}. Events may be missed."
         )
         super().__init__(message or default_msg)
-
 
 class ConversationRunError(RuntimeError):
     conversation_id: ConversationID

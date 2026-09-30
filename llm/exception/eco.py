@@ -1,5 +1,4 @@
 # fiber.llm.exception.eco
-## @lineage: fiber.llm.types.exception.eco
 from __future__ import annotations
 from typing import Any, Dict, Optional, Union
 from enum import Enum
@@ -149,13 +148,13 @@ class BadRequestError(openai.BadRequestError, FiberExceptionMixin):
 class ImageFetchError(BadRequestError):
     pass
 
-class UnprocessableEntityError(openai.UnprocessableEntityError, FiberExceptionMixin): # type: ignore
+class UnprocessableEntityError(openai.UnprocessableEntityError, FiberExceptionMixin):
     def __init__(self, message, model, llm_provider, response, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 422
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         openai.UnprocessableEntityError.__init__(self, self.message, response=response, body=None)
 
-class Timeout(openai.APITimeoutError, FiberExceptionMixin): # type: ignore
+class Timeout(openai.APITimeoutError, FiberExceptionMixin):
     def __init__(self, message, model, llm_provider, debug_info=None, max_retries=None, num_retries=None, headers=None, exception_status_code=408):
         self.status_code = exception_status_code
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
@@ -190,42 +189,42 @@ class ContentPolicyViolationError(BadRequestError):
         super().__init__(message=message, model=model, llm_provider=llm_provider, response=response, debug_info=debug_info, body=body)
         self.provider_specific_fields = provider_specific_fields
 
-class ServiceUnavailableError(openai.APIStatusError, FiberExceptionMixin): # type: ignore
+class ServiceUnavailableError(openai.APIStatusError, FiberExceptionMixin):
     def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 503
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         self.response = _ensure_mock_response(response, self.status_code)
         openai.APIStatusError.__init__(self, self.message, response=self.response, body=None)
 
-class BadGatewayError(openai.APIStatusError, FiberExceptionMixin): # type: ignore
+class BadGatewayError(openai.APIStatusError, FiberExceptionMixin):
     def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 502
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         self.response = _ensure_mock_response(response, self.status_code)
         openai.APIStatusError.__init__(self, self.message, response=self.response, body=None)
 
-class InternalServerError(openai.InternalServerError, FiberExceptionMixin): # type: ignore
+class InternalServerError(openai.InternalServerError, FiberExceptionMixin):
     def __init__(self, message, llm_provider, model, response=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 500
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         self.response = _ensure_mock_response(response, self.status_code)
         openai.InternalServerError.__init__(self, self.message, response=self.response, body=None)
 
-class APIError(openai.APIError, FiberExceptionMixin): # type: ignore
+class APIError(openai.APIError, FiberExceptionMixin):
     def __init__(self, status_code: int, message, llm_provider, model, request=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = status_code
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         request = _ensure_mock_request(request)
         openai.APIError.__init__(self, self.message, request=request, body=None)
 
-class APIConnectionError(openai.APIConnectionError, FiberExceptionMixin): # type: ignore
+class APIConnectionError(openai.APIConnectionError, FiberExceptionMixin):
     def __init__(self, message, llm_provider, model, request=None, debug_info=None, max_retries=None, num_retries=None):
         self.status_code = 500
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         self.request = _ensure_mock_request(request)
         openai.APIConnectionError.__init__(self, message=self.message, request=self.request)
 
-class APIResponseValidationError(openai.APIResponseValidationError, FiberExceptionMixin): # type: ignore
+class APIResponseValidationError(openai.APIResponseValidationError, FiberExceptionMixin):
     def __init__(self, message, llm_provider, model, debug_info=None, max_retries=None, num_retries=None):
         self.init_fiber_attrs(message, llm_provider, model, debug_info, max_retries, num_retries)
         response = _ensure_mock_response(None, 500)
@@ -291,8 +290,7 @@ class MockException(openai.APIError):
         self.num_retries = num_retries
         if request is None:
             request = httpx.Request(method="POST", url="https://api.openai.com/v1")
-        super().__init__(self.message, request=request, body=None)  # type: ignore
-
+        super().__init__(self.message, request=request, body=None)
 
 class FiberUnknownProvider(BadRequestError):
     def __init__(self, model: str, custom_llm_provider: Optional[str] = None):
@@ -305,7 +303,6 @@ class FiberUnknownProvider(BadRequestError):
 
     def __str__(self):
         return self.message
-
 
 class GuardrailRaisedException(Exception):
     def __init__(
@@ -329,17 +326,13 @@ class BlockedPiiEntityError(Exception):
         guardrail_name: Optional[str] = None,
         status_code: int = 400,
     ):
-        """
-        Raised when a blocked entity is detected by a guardrail.
-        """
         self.entity_type = entity_type
         self.guardrail_name = guardrail_name
         self.status_code = status_code
         self.message = f"Blocked entity detected: {entity_type} by Guardrail: {guardrail_name}. This entity is not allowed to be used in this request."
         super().__init__(self.message)
 
-
-class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
+class MidStreamFallbackError(ServiceUnavailableError):
     def __init__(
         self,
         message: str,
@@ -364,8 +357,6 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
         self.num_retries = num_retries
         self.generated_content = generated_content
         self.is_pre_first_chunk = is_pre_first_chunk
-
-        # Create a response if one wasn't provided
         if response is None:
             self.response = httpx.Response(
                 status_code=self.status_code,
@@ -377,14 +368,11 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
         else:
             self.response = response
 
-        # Save the original attributes before they are overridden by ServiceUnavailableError
         _saved_response = self.response
         _saved_request = getattr(self.response, "request", None) or httpx.Request(
             method="POST", url=f"https://{llm_provider}.com/v1/"
         )
         _saved_message = self.message
-
-        # Call the parent constructor (which hardcodes status_code=503 and modifies the response object)
         super().__init__(
             message=self.message,
             llm_provider=llm_provider,
@@ -395,7 +383,6 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
             num_retries=self.num_retries,
         )
 
-        # Restore the propagated status and original response/request objects
         self.status_code = int(original_status) if original_status is not None else 503
         self.response = _saved_response
         self.request = _saved_request
@@ -414,7 +401,6 @@ class MidStreamFallbackError(ServiceUnavailableError):  # type: ignore
 
     def __repr__(self):
         return self.__str__()
-
 
 class ModifyResponseException(Exception):
     def __init__(

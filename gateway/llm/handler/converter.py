@@ -1,20 +1,10 @@
 # fiber.gateway.llm.handler.converter
-## @lineage: fiber.llm.router.handle.converter
 import base64
 import json
 import os
 from binascii import Error as BinasciiError
 from pathlib import Path
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Union
 
 from fiber.llm.types.inter.block import MessageRole, ImageBlock
 from fiber.llm.types.inter.response import (

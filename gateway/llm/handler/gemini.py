@@ -18,10 +18,10 @@ from typing import (
     cast,
 )
 import typing
+import httpx
 
 import google.genai.types as types
 import google.genai
-import httpx
 from google.genai import _transformers, Client
 from google.genai import errors
 

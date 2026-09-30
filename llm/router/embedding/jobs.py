@@ -1,4 +1,4 @@
-# fiber.llm.router.jobs
+# fiber.llm.router.embedding.jobs
 import asyncio
 import base64
 import concurrent.futures
@@ -29,25 +29,31 @@ from urllib.parse import urlparse
 import platformdirs
 import requests
 
-from fiber.llm.router.dispatcher import dispatcher
+from xphi.watcher.observer.span import observe
+from xphi.watcher.plane.emitter import get_emitter
 
 if TYPE_CHECKING:
     from fiber.llm.types.inter.block import ContentBlock, TextBlock
 
+log = get_emitter(__name__, phase="EMBEDDING_JOBS")
 
 T = TypeVar("T")
 DEFAULT_NUM_WORKERS = 4
 
-@dispatcher.span
+@observe(name="llm.embedding.run_jobs", phase="EMBEDDING_JOBS")
 async def run_jobs(
     jobs: List[Coroutine[Any, Any, T]],
     show_progress: bool = False,
     workers: int = DEFAULT_NUM_WORKERS,
     desc: Optional[str] = None,
 ) -> List[T]:
-    semaphore = asyncio.Semaphore(workers)
+    log.info(
+        f"Starting {len(jobs)} parallel jobs", 
+        context={"workers": workers, "desc": desc}
+    )
 
-    @dispatcher.span
+    semaphore = asyncio.Semaphore(workers)
+    @observe(name="llm.embedding.worker")
     async def worker(job: Coroutine) -> Any:
         async with semaphore:
             return await job
@@ -60,4 +66,5 @@ async def run_jobs(
     else:
         results = await asyncio.gather(*pool_jobs)
 
+    log.debug("All parallel jobs completed successfully.")
     return results

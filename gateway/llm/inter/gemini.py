@@ -36,7 +36,7 @@ from xphi.arch.contract.config import env
 from fiber.gateway.llm.state.pydantic import BaseModel, Field, PrivateAttr
 from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
-from fiber.gateway.llm.inter.base import LLM
+from fiber.gateway.llm.inter.base import InterLLM
 from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import Model
 from fiber.gateway.llm.handler.template import PromptTemplate
@@ -106,7 +106,7 @@ def llm_retry_decorator(f: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-class GoogleGenAI(LLM):
+class GoogleGenAI(InterLLM):
     model: str = Field(default=DEFAULT_MODEL, description="The Gemini model to use.")
     temperature: float = Field(
         default=DEFAULT_TEMPERATURE,
