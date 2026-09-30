@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 import httpx
 
-from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary

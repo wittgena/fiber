@@ -11,7 +11,6 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from fiber.gateway.worker.notary import NotarySwarm
 from fiber.gateway.rest.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -19,7 +18,7 @@ from fiber.gateway.rest.serv.depend import (
     get_secret_auditor, 
     get_rpc_client
 )
-from fiber.infra.rpc.client import InternalRpcClient, RpcException
+from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from fiber.phase.contract.router import ContractRouter
 from xphi.arch.model.edge.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
@@ -152,7 +151,7 @@ async def public_issue_invoice(
     summary="Check Fuel Balance"
 )
 async def public_get_balance(
-    client_id: str = Query(..., description="조회할 클라이언트 주소"),
+    client_id: str = Query(..., description="조회할 클라이언트 ID"),
     asset_type: str = Query("fuel", description="조회할 자산 타입"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
@@ -302,6 +301,6 @@ async def public_audit_verify(
             "state_root": receipt.state_root,
             "full_receipt": receipt.model_dump(exclude_none=True)
         }
-        return await rpc.call("core.ledger.verify", rpc_payload)
+        return await rpc.call("core.receipt.verify", rpc_payload)
     except RpcException as e:
         raise HTTPException(status_code=e.status_code, detail=f"Verification Failed: {{\"detail\":\"{e.detail}\"}}")

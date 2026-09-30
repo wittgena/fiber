@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from fiber.infra.rpc.client import RpcException
+from xphi.arch.bound.client.rpc import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.gateway.rest.serv.public import public_edge
 from fiber.gateway.rest.serv.llm import llm_edge

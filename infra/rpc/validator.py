@@ -103,7 +103,6 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
 GENESIS_FLOOR_PRICE_USD = 0.002
 
 async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
-    """X402 영수증 및 AP2 Mandate 무결성/잔여 검증 핸들러"""
     receipt_data = params.get("fuel_receipt")
     action = params.get("action", "unknown_action")
     target_server_id = params.get("target_server_id") 
@@ -116,13 +115,11 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
         try:
             tunnel = await TunnelFactory.get_default()
             cached_price = await tunnel.get(f"eco:price_tag:{target_server_id}")
-            
             if cached_price is not None:
                 required_fee = float(cached_price)
                 log.debug(f"[Billing] Fetched dynamic fee for {target_server_id}: ${required_fee:.4f}")
             else:
                 log.debug(f"[Billing] No cached price for {target_server_id}. Using Genesis Floor: ${required_fee:.4f}")
-                
         except Exception as e:
             log.warning(f"[Billing] KV Store lookup failed for {target_server_id}, using genesis floor. Error: {e}")
     else:
@@ -140,11 +137,9 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
     # Production Cryptographic Path
     try:
         payload = json.loads(receipt_data) if isinstance(receipt_data, str) else receipt_data
-        
         # Case A: AP2 Mandate 
         if "authorization" in payload and "mandate" in payload:
             mandate_obj = Ap2MandateResult(**payload)
-            
             if not MandateAdapter.verify_mandate_signature(mandate_obj):
                 log.warning(f"AP2 Mandate signature rejected for {mandate_obj.mandate.requester_id}")
                 return _build_error(402, "AP2 Mandate Rejected: Invalid Cryptographic Signature")
@@ -164,7 +159,6 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
         # Case B: X402 Settlement Receipt
         elif "receipt_id" in payload and "tx_hash" in payload:
             receipt_obj = X402SettlementReceipt(**payload)
-            
             is_valid_lineage = await ctx.pta_adapter.verify_lineage(receipt_obj.tx_hash, depth=2)
             if not is_valid_lineage:
                 log.warning(f"X402 Receipt lineage verification failed for {receipt_obj.receipt_id}")

@@ -85,7 +85,7 @@ class AgentNetworkTracePipeline(PipelineRunner):
         # =========================================================================
         # [개선] 관측성 폐쇄 루프(Closed-loop)를 완성하는 가상의 SDK 워커 엔드포인트
         # =========================================================================
-        from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+        from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
         sdk_client = DphiPublicClient(base_url=self.local_url)
 
         @self.rest_app.post("/mock-agent-trace")

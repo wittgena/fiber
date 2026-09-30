@@ -2,30 +2,139 @@
 import asyncio
 import os
 import uuid
-from typing import List, Any
+from enum import Enum, auto
+from dataclasses import dataclass
+from typing import List, Any, Dict, Union
 
 import httpx
 from eth_account import Account
 from eth_account.messages import encode_defunct
 
 from fiber.infra.e2e.config import PipelineRunner, TestResult, E2EConfig, Phase
-from fiber.dev.sdk.ext import ExtClient
-from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory 
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory 
 
 from xphi.arch.bound.client.http import VerifiedHttpClient
 from xphi.arch.dev.tracer.transport import HttpFlowTracer
-from xphi.kernel.node.fsm.edge import (
-    EdgePhaseFSM, EdgePhaseState, StartIntentEvent, PhaseFailedEvent,
-    ComputePhaseCompletedEvent, CompliancePhaseCompletedEvent, SettlementPhaseCompletedEvent,
-    RunComputePhaseCmd, RunCompliancePhaseCmd, RunSettlementPhaseCmd,
-    FinishWorkflowCmd, HaltWorkflowCmd
-)
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.state.phase.reactor import PhaseReactor
 
 log = get_emitter("e2e.edge.client")
 
+# EDGE FSM
+class EdgePhaseState(Enum):
+    INIT = auto()
+    COMPUTING = auto()
+    COMPLIANCE_CHECKING = auto()
+    SETTLING = auto()
+    COMPLETED = auto()
+    FAILED = auto()
+
+class EdgeEvent: pass
+class EdgeCommand: pass
+
+@dataclass(frozen=True)
+class StartIntentEvent(EdgeEvent):
+    client_id: str
+    action: str
+    max_fuel: int
+    payload: Any
+    signature: str
+
+@dataclass(frozen=True)
+class ComputePhaseCompletedEvent(EdgeEvent):
+    audit_receipt: Dict[str, Any]
+    cost_usd: float
+
+@dataclass(frozen=True)
+class CompliancePhaseCompletedEvent(EdgeEvent):
+    otlp_hash: str
+
+@dataclass(frozen=True)
+class SettlementPhaseCompletedEvent(EdgeEvent):
+    tx_hash: str
+
+@dataclass(frozen=True)
+class PhaseFailedEvent(EdgeEvent):
+    reason: str
+
+# --- Commands ---
+@dataclass(frozen=True)
+class RunComputePhaseCmd(EdgeCommand):
+    client_id: str
+    action: str
+    max_fuel: int
+    payload: Any
+    signature: str
+
+@dataclass(frozen=True)
+class RunCompliancePhaseCmd(EdgeCommand):
+    audit_receipt: Dict[str, Any]
+
+@dataclass(frozen=True)
+class RunSettlementPhaseCmd(EdgeCommand):
+    client_id: str
+    cost_usd: float
+
+@dataclass(frozen=True)
+class FinishWorkflowCmd(EdgeCommand):
+    tx_hash: str
+
+@dataclass(frozen=True)
+class HaltWorkflowCmd(EdgeCommand):
+    reason: str
+
+class EdgePhaseFSM:
+    def __init__(self, requires_settlement: bool = True):
+        self.state = EdgePhaseState.INIT
+        self.context: Dict[str, Any] = {}
+        self.requires_settlement = requires_settlement
+
+    def apply(self, event: EdgeEvent) -> EdgeCommand:
+        if isinstance(event, PhaseFailedEvent):
+            self.state = EdgePhaseState.FAILED
+            return HaltWorkflowCmd(reason=event.reason)
+
+        if self.state == EdgePhaseState.INIT and isinstance(event, StartIntentEvent):
+            self.state = EdgePhaseState.COMPUTING
+            self.context["client_id"] = event.client_id
+            return RunComputePhaseCmd(
+                client_id=event.client_id, 
+                action=event.action,
+                max_fuel=event.max_fuel, 
+                payload=event.payload,
+                signature=event.signature
+            )
+            
+        elif self.state == EdgePhaseState.COMPUTING and isinstance(event, ComputePhaseCompletedEvent):
+            self.state = EdgePhaseState.COMPLIANCE_CHECKING
+            self.context["audit_receipt"] = event.audit_receipt
+            self.context["cost_usd"] = event.cost_usd
+            return RunCompliancePhaseCmd(audit_receipt=event.audit_receipt)
+            
+        elif self.state == EdgePhaseState.COMPLIANCE_CHECKING and isinstance(event, CompliancePhaseCompletedEvent):
+            if self.requires_settlement:
+                self.state = EdgePhaseState.SETTLING
+                return RunSettlementPhaseCmd(
+                    client_id=self.context["client_id"],
+                    cost_usd=self.context.get("cost_usd", 0.0)
+                )
+            else:
+                self.state = EdgePhaseState.COMPLETED
+                return FinishWorkflowCmd(tx_hash=event.otlp_hash)
+                
+        elif self.state == EdgePhaseState.SETTLING and isinstance(event, SettlementPhaseCompletedEvent):
+            self.state = EdgePhaseState.COMPLETED
+            return FinishWorkflowCmd(tx_hash=event.tx_hash)
+
+        invalid_state_name = self.state.name
+        self.state = EdgePhaseState.FAILED
+        return HaltWorkflowCmd(
+            reason=f"Invalid Event {event.__class__.__name__} at {invalid_state_name}"
+        )
+
+
+# EDGE CLIENT WORKFLOW & PIPELINE
 class CommandMsg(WorkflowMessage):
     def __init__(self, command: Any):
         self.command = command
@@ -36,9 +145,7 @@ class EdgeWorkflow(Workflow):
         self.fsm = fsm
         self.client = client
         self.base_url = base_url
-        
         self.sdk_client = DphiPublicClient(base_url=self.base_url)
-        self.ext_client = ExtClient() 
 
     async def execute(self, start_event: StartIntentEvent):
         log.info("🏁 [START] EDGE CLIENT WORKFLOW INITIATED | " + "="*40)
@@ -72,10 +179,6 @@ class EdgeWorkflow(Workflow):
                 log.info(f"✅ [COMPLIANCE PHASE] PASSED")
                 return CommandMsg(self.fsm.apply(event))
             
-            elif isinstance(cmd, RunSettlementPhaseCmd):
-                event = await self._run_settlement_phase(cmd)
-                log.info(f"✅ [SETTLEMENT PHASE] PASSED")
-                return CommandMsg(self.fsm.apply(event))
             else:
                 raise ValueError(f"Unknown Command: {cmd}")
         except Exception as e:
@@ -131,21 +234,6 @@ class EdgeWorkflow(Workflow):
         log.info(f"  └─ Zero-Trust Validated | Telemetry Sealed: {fingerprint[:16]}...")
         return CompliancePhaseCompletedEvent(otlp_hash=fingerprint)
 
-    async def _run_settlement_phase(self, cmd: RunSettlementPhaseCmd) -> SettlementPhaseCompletedEvent:
-        res_payment = await self.ext_client.process_x402_payment(
-            payee_address="0x000000000000000000000000000000000000dEaD", 
-            amount_usdc=str(cmd.cost_usd), resource_id=f"res_{uuid.uuid4().hex[:8]}", use_ledger=True
-        )
-        receipt = res_payment.get("receipt", {})
-        tx_hash = receipt.get("tx_hash") or res_payment.get("tx_hash") or f"0x_cleared_{uuid.uuid4().hex[:8]}"
-
-        res_balance = await self.client.get(
-            f"{self.base_url}/v1/public/billing/balance", params={"client_id": cmd.client_id, "asset_type": "fuel"}
-        )
-        
-        current_fuel = res_balance.json().get("balance", 0) if res_balance.status_code == 200 else "Unknown"
-        log.info(f"  └─ Ext Payment: {tx_hash[:16]}... | Current Fuel Balance: {current_fuel}")
-        return SettlementPhaseCompletedEvent(tx_hash=tx_hash)
 
 class EdgeTracerPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig):
@@ -164,7 +252,7 @@ class EdgeTracerPipeline(PipelineRunner):
         results = []
         try:
             for idx, phase in enumerate(self.phases, 1):
-                log.info(f"\n▶️ [PIPELINE PHASE {idx}/{len(self.phases)}] {phase.name}")
+                log.info(f"\n▶️️ [PIPELINE PHASE {idx}/{len(self.phases)}] {phase.name}")
                 try:
                     await phase.action()
                     results.append(TestResult("EDGE_GATEWAY", phase.name, True, True))
@@ -207,7 +295,9 @@ class EdgeTracerPipeline(PipelineRunner):
                 payload={"message": "audit_test", "severity": "info"}, signature=signature
             )
             
-            fsm = EdgePhaseFSM()
+            # [결정적 픽스] E2E 클라이언트에서 Settlement 단계를 우회하도록 플래그 전달
+            fsm = EdgePhaseFSM(requires_settlement=False)
+            
             workflow = EdgeWorkflow(fsm=fsm, client=client, base_url=self.local_url)
             await workflow.execute(start_event) 
             

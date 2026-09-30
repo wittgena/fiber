@@ -14,7 +14,7 @@ import random
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 from fiber.infra.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary

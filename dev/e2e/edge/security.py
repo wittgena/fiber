@@ -10,7 +10,7 @@ from contextlib import suppress
 
 import httpx
 
-from fiber.dev.sdk.gateway import Endpoints, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import Endpoints, StrictPayloadFactory
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary

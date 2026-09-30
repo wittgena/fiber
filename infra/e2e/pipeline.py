@@ -8,7 +8,7 @@ from typing import Any, List, Dict
 
 import uvicorn
 
-from fiber.infra.rpc.client import InternalRpcClient
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from fiber.infra.e2e.config import (
     PipelineRunner, 
     ManagedTestServer, 

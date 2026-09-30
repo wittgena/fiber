@@ -18,7 +18,7 @@ import fiber.dev.ex.worker.legacy.margin as worker_margin
 import fiber.dev.ex.worker.search.archive as worker_search
 
 from fiber.gateway.daemon.economy.pricing import DynamicPricingDaemon
-from fiber.infra.rpc.client import InternalRpcClient
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 
 from xphi.state.phase.reactor import PhaseReactor

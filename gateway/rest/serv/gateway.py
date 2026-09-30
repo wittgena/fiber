@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from fiber.infra.rpc.client import InternalRpcClient, RpcException
+from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from fiber.gateway.rest.serv.depend import get_rpc_client
 
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator

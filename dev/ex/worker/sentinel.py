@@ -5,7 +5,7 @@ import time
 import json
 from typing import List, Dict, Any
 
-from fiber.infra.rpc.client import InternalRpcClient
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.protocol.worker import WorkerProtocol
 from xphi.state.anchor.consensus import KernelLedger
 
