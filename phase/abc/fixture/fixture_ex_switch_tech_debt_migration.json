@@ -1,182 +1,14 @@
 {
   "scenario": "tech_debt_migration",
-  "latest_trace_id": "015d70c8eb823000790e2b34ecaac4bf",
+  "latest_trace_id": "015d90cae4023000c0a0af254e977896",
   "history_keys": [
-    "015d6822db423002738d1bae961f7c3b",
     "015d6edcdec23000a65f26164774dbe9",
     "015d6f0dd0c230002294c1fc03fb4dac",
     "015d701724c23000de58424fbd4fd7eb",
-    "015d70c8eb823000790e2b34ecaac4bf"
+    "015d70c8eb823000790e2b34ecaac4bf",
+    "015d90cae4023000c0a0af254e977896"
   ],
   "traces": {
-    "015d6822db423002738d1bae961f7c3b": {
-      "trace_id": "015d6822db423002738d1bae961f7c3b",
-      "request_context": {
-        "model": "gemini-3.1-flash-lite",
-        "provider": "gemini",
-        "messages": [
-          {
-            "role": "user",
-            "content": "As a senior software architect, explain why relying on a temporary 'Zero-Code Integration' (like Python module aliasing or monkey-patching) is dangerous as a long-term production solution. Provide a 3-step action plan for safely migrating to a native SDK implementation. Use bullet points."
-          }
-        ],
-        "parameters": {
-          "temperature": 0.7,
-          "max_tokens": null,
-          "stream": true
-        }
-      },
-      "network_metrics": {
-        "ttfb_ms": 3675.0422079348937,
-        "total_duration_ms": 8371.821083012037
-      },
-      "response_timeline": [
-        {
-          "delta_ms": 3675.0422079348937,
-          "chunk": "As a"
-        },
-        {
-          "delta_ms": 120.79383304808289,
-          "chunk": " senior software architect, I see \"Zero-Code\" integration hacks—such as monkey-patching third"
-        },
-        {
-          "delta_ms": 150.06749995518476,
-          "chunk": "-party modules or dynamic aliasing—as **technical debt with high interest rates.** \n\nWhile these methods provide immediate"
-        },
-        {
-          "delta_ms": 169.83520903158933,
-          "chunk": " relief during a prototype phase, they violate the fundamental principles of software stability. Here is why this pattern is dangerous for production:\n\n### The"
-        },
-        {
-          "delta_ms": 180.9048750437796,
-          "chunk": " Risks of \"Zero-Code\" Hacks\n*   **Breaking Encapsulation & Contracts:** Monkey-patching relies"
-        },
-        {
-          "delta_ms": 159.42879091016948,
-          "chunk": " on the internal implementation details of a library. If the vendor updates their library, they may rename internal functions or change signatures"
-        },
-        {
-          "delta_ms": 149.56779207568616,
-          "chunk": ", causing your \"silent\" override to crash the application or, worse, fail silently.\n*   **Debugging Night"
-        },
-        {
-          "delta_ms": 169.05983292963356,
-          "chunk": "mares:** When an application crashes, stack traces will point to your patched logic, but the root cause is hidden within the vendor"
-        },
-        {
-          "delta_ms": 144.43466707598418,
-          "chunk": "’s modified bytecode. This creates a \"heisenbug\" scenario where the behavior changes based on the environment or the order"
-        },
-        {
-          "delta_ms": 155.8921670075506,
-          "chunk": " in which modules were loaded.\n*   **Dependency Hell:** These hacks often create circular dependencies or conflict with other middleware"
-        },
-        {
-          "delta_ms": 190.36241597495973,
-          "chunk": " that expects standard library behavior. You are essentially creating a \"fork\" of a library that you don’t own, making it impossible"
-        },
-        {
-          "delta_ms": 151.5548339812085,
-          "chunk": " to upgrade your dependencies safely.\n*   **Security Vulnerabilities:** By bypassing native SDKs, you are likely bypassing built-"
-        },
-        {
-          "delta_ms": 148.78387504722923,
-          "chunk": "in security features like request signing, rate-limiting, or data encryption, exposing your system to risks that native implementations handle out"
-        },
-        {
-          "delta_ms": 191.2894999841228,
-          "chunk": "-of-the-box.\n\n---\n\n### 3-Step Migration Action Plan\n\nTo transition from a brittle"
-        },
-        {
-          "delta_ms": 149.58654099609703,
-          "chunk": " hack to a robust, native implementation, follow this structured path:\n\n#### 1. Define an Abstraction Layer (The Interface"
-        },
-        {
-          "delta_ms": 169.73795893136412,
-          "chunk": ")\nBefore removing the hack, decouple your business logic from the integration. Create an internal **Adapter** or **Interface** that defines *"
-        },
-        {
-          "delta_ms": 139.98437498230487,
-          "chunk": "what* you need the integration to do, rather than *how* it does it.\n*   **Action:** Create a formal"
-        },
-        {
-          "delta_ms": 151.31191606633365,
-          "chunk": " service class (e.g., `PaymentGatewayInterface`) that exposes the methods your application actually uses.\n*   **"
-        },
-        {
-          "delta_ms": 178.94004203844815,
-          "chunk": "Result:** Your application code will call your interface, not the monkey-patched library. This isolates the \"ugly\" integration"
-        },
-        {
-          "delta_ms": 149.86837492324412,
-          "chunk": " code into one single file, making it easier to swap out later.\n\n#### 2. Parallel Implementation (The \"Str"
-        },
-        {
-          "delta_ms": 158.22462504729629,
-          "chunk": "angler\" Pattern)\nNever perform a \"big bang\" migration. Instead, implement the native SDK side-by-side with your"
-        },
-        {
-          "delta_ms": 151.95587498601526,
-          "chunk": " hack.\n*   **Action:** In your Adapter, implement a feature flag or a \"shadow execution\" mode. Initially"
-        },
-        {
-          "delta_ms": 149.86533299088478,
-          "chunk": ", keep the legacy hack as the primary path, but start routing non-critical requests through the new, native SDK implementation.\n*"
-        },
-        {
-          "delta_ms": 190.1530419709161,
-          "chunk": "   **Result:** You can compare logs and performance metrics between the two implementations without risking production uptime. This allows you to verify that the"
-        },
-        {
-          "delta_ms": 150.05862503312528,
-          "chunk": " native SDK behaves exactly as expected.\n\n#### 3. Formalize and Deprecate\nOnce the native SDK is"
-        },
-        {
-          "delta_ms": 169.35154201928526,
-          "chunk": " verified and tested against your integration suite, perform the final cut-over.\n*   **Action:** Switch the feature"
-        },
-        {
-          "delta_ms": 190.4242499731481,
-          "chunk": " flag to point exclusively to the native SDK. Once stability is confirmed over a full release cycle, delete the monkey-patching code entirely.\n"
-        },
-        {
-          "delta_ms": 180.06704095751047,
-          "chunk": "*   **Result:** You have successfully moved from a \"hack\" to a \"supported integration.\" The codebase is now cleaner"
-        },
-        {
-          "delta_ms": 149.98883404769003,
-          "chunk": ", easier to upgrade, and fully compliant with the vendor’s intended usage patterns."
-        },
-        {
-          "delta_ms": 73.03391594905406,
-          "chunk": "",
-          "finish_reason": "stop"
-        }
-      ],
-      "usage": {
-        "cache_tokens_details": null,
-        "cached_content_token_count": null,
-        "candidates_token_count": 703,
-        "candidates_tokens_details": null,
-        "prompt_token_count": 62,
-        "prompt_tokens_details": [
-          {
-            "modality": "TEXT",
-            "token_count": 62
-          }
-        ],
-        "thoughts_token_count": null,
-        "tool_use_prompt_token_count": null,
-        "tool_use_prompt_tokens_details": null,
-        "total_token_count": 765,
-        "traffic_type": null
-      },
-      "exception_boundary": {
-        "occurred": false,
-        "error_type": null,
-        "message": null
-      }
-    },
     "015d6edcdec23000a65f26164774dbe9": {
       "trace_id": "015d6edcdec23000a65f26164774dbe9",
       "request_context": {
@@ -1579,6 +1411,186 @@
         }
       ],
       "usage": null,
+      "exception_boundary": {
+        "occurred": false,
+        "error_type": null,
+        "message": null
+      }
+    },
+    "015d90cae4023000c0a0af254e977896": {
+      "trace_id": "015d90cae4023000c0a0af254e977896",
+      "request_context": {
+        "model": "gemini-3.1-flash-lite",
+        "provider": "gemini",
+        "messages": [
+          {
+            "role": "user",
+            "content": "As a senior software architect, explain why relying on a temporary 'Zero-Code Integration' (like Python module aliasing or monkey-patching) is dangerous as a long-term production solution. Provide a 3-step action plan for safely migrating to a native SDK implementation. Use bullet points."
+          }
+        ],
+        "parameters": {
+          "temperature": 0.7,
+          "max_tokens": null,
+          "stream": true
+        }
+      },
+      "network_metrics": {
+        "ttfb_ms": 5594.551374902949,
+        "total_duration_ms": 10735.853874939494
+      },
+      "response_timeline": [
+        {
+          "delta_ms": 5594.551374902949,
+          "chunk": "As a"
+        },
+        {
+          "delta_ms": 179.00937504600734,
+          "chunk": " senior software architect, I see \"Zero-Code\" integrations—such as monkey-patching, dynamic module aliasing, or sidecar-based interceptors—as **technical debt with high interest rates.** While"
+        },
+        {
+          "delta_ms": 139.6241249749437,
+          "chunk": " they offer a seductive \"speed-to-market\" advantage, they fundamentally decouple your application’s behavior from its explicit"
+        },
+        {
+          "delta_ms": 140.38966700900346,
+          "chunk": " codebase.\n\nHere is why relying on these methods is a dangerous architectural anti-pattern for production systems:\n\n### The"
+        },
+        {
+          "delta_ms": 150.23170807398856,
+          "chunk": " Dangers of \"Zero-Code\" Reliance\n\n*   **Opaque Failure Modes:** When you monkey-patch a"
+        },
+        {
+          "delta_ms": 250.06258394569159,
+          "chunk": " library, you bypass the standard execution path. If the underlying library updates its internal API or changes its thread-safety model, your patch will likely fail in ways that are not caught by standard unit tests, leading to \"ghost\" bugs that are notoriously difficult to debug in"
+        },
+        {
+          "delta_ms": 147.7104580262676,
+          "chunk": " production.\n*   **Dependency Fragility:** These integrations often rely on the internal state or private methods of a third-party library"
+        },
+        {
+          "delta_ms": 152.60033297818154,
+          "chunk": ". Because these internals are not part of the public contract, the library maintainers can break your integration at any time without warning ("
+        },
+        {
+          "delta_ms": 150.1306249992922,
+          "chunk": "e.g., a minor version bump). You are effectively \"trapped\" on an old version of your dependencies.\n*   **"
+        },
+        {
+          "delta_ms": 139.65079199988395,
+          "chunk": "Violations of \"Explicit is Better than Implicit\":** Modern software relies on static analysis, type checking, and IDE auto"
+        },
+        {
+          "delta_ms": 149.05408304184675,
+          "chunk": "-completion. Monkey-patching breaks these tools. New developers joining the team will be unable to trace the execution flow, leading to increased cognitive"
+        },
+        {
+          "delta_ms": 140.7129589933902,
+          "chunk": " load and a higher probability of introducing regressions during future development.\n*   **Security Vulnerabilities:** Many \"zero-code\" solutions"
+        },
+        {
+          "delta_ms": 171.11825000029057,
+          "chunk": " rely on dynamic code execution or runtime object mutation. These techniques are often flagged by security scanners and can be exploited by malicious"
+        },
+        {
+          "delta_ms": 138.57966591604054,
+          "chunk": " actors to inject unauthorized logic into your memory space.\n\n---\n\n### 3-Step Action Plan for Migration\n\nTo move from a"
+        },
+        {
+          "delta_ms": 139.66525008436292,
+          "chunk": " \"hacky\" integration to a robust, native SDK implementation, follow this structured path to minimize downtime and risk:\n\n#### "
+        },
+        {
+          "delta_ms": 151.11641690600663,
+          "chunk": "1. Encapsulate and Abstract (The \"Adapter\" Phase)\nDo not attempt to rip out the code immediately. First"
+        },
+        {
+          "delta_ms": 159.43216707091779,
+          "chunk": ", create an **Adapter Interface** that defines exactly what your application needs from the integration.\n*   Create a wrapper"
+        },
+        {
+          "delta_ms": 239.4496250199154,
+          "chunk": " class/module that mirrors the functionality you are currently \"patching.\"\n*   Redirect all calls from your application code"
+        },
+        {
+          "delta_ms": 100.8759579854086,
+          "chunk": " to this new Adapter.\n*   **Goal:** Your application code should no longer know that an integration exists; it should only"
+        },
+        {
+          "delta_ms": 149.90320801734924,
+          "chunk": " know about your interface. This creates a \"seam\" where you can swap out the implementation later.\n\n#### 2. Parallel"
+        },
+        {
+          "delta_ms": 149.171833996661,
+          "chunk": " Implementation (The \"Shadow\" Phase)\nOnce the adapter is in place, implement the **Native SDK** inside the adapter alongside"
+        },
+        {
+          "delta_ms": 160.4213749524206,
+          "chunk": " the existing monkey-patching logic.\n*   Implement a \"Feature Flag\" or a simple toggle within the Adapter to switch"
+        },
+        {
+          "delta_ms": 158.56150002218783,
+          "chunk": " between the old (patch) and new (SDK) methods.\n*   Run the Native SDK in \"Shadow Mode\"—"
+        },
+        {
+          "delta_ms": 149.9387079384178,
+          "chunk": "log the results of both the old and new methods in production. Compare the outputs to ensure the Native SDK produces identical,"
+        },
+        {
+          "delta_ms": 161.6643751040101,
+          "chunk": " correct results without affecting the actual request/response flow.\n*   **Goal:** Verify the Native SDK’s stability"
+        },
+        {
+          "delta_ms": 160.01304192468524,
+          "chunk": " and behavior under real production load without risking user impact.\n\n#### 3. Phased Cutover and Cleanup (The \"De"
+        },
+        {
+          "delta_ms": 150.30683297663927,
+          "chunk": "commission\" Phase)\nOnce you have confidence in the Native SDK’s output, move to production adoption.\n*   **Can"
+        },
+        {
+          "delta_ms": 160.2611670969054,
+          "chunk": "ary Deployment:** Enable the Native SDK for a small percentage of traffic (e.g., 5%) using the feature flag"
+        },
+        {
+          "delta_ms": 160.280832904391,
+          "chunk": ". Monitor error rates, latency, and memory usage.\n*   **Gradual Ramp-up:** Incrementally increase traffic"
+        },
+        {
+          "delta_ms": 169.32300000917166,
+          "chunk": " to 25%, 50%, and 100%.\n*   **Purge:** Once at"
+        },
+        {
+          "delta_ms": 150.0595420366153,
+          "chunk": " 100% stability, delete the monkey-patching code, the temporary aliases, and the feature flag."
+        },
+        {
+          "delta_ms": 239.8279580520466,
+          "chunk": "\n*   **Goal:** Cleanly remove the technical debt and ensure the application is now using a supported, type-safe, and maintainable implementation."
+        },
+        {
+          "delta_ms": 72.57729198317975,
+          "chunk": "",
+          "finish_reason": "stop"
+        }
+      ],
+      "usage": {
+        "cache_tokens_details": null,
+        "cached_content_token_count": null,
+        "candidates_token_count": 843,
+        "candidates_tokens_details": null,
+        "prompt_token_count": 62,
+        "prompt_tokens_details": [
+          {
+            "modality": "TEXT",
+            "token_count": 62
+          }
+        ],
+        "thoughts_token_count": null,
+        "tool_use_prompt_token_count": null,
+        "tool_use_prompt_tokens_details": null,
+        "total_token_count": 905,
+        "traffic_type": null
+      },
       "exception_boundary": {
         "occurred": false,
         "error_type": null,

@@ -157,7 +157,7 @@ if VCR_MODE in ("record", "replay"):
     from fiber.phase.cli.sandbox import create_security_sandbox
     from fiber.dev.ex.space.bind.redirector import PhaseAirlock
     import fiber.llm.entry as llm_entry
-    import fiber.llm.param as llm_param
+    import fiber.llm.response as llm_response
     
     # Enforce strict PEP-578 security boundaries
     create_security_sandbox(vcr_mode=VCR_MODE)
@@ -165,7 +165,7 @@ if VCR_MODE in ("record", "replay"):
     # Transparently route legacy SDK imports to Fiber's gateway
     PhaseAirlock.alias({
         "litellm": llm_entry.__name__,
-        "litellm.types.utils": llm_param.__name__
+        "litellm.types.utils": llm_response.__name__
     })
     
     # Mount the VCR engine for deterministic testing and traffic coalescing
@@ -226,48 +226,47 @@ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 
 ---
 
-네, 과도하게 들어갔던 힘(수식어, 거창한 표현)을 빼고 개발자 친화적으로 담백하고 간결하게 덜어냈습니다. "알 사람은 아는" 직관적인 코드 예제를 중심으로 서술을 다이어트했습니다.
+기존의 핵심 철학(Dot-notation, Path Fallback)을 유지하면서, 새롭게 도입된 Zero-code JSON 주입 방식과 안전성(Validation)을 사용자가 직관적으로 이해할 수 있도록 스펙(Spec)에 가깝게 건조하고 압축적으로 재작성했습니다.
 
-수정된 마크다운은 다음과 같습니다.
+기존 분량 대비 약 30% 정도만 늘려 가독성을 극대화한 개선안입니다.
 
 ---
 
-### 1.3. State Traverser
+### 1.3. State Traverser & Compat Registry
 
-The LLM ecosystem is fragmented. Providers often introduce proprietary JSON schemas while simultaneously maintaining partial OpenAI-compatibility.
+The LLM ecosystem is fragmented. Fiber eliminates brittle `if/elif` parsing logic through its **Rule-based Traverser**. Using dot-notation and **Path Fallbacks**, it seamlessly navigates mixed topologies (Dicts, Lists, Pydantic Objects) across request parameters, sync responses, and async stream chunks.
 
-Fiber eliminates brittle `if/elif` parsing logic through its `StateTraverser`. Using dot-notation and **Path Fallbacks**, it navigates mixed topologies (Dicts, Lists, Pydantic Objects) by evaluating an array of extraction paths sequentially.
+**Provider Extension:**
+To integrate a new provider or override existing parsing logic, you no longer need to modify Python code. Simply map their schema in an external JSON file and inject it via the `FIBER_COMPAT_RULES_PATH` environment variable.
 
-**Extending Fiber for a New Provider:**
-To integrate a new provider, simply map their JSON topology in the declarative rulesets. Fiber handles the rest.
+Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules. Invalid formats are safely ignored with a warning (Partial Update), ensuring your gateway never crashes at runtime.
 
-```python
-# Map Stream Chunks (e.g., fiber/llm/router/stream/parser/chunk.py)
-# Use arrays to support both Native and OpenAI-compatible responses seamlessly.
-STREAM_EXTRACTION_RULES["ollama"] = {
-    "text": ["message.content", "choices.0.delta.content"],
-    "finish_reason": ["done_reason", "choices.0.finish_reason"],
-    "is_finished_cond": {"path": "done", "value": True},
-    "usage": [
-        "usage",  # 1st: Standard OpenAI Usage
-        {         # 2nd: Native Custom Mapping
-            "prompt_tokens": "prompt_eval_count",
-            "completion_tokens": "eval_count"
-        }
-    ]
+```json
+// Export env: FIBER_COMPAT_RULES_PATH=/etc/fiber/compat_rules.json
+{
+  "provider_param_rules": {
+    "my_custom_llm": {
+      "supported": ["temperature", "max_tokens", "stream"],
+      "tool_format": "standard"
+    }
+  },
+  "stream_extraction_rules": {
+    "ollama": {
+      "text": ["message.content", "choices.0.delta.content"],
+      "usage": [
+        "usage", 
+        {"prompt_tokens": "prompt_eval_count", "completion_tokens": "eval_count"}
+      ],
+      "is_finished_cond": {"path": "done", "value": true}
+    }
+  },
+  "state_extraction_rules": {
+    "gemini": {
+      "sync_content_paths": ["candidates.0.content.parts.0.text", "choices.0.message.content"],
+      "fallback_tool_name": "content.parts.0.function_call.name"
+    }
+  }
 }
-
-# Map State & Tool Calls (e.g., fiber/gateway/llm/mapper/traverser.py)
-STATE_EXTRACTION_RULES["gemini"] = {
-    "sync_content_paths": ["candidates.0.content.parts.0.text", "choices.0.message.content"],
-    "sync_usage_paths": ["usageMetadata", "usage"],
-    "fallback_tool_name": "content.parts.0.function_call.name",
-    "fallback_tool_args": "content.parts.0.function_call.args"
-}
-
-# Register Routing Aliases
-# E.g., Alias llama.cpp server to reuse the standard OpenAI parser.
-PROVIDER_RULE_ALIAS["llama_server"] = "openai"
 ```
 
 ---
@@ -287,7 +286,7 @@ pyenv local fiber-user
 
 ## 2. Install via local source OR remote git reference
 uv pip install /path/to/local/self/fiber
-# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4
+# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.1
 
 ## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help

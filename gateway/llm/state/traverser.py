@@ -1,4 +1,4 @@
-# fiber.gateway.llm.mapper.traverser
+# fiber.gateway.llm.state.traverser
 import os
 import json
 import asyncio
@@ -6,6 +6,8 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional, Union, Dict
 
+from fiber.llm.compat.registry import STATE_EXTRACTION_RULES
+from fiber.llm.compat.state import ENDPOINT_ROUTING_RULES
 from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
 
@@ -15,49 +17,6 @@ from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))
 log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
-
-STATE_EXTRACTION_RULES = {
-    "gemini": {
-        "fallback_tool_name": "content.parts.0.function_call.name",
-        "fallback_tool_args": "content.parts.0.function_call.args",
-        "sync_content_paths": ["candidates.0.content.parts.0.text", "choices.0.message.content"],
-        "sync_usage_paths": ["usageMetadata", "usage"]
-    },
-    "ollama": {
-        "sync_content_paths": ["message.content", "response", "choices.0.message.content"],
-        "sync_usage_paths": ["prompt_eval_count", "usage"]
-    },
-    "defaults": {
-        "role": "assistant",
-        "finish_stop": "stop",
-        "finish_tool": "tool_calls",
-        "stream_content_paths": [
-            "delta",                     # Default
-            "choices.0.delta.content",   # OpenAI/LiteLLM 표준 경로
-            "content.parts.0.text"       # Gemini Native JSON 경로
-        ],
-        "sync_content_paths": [
-            "choices.0.message.content", # Default
-            "message.content",           # Generic
-            "output"                     # Replicate 등
-        ],
-        "sync_usage_paths": [
-            "usage",                     # Default
-            "meta.usage"
-        ]
-    }
-}
-
-ENDPOINT_ROUTING_RULES = {
-    "ollama": {
-        "native_suffix": "/api/chat",
-        "openai_suffix": "/chat/completions",
-        "v1_indicator": "/v1"
-    },
-    "defaults": {
-        "openai_suffix": "/chat/completions"
-    }
-}
 
 class StateTraverser:
     @staticmethod
@@ -141,42 +100,84 @@ class ImperativeFallbackRule:
 
 class StateMapper:
     @staticmethod
+    def _extract_sync_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, int]]:
+        if not usage_rule:
+            return None
+            
+        if isinstance(usage_rule, list):
+            for rule in usage_rule:
+                res = StateMapper._extract_sync_usage(obj, rule)
+                if res and any(v is not None for v in res.values()):
+                    return res
+            return None
+
+        # 룰셋이 Dict인 경우 (벤더별 매핑 룰 해석)
+        if isinstance(usage_rule, dict):
+            p_tokens = StateTraverser.resolve(obj, usage_rule.get("prompt_tokens")) or 0
+            c_tokens = StateTraverser.resolve(obj, usage_rule.get("completion_tokens")) or 0
+            t_tokens = StateTraverser.resolve(obj, usage_rule.get("total_tokens")) or 0
+            
+            if t_tokens == 0 and (p_tokens > 0 or c_tokens > 0):
+                t_tokens = p_tokens + c_tokens
+                
+            if p_tokens > 0 or c_tokens > 0 or t_tokens > 0:
+                return {
+                    "prompt_tokens": int(p_tokens),
+                    "completion_tokens": int(c_tokens),
+                    "total_tokens": int(t_tokens)
+                }
+            return None
+            
+        # 기존 단일 경로 탐색
+        usage_obj = StateTraverser.resolve(obj, usage_rule)
+        if hasattr(usage_obj, "model_dump") and callable(getattr(usage_obj, "model_dump")):
+            try: return usage_obj.model_dump(exclude_unset=True)
+            except Exception: return dict(usage_obj)
+        elif isinstance(usage_obj, dict):
+            return usage_obj
+        else:
+            try: return dict(usage_obj)
+            except Exception: return None
+    
+    @staticmethod
     def extract_sync_response(response: Any, provider: Optional[str] = None) -> Tuple[str, Optional[Dict]]:
-        """
-        [신규] Non-stream(Sync) 응답에서 Provider 룰에 맞춰 Content와 Usage를 우아하게 추출합니다.
-        하위호환성(Backward Compatibility)을 보장하기 위해 기본값은 OpenAI 규격을 따릅니다.
-        """
-        # 1. Provider에 맞는 룰셋 로드 (없으면 defaults)
         rules = STATE_EXTRACTION_RULES.get(provider) or STATE_EXTRACTION_RULES["defaults"]
         
-        # 2. 다중 경로 탐색을 통한 텍스트 안전 추출
         content_paths = rules.get("sync_content_paths", STATE_EXTRACTION_RULES["defaults"]["sync_content_paths"])
         raw_content = StateTraverser.resolve(response, content_paths)
-        
-        # 3. 텍스트 블록 정규화 (Claude 등 복합 블록이 들어올 경우를 대비한 2차 안전망)
         content = ImperativeFallbackRule.parse_content_blocks(raw_content) or ""
 
-        # 4. Usage 추출 및 정규화 (Pydantic V1/V2, Dict, Object 혼용 방어)
         usage_paths = rules.get("sync_usage_paths", STATE_EXTRACTION_RULES["defaults"]["sync_usage_paths"])
-        usage_obj = StateTraverser.resolve(response, usage_paths)
-        usage_dict = None
-        
-        if usage_obj:
-            if hasattr(usage_obj, "model_dump") and callable(getattr(usage_obj, "model_dump")):
-                try:
-                    usage_dict = usage_obj.model_dump(exclude_unset=True)
-                except Exception:
-                    usage_dict = dict(usage_obj)
-            elif isinstance(usage_obj, dict):
-                usage_dict = usage_obj
-            else:
-                try:
-                    usage_dict = dict(usage_obj)
-                except Exception:
-                    # Dict 변환 불가능한 원시 타입일 경우 방어
-                    pass 
+        usage_dict = StateMapper._extract_sync_usage(response, usage_paths)
 
         return content, usage_dict
+
+    # @staticmethod
+    # def extract_sync_response(response: Any, provider: Optional[str] = None) -> Tuple[str, Optional[Dict]]:
+    #     rules = STATE_EXTRACTION_RULES.get(provider) or STATE_EXTRACTION_RULES["defaults"]
+    #     content_paths = rules.get("sync_content_paths", STATE_EXTRACTION_RULES["defaults"]["sync_content_paths"])
+    #     raw_content = StateTraverser.resolve(response, content_paths)
+        
+    #     content = ImperativeFallbackRule.parse_content_blocks(raw_content) or ""
+    #     usage_paths = rules.get("sync_usage_paths", STATE_EXTRACTION_RULES["defaults"]["sync_usage_paths"])
+    #     usage_obj = StateTraverser.resolve(response, usage_paths)
+    #     usage_dict = None
+        
+    #     if usage_obj:
+    #         if hasattr(usage_obj, "model_dump") and callable(getattr(usage_obj, "model_dump")):
+    #             try:
+    #                 usage_dict = usage_obj.model_dump(exclude_unset=True)
+    #             except Exception:
+    #                 usage_dict = dict(usage_obj)
+    #         elif isinstance(usage_obj, dict):
+    #             usage_dict = usage_obj
+    #         else:
+    #             try:
+    #                 usage_dict = dict(usage_obj)
+    #             except Exception:
+    #                 pass 
+
+    #     return content, usage_dict
 
     @staticmethod
     def resolve_chat_endpoint(provider: Optional[str], base_url: str) -> str:

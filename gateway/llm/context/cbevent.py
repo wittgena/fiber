@@ -5,13 +5,13 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from fiber.gateway.llm.mapper.pydantic import BaseModel, SerializeAsAny, ConfigDict
+from fiber.gateway.llm.state.pydantic import BaseModel, SerializeAsAny, ConfigDict
 from fiber.llm.types.inter.response import (
     ChatMessage,
     ChatResponse,
     CompletionResponse,
 )
-from fiber.gateway.llm.mapper.pydantic import ConfigDict, Field
+from fiber.gateway.llm.state.pydantic import ConfigDict, Field
 from fiber.gateway.llm.handler.template import BasePromptTemplate
 from xphi.arch.bound.event.next import uuid4
 

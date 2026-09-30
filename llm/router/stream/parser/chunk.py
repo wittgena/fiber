@@ -2,97 +2,11 @@
 import json
 from typing import Any, Dict, List, Optional, Union
 from typing_extensions import TypedDict
+from fiber.llm.compat.registry import STREAM_EXTRACTION_RULES
+from fiber.llm.compat.stream import PROVIDER_RULE_ALIAS
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("chunk.parser")
-
-STREAM_EXTRACTION_RULES = {
-    "openai": {
-        "text": "choices.0.delta.content",
-        "finish_reason": "choices.0.finish_reason",
-        "logprobs": "choices.0.logprobs",
-        "usage": "usage",
-        "tool_calls": "choices.0.delta.tool_calls"
-    },
-    "ollama": {
-        "text": ["message.content", "choices.0.delta.content"],
-        "finish_reason": ["done_reason", "choices.0.finish_reason"],
-        "is_finished_cond": {"path": "done", "value": True},
-        "usage": [
-            "usage",  # 1순위: OpenAI 호환 방식 방어
-            {         # 2순위: Native 방식 커스텀 매핑
-                "prompt_tokens": "prompt_eval_count",
-                "completion_tokens": "eval_count"
-            }
-        ]
-    },
-    "text-completion-openai": {
-        "text": "choices.0.text",
-        "finish_reason": "choices.0.finish_reason",
-        "usage": "usage"
-    },
-    "text-completion-codestral": {
-        "text": "choices.0.text",
-        "finish_reason": "choices.0.finish_reason",
-        "usage": "usage"
-    },
-    "azure": {
-        "text": "choices.0.delta.content",
-        "finish_reason": "choices.0.finish_reason",
-    },
-    "azure_text": {
-        "text": "choices.0.text",
-        "finish_reason": "choices.0.finish_reason",
-    },
-    "replicate": {
-        "text": "output",
-        "error": "error",
-        "is_finished_cond": {"path": "status", "value": "succeeded"},
-        "finish_reason_static": "stop"
-    },
-    "predibase": {
-        "text": "token.text",
-        "finish_reason": ["details.finish_reason", "generated_text"]
-    },
-    "baseten": {
-        "text": ["token.text", "model_output.data.0", "model_output", "completion"]
-    },
-    "ai21": {
-        "text": "completions.0.data.text",
-        "is_finished_static": True,
-        "finish_reason_static": "stop"
-    },
-    "maritalk": {
-        "text": "answer",
-        "is_finished_static": True,
-        "finish_reason_static": "stop"
-    },
-    "aleph_alpha": {
-        "text": "completions.0.completion",
-        "is_finished_static": True,
-        "finish_reason_static": "stop"
-    },
-    "triton": {
-        "text": "text_output",
-        "finish_reason": "stop_reason",
-        "is_finished_cond": {"path": "is_finished", "value": True},
-        "usage": {
-            "prompt_tokens": "input_token_count",
-            "completion_tokens": "generated_token_count"
-        }
-    }
-}
-
-PROVIDER_RULE_ALIAS = {
-    "azure": "openai",
-    "azure_ai": "openai",
-    "custom_openai": "openai",
-    "sagemaker_chat": "openai",
-    "nlp_cloud": "openai",
-    "gemini": "vertex_ai",
-    "llama_server": "openai",   # llama.cpp 서버는 OpenAI SSE 포맷을 따름
-    "generic": "openai",        # 범용 어댑터 기본값
-}
 
 class ParsedChunk(TypedDict):
     """Parser가 Accumulator로 넘겨주는 단일화된 표준 데이터 규격"""
@@ -262,7 +176,6 @@ class StreamChunkParser:
 
     @staticmethod
     def _extract_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, Any]]:
-        """✨ [개선] Usage 규칙이 복잡한 경우(사전 매핑 및 다중 폴백)를 안전하게 처리"""
         if not usage_rule:
             return None
             

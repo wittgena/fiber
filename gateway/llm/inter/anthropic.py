@@ -2,45 +2,22 @@
 import json
 import logging
 from importlib.metadata import version as get_version
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Type,
-    AsyncGenerator,
-    Callable,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Type, AsyncGenerator, Callable, Dict, Generator, List, Optional, Sequence, Set, Tuple, Union, cast
+
 from fiber.llm.router.util import parse_partial_json
-from fiber.llm.types.inter.response import (
-    ChatMessage,
-    ChatResponse,
-    ChatResponseAsyncGen,
-    CompletionResponse,
-    LLMMetadata,
-)
+from fiber.llm.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, CompletionResponse, LLMMetadata
 from fiber.llm.types.inter.block import MessageRole, ContentBlock, ToolCallBlock
 from fiber.llm.types.inter.block import TextBlock as LITextBlock
 from fiber.llm.types.inter.block import CitationBlock as LICitationBlock
 from fiber.llm.types.inter.block import ThinkingBlock as LIThinkingBlock
-
-from fiber.gateway.llm.mapper.pydantic import Field, PrivateAttr
-from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
-from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
-from fiber.gateway.llm.inter.base import LLM
-from fiber.llm.router.util import ToolSelection
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
-from fiber.gateway.llm.handler.template import PromptTemplate
-
+from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
+from fiber.llm.router.util import ToolSelection
 from fiber.llm.model.token.encoder import Tokenizer
 
+from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
+from fiber.gateway.llm.inter.base import InterLLM
+from fiber.gateway.llm.handler.template import PromptTemplate
 from fiber.gateway.llm.handler.anthropic import (
     ANTHROPIC_NO_TEMP_MODELS,
     anthropic_modelname_to_contextsize,
@@ -79,6 +56,7 @@ if TYPE_CHECKING:
     from fiber.llm.types.inter.tool import BaseTool
 
 from xphi.arch.contract.config import env
+from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
 
 logger = logging.getLogger(__name__)
 DEFAULT_ANTHROPIC_MODEL = "claude-2.1"
@@ -115,7 +93,7 @@ class AnthropicCompletionResponse(CompletionResponse):
     """Extended CompletionResponse for Anthropic with citation support."""
     citations: List[Dict[str, Any]] = Field(default_factory=list)
 
-class Anthropic(LLM):
+class Anthropic(InterLLM):
     model: str = Field(
         default=DEFAULT_ANTHROPIC_MODEL, description="The anthropic model to use."
     )

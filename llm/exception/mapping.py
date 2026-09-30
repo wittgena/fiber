@@ -1,5 +1,4 @@
 # fiber.llm.exception.mapping
-## @lineage: fiber.llm.types.exception.mapping
 from __future__ import annotations
 import json
 import re
@@ -124,7 +123,6 @@ def exception_type(
         ## @phase: context_building, @desc: Assemble extra debug information
         extra_information = f"\nModel: {model}"
         try:
-            # 전역 함수 대신 _resolver_instance를 임포트하여 메서드 호출
             from fiber.llm.model.provider.resolver import _resolver_instance
             _api_base = _resolver_instance.get_api_base(model=model or "", optional_params=extra_kwargs)
             if _api_base: 

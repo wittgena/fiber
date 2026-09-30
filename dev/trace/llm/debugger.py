@@ -7,10 +7,10 @@ from typing import Any, Dict
 
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.gateway.llm.pipeline import PipelineSlot
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.core import Usage
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
-from fiber.gateway.llm.mapper.traverser import StateTraverser
+from fiber.gateway.llm.state.traverser import StateTraverser
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter

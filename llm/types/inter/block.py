@@ -20,7 +20,7 @@ from tinytag import TinyTag, UnsupportedFormatError
 from typing_extensions import Self
 
 from fiber.llm.router.util import asyncio_run
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     AnyUrl,
     BaseModel,
     ConfigDict,

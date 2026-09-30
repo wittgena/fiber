@@ -2,18 +2,13 @@
 import asyncio
 import logging
 from collections import ChainMap
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Union,
-    TYPE_CHECKING,
-)
+from typing import Any, Dict, List, Optional, Sequence, Union, TYPE_CHECKING
 
 from fiber.llm.router.util import asyncio_run
-from fiber.llm.router.dispatcher import dispatcher
+
+from xphi.watcher.observer.span import observe
+from xphi.watcher.plane.emitter import get_emitter
+
 from fiber.llm.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, ChatResponseGen
 from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.llm import LLMBase
@@ -24,7 +19,7 @@ from fiber.llm.types.inter.base import (
     TokenGen,
 )
 
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     Field,
     field_validator,
     model_validator,
@@ -32,11 +27,11 @@ from fiber.gateway.llm.mapper.pydantic import (
 
 from fiber.gateway.llm.handler.template import default_messages_to_prompt as generic_messages_to_prompt
 from fiber.gateway.llm.handler.template import BasePromptTemplate
+
+# [수정됨] 무의미한 글로벌 이벤트(LLMPredictStartEvent 등) 제거, 콜백 이벤트만 유지
 from fiber.gateway.llm.context.cbevent import (
     CBEventType,
     EventPayload,
-    LLMPredictEndEvent,
-    LLMPredictStartEvent,
 )
 
 from fiber.llm.router.util import (
@@ -59,13 +54,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# [추가됨] 시스템 표준 텔레메트리 로거 할당
+log = get_emitter(__name__, phase="LLM_INTER")
 
-# ==========================================
-# Core LLM Class
-# ==========================================
-class LLM(LLMBase):
+class InterLLM(LLMBase):
     """
-    Unified Base LLM Class.
     Integrates generic generation, templating, and native function calling.
     Automatically falls back to ReAct agent if native function calling is unsupported.
     """
@@ -183,9 +176,11 @@ class LLM(LLMBase):
     # ------------------------------------------
     # Standard Prediction Methods
     # ------------------------------------------
-    @dispatcher.span
+    @observe(name="llm.inter.predict")
     def predict(self, prompt: BasePromptTemplate, **prompt_args: Any) -> str:
-        dispatcher.event(LLMPredictStartEvent(template=prompt, template_args=prompt_args))
+        # [수정됨] 비대화 방지 - 거대한 텍스트 대신 메타데이터(Key)만 로깅
+        log.info("Starting LLM predict", context={"template_args_keys": list(prompt_args.keys())})
+        
         self._log_template_data(prompt, **prompt_args)
 
         if self.metadata.is_chat_model:
@@ -198,13 +193,16 @@ class LLM(LLMBase):
             output = response.text
             
         parsed_output = self._parse_output(output)
-        dispatcher.event(LLMPredictEndEvent(output=parsed_output))
+        
+        # [수정됨] 완료 이벤트 명시
+        log.debug("LLM predict complete", context={"output_length": len(parsed_output)})
         return parsed_output
 
-    @dispatcher.span
+    @observe(name="llm.inter.stream")
     def stream(self, prompt: BasePromptTemplate, **prompt_args: Any) -> TokenGen:
+        log.info("Starting LLM stream", context={"template_args_keys": list(prompt_args.keys())})
+        
         self._log_template_data(prompt, **prompt_args)
-        dispatcher.event(LLMPredictStartEvent(template=prompt, template_args=prompt_args))
         
         if self.metadata.is_chat_model:
             messages = self._get_messages(prompt, **prompt_args)
@@ -217,11 +215,14 @@ class LLM(LLMBase):
 
         if prompt.output_parser is not None or self.output_parser is not None:
             raise NotImplementedError("Output parser is not supported for streaming.")
+            
+        log.debug("LLM stream setup complete")
         return stream_tokens
 
-    @dispatcher.span
+    @observe(name="llm.inter.apredict")
     async def apredict(self, prompt: BasePromptTemplate, **prompt_args: Any) -> str:
-        dispatcher.event(LLMPredictStartEvent(template=prompt, template_args=prompt_args))
+        log.info("Starting async LLM predict", context={"template_args_keys": list(prompt_args.keys())})
+        
         self._log_template_data(prompt, **prompt_args)
 
         if self.metadata.is_chat_model:
@@ -234,13 +235,15 @@ class LLM(LLMBase):
             output = response.text
 
         parsed_output = self._parse_output(output)
-        dispatcher.event(LLMPredictEndEvent(output=parsed_output))
+        
+        log.debug("Async LLM predict complete", context={"output_length": len(parsed_output)})
         return parsed_output
 
-    @dispatcher.span
+    @observe(name="llm.inter.astream")
     async def astream(self, prompt: BasePromptTemplate, **prompt_args: Any) -> TokenAsyncGen:
+        log.info("Starting async LLM stream", context={"template_args_keys": list(prompt_args.keys())})
+        
         self._log_template_data(prompt, **prompt_args)
-        dispatcher.event(LLMPredictStartEvent(template=prompt, template_args=prompt_args))
         
         if self.metadata.is_chat_model:
             messages = self._get_messages(prompt, **prompt_args)
@@ -253,6 +256,8 @@ class LLM(LLMBase):
 
         if prompt.output_parser is not None or self.output_parser is not None:
             raise NotImplementedError("Output parser is not supported for streaming.")
+            
+        log.debug("Async LLM stream setup complete")
         return stream_tokens
 
     # ------------------------------------------
@@ -389,7 +394,7 @@ class LLM(LLMBase):
     # ------------------------------------------
     # Predict & Call (Native FC or ReAct Fallback)
     # ------------------------------------------
-    @dispatcher.span
+    @observe(name="llm.inter.predict_and_call")
     def predict_and_call(
         self,
         tools: Sequence["BaseTool"],
@@ -408,8 +413,13 @@ class LLM(LLMBase):
         from fiber.llm.router.chat_engine.types import AgentChatResponse
         from fiber.llm.router.tools.calling import call_tool_with_selection
 
+        # [추가됨] 동작 맥락(보유 툴 개수/이름) 로깅
+        tool_names = [getattr(t, "metadata", t).name for t in tools] if tools else []
+        log.info("Starting predict_and_call", context={"available_tools": tool_names})
+
         # Fallback to ReAct Agent if native function calling is not supported
         if not getattr(self.metadata, "is_function_calling_model", False):
+            log.debug("Native function calling unsupported, falling back to ReAct.")
             return self._predict_and_call_with_react(
                 tools=list(tools), user_msg=user_msg, chat_history=chat_history, verbose=verbose, **kwargs
             )
@@ -422,6 +432,9 @@ class LLM(LLMBase):
         tool_calls = self.get_tool_calls_from_response(
             response, error_on_no_tool_call=error_on_no_tool_call
         )
+        
+        log.debug("Tool selections parsed", context={"num_calls": len(tool_calls)})
+        
         tool_outputs = [
             call_tool_with_selection(tool_call, tools, verbose=verbose)
             for tool_call in tool_calls
@@ -431,6 +444,7 @@ class LLM(LLMBase):
         
         if error_on_tool_error and len(tool_outputs_with_error) > 0:
             error_text = "\n\n".join([t_out.content for t_out in tool_outputs])
+            log.error("Tool execution resulted in errors", context={"errors": error_text})
             raise ValueError(error_text)
             
         elif allow_parallel_tool_calls:
@@ -446,7 +460,7 @@ class LLM(LLMBase):
                 )
             return AgentChatResponse(response=tool_outputs[0].content, sources=tool_outputs)
 
-    @dispatcher.span
+    @observe(name="llm.inter.apredict_and_call")
     async def apredict_and_call(
         self,
         tools: Sequence["BaseTool"],
@@ -462,7 +476,11 @@ class LLM(LLMBase):
         from fiber.llm.router.chat_engine.types import AgentChatResponse
         from fiber.llm.router.tools.calling import acall_tool_with_selection
 
+        tool_names = [getattr(t, "metadata", t).name for t in tools] if tools else []
+        log.info("Starting async apredict_and_call", context={"available_tools": tool_names})
+
         if not getattr(self.metadata, "is_function_calling_model", False):
+            log.debug("Native function calling unsupported, falling back to ReAct.")
             return await self._apredict_and_call_with_react(
                 tools=list(tools), user_msg=user_msg, chat_history=chat_history, verbose=verbose, **kwargs
             )
@@ -475,6 +493,9 @@ class LLM(LLMBase):
         tool_calls = self.get_tool_calls_from_response(
             response, error_on_no_tool_call=error_on_no_tool_call
         )
+        
+        log.debug("Async tool selections parsed", context={"num_calls": len(tool_calls)})
+        
         tool_tasks = [
             acall_tool_with_selection(tool_call, tools, verbose=verbose)
             for tool_call in tool_calls
@@ -485,6 +506,7 @@ class LLM(LLMBase):
         
         if error_on_tool_error and len(tool_outputs_with_error) > 0:
             error_text = "\n\n".join([t_out.content for t_out in tool_outputs])
+            log.error("Async tool execution resulted in errors", context={"errors": error_text})
             raise ValueError(error_text)
             
         elif allow_parallel_tool_calls:
@@ -553,6 +575,7 @@ class LLM(LLMBase):
             return AgentChatResponse(response=output_text, sources=tool_outputs)
             
         except Exception as e:
+            log.error("ReAct fallback execution failed", context={"error": str(e)})
             return AgentChatResponse(
                 response=f"An error occurred while running the tool via ReAct fallback: {str(e)}",
                 sources=[],
@@ -608,6 +631,7 @@ class LLM(LLMBase):
             return AgentChatResponse(response=output_text, sources=tool_outputs)
             
         except Exception as e:
+            log.error("Async ReAct fallback execution failed", context={"error": str(e)})
             return AgentChatResponse(
                 response=f"An error occurred while running the tool via ReAct fallback: {str(e)}",
                 sources=[],

@@ -40,7 +40,7 @@ response = await aembedding(model="text-embedding-3-small", input=["Hello world"
 
 ## 3. Compatibility & Return Types
 
-All return objects map to the OpenAI-compatible Pydantic models defined in `fiber.llm.param`. This preserves existing type hinting and attribute access patterns (e.g., `response.choices[0].message.content`).
+All return objects map to the OpenAI-compatible Pydantic models defined in `fiber.llm.response`. This preserves existing type hinting and attribute access patterns (e.g., `response.choices[0].message.content`).
 
 | Object Name | Description | Compatibility Mapping (OpenAI / LiteLLM) |
 | --- | --- | --- |

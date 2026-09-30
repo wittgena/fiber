@@ -58,10 +58,10 @@ async def run_scenario(
     from fiber.llm.model.message import Message
     from fiber.dev.ex.agent.llm.driver import LLMFacade
     import fiber.dev.ex.agent.llm.observer 
-    from fiber.gateway.llm.mapper.traverser import StateTraverseRule
+    from fiber.gateway.llm.state.traverser import StateTraverseRule
     
     try:
-        from fiber.llm.param import ModelResponseStream
+        from fiber.llm.response import ModelResponseStream
     except ImportError:
         ModelResponseStream = None
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Union
 
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.router.stream.wrapper import StreamWrapper
 from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge

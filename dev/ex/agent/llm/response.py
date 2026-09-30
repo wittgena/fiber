@@ -4,7 +4,7 @@ from typing import ClassVar
 from pydantic import BaseModel, ConfigDict
 
 from fiber.llm.model.message import Message
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.llm.model.usage import MetricsSnapshot
 
 warnings.filterwarnings("ignore", message="Pydantic serializer warnings")

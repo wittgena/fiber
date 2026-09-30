@@ -243,7 +243,7 @@ class LlmCompatWorkflow(Workflow):
         """[NEW] Phase 6: InterLLM Adapter & State Mapper (Traverser) 검증"""
         self.log.info(f"[{self.name}] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification")
         try:
-            from fiber.gateway.llm.mapper.traverser import StateMapper
+            from fiber.gateway.llm.state.traverser import StateMapper
             mapper = StateMapper()
 
             mock_raw_resp = {

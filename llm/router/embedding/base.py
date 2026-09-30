@@ -17,41 +17,25 @@ from typing import (
     cast,
 )
 from typing_extensions import Self
-
 import numpy as np
 
-# Pydantic Imports
-from fiber.gateway.llm.mapper.pydantic import (
-    BaseModel,
-    Field,
-    ConfigDict,
-    model_serializer,
-    model_validator,
-)
-
-# Framework & Context Imports
+from fiber.gateway.llm.state.pydantic import BaseModel, Field, ConfigDict, model_serializer, model_validator
 from fiber.llm.router.manager import CallbackManager
 from fiber.gateway.llm.context.cbevent import (
     CBEventType,
     EventPayload,
-    EmbeddingEndEvent,
-    EmbeddingStartEvent,
-    SparseEmbeddingEndEvent,
-    SparseEmbeddingStartEvent,
 )
+
+from fiber.llm.types.inter.component import BaseComponent, BaseNode, MetadataMode
+from fiber.llm.router.util import get_tqdm_iterable
+from fiber.llm.router.embedding.jobs import run_jobs
+
+from xphi.watcher.observer.span import observe
+from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.bound.client.constants import DEFAULT_EMBED_BATCH_SIZE
 
-# [핵심 변경점] TransformComponent를 여기서 직접 정의하므로 임포트하지 않음
-from fiber.llm.types.inter.component import BaseComponent, BaseNode, MetadataMode
+log = get_emitter(__name__, phase="LLM_EMBEDDING")
 
-from fiber.llm.router.util import get_tqdm_iterable
-from fiber.llm.router.jobs import run_jobs
-from fiber.llm.router.dispatcher import dispatcher
-
-
-# ==========================================
-# 1. Types & Enums
-# ==========================================
 Embedding = List[float]
 SparseEmbedding = Dict[int, float]
 
@@ -61,16 +45,11 @@ class SimilarityMode(str, Enum):
     DOT_PRODUCT = "dot_product"
     EUCLIDEAN = "euclidean"
 
-
-# ==========================================
-# 2. Dense Embedding Utilities
-# ==========================================
 def dense_mean_agg(embeddings: List[Embedding]) -> Embedding:
     """Mean aggregation for dense embeddings."""
     if not embeddings:
         raise ValueError("No embeddings to aggregate")
     return np.array(embeddings).mean(axis=0).tolist()
-
 
 def similarity(
     embedding1: Embedding,
@@ -79,7 +58,6 @@ def similarity(
 ) -> float:
     """Get embedding similarity."""
     if mode == SimilarityMode.EUCLIDEAN:
-        # Using -euclidean distance as similarity to achieve same ranking order
         return -float(np.linalg.norm(np.array(embedding1) - np.array(embedding2)))
     elif mode == SimilarityMode.DOT_PRODUCT:
         return float(np.dot(embedding1, embedding2))
@@ -88,10 +66,6 @@ def similarity(
         norm = np.linalg.norm(embedding1) * np.linalg.norm(embedding2)
         return float(product / norm)
 
-
-# ==========================================
-# 3. Sparse Embedding Utilities
-# ==========================================
 def sparse_similarity(
     embedding1: SparseEmbedding,
     embedding2: SparseEmbedding,
@@ -100,11 +74,9 @@ def sparse_similarity(
     if not embedding1 or not embedding2:
         return 0.0
 
-    # Use the smaller embedding as the primary iteration set
     if len(embedding1) > len(embedding2):
         embedding1, embedding2 = embedding2, embedding1
 
-    # Precompute norms and find common indices
     norm1 = norm2 = dot_product = 0.0
     common_indices = set(embedding1.keys()) & set(embedding2.keys())
 
@@ -134,15 +106,7 @@ def sparse_mean_agg(embeddings: List[SparseEmbedding]) -> SparseEmbedding:
 
     return {idx: value / len(embeddings) for idx, value in sum_dict.items()}
 
-
-# ==========================================
-# 4. Pipeline Components
-# ==========================================
 class TransformComponent(BaseComponent, ABC):
-    """
-    Base class for transform components in standalone systems.
-    Moved here to act as the foundation for Embeddings and other node processors.
-    """
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @abstractmethod
@@ -155,10 +119,6 @@ class TransformComponent(BaseComponent, ABC):
         """Async transform nodes."""
         return self.__call__(nodes, **kwargs)
 
-
-# ==========================================
-# 5. Dense BaseEmbedding Component
-# ==========================================
 class BaseEmbedding(TransformComponent):
     """Base class for dense embeddings."""
 
@@ -211,12 +171,12 @@ class BaseEmbedding(TransformComponent):
     async def _aget_query_embedding(self, query: str) -> Embedding:
         """Embed the input query asynchronously."""
 
-    @dispatcher.span
+    @observe(name="embed.dense.query")
     def get_query_embedding(self, query: str) -> Embedding:
         """Embed the input query."""
         model_dict = self.to_dict()
         model_dict.pop("api_key", None)
-        dispatcher.event(EmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting dense query embedding", context={"model": model_dict})
         
         with self.callback_manager.event(
             CBEventType.EMBEDDING, payload={EventPayload.SERIALIZED: self.to_dict()}
@@ -248,17 +208,15 @@ class BaseEmbedding(TransformComponent):
                 },
             )
             
-        dispatcher.event(
-            EmbeddingEndEvent(chunks=[query], embeddings=[query_embedding])
-        )
+        log.debug("Dense query embedding complete", context={"query_length": len(query)})
         return query_embedding
 
-    @dispatcher.span
+    @observe(name="embed.dense.aquery")
     async def aget_query_embedding(self, query: str) -> Embedding:
         """Get query embedding asynchronously."""
         model_dict = self.to_dict()
         model_dict.pop("api_key", None)
-        dispatcher.event(EmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting async dense query embedding", context={"model": model_dict})
         
         with self.callback_manager.event(
             CBEventType.EMBEDDING, payload={EventPayload.SERIALIZED: self.to_dict()}
@@ -291,9 +249,7 @@ class BaseEmbedding(TransformComponent):
                 },
             )
             
-        dispatcher.event(
-            EmbeddingEndEvent(chunks=[query], embeddings=[query_embedding])
-        )
+        log.debug("Async dense query embedding complete", context={"query_length": len(query)})
         return query_embedding
 
     def get_agg_embedding_from_queries(
@@ -301,7 +257,6 @@ class BaseEmbedding(TransformComponent):
         queries: List[str],
         agg_fn: Optional[Callable[..., Embedding]] = None,
     ) -> Embedding:
-        """Get aggregated embedding from multiple queries."""
         query_embeddings = [self.get_query_embedding(query) for query in queries]
         agg_fn = agg_fn or dense_mean_agg
         return agg_fn(query_embeddings)
@@ -311,7 +266,6 @@ class BaseEmbedding(TransformComponent):
         queries: List[str],
         agg_fn: Optional[Callable[..., Embedding]] = None,
     ) -> Embedding:
-        """Async get aggregated embedding from multiple queries."""
         query_embeddings = [await self.aget_query_embedding(query) for query in queries]
         agg_fn = agg_fn or dense_mean_agg
         return agg_fn(query_embeddings)
@@ -393,11 +347,11 @@ class BaseEmbedding(TransformComponent):
                 )
         return cast(List[Embedding], embeddings)
 
-    @dispatcher.span
+    @observe(name="embed.dense.text")
     def get_text_embedding(self, text: str) -> Embedding:
         model_dict = self.to_dict()
         model_dict.pop("api_key", None)
-        dispatcher.event(EmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting dense text embedding", context={"model": model_dict})
         
         with self.callback_manager.event(
             CBEventType.EMBEDDING, payload={EventPayload.SERIALIZED: self.to_dict()}
@@ -430,16 +384,14 @@ class BaseEmbedding(TransformComponent):
                 }
             )
             
-        dispatcher.event(
-            EmbeddingEndEvent(chunks=[text], embeddings=[text_embedding])
-        )
+        log.debug("Dense text embedding complete", context={"text_length": len(text)})
         return text_embedding
 
-    @dispatcher.span
+    @observe(name="embed.dense.atext")
     async def aget_text_embedding(self, text: str) -> Embedding:
         model_dict = self.to_dict()
         model_dict.pop("api_key", None)
-        dispatcher.event(EmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting async dense text embedding", context={"model": model_dict})
         
         with self.callback_manager.event(
             CBEventType.EMBEDDING, payload={EventPayload.SERIALIZED: self.to_dict()}
@@ -472,12 +424,10 @@ class BaseEmbedding(TransformComponent):
                 }
             )
             
-        dispatcher.event(
-            EmbeddingEndEvent(chunks=[text], embeddings=[text_embedding])
-        )
+        log.debug("Async dense text embedding complete", context={"text_length": len(text)})
         return text_embedding
 
-    @dispatcher.span
+    @observe(name="embed.dense.batch")
     def get_text_embedding_batch(
         self,
         texts: List[str],
@@ -494,10 +444,12 @@ class BaseEmbedding(TransformComponent):
         model_dict = self.to_dict()
         model_dict.pop("api_key", None)
         
+        log.info(f"Starting dense batch embedding for {len(texts)} chunks", context={"model": model_dict})
+        
         for idx, text in queue_with_progress:
             cur_batch.append(text)
             if idx == len(texts) - 1 or len(cur_batch) == self.embed_batch_size:
-                dispatcher.event(EmbeddingStartEvent(model_dict=model_dict))
+                log.debug("Processing dense embedding batch", context={"batch_size": len(cur_batch)})
                 
                 with self.callback_manager.event(
                     CBEventType.EMBEDDING,
@@ -518,14 +470,12 @@ class BaseEmbedding(TransformComponent):
                         },
                     )
                     
-                dispatcher.event(
-                    EmbeddingEndEvent(chunks=cur_batch, embeddings=embeddings)
-                )
+                log.debug("Dense batch processing complete", context={"completed_chunks": len(cur_batch)})
                 cur_batch = []
 
         return result_embeddings
 
-    @dispatcher.span
+    @observe(name="embed.dense.abatch")
     async def aget_text_embedding_batch(
         self,
         texts: List[str],
@@ -536,6 +486,8 @@ class BaseEmbedding(TransformComponent):
         model_dict = self.to_dict()
         model_dict.pop("api_key", None)
 
+        log.info(f"Starting async dense batch embedding for {len(texts)} chunks", context={"model": model_dict})
+
         cur_batch: List[str] = []
         embeddings_coroutines: List[Coroutine] = []
         callback_payloads: List[Tuple[str, List[str]]] = []
@@ -543,7 +495,7 @@ class BaseEmbedding(TransformComponent):
         for idx, text in enumerate(texts):
             cur_batch.append(text)
             if idx == len(texts) - 1 or len(cur_batch) == self.embed_batch_size:
-                dispatcher.event(EmbeddingStartEvent(model_dict=model_dict))
+                log.debug("Queueing async dense embedding batch", context={"batch_size": len(cur_batch)})
                 
                 event_id = self.callback_manager.on_event_start(
                     CBEventType.EMBEDDING,
@@ -586,7 +538,7 @@ class BaseEmbedding(TransformComponent):
         ]
 
         for (event_id, text_batch), embeddings in zip(callback_payloads, nested_embeddings):
-            dispatcher.event(EmbeddingEndEvent(chunks=text_batch, embeddings=embeddings))
+            log.debug("Async batch processing complete", context={"completed_chunks": len(text_batch)})
             self.callback_manager.on_event_end(
                 CBEventType.EMBEDDING,
                 payload={
@@ -667,20 +619,24 @@ class BaseSparseEmbedding(BaseModel):
     async def _aget_query_embedding(self, query: str) -> SparseEmbedding:
         """Embed the input query asynchronously."""
 
-    @dispatcher.span
+    @observe(name="embed.sparse.query")
     def get_query_embedding(self, query: str) -> SparseEmbedding:
         model_dict = self.model_dump()
-        dispatcher.event(SparseEmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting sparse query embedding", context={"model": model_dict})
+        
         query_embedding = self._get_query_embedding(query)
-        dispatcher.event(SparseEmbeddingEndEvent(chunks=[query], embeddings=[query_embedding]))
+        
+        log.debug("Sparse query embedding complete", context={"query_length": len(query)})
         return query_embedding
 
-    @dispatcher.span
+    @observe(name="embed.sparse.aquery")
     async def aget_query_embedding(self, query: str) -> SparseEmbedding:
         model_dict = self.model_dump()
-        dispatcher.event(SparseEmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting async sparse query embedding", context={"model": model_dict})
+        
         query_embedding = await self._aget_query_embedding(query)
-        dispatcher.event(SparseEmbeddingEndEvent(chunks=[query], embeddings=[query_embedding]))
+        
+        log.debug("Async sparse query embedding complete", context={"query_length": len(query)})
         return query_embedding
 
     def get_agg_embedding_from_queries(
@@ -717,23 +673,27 @@ class BaseSparseEmbedding(BaseModel):
             *[self._aget_text_embedding(text) for text in texts]
         )
 
-    @dispatcher.span
+    @observe(name="embed.sparse.text")
     def get_text_embedding(self, text: str) -> SparseEmbedding:
         model_dict = self.model_dump()
-        dispatcher.event(SparseEmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting sparse text embedding", context={"model": model_dict})
+        
         text_embedding = self._get_text_embedding(text)
-        dispatcher.event(SparseEmbeddingEndEvent(chunks=[text], embeddings=[text_embedding]))
+        
+        log.debug("Sparse text embedding complete", context={"text_length": len(text)})
         return text_embedding
 
-    @dispatcher.span
+    @observe(name="embed.sparse.atext")
     async def aget_text_embedding(self, text: str) -> SparseEmbedding:
         model_dict = self.model_dump()
-        dispatcher.event(SparseEmbeddingStartEvent(model_dict=model_dict))
+        log.info("Starting async sparse text embedding", context={"model": model_dict})
+        
         text_embedding = await self._aget_text_embedding(text)
-        dispatcher.event(SparseEmbeddingEndEvent(chunks=[text], embeddings=[text_embedding]))
+        
+        log.debug("Async sparse text embedding complete", context={"text_length": len(text)})
         return text_embedding
 
-    @dispatcher.span
+    @observe(name="embed.sparse.batch")
     def get_text_embedding_batch(
         self,
         texts: List[str],
@@ -747,23 +707,28 @@ class BaseSparseEmbedding(BaseModel):
         )
 
         model_dict = self.model_dump()
+        log.info(f"Starting sparse batch embedding for {len(texts)} chunks", context={"model": model_dict})
+        
         for idx, text in queue_with_progress:
             cur_batch.append(text)
             if idx == len(texts) - 1 or len(cur_batch) == self.embed_batch_size:
-                dispatcher.event(SparseEmbeddingStartEvent(model_dict=model_dict))
+                log.debug("Processing sparse embedding batch", context={"batch_size": len(cur_batch)})
                 embeddings = self._get_text_embeddings(cur_batch)
                 result_embeddings.extend(embeddings)
-                dispatcher.event(SparseEmbeddingEndEvent(chunks=cur_batch, embeddings=embeddings))
+                log.debug("Sparse batch processing complete", context={"completed_chunks": len(cur_batch)})
                 cur_batch = []
 
         return result_embeddings
 
-    @dispatcher.span
+    @observe(name="embed.sparse.abatch")
     async def aget_text_embedding_batch(
         self, texts: List[str], show_progress: bool = False
     ) -> List[SparseEmbedding]:
         num_workers = self.num_workers
         model_dict = self.model_dump()
+        
+        log.info(f"Starting async sparse batch embedding for {len(texts)} chunks", context={"model": model_dict})
+        
         cur_batch: List[str] = []
         callback_payloads: List[List[str]] = []
         embeddings_coroutines: List[Coroutine] = []
@@ -771,7 +736,7 @@ class BaseSparseEmbedding(BaseModel):
         for idx, text in enumerate(texts):
             cur_batch.append(text)
             if idx == len(texts) - 1 or len(cur_batch) == self.embed_batch_size:
-                dispatcher.event(SparseEmbeddingStartEvent(model_dict=model_dict))
+                log.debug("Queueing async sparse embedding batch", context={"batch_size": len(cur_batch)})
                 callback_payloads.append(cur_batch)
                 embeddings_coroutines.append(self._aget_text_embeddings(cur_batch))
                 cur_batch = []
@@ -802,7 +767,7 @@ class BaseSparseEmbedding(BaseModel):
         ]
 
         for text_batch, embeddings in zip(callback_payloads, nested_embeddings):
-            dispatcher.event(SparseEmbeddingEndEvent(chunks=text_batch, embeddings=embeddings))
+            log.debug("Async sparse batch processing complete", context={"completed_chunks": len(text_batch)})
 
         return result_embeddings
 

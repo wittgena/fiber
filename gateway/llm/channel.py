@@ -10,7 +10,7 @@ import uuid
 import copy
 from typing import Any, Dict, List, Union
 
-from fiber.llm.param import ModelResponse
+from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.mapping import exception_type

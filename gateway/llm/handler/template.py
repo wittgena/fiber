@@ -16,7 +16,7 @@ from typing import (
 )
 from typing_extensions import Annotated
 
-from fiber.gateway.llm.mapper.pydantic import (
+from fiber.gateway.llm.state.pydantic import (
     Field,
     WithJsonSchema,
     PlainSerializer,
@@ -25,11 +25,10 @@ from fiber.gateway.llm.mapper.pydantic import (
 
 from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
-
-from fiber.gateway.llm.mapper.pydantic import BaseModel, ConfigDict
 from fiber.llm.types.inter.llm import LLMBase
-from fiber.llm.router.util import get_template_vars, format_string
 from fiber.llm.types.inter.base import BaseOutputParser
+from fiber.llm.router.util import get_template_vars, format_string
+from fiber.gateway.llm.state.pydantic import BaseModel, ConfigDict
 
 def default_messages_to_prompt(messages: Sequence[ChatMessage]) -> str:
     """Convert messages to a prompt string."""

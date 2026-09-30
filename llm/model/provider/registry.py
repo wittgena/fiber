@@ -31,8 +31,6 @@ class ProviderKeyResolver:
         return False
 
 class RegistryIO:
-    """@desc: Namespace for local registry file operations (Network I/O removed)."""
-    
     @classmethod
     def save_registry(cls, data: dict, filename: str = DEFAULT_REGISTRY_FILENAME) -> None:
         try:

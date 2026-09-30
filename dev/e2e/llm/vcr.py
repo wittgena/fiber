@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.mapper.traverser import StateTraverser
+from fiber.gateway.llm.state.traverser import StateTraverser
 
 from fiber.dev.trace.llm.debugger import DebugTracer
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
