@@ -1,37 +1,27 @@
-# fiber.gateway.worker.registry.quarantine
-## @lineage: fiber.gateway.node.registry.quarantine
-## @lineage: fiber.gateway.node.worker.registry.quarantine
-## @lineage: fiber.dphi.worker.registry.quarantine
+# fiber.gateway.mcp.registry.quarantine
 import json
 import logging
 from typing import Any, Dict
 
-log = logging.getLogger("gateway.quarantine")
+log = logging.getLogger("registry.quarantine")
 
 """Declarative Ruleset"""
 QUARANTINE_RULES = {
     "legacy-01": {
-        ## rule.1: Data Sanitization] 값 교정 (클라이언트 오타 방어)
-        "sanitizers": [
-            {"path": "params.arguments.target_env", "match": "prod", "replace": "production"}
-        ],
-        ## rule.2: Resume Extraction] YIELD 재개 시 특정 경로만 추출하여 단축 반환
+        ## rule.1: Data Sanitization 값 교정 (클라이언트 오타 방어)
+        "sanitizers": [{"path": "params.arguments.target_env", "match": "prod", "replace": "production"}],
+        ## rule.2: Resume Extraction YIELD 재개 시 특정 경로만 추출하여 단축 반환
         "resume_path": "params._meta.inputResponses",
-        ## rule.3: Compatibility] 데이터 매핑/이동 (MCP 표준 -> 레거시 규격)
-        "mappings": [
-            {"src": "params._meta.user_id", "dst": "params.arguments.user_id"}
-        ]
+        ## rule.3: Compatibility 데이터 매핑/이동 (MCP 표준 -> 레거시 규격)
+        "mappings": [{"src": "params._meta.user_id", "dst": "params.arguments.user_id"}]
     },
     "margin-01": {
         ## 레거시 스키마 크래시 방지를 위한 메타데이터 삭제
-        "deletions": [
-            "params._meta"
-        ]
+        "deletions": ["params._meta"]
     }
 }
 
-class PayloadTraverser:
-    """점 표기법(Dot-notation) 기반의 안전한 Dict 탐색/조작 엔진"""
+class MCPPayloadTraverser:
     @staticmethod
     def resolve(obj: Dict, path: str, default: Any = None) -> Any:
         if not path or not isinstance(obj, dict): return default
@@ -70,7 +60,7 @@ class IsolationAdapter:
         return payload
         
     def translate_egress(self, raw_output: str) -> dict:
-        """[엄격한 규약] 레거시의 출력물이 유효한 JSON이 아니면 즉시 빠른 실패(Fail-Fast)"""
+        """레거시의 출력물이 유효한 JSON이 아니면 즉시 빠른 실패(Fail-Fast)"""
         line = raw_output.strip()
         if not line:
             raise RuntimeError("IPC Contract Violation: Agent closed stream unexpectedly.")
@@ -79,7 +69,6 @@ class IsolationAdapter:
         except json.JSONDecodeError:
             log.error(f"[Quarantine] STDOUT Pollution Detected: {line}")
             raise RuntimeError(f"IPC Contract Violation: Agent stdout is not valid JSON. (Output: {line[:50]}...)")
-
 
 class DeclarativeIsolationAdapter(IsolationAdapter):
     """규칙 기반 범용 격리 어댑터 (LLM StateMapper 패턴 적용)"""
@@ -94,25 +83,24 @@ class DeclarativeIsolationAdapter(IsolationAdapter):
         ## Short-circuit Extraction (Resume 처리)
         resume_path = self.rule.get("resume_path")
         if resume_path:
-            resume_data = PayloadTraverser.resolve(payload, resume_path)
+            resume_data = MCPPayloadTraverser.resolve(payload, resume_path)
             if resume_data:
                 return resume_data  # 역직렬화된 Elicitation 응답만 즉시 반환
 
         ## Sanitizations (값 교정)
         for san in self.rule.get("sanitizers", []):
-            val = PayloadTraverser.resolve(payload, san["path"])
+            val = MCPPayloadTraverser.resolve(payload, san["path"])
             if val == san["match"]:
-                PayloadTraverser.set(payload, san["path"], san["replace"])
+                MCPPayloadTraverser.set(payload, san["path"], san["replace"])
 
         ## Mappings (값 복사/이동)
         for map_rule in self.rule.get("mappings", []):
-            src_val = PayloadTraverser.resolve(payload, map_rule["src"])
+            src_val = MCPPayloadTraverser.resolve(payload, map_rule["src"])
             if src_val is not None:
-                PayloadTraverser.set(payload, map_rule["dst"], src_val)
+                MCPPayloadTraverser.set(payload, map_rule["dst"], src_val)
 
-        ## Deletions (구형 에이전트 크래시 방지용 필드 삭제)
         for del_path in self.rule.get("deletions", []):
-            PayloadTraverser.delete(payload, del_path)
+            MCPPayloadTraverser.delete(payload, del_path)
 
         return payload
 

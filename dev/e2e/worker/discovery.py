@@ -10,7 +10,7 @@ import httpx
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 import fiber.dev.ex.worker.legacy.finlib as worker_finlib
 import fiber.dev.ex.worker.legacy.oracle as worker_oracle
 import fiber.dev.ex.worker.search.archive as worker_archive_search
@@ -49,17 +49,17 @@ class ToolDiscoveryPipeline(BaseBridgePipeline):
         """테스트할 워커 부팅 (Oracle, FinLib, Search)"""
         oracle_cmd = f"{sys.executable} -m {worker_oracle.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
+            MCPServerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
         )
 
         finlib_cmd = f"{sys.executable} -m {worker_finlib.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
+            MCPServerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
         )
 
         search_cmd = f"{sys.executable} -m {worker_archive_search.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
+            MCPServerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
         )
 
     # Test Phases

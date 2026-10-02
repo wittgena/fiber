@@ -1,4 +1,4 @@
-# fiber.dev.e2e.dphi.scene.eco
+# fiber.infra.scene.eco
 import time
 import json
 from typing import Any, List, Dict
@@ -6,7 +6,7 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.infra.e2e.sandbox import EpochBase
+from fiber.infra.e2e.epoch import EpochBase
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from xphi.state.anchor.nexus import ActorIdentity
 

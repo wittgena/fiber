@@ -9,7 +9,7 @@ from contextlib import suppress
 
 from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor
@@ -69,7 +69,7 @@ class McpIngressTracer(PipelineRunner):
         # 초경량 Dummy Worker (JSON-RPC 응답만 반환하는 파이썬 스크립트)
         dummy_cmd = f"""{sys.executable} -c "import sys, json; req=json.loads(sys.stdin.readline()); sys.stdout.write(json.dumps({{'jsonrpc': '2.0', 'id': req.get('id'), 'result': 'TRACED_SUCCESS'}})+'\\n')" """
         
-        self.connector = WorkerConnector(
+        self.connector = MCPServerConnector(
             target_id=self.target_worker_id, 
             execution_target=dummy_cmd, 
             mode="ephemeral", 

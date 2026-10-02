@@ -135,7 +135,7 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["llm.trace", "edge.compliance", "dphi.clearing", "dphi.wasm.phase", "plane.flare"]
+    KNOWN_SUITES = ["llm.trace", "edge.compliance", "wasm.phase", "plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] 🧪 Igniting E2E Test Suite(s): {', '.join(targets)}")
@@ -177,9 +177,9 @@ def run_connector(
     resolved_cmd = KNOWN_WORKERS.get(exec_cmd, exec_cmd)
 
     async def _launch_connector():
-        from fiber.gateway.worker.connector import WorkerConnector
+        from fiber.gateway.mcp.connector import MCPServerConnector
         log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
-        daemon = WorkerConnector(target_id=target, execution_target=resolved_cmd)
+        daemon = MCPServerConnector(target_id=target, execution_target=resolved_cmd)
         try:
             await daemon.run()
         finally:

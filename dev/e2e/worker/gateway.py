@@ -11,7 +11,7 @@ import httpx
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 import fiber.dev.ex.worker.legacy.oracle as worker_oracle
 import fiber.dev.ex.worker.legacy.finlib as worker_finlib
 import fiber.dev.ex.worker.legacy.margin as worker_margin
@@ -75,16 +75,16 @@ class CoreRoutingPipeline(BaseBridgePipeline):
             
     async def setup_workers(self):
         oracle_cmd = f"{sys.executable} -m {worker_oracle.__name__}"
-        self.connectors.append(WorkerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex"))
+        self.connectors.append(MCPServerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex"))
 
         finlib_cmd = f"{sys.executable} -m {worker_finlib.__name__}"
-        self.connectors.append(WorkerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear"))
+        self.connectors.append(MCPServerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear"))
 
         margin_cmd = f"{sys.executable} -m {worker_margin.__name__}"
-        self.connectors.append(WorkerConnector(target_id=self.margin_id, execution_target=margin_cmd, mode="multiplex"))
+        self.connectors.append(MCPServerConnector(target_id=self.margin_id, execution_target=margin_cmd, mode="multiplex"))
 
         search_cmd = f"{sys.executable} -m {worker_search.__name__}"
-        self.connectors.append(WorkerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex"))
+        self.connectors.append(MCPServerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex"))
 
     # =====================================================================
     # Test Phases (1 ~ 8) 

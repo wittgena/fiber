@@ -25,7 +25,7 @@ from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 import fiber.dev.ex.worker.deployer as worker_deployer
 import fiber.dev.ex.worker.sentinel as worker_sentinel
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 from fiber.infra.rpc.validator import ValidatorService
 import fiber.infra.rpc.registry as rpc_registry
 
@@ -117,7 +117,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
     async def setup_workers(self):
         deploy_cmd = f"{sys.executable} -m {worker_deployer.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
+            MCPServerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
         )
 
         self.sentinel = worker_sentinel.AgentSentinel(ledger=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0)

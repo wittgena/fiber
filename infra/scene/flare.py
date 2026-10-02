@@ -1,4 +1,4 @@
-# fiber.dev.e2e.dphi.scene.flare
+# fiber.infra.scene.flare
 import time
 import asyncio
 import json
