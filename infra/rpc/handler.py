@@ -15,10 +15,10 @@ from xphi.arch.model.edge.receptor import (
     ExecuteComputeRequest, ProofGenerationRequest, TradeIngressRequest,
     EpochInitPayload, ClearingReceiptRequest
 )
-from xphi.arch.model.edge.receipt import BilledExecutionRequest, KernelLedgerAppendRecord
+from xphi.arch.model.edge.receipt import BilledExecutionRequest, PhaseStoreAppendRecord
 
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.kernel.wasm.cgroup import Tier
+from xphi.kernel.wasm.quota import Tier
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.state.anchor.consensus import LogicStream
@@ -104,7 +104,7 @@ async def handle_mcp_state_resolve(params: dict, ctx: WorkerContext) -> dict:
     return {"success": True, "status": status}
 
 """Infrastructure & Consensus"""
-async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
+async def handle_phase_store_stream_append(params: dict, ctx: WorkerContext) -> dict:
     try: req = StreamAppendRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
@@ -112,9 +112,9 @@ async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
     with flow_scope(phase="LEDGER_STREAM_APPEND", bound="rpc.handler", req_id=request_id):
         events_dicts = [e.model_dump(exclude_none=True) for e in req.events]
         is_authorized = await ctx.store.bulk_append(stream_name=req.stream_name, events=events_dicts)
-        if not is_authorized: return _build_error(403, "Ledger Blocked Stream Append")
+        if not is_authorized: return _build_error(403, "PhaseStore Blocked Stream Append")
             
-        payload_to_hash = KernelLedgerAppendRecord(stream_name=req.stream_name, timestamp=int(time.time() * 1000), events=events_dicts).model_dump(exclude_none=True)
+        payload_to_hash = PhaseStoreAppendRecord(stream_name=req.stream_name, timestamp=int(time.time() * 1000), events=events_dicts).model_dump(exclude_none=True)
         fp_res = await ctx.broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, payload_to_hash)
         if not fp_res.success: return _build_error(500, f"WASM Fingerprint Failed: {fp_res.error}")
         event_hash = json.loads(fp_res.output)["fingerprint"]
@@ -125,7 +125,7 @@ async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
                 
         return {"request_id": request_id, "status": "success", "result": {"hash": event_hash, "membership_proof": merkle_proof}}
 
-async def handle_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
+async def handle_phase_store_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
     try: req = AnchorProposalRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
@@ -139,7 +139,7 @@ async def handle_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
     if not result.is_sealed: return _build_error(409, f"Consensus Failed: {result.rupture_reason}")
     return {"status": EdgeState.SEALED_AND_COMMITTED, "nexus_id": result.nexus_id, "commit_hash": result.commit_hash, "receipt": result.receipt.__dict__ if hasattr(result.receipt, "__dict__") else dict(result.receipt)}
 
-async def handle_receipt_verify(params: dict, ctx: WorkerContext) -> dict:
+async def handle_phase_store_receipt_verify(params: dict, ctx: WorkerContext) -> dict:
     state_root, receipt_id = params.get("state_root"), params.get("receipt_id")
     if not state_root or not receipt_id: return _build_error(422, "Payload Format Error: Missing 'state_root' or 'receipt_id' in receipt")
 

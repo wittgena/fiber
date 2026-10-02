@@ -15,7 +15,7 @@ from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.rest")
@@ -63,13 +63,12 @@ class RestEdgeDaemon(AbstractDaemon):
         log.info(f"[{self.name}] Starting REST Edge Daemon...")
         try:
             await clear_zombie_ports([self.target_port], tag=self.name)
-            
             self._tunnel = await TunnelFactory.get_default()
-            
-            ledger = getattr(self.ctx, "ledger", None)
-            if ledger is None:
-                log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger.")
-                ledger = KernelLedger()
+
+            phase_store = getattr(self.ctx, "phase_store", None)
+            if phase_store is None:
+                log.info(f"[{self.name}] PhaseStore not found in context. Bootstrapping local PhaseStore.")
+                phase_store = PhaseStore()
 
             resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
@@ -83,7 +82,7 @@ class RestEdgeDaemon(AbstractDaemon):
             injected_app = create_app(
                 config=runtime_config,
                 tunnel=self._tunnel,
-                ledger=ledger
+                phase_store=phase_store
             )
 
             config = uvicorn.Config(

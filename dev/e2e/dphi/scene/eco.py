@@ -25,10 +25,6 @@ class EcoContext:
         self.field = ActorIdentity("Clearing_Field")
         self.exchange_adapter = ClearingAdapter(clearing_house_pub_key=self.field.pubkey_hex)
 
-
-# =========================================================================
-# 1. Eco Pipeline (Integrated from scene.eco)
-# =========================================================================
 class EcoScene(SchemeRunner):
     """@desc: Unified Zero-Trust Data Pipeline, Autonomous State Engine, Agent-to-Agent, and P2P Exchange scenarios."""
     def __init__(self, broker):
@@ -38,24 +34,22 @@ class EcoScene(SchemeRunner):
 
     async def execute_suite(self):
         log.info("\n=== [PHASE 1] Executing Unified Ecosystem & Eco Structural Scenarios ===")
-        # 글로벌 상태 조작 폐기 (모든 제어는 SYSTEM 베이스로 동작)
-        
-        # @pipeline.1: Zero-Trust Data Integrity
+        # @phase.1: Zero-Trust Data Integrity
         await self._test_oracle_data_provenance()
         await self._test_oracle_epoch_initialization()
         await self._test_oracle_self_healing()
         
-        # @pipeline.2: Autonomous Protocol State Engine
+        # @phase.2: Autonomous Protocol State Engine
         await self._test_dao_tension_evaluation()
         await self._test_dao_state_evolution()
         await self._test_dao_epoch_sealing()
 
-        # @pipeline.3: Agent-to-Agent (Eco) Proof-of-Compute
+        # @phase.3: Agent-to-Agent (Eco) Proof-of-Compute
         await self._test_a2a_trustless_execution()
         await self._test_a2a_proof_generation()
         await self._test_a2a_ledger_inscription()
 
-        # @pipeline.4: Decentralized Exchange & Deterministic Settlement
+        # @phase.4: Decentralized Exchange & Deterministic Settlement
         await self._test_p2p_exchange_settlement()
 
     async def _test_oracle_data_provenance(self):
@@ -117,7 +111,7 @@ class EcoScene(SchemeRunner):
         await self._run_case("Eco: Generate Proof-of-Compute", DphiMethod.GENERATE_PROOF.value, payload, expected_success=True)
 
     async def _test_a2a_ledger_inscription(self):
-        log.info("\n--- [Eco Pipeline] Phase 4: Cryptographic Ledger Inscription ---")
+        log.info("\n--- [Eco Pipeline] Phase 4: Cryptographic PhaseStore Inscription ---")
         repo_commit = StateAdapter.build_repo_commit(nexus_id=907049, parent_nexus_id=0, parent_commit_id="proof-hash-xyz")
         sig_hex = self.ctx.system.sign(repo_commit)
         payload = StateAdapter.build_inscribe_payload(
@@ -191,10 +185,6 @@ class EcoScene(SchemeRunner):
         await self._run_case("Trade Settlement: 3-of-3 Multi-sig State Committed to Nexus", DphiMethod.SEAL_EPOCH.value, seal_payload, expected_success=True)
         return signatures
 
-
-# =========================================================================
-# 2. Ledger Security Suite
-# =========================================================================
 class LedgerSecuritySuite(SchemeRunner):
     """@desc: Multi-sig Consensus, Ed25519 Signatures, and Sybil Defense scenarios"""
     def __init__(self, broker):
@@ -204,7 +194,7 @@ class LedgerSecuritySuite(SchemeRunner):
         self.rogue = ActorIdentity("Rogue_Attacker")
 
     async def execute_suite(self):
-        log.info("\n=== [PHASE 2] Executing Ledger Cryptographic Security Boundaries ===")
+        log.info("\n=== [PHASE 2] Executing PhaseStore Cryptographic Security Boundaries ===")
         await self._test_multisig_authorized()
         await self._test_multisig_threshold_fail()
         await self._test_multisig_sybil_attack()
@@ -277,9 +267,7 @@ class LedgerSecuritySuite(SchemeRunner):
         await self._run_case("Ledger: Reject Unauthorized Signer via ACL", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
 
-# =========================================================================
-# 3. Anchor Lifecycles (Swarm Consensus & Provenance Alignment)
-# =========================================================================
+# Anchor Lifecycles (Swarm Consensus & Provenance Alignment)
 class SwarmConsensusScene(EpochBase):
     def __init__(self, broker: Any, simulate_wallet: bool = True):
         super().__init__(broker, "AI Agent Swarm Consensus (M-of-N)")
@@ -309,7 +297,6 @@ class SwarmConsensusScene(EpochBase):
 
     async def hook_build_phase_root(self, commit_hash: str, repos: dict) -> dict:
         return StateAdapter.adapt_swarm_to_phase_root(commit_hash, agents_dict=repos)
-
 
 class ProvAlignScene(EpochBase):
     def __init__(self, broker: Any, simulate_wallet: bool = True):
@@ -348,21 +335,18 @@ class AnchorScene(SchemeRunner):
     async def run_all(self):
         log.info("\n=== [START] Unified Master Pipeline (Eco + Anchor) ===")
         
-        # 1. Eco Pipeline (Zero-Trust, DAO, A2A, Exchange)
         eco = EcoScene(self.broker)
         await eco.execute_suite()
         self.success_count += eco.success_count
         self.fail_count += eco.fail_count
         self.failed_cases.extend(eco.failed_cases)
         
-        # 2. 암호학적 기반 보안 규칙 검증 (Ledger)
         ledger = LedgerSecuritySuite(self.broker)
         await ledger.execute_suite()
         self.success_count += ledger.success_count
         self.fail_count += ledger.fail_count
         self.failed_cases.extend(ledger.failed_cases)
         
-        # 3. Swarm 합의 라이프사이클 
         log.info("\n=== [PHASE 3] Executing 5-Flow Complete Epoch Scenarios ===")
         swarm = SwarmConsensusScene(self.broker, simulate_wallet=True)
         await swarm.execute_anchor_lifecycle(topo=1, press=3, rupture=False)
@@ -370,12 +354,10 @@ class AnchorScene(SchemeRunner):
         self.fail_count += swarm.fail_count
         self.failed_cases.extend(swarm.failed_cases)
         
-        # 4. Provenance 증명 라이프사이클
         prov = ProvAlignScene(self.broker, simulate_wallet=True)
         await prov.execute_anchor_lifecycle(topo=1, press=3, rupture=True)
         self.success_count += prov.success_count
         self.fail_count += prov.fail_count
         self.failed_cases.extend(prov.failed_cases)
         
-        # 최종 결과 집계 리포트
         self.report()

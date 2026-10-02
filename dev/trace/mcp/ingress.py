@@ -14,7 +14,7 @@ from fiber.gateway.worker.connector import WorkerConnector
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("tracer.mcp_ingress")
@@ -51,7 +51,7 @@ class McpIngressTracer(PipelineRunner):
     async def phase_ignition(self):
         log.info(f"[{self.scope_name}] Bootstrapping Gateway & Connector...")
         self.tunnel = await TunnelFactory.get_default()
-        self.ledger = KernelLedger()
+        self.ledger = PhaseStore()
         
         # Gateway 기동
         self.rest_app = create_app(config=Config(), tunnel=self.tunnel, ledger=self.ledger)

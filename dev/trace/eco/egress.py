@@ -10,7 +10,7 @@ from fiber.gateway.rest.payload import create_app, Config
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
@@ -37,7 +37,7 @@ class EcoEgressTracer(PipelineRunner):
     async def phase_ignition(self):
         log.info(f"[{self.scope_name}] Bootstrapping Gateway for Egress Trace...")
         self.tunnel = await TunnelFactory.get_default()
-        self.ledger = KernelLedger()
+        self.ledger = PhaseStore()
         
         self.rest_app = create_app(config=Config(), tunnel=self.tunnel, ledger=self.ledger)
         u_config = uvicorn.Config(app=self.rest_app, host=self.config.host, port=self.config.port, log_level="error", access_log=False)

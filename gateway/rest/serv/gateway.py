@@ -29,6 +29,18 @@ class TransitionBridge:
         self.nonce_protector = nonce_protector
         log.info("[TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.")
 
+    async def _is_x402_required(self, target_server_id: str) -> bool:
+        """개별 서버/워커별 X402 과금 활성화 Flag 여부를 동적으로 확인합니다."""
+        try:
+            tunnel = await TunnelFactory.get_default()
+            policy = await tunnel.get(f"config:x402:{target_server_id}")
+            if policy is not None:
+                # Redis 클라이언트 반환 타입(bytes or str) 안전 처리
+                return policy.decode('utf-8') == "1" if isinstance(policy, bytes) else str(policy) == "1"
+        except Exception as e:
+            log.warning(f"[Bridge:Config] Failed to fetch X402 flag for {target_server_id}: {e}")
+        return False
+
     async def invoke_mcp_sync(
         self, identity: AgentIdentity, payload: Dict[str, Any], target_uri: str, target_method: str, rpc: InternalRpcClient
     ) -> Union[Dict[str, Any], JSONResponse]:
@@ -55,6 +67,9 @@ class TransitionBridge:
         trace_ctx["handle_id"] = str(handle_id)
         log.debug(f"[Bridge:Idempotency] Handle mapped", extra={"is_new": is_new, **trace_ctx})
 
+        # Polling/Status Location header
+        location_header = {"Location": f"/v1/mcp-gateway/{identity.target_server_id}/status/{handle_id}"}
+
         if not is_new:
             state_res = await rpc.call("mcp.state.query", {"handle_id": handle_id})
             if state_res.get("exists"):
@@ -76,7 +91,7 @@ class TransitionBridge:
                         return await self._wait_for_resolution(handle_id, identity.target_server_id, rpc, trace_ctx)
                         
                     log.debug(f"[Bridge:Yield] Returning existing prompt to client", extra=trace_ctx)
-                    return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}))
+                    return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}), headers=location_header)
                     
                 elif status == "FAULTED":
                     raw_err = state_res.get("error_detail", "Execution Fault")
@@ -90,42 +105,37 @@ class TransitionBridge:
                     return state_res.get("executable_payload", {})
                     
             log.warning(f"[Bridge:Conflict] Transaction already in progress but state not queryable", extra=trace_ctx)
-            return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
+            return JSONResponse(status_code=202, content={"message": "Transaction already in progress."}, headers=location_header)
 
         # Identify MCP discovery and initialization methods
         mcp_method = payload.get("method", "")
         is_discovery_phase = mcp_method in ("initialize", "tools/list", "prompts/list", "resources/list")
 
-        # Authentication & Fuel Validation (DPoP & X402)
-        # X402 and HTTP 402 are utilized strictly for execution fuel/quota management
-        is_authenticated = False
+        # Authentication (DPoP Mandatory) & Fuel Validation (X402 Conditional)
         if is_discovery_phase:
             # Bypass strict auth and fuel checks for discovery phases
             log.debug(f"[Bridge:Auth] Bypassing strict auth for discovery method: {mcp_method}", extra=trace_ctx)
-            is_authenticated = True
         else:
-            # Enforce strict DPoP signature and fuel receipt validation for execution phases
-            if identity.proof_of_possession:
-                if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
-                    log.warning(f"[Bridge:Auth] DPoP Verification Failed", extra=trace_ctx)
-                    raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
-                is_authenticated = True
+            # 1. DPoP 필수 검증 (Mandatory)
+            if not identity.proof_of_possession or not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
+                log.warning(f"[Bridge:Auth] DPoP Verification Failed or Missing", extra=trace_ctx)
+                raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
 
-            if identity.receipt:
+            # 2. X402 영수증 선택적 검증 (Flag 기반)
+            if await self._is_x402_required(identity.target_server_id):
+                if not identity.receipt:
+                    log.warning(f"[Bridge:Fuel] Missing X402 Receipt for billing-enabled server", extra=trace_ctx)
+                    raise HTTPException(status_code=402, detail="Payment Required: X402 Receipt Missing")
+                
                 try:
                     await rpc.call("validate.fuel.receipt", {
                         "target_server_id": identity.target_server_id,
                         "action": payload.get("params", {}).get("name", "unknown_tool"),
                         "fuel_receipt": identity.receipt
                     })
-                    is_authenticated = True
                 except RpcException as e:
                     log.warning(f"[Bridge:Fuel] Fuel validation rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
-                    raise HTTPException(status_code=e.status_code, detail=f"Fuel/Intent Rejected: {e.detail}")
-
-        if not is_authenticated:
-            log.warning(f"[Bridge:Auth] Missing Authentication or Receipt", extra=trace_ctx)
-            raise HTTPException(status_code=401, detail="Authentication (DPoP) or Fuel Receipt (X402) missing.")
+                    raise HTTPException(status_code=402, detail=f"Fuel/Intent Rejected: {e.detail}")
 
         # Seal state and dispatch EXECUTE Intent
         await rpc.call("mcp.state.pending.seal", {
@@ -150,6 +160,9 @@ class TransitionBridge:
         log.debug(f"[Bridge:PubSub] Listening for backend resolution", extra={"channel": reply_channel, **trace_ctx})
         start_time = time.time()
 
+        # 202 응답 시 제공될 Location 헤더
+        location_header = {"Location": f"/v1/mcp-gateway/{target_server_id}/status/{handle_id}"}
+
         try:
             async with asyncio.timeout(30.0):
                 async for msg in pubsub.listen():
@@ -162,7 +175,7 @@ class TransitionBridge:
                         
                         if status == "YIELD":
                             log.info(f"[Bridge:PubSub:Yield] Agent prompted for input", extra=trace_ctx)
-                            return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}))
+                            return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}), headers=location_header)
                         
                         elif status == "FAULTED":
                             raw_err = state_data.get("error_detail", "Execution Fault")

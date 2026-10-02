@@ -58,14 +58,14 @@ async def execute_direct_fuel_deduction(tenant_id: str, consumed_fuel: int, trac
             if accumulated >= actual_consume:
                 break
                 
-        # 새로운 상태 발행 (Mint: 거스름돈 및 트레저리 귀속)
+        # 새로운 상태 발행 (consume: 거스름돈 및 트레저리 귀속)
         change = accumulated - actual_consume
         if change > 0:
             outputs.append(PtaOutput(amount=change, owner=tenant_id, asset_type="fuel"))
             
         outputs.append(PtaOutput(amount=actual_consume, owner="system_treasury", asset_type="fuel"))
         
-        # 차감 트랜잭션 Ledger 제출
+        # 차감 트랜잭션
         tx = PtaTransaction(
             inputs=inputs, 
             outputs=outputs, 
@@ -73,11 +73,9 @@ async def execute_direct_fuel_deduction(tenant_id: str, consumed_fuel: int, trac
         )
         await pta_adapter.execute_transaction(tx)
         log.info(f"[Billing:Direct] Auto-deducted {actual_consume} fuel from '{tenant_id}'. Trace: {trace_id}")
-        
     except Exception as e:
         log.error(f"[Billing:Direct] Background deduction failed for '{tenant_id}': {e}", exc_info=True)
     finally:
-        # 독립 실행 환경이므로 자원 누수 방지를 위해 반드시 종료 처리
         await broker.close()
 
 

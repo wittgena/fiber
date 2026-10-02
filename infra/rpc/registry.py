@@ -1,9 +1,9 @@
 # fiber.infra.rpc.registry
 from typing import Dict, Callable, Any, Optional
 from fiber.infra.rpc.handler import (
-    handle_ledger_stream_append,
-    handle_anchor_seal,
-    handle_receipt_verify,
+    handle_phase_store_stream_append,
+    handle_phase_store_anchor_seal,
+    handle_phase_store_receipt_verify,
     handle_mcp_state_query,
     handle_mcp_state_pending_seal,
     handle_mcp_state_resolve,
@@ -21,10 +21,10 @@ from fiber.infra.rpc.fuel import handle_fuel_deduction
 
 def build_internal_rpc_registry(validator_service: Optional[ValidatorService] = None) -> Dict[str, Callable]:
     registry = {
-        # Ledger & State
-        "core.ledger.append": handle_ledger_stream_append,
-        "core.receipt.verify": handle_receipt_verify,
-        "core.anchor.seal": handle_anchor_seal,
+        # phase store & State
+        "phase.store.stream.append": handle_phase_store_stream_append,
+        "phase.store.receipt.verify": handle_phase_store_receipt_verify,
+        "phase.store.anchor.seal": handle_phase_store_anchor_seal,
         
         # MCP Gateway Delegation
         "mcp.state.query": handle_mcp_state_query,

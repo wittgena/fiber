@@ -206,14 +206,12 @@ class MultiMCPRouter:
                         
                 except Exception as e:
                     print(f"  └─ ❌ [Network Fault] {e}")
-                    # 파이썬 크래시를 방지하고 State Ledger에 에러 기록
                     state.add_event(ToolErrorEvent(
                         tool_call_id=tool_call.id,
                         tool_name=tool_name,
                         error_message=f"Internal MCP Client Fault: {str(e)}"
                     ))
                 finally:
-                    # 다음 Action을 위해 ContextVar 초기화
                     current_idempotency_key.reset(token)
 
     def close(self):

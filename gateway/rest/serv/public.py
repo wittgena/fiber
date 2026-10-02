@@ -301,6 +301,6 @@ async def public_audit_verify(
             "state_root": receipt.state_root,
             "full_receipt": receipt.model_dump(exclude_none=True)
         }
-        return await rpc.call("core.receipt.verify", rpc_payload)
+        return await rpc.call("phase.store.receipt.verify", rpc_payload)
     except RpcException as e:
         raise HTTPException(status_code=e.status_code, detail=f"Verification Failed: {{\"detail\":\"{e.detail}\"}}")

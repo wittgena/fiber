@@ -1,5 +1,4 @@
 # fiber.dev.ex.worker.sentinel
-## @lineage: fiber.gateway.node.sentinel
 import asyncio
 import time
 import json
@@ -7,10 +6,10 @@ from typing import List, Dict, Any
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.protocol.worker import WorkerProtocol
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 
 class AgentSentinel(WorkerProtocol):
-    def __init__(self, ledger: KernelLedger, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):
+    def __init__(self, ledger: PhaseStore, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):
         super().__init__(agent_name="agent.sentinel")
         
         self.ledger = ledger
@@ -65,9 +64,6 @@ class AgentSentinel(WorkerProtocol):
             self.log.error(f"Manual sweep failed: {e}")
             self.send_error(req_id, -32000, str(e))
 
-    # =====================================================================
-    # [기능 2] 자율 데몬 로직
-    # =====================================================================
     async def ignite(self):
         """컨트롤 플레인의 백그라운드 태스크로 동작하는 무한 루프"""
         self.running = True
@@ -126,8 +122,6 @@ class AgentSentinel(WorkerProtocol):
         )
 
         # Phase 2: 원장 씰링 및 증거 기록 (Sealing the Truth)
-        # 경제/Legacy 모듈이 사후에 환불 및 패널티를 비동기 처리할 수 있도록, 
-        # 원장 메타데이터에 연료량과 위험도 증적을 명확히 브릿지(기록)해 둡니다.
         await self.ledger.force_transition(
             handle_id=handle_id,
             new_action="dphi.transition.resolve",
@@ -142,13 +136,13 @@ class AgentSentinel(WorkerProtocol):
 
 
 async def main():
-    class MockLedger:
+    class MockStore:
         async def query_stale_streams(self, current_time, thresholds):
             return []
         async def force_transition(self, *args, **kwargs):
             pass
 
-    sentinel = AgentSentinel(ledger=MockLedger(), rpc_client=InternalRpcClient())
+    sentinel = AgentSentinel(ledger=MockStore(), rpc_client=InternalRpcClient())
     await sentinel.ignite()
 
 if __name__ == "__main__":
