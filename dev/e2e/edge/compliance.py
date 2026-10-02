@@ -32,7 +32,6 @@ class ComplianceSuiteWorkflow(Workflow):
         super().__init__(name="EDGE_COMPLIANCE_SUITE")
         self.base_url = base_url
         
-        # SDK 및 원시 HTTP 클라이언트 초기화 (외부 서버 타겟팅)
         self.sdk_client = DphiPublicClient(base_url=self.base_url)
         self.raw_client = httpx.AsyncClient(base_url=self.base_url, timeout=10.0, follow_redirects=True)
         

@@ -83,14 +83,14 @@ jobs:
           timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done'
           echo "✅ Kernel is fully up and running!"
 
-      - name: 🧪 Run E2E Edge Client
+      - name: 🧪 Run E2E Edge Test
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           DPHI_ENV: "local"
         run: |
           python -m fiber.dev.e2e.edge.compliance
-          python -m fiber.dev.e2e.edge.client
           python -m fiber.dev.e2e.edge.security
+          python -m fiber.dev.e2e.edge.client
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()
