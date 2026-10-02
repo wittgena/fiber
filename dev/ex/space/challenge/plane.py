@@ -59,7 +59,7 @@ echo "[CTF-SYNC] 2. Booting Kernel (Background)..."
 python -u -m xphi.kernel.ops.boot & 
 
 echo "[CTF-SYNC] 3. Waiting for Kernel Healthcheck..."
-timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! 🔥\\n"; exit 1; }
+timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! 🔥\\n"; exit 1; }
 
 echo -e "\\n========================================================"
 echo "🎯 [FIBER CTF] Target Node is LIVE and ready for attacks!"

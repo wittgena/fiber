@@ -1,4 +1,5 @@
-# fiber.dev.e2e.edge.client
+# fiber.dev.e2e.edge.exchange
+## @lineage: fiber.dev.e2e.edge.client
 import asyncio
 import os
 import uuid
@@ -19,7 +20,7 @@ from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, Wor
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.state.phase.reactor import PhaseReactor
 
-log = get_emitter("e2e.edge.client")
+log = get_emitter("e2e.edge.exchange")
 
 # EDGE FSM
 class EdgePhaseState(Enum):
@@ -199,14 +200,14 @@ class EdgeWorkflow(Workflow):
         }
 
         cost_usd = 0.001
-        res = await self.client.post(f"{self.base_url}/v1/public/billing/invoice", json={
+        res = await self.client.post(f"{self.base_url}/v1/exchange/billing/invoice", json={
             "payee_address": "0x000000000000000000000000000000000000dEaD", 
             "amount_usdc": str(cost_usd), "resource_id": f"res_{uuid.uuid4().hex[:8]}"
         })
         res.raise_for_status()
         invoice_id = res.json().get("invoice_id", f"inv_{uuid.uuid4().hex[:8]}")
 
-        res = await self.client.get(f"{self.base_url}/v1/public/billing/balance", params={"client_id": cmd.client_id, "asset_type": "fuel"})
+        res = await self.client.get(f"{self.base_url}/v1/exchange/billing/balance", params={"client_id": cmd.client_id, "asset_type": "fuel"})
         if res.status_code != 200: raise RuntimeError("Insufficient Balance")
 
         audit_payload = StrictPayloadFactory.create_audit_payload(
@@ -223,7 +224,7 @@ class EdgeWorkflow(Workflow):
         return ComputePhaseCompletedEvent(audit_receipt=actual_receipt, cost_usd=cost_usd)
 
     async def _run_compliance_phase(self, cmd: RunCompliancePhaseCmd) -> CompliancePhaseCompletedEvent:
-        res_verify = await self.client.post(f"{self.base_url}/v1/public/audit/verify", json=cmd.audit_receipt)
+        res_verify = await self.client.post(f"{self.base_url}/v1/exchange/audit/verify", json=cmd.audit_receipt)
         res_verify.raise_for_status() 
 
         telemetry_payload = StrictPayloadFactory.create_telemetry_payload(
@@ -267,7 +268,7 @@ class EdgeTracerPipeline(PipelineRunner):
 
     async def phase_origin_api_verification(self):
         async with httpx.AsyncClient(base_url=self.local_url, timeout=5.0) as client:
-            res = await client.get("/v1/public/keys")
+            res = await client.get("/v1/exchange/keys")
             if res.status_code != 200:
                 raise RuntimeError(f"Origin API failed with status {res.status_code}")
             if "x-dphi-root-signature" not in res.headers:
