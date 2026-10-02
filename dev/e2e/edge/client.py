@@ -295,12 +295,9 @@ class EdgeTracerPipeline(PipelineRunner):
                 payload={"message": "audit_test", "severity": "info"}, signature=signature
             )
             
-            # [결정적 픽스] E2E 클라이언트에서 Settlement 단계를 우회하도록 플래그 전달
             fsm = EdgePhaseFSM(requires_settlement=False)
-            
             workflow = EdgeWorkflow(fsm=fsm, client=client, base_url=self.local_url)
             await workflow.execute(start_event) 
-            
             if fsm.state != EdgePhaseState.COMPLETED:
                 raise RuntimeError(f"Path Failed! Final state: {fsm.state.name}")
 
