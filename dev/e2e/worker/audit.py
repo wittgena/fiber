@@ -25,11 +25,12 @@ from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 import fiber.dev.ex.worker.deployer as worker_deployer
 import fiber.dev.ex.worker.sentinel as worker_sentinel
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 from fiber.infra.rpc.validator import ValidatorService
 import fiber.infra.rpc.registry as rpc_registry
 
 from xphi.state.phase.reactor import PhaseReactor
+from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 
 class AuditSecurityPipeline(BaseBridgePipeline):
     def __init__(self, config: E2EConfig):
@@ -51,6 +52,9 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         self.sentinel = None
         self._sentinel_task = None
         self.temp_db_path = None
+        
+        # DPoP 클라이언트 인스턴스화
+        self.dpop_client = DPoPClientGenerator(key_size=2048)
 
         self.set_phases([
             Phase("Phase 1: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
@@ -73,7 +77,6 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         aesgcm = AESGCM(kdf.derive(self.test_passphrase.encode('utf-8')))
         ciphertext = aesgcm.encrypt(nonce, self.mock_totp_secret.encode('utf-8'), None)
 
-        # 1. 샌드박스와 통신할 가짜 DB에 데이터 주입
         with sqlite3.connect(self.temp_db_path) as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS admin_users (
@@ -91,26 +94,19 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         self.val_priv_hex = val_key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()).hex()
         self.val_pub_hex = val_key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
         
-        # 2. Validator 인스턴스화를 위한 환경 변수 세팅
         os.environ["DPHI_VALIDATOR_PRIVATE_KEY"] = self.val_priv_hex
         os.environ["DPHI_VALIDATOR_PUBLIC_KEY"] = self.val_pub_hex
         os.environ["DPHI_MASTER_PASSPHRASE"] = self.test_passphrase
         os.environ["DPHI_AUDIT_DB_PATH"] = self.temp_db_path
         
-        # 3. 확실한 데이터 연결을 위해 여기서 Validator 인스턴스를 직접 만듭니다.
         self.validator_service = ValidatorService()
         
-        # [Zero-Trust 격리] 메모리에 올렸으니 즉시 환경 변수에서 민감 정보 영구 삭제
-        os.environ.pop("DPHI_VALIDATOR_PRIVATE_KEY", None)
-        os.environ.pop("DPHI_MASTER_PASSPHRASE", None)
-        os.environ.pop("DPHI_AUDIT_DB_PATH", None)
-        # PUBLIC_KEY는 샌드박스의 서명 검증을 위해 남겨둡니다.
+        # [수정] 여기서 os.environ.pop 하던 3줄을 삭제하고 teardown_custom으로 이동시켰습니다.
+        # 백엔드 데몬이 자체적으로 ValidatorService를 생성할 때 환경변수가 필요하기 때문입니다.
 
-        # 4. [개선] 데몬이 우리가 만든 이 인스턴스를 사용하도록 동적 레지스트리에 주입 (Monkey Patch)
         original_builder = rpc_registry.build_internal_rpc_registry
         
         def safe_mock_registry_builder(*args, **kwargs):
-            # args/kwargs에 뭐가 오든, 우리가 만든 E2E Validator를 강제로 물려줍니다.
             kwargs['validator_service'] = self.validator_service
             return original_builder(*args, **kwargs)
             
@@ -119,14 +115,12 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         log.info("[AuditPipeline] Ephemeral DB Provisioned and Validator Instance Injected.")
 
     async def setup_workers(self):
-        """Worker Connector 및 Sentinel 데몬 기동"""
         deploy_cmd = f"{sys.executable} -m {worker_deployer.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
+            MCPServerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
         )
 
-        # Sentinel 시작
-        self.sentinel = worker_sentinel.AgentSentinel(ledger=self.mock_ledger, rpc_client=self.rpc, sweep_interval=1.0)
+        self.sentinel = worker_sentinel.AgentSentinel(ledger=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0)
         self._sentinel_task = asyncio.create_task(self.sentinel.ignite())
         log.info("[AuditPipeline] Sentinel Autonomous Daemon & Worker Connectors Ignited. Environment Sanitized.")
 
@@ -136,10 +130,14 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         if self.temp_db_path and os.path.exists(self.temp_db_path):
             os.remove(self.temp_db_path)
             
-        # 닫히지 않은 Validator DB 커넥션 종료 (Lock 에러 방어)
         if hasattr(self, 'validator_service') and hasattr(self.validator_service, 'conn'):
             try: self.validator_service.conn.close()
             except: pass
+            
+        # [수정] 테스트 종료 시점에 환경변수들을 안전하게 삭제합니다.
+        os.environ.pop("DPHI_VALIDATOR_PRIVATE_KEY", None)
+        os.environ.pop("DPHI_MASTER_PASSPHRASE", None)
+        os.environ.pop("DPHI_AUDIT_DB_PATH", None)
             
         log.info("[AuditPipeline] Sentinel Autonomous Daemon Shutdown & Temp DB Cleared.")
 
@@ -150,22 +148,34 @@ class AuditSecurityPipeline(BaseBridgePipeline):
             "jsonrpc": "2.0", "id": 777, "method": "tools/call",
             "params": {"name": "execute_db_migration", "arguments": {"service_name": "auth", "target_env": "production", "sql_script": "DROP TABLE"}}
         }
-        headers = {
+        
+        # 요청 1: DPoP 헤더 주입
+        nonce1 = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
+        dpop_proof1 = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce1)
+        
+        headers1 = {
             "x-idempotency-key": self.idem_key_otp, 
-            "x-nonce": uuid.uuid4().hex, 
+            "x-nonce": nonce1, 
             "X-X402-Receipt": "valid_x402",
-            "x-spiffe-id": self.test_spiffe_id 
+            "x-spiffe-id": self.test_spiffe_id,
+            "DPoP": dpop_proof1
         }
 
         async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res1 = await client.post(f"/v1/mcp-gateway/{self.deploy_id}/invoke", json=self.deploy_payload, headers=headers)
+            res1 = await client.post(url, json=self.deploy_payload, headers=headers1)
             if res1.status_code != 202: raise RuntimeError(f"Expected HTTP 202 (YIELD), got {res1.status_code} - {res1.text}")
             prompt_res = res1.json()
             self.prompt_id = prompt_res.get("id")
 
-        headers["x-nonce"] = uuid.uuid4().hex 
+        # 요청 2(재시도 검증): 새로운 Nonce로 DPoP 재발급
+        nonce2 = uuid.uuid4().hex
+        dpop_proof2 = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce2)
+        headers2 = dict(headers1)
+        headers2.update({"x-nonce": nonce2, "DPoP": dpop_proof2})
+        
         async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res2 = await client.post(f"/v1/mcp-gateway/{self.deploy_id}/invoke", json=self.deploy_payload, headers=headers)
+            res2 = await client.post(url, json=self.deploy_payload, headers=headers2)
             if res2.status_code != 202: raise RuntimeError(f"Fast-Path failed. Expected 202, got {res2.status_code}")
 
         log.info("  └─ ✨ Idempotency Shield deflected duplicate request without crashing Sandbox.")
@@ -185,15 +195,22 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         resume_payload["params"]["_meta"] = {
             "inputResponses": {"jsonrpc": "2.0", "id": self.prompt_id, "result": {"value": valid_totp_code}}
         }
+        
+        # Resume 요청용 DPoP 발급
+        nonce = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
+        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        
         headers = {
             "x-idempotency-key": self.idem_key_otp,
-            "x-nonce": uuid.uuid4().hex, 
+            "x-nonce": nonce, 
             "X-X402-Receipt": "valid_x402",
-            "x-spiffe-id": self.test_spiffe_id 
+            "x-spiffe-id": self.test_spiffe_id,
+            "DPoP": dpop_proof
         }
 
         async with httpx.AsyncClient(base_url=self.local_url, timeout=10.0) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.deploy_id}/invoke", json=resume_payload, headers=headers)
+            res = await client.post(url, json=resume_payload, headers=headers)
             if res.status_code != 200:
                 raise RuntimeError(f"Bridge failed to Resume Sandbox. Expected 200 OK, got {res.status_code} ({res.text})")
 
@@ -202,29 +219,84 @@ class AuditSecurityPipeline(BaseBridgePipeline):
             raise RuntimeError(f"Resume succeeded, but payload failed: {final_result}")
         log.info("  └─ ✨ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.")
 
+    # async def phase_sentinel_reconciliation(self):
+    #     self.mock_ledger.stale_timeout = 1.0
+    #     idem_key_sentinel = uuid.uuid4().hex
+    #     payload = {
+    #         "jsonrpc": "2.0", "id": 888, "method": "tools/call",
+    #         "params": {"name": "execute_db_migration", "arguments": {"service_name": "billing", "target_env": "production", "sql_script": "DROP TABLE"}}
+    #     }
+        
+    #     # Sentinel 강제 롤백 유도용 DPoP 발급
+    #     nonce = uuid.uuid4().hex
+    #     url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
+    #     dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        
+    #     headers = {
+    #         "x-idempotency-key": idem_key_sentinel, 
+    #         "x-nonce": nonce, 
+    #         "X-X402-Receipt": "valid_x402", 
+    #         "x-spiffe-id": self.test_spiffe_id,
+    #         "DPoP": dpop_proof
+    #     }
+
+    #     async with httpx.AsyncClient(base_url=self.local_url) as client:
+    #         await client.post(url, json=payload, headers=headers)
+
+    #     handle_id = self.captured_handle_ids.get("latest")
+    #     await asyncio.sleep(3.0)
+
+    #     final_state = await self.mock_ledger.query_state(handle_id)
+    #     if not final_state or final_state.metadata.get("status") != "FAULTED":
+    #         raise RuntimeError("Sentinel failed to rollback.")
+    #     log.info(f"  └─ ✨ Sentinel Autonomous Reconciliation Successful.")
+    
     async def phase_sentinel_reconciliation(self):
-        self.mock_ledger.stale_timeout = 1.0
+        self.mock_store.stale_timeout = 1.0
         idem_key_sentinel = uuid.uuid4().hex
         payload = {
             "jsonrpc": "2.0", "id": 888, "method": "tools/call",
             "params": {"name": "execute_db_migration", "arguments": {"service_name": "billing", "target_env": "production", "sql_script": "DROP TABLE"}}
         }
+        
+        nonce = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
+        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        
         headers = {
             "x-idempotency-key": idem_key_sentinel, 
-            "x-nonce": uuid.uuid4().hex, 
+            "x-nonce": nonce, 
             "X-X402-Receipt": "valid_x402", 
-            "x-spiffe-id": self.test_spiffe_id
+            "x-spiffe-id": self.test_spiffe_id,
+            "DPoP": dpop_proof
         }
 
         async with httpx.AsyncClient(base_url=self.local_url) as client:
-            await client.post(f"/v1/mcp-gateway/{self.deploy_id}/invoke", json=payload, headers=headers)
+            res = await client.post(url, json=payload, headers=headers)
+            
+        location = res.headers.get("Location", "")
+        if "/" in location:
+            handle_id = location.split("/")[-1]
+        else:
+            handle_id = self.captured_handle_ids.get("latest")
 
-        handle_id = self.captured_handle_ids.get("latest")
-        await asyncio.sleep(3.0)
+        # =========================================================================
+        # [변경] 하드코딩된 sleep(3.0) 대신, 최대 10초간 0.5초 간격으로 Polling
+        # =========================================================================
+        max_retries = 20
+        retry_interval = 0.5
+        final_state = None
+        
+        for _ in range(max_retries):
+            final_state = await self.mock_store.query_state(handle_id)
+            if final_state and final_state.metadata.get("status") == "FAULTED":
+                break  # Sentinel 롤백 완료됨!
+            await asyncio.sleep(retry_interval)
 
-        final_state = await self.mock_ledger.query_state(handle_id)
         if not final_state or final_state.metadata.get("status") != "FAULTED":
-            raise RuntimeError("Sentinel failed to rollback.")
+            current_status = final_state.metadata.get('status') if final_state else 'None'
+            raise RuntimeError(f"Sentinel failed to rollback within {max_retries * retry_interval}s. Current status: {current_status}")
+            
         log.info(f"  └─ ✨ Sentinel Autonomous Reconciliation Successful.")
 
 

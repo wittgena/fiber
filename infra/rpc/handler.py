@@ -15,10 +15,10 @@ from xphi.arch.model.edge.receptor import (
     ExecuteComputeRequest, ProofGenerationRequest, TradeIngressRequest,
     EpochInitPayload, ClearingReceiptRequest
 )
-from xphi.arch.model.edge.receipt import BilledExecutionRequest, KernelLedgerAppendRecord
+from xphi.arch.model.edge.receipt import BilledExecutionRequest, PhaseStoreAppendRecord
 
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.kernel.wasm.cgroup import Tier
+from xphi.kernel.wasm.quota import Tier
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.state.anchor.consensus import LogicStream
@@ -46,7 +46,7 @@ def _build_error(code: int, message: str) -> dict:
     """RPC 표준 에러 응답 빌더"""
     return {"error": True, "code": code, "message": message}
 
-"""[Core MCP] State Transition & Gateway Handlers"""
+"""State Transition & Gateway Handlers"""
 async def handle_mcp_state_query(params: dict, ctx: WorkerContext) -> dict:
     handle_id = params.get("handle_id")
     if not handle_id: return _build_error(422, "Missing handle_id")
@@ -72,9 +72,7 @@ async def handle_mcp_state_pending_seal(params: dict, ctx: WorkerContext) -> dic
     payload = params.get("payload", {})
     target_server_id = params.get("target_server_id")
 
-    # [개선] 직접 초기화 방지: 팩토리 함수를 사용하여 PENDING 앵커 생성
     initial_phase = create_state_anchor(handle_id=handle_id, status="PENDING", payload=payload)
-    
     tx = PtaTransaction(inputs=[], outputs=[initial_phase], metadata={"target": target_server_id, "action": "dphi.transition.pending"})
     await ctx.pta_adapter.execute_transaction(tx)
     return {"success": True, "handle_id": handle_id}
@@ -86,7 +84,6 @@ async def handle_mcp_state_resolve(params: dict, ctx: WorkerContext) -> dict:
     error_detail = params.get("error_detail", "")
 
     if not handle_id or not status: return _build_error(422, "Missing handle_id or status")
-
     expected_owner = f"mcp_bridge_{handle_id}"
     prev_pointer_key = next((key for key, output in ctx.pta_adapter._unfold_pool.items() 
                              if output.owner == expected_owner and output.asset_type == "mcp_state_anchor"), None)
@@ -107,20 +104,19 @@ async def handle_mcp_state_resolve(params: dict, ctx: WorkerContext) -> dict:
     return {"success": True, "status": status}
 
 """Infrastructure & Consensus"""
-async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
+async def handle_phase_store_stream_append(params: dict, ctx: WorkerContext) -> dict:
     try: req = StreamAppendRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
     request_id = f"ledg_{uuid.uuid4().hex[:8]}"
-    with flow_scope(phase="LEDGER_INTERNAL_APPEND", bound="edge.internal", req_id=request_id):
+    with flow_scope(phase="LEDGER_STREAM_APPEND", bound="rpc.handler", req_id=request_id):
         events_dicts = [e.model_dump(exclude_none=True) for e in req.events]
         is_authorized = await ctx.store.bulk_append(stream_name=req.stream_name, events=events_dicts)
-        if not is_authorized: return _build_error(403, "Kernel Blocked Stream Append")
+        if not is_authorized: return _build_error(403, "PhaseStore Blocked Stream Append")
             
-        payload_to_hash = KernelLedgerAppendRecord(stream_name=req.stream_name, timestamp=int(time.time() * 1000), events=events_dicts).model_dump(exclude_none=True)
+        payload_to_hash = PhaseStoreAppendRecord(stream_name=req.stream_name, timestamp=int(time.time() * 1000), events=events_dicts).model_dump(exclude_none=True)
         fp_res = await ctx.broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, payload_to_hash)
         if not fp_res.success: return _build_error(500, f"WASM Fingerprint Failed: {fp_res.error}")
-            
         event_hash = json.loads(fp_res.output)["fingerprint"]
         merkle_proof = None
         if req.verbose:
@@ -129,7 +125,7 @@ async def handle_ledger_stream_append(params: dict, ctx: WorkerContext) -> dict:
                 
         return {"request_id": request_id, "status": "success", "result": {"hash": event_hash, "membership_proof": merkle_proof}}
 
-async def handle_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
+async def handle_phase_store_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
     try: req = AnchorProposalRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
@@ -143,38 +139,38 @@ async def handle_anchor_seal(params: dict, ctx: WorkerContext) -> dict:
     if not result.is_sealed: return _build_error(409, f"Consensus Failed: {result.rupture_reason}")
     return {"status": EdgeState.SEALED_AND_COMMITTED, "nexus_id": result.nexus_id, "commit_hash": result.commit_hash, "receipt": result.receipt.__dict__ if hasattr(result.receipt, "__dict__") else dict(result.receipt)}
 
-async def handle_ledger_verify(params: dict, ctx: WorkerContext) -> dict:
+async def handle_phase_store_receipt_verify(params: dict, ctx: WorkerContext) -> dict:
     state_root, receipt_id = params.get("state_root"), params.get("receipt_id")
     if not state_root or not receipt_id: return _build_error(422, "Payload Format Error: Missing 'state_root' or 'receipt_id' in receipt")
 
     try:
         is_valid = await ctx.pta_adapter.verify_lineage(tx_hash=state_root, depth=3)
         if not is_valid and isinstance(state_root, str) and (state_root.startswith("0x") or len(state_root) in [64, 66]):
-            log.info(f"[LedgerVerify] Off-chain receipt {receipt_id} verified via cryptographic fingerprint.")
+            log.info(f"[ReceiptVerify] receipt {receipt_id} verified via fingerprint.")
             is_valid = True
         elif not is_valid:
-            log.warning(f"[LedgerVerify] Invalid state_root format for receipt {receipt_id}.")
+            log.warning(f"[ReceiptVerify] Invalid state_root format for receipt {receipt_id}.")
     except Exception as e:
         log.error(f"Receipt verification process crashed: {str(e)}")
         return _build_error(500, f"Verification execution failed: {str(e)}")
     
-    return {"status": "SUCCESS", "is_valid": is_valid, "message": "Cryptographically verified via Ledger/Oracle" if is_valid else "Mathematical verification failed (Tampered or Orphaned)"}
+    return {"status": "SUCCESS", "is_valid": is_valid, "message": "Receipt verified via Ledger/Oracle" if is_valid else "verification failed (Tampered or Orphaned)"}
 
-"""Eco Compute & Billing Validation"""
-async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
-    receipt = params.get("payment_receipt")
-    if not receipt: return _build_error(401, "Payment receipt is missing")
+"""Fuel Receipt Validation"""
+async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
+    receipt = params.get("fuel_receipt")
+    if not receipt: return _build_error(401, "Fuel receipt is missing")
         
     try:
         # TODO: Implement actual receipt validation logic here
         is_valid_receipt = True 
-        if not is_valid_receipt: return _build_error(402, "x402 Payment Required: Receipt is invalid or depleted.")
+        if not is_valid_receipt: return _build_error(402, "x402 Fuel Receipt Required: Receipt is invalid or depleted.")
         return {"status": "VALIDATED", "clearance": "GRANTED"}
     except Exception as e:
         log.error(f"Receipt Validation crashed: {e}")
         return _build_error(500, "Internal Billing Validation Error")
 
-async def handle_intent_validate(params: dict, ctx: WorkerContext) -> dict:
+async def handle_compute_intent_validate(params: dict, ctx: WorkerContext) -> dict:
     try: req = IntentValidationRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
@@ -259,13 +255,20 @@ async def handle_pta_balance(params: dict, ctx: WorkerContext) -> dict:
         log.error(f"PTA Balance check failed for {client_id}: {str(e)}")
         return _build_error(500, "Failed to read hot state balance.")
 
-async def handle_profile_quote(params: dict, ctx: WorkerContext) -> dict:
+async def handle_intent_estimate(params: dict, ctx: WorkerContext) -> dict:
     try: req = BilledExecutionRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-
     client_id = params.get("client_id", getattr(req, "client_id", "anonymous_agent"))
+
     try:
-        result = await ctx.profile_service.execute(client_id=client_id, schema=req.sandbox_schema, entry=req.target_entry, depth=req.context_depth, tier=Tier.STANDARD, dry_run=True)
+        result = await ctx.profile_service.execute(
+            client_id=client_id, 
+            schema=req.sandbox_schema, 
+            entry=req.target_entry,
+            depth=req.context_depth,
+            tier=Tier.STANDARD,
+            dry_run=True
+        )
         if result.status != "COHERENCE":
             log.warning(f"[Quote] Execution Divergence: {result.reason}")
             return _build_error(422, f"Quotation Rejected: {result.reason}")

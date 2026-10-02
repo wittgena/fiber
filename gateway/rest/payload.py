@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
-from fiber.infra.rpc.client import RpcException
+from xphi.arch.bound.client.rpc import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.gateway.rest.serv.public import public_edge
 from fiber.gateway.rest.serv.llm import llm_edge
@@ -49,7 +49,6 @@ async def verify_access_credential(
 ):
     path = request.url.path
     public_whitelist = {
-        "/v1/public/sandbox/quote",
         "/v1/public/sandbox/handshake",
         "/v1/public/billing/invoice",
         "/v1/public/billing/balance",
@@ -75,7 +74,7 @@ async def verify_access_credential(
     if config.session_api_keys and api_key in config.session_api_keys:
         return api_key
 
-    # 글로벌 LLM Gateway 결제 검증
+    # 글로벌 LLM Gateway Receipt 검증
     x402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
     if x402_header:
         return x402_header
@@ -103,42 +102,34 @@ async def lifespan(app: FastAPI):
         log.info("SecretAuditor mounted successfully to app.state.")
 
         tunnel = app.state.tunnel
-        ledger = app.state.ledger
+        phase_store = app.state.phase_store
 
-        if not all([tunnel, ledger]):
-            log.warning("Some infrastructure dependencies (tunnel, ledger) are missing from injection.")
+        if not all([tunnel, phase_store]):
+            log.warning("Some infrastructure dependencies (tunnel, phase_store) are missing from injection.")
 
         pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
         await pubsub.start_listening()
         app.state.pubsub = pubsub
         
-        # 1. WASM Broker 초기화
+        # WASM Broker 초기화
         app.state.broker = DphiBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
-        # 2. OTLP Parser & Extraction Engine Init
+        # OTLP Parser & Extraction Engine Init
         otlp_parser = OtlpRulesetParser()
         app.state.otlp_engine = otlp_parser.parse_ruleset(default_otlp_ruleset)
         log.info("StrictOtlpExtractionEngine initialized.")
 
-        # 3. Stateless Transition Bridge 인스턴스 마운트 (2026-07-28 규격)
+        # Stateless Transition Bridge
         nonce_protector = NonceReplayProtector(tunnel=tunnel)
         mapper = IdempotencyMapper(tunnel=tunnel)
-        app.state.mcp_transition_adapter = TransitionBridge(
-            mapper=mapper,                           
-            nonce_protector=nonce_protector
-        )
-        log.info("Stateless MCP Transition Bridge (2026-07-28) initialized and mounted to app.state.")
-        
+        app.state.mcp_transition_adapter = TransitionBridge(mapper=mapper, nonce_protector=nonce_protector)
         app.state.is_ready = True
         log.info("REST Edge API Payload is fully READY.")
         yield
-        
     except Exception as e:
         log.error(f"Failed to initialize REST Edge services: {e}", exc_info=True)
-        # 보안 검증 등 크리티컬한 초기화가 실패하면 애플리케이션 기동 자체를 중지시킴
         raise
-        
     finally:
         app.state.is_ready = False
         log.info("Shutting down receptor.rest payload safely...")
@@ -161,21 +152,20 @@ def _get_root_path(config: Config) -> str:
 def create_app(
     config: Optional[Config] = None,
     tunnel: Optional[Any] = None,
-    ledger: Optional[Any] = None  
+    phase_store: Optional[Any] = None  
 ) -> FastAPI:
     config = config or get_default_config()
     app = FastAPI(
-        title="DPHI Edge Gateway",
-        description="Stateless Immutable Gateway, Proof of Compute, and First-Party Oracle",
+        title="Edge Gateway",
+        description="Edge Gateway",
         lifespan=lifespan,
         root_path=_get_root_path(config),
         dependencies=[Depends(verify_access_credential)]
     )
     
-    # State Injection
     app.state.config = config
     app.state.tunnel = tunnel
-    app.state.ledger = ledger  
+    app.state.phase_store = phase_store  
     app.state.is_ready = False  
     
     # Routers Binding

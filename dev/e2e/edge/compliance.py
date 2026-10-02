@@ -1,239 +1,196 @@
 # fiber.dev.e2e.edge.compliance
 import asyncio
 import random
-import uvicorn
+from dataclasses import dataclass
+from typing import Any, Dict, List
 import httpx
-from typing import List
 
-from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.daemon.rpc import RpcWorkerDaemon
-from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
-from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
-
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
+from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
 
-from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+log = get_emitter("e2e.edge.compliance")
 
-log = get_emitter("e2e.compliance")
+"""Workflow Messages (Phase Transitions)"""
+class StartComplianceMsg(WorkflowMessage): pass
+class TelemetryChaosMsg(WorkflowMessage): pass
+class AuditGoldenMsg(WorkflowMessage): pass
+class AuditNegativeMsg(WorkflowMessage): pass
 
-class ComplianceTracerPipeline(PipelineRunner):
-    def __init__(self, config: E2EConfig):
-        super().__init__(name="Public Gateway - Cryptographic Compliance & Audit", scope_name="EDGE_COMPLIANCE")
-        self.config = config
-        self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
-        self.test_config = Config()
-        
-        self.sdk_client = DphiPublicClient(base_url=self.local_url)
-        self.rest_app = None
-        self.server = None
-        self._server_task = None
-        
-        self.worker_daemon = None
-        self._worker_task = None
-        
-        self.set_phases([
-            Phase("Telemetry OTLP Ingress (Golden Path)", self.phase_telemetry_golden),
-            Phase("Telemetry WAF Defenses (Chaos Check)", self.phase_telemetry_chaos),
-            Phase("Audit Notarization & Proof Issuance (Golden)", self.phase_audit_golden),
-            Phase("Audit Schema Enforcement (Negative)", self.phase_audit_negative)
-        ])
+@dataclass
+class ComplianceReport:
+    phase: str
+    status: str
+    passed: bool
+    details: str
 
-    async def _bootstrap_infrastructure(self):
-        log.info(f"[{self.scope_name}] Bootstrapping Compliance Infrastructure (Tunnel & Ledger)...")
-        self.tunnel = await TunnelFactory.get_default()
-        self.ledger = KernelLedger()
+class ComplianceSuiteWorkflow(Workflow):
+    def __init__(self, base_url: str):
+        super().__init__(name="EDGE_COMPLIANCE_SUITE")
+        self.base_url = base_url
         
-        self.rest_app = create_app(
-            config=self.test_config,
-            tunnel=self.tunnel,
-            ledger=self.ledger
-        )
+        self.sdk_client = DphiPublicClient(base_url=self.base_url)
+        self.raw_client = httpx.AsyncClient(base_url=self.base_url, timeout=10.0, follow_redirects=True)
         
-        u_config = uvicorn.Config(
-            app=self.rest_app, 
-            host="127.0.0.1", 
-            port=self.config.port, 
-            log_level="error",
-            access_log=False
-        )
-        self.server = ManagedTestServer(u_config)
-        self.worker_daemon = RpcWorkerDaemon(ctx=self.rest_app.state)
+        self.log = get_emitter("workflow.compliance", phase="AUDIT")
+        self.reports: List[ComplianceReport] = []
+        self.halted_by_error = False
 
-    async def _wait_for_server(self):
-        async with httpx.AsyncClient() as client:
-            for _ in range(20):
-                try:
-                    if (await client.get(f"{self.local_url}/openapi.json")).status_code == 200: return
-                except Exception: pass
-                await asyncio.sleep(0.2)
-        raise RuntimeError("Failed to boot embedded REST server for tests.")
+    async def execute(self):
+        self.log.info(f"\n=== [START] {self.name} (Cryptographic Compliance & Audit) ===")
+        self.post_message(StartComplianceMsg())
+        await self.run()
 
-    async def run_pipeline(self) -> List[TestResult]:
-        log.info(f"\n=== Starting Pipeline: {self.name} ({self.scope_name}) ===")
-        
-        await self._bootstrap_infrastructure()
-        
-        log.info(f"[Pipeline] Booting embedded Uvicorn REST server on {self.local_url}...")
-        self._server_task = asyncio.create_task(self.server.serve())
-        
-        await self._wait_for_server()
-        
-        log.info(f"[Pipeline] Igniting RpcWorkerDaemon lifecycle...")
-        self.worker_daemon.running = True
-        self._worker_task = asyncio.create_task(self.worker_daemon.run())
-        
-        await asyncio.sleep(0.5)
+    def _record(self, phase: str, passed: bool, details: str) -> bool:
+        self.reports.append(ComplianceReport(phase, "PASSED" if passed else "FAILED", passed, details))
+        if passed:
+            self.log.info(f"  └─ ✅ [{phase}]: {details}")
+        else:
+            self.log.critical(f"  └─ 🚨 BREACH [{phase}]: {details}")
+        return passed
 
-        results = []
+    @step
+    async def phase_telemetry_golden(self, msg: StartComplianceMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 1/4] Telemetry OTLP Ingress (Golden Path) ---")
         try:
-            for idx, phase in enumerate(self.phases, 1):
-                log.info(f"\n▶️ [PHASE {idx}/{len(self.phases)}] {phase.name}")
-                try:
-                    await phase.action()
-                    results.append(TestResult("EDGE_COMPLIANCE", phase.name, True, True))
-                except Exception as e:
-                    log.error(f"Phase '{phase.name}' Halted: {str(e)}")
-                    results.append(TestResult("EDGE_COMPLIANCE", phase.name, False, True))
-                    break 
-        finally:
-            log.info(f"\n[Pipeline] Triggering teardown sequence...")
+            payload = StrictPayloadFactory.create_telemetry_payload(
+                tenant_id="tenant-456",
+                model_name="gpt-4o",
+                prompt_tokens=150,
+                completion_tokens=50
+            )
             
-            self.server.should_exit = True
-            if self._server_task: await self._server_task
-            
-            self.worker_daemon.running = False
-            if self._worker_task: 
-                self._worker_task.cancel()
-                try:
-                    await asyncio.wait_for(self._worker_task, timeout=5.0)
-                except (asyncio.CancelledError, asyncio.TimeoutError):
-                    pass
-                    
-            try:
-                await TunnelFactory.close_all()
-                log.info("[Pipeline] TunnelFactory closed securely.")
-            except Exception as e:
-                log.error(f"[Pipeline] Error closing TunnelFactory: {e}")
+            res = await self.sdk_client.push_telemetry(
+                request=payload, 
+                fuel_receipt="mock_valid_receipt"
+            )
+
+            if res.get("status") != "success":
+                raise RuntimeError("SDK failed to confirm telemetry success.")
+            if res.get("fingerprint") == "N/A":
+                raise RuntimeError("Kernel Fingerprint is missing from SDK response.")
                 
-            log.info(f"[Pipeline] All daemons and servers evaporated safely.")
+            self._record("Telemetry Golden", True, f"Telemetry Sealed. Fingerprint: {res.get('fingerprint')}")
+            return TelemetryChaosMsg()
             
-        return results
+        except Exception as e:
+            return ErrorMessage(f"Telemetry Golden Path Failed: {e}")
 
-    # =========================================================================
-    # Phase Implementations (SDK 기반 통합 테스트)
-    # =========================================================================
-
-    async def phase_telemetry_golden(self):
-        """[Telemetry] StrictPayloadFactory와 SDK를 통한 OTLP Seal 검증"""
-        payload = StrictPayloadFactory.create_telemetry_payload(
-            tenant_id="tenant-456",
-            model_name="gpt-4o",
-            prompt_tokens=150,
-            completion_tokens=50
-        )
-        
-        res = await self.sdk_client.push_telemetry(
-            request=payload, 
-            payment_receipt="mock_valid_receipt"
-        )
-        
-        if res.get("status") != "success":
-            raise RuntimeError("SDK failed to confirm telemetry success.")
-        if res.get("fingerprint") == "N/A":
-            raise RuntimeError("Kernel Fingerprint is missing from SDK response.")
-            
-        log.info(f"Telemetry Sealed Successfully via SDK. Fingerprint: {res.get('fingerprint')}")
-
-    async def phase_telemetry_chaos(self):
-        """[Telemetry] Chaos WAF 테스트 (SDK 우회하여 서버 방어막 직접 타격)"""
-        attack_vectors = ChaosPayloadLibrary.get_all_vectors()
-        async with httpx.AsyncClient(base_url=self.local_url, timeout=5.0) as client:
+    @step
+    async def phase_telemetry_chaos(self, msg: TelemetryChaosMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 2/4] Telemetry WAF Defenses (Chaos Check) ---")
+        try:
+            attack_vectors = ChaosPayloadLibrary.get_all_vectors()
             for vector_name, rule_list in attack_vectors:
                 payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
-                res = await client.post("/v1/public/telemetry/logs", content=payload)
+                res = await self.raw_client.post("/v1/public/telemetry/logs", content=payload)
                 if res.status_code >= 500 or res.status_code < 400:
                     raise RuntimeError(f"Compliance WAF Breach! '{vector_name}' bypassed defenses. Status: {res.status_code}")
-        log.info("WAF Defense fully operational against raw injection payloads.")
-
-    async def phase_audit_golden(self):
-        """[Audit] SDK를 통한 이벤트 Notarization(공증) 및 Merkle Proof 검증"""
-        payload = StrictPayloadFactory.create_audit_payload(
-            actor="bot-007",
-            action="financial_trade",
-            message="Financial trade executed for user secret@corp.com",
-            require_proof=True
-        )
-        
-        result = await self.sdk_client.record_audit_event(
-            request=payload,
-            payment_receipt="mock_x402_trade"
-        )
-        
-        if "membership_proof" not in result or not result["membership_proof"]:
-            raise RuntimeError("CRITICAL: SDK did not return Cryptographic Proof (Merkle).")
             
-        log.info(f"Audit Event Notarized via SDK. Proof Hash: {result.get('hash')}")
+            self._record("Telemetry Chaos", True, "WAF Defense fully operational against raw injection payloads.")
+            return AuditGoldenMsg()
+            
+        except Exception as e:
+            return ErrorMessage(f"Telemetry WAF Defense Failed: {e}")
 
-    async def phase_audit_negative(self):
-        """[Audit] 비정상적 구조 시 422 에러 강제 여부 검증 (SDK 우회)"""
-        async with httpx.AsyncClient(base_url=self.local_url, timeout=5.0) as client:
+    @step
+    async def phase_audit_golden(self, msg: AuditGoldenMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 3/4] Audit Notarization & Proof Issuance (Golden) ---")
+        try:
+            payload = StrictPayloadFactory.create_audit_payload(
+                actor="bot-007",
+                action="financial_trade",
+                message="Financial trade executed for user secret@corp.com",
+                require_proof=True
+            )
+            
+            res = await self.sdk_client.record_audit_event(
+                request=payload,
+                fuel_receipt="mock_x402_trade"
+            )
+            
+            # ✅ [FIX APPLIED] : API 응답의 중첩된 'result' 객체 내부의 증명(Proof) 데이터를 참조
+            audit_result = res.get("result", {})
+            if "membership_proof" not in audit_result or not audit_result.get("membership_proof"):
+                raise RuntimeError("CRITICAL: SDK did not return Cryptographic Proof (Merkle).")
+                
+            self._record("Audit Golden", True, f"Audit Notarized via SDK. Proof Hash: {audit_result.get('hash')}")
+            return AuditNegativeMsg()
+            
+        except Exception as e:
+            return ErrorMessage(f"Audit Golden Path Failed: {e}")
+
+    @step
+    async def phase_audit_negative(self, msg: AuditNegativeMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 4/4] Audit Schema Enforcement (Negative) ---")
+        try:
             malformed_payload = {"verbose": True, "some_data": "invalid"}
             headers = {"X-X402-Receipt": "mock_x402_trade"}
             
-            res = await client.post("/v1/public/audit/event", json=malformed_payload, headers=headers)
+            res = await self.raw_client.post("/v1/public/audit/event", json=malformed_payload, headers=headers)
             
             if res.status_code != 422:
                 raise RuntimeError(f"Failed to block malformed audit request. Expected 422, got {res.status_code}")
                 
-            log.info("Schema enforcement validated on raw HTTP ingress. Malformed requests appropriately blocked.")
+            self._record("Audit Negative", True, "Schema enforcement validated. Malformed requests blocked (HTTP 422).")
+            return StopMessage(result=True)
+            
+        except Exception as e:
+            return ErrorMessage(f"Audit Schema Validation Failed: {e}")
+
+    @step
+    async def on_error(self, msg: ErrorMessage) -> WorkflowMessage:
+        self.log.error(f"\n[HALTED] {self.name} Critical Breach Detected: {msg.msg}")
+        self.halted_by_error = True
+        self._record("WORKFLOW_CRASH", False, f"Test Suite halted prematurely due to: {msg.msg}")
+        return StopMessage(result=False)
 
 
 class ComplianceSuiteRunner:
     def __init__(self):
         self.log = log
-        self.results: List[TestResult] = []
-
-    async def _run_compliance_pipeline(self):
-        net_config = E2EConfig(host="127.0.0.1", port=8354, protocol="http")
-        self.results.extend(await ComplianceTracerPipeline(config=net_config).run_pipeline())
+        self.base_url = XPHI_BASE
+        self.workflow = ComplianceSuiteWorkflow(base_url=self.base_url)
 
     def _print_report(self):
-        lines = [
-            "\n" + "=" * 80,
-            "📜 [EDGE COMPLIANCE TEST SUITE REPORT]",
-            "=" * 80
-        ]
-        
-        all_passed = all(r.passed for r in self.results)
-        for idx, res in enumerate(self.results, 1):
-            status_icon = "✅" if res.passed else "❌"
-            lines.append(
-                f"{status_icon} {idx:02d}. [{res.target}]".ljust(22)
-                + f"{res.scenario.ljust(45)} | Result: {'PASSED' if res.passed else 'FAILED'}"
-            )
-            
-        lines.append("-" * 80)
-        if all_passed: 
-            lines.append("🎉 ALL COMPLIANCE NOTARIZATION & SECURITY TESTS PASSED.")
-        else: 
-            lines.append("💥 COMPLIANCE BOUNDARY COMPROMISED. Check logs for details.")
-        lines.append("=" * 80 + "\n")
-        
-        self.log.info("\n".join(lines))
-
-    async def execute(self):
         self.log.info("\n" + "=" * 80)
-        self.log.info("🧪 [DPHI COMPLIANCE SUITE] Commencing Cryptographic Audit & Telemetry Tests via SDK")
+        self.log.info("📜 [EDGE COMPLIANCE TEST SUITE REPORT]")
         self.log.info("=" * 80)
-        await self._run_compliance_pipeline()
+        
+        reports = self.workflow.reports
+        failed = sum(1 for r in reports if not r.passed)
+        
+        for idx, r in enumerate(reports, 1):
+            status_icon = "✅" if r.passed else "❌"
+            prefix = f"{status_icon} {idx:02d}. [{r.phase}]".ljust(26)
+            self.log.info(f"{prefix} | Result: {r.status.ljust(6)} | {r.details}")
+            
+        self.log.info("-" * 80)
+        if failed == 0 and not self.workflow.halted_by_error:
+            self.log.info("🎉 ALL COMPLIANCE NOTARIZATION & SECURITY TESTS PASSED.")
+        else:
+            self.log.critical(f"💥 COMPLIANCE BOUNDARY COMPROMISED! Failed: {failed}. Check logs for details.")
+            exit(1)
+        self.log.info("=" * 80 + "\n")
+
+    async def execute_suite(self):
+        self.log.info("\n" + "=" * 80)
+        self.log.info(f"🧪 [DPHI COMPLIANCE SUITE] Commencing Cryptographic Tests against {self.base_url}")
+        self.log.info("=" * 80)
+        
+        try:
+            await self.workflow.execute()
+        finally:
+            await self.workflow.raw_client.aclose()
+            
         self._print_report()
 
 def main(args_list: list[str] = None):
     app = ComplianceSuiteRunner()
-    PhaseReactor.ignite(main_coro_func=app.execute)
+    PhaseReactor.ignite(main_coro_func=app.execute_suite)
 
 if __name__ == "__main__":
     main()

@@ -27,24 +27,21 @@ class ExecutionDeployer(AsyncWorkerProtocol):
         self.pending_prompts: Dict[str, asyncio.Future] = {}
 
     async def _route_request_async(self, req: Dict[str, Any]):
-        """부모 클래스의 라우터를 오버라이드하여, Gateway로부터 반환된 Multiplex 제어 메시지(RESUME) 및 순수 JSON-RPC Response를 가로채어 처리"""
-        # 1. Multiplex Intent 제어 메시지 (RESUME) 언래핑 처리
+        # Multiplex Intent 제어 메시지 (RESUME) 언래핑 처리
         if req.get("action") == "RESUME":
             payload = req.get("payload", {})
             prompt_id = payload.get("id")
             
-            # ID Mismatch 해결: 원래 ID(예: 777)와 Elicitation ID(prompt_777) 양방향 호환 검사
             target_id = prompt_id if prompt_id in self.pending_prompts else f"prompt_{prompt_id}"
-            
             if target_id in self.pending_prompts:
                 future = self.pending_prompts.pop(target_id)
                 if not future.done():
-                    future.set_result(payload)  # 언래핑된 순수 MCP 응답을 Future로 전달
+                    future.set_result(payload)
             else:
                 self.log.warning(f"Unmatched RESUME prompt_id: {prompt_id}")
             return
 
-        # 2. 순수 JSON-RPC Response (RPC 대행 결과 및 Sentinel 강제 롤백 등의 에러 메시지) 처리
+        # 순수 JSON-RPC Response (RPC 대행 결과 및 Sentinel 강제 롤백 등의 에러 메시지) 처리
         if "method" not in req and ("result" in req or "error" in req):
             req_id = req.get("id")
             if req_id in self.pending_prompts:
@@ -56,7 +53,7 @@ class ExecutionDeployer(AsyncWorkerProtocol):
                 self.log.warning(f"Unmatched response received for unknown ID: {req_id}")
             return
                 
-        # 3. 일반 Request는 부모 프로토콜 엔진에 위임
+        # 일반 Request는 부모 프로토콜 엔진에 위임
         await super()._route_request_async(req)
 
     async def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
@@ -85,13 +82,13 @@ class ExecutionDeployer(AsyncWorkerProtocol):
             if not otp_code:
                 return await self.send_error(req_id, -32000, "OTP Input Cancelled or Timed Out.")
 
-            # [백엔드 통신 개선] Validator RPC 직접 호출 제거 및 Connector로 대행(Delegation) 요청
+            # Validator RPC 직접 호출 제거 및 Connector로 대행(Delegation) 요청
             delegate_req_id = f"delegate_{req_id}"
             loop = asyncio.get_running_loop()
             future = loop.create_future()
             self.pending_prompts[delegate_req_id] = future
             
-            # STDOUT을 통해 Connector에게 백엔드 RPC 호출을 위임 (Zero-Trust 격리 보장)
+            # STDOUT을 통해 Connector에게 백엔드 RPC 호출을 위임
             await self.send_request(
                 req_id=delegate_req_id,
                 method="rpc_delegate",
@@ -142,12 +139,12 @@ class ExecutionDeployer(AsyncWorkerProtocol):
     async def _request_user_otp_async(self, parent_req_id: Any, service: str) -> str:
         prompt_req_id = f"prompt_{parent_req_id}"
         
-        # 1. 응답을 대기할 Future 객체 생성 및 레지스트리 등록
+        # 응답을 대기할 Future 객체 생성 및 레지스트리 등록
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         self.pending_prompts[prompt_req_id] = future
 
-        # 2. Gateway로 Elicitation (YIELD 트리거) 요청 전송
+        # Gateway로 Elicitation (YIELD 트리거) 요청 전송
         await self.send_request(
             req_id=prompt_req_id,
             method="elicitation/createMessage",
@@ -155,7 +152,7 @@ class ExecutionDeployer(AsyncWorkerProtocol):
         )
         self.log.info(f"[BLOCKED] Waiting for TOTP input (Suspended execution context)...")
         
-        # 3. 메인 루프를 블로킹하지 않고 비동기로 대기
+        # 메인 루프를 블로킹하지 않고 비동기로 대기
         try:
             # 타임아웃을 넉넉하게 주어 외부 Gateway나 사용자의 응답 대기 시간을 보장
             client_res = await asyncio.wait_for(future, timeout=300.0)

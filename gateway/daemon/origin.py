@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 import aiohttp
 
-from fiber.infra.adapter.config.exchange import exchange_config
+from xphi.arch.contract.config.attestation import attestation_config, delegation_config
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.arch.bound.adapter.pta import NodeSigner
@@ -28,15 +28,14 @@ class OriginDelegatorDaemon(AbstractDaemon):
         super().__init__("OriginDelegatorDaemon")
         self.ctx = ctx
         
-        # 1. 인프라 및 라우팅 설정 로드
-        self.origin_url = exchange_config.delegation.origin_url
-        self.allow_fallback = exchange_config.delegation.allow_fallback
+        # 인프라 및 라우팅 설정 로드
+        self.origin_url = delegation_config.origin_url
+        self.allow_fallback = delegation_config.allow_fallback
         
-        # 2. 오리진 무결성 검증을 위한 신뢰된 위원회 공개키
-        self.trusted_witnesses = set(exchange_config.export_attestation.witness_pubkeys)
+        # 오리진 무결성 검증을 위한 신뢰된 위원회 공개키
+        self.trusted_witnesses = set(attestation_config.witness_pubkeys)
         
-        # 3. 게이트웨이 자체의 신원(Signer) - 오리진에 위탁 시 DPoP 래핑에 사용
-        # 시스템 마스터 키를 가져오거나 기본 NodeSigner 인스턴스 사용
+        # 게이트웨이 자체의 신원(Signer) - 오리진에 위탁 시 DPoP 래핑에 사용
         self.signer = NodeSigner.get_instance() 
         
         self.tunnel = None

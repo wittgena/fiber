@@ -10,10 +10,10 @@ from fiber.gateway.rest.payload import create_app, Config
 
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 
 log = get_emitter("tracer.eco_egress")
 
@@ -37,7 +37,7 @@ class EcoEgressTracer(PipelineRunner):
     async def phase_ignition(self):
         log.info(f"[{self.scope_name}] Bootstrapping Gateway for Egress Trace...")
         self.tunnel = await TunnelFactory.get_default()
-        self.ledger = KernelLedger()
+        self.ledger = PhaseStore()
         
         self.rest_app = create_app(config=Config(), tunnel=self.tunnel, ledger=self.ledger)
         u_config = uvicorn.Config(app=self.rest_app, host=self.config.host, port=self.config.port, log_level="error", access_log=False)
@@ -64,7 +64,7 @@ class EcoEgressTracer(PipelineRunner):
             completion_tokens=50
         )
         
-        res = await self.sdk_client.push_telemetry(otlp_payload, payment_receipt=self.mock_receipt)
+        res = await self.sdk_client.push_telemetry(otlp_payload, fuel_receipt=self.mock_receipt)
         if res.get("status") == "success" and res.get("fingerprint") != "N/A":
             log.info(f"✅ OTLP Telemetry sealed and mapped to kernel fingerprint: {res['fingerprint']}")
         else:
@@ -78,7 +78,7 @@ class EcoEgressTracer(PipelineRunner):
             message="Audit egress path trace verification."
         )
         
-        res = await self.sdk_client.record_audit_event(audit_payload, payment_receipt=self.mock_receipt)
+        res = await self.sdk_client.record_audit_event(audit_payload, fuel_receipt=self.mock_receipt)
         if "hash" in res:
             log.info(f"✅ Audit Event sealed securely. Hash: {res['hash']}")
         else:

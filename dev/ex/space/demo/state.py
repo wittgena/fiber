@@ -49,14 +49,10 @@ StateEvent = Union[
     ToolErrorEvent
 ]
 
-# =====================================================================
-# 2. Agent State Manager (Event Ledger)
-# =====================================================================
-
 class AgentState(BaseModel):
     """
-    Core ledger for the stateless agent architecture.
-    Manages the event trajectory without internal loop states.
+    Event Store for the stateless agent architecture.
+    - Manages the event trajectory without internal loop states.
     """
     conversation_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     events: List[StateEvent] = Field(default_factory=list)
@@ -90,7 +86,7 @@ class AgentState(BaseModel):
 
     def to_llm_messages(self) -> List[Message]:
         """
-        Compiles the event ledger into standard LLM messages.
+        Compiles the event store into standard LLM messages.
         Separates state management from view (prompt) generation.
         """
         messages: List[Message] = []

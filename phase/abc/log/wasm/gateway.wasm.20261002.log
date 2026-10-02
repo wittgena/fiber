@@ -1,0 +1,123 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m fiber.dev.e2e.wasm.gateway --build
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 26 aliases.
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-28201
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: 
+==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: 🔨 [PRE-FLIGHT] Forcing Rebuild of 'gateway.wasm' Artifact...
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: ==========================================================================================
+ LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.init: Initiating Structural Trace Lifecycle
+ LOG | agent  | INFO  |  tracer.wasm.builder: 
+--- [START] Compiling WASM Artifacts (GATEWAY) ---
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Skipping Schema Extraction (Not required for ['gateway']).
+info: component rust-std for target wasm32-unknown-unknown is up to date
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Applying env for gateway: {'RUSTFLAGS': '-C opt-level=3 -C lto=thin'}
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Wiping Cargo cache for 'gateway' to force Pest Macro re-expansion...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Compiling gateway to wasm32-unknown-unknown...
+ LOG | agent  | INFO  |  tracer.wasm.builder: [Builder] Copied artifact -> gateway.wasm
+ LOG | agent  | INFO  |  tracer.wasm.builder: ## @trace.teardown: Collapsing space and reclaiming resources...
+ LOG | agent  | CRIT  |  tracer.wasm.builder: ## @trace.exit: Field Restored.
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: ✅ [PRE-FLIGHT] Binary synced. Proceeding to Tests.
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: 
+==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: 🧪 [MASTER SUITE] Commencing Decoupled WasmGateway Integration Tests
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: ==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: 
+--------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: 🔌 [GATEWAY SETUP] Initializing Zero-WASI WasmGateway (L0 Firewall)...
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: ✅ Gateway Initialized (Pre-allocated Buffer: 1MB & Thread-Safe Locked)
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: --------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: 
+[CLI] 🏃‍♂️ Initiating L0 Zero-Trust Isolation Tests...
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: 
+▶️ [FIREWALL DOMAIN] Scenario: OpCode, Budget, Target, Hex Payload
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'intent_parser' (0.17 KB)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ✅ [WASM Gateway] Execution successful: 'intent_parser' (0.54 ms)
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: ✅ Passed L0 Firewall! Extracted AST: {'op_code': 'CALL', 'amount': 15.5, 'ticker': 'USDC', 'target': 'urn:xphi:agent:db_router_01', 'raw_data': '0xDEADBEEF'}
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: 
+▶️ [FIREWALL DOMAIN] Scenario: O(1) BDD Logic Matrix Rejection
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'intent_parser' (0.17 KB)
+ LOG | SYSTEM | WARN  |  wasm.gateway: ⚠️ [WASM Gateway] Execution reverted: 'intent_parser' (Reason: State vector rejected by logic matrix.)
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: ✅ Defense mechanism triggered (Revert: State vector rejected by logic matrix.)
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.compute: 
+▶️ [FIREWALL DOMAIN] Scenario: Pest Sandbox Defense (SQL Injection Rejection)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'intent_parser' (0.16 KB)
+ LOG | SYSTEM | WARN  |  wasm.gateway: ⚠️ [WASM Gateway] Execution reverted: 'intent_parser' (Reason: Syntax error:  --> 1:38
+  |
+1 | CALL FEE 100 USDC TO DB_SERVICE WITH DROP TABLE users;
+  |                                      ^---
+  |
+  = expected raw_data)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] e2e.wasm.gateway.compute: ✅ Defense mechanism triggered (Revert: Syntax error:  --> 1:38
+  |
+1 | CALL FEE 100 USDC TO DB_SERVICE WITH DROP TABLE users;
+  |                                      ^---
+  |
+  = expected raw_data)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] e2e.wasm.gateway.compute: 
+▶️ [FIREWALL DOMAIN] Scenario: AST Pest Parser Rejection (LLM Hallucination)
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'intent_parser' (0.14 KB)
+ LOG | SYSTEM | WARN  |  wasm.gateway: ⚠️ [WASM Gateway] Execution reverted: 'intent_parser' (Reason: Syntax error:  --> 1:1
+  |
+1 | PLEASE CALL FEE 10 USDC TO STORAGE_NODE
+  | ^---
+  |
+  = expected op_code)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] e2e.wasm.gateway.compute: ✅ Defense mechanism triggered (Revert: Syntax error:  --> 1:1
+  |
+1 | PLEASE CALL FEE 10 USDC TO STORAGE_NODE
+  | ^---
+  |
+  = expected op_code)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.wasm.gateway.compute' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] e2e.wasm.gateway.compute: 
+▶️ [FIREWALL DOMAIN] Scenario: Physical Circuit Breaker (Overflow 1MB)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.gateway'
+ LOG | SYSTEM | INFO  |  wasm.gateway: ⚡ [WASM Gateway] Invoking module 'intent_parser' (1024.16 KB)
+ LOG | SYSTEM | WARN  |  wasm.gateway: 🛡️ [Circuit Breaker Triggered] Payload exceeds boundary (1048576B).
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.wasm.gateway.compute' (Acc: 1.70) Den: 7.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.wasm.gateway.fsm'
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: 
+[Gateway] 🔄 Initiating FSM Determinism & State Transition Tests...
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: 
+⚙ [FSM DOMAIN] Scenario: Transaction FSM: Init -> ExecuteVmCmd
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] wasm.gateway: ⚡ [WASM Gateway] Invoking module 'transaction_fsm' (0.34 KB)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] wasm.gateway: ✅ [WASM Gateway] Execution successful: 'transaction_fsm' (0.19 ms)
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: ✅ FSM Transitioned successfully! Next State: {'state': 'ShadowExecution', 'max_fuel_limit': 200000, 'caller': 'urn:xphi:tenant:auth_77a9', 'target_resource': 'urn:xphi:agent:db_router_01', 'charge_amount': 100}, Command: ExecuteVmCmd
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: 
+⚙ [FSM DOMAIN] Scenario: Epoch Topology: ZERO -> ANCHOR (Resource Lock)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] wasm.gateway: ⚡ [WASM Gateway] Invoking module 'flow_transition_fsm' (0.23 KB)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:wasm.gateway' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] wasm.gateway: ✅ [WASM Gateway] Execution successful: 'flow_transition_fsm' (0.13 ms)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.wasm.gateway.fsm'
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: ✅ FSM Transitioned successfully! Next State: {'origin': '0', 'edge': 'ANCHOR', 'reflective': True, 'reversible': True, 'anchored_target': 'urn:surgent:resource:resolved_task_999'}, Command: ResolveAnchorCmd
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: 
+⚙ [FSM DOMAIN] Scenario: Epoch Topology: Forced Collapse -> FractureCmd
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:wasm.gateway' (Acc: 1.70) Den: 7.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.wasm.gateway.fsm'
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: ✅ FSM Transitioned successfully! Next State: {'origin': '0', 'edge': 'COLLAPSED', 'reflective': True, 'reversible': True, 'anchored_target': None}, Command: FractureCmd
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: 
+⚙ [FSM DOMAIN] Scenario: Clearing FSM: Rejecting unauthorized/invalid event
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:wasm.gateway' (Acc: 1.93) Den: 8.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:e2e.wasm.gateway.fsm'
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway.fsm: ✅ FSM properly rejected transition (Revert: Gateway Router Parse Error: unknown variant `InvalidHackingEvent`, expected one of `FsmStartIntent`, `PtaAnchoredEvent`, `WasmExecutedEvent`)
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: 
+==========================================================================================
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: 📊 [WASM GATEWAY E2E REPORT: PEST ISOLATION & FSM DETERMINISM]
+ LOG | SYSTEM | INFO  |  e2e.wasm.gateway: ==========================================================================================
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.8] e2e.wasm.gateway: ✅ 01. [WASM_GATEWAY]  OpCode, Budget, Target, Hex Payload                          | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.9] e2e.wasm.gateway: ✅ 02. [WASM_GATEWAY]  O(1) BDD Logic Matrix Rejection                              | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.0] e2e.wasm.gateway: ✅ 03. [WASM_GATEWAY]  Pest Sandbox Defense (SQL Injection Rejection)               | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.1] e2e.wasm.gateway: ✅ 04. [WASM_GATEWAY]  AST Pest Parser Rejection (LLM Hallucination)                | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.2] e2e.wasm.gateway: ✅ 05. [WASM_GATEWAY]  Physical Circuit Breaker (Overflow 1MB)                      | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.3] e2e.wasm.gateway: ✅ 06. [FSM]           Transaction FSM: Init -> ExecuteVmCmd                        | Result: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.5] e2e.wasm.gateway: ✅ 07. [FSM]           Epoch Topology: ZERO -> ANCHOR (Resource Lock)               | Result: PASSED
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:e2e.wasm.gateway' (Acc: 1.57) Den: 9.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] e2e.wasm.gateway: ✅ 08. [FSM]           Epoch Topology: Forced Collapse -> FractureCmd               | Result: PASSED
+[Reactor] 🏁 Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.7] e2e.wasm.gateway.compute: [e2e.wasm.gateway.compute] Bursting logs suppressed... (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.0] wasm.gateway: [wasm.gateway] Bursting logs suppressed... (x5)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.9] e2e.wasm.gateway: [e2e.wasm.gateway] Bursting logs suppressed... (x5)
+(self) wittgena@wittgenas-MacBook-Pro self % 

@@ -14,7 +14,7 @@ import random
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.dev.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
 from fiber.infra.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
@@ -116,7 +116,7 @@ class KubeWorkflowScene:
             payload = StrictPayloadFactory.create_telemetry_payload(
                 tenant_id="tenant-456", model_name="gpt-4o", prompt_tokens=150, completion_tokens=50
             )
-            res = await sdk_client.push_telemetry(request=payload, payment_receipt="mock_valid_receipt")
+            res = await sdk_client.push_telemetry(request=payload, fuel_receipt="mock_valid_receipt")
             if res.get("status") != "success":
                 raise RuntimeError("SDK failed to confirm telemetry success.")
             self.log.info(f"  │  └─ Sealed Successfully. Fingerprint: {res.get('fingerprint')}")

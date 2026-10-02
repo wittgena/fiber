@@ -73,7 +73,7 @@ jobs:
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
-          XPHI_WORKERS: "1"
+          XPHI_WORKERS: "2"
         run: |
           echo "Starting Kernel in background..."
           nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
@@ -83,12 +83,12 @@ jobs:
           timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done'
           echo "✅ Kernel is fully up and running!"
 
-      - name: 🧪 Run E2E Edge Client
+      - name: 🧪 Run E2E Edge Test
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           DPHI_ENV: "local"
         run: |
-          python -m dev.e2e.edge.client
+          python -m fiber.dev.e2e.edge.compliance
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()

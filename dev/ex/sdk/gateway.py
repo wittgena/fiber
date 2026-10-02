@@ -1,4 +1,5 @@
-# fiber.dev.sdk.gateway
+# fiber.dev.ex.sdk.gateway
+## @lineage: fiber.dev.sdk.gateway
 import time
 import logging
 from dataclasses import dataclass, asdict
@@ -6,22 +7,13 @@ from typing import Dict, Any, Optional, List
 import httpx
 
 from xphi.arch.bound.client.http import VerifiedHttpClient
-from xphi.arch.model.edge.receipt import (
-    AuditLogRequest, 
-    AuditEvent, 
-    ExportLogsServiceRequest,
-    ResourceLogs,
-    ScopeLogs,
-    LogRecord,
-    KeyValue
-)
+from xphi.arch.model.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest, ResourceLogs, ScopeLogs, LogRecord, KeyValue
 from xphi.arch.model.edge.receptor import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for Edge Gateway"""
     KEYS              = "/v1/public/keys"
-    SANDBOX_QUOTE     = "/v1/public/sandbox/quote"
-    SANDBOX_HANDSHAKE = "/v1/public/sandbox/handshake"
+    INTENT_HANDSHAKE = "/v1/public/intent/handshake"
     BILLING_INVOICE   = "/v1/public/billing/invoice"
     BILLING_BALANCE   = "/v1/public/billing/balance"
     TELEMETRY_LOGS    = "/v1/public/telemetry/logs"
@@ -30,11 +22,12 @@ class Endpoints:
 
     LLM_CHAT        = "/v1/chat/completions"
     LLM_EMBEDDING   = "/v1/embeddings"
-    MCP_STATE       = "/v1/mcp-gateway/state"
+    
+    MCP_INVOKE_TEMPLATE = "/v1/mcp-gateway/{target_server_id}/invoke"
 
 
 @dataclass
-class SandboxIntent:
+class HandshakeIntent:
     client_id: str
     action: str
     payload: Any
@@ -50,9 +43,14 @@ class LLMIntent:
 
 @dataclass
 class MCPStateIntent:
+    target_server_id: str
+    
+    # Payload & State
     action: str
     handle_id: Optional[str]
     payload: Dict[str, Any]
+    
+    # Security Headers
     x_spiffe_id: str
     x_dpop_proof: str
     x_nonce: str
@@ -116,7 +114,7 @@ class DphiPublicClient:
         self.api_key = api_key
         self.http_timeout = httpx.Timeout(60.0, connect=5.0)
         
-        self.log = logging.getLogger("dphi.client.sdk")
+        self.log = logging.getLogger("sdk.gateway")
         if not self.log.handlers:
             logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -132,11 +130,11 @@ class DphiPublicClient:
         )
         return VerifiedHttpClient(client=base_client, max_age_seconds=60)
 
-    # Public Edge (Economy)
-    async def request_handshake(self, intent: SandboxIntent) -> Dict[str, Any]:
+    # Public Edge
+    async def request_handshake(self, intent: HandshakeIntent) -> Dict[str, Any]:
         verifier = self._get_verified_client()
         try:
-            response = await verifier.async_post_verified(Endpoints.SANDBOX_HANDSHAKE, json=asdict(intent))
+            response = await verifier.async_post_verified(Endpoints.INTENT_HANDSHAKE, json=asdict(intent))
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -170,9 +168,9 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def push_telemetry(self, request: ExportLogsServiceRequest, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
+    async def push_telemetry(self, request: ExportLogsServiceRequest, fuel_receipt: Optional[str] = None) -> Dict[str, Any]:
         verifier = self._get_verified_client()
-        headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
+        headers = {"X-X402-Receipt": fuel_receipt} if fuel_receipt else {}
         try:
             response = await verifier.async_post_verified(
                 Endpoints.TELEMETRY_LOGS, 
@@ -198,13 +196,10 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def record_audit_event(self, request: AuditLogRequest, payment_receipt: Optional[str] = None) -> Dict[str, Any]:
-        """
-        API: POST /v1/public/audit/event
-        Gateway returns AuditLogResponse schema containing 'request_id' and 'result.hash'.
-        """
+    async def record_audit_event(self, request: AuditLogRequest, fuel_receipt: Optional[str] = None) -> Dict[str, Any]:
+        """Gateway returns AuditLogResponse schema containing 'request_id' and 'result.hash'"""
         verifier = self._get_verified_client()
-        headers = {"X-X402-Receipt": payment_receipt} if payment_receipt else {}
+        headers = {"X-X402-Receipt": fuel_receipt} if fuel_receipt else {}
         try:
             response = await verifier.async_post_verified(
                 Endpoints.AUDIT_EVENT, 
@@ -212,10 +207,6 @@ class DphiPublicClient:
                 headers=headers
             )
             response.raise_for_status()
-            
-            # [핵심 개선]: 데이터 유실(Information Loss) 방지. 
-            # response.json().get("result", {}) 로 알맹이만 파싱하던 잘못된 관행을 버리고, 
-            # Gateway API의 명세(AuditLogResponse)를 클라이언트에게 투명하게 1:1로 전달합니다.
             return response.json()
             
         except httpx.HTTPStatusError as he:
@@ -241,8 +232,8 @@ class DphiPublicClient:
             response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload)
             
             if response.status_code == 402:
-                self.log.warning("[SDK] 402 Payment Required. Initiating auto x402 Handshake...")
-                hs_res = await self.request_handshake(SandboxIntent(
+                self.log.warning("[SDK] 402 Fuel Receipt Required. Initiating auto x402 Handshake...")
+                hs_res = await self.request_handshake(HandshakeIntent(
                     client_id=intent.client_id, action="LLM_COMPUTE", payload="", max_fuel=intent.max_tokens, signature="sig"
                 ))
                 x402_receipt = hs_res.get("x402_receipt")
@@ -260,7 +251,7 @@ class DphiPublicClient:
         finally:
             await verifier._client.aclose()
 
-    async def process_mcp_state(self, intent: MCPStateIntent) -> Dict[str, Any]:
+    async def process_mcp_invoke(self, intent: MCPStateIntent) -> Dict[str, Any]:
         verifier = self._get_verified_client()
         headers = {
             "x-spiffe-id": intent.x_spiffe_id,
@@ -278,8 +269,9 @@ class DphiPublicClient:
             "payload": intent.payload
         }
 
+        target_url = Endpoints.MCP_INVOKE_TEMPLATE.format(target_server_id=intent.target_server_id)
         try:
-            response = await verifier._client.post(Endpoints.MCP_STATE, json=payload, headers=headers)
+            response = await verifier._client.post(target_url, json=payload, headers=headers)
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as he:

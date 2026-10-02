@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from fiber.infra.rpc.client import InternalRpcClient, RpcException
+from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from fiber.gateway.rest.serv.depend import get_rpc_client
 
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
@@ -19,7 +19,6 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("serv.gateway")
 
 def _extract_error_message(error_detail: Any) -> str:
-    """Sandbox나 RPC에서 반환된 다양한 형태의 에러 객체에서 안전하게 메시지를 추출합니다."""
     if isinstance(error_detail, dict):
         return error_detail.get("message", str(error_detail))
     return str(error_detail) if error_detail else "Unknown Execution Fault"
@@ -29,6 +28,18 @@ class TransitionBridge:
         self.mapper = mapper
         self.nonce_protector = nonce_protector
         log.info("[TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.")
+
+    async def _is_x402_required(self, target_server_id: str) -> bool:
+        """개별 서버/워커별 X402 과금 활성화 Flag 여부를 동적으로 확인합니다."""
+        try:
+            tunnel = await TunnelFactory.get_default()
+            policy = await tunnel.get(f"config:x402:{target_server_id}")
+            if policy is not None:
+                # Redis 클라이언트 반환 타입(bytes or str) 안전 처리
+                return policy.decode('utf-8') == "1" if isinstance(policy, bytes) else str(policy) == "1"
+        except Exception as e:
+            log.warning(f"[Bridge:Config] Failed to fetch X402 flag for {target_server_id}: {e}")
+        return False
 
     async def invoke_mcp_sync(
         self, identity: AgentIdentity, payload: Dict[str, Any], target_uri: str, target_method: str, rpc: InternalRpcClient
@@ -41,23 +52,23 @@ class TransitionBridge:
         }
         log.info(f"[Bridge:Start] Ingress request received", extra=trace_ctx)
 
-        # 1. 외곽 망 보안 (Replay Attack 원천 차단)
+        # Perimeter security: Block replay attacks
         if not await self.nonce_protector.validate_and_lock_nonce(identity.nonce):
             log.warning(f"[Bridge:Security] REPLAY_ATTACK_DETECTED - Nonce lock failed", extra={"nonce": str(identity.nonce), **trace_ctx})
             raise HTTPException(status_code=423, detail="REPLAY_ATTACK_DETECTED")
 
-        # 2. 레거시 스키마 배려 제거. 오직 MCP 표준 _meta에만 신원 기록.
+        # Remove legacy schema fallbacks; enforce identity strictly via MCP _meta
         if "params" not in payload: payload["params"] = {}
         if "_meta" not in payload["params"]: payload["params"]["_meta"] = {}
         payload["params"]["_meta"]["user_id"] = str(identity.agent_uri)
 
-        # 3. 멱등성 매핑 (Idempotency Handling)
-        handle_id, is_new = await self.mapper.get_or_create_handle(
-            identity.target_server_id, identity.idempotency_key
-        )
-        
+        # Idempotency handling
+        handle_id, is_new = await self.mapper.get_or_create_handle(identity.target_server_id, identity.idempotency_key)
         trace_ctx["handle_id"] = str(handle_id)
         log.debug(f"[Bridge:Idempotency] Handle mapped", extra={"is_new": is_new, **trace_ctx})
+
+        # Polling/Status Location header
+        location_header = {"Location": f"/v1/mcp-gateway/{identity.target_server_id}/status/{handle_id}"}
 
         if not is_new:
             state_res = await rpc.call("mcp.state.query", {"handle_id": handle_id})
@@ -80,7 +91,7 @@ class TransitionBridge:
                         return await self._wait_for_resolution(handle_id, identity.target_server_id, rpc, trace_ctx)
                         
                     log.debug(f"[Bridge:Yield] Returning existing prompt to client", extra=trace_ctx)
-                    return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}))
+                    return JSONResponse(status_code=202, content=state_res.get("executable_payload", {}), headers=location_header)
                     
                 elif status == "FAULTED":
                     raw_err = state_res.get("error_detail", "Execution Fault")
@@ -94,45 +105,39 @@ class TransitionBridge:
                     return state_res.get("executable_payload", {})
                     
             log.warning(f"[Bridge:Conflict] Transaction already in progress but state not queryable", extra=trace_ctx)
-            return JSONResponse(status_code=202, content={"message": "Transaction already in progress."})
+            return JSONResponse(status_code=202, content={"message": "Transaction already in progress."}, headers=location_header)
 
-        # MCP 표준 공시 및 초기화 메서드 식별
+        # Identify MCP discovery and initialization methods
         mcp_method = payload.get("method", "")
         is_discovery_phase = mcp_method in ("initialize", "tools/list", "prompts/list", "resources/list")
 
-        # 4. 보안 및 결제 검증 (DPoP & x402)
-        is_authenticated = False
-        
+        # Authentication (DPoP Mandatory) & Fuel Validation (X402 Conditional)
         if is_discovery_phase:
-            # 공시 단계는 결제/서명 없이 통과 허용 (Bypass)
+            # Bypass strict auth and fuel checks for discovery phases
             log.debug(f"[Bridge:Auth] Bypassing strict auth for discovery method: {mcp_method}", extra=trace_ctx)
-            is_authenticated = True
         else:
-            # 실제 도구 실행 단계는 엄격한 서명 및 영수증 검증 수행
-            if identity.proof_of_possession:
-                if not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
-                    log.warning(f"[Bridge:Auth] DPoP Verification Failed", extra=trace_ctx)
-                    raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
-                is_authenticated = True
+            # 1. DPoP 필수 검증 (Mandatory)
+            if not identity.proof_of_possession or not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
+                log.warning(f"[Bridge:Auth] DPoP Verification Failed or Missing", extra=trace_ctx)
+                raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
 
-            if identity.receipt:
+            # 2. X402 영수증 선택적 검증 (Flag 기반)
+            if await self._is_x402_required(identity.target_server_id):
+                if not identity.receipt:
+                    log.warning(f"[Bridge:Fuel] Missing X402 Receipt for billing-enabled server", extra=trace_ctx)
+                    raise HTTPException(status_code=402, detail="Payment Required: X402 Receipt Missing")
+                
                 try:
-                    await rpc.call("validate.billing.receipt", {
+                    await rpc.call("validate.fuel.receipt", {
                         "target_server_id": identity.target_server_id,
-                        # [버그 픽스] nested dict에서 action 이름 정확히 추출
                         "action": payload.get("params", {}).get("name", "unknown_tool"),
-                        "payment_receipt": identity.receipt
+                        "fuel_receipt": identity.receipt
                     })
-                    is_authenticated = True
                 except RpcException as e:
-                    log.warning(f"[Bridge:Billing] Payment rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
-                    raise HTTPException(status_code=e.status_code, detail=f"Payment/Intent Rejected: {e.detail}")
+                    log.warning(f"[Bridge:Fuel] Fuel validation rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
+                    raise HTTPException(status_code=402, detail=f"Fuel/Intent Rejected: {e.detail}")
 
-        if not is_authenticated:
-            log.warning(f"[Bridge:Auth] Missing Authentication or Receipt", extra=trace_ctx)
-            raise HTTPException(status_code=401, detail="Authentication (DPoP) or Payment Receipt (X402) missing.")
-
-        # 5. 상태 씰링 및 실행 지시 (EXECUTE Intent)
+        # Seal state and dispatch EXECUTE Intent
         await rpc.call("mcp.state.pending.seal", {
             "handle_id": handle_id,
             "payload": payload,
@@ -144,7 +149,6 @@ class TransitionBridge:
             payload={"handle_id": handle_id, "action": "EXECUTE", "payload": payload}
         )
         log.info(f"[Bridge:Intent] EXECUTE Intent published to queue", extra=trace_ctx)
-
         return await self._wait_for_resolution(handle_id, identity.target_server_id, rpc, trace_ctx)
 
     async def _wait_for_resolution(self, handle_id: str, target_server_id: str, rpc: InternalRpcClient, trace_ctx: Dict[str, Any]) -> Union[Dict[str, Any], JSONResponse]:
@@ -155,6 +159,9 @@ class TransitionBridge:
         
         log.debug(f"[Bridge:PubSub] Listening for backend resolution", extra={"channel": reply_channel, **trace_ctx})
         start_time = time.time()
+
+        # 202 응답 시 제공될 Location 헤더
+        location_header = {"Location": f"/v1/mcp-gateway/{target_server_id}/status/{handle_id}"}
 
         try:
             async with asyncio.timeout(30.0):
@@ -168,7 +175,7 @@ class TransitionBridge:
                         
                         if status == "YIELD":
                             log.info(f"[Bridge:PubSub:Yield] Agent prompted for input", extra=trace_ctx)
-                            return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}))
+                            return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}), headers=location_header)
                         
                         elif status == "FAULTED":
                             raw_err = state_data.get("error_detail", "Execution Fault")
@@ -264,8 +271,6 @@ async def discover_tools(
         nonce=uuid.uuid4().hex,
         idempotency_key=uuid.uuid4().hex
     )
-    
-    # 순수 MCP 표준 payload(tools/list) 조립
     discovery_payload = {
         "jsonrpc": "2.0",
         "id": "discovery_" + ephemeral_identity.idempotency_key[:8],
@@ -274,12 +279,11 @@ async def discover_tools(
     }
     
     try:
-        # invoke_mcp_sync의 is_discovery_phase 조건에 의해 자동 Bypass 처리됨
         result = await adapter.invoke_mcp_sync(
             identity=ephemeral_identity,
             payload=discovery_payload,
             target_uri=str(request.url),
-            target_method="POST", # 워커 통신을 위해 내부적으로는 POST 인텐트로 전환
+            target_method="POST",
             rpc=rpc
         )
         return result

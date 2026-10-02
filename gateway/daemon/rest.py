@@ -11,13 +11,11 @@ from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.phase.contract.server import SecureMCPServer
-
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
 from xphi.kernel.ops.reaper import SystemOps
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.rest")
@@ -50,182 +48,6 @@ async def clear_zombie_ports(ports: List[int], tag: str):
         except Exception as e:
             log.warning(f"[{tag}] Error scanning port {port}: {e}")
 
-
-# ============================================================================
-# Gateway Core Server Component (Aiohttp Reverse Proxy + MCP)
-# ============================================================================
-
-class GatewaySettings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="GATEWAY_")
-    host: str = "0.0.0.0"
-    proxy_port: int = int(os.getenv("GATEWAY_PROXY_PORT", 8443)) 
-    mcp_port: int = int(os.getenv("GATEWAY_MCP_PORT", 8084))
-    upstream_url: str = "http://127.0.0.1:8000"
-    transport_mode: Literal["stdio", "sse"] = "sse"
-
-
-class DphiGatewayServer:
-    def __init__(self, settings: GatewaySettings):
-        self.settings = settings
-        self.log = get_emitter("ingress.gateway", phase="GATEWAY")
-        self.mcp = SecureMCPServer(name="mcp-gateway-control", version="1.0")
-        self.client_session: ClientSession | None = None
-        self.firewall_rules = {"blocked_ips": set(), "quarantine_paths": set()}
-        self._register_mcp_tools()
-
-    def _register_mcp_tools(self):
-        @self.mcp.tool()
-        async def block_ip(ip_address: str, reason: str = "Malicious activity") -> str:
-            self.firewall_rules["blocked_ips"].add(ip_address)
-            return f"[SUCCESS] IP {ip_address} is now blocked."
-
-        @self.mcp.tool()
-        async def get_gateway_status() -> dict:
-            return {
-                "status": "OPERATIONAL",
-                "upstream": self.settings.upstream_url,
-                "blocked_ips_count": len(self.firewall_rules["blocked_ips"]),
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-
-    async def gateway_handler(self, request: web.Request) -> web.Response:
-        client_ip = request.remote
-        path = request.path
-        
-        if not path.startswith("/v1/public"):
-            raise web.HTTPForbidden(reason="Security: Access Denied.")
-        if client_ip in self.firewall_rules["blocked_ips"]:
-            raise web.HTTPForbidden(reason="Security: IP Quarantined.")
-
-        headers = dict(request.headers)
-        headers.pop("Host", None) 
-        headers['X-Forwarded-For'] = client_ip
-        headers['X-Gateway-Passed'] = "true"
-
-        target_url = f"{self.settings.upstream_url}{path}"
-        data = await request.read()
-        
-        try:
-            async with self.client_session.request(
-                method=request.method, url=target_url, headers=headers, data=data, params=request.query
-            ) as resp:
-                response_body = await resp.read()
-                clean_headers = {k: v for k, v in resp.headers.items() if k.lower() not in {'connection', 'keep-alive', 'upgrade'}}
-                return web.Response(body=response_body, status=resp.status, headers=clean_headers)
-        except Exception as e:
-            self.log.error(f"Upstream Relay Error: {e}")
-            return web.Response(status=502, text="Bad Gateway.")
-
-    async def mcp_sse_handler(self, request: web.Request) -> web.Response:
-        return await self.mcp.handle_sse_connection(request)
-
-    async def mcp_message_handler(self, request: web.Request) -> web.Response:
-        return await self.mcp.handle_post_message(request)
-
-    async def startup_context(self, app: web.Application):
-        if not self.client_session:
-            self.client_session = ClientSession()
-
-    async def cleanup_context(self, app: web.Application):
-        if self.client_session and not self.client_session.closed:
-            await self.client_session.close()
-
-    async def start_dual_servers(self):
-        proxy_app = web.Application()
-        proxy_app.on_startup.append(self.startup_context)
-        proxy_app.on_cleanup.append(self.cleanup_context)
-        proxy_app.router.add_route('*', '/{tail:.*}', self.gateway_handler)
-        
-        mcp_app = web.Application()
-        mcp_app.router.add_get('/mcp/sse', self.mcp_sse_handler)
-        mcp_app.router.add_post('/mcp/messages', self.mcp_message_handler)
-        
-        proxy_runner = web.AppRunner(proxy_app)
-        mcp_runner = web.AppRunner(mcp_app)
-        await proxy_runner.setup()
-        await mcp_runner.setup()
-        
-        proxy_site = web.TCPSite(
-            proxy_runner, self.settings.host, self.settings.proxy_port, 
-            reuse_address=True, reuse_port=True
-        )
-        mcp_site = web.TCPSite(
-            mcp_runner, self.settings.host, self.settings.mcp_port, 
-            reuse_address=True, reuse_port=True
-        )
-        
-        try:
-            await asyncio.gather(proxy_site.start(), mcp_site.start())
-        except OSError as e:
-            self.log.error(f"Failed to bind ports ({self.settings.proxy_port}, {self.settings.mcp_port}). Error: {e}")
-            raise e
-        
-        self.log.info(json.dumps({
-            "msg": "Gateway Server Started",
-            "public_proxy_port": self.settings.proxy_port,
-            "control_mcp_port": self.settings.mcp_port,
-            "upstream_url": self.settings.upstream_url
-        }), file=sys.stderr)
-
-
-# ============================================================================
-# Gateway Edge Daemon (Public / External Traffic)
-# ============================================================================
-
-@contract.daemon("gateway_edge")
-class GatewayEdgeDaemon(AbstractDaemon):
-    def __init__(self, ctx):
-        super().__init__("GatewayEdgeDaemon")
-        self.ctx = ctx
-        self.settings = GatewaySettings()
-        self.gateway_server: Optional[DphiGatewayServer] = None
-        self._tasks = set()
-
-    async def run(self):
-        log.info(f"[{self.name}] Starting Gateway Edge Daemon...")
-        try:
-            await clear_zombie_ports([self.settings.proxy_port, self.settings.mcp_port], tag=self.name)
-            
-            log.info(f"[{self.name}] Starting Public Gateway & MCP Control Plane...")
-            self.gateway_server = DphiGatewayServer(self.settings)
-            gw_task = asyncio.create_task(self.gateway_server.start_dual_servers())
-            self._tasks.add(gw_task)
-            
-            while self.running:
-                if gw_task.done():
-                    exc = gw_task.exception()
-                    if exc:
-                        log.error(f"[{self.name}] Gateway servers crashed: {exc}", exc_info=exc)
-                    else:
-                        log.error(f"[{self.name}] Gateway servers exited unexpectedly.")
-                    break
-                await asyncio.sleep(1.0)
-                
-        except asyncio.CancelledError:
-            log.info(f"[{self.name}] Shutdown signal received.")
-        except Exception as e:
-            log.error(f"[{self.name}] Fatal error. Terminating daemon: {e}", exc_info=True)
-        finally:
-            await self._teardown()
-
-    async def _teardown(self):
-        log.info(f"[{self.name}] Releasing Gateway Edge resources...")
-        if self.gateway_server and getattr(self.gateway_server, "client_session", None):
-            with suppress(Exception):
-                await self.gateway_server.client_session.close()
-        
-        for task in list(self._tasks):
-            if not task.done():
-                task.cancel()
-        if self._tasks:
-            await asyncio.gather(*self._tasks, return_exceptions=True)
-        log.info(f"[{self.name}] Gateway Edge resource cleanup complete.")
-
-
-# ============================================================================
-# REST Edge Daemon (Internal / Microservice Traffic)
-# ============================================================================
-
 @contract.daemon("rest_edge")
 class RestEdgeDaemon(AbstractDaemon):
     def __init__(self, ctx):
@@ -241,13 +63,12 @@ class RestEdgeDaemon(AbstractDaemon):
         log.info(f"[{self.name}] Starting REST Edge Daemon...")
         try:
             await clear_zombie_ports([self.target_port], tag=self.name)
-            
             self._tunnel = await TunnelFactory.get_default()
-            
-            ledger = getattr(self.ctx, "ledger", None)
-            if ledger is None:
-                log.info(f"[{self.name}] Ledger not found in context. Bootstrapping local KernelLedger.")
-                ledger = KernelLedger()
+
+            phase_store = getattr(self.ctx, "phase_store", None)
+            if phase_store is None:
+                log.info(f"[{self.name}] PhaseStore not found in context. Bootstrapping local PhaseStore.")
+                phase_store = PhaseStore()
 
             resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
@@ -261,7 +82,7 @@ class RestEdgeDaemon(AbstractDaemon):
             injected_app = create_app(
                 config=runtime_config,
                 tunnel=self._tunnel,
-                ledger=ledger
+                phase_store=phase_store
             )
 
             config = uvicorn.Config(

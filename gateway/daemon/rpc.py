@@ -11,11 +11,11 @@ from dataclasses import dataclass
 from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
 
-from fiber.infra.rpc.ext import ExtRpcService
 from fiber.infra.rpc.registry import build_internal_rpc_registry
 from fiber.infra.rpc.handler import WorkerContext
 from fiber.infra.rpc.validator import ValidatorService
 
+from xphi.arch.contract.config import env
 from xphi.arch.contract.registry.unified import contract
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from xphi.arch.bound.adapter.pta import PtaAdapter
@@ -57,7 +57,6 @@ class FuelAllocator:
 
 class HealthMonitor:
     async def is_ruptured(self) -> tuple[bool, str]:
-        # 낮은 확률로 네트워크 균열(Byzantine 장애 등) 상태를 모사
         if random.random() < 0.01:
             return True, "Byzantine divergence detected in consensus layer."
         return False, ""
@@ -168,7 +167,7 @@ class RpcWorkerDaemon(AbstractDaemon):
         super().__init__("RpcWorkerDaemon")
         self.app_ctx = ctx  
         
-        self.topic = os.getenv("RPC_QUEUE_TOPIC", "internal.rpc.queue")
+        self.topic = env.RPC_QUEUE_TOPIC
         self.group = os.getenv("RPC_QUEUE_GROUP", "internal_workers")
         self.worker_id = os.getenv("RPC_WORKER_ID", f"worker-{os.getpid()}")
 
@@ -178,7 +177,6 @@ class RpcWorkerDaemon(AbstractDaemon):
         self.routes: Dict[str, Callable] = {}
         self.tunnel = None
         self.worker_ctx: Optional[WorkerContext] = None
-        self.ext_service: Optional[ExtRpcService] = None
         self._tasks = set()
 
     async def _init_context(self):
@@ -206,12 +204,8 @@ class RpcWorkerDaemon(AbstractDaemon):
             profile_service=profile_service
         )
 
-        self.ext_service = ExtRpcService()
         prod_validator = ValidatorService()
-        self.routes = build_internal_rpc_registry(
-            validator_service=prod_validator,
-            ext_service=self.ext_service
-        )
+        self.routes = build_internal_rpc_registry(validator_service=prod_validator)
         log.info(f"[{self.name}] Dynamic RPC Registry mounted with {len(self.routes)} routes.")
 
     async def run(self):
@@ -265,7 +259,6 @@ class RpcWorkerDaemon(AbstractDaemon):
                 await self.tunnel.stream_ack(self.topic, self.group, message_id)
                 return
 
-            # 독약 메시지(Poison Pill) 방어: JSON 디코딩 실패 시 즉시 폐기 및 감사 로그
             try:
                 payload = json.loads(payload_raw)
             except json.JSONDecodeError as e:

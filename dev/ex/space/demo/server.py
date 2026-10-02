@@ -3,7 +3,7 @@ import os
 import sys
 import asyncio
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 import fiber.dev.ex.worker.legacy.oracle as worker_oracle
 import fiber.dev.ex.worker.legacy.finlib as worker_finlib
 import fiber.dev.ex.worker.search.archive as worker_search
@@ -17,17 +17,17 @@ log = get_emitter("space.demo.server")
 async def run_integrated_server():
     log.info("[TestServer] 🚀 Igniting All-in-One MCP Edge Server...")
     connectors = [
-        WorkerConnector(
+        MCPServerConnector(
             target_id="oracle-01", 
             execution_target=f"{sys.executable} -m {worker_oracle.__name__}", 
             mode="multiplex"
         ),
-        WorkerConnector(
+        MCPServerConnector(
             target_id="finlib-01", 
             execution_target=f"{sys.executable} -m {worker_finlib.__name__}", 
             mode="linear"
         ),
-        WorkerConnector(
+        MCPServerConnector(
             target_id="search-archive-01", 
             execution_target=f"{sys.executable} -m {worker_search.__name__}", 
             mode="multiplex"

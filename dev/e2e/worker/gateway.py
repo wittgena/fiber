@@ -11,17 +11,18 @@ import httpx
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 import fiber.dev.ex.worker.legacy.oracle as worker_oracle
 import fiber.dev.ex.worker.legacy.finlib as worker_finlib
 import fiber.dev.ex.worker.legacy.margin as worker_margin
 import fiber.dev.ex.worker.search.archive as worker_search
 
 from fiber.gateway.daemon.economy.pricing import DynamicPricingDaemon
-from fiber.infra.rpc.client import InternalRpcClient
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-
 from xphi.state.phase.reactor import PhaseReactor
+
+from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 
 class CoreRoutingPipeline(BaseBridgePipeline):
     def __init__(self, config: E2EConfig):
@@ -35,6 +36,9 @@ class CoreRoutingPipeline(BaseBridgePipeline):
         self.finlib_id = "finlib-01"
         self.margin_id = "margin-01"
         self.search_id = "search-archive-01"
+
+        # [추가] E2E 클라이언트용 DPoP 생성기
+        self.dpop_client = DPoPClientGenerator(key_size=2048)
 
         self.set_phases([
             Phase("Phase 1: Event-Driven Zero-Latency Proof", self.phase_zero_latency),
@@ -51,8 +55,6 @@ class CoreRoutingPipeline(BaseBridgePipeline):
     # Lifecycle Overrides (Pricing Daemon 관리)
     # =====================================================================
     async def setup_custom_context(self):
-        """기본 인프라 외에 Dynamic Pricing Daemon을 추가로 부트스트랩합니다."""
-        
         class MockPricingCtx:
             pass
             
@@ -66,7 +68,6 @@ class CoreRoutingPipeline(BaseBridgePipeline):
         log.info("[E2E Pipeline] DynamicPricingDaemon successfully injected into test lifecycle.")
 
     async def teardown_custom(self):
-        """테스트 종료 시 Pricing Daemon을 안전하게 종료합니다."""
         if hasattr(self, 'pricing_daemon'):
             self.pricing_daemon.running = False
         if hasattr(self, '_pricing_task'):
@@ -74,41 +75,44 @@ class CoreRoutingPipeline(BaseBridgePipeline):
             
     async def setup_workers(self):
         oracle_cmd = f"{sys.executable} -m {worker_oracle.__name__}"
-        self.connectors.append(
-            WorkerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
-        )
+        self.connectors.append(MCPServerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex"))
 
         finlib_cmd = f"{sys.executable} -m {worker_finlib.__name__}"
-        self.connectors.append(
-            WorkerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
-        )
+        self.connectors.append(MCPServerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear"))
 
         margin_cmd = f"{sys.executable} -m {worker_margin.__name__}"
-        self.connectors.append(
-            WorkerConnector(target_id=self.margin_id, execution_target=margin_cmd, mode="multiplex")
-        )
+        self.connectors.append(MCPServerConnector(target_id=self.margin_id, execution_target=margin_cmd, mode="multiplex"))
 
         search_cmd = f"{sys.executable} -m {worker_search.__name__}"
-        self.connectors.append(
-            WorkerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
-        )
+        self.connectors.append(MCPServerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex"))
 
     # =====================================================================
     # Test Phases (1 ~ 8) 
     # =====================================================================
     async def phase_zero_latency(self):
         payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "100 * 50"}}}
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+        
+        # [변경] DPoP 헤더 동적 주입 (영수증 값은 원본 "valid_x402" 그대로 유지)
+        nonce = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
+        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        
         async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
+            res = await client.post(url, json=payload, headers=headers)
         if res.status_code != 200: raise RuntimeError(f"Expected 200, got {res.status_code}")
 
     async def phase_finlib_linear_queue(self):
         async def send_compute(idx: int):
             payload = {"jsonrpc": "2.0", "id": idx, "method": "tools/call", "params": {"name": "resolve_dates", "arguments": {"base_date": "2026-09-04", "offset_business_days": idx}}}
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+            
+            nonce = uuid.uuid4().hex
+            url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
+            dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+            
             async with httpx.AsyncClient(base_url=self.local_url, timeout=10.0) as client:
-                return await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
+                return await client.post(url, json=payload, headers=headers)
         
         req_count = 10
         results = await asyncio.gather(*[send_compute(i) for i in range(1, req_count + 1)])
@@ -120,9 +124,14 @@ class CoreRoutingPipeline(BaseBridgePipeline):
                 "jsonrpc": "2.0", "id": req_id, "method": "tools/call",
                 "params": {"name": "fetch_aggregated_kline", "arguments": {"symbol": symbol}}
             }
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+            
+            nonce = uuid.uuid4().hex
+            url = f"{self.local_url}/v1/mcp-gateway/{self.oracle_id}/invoke"
+            dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+            
             async with httpx.AsyncClient(base_url=self.local_url, timeout=15.0) as client:
-                return await client.post(f"/v1/mcp-gateway/{self.oracle_id}/invoke", json=payload, headers=headers)
+                return await client.post(url, json=payload, headers=headers)
                 
         symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
         start_time = time.time()
@@ -152,24 +161,48 @@ class CoreRoutingPipeline(BaseBridgePipeline):
                 }
             }
         }
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+        
+        nonce = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.margin_id}/invoke"
+        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        
         async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.margin_id}/invoke", json=payload, headers=headers)
+            res = await client.post(url, json=payload, headers=headers)
             if res.status_code != 200: 
                 raise RuntimeError(f"Margin Sim Failed: Expected 200, got {res.status_code} ({res.text})")
 
     async def phase_x402_rejection(self):
-        payload = {"jsonrpc": "2.0", "id": 300, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "1 + 1"}}}
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "invalid_receipt"}
-        async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
-            if res.status_code != 402: raise RuntimeError("Expected HTTP 402")
+        tunnel = await TunnelFactory.get_default()
+        redis_key = f"config:x402:{self.finlib_id}"
+        
+        # [변경] 상태 격리: X402 플래그를 이 Phase에서만 임시 활성화
+        await tunnel.set(redis_key, "1")
+        try:
+            payload = {"jsonrpc": "2.0", "id": 300, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "1 + 1"}}}
+            
+            nonce = uuid.uuid4().hex
+            url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
+            dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "invalid_receipt", "DPoP": dpop_proof}
+            
+            async with httpx.AsyncClient(base_url=self.local_url) as client:
+                res = await client.post(url, json=payload, headers=headers)
+                if res.status_code != 402: raise RuntimeError(f"Expected HTTP 402, got {res.status_code}")
+        finally:
+            # 상태 복구 (다른 테스트에 영향 주지 않음)
+            await tunnel.delete(redis_key)
 
     async def phase_error_routing(self):
         payload = {"jsonrpc": "2.0", "id": 99, "method": "tools/call", "params": {"name": "calc_indicators_batch", "arguments": {"prices_matrix": "BAD_DATA"}}}
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+        
+        nonce = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
+        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        
         async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.finlib_id}/invoke", json=payload, headers=headers)
+            res = await client.post(url, json=payload, headers=headers)
             if res.status_code != 502: raise RuntimeError("Expected HTTP 502")
 
     async def phase_duckdb_search_worker(self):
@@ -178,11 +211,15 @@ class CoreRoutingPipeline(BaseBridgePipeline):
             "jsonrpc": "2.0", "id": req_id, "method": "tools/call", 
             "params": {"name": "search_market_evidence", "arguments": {"domain": "Domain_1_Control_Failure", "limit": 2}}
         }
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "valid_x402"}
+        
+        nonce = uuid.uuid4().hex
+        url = f"{self.local_url}/v1/mcp-gateway/{self.search_id}/invoke"
+        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
         
         start_time = time.time()
         async with httpx.AsyncClient(base_url=self.local_url, timeout=60.0) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.search_id}/invoke", json=payload, headers=headers)
+            res = await client.post(url, json=payload, headers=headers)
             
         elapsed = time.time() - start_time
         if res.status_code != 200: raise RuntimeError(f"Search Worker Failed: Expected 200, got {res.status_code}")
@@ -204,48 +241,56 @@ class CoreRoutingPipeline(BaseBridgePipeline):
         except Exception as e:
             raise RuntimeError(f"Search response parsing failed: {e}")
 
-    ## Phase 8: Dynamic Pricing Alignment 검증
     async def phase_dynamic_pricing_alignment(self):
-        # 1. Pub/Sub 전파 및 Margin 워커 연산 시간을 고려한 비동기 대기
-        await asyncio.sleep(1.0)
-        
         tunnel = await TunnelFactory.get_default()
-        price_tag_key = f"eco:price_tag:{self.search_id}"
-        dynamic_price_str = await tunnel.get(price_tag_key)
+        redis_key = f"config:x402:{self.search_id}"
+        
+        # [변경] 상태 격리: X402 플래그 임시 활성화
+        await tunnel.set(redis_key, "1")
+        try:
+            await asyncio.sleep(1.0)
+            
+            price_tag_key = f"eco:price_tag:{self.search_id}"
+            dynamic_price_str = await tunnel.get(price_tag_key)
 
-        if not dynamic_price_str:
-            raise RuntimeError(f"Pricing Daemon failed to write to Redis key: {price_tag_key}")
+            if not dynamic_price_str:
+                raise RuntimeError(f"Pricing Daemon failed to write to Redis key: {price_tag_key}")
+                
+            dynamic_price = float(dynamic_price_str)
+            genesis_floor = 0.002
             
-        dynamic_price = float(dynamic_price_str)
-        genesis_floor = 0.002
-        
-        log.info(f"  ├─ Genesis Floor Price: ${genesis_floor:.4f}")
-        log.info(f"  ├─ New Dynamic Price  : ${dynamic_price:.4f}")
-        
-        if dynamic_price <= genesis_floor:
-            raise RuntimeError(f"Dynamic price (${dynamic_price}) did not increase from Genesis floor despite compute usage.")
+            log.info(f"  ├─ Genesis Floor Price: ${genesis_floor:.4f}")
+            log.info(f"  ├─ New Dynamic Price  : ${dynamic_price:.4f}")
+            
+            if dynamic_price <= genesis_floor:
+                raise RuntimeError(f"Dynamic price (${dynamic_price}) did not increase from Genesis floor despite compute usage.")
 
-        # 2. X402 영수증의 잔액 부족(402) 방어막 테스트
-        payload = {
-            "jsonrpc": "2.0", "id": 500, "method": "tools/call", 
-            "params": {"name": "search_market_evidence", "arguments": {"domain": "Domain_2_Security_Audit", "limit": 1}}
-        }
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": uuid.uuid4().hex, "X-X402-Receipt": "invalid_receipt"}
-        
-        async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res = await client.post(f"/v1/mcp-gateway/{self.search_id}/invoke", json=payload, headers=headers)
+            payload = {
+                "jsonrpc": "2.0", "id": 500, "method": "tools/call", 
+                "params": {"name": "search_market_evidence", "arguments": {"domain": "Domain_2_Security_Audit", "limit": 1}}
+            }
             
-        if res.status_code != 402:
-            raise RuntimeError(f"Expected 402 Payment Required, got {res.status_code}")
+            nonce = uuid.uuid4().hex
+            url = f"{self.local_url}/v1/mcp-gateway/{self.search_id}/invoke"
+            dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "invalid_receipt", "DPoP": dpop_proof}
             
-        # 3. 에러 메시지 검증
-        error_msg = res.json().get("detail", "")
-        expected_fee_string = f"${dynamic_price:.4f}"
-        
-        if expected_fee_string not in error_msg:
-            raise RuntimeError(f"Rejection message does not contain dynamic price! Msg: {error_msg}")
+            async with httpx.AsyncClient(base_url=self.local_url) as client:
+                res = await client.post(url, json=payload, headers=headers)
+                
+            if res.status_code != 402:
+                raise RuntimeError(f"Expected 402 Payment Required, got {res.status_code}")
+                
+            error_msg = res.json().get("detail", "")
+            expected_fee_string = f"${dynamic_price:.4f}"
             
-        log.info(f"  └─ Gateway precisely rejected underfunded request based on Dynamic Price ({expected_fee_string}).")
+            if expected_fee_string not in error_msg:
+                raise RuntimeError(f"Rejection message does not contain dynamic price! Msg: {error_msg}")
+                
+            log.info(f"  └─ Gateway precisely rejected underfunded request based on Dynamic Price ({expected_fee_string}).")
+        finally:
+            # 상태 복구
+            await tunnel.delete(redis_key)
 
 
 class CoreSuiteRunner:

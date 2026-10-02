@@ -9,12 +9,12 @@ from contextlib import suppress
 
 from fiber.infra.e2e.config import PipelineRunner, ManagedTestServer, TestResult, E2EConfig, Phase
 from fiber.gateway.rest.payload import create_app, Config
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import KernelLedger
+from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("tracer.mcp_ingress")
@@ -51,7 +51,7 @@ class McpIngressTracer(PipelineRunner):
     async def phase_ignition(self):
         log.info(f"[{self.scope_name}] Bootstrapping Gateway & Connector...")
         self.tunnel = await TunnelFactory.get_default()
-        self.ledger = KernelLedger()
+        self.ledger = PhaseStore()
         
         # Gateway 기동
         self.rest_app = create_app(config=Config(), tunnel=self.tunnel, ledger=self.ledger)
@@ -69,7 +69,7 @@ class McpIngressTracer(PipelineRunner):
         # 초경량 Dummy Worker (JSON-RPC 응답만 반환하는 파이썬 스크립트)
         dummy_cmd = f"""{sys.executable} -c "import sys, json; req=json.loads(sys.stdin.readline()); sys.stdout.write(json.dumps({{'jsonrpc': '2.0', 'id': req.get('id'), 'result': 'TRACED_SUCCESS'}})+'\\n')" """
         
-        self.connector = WorkerConnector(
+        self.connector = MCPServerConnector(
             target_id=self.target_worker_id, 
             execution_target=dummy_cmd, 
             mode="ephemeral", 

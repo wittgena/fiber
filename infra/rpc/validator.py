@@ -1,6 +1,4 @@
 # fiber.infra.rpc.validator
-## @lineage: fiber.dev.infra.rpc.validator
-## @lineage: fiber.gateway.edge.rpc.validator
 import os
 import json
 import time
@@ -19,11 +17,9 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from fiber.infra.rpc.handler import WorkerContext, _build_error
-from xphi.arch.bound.adapter.settlement import (
-    MandateAdapter, 
-    Ap2MandateResult, 
-    X402SettlementReceipt
-)
+
+from xphi.arch.contract.config.env import DPHI_ENV
+from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
@@ -106,9 +102,8 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
 """Billing Receipt Validator"""
 GENESIS_FLOOR_PRICE_USD = 0.002
 
-async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
-    """X402 영수증 및 AP2 지불 위임장(Mandate) 무결성/잔액 검증 핸들러"""
-    receipt_data = params.get("payment_receipt")
+async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
+    receipt_data = params.get("fuel_receipt")
     action = params.get("action", "unknown_action")
     target_server_id = params.get("target_server_id") 
     
@@ -120,33 +115,31 @@ async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> d
         try:
             tunnel = await TunnelFactory.get_default()
             cached_price = await tunnel.get(f"eco:price_tag:{target_server_id}")
-            
             if cached_price is not None:
                 required_fee = float(cached_price)
                 log.debug(f"[Billing] Fetched dynamic fee for {target_server_id}: ${required_fee:.4f}")
             else:
                 log.debug(f"[Billing] No cached price for {target_server_id}. Using Genesis Floor: ${required_fee:.4f}")
-                
         except Exception as e:
             log.warning(f"[Billing] KV Store lookup failed for {target_server_id}, using genesis floor. Error: {e}")
     else:
         log.info(f"[Billing] Legacy validation call (no target_server_id). Applying Genesis Floor: ${required_fee:.4f}")
 
-    # [E2E Testing Fast-Path]
-    if isinstance(receipt_data, str):
+    # E2E Testing Fast-Path
+    is_test_env = DPHI_ENV in ("test", "e2e", "local")
+    if is_test_env and isinstance(receipt_data, str):
         if receipt_data == "valid_x402":
+            log.warning(f"[SECURITY] Mock E2E receipt used. Environment: {DPHI_ENV}")
             return {"status": "VALIDATED", "clearance": "GRANTED", "type": "MOCK_E2E", "fee_deducted": required_fee}
         elif receipt_data == "invalid_receipt":
             return _build_error(402, f"x402 Payment Required: Insufficient balance. Required: ${required_fee:.4f}")
 
-    # [Production Cryptographic Path]
+    # Production Cryptographic Path
     try:
         payload = json.loads(receipt_data) if isinstance(receipt_data, str) else receipt_data
-        
         # Case A: AP2 Mandate 
         if "authorization" in payload and "mandate" in payload:
             mandate_obj = Ap2MandateResult(**payload)
-            
             if not MandateAdapter.verify_mandate_signature(mandate_obj):
                 log.warning(f"AP2 Mandate signature rejected for {mandate_obj.mandate.requester_id}")
                 return _build_error(402, "AP2 Mandate Rejected: Invalid Cryptographic Signature")
@@ -166,7 +159,6 @@ async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> d
         # Case B: X402 Settlement Receipt
         elif "receipt_id" in payload and "tx_hash" in payload:
             receipt_obj = X402SettlementReceipt(**payload)
-            
             is_valid_lineage = await ctx.pta_adapter.verify_lineage(receipt_obj.tx_hash, depth=2)
             if not is_valid_lineage:
                 log.warning(f"X402 Receipt lineage verification failed for {receipt_obj.receipt_id}")
@@ -175,13 +167,10 @@ async def handle_billing_receipt_validate(params: dict, ctx: WorkerContext) -> d
             if required_fee > actual_balance:
                 log.warning(f"X402 Receipt insufficient for {target_server_id}. Required: {required_fee}, Provided: {actual_balance}")
                 return _build_error(402, f"Payment Required: Insufficient X402 Receipt value. Required: ${required_fee:.4f}")
-                
             log.info(f"X402 Receipt Validated: {receipt_obj.receipt_id} (Fee Deducted: ${required_fee:.4f})")
             return {"status": "VALIDATED", "clearance": "GRANTED", "type": "X402_RECEIPT", "fee_deducted": required_fee}
-            
         else:
             return _build_error(400, "Unknown receipt format: Payload missing required cryptographic bounds")
-            
     except json.JSONDecodeError:
         return _build_error(400, "Malformed receipt: Invalid JSON")
     except ValidationError as e:

@@ -10,12 +10,12 @@ import httpx
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
-from fiber.gateway.worker.connector import WorkerConnector
+from fiber.gateway.mcp.connector import MCPServerConnector
 import fiber.dev.ex.worker.legacy.finlib as worker_finlib
 import fiber.dev.ex.worker.legacy.oracle as worker_oracle
 import fiber.dev.ex.worker.search.archive as worker_archive_search
 
-from fiber.infra.rpc.client import InternalRpcClient
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 
@@ -29,23 +29,17 @@ class ToolDiscoveryPipeline(BaseBridgePipeline):
 
         self.oracle_id = "oracle-01"
         self.finlib_id = "finlib-01"
-        self.search_id = "search-archive-01" # [추가] Search 워커 ID
-
+        self.search_id = "search-archive-01"
         self.set_phases([
             Phase("Phase 1: Pure MCP Initialize (Auth Bypass)", self.phase_mcp_initialize),
             Phase("Phase 2: Standard POST tools/list Bypass (FinLib)", self.phase_post_tools_list_bypass),
             Phase("Phase 3: Standard POST tools/list Bypass (Oracle)", self.phase_post_tools_list_oracle),
             Phase("Phase 4: REST GET /tools Facade Routing (FinLib)", self.phase_get_tools_facade_finlib),
             Phase("Phase 5: Isolation Proof (No Cross-Talk)", self.phase_isolation_proof),
-            # [추가] Heavy Worker Discovery 검증
             Phase("Phase 6: Heavy Worker Instant Discovery (DuckDB)", self.phase_search_worker_discovery),
         ])
 
-    # =====================================================================
-    # Lifecycle Overrides (Pricing Daemon 불필요)
-    # =====================================================================
     async def setup_custom_context(self):
-        """Discovery 테스트는 실행(Execution)이 아니므로 Pricing Daemon을 생략합니다."""
         log.info("[E2E Pipeline] Pricing Daemon bypassed for Discovery Suite.")
 
     async def teardown_custom(self):
@@ -55,22 +49,20 @@ class ToolDiscoveryPipeline(BaseBridgePipeline):
         """테스트할 워커 부팅 (Oracle, FinLib, Search)"""
         oracle_cmd = f"{sys.executable} -m {worker_oracle.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
+            MCPServerConnector(target_id=self.oracle_id, execution_target=oracle_cmd, mode="multiplex")
         )
 
         finlib_cmd = f"{sys.executable} -m {worker_finlib.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
+            MCPServerConnector(target_id=self.finlib_id, execution_target=finlib_cmd, mode="linear")
         )
 
         search_cmd = f"{sys.executable} -m {worker_archive_search.__name__}"
         self.connectors.append(
-            WorkerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
+            MCPServerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex")
         )
 
-    # =====================================================================
     # Test Phases
-    # =====================================================================
     async def phase_mcp_initialize(self):
         """초기 핸드쉐이크(initialize)가 영수증이나 서명 없이 통과되는지 검증합니다."""
         payload = {
@@ -136,8 +128,6 @@ class ToolDiscoveryPipeline(BaseBridgePipeline):
             raise RuntimeError("Missing expected tool 'fetch_aggregated_kline' from Oracle")
 
     async def phase_get_tools_facade_finlib(self):
-        """방법 2 검증: GET /tools REST Facade가 Gateway 내부에서 인텐트를 잘 조립하여 반환하는지 확인"""
-        # GET 요청이므로 복잡한 헤더나 payload 불필요
         async with httpx.AsyncClient(base_url=self.local_url, timeout=5.0) as client:
             res = await client.get(f"/v1/mcp-gateway/{self.finlib_id}/tools")
             

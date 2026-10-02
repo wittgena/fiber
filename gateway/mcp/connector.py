@@ -1,4 +1,4 @@
-# fiber.gateway.worker.connector
+# fiber.gateway.mcp.connector
 import os
 import sys
 import json
@@ -8,15 +8,15 @@ import argparse
 from pathlib import Path
 from typing import Dict, Any, Optional, Protocol
 
-from fiber.infra.rpc.client import InternalRpcClient
-from fiber.gateway.worker.registry.quarantine import QuarantineRegistry
+from fiber.gateway.mcp.registry.quarantine import QuarantineRegistry
 
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("worker.connector")
+log = get_emitter("mcp.connector")
 
-class WorkerTransport(Protocol):
+class MCPServerTransport(Protocol):
     async def start(self) -> None: ...
     async def send_payload(self, safe_payload: Dict[str, Any]) -> None: ...
     async def receive_raw(self) -> str: ...
@@ -24,7 +24,7 @@ class WorkerTransport(Protocol):
     async def close(self) -> None: ...
     process: Any 
 
-class WorkerConnector:
+class MCPServerConnector:
     def __init__(self, target_id: str, execution_target: str, mode: str = "ephemeral", transport_type: str = "stdio"):
         self.target_id = target_id
         self.execution_target = execution_target
@@ -44,18 +44,18 @@ class WorkerConnector:
         
         self.quarantine = QuarantineRegistry.get_adapter(self.target_id)
         
-        self.active_sandboxes: Dict[str, WorkerTransport] = {}
-        self.shared_transport: Optional[WorkerTransport] = None
+        self.active_sandboxes: Dict[str, MCPServerTransport] = {}
+        self.shared_transport: Optional[MCPServerTransport] = None
         self.pending_requests: Dict[str, asyncio.Future] = {}
         self.linear_lock = asyncio.Lock()
 
-    def _create_transport(self, handle_id: str) -> WorkerTransport:
+    def _create_transport(self, handle_id: str) -> MCPServerTransport:
         """Transport 팩토리: 설정된 타입에 따라 적절한 전송 계층 객체를 동적으로 생성"""
         if self.transport_type == "network":
-            from fiber.gateway.worker.transport import NetworkTransport
+            from xphi.state.phase.network.transport import NetworkTransport
             return NetworkTransport(execution_target=self.execution_target, handle_id=handle_id)
         else:
-            from fiber.gateway.worker.transport import StdioTransport
+            from xphi.state.phase.network.transport import StdioTransport
             return StdioTransport(command=self.execution_target, handle_id=handle_id)
 
     async def run(self):
@@ -248,7 +248,6 @@ class WorkerConnector:
                 status = "RESOLVED"
                 
             log.info(f"[Connector] ⏹️ Shared Intent {handle_id} {status}.")
-            
             await self.rpc.call("mcp.bridge.resolve_state", {
                 "handle_id": handle_id,
                 "status": status,
@@ -269,7 +268,7 @@ class WorkerConnector:
         log.debug(f"[Connector] Injecting New Ephemeral Intent: {handle_id}")
         await self._cycle_io(handle_id, payload, transport)
 
-    async def _cycle_io(self, handle_id: str, payload: Dict[str, Any], transport: WorkerTransport, is_rollback: bool = False):
+    async def _cycle_io(self, handle_id: str, payload: Dict[str, Any], transport: MCPServerTransport, is_rollback: bool = False):
         try:
             safe_payload = self.quarantine.translate_ingress(payload)
             await transport.send_payload(safe_payload)
@@ -337,7 +336,7 @@ class WorkerConnector:
             log.critical(f"[Connector] Failed to report FAULT to Core: {rpc_e}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Fiber Worker Egress Sidecar Connector")
+    parser = argparse.ArgumentParser(description="Fiber MCP Worker Egress Connector")
     parser.add_argument("--target", required=True, help="Target ID (e.g., db-server-01)")
     parser.add_argument("--exec", required=True, help="Legacy command OR Binary root path (e.g., 'python -m agent', '/opt/bin')")
     parser.add_argument(
@@ -355,7 +354,7 @@ def main():
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s - %(message)s")
-    connector = WorkerConnector(
+    connector = MCPServerConnector(
         target_id=args.target, 
         execution_target=args.exec, 
         mode=args.mode,
