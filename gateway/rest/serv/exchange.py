@@ -1,4 +1,4 @@
-# fiber.gateway.rest.serv.public
+# fiber.gateway.rest.serv.exchange
 import os
 import json
 import time
@@ -11,6 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from fiber.infra.rpc.method import RpcMethod
 from fiber.gateway.rest.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -41,13 +42,13 @@ from xphi.arch.model.edge.receipt import (
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
-log = get_emitter("edge.public")
+log = get_emitter("edge.exchange")
 
-public_edge = ContractRouter(
-    namespace="public", 
-    prefix="/v1/public", 
-    tags=["Public Gateway"],
-    description="Deterministic Zero-Trust Gateway for Isolated Sandbox Workloads"
+exchange_edge = ContractRouter(
+    namespace="exchange", 
+    prefix="/v1/exchange", 
+    tags=["Exchange Gateway"],
+    description="Exchange Gateway"
 )
 
 class InvoiceIssueRequest(BaseModel):
@@ -61,11 +62,12 @@ class HandshakeResponse(BaseModel):
     estimated_cost_usd: float
     invoice: Dict[str, Any]
     x402_receipt: Optional[str] = None
-    next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
+    next_action: str = "POST /v1/exchange X-X402-Receipt header"
+
 
 """TRUST ANCHOR"""
-@public_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
-async def get_public_keys(request: Request):
+@exchange_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
+async def get_trust_keys(request: Request):
     registry = getattr(request.app.state, "origin_registry", None)
     
     if not registry or not registry.is_verified:
@@ -85,12 +87,12 @@ async def get_public_keys(request: Request):
     )
 
 """INVOICE ↔ BALANCE & HANDSHAKE"""
-@public_edge.post(
+@exchange_edge.post(
     "/intent/handshake", 
     summary="Client Pre-flight Handshake (Quote & Invoice)",
     response_model=HandshakeResponse
 )
-async def public_intent_handshake(
+async def intent_handshake(
     intent: HandshakeIntent,
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
@@ -105,7 +107,7 @@ async def public_intent_handshake(
     }
     
     try:
-        quote_data = await rpc.call("eco.profile.quote", quote_req)
+        quote_data = await rpc.call(RpcMethod.ECO_INTENT_ESTIMATE, quote_req)
     except RpcException as e:
         raise HTTPException(status_code=422, detail=f"Quotation Failed: {e.detail}")
     
@@ -118,7 +120,7 @@ async def public_intent_handshake(
     }
     
     try:
-        invoice_data = await rpc.call("eco.exchange.invoice.issue", invoice_req)
+        invoice_data = await rpc.call(RpcMethod.EXCHANGE_INVOICE_ISSUE, invoice_req)
     except RpcException as e:
         raise HTTPException(status_code=500, detail=f"Invoice Issue Failed: {e.detail}")
 
@@ -131,43 +133,43 @@ async def public_intent_handshake(
     )
 
 
-@public_edge.post(
+@exchange_edge.post(
     "/billing/invoice", 
     summary="Issue x402 Invoice for Resource Access"
 )
-async def public_issue_invoice(
+async def issue_invoice(
     req: InvoiceIssueRequest,
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        return await rpc.call("eco.exchange.invoice.issue", req.model_dump())
+        return await rpc.call(RpcMethod.EXCHANGE_INVOICE_ISSUE, req.model_dump())
     except RpcException:
         raise
 
 
-@public_edge.get(
+@exchange_edge.get(
     "/billing/balance", 
     summary="Check Fuel Balance"
 )
-async def public_get_balance(
+async def get_balance(
     client_id: str = Query(..., description="조회할 클라이언트 ID"),
     asset_type: str = Query("fuel", description="조회할 자산 타입"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        return await rpc.call("eco.exchange.balance", {"client_id": client_id, "asset_type": asset_type})
+        return await rpc.call(RpcMethod.EXCHANGE_GET_BALANCE, {"client_id": client_id, "asset_type": asset_type})
     except RpcException:
         raise
 
 
 """COMPLIANCE SYMMETRY (RECORD ↔ VERIFY)"""
-@public_edge.post(
+@exchange_edge.post(
     "/telemetry/logs", 
     tags=["Log Ingress"], 
     summary="Ingest OTLP Telemetry, Verify Integrity & Seal Global Stream",
     status_code=status.HTTP_200_OK
 )
-async def public_otlp_logs_export(
+async def otlp_logs_export(
     payload: ExportLogsServiceRequest = Body(...),
     x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
@@ -184,7 +186,7 @@ async def public_otlp_logs_export(
             extracted_metrics = otlp_engine.execute(raw_json_bytes)
         except ValueError as e:
             error_msg = str(e)
-            log.warning(f"[Public OTLP] Rule extraction rejected payload: {error_msg}")
+            log.warning(f"[OTLP] Rule extraction rejected payload: {error_msg}")
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
                 detail=f"Telemetry ruleset violation: {error_msg}. Please ensure your payload contains all strictly required metrics."
@@ -224,27 +226,26 @@ async def public_otlp_logs_export(
     except HTTPException:
         raise
     except Exception as e:
-        log.error(f"[Public OTLP] Processing failed: {str(e)}")
+        log.error(f"[OTLP] Processing failed: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stream processing error")
 
-@public_edge.post(
+@exchange_edge.post(
     "/audit/event", 
     tags=["Log Ingress"], 
     summary="Secure Audit Event Recording & Conditional Cryptographic Proof Issuance"
 )
-async def public_audit_log(
+async def audit_log(
     payload: AuditLogRequest,
     x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
     request_time = str(time.time())
-    
     try:
         event_dict = payload.event.model_dump(exclude_none=True)
         sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
     except ValueError as e:
-        log.warning(f"[Public Audit] Payload failed business validation: {str(e)}")
+        log.warning(f"[Audit] Payload failed business validation: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, 
             detail=f"Audit event validation failed: {str(e)}."
@@ -286,11 +287,11 @@ async def public_audit_log(
         result=audit_result
     )
 
-@public_edge.post(
+@exchange_edge.post(
     "/audit/verify", 
     summary="Verify AuditReceipt Authenticity"
 )
-async def public_audit_verify(
+async def audit_verify(
     receipt: AuditReceipt = Body(...),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
@@ -300,6 +301,6 @@ async def public_audit_verify(
             "state_root": receipt.state_root,
             "full_receipt": receipt.model_dump(exclude_none=True)
         }
-        return await rpc.call("phase.store.receipt.verify", rpc_payload)
+        return await rpc.call(RpcMethod.PHASE_STORE_RECEIPT_VERIFY, rpc_payload)
     except RpcException as e:
         raise HTTPException(status_code=e.status_code, detail=f"Verification Failed: {{\"detail\":\"{e.detail}\"}}")

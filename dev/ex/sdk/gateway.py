@@ -12,13 +12,13 @@ from xphi.arch.model.edge.receptor import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for Edge Gateway"""
-    KEYS              = "/v1/public/keys"
-    INTENT_HANDSHAKE = "/v1/public/intent/handshake"
-    BILLING_INVOICE   = "/v1/public/billing/invoice"
-    BILLING_BALANCE   = "/v1/public/billing/balance"
-    TELEMETRY_LOGS    = "/v1/public/telemetry/logs"
-    AUDIT_EVENT       = "/v1/public/audit/event"
-    AUDIT_VERIFY      = "/v1/public/audit/verify"
+    KEYS              = "/v1/exchange/keys"
+    INTENT_HANDSHAKE = "/v1/exchange/intent/handshake"
+    BILLING_INVOICE   = "/v1/exchange/billing/invoice"
+    BILLING_BALANCE   = "/v1/exchange/billing/balance"
+    TELEMETRY_LOGS    = "/v1/exchange/telemetry/logs"
+    AUDIT_EVENT       = "/v1/exchange/audit/event"
+    AUDIT_VERIFY      = "/v1/exchange/audit/verify"
 
     LLM_CHAT        = "/v1/chat/completions"
     LLM_EMBEDDING   = "/v1/embeddings"

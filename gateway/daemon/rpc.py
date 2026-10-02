@@ -1,12 +1,12 @@
 # fiber.gateway.daemon.rpc
 import os
-import json
 import uuid
 import httpx
 import asyncio
 import time
 import hashlib
 import random
+import orjson
 from dataclasses import dataclass
 from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
@@ -260,8 +260,9 @@ class RpcWorkerDaemon(AbstractDaemon):
                 return
 
             try:
-                payload = json.loads(payload_raw)
-            except json.JSONDecodeError as e:
+                # [개선 1] orjson.loads 적용: C 레벨 역직렬화로 성능 최적화 및 str 호환
+                payload = orjson.loads(payload_raw)
+            except orjson.JSONDecodeError as e:  # 예외 클래스 교체
                 log.error(f"[{self.name}] Invalid JSON payload. Discarding msg {message_id}: {e}")
                 AuditWarden.record_anomaly(action="rpc.invalid_payload", details=str(payload_raw))
                 await self.tunnel.stream_ack(self.topic, self.group, message_id)
@@ -285,11 +286,15 @@ class RpcWorkerDaemon(AbstractDaemon):
                 
             if reply_to:
                 try:
-                    await self.tunnel.publish(reply_to, json.dumps({
+                    # [개선 2] 응답(Reply) 전송 시에도 orjson.dumps 적용
+                    # 클라이언트 측 시스템 호환을 위한 decode('utf-8') 및 안전장치(OPT_NON_STR_KEYS) 옵션 포함
+                    reply_payload = orjson.dumps({
                         "id": request_id,
                         "result": response if not response.get("error") else None,
                         "error": response if response.get("error") else None
-                    }))
+                    }, option=orjson.OPT_NON_STR_KEYS).decode('utf-8')
+                    
+                    await self.tunnel.publish(reply_to, reply_payload)
                 except Exception as pub_exc:
                     log.error(f"[{self.name}] Failed to publish reply to {reply_to}: {pub_exc}")
                 

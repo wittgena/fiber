@@ -2,28 +2,16 @@
 import json
 import time
 import uuid
-import logging
 from typing import Dict, Any
 
 from pydantic import ValidationError
 
 from xphi.state.anchor.nexus import AnchorProposal, StreamAppendRequest
-
-from xphi.kernel.space.sandbox.config import tier_config, fuel_config
-from xphi.arch.model.edge.receptor import (
-    EdgeState, AnchorProposalRequest, IntentValidationRequest,
-    ExecuteComputeRequest, ProofGenerationRequest, TradeIngressRequest,
-    EpochInitPayload, ClearingReceiptRequest
-)
-from xphi.arch.model.edge.receipt import BilledExecutionRequest, PhaseStoreAppendRecord
-
+from xphi.arch.model.edge.receptor import EdgeState, AnchorProposalRequest, IntentValidationRequest, ExecuteComputeRequest
+from xphi.arch.model.edge.receipt import PhaseStoreAppendRecord
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.kernel.wasm.quota import Tier
-from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
-from xphi.state.anchor.consensus import LogicStream
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-
 from xphi.arch.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
 
 log = get_emitter("rpc.handler")
@@ -31,7 +19,7 @@ log = get_emitter("rpc.handler")
 class WorkerContext:
     def __init__(
         self, broker: DphiBroker, store: Any, nexus: Any, exchange_adapter: Any,
-        pta_adapter: Any, policy_engine: Any, profile_service: Any, ledger: Any = None 
+        pta_adapter: Any, policy_engine: Any, profile_service: Any, phase_store: Any = None 
     ):
         self.broker = broker
         self.store = store
@@ -40,7 +28,7 @@ class WorkerContext:
         self.pta_adapter = pta_adapter
         self.policy_engine = policy_engine
         self.profile_service = profile_service
-        self.ledger = ledger
+        self.phase_store = phase_store
 
 def _build_error(code: int, message: str) -> dict:
     """RPC 표준 에러 응답 빌더"""
@@ -108,8 +96,8 @@ async def handle_phase_store_stream_append(params: dict, ctx: WorkerContext) -> 
     try: req = StreamAppendRequest(**params)
     except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
 
-    request_id = f"ledg_{uuid.uuid4().hex[:8]}"
-    with flow_scope(phase="LEDGER_STREAM_APPEND", bound="rpc.handler", req_id=request_id):
+    request_id = f"store_{uuid.uuid4().hex[:8]}"
+    with flow_scope(phase="STORE_STREAM_APPEND", bound="rpc.handler", req_id=request_id):
         events_dicts = [e.model_dump(exclude_none=True) for e in req.events]
         is_authorized = await ctx.store.bulk_append(stream_name=req.stream_name, events=events_dicts)
         if not is_authorized: return _build_error(403, "PhaseStore Blocked Stream Append")
@@ -154,21 +142,7 @@ async def handle_phase_store_receipt_verify(params: dict, ctx: WorkerContext) ->
         log.error(f"Receipt verification process crashed: {str(e)}")
         return _build_error(500, f"Verification execution failed: {str(e)}")
     
-    return {"status": "SUCCESS", "is_valid": is_valid, "message": "Receipt verified via Ledger/Oracle" if is_valid else "verification failed (Tampered or Orphaned)"}
-
-"""Fuel Receipt Validation"""
-async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
-    receipt = params.get("fuel_receipt")
-    if not receipt: return _build_error(401, "Fuel receipt is missing")
-        
-    try:
-        # TODO: Implement actual receipt validation logic here
-        is_valid_receipt = True 
-        if not is_valid_receipt: return _build_error(402, "x402 Fuel Receipt Required: Receipt is invalid or depleted.")
-        return {"status": "VALIDATED", "clearance": "GRANTED"}
-    except Exception as e:
-        log.error(f"Receipt Validation crashed: {e}")
-        return _build_error(500, "Internal Billing Validation Error")
+    return {"status": "SUCCESS", "is_valid": is_valid, "message": "Receipt verified via PhaseStore/Oracle" if is_valid else "verification failed (Tampered or Orphaned)"}
 
 async def handle_compute_intent_validate(params: dict, ctx: WorkerContext) -> dict:
     try: req = IntentValidationRequest(**params)
@@ -201,97 +175,3 @@ async def handle_compute_intent_validate(params: dict, ctx: WorkerContext) -> di
         return _build_error(401, "Malformed cryptographic signature")
 
     return {"status": EdgeState.INTENT_VALIDATED, "clearance": {"is_valid": True, "verified_at": int(time.time() * 1000), "agent": req.requester_id, "fuel_authorized": req.max_fuel_budget}}
-
-async def handle_execute_compute(params: dict, ctx: WorkerContext) -> dict:
-    try: req = ExecuteComputeRequest(**params)
-    except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-
-    res = await ctx.broker.execute(code=req.code, variables=req.variables)
-    if not res.success: return _build_error(422, str(res.error))
-    return {"status": EdgeState.EXECUTION_SUCCESS, "output": res.output}
-
-"""[Eco Exchange & Profile] Billing & Economy"""
-async def handle_trade_ingress(params: dict, ctx: WorkerContext) -> dict:
-    try: req = TradeIngressRequest(**params)
-    except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-
-    context = await ctx.policy_engine.resolve_context(client_id=req.client_id, action=req.action)
-    if context.is_ruptured: return _build_error(503, f"Topology Ruptured: {context.reason}")
-
-    press_limit = context.press_limit if hasattr(context, 'press_limit') and context.press_limit > 0 else tier_config.fallback_fuel
-    payload_obj = EpochInitPayload(ts=int(time.time() * 1000), topo=context.topo_id, press=press_limit, rupture=context.is_ruptured, injected_intent=req)
-    
-    res = await ctx.broker.invoke(DphiMethod.INIT_EPOCH, payload_obj.model_dump(exclude_none=True))
-    if not res.success: return _build_error(400, str(res.error))
-    return {"status": EdgeState.INTENT_ACCEPTED, "session": json.loads(res.output)}
-
-async def handle_clearing_receipt_generate(params: dict, ctx: WorkerContext) -> dict:
-    try: req = ClearingReceiptRequest(**params)
-    except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-
-    receipt = ctx.exchange_adapter.finalize_settlement(entangled_state=req.entangled_state, signatures=req.signatures, cost_metrics=req.cost_metrics, tier=Tier.SYSTEM)
-    return {"status": EdgeState.RECEIPT_GENERATED, "rollup_payload": ctx.exchange_adapter.generate_settlement_payload(receipt)}
-
-async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
-    payee_address, amount_usdc, resource_id = params.get("payee_address"), params.get("amount_usdc"), params.get("resource_id")
-    if not all([payee_address, amount_usdc, resource_id]): return _build_error(422, "Missing required invoice parameters")
-
-    try:
-        from xphi.arch.bound.adapter.settlement import MandateAdapter
-        invoice = MandateAdapter.build_x402_invoice(payee_address=payee_address, amount_usdc=amount_usdc, resource_id=resource_id)
-        return {"status": "INVOICE_ISSUED", "invoice": invoice.model_dump() if hasattr(invoice, "model_dump") else invoice.__dict__}
-    except Exception as e:
-        return _build_error(500, f"Invoice Issue Failed: {str(e)}")
-
-async def handle_pta_balance(params: dict, ctx: WorkerContext) -> dict:
-    client_id = params.get("client_id")
-    asset_type = params.get("asset_type", "fuel")
-    if not client_id: return _build_error(422, "Missing 'client_id' parameter")
-
-    try:
-        balance = await ctx.pta_adapter.get_balance(owner_address=client_id, asset_type=asset_type)
-        return {"client_id": client_id, "asset_type": asset_type, "balance": balance}
-    except Exception as e:
-        log.error(f"PTA Balance check failed for {client_id}: {str(e)}")
-        return _build_error(500, "Failed to read hot state balance.")
-
-async def handle_intent_estimate(params: dict, ctx: WorkerContext) -> dict:
-    try: req = BilledExecutionRequest(**params)
-    except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-    client_id = params.get("client_id", getattr(req, "client_id", "anonymous_agent"))
-
-    try:
-        result = await ctx.profile_service.execute(
-            client_id=client_id, 
-            schema=req.sandbox_schema, 
-            entry=req.target_entry,
-            depth=req.context_depth,
-            tier=Tier.STANDARD,
-            dry_run=True
-        )
-        if result.status != "COHERENCE":
-            log.warning(f"[Quote] Execution Divergence: {result.reason}")
-            return _build_error(422, f"Quotation Rejected: {result.reason}")
-    except Exception as e:
-        log.error(f"[Quote] Unhandled Error: {e}")
-        return _build_error(500, "Internal sandbox error")
-        
-    estimated_cost = (result.fuel_consumed / fuel_config.fuel_unit) * fuel_config.usd_per_fuel_unit
-    return {"status": "QUOTE_READY", "tier_applied": result.tier_applied, "fuel_estimated": result.fuel_consumed, "estimated_cost_usd": estimated_cost, "reason": result.reason}
-
-async def handle_profile_execute_billed(params: dict, ctx: WorkerContext) -> dict:
-    try: req = BilledExecutionRequest(**params)
-    except ValidationError as e: return _build_error(422, f"Payload Error: {e.errors()}")
-
-    client_id = params.get("client_id", getattr(req, "client_id", "anonymous_agent"))
-    try:
-        result = await ctx.profile_service.execute(client_id=client_id, schema=req.sandbox_schema, entry=req.target_entry, depth=req.context_depth, tier=Tier.SYSTEM, dry_run=False)
-        if result.status != "COHERENCE":
-            log.error(f"[Execute] Execution Failed/Diverged: {result.reason}")
-            return _build_error(422, f"Billed Execution Failed: {result.reason}")
-    except Exception as e:
-        log.error(f"[Execute] Unhandled Sandbox Error: {e}")
-        return _build_error(500, "Sandbox execution crashed unexpectedly")
-        
-    billed_cost = (result.fuel_consumed / fuel_config.fuel_unit) * fuel_config.usd_per_fuel_unit
-    return {"status": "BILLED_EXECUTION_SUCCESS", "tier_applied": result.tier_applied, "fuel_billed": result.fuel_consumed, "billed_cost_usd": billed_cost, "reason": result.reason}

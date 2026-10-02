@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from xphi.arch.bound.client.rpc import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
-from fiber.gateway.rest.serv.public import public_edge
+from fiber.gateway.rest.serv.exchange import exchange_edge
 from fiber.gateway.rest.serv.llm import llm_edge
 from fiber.gateway.rest.security import SecurityProvisioner
 from fiber.phase.contract.origin import OriginRegistry
@@ -48,22 +48,19 @@ async def verify_access_credential(
     api_key: str = Security(api_key_header)
 ):
     path = request.url.path
-    public_whitelist = {
-        "/v1/public/sandbox/handshake",
-        "/v1/public/billing/invoice",
-        "/v1/public/billing/balance",
-        "/v1/public/audit/verify",
-        "/v1/public/keys",
+    whitelist = {
+        "/v1/exchange/intent/handshake",
+        "/v1/exchange/billing/invoice",
+        "/v1/exchange/billing/balance",
+        "/v1/exchange/audit/verify",
+        "/v1/exchange/keys",
         "/openapi.json",
         "/docs",
         "/redoc",
         "/_health"
     }
     
-    if path in public_whitelist:
-        return None
-
-    if path.startswith("/v1/ext/"):
+    if path in whitelist:
         return None
 
     # MCP Gateway 라우터 우회: 내부 브릿지가 DPoP / x402(Track A/B)를 직접 자체 검증함
@@ -74,7 +71,6 @@ async def verify_access_credential(
     if config.session_api_keys and api_key in config.session_api_keys:
         return api_key
 
-    # 글로벌 LLM Gateway Receipt 검증
     x402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
     if x402_header:
         return x402_header
@@ -169,7 +165,7 @@ def create_app(
     app.state.is_ready = False  
     
     # Routers Binding
-    app.include_router(public_edge, tags=["mcp-exposed"]) 
+    app.include_router(exchange_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
     app.include_router(mcp_bridge)  
 

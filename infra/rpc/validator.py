@@ -38,10 +38,8 @@ class ComputeMarginRequest(BaseModel):
     cost_per_cpu_sec_usd: float = Field(0.0001, description="Cost per second of CPU time")
 
 async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> dict:
-    """워커가 발생시킨 범용 클라우드 텔레메트리(CPU/IO)를 기반으로 X402 종량제 단가를 정밀하게 산출"""
     try:
         target = params.get("target") or params.get("target_worker", "unknown_worker")
-        
         compute_time = params.get("compute_time_sec", 0.0)
         if "duckdb_sql_time_sec" in params:
             compute_time += params.get("duckdb_sql_time_sec", 0.0) + params.get("python_regex_time_sec", 0.0)
@@ -69,12 +67,10 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
         cpu_cost = req.compute_time_sec * req.cost_per_cpu_sec_usd
         io_cost = req.io_consumed_mb * req.cost_per_mb_usd
         value_premium = req.value_units_extracted * 0.00001
-        
         total_calculated_fee = req.base_fee_usd + cpu_cost + io_cost + value_premium
         safe_fee_usd = round(max(req.base_fee_usd, total_calculated_fee), 5)
         
         log.info(f"[Universal Pricing] {req.target_worker} -> Base: ({req.base_fee_usd} | CPU:){cpu_cost:.5f} | IO: ({io_cost:.5f} | Total:){safe_fee_usd:.5f}")
-
         return {
             "worker_id": req.target_worker,
             "unit_economics": {
@@ -91,7 +87,6 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
                 "compute_time_sec": round(req.compute_time_sec, 4)
             }
         }
-        
     except ValidationError as ve:
         log.warning(f"[Margin] Pydantic Validation failed: {ve}")
         return _build_error(422, "Margin Request Validation failed")

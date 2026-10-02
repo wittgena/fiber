@@ -8,6 +8,7 @@ import argparse
 from pathlib import Path
 from typing import Dict, Any, Optional, Protocol
 
+from fiber.infra.rpc.method import RpcMethod
 from fiber.gateway.mcp.registry.quarantine import QuarantineRegistry
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
@@ -122,7 +123,7 @@ class MCPServerConnector:
                     if self.mode == "linear":
                         log.error(f"🚨 FATAL: Linear mode worker yielded! This blocks the entire queue.")
                     
-                    await self.rpc.call("mcp.bridge.resolve_state", {
+                    await self.rpc.call(RpcMethod.MCP_BRIDGE_RESOLVE_STATE, {
                         "handle_id": req_id,
                         "status": "YIELD",
                         "executable_payload": response
@@ -248,7 +249,7 @@ class MCPServerConnector:
                 status = "RESOLVED"
                 
             log.info(f"[Connector] ⏹️ Shared Intent {handle_id} {status}.")
-            await self.rpc.call("mcp.bridge.resolve_state", {
+            await self.rpc.call(RpcMethod.MCP_BRIDGE_RESOLVE_STATE, {
                 "handle_id": handle_id,
                 "status": status,
                 "executable_payload": response
@@ -295,7 +296,7 @@ class MCPServerConnector:
 
             if response.get("method") and "elicitation" in response.get("method", ""):
                 log.warning(f"[Connector] ⏸️ TRAP: Elicitation detected. Parking {handle_id} (YIELD).")
-                await self.rpc.call("mcp.bridge.resolve_state", {
+                await self.rpc.call(RpcMethod.MCP_BRIDGE_RESOLVE_STATE, {
                     "handle_id": handle_id,
                     "status": "YIELD",
                     "executable_payload": response
@@ -310,7 +311,7 @@ class MCPServerConnector:
                     
                 log.info(f"[Connector] ⏹️ Intent {handle_id} {status}.")
                 
-                await self.rpc.call("mcp.bridge.resolve_state", {
+                await self.rpc.call(RpcMethod.MCP_BRIDGE_RESOLVE_STATE, {
                     "handle_id": handle_id,
                     "status": status,
                     "executable_payload": response

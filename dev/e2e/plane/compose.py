@@ -60,16 +60,17 @@ echo "[CI-SYNC] 2. Booting Kernel (Background)..."
 nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
 
 echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
-timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/public/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
+timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
 echo "✅ Kernel is fully up and running!"
 
 echo "[CI-SYNC] 4. Executing Core E2E Client..."
-python -m fiber.dev.e2e.edge.client
 python -m fiber.dev.e2e.edge.compliance
+python -m fiber.dev.e2e.edge.exchange
 python -m fiber.dev.e2e.edge.security
 
 echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
-fiber e2e dphi.wasm.phase
+fiber e2e wasm.gateway
+fiber e2e wasm.phase
 VCR_MODE=replay python -m fiber.dev.ex.switch
 fiber e2e plane.flare --mode dev
 """
