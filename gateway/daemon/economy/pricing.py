@@ -4,6 +4,8 @@ import json
 from typing import Dict, Any
 from contextlib import suppress
 
+from fiber.infra.rpc.method import RpcMethod
+
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.registry.unified import contract
 from xphi.kernel.ops.daemon.base import AbstractDaemon
@@ -38,20 +40,15 @@ class PricingRiskManager:
         target_id = telemetry.get("target", "unknown_worker")
         
         try:
-            # 1. MCP 외부 껍데기(tools/call) 우회를 중단하고, 순수 내부 RPC 호출
-            margin_res = await self.rpc.call("eco.margin.calculate", telemetry)
-            
-            # 2. 순수 딕셔너리 반환이 보장되므로, 억지 파싱 없이 직관적 접근 가능
+            margin_res = await self.rpc.call(RpcMethod.VALIDATE_MARGIN_CALCULATE, telemetry)
             unit_economics = margin_res.get("unit_economics", {}) if isinstance(margin_res, dict) else {}
             proposed_fee = float(unit_economics.get("effective_fee_usd", self.MIN_PRICE_USD))
             
-            # 3. 리스크 매니지먼트 (캡 적용)
             verified_fee = max(self.MIN_PRICE_USD, min(proposed_fee, self.MAX_PRICE_USD))
             if proposed_fee != verified_fee:
                 log.warning(f"[Risk Alert] Agent proposed unsafe fee ({proposed_fee}) for {target_id}. Clamped to {verified_fee}.")
                 
             return verified_fee
-            
         except Exception as e:
             log.error(f"Failed to calculate price for {target_id}. Fallback to floor. Error: {e}")
             return self.MIN_PRICE_USD
@@ -71,12 +68,8 @@ class PricingVault:
         if not target_id: 
             return
 
-        ## 1. 리스크 검증을 거친 최종 단가 획득
         safe_price = await self.risk.calculate_and_verify_price(telemetry)
-        
-        ## 2. Redis 전광판(요금표) 업데이트 (Atomic operation)
         await self.tunnel.set(f"eco:price_tag:{target_id}", safe_price)
-        
         log.info(f"⚖️ [Pricing Enforcer] Updated X402 Fee for {target_id} -> ${safe_price:.4f}")
 
 @contract.daemon("dynamic_pricing")
@@ -100,10 +93,7 @@ class DynamicPricingDaemon(AbstractDaemon):
 
     async def run(self):
         log.info(f"[{self.name}] Autonomous Pricing Daemon Started.")
-        
-        # 비동기 인프라(Tunnel, RPC) 주입 및 Vault 초기화
         await self._init_dependencies()
-        
         vault_task = asyncio.create_task(self.vault.deploy_daemon())
         
         try:

@@ -75,7 +75,7 @@ class MarginCalcAgent(AsyncWorkerProtocol):
             elif tool_name == "calculate_compute_margin":
                 try:
                     result = await self.request_core_rpc(
-                        target_method="eco.margin.calculate", 
+                        target_method="validate.margin.calculate", 
                         payload=arguments
                     )
                 except Exception as rpc_err:

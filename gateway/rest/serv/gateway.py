@@ -8,9 +8,10 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
+from fiber.infra.rpc.method import RpcMethod
 from fiber.gateway.rest.serv.depend import get_rpc_client
 
+from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 from xphi.arch.bound.xor.parser.mcp import McpPayloadParser
 from xphi.kernel.space.tunnel.factory import TunnelFactory
@@ -71,7 +72,7 @@ class TransitionBridge:
         location_header = {"Location": f"/v1/mcp-gateway/{identity.target_server_id}/status/{handle_id}"}
 
         if not is_new:
-            state_res = await rpc.call("mcp.state.query", {"handle_id": handle_id})
+            state_res = await rpc.call(RpcMethod.MCP_STATE_QUERY, {"handle_id": handle_id})
             if state_res.get("exists"):
                 status = state_res.get("status")
                 log.info(f"[Bridge:State] Existing state found: {status}", extra=trace_ctx)
@@ -128,7 +129,7 @@ class TransitionBridge:
                     raise HTTPException(status_code=402, detail="Payment Required: X402 Receipt Missing")
                 
                 try:
-                    await rpc.call("validate.fuel.receipt", {
+                    await rpc.call(RpcMethod.VALIDATE_FUEL_RECEIPT,{
                         "target_server_id": identity.target_server_id,
                         "action": payload.get("params", {}).get("name", "unknown_tool"),
                         "fuel_receipt": identity.receipt
@@ -137,8 +138,7 @@ class TransitionBridge:
                     log.warning(f"[Bridge:Fuel] Fuel validation rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
                     raise HTTPException(status_code=402, detail=f"Fuel/Intent Rejected: {e.detail}")
 
-        # Seal state and dispatch EXECUTE Intent
-        await rpc.call("mcp.state.pending.seal", {
+        await rpc.call(RpcMethod.MCP_STATE_PENDING_SEAL, {
             "handle_id": handle_id,
             "payload": payload,
             "target_server_id": identity.target_server_id

@@ -11,6 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
+from fiber.infra.rpc.method import RpcMethod
 from fiber.gateway.rest.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -63,6 +64,7 @@ class HandshakeResponse(BaseModel):
     x402_receipt: Optional[str] = None
     next_action: str = "POST /v1/public/sandbox/execute with X-X402-Receipt header"
 
+
 """TRUST ANCHOR"""
 @public_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
 async def get_public_keys(request: Request):
@@ -105,7 +107,7 @@ async def public_intent_handshake(
     }
     
     try:
-        quote_data = await rpc.call("eco.profile.quote", quote_req)
+        quote_data = await rpc.call(RpcMethod.ECO_INTENT_ESTIMATE, quote_req)
     except RpcException as e:
         raise HTTPException(status_code=422, detail=f"Quotation Failed: {e.detail}")
     
@@ -118,7 +120,7 @@ async def public_intent_handshake(
     }
     
     try:
-        invoice_data = await rpc.call("eco.exchange.invoice.issue", invoice_req)
+        invoice_data = await rpc.call(RpcMethod.EXCHANGE_INVOICE_ISSUE, invoice_req)
     except RpcException as e:
         raise HTTPException(status_code=500, detail=f"Invoice Issue Failed: {e.detail}")
 
@@ -140,7 +142,7 @@ async def public_issue_invoice(
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        return await rpc.call("eco.exchange.invoice.issue", req.model_dump())
+        return await rpc.call(RpcMethod.EXCHANGE_INVOICE_ISSUE, req.model_dump())
     except RpcException:
         raise
 
@@ -155,7 +157,7 @@ async def public_get_balance(
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     try:
-        return await rpc.call("eco.exchange.balance", {"client_id": client_id, "asset_type": asset_type})
+        return await rpc.call(RpcMethod.EXCHANGE_GET_BALANCE, {"client_id": client_id, "asset_type": asset_type})
     except RpcException:
         raise
 
@@ -239,7 +241,6 @@ async def public_audit_log(
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
     request_time = str(time.time())
-    
     try:
         event_dict = payload.event.model_dump(exclude_none=True)
         sanitized_event = secret_auditor._encrypt_sensitive_data(event_dict)
@@ -300,6 +301,6 @@ async def public_audit_verify(
             "state_root": receipt.state_root,
             "full_receipt": receipt.model_dump(exclude_none=True)
         }
-        return await rpc.call("phase.store.receipt.verify", rpc_payload)
+        return await rpc.call(RpcMethod.PHASE_STORE_RECEIPT_VERIFY, rpc_payload)
     except RpcException as e:
         raise HTTPException(status_code=e.status_code, detail=f"Verification Failed: {{\"detail\":\"{e.detail}\"}}")

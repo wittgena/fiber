@@ -69,7 +69,8 @@ python -m fiber.dev.e2e.edge.compliance
 python -m fiber.dev.e2e.edge.security
 
 echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
-fiber e2e dphi.wasm.phase
+fiber e2e wasm.gateway
+fiber e2e wasm.phase
 VCR_MODE=replay python -m fiber.dev.ex.switch
 fiber e2e plane.flare --mode dev
 """

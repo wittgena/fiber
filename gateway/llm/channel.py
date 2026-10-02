@@ -10,12 +10,12 @@ import uuid
 import copy
 from typing import Any, Dict, List, Union
 
-from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
+
+from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.mapping import exception_type
 from fiber.llm.router.stream.wrapper import StreamWrapper
-
 from fiber.llm.router.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.llm.model.registry.adapter import AdapterRegistry
 
@@ -175,12 +175,10 @@ class ChannelObserver(DuplexChannel):
                 audit_hash=audit_hash
             )
 
-            # 백그라운드 비동기 차감(Billing Deduction) 트리거
             if fuel_consumed > 0 and tenant_id not in ("anonymous", "internal_system", "unknown"):
                 try:
                     from fiber.infra.rpc.fuel import execute_direct_fuel_deduction
                     import asyncio
-                    # 메인 LLM 응답을 블로킹하지 않도록 Fire-and-Forget 실행
                     asyncio.create_task(
                         execute_direct_fuel_deduction(
                             tenant_id=tenant_id, 
@@ -191,15 +189,12 @@ class ChannelObserver(DuplexChannel):
                 except Exception as e:
                     log_pipeline.error(f"Failed to trigger async fuel deduction for {tenant_id}: {e}")
 
-        # ✨ [개선] 2. 스트림 분기: 완료 로깅과 과금을 'StreamWrapper'에게 위임(Deferred)
         if is_stream:
-            # 방금 만든 함수를 메타데이터에 달아서 보냄 (StreamWrapper가 마지막 청크에서 호출함)
             meta.framework_flags["on_stream_complete"] = execute_completion_and_billing
             self.emitter.trace(f"LLM Stream Connection Established. Billing deferred to end of stream.")
             await ctx.fire_channel_read(msg)
             return
 
-        # ✨ [개선] 3. 단일 호출 분기: 즉시 실행
         usage = getattr(msg, "usage", None)
         usage_dict = usage.model_dump() if hasattr(usage, "model_dump") else (usage or {})
         total_tokens = usage_dict.get("total_tokens", 0)
@@ -270,31 +265,30 @@ class FallbackHandler(DuplexChannel):
     Acts as a 'reflector' that catches bubbling errors and pushes new requests downward.
     """
     async def write(self, ctx: ChannelContext, msg: dict):
-        # [FLOW: OUTBOUND] 1. Extract fallback queue from the outgoing request
         fallbacks = msg.pop("fallbacks", [])
         if fallbacks:
             ctx.set_attr("fallbacks", fallbacks)
-            # 2. Preserve a pristine snapshot. 
+            # Preserve a pristine snapshot. 
             # (Deepcopy ensures downstream processors cannot mutate our backup)
             ctx.set_attr("original_msg", copy.deepcopy(msg))
         
-        # 3. Pass the clean message further down the pipeline
+        # Pass the clean message further down the pipeline
         await ctx.fire_write(msg)
 
     async def exception_caught(self, ctx: ChannelContext, exc: Exception):
         # [FLOW: REVERSE ERROR] 1. Catch bubbling exception from downstream (e.g., Timeout, 502)
         fallbacks = ctx.get_attr("fallbacks", [])
         
-        # 2. If fallback pool is exhausted, let the error propagate to the user
+        # If fallback pool is exhausted, let the error propagate to the user
         if not fallbacks:
             await ctx.fire_exception_caught(exc)
             return
 
-        # 3. Pop the next candidate and restore the pristine snapshot
+        # Pop the next candidate and restore the pristine snapshot
         next_fallback = fallbacks.pop(0)
         retry_msg = copy.deepcopy(ctx.get_attr("original_msg")) # Deepcopy for true idempotency
         
-        # 4. Patch the request with the new fallback model/configurations
+        # Patch the request with the new fallback model/configurations
         if isinstance(next_fallback, dict):
             fallback_config = next_fallback.copy()
             retry_msg["model"] = fallback_config.pop("model", retry_msg.get("model"))
@@ -314,7 +308,7 @@ class PayloadTranslator(DuplexChannel):
             # API Payload(msg)에서 내부 메타데이터를 완전히 팝(pop)하여 격리
             system_meta = msg.pop("system_meta", None) or ctx.get_attr("system_meta")
 
-            ## 1. Payload Pre-processing
+            ## Payload Pre-processing
             prompt_id = msg.get("prompt_id")
             if prompt_id:
                 try:
@@ -324,7 +318,6 @@ class PayloadTranslator(DuplexChannel):
                     await ctx.fire_exception_caught(e)
                     return
             
-            # Tools 정규화 로직 통합
             if msg.get("tools") is not None:
                 if len(msg.get("tools", [])) == 0:
                     log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] 빈 tools 리스트가 감지되어 None으로 초기화합니다.")
@@ -332,7 +325,6 @@ class PayloadTranslator(DuplexChannel):
                 else:
                     log_handlers.debug(f"[DEBUG-PAYLOAD-TRANSLATOR] {len(msg.get('tools'))}개의 tool이 감지되었습니다.")
             
-            ## 2. Core Translation (Processor 빌드)
             model = msg.get("model")
             tools_data = msg.get("tools")
             if tools_data:
@@ -356,19 +348,15 @@ class PayloadTranslator(DuplexChannel):
                     log_handlers.debug("[DEBUG-PAYLOAD-TRANSLATOR] CompletionProcessor 빌드 성공. Tools 속성 유지됨.")
                 processed_ctx.original_kwargs.pop("system_meta", None)
 
-            # 격리해둔 메타데이터를 반환 객체의 '독립된 속성'으로 주입
             if system_meta:
                 processed_ctx.system_meta = system_meta
 
-            # 다음 파이프라인으로 Context 전달
             ctx.set_attr("processed_context", processed_ctx)
             await ctx.fire_write(processed_ctx)
-
         except Exception as e:
             show_trace = ctx.get_attr("trace_errors", False)
             log_handlers.error("Payload translation failed", error=str(e), exc_info=show_trace)
             await ctx.fire_exception_caught(e)
-
 
 class StreamAggregator(DuplexChannel):
     def _is_streaming(self, req: Dict[str, Any]) -> bool:
@@ -403,7 +391,6 @@ class StreamAggregator(DuplexChannel):
             await ctx.fire_channel_read(stream_wrapper)
         else:
             await ctx.fire_channel_read(msg)
-
 
 class CompletionTransport(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Any):
