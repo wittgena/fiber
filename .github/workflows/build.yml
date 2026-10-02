@@ -73,7 +73,7 @@ jobs:
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
-          XPHI_WORKERS: "1"
+          XPHI_WORKERS: "2"
         run: |
           echo "Starting Kernel in background..."
           nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
@@ -89,8 +89,6 @@ jobs:
           DPHI_ENV: "local"
         run: |
           python -m fiber.dev.e2e.edge.compliance
-          python -m fiber.dev.e2e.edge.client
-          python -m fiber.dev.e2e.edge.security
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()

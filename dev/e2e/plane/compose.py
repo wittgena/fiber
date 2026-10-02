@@ -65,6 +65,7 @@ echo "✅ Kernel is fully up and running!"
 
 echo "[CI-SYNC] 4. Executing Core E2E Client..."
 python -m fiber.dev.e2e.edge.client
+python -m fiber.dev.e2e.edge.compliance
 python -m fiber.dev.e2e.edge.security
 
 echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
