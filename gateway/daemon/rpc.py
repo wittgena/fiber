@@ -57,7 +57,6 @@ class FuelAllocator:
 
 class HealthMonitor:
     async def is_ruptured(self) -> tuple[bool, str]:
-        # 낮은 확률로 네트워크 균열(Byzantine 장애 등) 상태를 모사
         if random.random() < 0.01:
             return True, "Byzantine divergence detected in consensus layer."
         return False, ""
@@ -260,7 +259,6 @@ class RpcWorkerDaemon(AbstractDaemon):
                 await self.tunnel.stream_ack(self.topic, self.group, message_id)
                 return
 
-            # 독약 메시지(Poison Pill) 방어: JSON 디코딩 실패 시 즉시 폐기 및 감사 로그
             try:
                 payload = json.loads(payload_raw)
             except json.JSONDecodeError as e:

@@ -89,8 +89,8 @@ jobs:
           DPHI_ENV: "local"
         run: |
           python -m fiber.dev.e2e.edge.compliance
-          python -m fiber.dev.e2e.edge.security
           python -m fiber.dev.e2e.edge.client
+          python -m fiber.dev.e2e.edge.security
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()

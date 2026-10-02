@@ -50,7 +50,6 @@ public_edge = ContractRouter(
     description="Deterministic Zero-Trust Gateway for Isolated Sandbox Workloads"
 )
 
-"""DATA TRANSFER OBJECTS (DTO)"""
 class InvoiceIssueRequest(BaseModel):
     payee_address: str
     amount_usdc: str

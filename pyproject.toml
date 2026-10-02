@@ -21,7 +21,7 @@ path = "phase/hatch.py"
 base_dependencies = [
     "uvloop", "psutil", "fastapi", "redis", "pyyaml", "orjson", "typer", "canonicaljson", "aiohttp", "requests",
     "watchdog", "rocksdict", "filetype", "openai", "anthropic", "google-genai", "mcp==2.0.0a3", "pydantic", "httpx", "wasmtime",
-    "tinytag", "typing_extensions", "eth_account", "web3", "numpy", "duckdb", "qrcode", "tokenizers", "tqdm"
+    "tinytag", "typing_extensions", "eth_account", "web3", "numpy", "duckdb", "qrcode", "tokenizers", "tqdm", "pyotp", "deprecation", "ollama"
 ]
 
 [tool.hatch.version]
