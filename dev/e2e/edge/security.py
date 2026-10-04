@@ -10,7 +10,7 @@ from contextlib import suppress
 
 import httpx
 
-from fiber.dev.ex.sdk.gateway import Endpoints, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import Endpoints, StrictPayloadFactory, Endpoints
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
@@ -82,7 +82,6 @@ class SecurityBoundWorkflow(Workflow):
     async def phase_volumetric_attack(self, msg: VolumetricAttackMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 1] Volumetric & Chunked Shell Defense (Metered Execution) ---")
         
-        # SDK의 팩토리를 사용하여 완벽한 OTLP 스키마 생성 및 message 필드에 대용량(6MB) 데이터 주입
         huge_message = "A" * (6 * 1024 * 1024)
         payload_model = StrictPayloadFactory.create_telemetry_payload(
             tenant_id="e2e_tenant",
@@ -99,7 +98,6 @@ class SecurityBoundWorkflow(Workflow):
             headers={"X-X402-Receipt": "valid_x402"}
         )
         
-        # X402 영수증을 제출했다면, 돈을 낸 만큼 대용량(5MB+)도 처리되어 200 OK를 반환해야 함.
         self._record("Volumetric Exceed", "Funded Heavy Load", (200, 200), res_large.status_code, "Large payload processed successfully via Economic Firewall (Metered).")
         try:
             res_chunk = await self.client.post(

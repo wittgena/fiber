@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, List, Dict
 
 from fiber.infra.plane.compose import ComposeOrchestrator, ComposeContext
-
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path
@@ -17,10 +16,7 @@ FIBER_ROOT = resolve_path("fiber")
 log = get_emitter("e2e.plane.compose")
 
 class ComposeWorkflowScene:
-    """
-    Executes a pure Docker Compose runtime to cross-validate System E2E tests,
-    ensuring topology binding, infrastructure (Redis), and execution logic are intact.
-    """
+    """Executes Docker Compose runtime to cross-validate System E2E tests"""
     def __init__(self, broker: Any = None, context: ComposeContext = None):
         self.broker = broker
         self.context = context
@@ -65,7 +61,6 @@ echo "✅ Kernel is fully up and running!"
 
 echo "[CI-SYNC] 4. Executing Core E2E Client..."
 python -m fiber.dev.e2e.edge.compliance
-python -m fiber.dev.e2e.edge.exchange
 python -m fiber.dev.e2e.edge.security
 
 echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
@@ -88,7 +83,7 @@ fiber e2e plane.flare --mode dev
             if not success:
                 raise RuntimeError("System E2E job fractured. Check the streamed Docker Compose logs above for specific traceback.")
                 
-            self.log.info("  └─ System E2E Test Passed ✅ (Services & Binding OK)")
+            self.log.info("  └─ System E2E Test Passed (Services & Binding OK)")
         except Exception as e:
             self.fail_count += 1
             self.failed_cases.append({"title": "System E2E Test Job", "error": str(e)})
@@ -110,7 +105,6 @@ fiber e2e plane.flare --mode dev
             self.log.warning(f"=== [DONE] Workflow Scenes Completed with {self.fail_count} Failures ===")
 
 class ComposeFlow:
-    """CLI Control Plane for orchestrating Compose-based CI pipeline validations."""
     def __init__(self, mode: str = "dev", keep_workspace: bool = False, rebuild: bool = False):
         self.mode = mode
         self.keep_workspace = keep_workspace
@@ -119,7 +113,6 @@ class ComposeFlow:
     async def test(self):
         self.log = log
         self.log.info(f"\n[PHASE 1] Initializing COMPOSE Orchestrator in [{self.mode.upper()}] mode")
-        
         original_cwd = Path.cwd()
         if FIBER_ROOT:
             os.chdir(FIBER_ROOT)
@@ -162,10 +155,9 @@ def main(args_list: list[str] = None):
     parser.add_argument("--rebuild", action="store_true")
     
     args, _ = parser.parse_known_args(args_list)
-
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-        log.info("🐛 [DEBUG MODE] Internal execution logging is ENABLED.")
+        log.info("[DEBUG MODE] Internal execution logging is ENABLED.")
 
     app = ComposeFlow(mode=args.mode, keep_workspace=args.keep_workspace, rebuild=args.rebuild)
     PhaseReactor.ignite(main_coro_func=app.run)

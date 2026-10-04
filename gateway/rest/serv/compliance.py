@@ -1,4 +1,5 @@
-# fiber.gateway.rest.serv.exchange
+# fiber.gateway.rest.serv.compliance
+## @lineage: fiber.gateway.rest.serv.exchange
 import os
 import json
 import time
@@ -42,31 +43,17 @@ from xphi.arch.model.edge.receipt import (
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
-log = get_emitter("edge.exchange")
+log = get_emitter("edge.compliance")
 
-exchange_edge = ContractRouter(
-    namespace="exchange", 
-    prefix="/v1/exchange", 
-    tags=["Exchange Gateway"],
-    description="Exchange Gateway"
+compliance_edge = ContractRouter(
+    namespace="compliance", 
+    prefix="/v1/compliance", 
+    tags=["Compliance Gateway"],
+    description="Compliance Gateway"
 )
 
-class InvoiceIssueRequest(BaseModel):
-    payee_address: str
-    amount_usdc: str
-    resource_id: str
-
-class HandshakeResponse(BaseModel):
-    status: str
-    estimated_fuel: int
-    estimated_cost_usd: float
-    invoice: Dict[str, Any]
-    x402_receipt: Optional[str] = None
-    next_action: str = "POST /v1/exchange X-X402-Receipt header"
-
-
 """TRUST ANCHOR"""
-@exchange_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
+@compliance_edge.get("/keys", summary="Get Trusted Signer Keys (Strictly Pre-Signed)")
 async def get_trust_keys(request: Request):
     registry = getattr(request.app.state, "origin_registry", None)
     
@@ -86,84 +73,8 @@ async def get_trust_keys(request: Request):
         headers={"X-Dphi-Root-Signature": trusted_state.root_signature}
     )
 
-"""INVOICE ↔ BALANCE & HANDSHAKE"""
-@exchange_edge.post(
-    "/intent/handshake", 
-    summary="Client Pre-flight Handshake (Quote & Invoice)",
-    response_model=HandshakeResponse
-)
-async def intent_handshake(
-    intent: HandshakeIntent,
-    rpc: InternalRpcClient = Depends(get_rpc_client)
-):
-    quote_req = {
-        "sandbox_schema": {
-            "runtime": "python3.11-wasm",
-            "files": {"main.py": intent.payload}, 
-            "limits": {"max_fuel": intent.max_fuel}
-        },
-        "target_entry": "main.py",
-        "context_depth": 2
-    }
-    
-    try:
-        quote_data = await rpc.call(RpcMethod.ECO_INTENT_ESTIMATE, quote_req)
-    except RpcException as e:
-        raise HTTPException(status_code=422, detail=f"Quotation Failed: {e.detail}")
-    
-    cost_usd = quote_data.get("estimated_cost_usd", 0.0)
-    fuel = quote_data.get("fuel_estimated", 0)
-    invoice_req = {
-        "payee_address": "0x000000000000000000000000000000000000dEaD",
-        "amount_usdc": str(cost_usd),
-        "resource_id": f"res_intent_{uuid.uuid4().hex[:8]}"
-    }
-    
-    try:
-        invoice_data = await rpc.call(RpcMethod.EXCHANGE_INVOICE_ISSUE, invoice_req)
-    except RpcException as e:
-        raise HTTPException(status_code=500, detail=f"Invoice Issue Failed: {e.detail}")
-
-    return HandshakeResponse(
-        status="HANDSHAKE_READY",
-        estimated_fuel=fuel,
-        estimated_cost_usd=cost_usd,
-        invoice=invoice_data.get("invoice", {}),
-        x402_receipt=invoice_data.get("x402_receipt")
-    )
-
-
-@exchange_edge.post(
-    "/billing/invoice", 
-    summary="Issue x402 Invoice for Resource Access"
-)
-async def issue_invoice(
-    req: InvoiceIssueRequest,
-    rpc: InternalRpcClient = Depends(get_rpc_client)
-):
-    try:
-        return await rpc.call(RpcMethod.EXCHANGE_INVOICE_ISSUE, req.model_dump())
-    except RpcException:
-        raise
-
-
-@exchange_edge.get(
-    "/billing/balance", 
-    summary="Check Fuel Balance"
-)
-async def get_balance(
-    client_id: str = Query(..., description="조회할 클라이언트 ID"),
-    asset_type: str = Query("fuel", description="조회할 자산 타입"),
-    rpc: InternalRpcClient = Depends(get_rpc_client)
-):
-    try:
-        return await rpc.call(RpcMethod.EXCHANGE_GET_BALANCE, {"client_id": client_id, "asset_type": asset_type})
-    except RpcException:
-        raise
-
-
 """COMPLIANCE SYMMETRY (RECORD ↔ VERIFY)"""
-@exchange_edge.post(
+@compliance_edge.post(
     "/telemetry/logs", 
     tags=["Log Ingress"], 
     summary="Ingest OTLP Telemetry, Verify Integrity & Seal Global Stream",
@@ -229,7 +140,7 @@ async def otlp_logs_export(
         log.error(f"[OTLP] Processing failed: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Stream processing error")
 
-@exchange_edge.post(
+@compliance_edge.post(
     "/audit/event", 
     tags=["Log Ingress"], 
     summary="Secure Audit Event Recording & Conditional Cryptographic Proof Issuance"
@@ -287,7 +198,7 @@ async def audit_log(
         result=audit_result
     )
 
-@exchange_edge.post(
+@compliance_edge.post(
     "/audit/verify", 
     summary="Verify AuditReceipt Authenticity"
 )

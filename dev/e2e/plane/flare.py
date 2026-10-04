@@ -21,13 +21,8 @@ MODULE_PATH = scene_module.__name__
 
 @dataclass
 class FlarePipelineConfig:
-    suites_registry: Dict[str, str] = field(default_factory=lambda: {
-        "flare": f"{MODULE_PATH}.flare:FlareScene",
-    })
-    
-    default_suites: List[str] = field(default_factory=lambda: [
-        "flare",
-    ])
+    suites_registry: Dict[str, str] = field(default_factory=lambda: {"flare": f"{MODULE_PATH}.flare:FlareScene",})
+    default_suites: List[str] = field(default_factory=lambda: ["flare",])
 
 class FlareFlow:
     def __init__(self, mode: str = "dev", command: str = "test", suites: List[str] = None, config: FlarePipelineConfig = None, keep_workspace: bool = False):
