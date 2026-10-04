@@ -1,10 +1,4 @@
 # fiber.dev.e2e.plane.kube
-"""
-@desc:
-- CLI Control Plane for orchestrating Kubernetes-based CI pipeline validations.
-- Validates internal shell workflows (WASM, VCR) via `kubectl exec`.
-- Validates external ingress defenses (WAF, Audit) via Port-forwarding & SDK Client.
-"""
 import os
 import sys
 import argparse
@@ -14,7 +8,7 @@ import random
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory, Endpoints
 from fiber.infra.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
@@ -127,7 +121,7 @@ class KubeWorkflowScene:
             async with httpx.AsyncClient(base_url=f"http://127.0.0.1:{local_port}", timeout=5.0) as client:
                 for vector_name, rule_list in attack_vectors:
                     chaos_payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
-                    chaos_res = await client.post("/v1/exchange/telemetry/logs", content=chaos_payload)
+                    chaos_res = await client.post(Endpoints.TELEMETRY_LOGS, content=chaos_payload)
                     if chaos_res.status_code >= 500 or chaos_res.status_code < 400:
                         raise RuntimeError(f"Compliance WAF Breach! '{vector_name}' bypassed defenses.")
             self.log.info("  │  └─ WAF Defense fully operational against raw payloads.")
@@ -180,8 +174,6 @@ class KubeFlow:
                 mode=self.mode,
                 suites={"workflow_validation": KubeWorkflowScene},
                 rebuild=self.rebuild,
-                # Optional: Pass external redis url via base_env if targeting an existing cluster
-                # base_env={"REDIS_URL": "redis://external-redis-cluster:6379/0"}
             )
             controller.keep_workspace = self.keep_workspace
             

@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from xphi.arch.bound.client.rpc import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
-from fiber.gateway.rest.serv.exchange import exchange_edge
+from fiber.gateway.rest.serv.compliance import compliance_edge
 from fiber.gateway.rest.serv.llm import llm_edge
 from fiber.gateway.rest.security import SecurityProvisioner
 from fiber.phase.contract.origin import OriginRegistry
@@ -49,11 +49,8 @@ async def verify_access_credential(
 ):
     path = request.url.path
     whitelist = {
-        "/v1/exchange/intent/handshake",
-        "/v1/exchange/billing/invoice",
-        "/v1/exchange/billing/balance",
-        "/v1/exchange/audit/verify",
-        "/v1/exchange/keys",
+        "/v1/compliance/audit/verify",
+        "/v1/compliance/keys",
         "/openapi.json",
         "/docs",
         "/redoc",
@@ -63,7 +60,6 @@ async def verify_access_credential(
     if path in whitelist:
         return None
 
-    # MCP Gateway 라우터 우회: 내부 브릿지가 DPoP / x402(Track A/B)를 직접 자체 검증함
     if path.startswith("/v1/mcp-gateway/"):
         return None
 
@@ -165,7 +161,7 @@ def create_app(
     app.state.is_ready = False  
     
     # Routers Binding
-    app.include_router(exchange_edge, tags=["mcp-exposed"]) 
+    app.include_router(compliance_edge, tags=["mcp-exposed"]) 
     app.include_router(llm_edge)
     app.include_router(mcp_bridge)  
 
@@ -219,10 +215,9 @@ def create_app(
     app.add_middleware(AttestationMiddleware)
     app.add_middleware(WasTelemetry)
 
-    log.info("Initializing Secure MCP Server (Native Gateway)...")
+    log.info("Init Secure MCP Server...")
     mcp = SecureMCPServer(name="MCP-Server", version="1.0.0")
     mcp.bind_fastapi(app, allowed_tags=["mcp-exposed"])
-    
     mcp_asgi_app = mcp.sse_app()
     app.mount("/mcp", mcp_asgi_app)
     

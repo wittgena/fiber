@@ -3,7 +3,7 @@
 
 Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic execution environment that unifies heterogeneous LLM integrations and enables idempotent offline testing.
 
-This document provides a practical guide on how to integrate and deploy Fiber across its core operational pillars:
+This document provides a practical guide on how to integrate and deploy Fiber across its operational pillars:
 
 Serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**). Fiber operates as a drop-in asynchronous pipeline (**1.1**) that autonomously normalizes heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism without altering your business logic.
 
@@ -139,11 +139,11 @@ if __name__ == "__main__":
 
 **Transparent Integration for Legacy Codebases**
 
-For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishing offline tests often requires complex refactoring. Fiber eliminates this friction via PhaseAirlock runtime routing.
+For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishing offline tests often requires complex refactoring. Fiber solves this through transparent runtime routing.
 
-By declaring explicit aliases at the boot sequence, PhaseAirlock intercepts legacy imports and routes traffic to Fiber's VCR engine. This grants your existing codebase immediate access to deterministic playback and time-window stream coalescing—without altering a single line of business logic. Fiber ensures duck-typing parity, returning exact mock objects so that strict legacy type checks continue to function.
+By declaring explicit aliases at the boot sequence, Fiber intercepts legacy imports and routes traffic directly to its VCR engine. This enables deterministic playback and time-window stream coalescing without altering your business logic. Fiber also maintains duck-typing parity, returning exact mock objects to satisfy strict legacy type checks.
 
-To guarantee offline determinism, Fiber simultaneously injects a PEP-578 Security Sandbox at the CPython boundary. This low-level audit hook physically intercepts OS-level operations, instantly blocking unexpected external network connections (socket.connect) or subprocess executions from upstream dependencies during replay.
+To guarantee offline test, Fiber injects a PEP-578 Security Sandbox at the CPython boundary. This blocks unexpected external network connections  or subprocess executions from upstream dependencies during replay.
 
 ```python
 import os
@@ -305,8 +305,7 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
-* 🔗 **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming offline network emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for playback optimization.
-* 🔗 **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the zero-code legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
-* 🔗 **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
-* 🔗 **[gateway.wasm.log](./phase/abc/log/wasm/gateway.wasm.20261002.log):** Validates L0 Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all non-linear FSM transitions execute deterministically with sub-millisecond (0.1ms) latency.
-* 🔗 **[phase.wasm.log](./phase/abc/log/wasm/phase.wasm.20261002.log):** Validates deterministic execution across Ephemeral sandboxes, confirming precise Resource Exhaustion Traps (OOM / CPU Time Limits), and Execution Receipts generation.
+* **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming offline network emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for playback optimization.
+* **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
+* **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* **[gateway.wasm.log](./phase/abc/log/wasm/gateway.wasm.20261002.log):** Validates Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all non-linear FSM transitions execute deterministically with millisecond latency.

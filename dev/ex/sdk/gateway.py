@@ -1,5 +1,4 @@
 # fiber.dev.ex.sdk.gateway
-## @lineage: fiber.dev.sdk.gateway
 import time
 import logging
 from dataclasses import dataclass, asdict
@@ -12,19 +11,13 @@ from xphi.arch.model.edge.receptor import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for Edge Gateway"""
-    KEYS              = "/v1/exchange/keys"
-    INTENT_HANDSHAKE = "/v1/exchange/intent/handshake"
-    BILLING_INVOICE   = "/v1/exchange/billing/invoice"
-    BILLING_BALANCE   = "/v1/exchange/billing/balance"
-    TELEMETRY_LOGS    = "/v1/exchange/telemetry/logs"
-    AUDIT_EVENT       = "/v1/exchange/audit/event"
-    AUDIT_VERIFY      = "/v1/exchange/audit/verify"
-
+    KEYS              = "/v1/compliance/keys"
+    TELEMETRY_LOGS    = "/v1/compliance/telemetry/logs"
+    AUDIT_EVENT       = "/v1/compliance/audit/event"
+    AUDIT_VERIFY      = "/v1/compliance/audit/verify"
     LLM_CHAT        = "/v1/chat/completions"
     LLM_EMBEDDING   = "/v1/embeddings"
-    
     MCP_INVOKE_TEMPLATE = "/v1/mcp-gateway/{target_server_id}/invoke"
-
 
 @dataclass
 class HandshakeIntent:
@@ -129,31 +122,6 @@ class DphiPublicClient:
             timeout=self.http_timeout
         )
         return VerifiedHttpClient(client=base_client, max_age_seconds=60)
-
-    # Public Edge
-    async def request_handshake(self, intent: HandshakeIntent) -> Dict[str, Any]:
-        verifier = self._get_verified_client()
-        try:
-            response = await verifier.async_post_verified(Endpoints.INTENT_HANDSHAKE, json=asdict(intent))
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            self.log.error(f"[SDK] Handshake Failed: {e}")
-            raise
-        finally:
-            await verifier._client.aclose()
-
-    async def get_fuel_balance(self, client_id: str, asset_type: str = "fuel") -> Dict[str, Any]:
-        verifier = self._get_verified_client()
-        try:
-            response = await verifier.async_get_verified(Endpoints.BILLING_BALANCE, params={"client_id": client_id, "asset_type": asset_type})
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            self.log.error(f"[SDK] Balance Check Failed: {e}")
-            raise
-        finally:
-            await verifier._client.aclose()
 
     # Compliance & Audit Methods
     async def verify_audit_receipt(self, receipt: Dict[str, Any]) -> Dict[str, Any]:

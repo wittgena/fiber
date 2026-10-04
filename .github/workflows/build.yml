@@ -80,7 +80,7 @@ jobs:
           echo "KERNEL_PID=\(!" >>\)GITHUB_ENV
 
           echo "Waiting for Kernel to become ready on port 8000..."
-          timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/exchange/keys > /dev/null; do sleep 1; done'
+          timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/compliance/keys > /dev/null; do sleep 1; done'
           echo "✅ Kernel is fully up and running!"
 
       - name: 🧪 Run E2E Edge Test
@@ -89,7 +89,6 @@ jobs:
           DPHI_ENV: "local"
         run: |
           python -m fiber.dev.e2e.edge.compliance
-          python -m fiber.dev.e2e.edge.exchange
           python -m fiber.dev.e2e.edge.security
 
       - name: 🧹 Execute Reaper (Teardown)

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 import httpx
 
-from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory
+from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory, Endpoints
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
@@ -86,7 +86,7 @@ class ComplianceSuiteWorkflow(Workflow):
             attack_vectors = ChaosPayloadLibrary.get_all_vectors()
             for vector_name, rule_list in attack_vectors:
                 payload = random.choice(rule_list)() if isinstance(rule_list, list) else rule_list()
-                res = await self.raw_client.post("/v1/exchange/telemetry/logs", content=payload)
+                res = await self.raw_client.post(Endpoints.TELEMETRY_LOGS, content=payload)
                 if res.status_code >= 500 or res.status_code < 400:
                     raise RuntimeError(f"Compliance WAF Breach! '{vector_name}' bypassed defenses. Status: {res.status_code}")
             
@@ -130,7 +130,7 @@ class ComplianceSuiteWorkflow(Workflow):
             malformed_payload = {"verbose": True, "some_data": "invalid"}
             headers = {"X-X402-Receipt": "mock_x402_trade"}
             
-            res = await self.raw_client.post("/v1/exchange/audit/event", json=malformed_payload, headers=headers)
+            res = await self.raw_client.post(Endpoints.AUDIT_EVENT, json=malformed_payload, headers=headers)
             
             if res.status_code != 422:
                 raise RuntimeError(f"Failed to block malformed audit request. Expected 422, got {res.status_code}")

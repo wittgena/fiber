@@ -9,6 +9,18 @@ description = "The Universal Integration Boundary for heterogeneous AI ecosystem
 readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["version", "dependencies"]
+authors = [{ name = "Wittgena Lee", email = "wittegena@gmail.com" }]
+license = "MIT"
+keywords = ["llm", "gateway", "proxy", "ai"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/wittgena/fiber"
+Repository = "https://github.com/wittgena/fiber.git"
 
 [project.scripts]
 fiber = "fiber.phase.cli.main:app"
