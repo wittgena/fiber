@@ -86,8 +86,6 @@ class CompatRegistryIO:
 
 # Global Initialization (부팅 시 1회 로드, 검증 및 병합)
 _custom_compat_data = CompatRegistryIO.load_registry()
-
-# 스키마 검증 수행 (통과한 룰만 추출)
 valid_state_rules, state_ok, state_err = CompatRegistryIO.validate_and_filter(
     _custom_compat_data.get("state_extraction_rules", {}), 
     StateExtractionRuleSchema, 
@@ -116,7 +114,6 @@ if param_ok: success_summary.append(f"PARAM({','.join(param_ok)})")
 if success_summary:
     log_compat.info(f"Custom compat rules injected safely -> {' | '.join(success_summary)}")
 
-# 원본 BASE 딕셔너리의 오염을 방지(deepcopy)하며 검증된 룰만 병합
 STATE_EXTRACTION_RULES = CompatRegistryIO._deep_update(copy.deepcopy(BASE_STATE_EXTRACTION_RULES), valid_state_rules)
 STREAM_EXTRACTION_RULES = CompatRegistryIO._deep_update(copy.deepcopy(BASE_STREAM_EXTRACTION_RULES), valid_stream_rules)
 PROVIDER_PARAM_RULES = CompatRegistryIO._deep_update(copy.deepcopy(BASE_PROVIDER_PARAM_RULES), valid_param_rules)

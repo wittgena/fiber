@@ -28,6 +28,12 @@ app = typer.Typer(
     add_completion=False
 )
 
+compat_app = typer.Typer(
+    help="Manage LLM compatibility rules and test fixtures (fiber-compats)",
+    no_args_is_help=True
+)
+app.add_typer(compat_app, name="compat")
+
 def _load_env(env_file: Optional[str]):
     if env_file:
         if dotenv:
@@ -57,8 +63,6 @@ def run_daemon(
 ):
     """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
     _load_env(env_file)
-    
-    # Expand topology presets into explicit daemon lists
     PRESETS = {
         "core": "rest_edge,rpc_worker",                           # Base MCP Bridge
         "eco": "rest_edge,rpc_worker,dynamic_pricing",            # Bridge + Pricing
@@ -72,10 +76,8 @@ def run_daemon(
     
     os.environ["KERNEL_DAEMONS"] = resolved_daemons
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
-    
-    # Simplified NODE_PROFILE routing: EDGE (lightweight) vs ALL (spawns workers)
+
     is_edge_only = all(d in ["rest_edge"] for d in daemons_list)
-    
     if is_edge_only:
         os.environ["NODE_PROFILE"] = "EDGE"
     else:
@@ -125,7 +127,7 @@ def run_shell(
     try:
         asyncio.run(_launch_console())
     except KeyboardInterrupt:
-        log.info("\n[Fiber] 👋 Exiting Console...")
+        log.info("\n[Fiber] Exiting Console...")
 
 @app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_e2e(
@@ -138,26 +140,26 @@ def run_e2e(
     KNOWN_SUITES = ["llm.trace", "edge.compliance", "wasm.phase", "plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
-    log.info(f"[Fiber] 🧪 Igniting E2E Test Suite(s): {', '.join(targets)}")
+    log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")
     for t in targets:
         module_path = f"fiber.dev.e2e.{t}"
         try:
             test_module = importlib.import_module(module_path)
             if hasattr(test_module, "main"):
-                log.info(f"\n{'='*60}\n▶️ Launching Suite: {module_path}\n{'='*60}")
+                log.info(f"\n{'='*60}\nLaunching Suite: {module_path}\n{'='*60}")
                 sig = inspect.signature(test_module.main)
                 if len(sig.parameters) > 0:
                     test_module.main(extra_args)
                 else:
                     test_module.main()
             else:
-                log.error(f"[Fiber] ❌ Module {module_path} lacks 'main'. Skipping.")
+                log.error(f"[Fiber] Module {module_path} lacks 'main'. Skipping.")
                 continue
         except ImportError as e:
-            log.error(f"[Fiber] ❌ Test module not found: {module_path} (Reason: {e})")
+            log.error(f"[Fiber] Test module not found: {module_path} (Reason: {e})")
             if target != "all": sys.exit(1)
         except Exception as e:
-            log.error(f"[Fiber] 💥 E2E Test {module_path} failed: {e}", exc_info=True)
+            log.error(f"[Fiber] E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
 
 @app.command("connect")
@@ -178,7 +180,7 @@ def run_connector(
 
     async def _launch_connector():
         from fiber.gateway.mcp.connector import MCPServerConnector
-        log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the A2A network...")
+        log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the MCP Server Connector...")
         daemon = MCPServerConnector(target_id=target, execution_target=resolved_cmd)
         try:
             await daemon.run()
@@ -187,7 +189,7 @@ def run_connector(
     try:
         asyncio.run(_launch_connector())
     except KeyboardInterrupt:
-        log.info("\n[Fiber] 👋 Connector shutting down...")
+        log.info("\n[Fiber] Connector shutting down...")
 
 @app.command("observe")
 def start_observer(
@@ -202,7 +204,43 @@ def start_observer(
     try:
         asyncio.run(run_observer(target=target, namespace=namespace, delay=delay, chaos=chaos))
     except KeyboardInterrupt:
-        log.info("\n[Fiber] 👋 Observer manually terminated by user.")
+        log.info("\n[Fiber] Observer manually terminated by user.")
+
+@compat_app.command("fixture")
+def manage_compat_fixtures(
+    model: Annotated[str, typer.Option("--model", "-m", help="Model name (e.g., ollama/gemma:2b)")],
+    vcr_mode: Annotated[str, typer.Option("--vcr-mode", "-v", help="Mode: 'record' (gen) or 'replay' (test)")] = "record",
+    api_key: Annotated[Optional[str], typer.Option("--api-key", "-k", envvar="COMPAT_API_KEY", help="API Key (Optional if set in Env)")] = None,
+    target_dir: Annotated[Optional[str], typer.Option("--target-dir", "-o", help="Custom target directory for fixtures")] = None,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+):
+    """
+    @desc: Manages VCR fixtures for compatibility testing
+    - Use '--vcr-mode record' to generate raw payloads, or '--vcr-mode replay' to verify extraction rules offline.
+    """
+    _load_env(env_file)
+    mode = vcr_mode.lower()
+    if mode in ("record", "gen", "generate"):
+        from fiber.phase.cli.compat import run_gen_fixture
+        try:
+            asyncio.run(run_gen_fixture(model=model, api_key=api_key, target_dir=target_dir))
+        except KeyboardInterrupt:
+            log.info("\n[Fiber] Compat fixture generation manually terminated by user.")
+        except Exception as e:
+            log.error(f"[Fiber] Fixture generation failed: {e}", exc_info=True)
+            sys.exit(1)
+    elif mode in ("replay", "test", "verify"):
+        from fiber.phase.cli.compat import run_test_fixture
+        try:
+            asyncio.run(run_test_fixture(model=model, target_dir=target_dir))
+        except KeyboardInterrupt:
+            log.info("\n[Fiber] Compat fixture testing manually terminated by user.")
+        except Exception as e:
+            log.error(f"[Fiber] Fixture testing failed: {e}", exc_info=True)
+            sys.exit(1)
+    else:
+        log.error(f"[Fiber] Invalid VCR mode: '{vcr_mode}'. Supported modes are 'record' (gen) or 'replay' (test).")
+        raise typer.Exit(1)
 
 def main():
     app()
