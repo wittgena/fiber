@@ -58,7 +58,7 @@ async def run_scenario(
     from fiber.llm.model.message import Message
     from fiber.dev.ex.agent.llm.driver import LLMFacade
     import fiber.dev.ex.agent.llm.observer 
-    from fiber.gateway.llm.state.traverser import StateTraverseRule
+    from fiber.gateway.llm.state.traverser import StateTraverser
     
     try:
         from fiber.llm.response import ModelResponseStream
@@ -111,7 +111,7 @@ async def run_scenario(
             pass
 
         try:
-            fiber_content = StateTraverseRule.extract_stream_content(chunk, default="")
+            fiber_content = StateTraverser.extract_stream_content(chunk, default="")
             if fiber_content:
                 counters["fiber_valid"] += 1
         except Exception:

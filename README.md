@@ -143,8 +143,6 @@ For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishi
 
 By declaring explicit aliases at the boot sequence, Fiber intercepts legacy imports and routes traffic directly to its VCR engine. This enables deterministic playback and time-window stream coalescing without altering your business logic. Fiber also maintains duck-typing parity, returning exact mock objects to satisfy strict legacy type checks.
 
-To guarantee offline test, Fiber injects a PEP-578 Security Sandbox at the CPython boundary. This blocks unexpected external network connections  or subprocess executions from upstream dependencies during replay.
-
 ```python
 import os
 import sys
@@ -264,6 +262,8 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 }
 ```
 
+**Community Validation**: To guarantee these custom rules work flawlessly, you can instantly validate them offline using `fiber compat fixture --vcr-mode test`. The community actively maintains these raw network fixtures in the `fiber-compats` repository, ensuring perfect parsing parity across the ever-evolving LLM landscape.
+
 ---
 
 ## 2. Installation & Infra Provisioning
@@ -298,7 +298,7 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python legacy_server.py"` |
 | **`daemon`** | **[Production Host]** Boots core gateway daemons (Edge + RPC) by default. Use `-s` to apply presets (`eco`, `full`). | `fiber daemon -s eco` |
 | **`e2e`** | **[Test Orchestrator]** Forwards suite-specific arguments to internal test pipelines. | `fiber e2e llm.trace --model ollama/gemma:2b` |
-
+| **`compat`** | **[Compat & VCR]** Manages local extraction rules and generates/verifies VCR fixtures to guarantee LLM compatibility offline | `fiber compat fixture --model gemini/gemini-3.1-flash-lite --vcr-mode record` |
 ---
 
 ## 4. System Validation Logs

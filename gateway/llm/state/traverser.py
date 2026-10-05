@@ -111,7 +111,6 @@ class StateMapper:
                     return res
             return None
 
-        # 룰셋이 Dict인 경우 (벤더별 매핑 룰 해석)
         if isinstance(usage_rule, dict):
             p_tokens = StateTraverser.resolve(obj, usage_rule.get("prompt_tokens")) or 0
             c_tokens = StateTraverser.resolve(obj, usage_rule.get("completion_tokens")) or 0
@@ -128,7 +127,6 @@ class StateMapper:
                 }
             return None
             
-        # 기존 단일 경로 탐색
         usage_obj = StateTraverser.resolve(obj, usage_rule)
         if hasattr(usage_obj, "model_dump") and callable(getattr(usage_obj, "model_dump")):
             try: return usage_obj.model_dump(exclude_unset=True)
@@ -151,33 +149,6 @@ class StateMapper:
         usage_dict = StateMapper._extract_sync_usage(response, usage_paths)
 
         return content, usage_dict
-
-    # @staticmethod
-    # def extract_sync_response(response: Any, provider: Optional[str] = None) -> Tuple[str, Optional[Dict]]:
-    #     rules = STATE_EXTRACTION_RULES.get(provider) or STATE_EXTRACTION_RULES["defaults"]
-    #     content_paths = rules.get("sync_content_paths", STATE_EXTRACTION_RULES["defaults"]["sync_content_paths"])
-    #     raw_content = StateTraverser.resolve(response, content_paths)
-        
-    #     content = ImperativeFallbackRule.parse_content_blocks(raw_content) or ""
-    #     usage_paths = rules.get("sync_usage_paths", STATE_EXTRACTION_RULES["defaults"]["sync_usage_paths"])
-    #     usage_obj = StateTraverser.resolve(response, usage_paths)
-    #     usage_dict = None
-        
-    #     if usage_obj:
-    #         if hasattr(usage_obj, "model_dump") and callable(getattr(usage_obj, "model_dump")):
-    #             try:
-    #                 usage_dict = usage_obj.model_dump(exclude_unset=True)
-    #             except Exception:
-    #                 usage_dict = dict(usage_obj)
-    #         elif isinstance(usage_obj, dict):
-    #             usage_dict = usage_obj
-    #         else:
-    #             try:
-    #                 usage_dict = dict(usage_obj)
-    #             except Exception:
-    #                 pass 
-
-    #     return content, usage_dict
 
     @staticmethod
     def resolve_chat_endpoint(provider: Optional[str], base_url: str) -> str:

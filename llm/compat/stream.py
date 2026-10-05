@@ -12,8 +12,8 @@ STREAM_EXTRACTION_RULES = {
         "finish_reason": ["done_reason", "choices.0.finish_reason"],
         "is_finished_cond": {"path": "done", "value": True},
         "usage": [
-            "usage",  # 1st: openai
-            {         # 2nd: native custom
+            "usage",
+            {
                 "prompt_tokens": "prompt_eval_count",
                 "completion_tokens": "eval_count"
             }
