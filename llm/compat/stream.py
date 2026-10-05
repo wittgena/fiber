@@ -73,7 +73,28 @@ STREAM_EXTRACTION_RULES = {
             "prompt_tokens": "input_token_count",
             "completion_tokens": "generated_token_count"
         }
-    }
+    },
+    "cohere": {
+        "text": ["text", "raw.text", "choices.0.delta.content"],
+        "finish_reason": ["finish_reason", "choices.0.finish_reason"],
+        "is_finished_cond": {"path": "is_finished", "value": True},
+        "usage": [
+            {
+                "prompt_tokens": "meta.billed_units.input_tokens",
+                "completion_tokens": "meta.billed_units.output_tokens"
+            },
+            "usage"
+        ]
+    },
+    # "cohere": {
+    #     "text": "text",                       # Cohere 본문 추출 경로
+    #     "finish_reason": ["finish_reason"],   # 종료 이유 추출 경로
+    #     "is_finished_cond": {"path": "is_finished", "value": True}, # 종료 조건 (is_finished 키가 True일 때)
+    #     "usage": {                            # 과금 데이터 추출 (스트림의 마지막 청크 'meta' 안에 있음)
+    #         "prompt_tokens": "meta.billed_units.input_tokens",
+    #         "completion_tokens": "meta.billed_units.output_tokens"
+    #     }
+    # },
 }
 
 PROVIDER_RULE_ALIAS = {
@@ -83,6 +104,7 @@ PROVIDER_RULE_ALIAS = {
     "sagemaker_chat": "openai",
     "nlp_cloud": "openai",
     "gemini": "vertex_ai",
-    "llama_server": "openai",   # llama.cpp -> openai sse 
-    "generic": "openai",        # default
+    "llama_server": "openai",
+    "generic": "openai",
+    "cohere": "cohere"
 }

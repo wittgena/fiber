@@ -10,16 +10,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Type, Optional, Callable, Any
 from contextlib import asynccontextmanager, AsyncExitStack
-
 import httpx
-# [변경됨] 동기 redis 임포트 제거
-# import redis
 
-# [추가됨] 중앙 집중형 환경 변수 및 비동기 터널 팩토리 도입
+from fiber.phase.scope.local.llama import LlamaServer
+
 from xphi.arch.contract.config import env
 from xphi.kernel.space.tunnel.factory import TunnelFactory
-
-from fiber.phase.scope.local.engine import LLMEngine
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.dev.tracer.scope import scope_trace, get_current_trace_path
 
@@ -28,9 +24,6 @@ log_local = get_emitter("surface.local")
 log_sandbox = get_emitter("surface.sandbox")
 log_proxy = get_emitter("scope.proxy")
 
-# =====================================================================
-# [UTILS]
-# =====================================================================
 def get_free_port(starting_port: int, max_port: int = 8999) -> int:
     for port in range(starting_port, max_port):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -41,9 +34,6 @@ def get_free_port(starting_port: int, max_port: int = 8999) -> int:
                 continue
     raise RuntimeError(f"No free ports available between {starting_port} and {max_port}.")
 
-# =====================================================================
-# [CONFIG & BASE]
-# =====================================================================
 @dataclass
 class SurfaceConfig:
     surface_type: str = "local"
@@ -70,17 +60,14 @@ class BaseSurface(ABC):
     def get_engine(self) -> Any: 
         pass
 
-# =====================================================================
-# [SURFACE IMPLEMENTATIONS]
-# =====================================================================
 class LocalSurface(BaseSurface):
     def __init__(self, config: SurfaceConfig):
         self.config = config
-        self.engine = LLMEngine()
+        self.llama_server = LlamaServer()
 
     async def up(self) -> None:
         log_local.info("[*] Initializing Local Direct Surface...")
-        self.engine.ensure_server()
+        self.llama_server.ensure_server()
         try:
             await asyncio.sleep(0.3)
         except Exception as e:
@@ -90,7 +77,7 @@ class LocalSurface(BaseSurface):
         log_local.info("[*] Folding Local Surface...")
 
     def get_engine(self) -> Any:
-        return lambda agent_usage: self.engine
+        return lambda agent_usage: self.llama_server
 
 class SandboxSurface(BaseSurface):
     def __init__(self, config: SurfaceConfig):
@@ -98,10 +85,8 @@ class SandboxSurface(BaseSurface):
         self.process = None
         self._stop_event = threading.Event()
         self.threads = []
-        self.llm_engine = LLMEngine()
+        self.llm_engine = LlamaServer()
         
-        # [변경됨] 초기화 시점의 블로킹 Redis 커넥션 생성 제거. 
-        # 터널은 비동기 메서드(up/down) 내부에서 지연 로딩(Lazy load)됨.
         self.process_name = "sandbox.surface"
         self._launcher_module = None 
         self.registry_key = "system:sandbox:pids"
@@ -140,7 +125,6 @@ class SandboxSurface(BaseSurface):
 
         pid = self.process.pid
         
-        # [변경됨] 비동기 터널(Facade)을 통한 상태 앵커링
         try:
             tunnel = await TunnelFactory.get_default()
             await tunnel.sadd(self.registry_key, pid)
@@ -158,7 +142,6 @@ class SandboxSurface(BaseSurface):
         start_time = time.time()
         ready = False
         
-        # 완전한 비동기 HTTP Polling
         async with httpx.AsyncClient() as client:
             while time.time() - start_time < self.config.timeout:
                 if self.process.poll() is not None:
@@ -171,7 +154,6 @@ class SandboxSurface(BaseSurface):
                 except (httpx.RequestError, httpx.ConnectError):
                     pass
                 
-                # 블로킹 방지
                 await asyncio.sleep(0.3)
 
         if not ready:
@@ -187,12 +169,10 @@ class SandboxSurface(BaseSurface):
             self.process.terminate()
             
             try:
-                # 동기 wait()를 백그라운드 스레드로 격리하여 이벤트 루프 보호
                 await asyncio.wait_for(asyncio.to_thread(self.process.wait), timeout=5.0)
             except asyncio.TimeoutError:
                 self.process.kill()
             
-            # [변경됨] 비동기 터널(Facade)을 통한 앵커 해제
             try:
                 tunnel = await TunnelFactory.get_default()
                 await tunnel.srem(self.registry_key, self.process.pid)
@@ -262,9 +242,6 @@ def get_surface_class(surface_type: str) -> Type[BaseSurface]:
         raise ValueError(f"Unknown surface type: {surface_type}")
     return surface_class
 
-# =====================================================================
-# [MANAGER & CONTEXT]
-# =====================================================================
 class SurfaceManager:
     def __init__(self, config: SurfaceConfig):
         self.config = config
@@ -278,7 +255,6 @@ class SurfaceManager:
         self.impl = surface_class(config)
 
     async def up(self):
-        # 모든 impl이 비동기로 수정되었으므로, 불필요한 분기문 제거
         await self.impl.up()
 
     async def down(self):

@@ -182,6 +182,9 @@ class StreamWrapper:
         self._stream_created_time = time.time()
         self.cache_hit = (self.custom_llm_provider == "cached_response")
         self.accumulator = StreamAccumulator(self.model, self.custom_llm_provider)
+
+        if not self.custom_llm_provider and self.model:
+            self.custom_llm_provider = self.model.split("/")[0] if "/" in self.model else "openai"
         
         self.rules = []
         if self.system_meta and hasattr(self.system_meta, "metadata"):
@@ -237,18 +240,15 @@ class StreamWrapper:
 
     def _process_usage_and_hooks(self, processed_chunk: ModelResponseStream) -> None:
         """스트림 종료 감지, 토큰 폴백 연산(필요시), 그리고 과금 및 로깅 훅 트리거를 전담"""
-        # 스트림 종료 조건 식별
         is_stream_end = self.accumulator.sent_last_chunk or (
             processed_chunk.choices and processed_chunk.choices[0].finish_reason is not None
         )
 
-        # 현재 청크 기준 토큰 파악
         total_tokens = 0
         if hasattr(processed_chunk, "usage") and processed_chunk.usage:
             usage_data = processed_chunk.usage.model_dump() if hasattr(processed_chunk.usage, "model_dump") else processed_chunk.usage
             total_tokens = usage_data.get("total_tokens", 0)
 
-        # 종료되었으나 토큰이 0인 경우 오프라인 계산 수행
         if is_stream_end and total_tokens == 0:
             try:
                 from fiber.llm.model.token.counter import calculate_fallback_usage
@@ -262,7 +262,6 @@ class StreamWrapper:
                 )
                 total_tokens = fallback_usage.get("total_tokens", 0)
                 
-                # 계산된 토큰 정보를 스트림 청크 및 누적 응답 객체에 강제 주입
                 fallback_usage_obj = Usage(**fallback_usage)
                 processed_chunk.usage = fallback_usage_obj
                 self.accumulator.final_response.usage = fallback_usage_obj
@@ -310,14 +309,11 @@ class StreamWrapper:
                 if self.system_meta and "time_to_first_token" not in self.system_meta.framework_flags:
                     self.system_meta.framework_flags["time_to_first_token"] = time.time()
 
-                # ✨ [개선] 분리된 Usage 및 Hook 처리기 호출 (코드가 극도로 깔끔해짐)
                 self._process_usage_and_hooks(processed_chunk)
-
                 if not config.get("disable_streaming_logging", False):
                     log.trace("Stream chunk yielded", model=self.model, chunk_id=getattr(processed_chunk, "id", None))
                 
                 return processed_chunk
-
         except StopAsyncIteration:
             raise StopAsyncIteration
         except Exception as e:

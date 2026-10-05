@@ -15,6 +15,7 @@ from fiber.llm.model.provider.resolver import get_llm_provider
 from fiber.llm.exception.mapping import exception_type
 from fiber.gateway.llm.state.traverser import StateMapper, StateTraverser
 from fiber.llm.router.stream.parser.chunk import StreamChunkParser
+from fiber.llm.compat.param import PROVIDER_PARAM_RULES
 
 from xphi.arch.bound.client.http import get_client
 from xphi.arch.bound.event.next import uuid4 
@@ -26,23 +27,17 @@ llm_log = get_emitter(MODULE_NAMESPACE, phase="SYSTEM")
 registry_log = get_emitter("registry.adapter")
 adapter_log = get_emitter("adapter.base")
 
-
-# ==========================================
-# 1. Base Interfaces & Fallback Adapters
-# ==========================================
 class BaseProviderAdapter:
-    """LLM 호출을 수행하고, 단일 응답 객체 또는 원시 청크 제너레이터를 반환하는 어댑터 인터페이스"""
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
         raise NotImplementedError()
 
 class GenericHTTPAdapter(BaseProviderAdapter):
-    """순수 HTTP 통신(OpenAI 호환 포맷 등)을 통해 LLM과 직접 통신하는 경량 폴백 어댑터"""
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
         req_id = str(uuid4())[:8]
         adapter_log.debug(f"[GenericHTTP-{req_id}] 🚀 execute START | model={ctx.model}, provider={ctx.custom_llm_provider}")
         
         headers = ctx.headers or {}
-        if ctx.custom_llm_provider == "ollama" and ctx.api_key and "Authorization" not in headers:
+        if ctx.api_key and "Authorization" not in headers:
             headers["Authorization"] = f"Bearer {ctx.api_key}"
 
         client = ctx.client_instance
@@ -51,21 +46,37 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                 is_async=True,
                 params={"ssl_verify": ctx.system_meta.framework_flags.get("ssl_verify", None)},
             )
+        
+        rule = PROVIDER_PARAM_RULES.get(ctx.custom_llm_provider, PROVIDER_PARAM_RULES["defaults"])
+        msg_schema = rule.get("message_schema", "openai_array")
 
         payload = {
             "model": ctx.model,
-            "messages": ctx.messages,
             "stream": ctx.stream,
         }
+
+        if msg_schema == "string_last":
+            # Cohere style rule
+            content = ctx.messages[-1].get("content", "") if isinstance(ctx.messages, list) and ctx.messages else ""
+            payload["message"] = content
+        else:
+            payload["messages"] = ctx.messages
+
         if ctx.optional_params:
-            payload.update(ctx.optional_params)
+            # mapping 룰을 적용하여 파라미터 이름 변환 (예: top_p -> p)
+            mapping_rule = rule.get("mapping", {})
+            for k, v in ctx.optional_params.items():
+                target_key = mapping_rule.get(k, k)
+                payload[target_key] = v
+
+        adapter_log.debug(f"[GenericHTTP-{req_id}] 📦 Target Model: {ctx.model}")
+        adapter_log.debug(f"[GenericHTTP-{req_id}] 📤 Payload: {json.dumps(payload, ensure_ascii=False)[:500]}...")
 
         target_url = StateMapper.resolve_chat_endpoint(
             provider=ctx.custom_llm_provider,
             base_url=ctx.api_base or ""
         )
         adapter_log.debug(f"[GenericHTTP-{req_id}] Resolved Target URL: {target_url}")
-
         if ctx.stream:
             adapter_log.debug(f"[GenericHTTP-{req_id}] 🌊 Initiating STREAM Execution")
             
@@ -77,11 +88,12 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                     json=payload, 
                     timeout=ctx.timeout
                 ) as response:
+                    if response.is_error:
+                        await response.aread()
+                        adapter_log.error(f"[GenericHTTP-{req_id}] 🚨 스트림 HTTP 에러 발생 ({response.status_code}): {response.text}")
                     response.raise_for_status()
                     async for line in response.aiter_lines():
                         if line:
-                            # ✨ [개선] 불필요한 이중 파싱 및 Telemetry Burst 유발 로그 제거. 
-                            # Raw Chunk(문자열) 그대로 방출하여 StreamWrapper가 Native하게 파싱 및 Usage 추출을 하도록 위임
                             yield line
                             
             return stream_generator()
@@ -93,12 +105,14 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                 json=payload, 
                 timeout=ctx.timeout
             )
+
+            if response.is_error:
+                adapter_log.error(f"[GenericHTTP-{req_id}] 🚨 단일 HTTP 에러 발생 ({response.status_code}): {response.text}")
+
             response.raise_for_status()
             data = response.json()
             
-            # ✨ [개선] 'response.raw is missing' 버그 수정: API 응답 JSON 전체를 raw 속성으로 복제
             ctx.model_response.raw = data.copy()
-            
             model_response = ctx.model_response
             if "choices" in data:
                 model_response.choices = data["choices"]
@@ -108,10 +122,6 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                 model_response.id = data["id"]
             return model_response
 
-
-# ==========================================
-# 2. Inter Framework Adapters
-# ==========================================
 class InterLLMAdapter(BaseProviderAdapter):
     def __init__(self):
         self.router = LLMRouter()
@@ -196,7 +206,6 @@ class InterLLMAdapter(BaseProviderAdapter):
                         }]
                     }
                     
-                    # ✨ [개선] 누락되었던 usage 및 logprobs 필드를 추출하여 패키징에 추가
                     usage = StateTraverser.resolve(raw_chunk, "usage") or StateTraverser.resolve(raw_chunk, "usage_metadata")
                     if usage:
                         normalized["usage"] = usage
@@ -227,7 +236,6 @@ class InterLLMAdapter(BaseProviderAdapter):
             choice_data = self.mapper.to_openai_choice(response, req_id, llm_log)
             ctx.model_response.choices = [choice_data]
             
-            # ✨ [개선] 원본 응답 복제 유지 (Tracer/디버그 용도)
             if hasattr(response, "raw"):
                 ctx.model_response.raw = response.raw
             
@@ -286,10 +294,6 @@ class InterEmbeddingAdapter(BaseProviderAdapter):
                 "usage": {"prompt_tokens": -1, "total_tokens": -1}
             }
 
-
-# ==========================================
-# 3. Adapter Registry
-# ==========================================
 class AdapterRegistry:
     """@state: Multi-dimensional topological boundaries"""
     _adapters: Dict[str, Dict[str, BaseProviderAdapter]] = {

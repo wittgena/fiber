@@ -28,12 +28,7 @@ from fiber.gateway.llm.state.pydantic import (
 from fiber.gateway.llm.handler.template import default_messages_to_prompt as generic_messages_to_prompt
 from fiber.gateway.llm.handler.template import BasePromptTemplate
 
-# [수정됨] 무의미한 글로벌 이벤트(LLMPredictStartEvent 등) 제거, 콜백 이벤트만 유지
-from fiber.gateway.llm.context.cbevent import (
-    CBEventType,
-    EventPayload,
-)
-
+from fiber.gateway.llm.context.cbevent import CBEventType, EventPayload
 from fiber.llm.router.util import (
     ToolSelection,
     MessagesToPromptType,

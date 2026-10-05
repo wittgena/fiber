@@ -27,7 +27,8 @@ PROVIDER_PARAM_RULES = {
         "wrap_in": {},
         "tool_format": "standard",
         "role_mapping": {"developer": "system"}, 
-        "system_param": None 
+        "system_param": None,
+        "message_schema": "openai_array"  # 기본값: [{"role": "...", "content": "..."}]
     },
     "openai": {
         "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
@@ -69,7 +70,17 @@ PROVIDER_PARAM_RULES = {
         "tool_format": "standard",
         "role_mapping": {"developer": "system"},
         "system_param": None
+    },
+    "cohere": {
+        "supported": ["temperature", "p", "k", "max_tokens", "stream", "stop_sequences", "seed", "tools"],
+        "mapping": {"top_p": "p", "top_k": "k", "stop": "stop_sequences"},
+        "wrap_in": {},
+        "tool_format": "standard",
+        "role_mapping": {},
+        "system_param": None,
+        "message_schema": "string_last"
     }
+
 }
 
 OPENAI_EMBEDDING_PARAMS = ["dimensions", "encoding_format", "user", "extra_headers", "extra_body"]

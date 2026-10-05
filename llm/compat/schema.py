@@ -3,10 +3,7 @@ from typing import List, Dict, Union, Any, Optional, Literal
 from pydantic import BaseModel, Field
 
 class UsageDictSchema(BaseModel):
-    """
-    Usage 매핑 규칙. (예: {"prompt_tokens": "usage.input_tokens", ...})
-    경로는 단일 문자열일 수도 있고, 여러 경로를 탐색하기 위한 문자열 리스트일 수도 있습니다.
-    """
+    """Usage 매핑 규칙 - (예: {"prompt_tokens": "usage.input_tokens", ...})"""
     prompt_tokens: Union[str, List[str]]
     completion_tokens: Union[str, List[str]]
     total_tokens: Optional[Union[str, List[str]]] = None
@@ -31,20 +28,16 @@ class StateExtractionRuleSchema(BaseModel):
     finish_tool: Optional[str] = None
     stream_content_paths: Optional[List[str]] = None
 
-# PROVIDER_PARAM_RULES 스키마
 class ProviderParamRuleSchema(BaseModel):
     supported: List[str] = Field(default_factory=list)
     mapping: Dict[str, str] = Field(default_factory=dict)
     wrap_in: Dict[str, List[str]] = Field(default_factory=dict)
-    
-    # 프레임워크 내부에서 분기를 타는 중요 파라미터는 Literal로 오타 방지
     tool_format: Literal["standard", "gemini_strict", "anthropic"] = "standard"
     
     role_mapping: Dict[str, str] = Field(default_factory=dict)
     system_param: Optional[str] = None
     supports_tools: bool = False
 
-# STREAM_EXTRACTION_RULES
 class StreamExtractionRuleSchema(BaseModel):
     # text와 finish_reason 등은 단일 경로(str) 혹은 폴백 경로(List[str])를 가짐
     text: Union[str, List[str]]

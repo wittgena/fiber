@@ -16,64 +16,38 @@ log_route = get_emitter("provider.resolver")
 
 PROVIDER_REGISTRY = {
     "openai": ("https://api.openai.com/v1", ["OPENAI_API_KEY"]),
-    "text-completion-openai": ("https://api.openai.com/v1", ["OPENAI_API_KEY"]),
     "anthropic": ("https://api.anthropic.com/v1/messages", ["ANTHROPIC_API_KEY"]),
-    "anthropic_text": ("https://api.anthropic.com/v1/complete", ["ANTHROPIC_API_KEY"]),
     "cohere": ("https://api.cohere.ai/v1", ["COHERE_API_KEY"]),
-    "cohere_chat": ("https://api.cohere.ai/v1", ["COHERE_API_KEY"]),
-    "meta_llama": ("https://api.llama.com/compat/v1", ["LLAMA_API_KEY"]),
     "ollama": ("http://localhost:11434", ["OLLAMA_API_KEY"]),
     "llama_server": ("http://localhost:8080/v1", ["OPENAI_API_KEY"]),
     "vllm": ("http://localhost:8000/v1", ["VLLM_API_KEY"]),
-    "hosted_vllm": ("http://localhost:8000/v1", ["VLLM_API_KEY"]),
     "lm_studio": ("http://localhost:1234/v1", ["LM_STUDIO_API_KEY"]),
     "llamafile": ("http://localhost:8080/v1", ["LLAMAFILE_API_KEY"]),
-    "langgraph": ("http://localhost:2024", ["LANGGRAPH_API_KEY"]),
-    "azure_ai": ("https://models.inference.ai.azure.com", ["AZURE_AI_API_KEY"]),
-    "github": ("https://models.inference.ai.azure.com", ["GITHUB_API_KEY"]),
     "github_copilot": ("https://api.githubcopilot.com", ["GITHUB_COPILOT_API_KEY"]),
-    "datarobot": (None, ["DATAROBOT_API_KEY"]), 
     "groq": ("https://api.groq.com/openai/v1", ["GROQ_API_KEY"]),
+    "cerebras": ("https://api.cerebras.ai/v1", ["CEREBRAS_API_KEY"]),
     "mistral": ("https://api.mistral.ai/v1", ["MISTRAL_API_KEY"]),
     "codestral": ("https://codestral.mistral.ai/v1", ["CODESTRAL_API_KEY"]),
-    "text-completion-codestral": ("https://codestral.mistral.ai/v1/fim/completions", ["CODESTRAL_API_KEY"]),
     "deepseek": ("https://api.deepseek.com/beta", ["DEEPSEEK_API_KEY"]),
     "perplexity": ("https://api.perplexity.ai", ["PERPLEXITYAI_API_KEY"]),
     "together_ai": ("https://api.together.xyz/v1", ["TOGETHER_API_KEY", "TOGETHER_AI_API_KEY", "TOGETHERAI_API_KEY", "TOGETHER_AI_TOKEN"]),
-    "anyscale": ("https://api.endpoints.anyscale.com/v1", ["ANYSCALE_API_KEY"]),
     "deepinfra": ("https://api.deepinfra.com/v1/openai", ["DEEPINFRA_API_KEY"]),
     "baseten": ("https://inference.baseten.co/v1", ["BASETEN_API_KEY"]),
     "fireworks_ai": ("https://api.fireworks.ai/inference/v1", ["FIREWORKS_AI_API_KEY"]),
     "ai21": ("https://api.ai21.com/studio/v1", ["AI21_API_KEY"]),
-    "ai21_chat": ("https://api.ai21.com/studio/v1", ["AI21_API_KEY"]),
-    "nvidia_nim": ("https://integrate.api.nvidia.com/v1", ["NVIDIA_NIM_API_KEY"]),
-    "nvidia_riva": ("grpc.nvcf.nvidia.com:443", ["NVIDIA_RIVA_API_KEY", "NVIDIA_NIM_API_KEY"]),
+    "nvidia": ("https://integrate.api.nvidia.com/v1", ["NVIDIA_API_KEY", "NVIDIA_NIM_API_KEY"]),
     "cerebras": ("https://api.cerebras.ai/v1", ["CEREBRAS_API_KEY"]),
     "sambanova": ("https://api.sambanova.ai/v1", ["SAMBANOVA_API_KEY"]),
     "empower": ("https://app.empower.dev/api/v1", ["EMPOWER_API_KEY"]),
-    "soniox": ("https://api.soniox.com", ["SONIOX_API_KEY"]),
     "nebius": ("https://api.studio.nebius.ai/v1", ["NEBIUS_API_KEY"]),
     "volcengine": ("https://ark.cn-beijing.volces.com/api/v3", ["VOLCENGINE_API_KEY"]),
     "dashscope": ("https://dashscope-intl.aliyuncs.com/compatible-mode/v1", ["DASHSCOPE_API_KEY"]),
     "moonshot": ("https://api.moonshot.ai/v1", ["MOONSHOT_API_KEY"]),
     "minimax": ("https://api.minimax.io/v1", ["MINIMAX_API_KEY"]),
     "friendliai": ("https://api.friendli.ai/serverless/v1", ["FRIENDLIAI_API_KEY", "FRIENDLI_TOKEN"]),
-    "galadriel": ("https://api.galadriel.com/v1", ["GALADRIEL_API_KEY"]),
     "novita": ("https://api.novita.ai/v3/openai", ["NOVITA_API_KEY"]),
-    "manus": ("https://api.manus.im", ["MANUS_API_KEY"]),
-    "v0": ("https://api.v0.dev/v1", ["V0_API_KEY"]),
-    "lambda_ai": ("https://api.lambda.ai/v1", ["LAMBDA_API_KEY"]),
-    "inception": ("https://api.inceptionlabs.ai/v1", ["INCEPTION_API_KEY"]),
     "hyperbolic": ("https://api.hyperbolic.xyz/v1", ["HYPERBOLIC_API_KEY"]),
     "vercel_ai_gateway": ("https://ai-gateway.vercel.sh/v1", ["VERCEL_AI_GATEWAY_API_KEY"]),
-    "wandb": ("https://api.inference.wandb.ai/v1", ["WANDB_API_KEY"]),
-    "publicai": ("https://platform.publicai.co/v1", ["PUBLICAI_API_KEY"]),
-    "synthetic": ("https://api.synthetic.new/openai/v1", ["SYNTHETIC_API_KEY"]),
-    "apertis": ("https://api.stima.tech/v1", ["STIMA_API_KEY"]),
-    "nano-gpt": ("https://nano-gpt.com/api/v1", ["NANOGPT_API_KEY"]),
-    "poe": ("https://api.poe.com/v1", ["POE_API_KEY"]),
-    "chutes": ("https://llm.chutes.ai/v1/", ["CHUTES_API_KEY"]),
-    "featherless_ai": ("https://api.featherless.ai/v1", ["FEATHERLESS_AI_API_KEY"]),
     "nscale": ("https://api.nscale.com/v1", ["NSCALE_API_KEY"]),
     "replicate": ("https://api.replicate.com/v1", ["REPLICATE_API_KEY", "REPLICATE_API_TOKEN"]),
     "vertex_ai": (None, ["VERTEX_AI_API_KEY", "GEMINI_API_KEY"]),
@@ -81,8 +55,9 @@ PROVIDER_REGISTRY = {
     "gemini": ("https://generativelanguage.googleapis.com/v1beta", ["GEMINI_API_KEY", "GOOGLE_API_KEY"]),
     "google": ("https://generativelanguage.googleapis.com/v1beta", ["GEMINI_API_KEY", "GOOGLE_API_KEY"]),
     
-    "bedrock": (None, ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]),
-    "watsonx": (None, ["WATSONX_API_KEY"]),
+    "huggingface": ("https://router.huggingface.co/v1", ["HF_TOKEN"]),
+    
+    "bedrock": (None, ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"])
 }
 
 _CLAUDE_PATTERN = re.compile(r"^claude-[a-z]+-\d+-\d+(?:-\d{8})?$", re.IGNORECASE)
@@ -345,11 +320,11 @@ class LLMProviderResolver:
         model, custom_llm_provider = handle_cohere_chat_model_custom_llm_provider(model, custom_llm_provider)
         model, custom_llm_provider = handle_anthropic_text_model_custom_llm_provider(model, custom_llm_provider)
         
-        if custom_llm_provider == "openrouter" and model.startswith("openrouter/"):
-            remainder = model[len("openrouter/"):]
-            if "/" in remainder:
-                return remainder, custom_llm_provider, True
-            return model, custom_llm_provider, True
+        # if custom_llm_provider == "openrouter" and model.startswith("openrouter/"):
+        #     remainder = model[len("openrouter/"):]
+        #     if "/" in remainder:
+        #         return remainder, custom_llm_provider, True
+        #     return model, custom_llm_provider, True
 
         return model, custom_llm_provider, False
 
