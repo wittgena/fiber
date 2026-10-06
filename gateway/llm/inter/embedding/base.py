@@ -1,4 +1,6 @@
-# fiber.llm.router.embedding.base
+# fiber.gateway.llm.inter.embedding.base
+## @lineage: fiber.gateway.llm.embedding.base
+## @lineage: fiber.llm.router.embedding.base
 import asyncio
 import math
 import uuid
@@ -20,15 +22,15 @@ from typing_extensions import Self
 import numpy as np
 
 from fiber.gateway.llm.state.pydantic import BaseModel, Field, ConfigDict, model_serializer, model_validator
-from fiber.llm.router.manager import CallbackManager
+from fiber.gateway.llm.inter.callback.manager import CallbackManager
 from fiber.gateway.llm.context.cbevent import (
     CBEventType,
     EventPayload,
 )
 
 from fiber.llm.types.inter.component import BaseComponent, BaseNode, MetadataMode
-from fiber.llm.router.util import get_tqdm_iterable
-from fiber.llm.router.embedding.jobs import run_jobs
+from fiber.gateway.llm.inter.handler.util import get_tqdm_iterable
+from fiber.gateway.llm.inter.embedding.jobs import run_jobs
 
 from xphi.watcher.observer.span import observe
 from xphi.watcher.plane.emitter import get_emitter
@@ -153,7 +155,7 @@ class BaseEmbedding(TransformComponent):
 
     @model_validator(mode="after")
     def check_base_embeddings_class(self) -> Self:
-        from fiber.llm.router.storage.kvstore.types import BaseKVStore
+        from fiber.llm.model.router.storage.kvstore.types import BaseKVStore
 
         if self.callback_manager is None:
             self.callback_manager = CallbackManager([])

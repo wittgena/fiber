@@ -1,4 +1,5 @@
-# fiber.llm.router.stream.rule
+# fiber.gateway.llm.stream.rule
+## @lineage: fiber.llm.router.stream.rule
 import json
 from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate

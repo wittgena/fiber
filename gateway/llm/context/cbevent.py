@@ -12,7 +12,7 @@ from fiber.llm.types.inter.response import (
     CompletionResponse,
 )
 from fiber.gateway.llm.state.pydantic import ConfigDict, Field
-from fiber.gateway.llm.handler.template import BasePromptTemplate
+from fiber.gateway.llm.inter.handler.template import BasePromptTemplate
 from xphi.arch.bound.event.next import uuid4
 
 class BaseEvent(BaseModel):

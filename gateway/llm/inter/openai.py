@@ -24,7 +24,7 @@ from typing import (
 import httpx
 import tiktoken
 
-from fiber.gateway.llm.handler.converter import (
+from fiber.gateway.llm.inter.handler.converter import (
     achat_to_completion_decorator,
     acompletion_to_chat_decorator,
     astream_chat_to_completion_decorator,
@@ -47,15 +47,15 @@ from fiber.llm.types.inter.response import (
 )
 
 from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
-from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
+from fiber.gateway.llm.inter.callback.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
 from fiber.gateway.llm.inter.base import InterLLM
-from fiber.llm.router.util import ToolSelection
+from fiber.gateway.llm.inter.handler.util import ToolSelection
 from fiber.llm.types.inter.base import Model
-from fiber.llm.router.util import parse_partial_json
-from fiber.gateway.llm.handler.template import PromptTemplate
+from fiber.gateway.llm.inter.handler.util import parse_partial_json
+from fiber.gateway.llm.inter.handler.template import PromptTemplate
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode
-from fiber.gateway.llm.handler.openai import (
+from fiber.gateway.llm.inter.handler.openai import (
     O1_MODELS,
     create_retry_decorator,
     from_openai_completion_logprobs,

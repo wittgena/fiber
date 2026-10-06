@@ -1,6 +1,4 @@
 # fiber.llm.types.provider.general
-## @lineage: fiber.llm.types.model.general
-## @lineage: fiber.llm.model.types.general
 import json
 import time
 from enum import Enum
@@ -9,7 +7,6 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 from typing_extensions import Required, TypedDict
 
-## OpenAI SDK Base Models
 from openai._models import BaseModel as OpenAIObject
 from openai.types.completion_usage import CompletionTokensDetails, PromptTokensDetails
 from openai.types.images_response import Image as OpenAIImage

@@ -9,8 +9,8 @@ from typing import Optional, Any, AsyncGenerator, List
 from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.core import Usage
 from fiber.gateway.llm.state.traverser import StateTraverser, StateMapper
-from fiber.llm.router.stream.parser.chunk import StreamChunkParser
-from fiber.llm.model.registry.adapter import AdapterRegistry
+from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
+from fiber.llm.model.router.adapter import AdapterRegistry
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRManager
 
 from fiber.llm.exception.mapping import STATUS_CODE_MAPPING, SEMANTIC_ERROR_REGEX

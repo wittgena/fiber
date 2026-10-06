@@ -26,7 +26,7 @@ from fiber.llm.types.inter.block import (
 )
 from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
 if TYPE_CHECKING:
-    from fiber.llm.router.tools.types import ToolOutput
+    from fiber.llm.model.router.tools.types import ToolOutput
     from fiber.llm.types.inter.component import ImageDocument
 
 

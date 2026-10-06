@@ -1,4 +1,4 @@
-# fiber.llm.router.param.processor
+# fiber.gateway.llm.param.processor
 from __future__ import annotations
 import copy
 from urllib.parse import urlparse

@@ -1,4 +1,4 @@
-# fiber.llm.model.registry.llm
+# fiber.llm.model.router.llm
 import importlib
 import inspect
 import pkgutil
@@ -95,14 +95,10 @@ class LLMInstalledScanner:
                 
         return {k: asdict(v) for k, v in registry.items()}
 
-# ==========================================
-# 3. Core Router Engine
-# ==========================================
 class ModuleMissingError(Exception):
     """해당 모듈이 시스템에 존재하지 않을 때 발생하는 치명적 오류"""
     pass
 
-## @state: Core topological boundaries (Batteries-included)
 DEFAULT_LLM_REGISTRY = {
     "openai": {
         "module": f"{_LLM_PKG_NAME}.openai",

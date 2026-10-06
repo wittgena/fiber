@@ -20,18 +20,18 @@ CURRENT_INVOKER, _ = get_invoker(Path(__file__))
 def init_vcr_environment(mode: str, speed: str, chaos_ms: float, tick_ms: float):
     """Initialize VCR sandbox and inject network proxies."""
     if mode not in ("record", "replay"):
-        log.info("🟢 [VCR] Mode: LIVE (Integration Bypassed)")
+        log.info("[VCR] Mode: LIVE (Integration Bypassed)")
         return
 
     try:
         from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
         verify_local_dev_environment(allow_ci=True)
         create_security_sandbox(vcr_mode=mode)
-        log.info("🔒 [Sandbox] Strict Security Policy Injected")
+        log.info("[Sandbox] Strict Security Policy Injected")
     except ImportError:
-        log.warning("⚠️ [Sandbox] Sandbox package not found, proceeding with injector only.")
+        log.warning("[Sandbox] Sandbox package not found, proceeding with injector only.")
     except Exception as e:
-        log.error(f"🚨 [SANDBOX VIOLATION] Execution Denied: {e}")
+        log.error(f"[SANDBOX VIOLATION] Execution Denied: {e}")
         sys.exit(1)
 
     from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
@@ -45,8 +45,8 @@ def init_vcr_environment(mode: str, speed: str, chaos_ms: float, tick_ms: float)
     )
     VCRInjector.apply(config=config, fixture_dir=FIXTURE_ROOT)
 
-    log.info(f"🔌 [VCR] Status: ENGAGED ({mode.upper()}) | Speed: {speed} | Chaos: {chaos_ms}ms | Tick: {tick_ms}ms")
-    log.info(f"📂 [VCR] Fixture Storage: {os.path.abspath(FIXTURE_ROOT)}\n")
+    log.info(f"[VCR] Status: ENGAGED ({mode.upper()}) | Speed: {speed} | Chaos: {chaos_ms}ms | Tick: {tick_ms}ms")
+    log.info(f"[VCR] Fixture Storage: {os.path.abspath(FIXTURE_ROOT)}\n")
 
 
 async def run_scenario(
@@ -91,11 +91,11 @@ async def run_scenario(
         counters["chunk_count"] += 1
         
         if counters["chunk_count"] == 1:
-            print(f"\n[🔍 DUCK-TYPING INSPECTOR - First Chunk]")
+            print(f"\n[DUCK-TYPING INSPECTOR - First Chunk]")
             print(f"   ├─ Actual Type  : {type(chunk)}")
             if ModelResponseStream:
                 is_compatible = isinstance(chunk, ModelResponseStream)
-                print(f"   ├─ isinstance() : {'✅ PASS' if is_compatible else '❌ FAIL'}")
+                print(f"   ├─ isinstance() : {'PASS' if is_compatible else 'FAIL'}")
             print("-" * 40 + "\n")
 
         legacy_content = ""
@@ -129,24 +129,20 @@ async def run_scenario(
         if stream:
             log.info("Receiving stream...")
         
-        # 1. VCR 픽스처 생성을 위한 결정론적 Trace ID 계산 로직
         formatted_scenario = scenario_name.replace(" ", "_").lower()
         vcr_mode = os.environ.get("VCR_MODE", "live")
-        
         seed = VCRIdentityRule.generate_seed(
             scenario_name=formatted_scenario,
             messages=messages_data,
             invoker=CURRENT_INVOKER
         )
 
-        # Record나 Replay일 때는 seed를 써서 고정 ID, Live일 때는 랜덤 ID 발급
         trace_id = next_trace_id(seed) if vcr_mode in ("record", "replay") else next_trace_id()
         trace_metadata = {
             "vcr_scenario": formatted_scenario,
             "vcr_invoker": CURRENT_INVOKER
         }
 
-        # Facade 호출 시 터널링(Tunneling)을 위한 예약어 명시적 주입
         response = await LLMFacade.make_completion(
             llm=profile,
             messages=messages,
@@ -160,33 +156,33 @@ async def run_scenario(
         
         if stream:
             print("\n\n" + "-"*40)
-            log.info(f"✅ [STREAM CLOSED] Duration: {duration:.2f}ms")
+            log.info(f"[STREAM CLOSED] Duration: {duration:.2f}ms")
             log.info(f"   ├─ Total Chunks Received : {counters['chunk_count']}")
             log.info(f"   ├─ Direct Extracted      : {counters['legacy_valid']}")
             log.info(f"   ├─ Fiber Mapper Extracted: {counters['fiber_valid']}")
             log.info(f"   └─ Data Mismatch Count   : {counters['mismatch']}\n")
         else:
             safe_text = response.message.content if response.message else ""
-            log.info(f"⚡ Singular response: {safe_text[:50]}...")
-            log.info(f"✅ [SUCCESS] Duration: {duration:.2f}ms")
+            log.info(f"  Singular response: {safe_text[:50]}...")
+            log.info(f"[SUCCESS] Duration: {duration:.2f}ms")
 
         metrics = response.metrics
-        log.info(f"💰 Cost: ${metrics.accumulated_cost:.6f}")
+        log.info(f"Cost: ${metrics.accumulated_cost:.6f}")
         
         if metrics.accumulated_token_usage:
             u = metrics.accumulated_token_usage
             total = getattr(u, 'total_tokens', getattr(u, 'prompt_tokens', 0) + getattr(u, 'completion_tokens', 0))
-            log.info(f"📊 Tokens: [Prompt: {getattr(u, 'prompt_tokens', 0)} / Completion: {getattr(u, 'completion_tokens', 0)} / Total: {total}]")
+            log.info(f"Tokens: [Prompt: {getattr(u, 'prompt_tokens', 0)} / Completion: {getattr(u, 'completion_tokens', 0)} / Total: {total}]")
 
     except Exception as e:
-        log.error(f"🚨 [UNEXPECTED FATAL ERROR] {type(e).__name__}: {e}")
+        log.error(f"[UNEXPECTED FATAL ERROR] {type(e).__name__}: {e}")
         raise
     finally:
         log.info(f"--- Scenario: {scenario_name} finished ---\n")
 
 
 async def execute_scenarios(args: argparse.Namespace):
-    log.info("🚀 Fiber VCR Utility Interactive Demonstration")
+    log.info("Fiber VCR Utility Interactive Demonstration")
     from fiber.llm.model.profile import BaseLLMProfile
     
     primary_profile = BaseLLMProfile(
@@ -213,12 +209,12 @@ async def execute_scenarios(args: argparse.Namespace):
 
     log.info("\n================================================================================")
     if args.vcr == "record":
-        log.info("✅ [RECORD COMPLETE] Network I/O has been frozen into fixtures.")
-        log.info(f"👉 Next Step: python -m dev.ex.recorder -m {args.model} --vcr replay --vcr-speed real")
+        log.info("[RECORD COMPLETE] Network I/O has been frozen into fixtures.")
+        log.info(f"  Next Step: python -m dev.ex.agent.recorder -m {args.model} --vcr replay --vcr-speed real")
     elif args.vcr == "replay":
-        log.info("✅ [REPLAY COMPLETE] Time-travel API mocking successful.")
+        log.info("[REPLAY COMPLETE] Time-travel API mocking successful.")
     else:
-        log.info("✅ [LIVE COMPLETE] Normal API execution without VCR.")
+        log.info("[LIVE COMPLETE] Normal API execution without VCR.")
     log.info("================================================================================\n")
 
 def main(args: list[str] = None):
@@ -231,7 +227,6 @@ def main(args: list[str] = None):
     
     parsed_args, _ = parser.parse_known_args(args)
     os.environ["VCR_MODE"] = parsed_args.vcr
-    
     os.makedirs(FIXTURE_ROOT, exist_ok=True)
     init_vcr_environment(
         mode=parsed_args.vcr, 
@@ -239,7 +234,6 @@ def main(args: list[str] = None):
         chaos_ms=parsed_args.vcr_chaos,
         tick_ms=parsed_args.vcr_tick
     )
-    
     asyncio.run(execute_scenarios(parsed_args))
 
 if __name__ == "__main__":

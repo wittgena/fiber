@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.response import ModelResponse, EmbeddingResponse
-from fiber.llm.router.stream.wrapper import StreamWrapper
+from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.phase.contract.router import ContractRouter
 
 from xphi.arch.model.dphi.auth import DphiKey, DphiAction, KernelAuthPayload

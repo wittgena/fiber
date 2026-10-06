@@ -14,7 +14,6 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("llm.entry")
 
 def _run_sync(coro: Any) -> Any:
-    """이벤트 루프 안전 처리를 위한 동기화 래퍼 헬퍼 (DRY)"""
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -31,10 +30,6 @@ def _run_sync(coro: Any) -> Any:
         return asyncio.run(coro)
 
 def _route_interceptors(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    [Facade] OpenAI 호환 kwargs에서 커스텀 플러그인(interceptors)을 가로채어,
-    파이프라인 슬롯(pipeline_hooks)으로 자동 라우팅합니다.
-    """
     interceptors = kwargs.pop("interceptors", [])
     legacy_tracers = kwargs.pop("llm_tracers", [])
     if legacy_tracers:
@@ -72,19 +67,14 @@ async def acompletion(model: str, messages: List = None, **kwargs) -> Any:
     """비동기 LLM 호출 진입점"""
     messages = messages or []
     kwargs = _route_interceptors(kwargs)
-    
-    # ✨ 호출 전, 보안 및 예산 식별자(Auth Payload) 자동 셋업
     kwargs = _ensure_kernel_auth(kwargs)
-    
     return await PipelineBootstrap.execute_completion(model, messages, **kwargs)
 
 def completion(model: str, messages: List = None, **kwargs) -> Any:
-    """동기 LLM 호출 진입점"""
     messages = messages or []
     return _run_sync(acompletion(model, messages, **kwargs))
 
 async def aembedding(*args, **kwargs) -> EmbeddingResponse:
-    """비동기 임베딩 호출 진입점"""
     model = args[0] if len(args) > 0 else kwargs.get("model")
     input_data = kwargs.get("input", [])
     
@@ -96,5 +86,4 @@ async def aembedding(*args, **kwargs) -> EmbeddingResponse:
     return await PipelineBootstrap.execute_embedding(model=model, input_data=input_data, **kwargs)
 
 def embedding(*args, **kwargs) -> EmbeddingResponse:
-    """동기 임베딩 호출 진입점"""
     return _run_sync(aembedding(*args, **kwargs))

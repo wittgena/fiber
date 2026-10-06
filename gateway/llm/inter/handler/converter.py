@@ -1,4 +1,5 @@
-# fiber.gateway.llm.handler.converter
+# fiber.gateway.llm.inter.handler.converter
+## @lineage: fiber.gateway.llm.handler.converter
 import base64
 import json
 import os
@@ -17,7 +18,7 @@ from fiber.llm.types.inter.response import (
     CompletionResponseGen
 )
 from fiber.llm.types.inter.component import ImageNode
-from fiber.llm.router.manager import CallbackManager
+from fiber.gateway.llm.inter.callback.manager import CallbackManager
 
 def parse_partial_json(s: str) -> Dict:
     try:

@@ -20,7 +20,7 @@ from typing import (
     Callable,
     Literal,
 )
-from fiber.gateway.llm.handler.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
+from fiber.gateway.llm.inter.handler.converter import chat_to_completion_decorator, achat_to_completion_decorator, stream_chat_to_completion_decorator, astream_chat_to_completion_decorator
 from fiber.llm.types.inter.block import MessageRole, ToolCallBlock
 from fiber.llm.types.inter.response import (
     ChatMessage,
@@ -34,13 +34,13 @@ from fiber.llm.types.inter.response import (
 )
 from xphi.arch.contract.config import env
 from fiber.gateway.llm.state.pydantic import BaseModel, Field, PrivateAttr
-from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
+from fiber.gateway.llm.inter.callback.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE, DEFAULT_NUM_OUTPUTS
 from fiber.gateway.llm.inter.base import InterLLM
-from fiber.llm.router.util import ToolSelection
+from fiber.gateway.llm.inter.handler.util import ToolSelection
 from fiber.llm.types.inter.base import Model
-from fiber.gateway.llm.handler.template import PromptTemplate
-from fiber.gateway.llm.handler.gemini import (
+from fiber.gateway.llm.inter.handler.template import PromptTemplate
+from fiber.gateway.llm.inter.handler.gemini import (
     chat_from_gemini_response,
     chat_message_to_gemini,
     convert_schema_to_function_declaration,

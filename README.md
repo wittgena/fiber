@@ -144,40 +144,19 @@ For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishi
 By declaring explicit aliases at the boot sequence, Fiber intercepts legacy imports and routes traffic directly to its VCR engine. This enables deterministic playback and time-window stream coalescing without altering your business logic. Fiber also maintains duck-typing parity, returning exact mock objects to satisfy strict legacy type checks.
 
 ```python
-import os
-import sys
 import asyncio
 
-"""Boot Sequence: Establishing the Isolation Layer"""
-VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
+# Transparently route legacy SDK imports to Fiber's gateway before business logic runs
+from fiber.dev.ex.bridge import vcr_setup_sequence, inspect_fixture
+VCR_MODE, RESOLVED_FIXTURE_DIR = vcr_setup_sequence()
 
-if VCR_MODE in ("record", "replay"):
-    from fiber.phase.cli.sandbox import create_security_sandbox
-    from fiber.dev.ex.space.bind.redirector import PhaseAirlock
-    import fiber.llm.entry as llm_entry
-    import fiber.llm.response as llm_response
-    
-    # Enforce strict PEP-578 security boundaries
-    create_security_sandbox(vcr_mode=VCR_MODE)
-    
-    # Transparently route legacy SDK imports to Fiber's gateway
-    PhaseAirlock.alias({
-        "litellm": llm_entry.__name__,
-        "litellm.types.utils": llm_response.__name__
-    })
-    
-    # Mount the VCR engine for deterministic testing and traffic coalescing
-    from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-    from fiber.dev.trace.llm.vcr.proxy import VCRInjector
-    
-    config = VCRPlaybackConfig(mode=VCR_MODE, speed="real", record_tick_ms=100.0)
-    VCRInjector.apply(config=config, fixture_dir="./fixtures")
-
-"""Legacy Business Logic (Unmodified Boundary)"""
+"""[Legacy Business Logic] Unmodified Boundary"""
 import litellm 
 from litellm.types.utils import ModelResponseStream
 
 async def main():
+    scenario_name = "tech_debt_migration"
+    
     # Fiber processes this standard call. The `metadata` acts as a bridge, 
     # guiding the underlying engine to manage deterministic fixture routing.
     response = await litellm.acompletion(
@@ -185,7 +164,7 @@ async def main():
         messages=[{"role": "user", "content": "Explain migration strategies."}],
         stream=True,
         metadata={
-            "vcr_scenario": "tech_debt_migration",
+            "vcr_scenario": scenario_name,
             "vcr_invoker": "legacy_app"
         }
     )
@@ -197,6 +176,10 @@ async def main():
         # Standard legacy parsing remains flawless
         if hasattr(chunk, "choices") and chunk.choices:
             print(chunk.choices[0].delta.content or "", end="", flush=True)
+
+    # Validate generated fixture offline
+    if VCR_MODE == "record":
+        inspect_fixture(scenario_name, RESOLVED_FIXTURE_DIR)
 
 if __name__ == "__main__":
     asyncio.run(main())
