@@ -1,4 +1,6 @@
-# fiber.llm.router.embedding.jobs
+# fiber.gateway.llm.inter.embedding.jobs
+## @lineage: fiber.gateway.llm.embedding.jobs
+## @lineage: fiber.llm.router.embedding.jobs
 import asyncio
 import base64
 import concurrent.futures

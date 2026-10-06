@@ -1,4 +1,5 @@
-# fiber.llm.router.stream.wrapper
+# fiber.gateway.llm.stream.wrapper
+## @lineage: fiber.llm.router.stream.wrapper
 import asyncio
 import collections.abc
 import time
@@ -14,7 +15,7 @@ from xphi.arch.bound.event.next import uuid
 from fiber.llm.exception.mapping import exception_type
 from fiber.llm.exception.eco import OpenAIError, APIResponseValidationError, MidStreamFallbackError
 from fiber.llm.response import ModelResponseStream
-from fiber.llm.router.stream.parser.chunk import StreamChunkParser, ParsedChunk
+from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser, ParsedChunk
 from fiber.llm.types.provider.core import (
     Choices, Delta, Message, ModelResponse, Usage, Function,
     ChatCompletionMessageToolCall

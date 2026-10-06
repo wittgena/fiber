@@ -49,7 +49,7 @@ from fiber.gateway.llm.state.pydantic import (
     model_serializer,
 )
 from fiber.gateway.llm.state.pydantic import CoreSchema
-from fiber.llm.router.util import truncate_text
+from fiber.gateway.llm.inter.handler.util import truncate_text
 
 if TYPE_CHECKING:
     from haystack.schema import Document as HaystackDocument
@@ -661,7 +661,7 @@ class IndexNode(TextNode):
     obj: Any = None
 
     def _serialize_obj(self) -> Any:
-        from fiber.llm.router.storage.docstore.utils import doc_to_json
+        from fiber.llm.model.router.storage.docstore.utils import doc_to_json
         try:
             if self.obj is None:
                 return None
@@ -698,7 +698,7 @@ class IndexNode(TextNode):
         if isinstance(obj, str):
             parsed_obj = TextNode(text=obj)
         elif isinstance(obj, dict):
-            from fiber.llm.router.storage.docstore.utils import json_to_doc
+            from fiber.llm.model.router.storage.docstore.utils import json_to_doc
             try:
                 parsed_obj = json_to_doc(obj)
             except Exception:

@@ -1,16 +1,14 @@
-# fiber.llm.model.registry.embedding
-## @lineage: fiber.llm.router.registry.embedding
+# fiber.llm.model.router.embedding
 import importlib
 from typing import Any
 
-import fiber.llm.router.embedding as embedding_pkg
+import fiber.gateway.llm.inter.embedding as embedding_pkg
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("registry.embedding")
 
-_EMBED_PKG_NAME = embedding_pkg.__name__  ## @ex: "anchor.inter.embeddings"
+_EMBED_PKG_NAME = embedding_pkg.__name__
 
-## @state: Core topological boundaries (Batteries-included)
 DEFAULT_EMBED_REGISTRY = {
     "openai": {
         "module": f"{_EMBED_PKG_NAME}.openai", 

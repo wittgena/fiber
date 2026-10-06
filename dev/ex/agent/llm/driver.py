@@ -14,7 +14,7 @@ from fiber.llm.model.usage import MetricsSnapshot, TokenUsage
 from fiber.llm.exception.mapping import map_provider_exception
 from fiber.llm.exception.types import LLMNoResponseError
 from fiber.llm.entry import acompletion
-from fiber.llm.router.stream.wrapper import StreamWrapper
+from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.llm.response import (
     ModelResponseStream, 
     ModelResponse, 

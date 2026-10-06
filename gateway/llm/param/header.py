@@ -1,5 +1,5 @@
-# fiber.llm.router.param.header
-## @lineage: fiber.llm.router.llm.param.header
+# fiber.gateway.llm.param.header
+## @lineage: fiber.llm.router.param.header
 import httpx
 from typing import Optional, Union
 from fiber.llm.types.provider.general import OPENAI_RESPONSE_HEADERS

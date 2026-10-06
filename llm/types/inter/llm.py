@@ -2,7 +2,7 @@
 from abc import abstractmethod
 from typing import Any, List, Optional, Sequence
 from fiber.gateway.llm.state.pydantic import ConfigDict, Field, model_validator
-from fiber.llm.router.manager import CallbackManager
+from fiber.gateway.llm.inter.callback.manager import CallbackManager
 
 from fiber.llm.types.inter.block import TextBlock
 from fiber.llm.types.inter.response import (

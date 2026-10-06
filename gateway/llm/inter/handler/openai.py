@@ -1,4 +1,5 @@
-# fiber.gateway.llm.handler.openai
+# fiber.gateway.llm.inter.handler.openai
+## @lineage: fiber.gateway.llm.handler.openai
 ## @lineage: fiber.llm.router.handle.openai
 import json
 import logging
@@ -20,7 +21,7 @@ from tenacity.stop import stop_base
 from tenacity.wait import wait_base
 
 import openai
-from fiber.gateway.llm.handler.converter import get_from_param_or_env
+from fiber.gateway.llm.inter.handler.converter import get_from_param_or_env
 from fiber.llm.types.inter.block import (
     AudioBlock,
     ContentBlock,

@@ -4,21 +4,21 @@ import logging
 from importlib.metadata import version as get_version
 from typing import TYPE_CHECKING, Any, Type, AsyncGenerator, Callable, Dict, Generator, List, Optional, Sequence, Set, Tuple, Union, cast
 
-from fiber.llm.router.util import parse_partial_json
+from fiber.gateway.llm.inter.handler.util import parse_partial_json
 from fiber.llm.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, CompletionResponse, LLMMetadata
 from fiber.llm.types.inter.block import MessageRole, ContentBlock, ToolCallBlock
 from fiber.llm.types.inter.block import TextBlock as LITextBlock
 from fiber.llm.types.inter.block import CitationBlock as LICitationBlock
 from fiber.llm.types.inter.block import ThinkingBlock as LIThinkingBlock
 from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
-from fiber.llm.router.manager import CallbackManager, llm_chat_callback, llm_completion_callback
-from fiber.llm.router.util import ToolSelection
+from fiber.gateway.llm.inter.callback.manager import CallbackManager, llm_chat_callback, llm_completion_callback
+from fiber.gateway.llm.inter.handler.util import ToolSelection
 from fiber.llm.model.token.encoder import Tokenizer
 
 from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
 from fiber.gateway.llm.inter.base import InterLLM
-from fiber.gateway.llm.handler.template import PromptTemplate
-from fiber.gateway.llm.handler.anthropic import (
+from fiber.gateway.llm.inter.handler.template import PromptTemplate
+from fiber.gateway.llm.inter.handler.anthropic import (
     ANTHROPIC_NO_TEMP_MODELS,
     anthropic_modelname_to_contextsize,
     force_single_tool_call,

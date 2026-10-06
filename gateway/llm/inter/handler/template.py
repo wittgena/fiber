@@ -1,4 +1,5 @@
-# fiber.gateway.llm.handler.template
+# fiber.gateway.llm.inter.handler.template
+## @lineage: fiber.gateway.llm.handler.template
 ## @lineage: fiber.llm.router.handle.template
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -27,7 +28,7 @@ from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
 from fiber.llm.types.inter.llm import LLMBase
 from fiber.llm.types.inter.base import BaseOutputParser
-from fiber.llm.router.util import get_template_vars, format_string
+from fiber.gateway.llm.inter.handler.util import get_template_vars, format_string
 from fiber.gateway.llm.state.pydantic import BaseModel, ConfigDict
 
 def default_messages_to_prompt(messages: Sequence[ChatMessage]) -> str:

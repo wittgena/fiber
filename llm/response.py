@@ -1,5 +1,4 @@
 # fiber.llm.response
-## @lineage: fiber.llm.reponse
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
 from fiber.llm.types.provider.core import (
     ChatCompletionToolParam,

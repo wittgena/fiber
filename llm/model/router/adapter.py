@@ -1,4 +1,4 @@
-# fiber.llm.model.registry.adapter
+# fiber.llm.model.router.adapter
 import json
 import asyncio
 import functools
@@ -8,13 +8,13 @@ from typing import Dict, AsyncGenerator, Generator, Any, List, Union
 
 from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import CompletionContext, EmbeddingContext
-from fiber.llm.model.registry.llm import LLMRouter, ModuleMissingError
-from fiber.llm.model.registry.embedding import EmbeddingRouter
+from fiber.llm.model.router.llm import LLMRouter, ModuleMissingError
+from fiber.llm.model.router.embedding import EmbeddingRouter
 from fiber.llm.model.provider.resolver import get_llm_provider
 
 from fiber.llm.exception.mapping import exception_type
 from fiber.gateway.llm.state.traverser import StateMapper, StateTraverser
-from fiber.llm.router.stream.parser.chunk import StreamChunkParser
+from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 from fiber.llm.compat.param import PROVIDER_PARAM_RULES
 
 from xphi.arch.bound.client.http import get_client
@@ -295,7 +295,6 @@ class InterEmbeddingAdapter(BaseProviderAdapter):
             }
 
 class AdapterRegistry:
-    """@state: Multi-dimensional topological boundaries"""
     _adapters: Dict[str, Dict[str, BaseProviderAdapter]] = {
         "llm": {},
         "embedding": {}
@@ -305,12 +304,10 @@ class AdapterRegistry:
 
     @classmethod
     def setup_defaults(cls):
-        ## @phase: Initialize primary kernels (Lazy Load Boundary)
         if cls._is_initialized:
             return
 
         registry_log.debug("[Registry] 시스템 코어 다중 위상(Multi-topology) 레지스트리 초기화 시작")
-        
         llm_generic = GenericHTTPAdapter()
         llm_inter = InterLLMAdapter()
         cls._fallback_adapters["llm"] = llm_generic
@@ -323,7 +320,7 @@ class AdapterRegistry:
 
         embed_inter = InterEmbeddingAdapter()
         cls._fallback_adapters["embedding"] = embed_inter 
-        for provider in ["openai", "azure", "cohere", "inter"]:
+        for provider in ["ollama", "inter"]:
             cls._adapters["embedding"][provider] = embed_inter
 
         cls._is_initialized = True

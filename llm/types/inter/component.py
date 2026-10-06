@@ -45,7 +45,7 @@ from fiber.gateway.llm.state.pydantic import (
     model_serializer,
     CoreSchema,
 )
-from fiber.llm.router.util import truncate_text
+from fiber.gateway.llm.inter.handler.util import truncate_text
 
 if TYPE_CHECKING:
     from fiber.llm.types.inter.block import BaseBlock

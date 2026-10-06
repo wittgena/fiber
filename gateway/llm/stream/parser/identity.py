@@ -1,4 +1,5 @@
-# fiber.llm.router.stream.parser.identity
+# fiber.gateway.llm.stream.parser.identity
+## @lineage: fiber.llm.router.stream.parser.identity
 ## @lineage: fiber.llm.stream.parser.identity
 ## @lineage: llm.stream.parser.identity
 ## @lineage: agent.llm.stream.parser.identity

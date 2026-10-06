@@ -9,7 +9,7 @@ from fiber.llm.model.provider.resolver import get_llm_provider
 import fiber.llm.entry as llm_entry 
 
 from fiber.gateway.llm.state.traverser import StateMapper
-from fiber.llm.router.stream.parser.chunk import StreamChunkParser
+from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
 from fiber.dev.trace.llm.vcr.proxy import VCRInjector
 
