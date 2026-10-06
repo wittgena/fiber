@@ -42,20 +42,21 @@ class StateTraverser:
                     found = False
                     break
                 
-                # 1. Dictionary 탐색
+                # Dictionary 탐색
                 if isinstance(current, dict):
                     current = current.get(k)
-                # 2. List/Tuple 탐색
+
+                # List/Tuple 탐색
                 elif isinstance(current, (list, tuple)):
                     try:
                         current = current[int(k)]
                     except (IndexError, ValueError):
                         found = False
                         break
-                # 3. Pydantic V2 및 일반 Object 탐색
+                
+                # Pydantic V2 및 일반 Object 탐색
                 else:
                     if hasattr(current, "model_dump") and callable(getattr(current, "model_dump")):
-                        # Pydantic v2 객체일 경우 dict로 덤프 후 탐색 시도 (안전성 강화)
                         try:
                             current = current.model_dump(exclude_unset=True).get(k)
                             continue
@@ -64,7 +65,7 @@ class StateTraverser:
                     current = getattr(current, k, None)
             
             if found and current is not None:
-                return current  # 매칭되는 첫 번째 유효 경로 반환
+                return current
         return default
 
 class StreamChunkParser:
@@ -93,7 +94,6 @@ class StreamChunkParser:
             except json.JSONDecodeError:
                 pass
                 
-            # JSON이 아닌 순수 문자열일 경우 그대로 반환
             return chunk
             
         return chunk
@@ -194,12 +194,10 @@ class StreamChunkParser:
                 "completion_tokens": StateTraverser.resolve(obj, usage_rule.get("completion_tokens"))
             }
             
-        # 단일 String 룰인 경우
         return StateTraverser.resolve(obj, usage_rule, None)
 
     @staticmethod
     def _empty_parsed_chunk(is_finished: bool = False, finish_reason: Optional[str] = None) -> ParsedChunk:
-        """기본값이 채워진 빈 ParsedChunk를 반환"""
         return ParsedChunk(
             id=None, text="", is_finished=is_finished, finish_reason=finish_reason,
             usage=None, logprobs=None, tool_calls=None,

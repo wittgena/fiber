@@ -18,8 +18,26 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("cli.compat")
 
 STANDARD_PROMPTS = [
-    {"scenario": "Standard Stream Payload", "stream": True, "messages": [{"role": "user", "content": "Print numbers from 1 to 5, separated by commas. Output only the numbers."}]},
-    {"scenario": "Standard Sync Payload", "stream": False, "messages": [{"role": "user", "content": "What is the capital of France? Reply in one word."}]}
+    {
+        "scenario": "Stream Compat Traverser", 
+        "stream": True, 
+        "messages": [
+            {
+                "role": "user", 
+                "content": "Briefly explain the role of a 'State Traverser' in an LLM gateway using one short sentence. Then, provide a minimal JSON example of a declarative extraction rule that maps the path 'choices.0.delta.content'."
+            }
+        ]
+    },
+    {
+        "scenario": "Sync Declarative Rule", 
+        "stream": False, 
+        "messages": [
+            {
+                "role": "user", 
+                "content": "In one concise sentence, what is the primary architectural benefit of using external declarative JSON rulesets instead of hardcoding Python parsing logic for new LLM providers?"
+            }
+        ]
+    }
 ]
 
 def _resolve_target_dir(model: str, target_dir: Optional[str]) -> tuple[str, str, str]:
@@ -64,13 +82,14 @@ async def _execute_suite(model: str, final_api_key: str, invoker_mode: str, prov
         
         try:
             kwargs = {"stream_options": {"include_usage": True}} if is_stream else {}
+            if final_api_key:
+                kwargs["api_key"] = final_api_key
 
             start_time = time.perf_counter()
             response = await llm_entry.acompletion(
                 model=model,
                 messages=test["messages"],
                 stream=is_stream,
-                api_key=final_api_key,
                 metadata={
                     "vcr_scenario": scenario_id,
                     "vcr_invoker": f"cli.compat.{invoker_mode}",
@@ -118,6 +137,7 @@ async def _execute_suite(model: str, final_api_key: str, invoker_mode: str, prov
             duration = (time.perf_counter() - start_time) * 1000
             print("\n\n" + "-" * 40)
             print("[VALIDATION PHASE]")
+            print(f"full_content = {full_content}")
             if not full_content.strip():
                 raise ValueError(f"Parsed content is empty! Missing or invalid extraction rule for provider: '{provider}'")
 
@@ -148,8 +168,15 @@ async def run_gen_fixture(
     except Exception as e:
         log.error(f"[Compat: GEN-FIXTURE] Invalid model identifier: {e}")
         sys.exit(1)
-        
-    final_api_key = api_key or dynamic_api_key or "sk-mock-local-key"
+    
+    LOCAL_PROVIDERS = ["lm_studio", "llama_server", "ollama", "vllm"]
+    if api_key or dynamic_api_key:
+        final_api_key = api_key or dynamic_api_key
+    elif resolved_provider in LOCAL_PROVIDERS:
+        final_api_key = "sk-mock-local-key"
+    else:
+        final_api_key = None
+
     os.makedirs(target_dir, exist_ok=True)
     _init_vcr(mode="record", target_dir=target_dir, include_raw=True)
     success_count = await _execute_suite(model, final_api_key, "gen_fixture", resolved_provider)

@@ -50,6 +50,17 @@ STATE_EXTRACTION_RULES = {
         "sync_content_paths": ["message.content", "response", "choices.0.message.content"],
         "sync_usage_paths": ["prompt_eval_count", "usage"]
     },
+    "cohere": {
+        "sync_content_paths": ["text", "raw.text"],
+        "sync_usage_paths": [
+            {
+                "prompt_tokens": ["raw.meta.billed_units.input_tokens", "raw.meta.tokens.input_tokens"],
+                "completion_tokens": ["raw.meta.billed_units.output_tokens", "raw.meta.tokens.output_tokens"],
+                "total_tokens": ["raw.meta.tokens.input_tokens"]
+            },
+            "raw.meta.billed_units"
+        ]
+    },
     "defaults": {
         "role": "assistant",
         "finish_stop": "stop",
@@ -57,7 +68,9 @@ STATE_EXTRACTION_RULES = {
         "stream_content_paths": [
             "delta",                     # Default
             "choices.0.delta.content",   # OpenAI/LiteLLM
-            "content.parts.0.text"       # Gemini Native JSON
+            "content.parts.0.text",      # Gemini Native JSON
+            "text",
+            "raw.text"
         ],
         "sync_content_paths": [
             "choices.0.message.content", # Default
@@ -76,6 +89,10 @@ ENDPOINT_ROUTING_RULES = {
         "native_suffix": "/api/chat",
         "openai_suffix": "/chat/completions",
         "v1_indicator": "/v1"
+    },
+    "cohere": {
+        "native_suffix": "/v1/chat",
+        "openai_suffix": "/v1/chat/completions"
     },
     "defaults": {
         "openai_suffix": "/chat/completions"

@@ -159,12 +159,23 @@ class StateMapper:
         
         if clean_base.endswith("/api/chat") or clean_base.endswith("/chat/completions"):
             return clean_base
-            
-        if provider == "ollama":
-            rules = ENDPOINT_ROUTING_RULES["ollama"]
-            if clean_base.endswith(rules["v1_indicator"]):
-                return f"{clean_base}{rules['openai_suffix']}"
-            return f"{clean_base}{rules['v1_indicator']}{rules['openai_suffix']}"
+        
+        rules = ENDPOINT_ROUTING_RULES.get(provider)
+        if rules:
+            if provider == "ollama":
+                if clean_base.endswith(rules["v1_indicator"]):
+                    return f"{clean_base}{rules['openai_suffix']}"
+                return f"{clean_base}{rules['v1_indicator']}{rules['openai_suffix']}"
+            elif provider == "cohere":
+                if clean_base.endswith("/v1"):
+                    return f"{clean_base}/chat"
+                return f"{clean_base}{rules['native_suffix']}"
+
+        # if provider == "ollama":
+        #     rules = ENDPOINT_ROUTING_RULES["ollama"]
+        #     if clean_base.endswith(rules["v1_indicator"]):
+        #         return f"{clean_base}{rules['openai_suffix']}"
+        #     return f"{clean_base}{rules['v1_indicator']}{rules['openai_suffix']}"
             
         default_suffix = ENDPOINT_ROUTING_RULES["defaults"]["openai_suffix"]
         return f"{clean_base}{default_suffix}"

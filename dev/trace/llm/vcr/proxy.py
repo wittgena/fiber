@@ -3,6 +3,7 @@ import asyncio
 import time
 import copy
 import re
+import json
 from typing import Optional, Any, AsyncGenerator, List
 
 from fiber.llm.response import ModelResponse
@@ -19,6 +20,20 @@ from xphi.arch.bound.event.next import next_trace_id
 from xphi.arch.model.surge.model import DynamicSurgeModel, _melt_alien_objects
 from xphi.watcher.plane.emitter import get_emitter
 
+def _sanitize_for_json(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {str(k): _sanitize_for_json(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
+        return [_sanitize_for_json(v) for v in obj]
+    elif isinstance(obj, bytes):
+        try:
+            return obj.decode("utf-8")
+        except Exception:
+            return str(obj)
+    elif isinstance(obj, (int, float, str, bool, type(None))):
+        return obj
+    else:
+        return str(obj)
 class VCRRawPayloadState(DynamicSurgeModel):
     sync_response: Optional[Any] = None
     stream_chunks: List[Any] = []
@@ -157,7 +172,7 @@ async def stream_recorder_proxy(
                 fixture_data["raw_payload"] = payload_state.model_dump(exclude_unset=True)
             except Exception:
                 pass
-        manager.save_fixture(trace_id, fixture_data, ctx)
+        manager.save_fixture(trace_id, _sanitize_for_json(fixture_data), ctx)
 
 
 async def stream_player_emulator(
@@ -281,10 +296,25 @@ class VCRAdapterProxy:
                     if getattr(self.config, "include_raw_payload", False):
                         try:
                             raw_data = getattr(response, "raw", response)
-                            payload_state = VCRRawPayloadState(sync_response=raw_data)
+                            if isinstance(raw_data, bytes):
+                                try:
+                                    raw_data = json.loads(raw_data.decode("utf-8"))
+                                except Exception:
+                                    raw_data = raw_data.decode("utf-8", errors="ignore")
+                                    
+                            safe_raw_data = _melt_alien_objects(raw_data)
+                            payload_state = VCRRawPayloadState(sync_response=safe_raw_data)
                             fixture_data["raw_payload"] = payload_state.model_dump(exclude_unset=True)
                         except Exception:
                             pass
+
+                    # if getattr(self.config, "include_raw_payload", False):
+                    #     try:
+                    #         raw_data = getattr(response, "raw", response)
+                    #         payload_state = VCRRawPayloadState(sync_response=raw_data)
+                    #         fixture_data["raw_payload"] = payload_state.model_dump(exclude_unset=True)
+                    #     except Exception:
+                    #         pass
                     
                     if usage_dict:
                         fixture_data["usage"] = usage_dict
@@ -296,7 +326,7 @@ class VCRAdapterProxy:
                     fixture_data["network_metrics"]["ttfb_ms"] = duration
                     fixture_data["network_metrics"]["total_duration_ms"] = duration
                     fixture_data["response_timeline"].append({"delta_ms": 0, "chunk": content})
-                    self.manager.save_fixture(trace_id, fixture_data, safe_ctx)
+                    self.manager.save_fixture(trace_id, _sanitize_for_json(fixture_data), safe_ctx)
                     
                     if system_meta and hasattr(system_meta, "metadata"):
                         system_meta.metadata["_vcr_injected_latency_ms"] = duration
@@ -310,7 +340,7 @@ class VCRAdapterProxy:
                     "error_type": type(e).__name__,
                     "message": str(e)
                 }
-                self.manager.save_fixture(trace_id, fixture_data, safe_ctx)
+                self.manager.save_fixture(trace_id, _sanitize_for_json(fixture_data), safe_ctx)
             raise
 
 class VCRInjector:
