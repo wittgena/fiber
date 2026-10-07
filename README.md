@@ -11,7 +11,7 @@ Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (conn
 
 ---
 
-## 1. LLM VCR & Pipeline
+## 1. LLM Pipeline & Fixture Testing
 
 ### 1.1. The Drop-In LLM Pipeline
 
@@ -44,25 +44,33 @@ class DatadogTracer(BaseLLMTracer):
             hooks.append(on_stream_complete)
             return
 
-        # Singular Mode: Instant physical I/O completion
         datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}", "type:singular"])
 
-# PRE_TRANSLATE: Intercept raw dict payload for instant Semantic Caching
-class SemanticCache(DuplexChannel):
+# PRE_TRANSLATE: Edge Caching for Instant Short-circuit
+class EdgeRedisCache(DuplexChannel):
     target_slot = PipelineSlot.PRE_TRANSLATE
     async def write(self, ctx, msg: dict):
-        if "USE_CACHE" in str(msg):
-            return await ctx.fire_channel_read(mock_response) # Short-circuit physical I/O
+        # note: Replace this exact-match hash with an Embedding to upgrade to a VectorDB Semantic Cache.
+        prompt_hash = hashlib.sha256(str(msg.get("messages", [])).encode()).hexdigest()
+        if cached_response := await redis_client.get(prompt_hash):
+            return await ctx.fire_channel_read(cached_response)
+            
         await ctx.fire_write(msg)
 
-# POST_TRANSLATE: Enforce Security Policies on strict Pydantic objects
-class PIIGuardrail(DuplexChannel):
+# POST_TRANSLATE: Strict Blocking for Standard Secrets - API Keys, Tokens
+class ActiveBlockingGuardrail(DuplexChannel):
     target_slot = PipelineSlot.POST_TRANSLATE
     async def write(self, ctx, processed_msg):
-        if "SECRET-SSN" in str(getattr(processed_msg, "original_kwargs", {})):
-            raise PermissionError("Guardrail Block: PII detected.") # Active pipeline break
+        messages = getattr(processed_msg, "original_kwargs", {}).get("messages", [])
+        for msg in messages:
+            content = msg.get("content", "")
+            # redact_string checks against built-in credential regex patterns
+            if isinstance(content, str) and redact_string(content) != content:
+                raise PermissionError("Guardrail Block: Sensitive credential detected.") # Active pipeline break
         await ctx.fire_write(processed_msg)
 ```
+
+**Out-of-the-box Guardrails**: The snippet above is a conceptual example. Fiber includes three production-grade samples in `fiber.dev.trace.llm.guardrail`—Active Secret Blocking, Deep Payload Sanitization (Mutation), and Custom C-Level Regex Injection—ready for enterprise deployment.
 
 **2. Execute via Drop-in Facade:**
 
@@ -70,11 +78,11 @@ class PIIGuardrail(DuplexChannel):
 from fiber.llm.entry import acompletion
 
 # The framework autonomously restructures the flat list into the strict pipeline:
-# [Cache] ➔ [Translator] ➔ [PII Guardrail] ➔ [Tracer] ➔ [Network I/O]
+# [Cache] ➔ [Translator] ➔ [Active Guardrail] ➔ [Tracer] ➔ [Network I/O]
 response = await acompletion(
-    model="gemini/gemini-3.1-flash-lite", # ex: ollama/gemma:2b, llama_server/gemma-3-1b-it-Q4_K_M.gguf
+    model="lm_studio/qwen-3.5-9b", # ex: cerebras/qwen-3.8-27b, gemini/gemini-3.1-flash-lite, ollama/gemma:2b, llama_server/gemma-3-1b-it-Q4_K_M.gguf
     messages=[{"role": "user", "content": "Analyze this data."}],
-    interceptors=[DatadogTracer(), PIIGuardrail(), SemanticCache()],
+    interceptors=[DatadogTracer(), ActiveBlockingGuardrail(), SemanticCache()],
     metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
 )
 ```
@@ -86,21 +94,21 @@ response = await acompletion(
 
 ---
 
-### 1.2. LLM VCR
+### 1.2. Fixture Testing (LLM Record/Replay)
 
-The VCR utility serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables deterministic offline testing and precise historical latency emulation without altering business logic.
+The Offline Fixture Engine serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables zero-cost, deterministic offline testing and precise historical latency emulation without altering business logic.
 
-Fiber provides two approaches for VCR integration:
+Fiber provides two approaches for injecting the local fixture engine:
 
 **Native Integration**
 
-If using Fiber's SDK, the VCR can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee idempotent replay matching.
+If using Fiber's SDK, this fixture engine (implemented as the VCR module) can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee idempotent replay matching.
 
 ```python
 import os, asyncio
 from fiber.llm.entry import acompletion
 
-# Decoupled VCR architecture: Storage & Interceptor
+# Decoupled Fixture architecture: Storage & Interceptor
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
 from fiber.dev.trace.llm.vcr.proxy import VCRInjector
 from xphi.arch.bound.event.next import next_trace_id
@@ -120,7 +128,8 @@ async def main():
 
     # Execute with explicit context tunneling
     response = await acompletion(
-        model="gemini/gemini-3.1-flash-lite",
+        # switch models: VCR works universally across all providers
+        model="cerebras/qwen-3.8-27b", 
         messages=messages,
         stream=True,
         trace_id=trace_id,
@@ -141,7 +150,7 @@ if __name__ == "__main__":
 
 For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishing offline tests often requires complex refactoring. Fiber solves this through transparent runtime routing.
 
-By declaring explicit aliases at the boot sequence, Fiber intercepts legacy imports and routes traffic directly to its VCR engine. This enables deterministic playback and time-window stream coalescing without altering your business logic. Fiber also maintains duck-typing parity, returning exact mock objects to satisfy strict legacy type checks.
+By declaring explicit aliases at the boot sequence, Fiber intercepts legacy imports and routes traffic directly to its offline fixture engine (VCR). This enables deterministic playback and time-window stream coalescing without altering your business logic. Fiber also maintains duck-typing parity, returning exact mock objects to satisfy strict legacy type checks.
 
 ```python
 import asyncio
@@ -160,7 +169,7 @@ async def main():
     # Fiber processes this standard call. The `metadata` acts as a bridge, 
     # guiding the underlying engine to manage deterministic fixture routing.
     response = await litellm.acompletion(
-        model="gemini/gemini-3.1-flash-lite",
+        model="cohere/command-r-08-2024", # Any model supported by the Traverser works here
         messages=[{"role": "user", "content": "Explain migration strategies."}],
         stream=True,
         metadata={
@@ -197,8 +206,8 @@ Executes live API calls to the target LLM. The engine autonomously coalesces mic
 python -m fiber.dev.ex.recorder --vcr record --vcr-tick 100.0
 ```
 
-* **Step 2: Replay (Offline Emulation & Chaos Injection)**
-Streams the cached response fully offline with zero network I/O. You can emulate exact historical latencies (`--vcr-speed real`), run at maximum velocity for CI/CD pipelines (`--vcr-speed max`), or inject artificial latency jitter (`--vcr-chaos`) to validate your application's timeout resilience.
+* **Step 2: Replay (Deterministic Playback & Chaos Injection)**
+Streams the recorded fixture fully offline with zero network I/O. You can emulate exact historical latencies (`--vcr-speed real`), run at maximum velocity for CI/CD pipelines (`--vcr-speed max`), or inject artificial latency jitter (`--vcr-chaos`) to validate your application's timeout resilience.
 
 ```bash
 # Replay in real-time with a 500ms artificial chaos jitter
