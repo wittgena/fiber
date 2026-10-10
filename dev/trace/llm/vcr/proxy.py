@@ -308,14 +308,6 @@ class VCRAdapterProxy:
                         except Exception:
                             pass
 
-                    # if getattr(self.config, "include_raw_payload", False):
-                    #     try:
-                    #         raw_data = getattr(response, "raw", response)
-                    #         payload_state = VCRRawPayloadState(sync_response=raw_data)
-                    #         fixture_data["raw_payload"] = payload_state.model_dump(exclude_unset=True)
-                    #     except Exception:
-                    #         pass
-                    
                     if usage_dict:
                         fixture_data["usage"] = usage_dict
                         if hasattr(response, "usage"):

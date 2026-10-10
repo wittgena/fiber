@@ -91,7 +91,7 @@ class EnterpriseDatadogTracer(BaseLLMTracer):
 **Purpose:** Intercepts the raw payload (`dict` phase) prior to heavy Pydantic serialization or network I/O. Resolves cache hits by short-circuiting the pipeline.
 
 ```python
-from fiber.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline import PipelineSlot
 from fiber.llm.response import ModelResponse
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 import uuid
@@ -127,7 +127,7 @@ class FastRedisCache(DuplexChannel):
 **Purpose:** Evaluates the immutable, validated Pydantic object against strict enterprise security policies prior to physical network egress.
 
 ```python
-from fiber.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 import re
 from typing import Any

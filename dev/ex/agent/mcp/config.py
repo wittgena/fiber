@@ -1,4 +1,5 @@
-# fiber.dev.ex.agent.config.mcp
+# fiber.dev.ex.agent.mcp.config
+## @lineage: fiber.dev.ex.agent.config.mcp
 from typing import Dict, List, Optional, Callable, Literal
 from pydantic import Field, model_validator
 from xphi.arch.model.surge.disc import SurgeBaseModel

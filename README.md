@@ -15,7 +15,7 @@ Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (conn
 
 ### 1.1. The Drop-In LLM Pipeline
 
-Fiber reimagines LLM routing by Python facade with a strict, netty style asynchronous pipeline under the hood. 
+Fiber reimagines LLM routing by Python facade with a strict, duplex asynchronous pipeline under the hood. 
 
 Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, this architecture achieves execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's State Traverser **[1.3]**.
 
@@ -25,7 +25,7 @@ Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, this arch
 
 ```python
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
-from fiber.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
 # PRE_OBSERVER: Asynchronous Telemetry with Stream-Aware Lifecycle
@@ -45,6 +45,36 @@ class DatadogTracer(BaseLLMTracer):
             return
 
         datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}", "type:singular"])
+
+# PRE_TRANSLATE: Active Payload Mutation (Dynamic Semantic Routing)
+class SemanticRouter(DuplexChannel):
+    target_slot = PipelineSlot.PRE_TRANSLATE
+    
+    def __init__(self, routing_rules: dict, default_model: str):
+        # Inject rules externally to decouple business logic from infrastructure
+        self.routing_rules = routing_rules
+        self.default_model = default_model
+
+    def _apply_routing(self, ctx, msg: dict, target_model: str):
+        """Syncs the physical payload with the logical pipeline metadata."""
+        msg["model"] = target_model
+        
+        # Must update system_meta so downstream tracers/observers track the correct model
+        meta = msg.get("system_meta") or ctx.get_attr("system_meta")
+        if meta:
+            meta.base_model = target_model
+
+    async def write(self, ctx, msg: dict):
+        # Evaluate intent (e.g., via lightweight ONNX CPU model) without blocking the event loop
+        intent = await asyncio.to_thread(self._predict_intent, msg.get("messages", []))
+        
+        # Actively mutate the payload and sync state based on semantic intent
+        if rule := self.routing_rules.get(intent):
+            self._apply_routing(ctx, msg, rule["target"])
+        else:
+            self._apply_routing(ctx, msg, msg.get("model", self.default_model))
+            
+        await ctx.fire_write(msg)
 
 # PRE_TRANSLATE: Edge Caching for Instant Short-circuit
 class EdgeRedisCache(DuplexChannel):
@@ -70,7 +100,7 @@ class ActiveBlockingGuardrail(DuplexChannel):
         await ctx.fire_write(processed_msg)
 ```
 
-**Out-of-the-box Guardrails**: The snippet above is a conceptual example. Fiber includes three production-grade samples in `fiber.dev.trace.llm.guardrail`—Active Secret Blocking, Deep Payload Sanitization (Mutation), and Custom C-Level Regex Injection—ready for enterprise deployment.
+**Out-of-the-box Guardrails**: The snippets above are conceptual examples. Fiber includes production-grade samples in `fiber.dev.trace.llm`—including INT8 Quantized ONNX Routers, Active Secret Blocking, and Custom C-Level Regex Injection—ready for enterprise deployment.
 
 **2. Execute via Drop-in Facade:**
 

@@ -13,11 +13,6 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.tracer")
 
-
-# =========================================================================
-# [1] LLM Tracer Base Interface & Interceptor Channel
-# =========================================================================
-
 class BaseLLMTracer(ABC):
     @abstractmethod
     async def on_llm_start(self, meta: ExecutionMetadata, kwargs: Dict[str, Any]):
@@ -31,13 +26,7 @@ class BaseLLMTracer(ABC):
     async def on_llm_error(self, meta: ExecutionMetadata, exc: Exception, duration_ms: float):
         pass
 
-
 class TracerInterceptorChannel(DuplexChannel):
-    """
-    파이프라인에 장착되어 메인 비즈니스 로직(LLM 호출)을 블로킹하지 않고, 
-    비동기적(Fire-and-forget)으로 관측 데이터를 외부로 방출하는 채널.
-    """
-    
     target_slot = PipelineSlot.PRE_OBSERVER
 
     def __init__(self, tracers: List[BaseLLMTracer]):
@@ -78,23 +67,13 @@ class TracerInterceptorChannel(DuplexChannel):
         try:
             await func(*args)
         except Exception as e:
-            # 트레이서 내부의 에러가 메인 파이프라인(LLM 스트림 등)을 붕괴시키지 않도록 격리
             log.warning(f"[Tracer] Custom tracer '{func.__self__.__class__.__name__}' fractured: {e}")
 
-
-# =========================================================================
-# [2] LLM Trace Profile & Test Utilities
-# =========================================================================
-
 class LlmTraceProfile:
-    """
-    @desc: TracerInterceptorChannel의 동작 무결성을 검증하고 다양한 Trace 엣지 케이스를 시뮬레이션하기 위한 프로파일.
-    """
     def __init__(self, target_model: str):
         self.target_model = target_model
 
     def _normalize_response(self, response: Union[Dict[str, Any], Any]) -> Dict[str, Any]:
-        """Pydantic 객체와 일반 Dict 형식을 하나의 인터페이스로 정규화합니다."""
         if isinstance(response, dict):
             return response
         if hasattr(response, "model_dump"):
@@ -103,9 +82,6 @@ class LlmTraceProfile:
             return response.__dict__
         return dict(response)
 
-    # =========================================================================
-    # [시나리오 1] Mock Bypass (파이프라인 Short-circuit 검증)
-    # =========================================================================
     def build_mock_bypass_payload(self) -> Dict[str, Any]:
         return {
             "model": self.target_model,
@@ -130,7 +106,6 @@ class LlmTraceProfile:
         except (IndexError, AttributeError) as e:
             raise ValueError(f"Trace Miss: Invalid response structure. {e}")
 
-    ## [phase.2] Fuel Breaker
     def build_fuel_breaker_payload(self, budget: int = 5) -> Dict[str, Any]:
         return {
             "model": self.target_model,
@@ -148,9 +123,6 @@ class LlmTraceProfile:
             return choices[0].get("finish_reason")
         return None
 
-    # =========================================================================
-    # [시나리오 3] Fallback Provenance (동적 우회 추적성 검증)
-    # =========================================================================
     def build_fallback_payload(self, fallbacks: List[Any]) -> Dict[str, Any]:
         return {
             "model": "invalid-trigger-model", 
@@ -180,9 +152,6 @@ class LlmTraceProfile:
                 
         return True
 
-    # =========================================================================
-    # [시나리오 4] Prompt Mutation (부수효과 추적성 검증)
-    # =========================================================================
     def build_prompt_mutation_payload(self) -> Dict[str, Any]:
         return {
             "model": self.target_model,

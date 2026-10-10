@@ -1,5 +1,4 @@
 # fiber.phase.contract.router
-## @lineage: xphi.arch.contract.protocol.router
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
