@@ -113,17 +113,3 @@ class DummySemanticCache(DuplexChannel):
             await ctx.fire_channel_read(cached_response)
             return
         await ctx.fire_write(msg)
-
-class DummyPIIGuardrail(DuplexChannel):
-    """[Slot: POST_TRANSLATE] 검증된 객체 상태에서 민감 정보를 차단하는 가드레일"""
-    target_slot = PipelineSlot.POST_TRANSLATE
-    
-    async def write(self, ctx: ChannelContext, processed_msg: Any):
-        original_kwargs = getattr(processed_msg, "original_kwargs", {})
-        messages = original_kwargs.get("messages", [])
-        for msg in messages:
-            if "SECRET-SSN" in msg.get("content", ""):
-                tracer_log.error("🛑 [GUARDRAIL BLOCK] Sensitive Information (PII) Detected!")
-                await ctx.fire_exception_caught(PermissionError("Guardrail Triggered: PII (SSN) detected."))
-                return  
-        await ctx.fire_write(processed_msg)

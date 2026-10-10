@@ -1,5 +1,4 @@
 # fiber.gateway.rest.serv.compliance
-## @lineage: fiber.gateway.rest.serv.exchange
 import os
 import json
 import time
