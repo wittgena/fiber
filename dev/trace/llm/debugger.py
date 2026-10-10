@@ -1,9 +1,8 @@
-# fiber.dev.trace.llm.debugger
 from __future__ import annotations
 
 import uuid
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.gateway.llm.pipeline import PipelineSlot
@@ -18,17 +17,22 @@ from xphi.watcher.plane.emitter import get_emitter
 tracer_log = get_emitter("llm.tracer")
 
 class DebugTracer(BaseLLMTracer):
-    """[Slot: PRE_OBSERVER] 실전형 비동기 방출 트레이서 (상세 시각화 로깅 지원)"""
+    """[Slot: PRE_OBSERVER] Practical async tracer with detailed visual logging."""
     def __init__(self):
         self.started = False
         self.ended = False
         self.error = False
         self.duration = 0.0
         self.start_time = 0.0
+        
+        # Added attributes to expose states for assertion tests
+        self.meta: Optional[ExecutionMetadata] = None
+        self.response: Optional[Any] = None
 
     async def on_llm_start(self, meta: ExecutionMetadata, kwargs: Dict[str, Any]):
         self.started = True
         self.start_time = time.time()
+        self.meta = meta
         
         safe_kwargs = {k: v for k, v in kwargs.items() if k not in ["api_key", "headers", "interceptors", "pipeline_hooks"]}
         tracer_log.info(
@@ -42,6 +46,8 @@ class DebugTracer(BaseLLMTracer):
     async def on_llm_end(self, meta: ExecutionMetadata, response: Any, duration_ms: float):
         self.ended = True
         self.duration = duration_ms
+        self.meta = meta
+        self.response = response
         
         is_stream = hasattr(response, "__aiter__")
         if is_stream:
@@ -89,6 +95,8 @@ class DebugTracer(BaseLLMTracer):
 
     async def on_llm_error(self, meta: ExecutionMetadata, exc: Exception, duration_ms: float):
         self.error = True
+        self.meta = meta
+        
         tracer_log.error(
             f"\n[🚨 LLM CALL FAILED] \n"
             f" ├─ Trace ID : {meta.trace_id}\n"
@@ -97,11 +105,12 @@ class DebugTracer(BaseLLMTracer):
         )
 
 class DummySemanticCache(DuplexChannel):
-    """[Slot: PRE_TRANSLATE] I/O 숏서킷을 수행하는 모의 캐시"""
+    """[Slot: PRE_TRANSLATE] Mock cache to perform I/O short-circuits."""
     target_slot = PipelineSlot.PRE_TRANSLATE
     
     async def write(self, ctx: ChannelContext, msg: dict):
         prompt = msg.get("messages", [{}])[-1].get("content", "")
+        
         if "USE_CACHE" in prompt:
             tracer_log.info("🎯 [CACHE HIT] Short-circuiting physical I/O...")
             cached_response = ModelResponse(
@@ -112,4 +121,5 @@ class DummySemanticCache(DuplexChannel):
             )
             await ctx.fire_channel_read(cached_response)
             return
+            
         await ctx.fire_write(msg)

@@ -87,9 +87,6 @@ def llm_metric_interceptor(event: LogEvent) -> None:
                 f"Latency: {latency:.3f}s | Cost: ${cost:.6f} | "
                 f"Tokens: [P:{usage.get('prompt', 0)} / C:{usage.get('completion', 0)} / R:{usage.get('reasoning', 0)}]"
             )
-            
-        # 추후 이곳에 Redis/Prometheus 등 전역 메트릭 수집기로 데이터를 비동기 발송하는 로직 추가 가능
-            
     elif event_type == "llm_rupture":
         model_name = ctx.get("model_name", "unknown")
         latency = ctx.get("latency_sec", 0.0)
