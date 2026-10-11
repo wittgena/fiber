@@ -88,14 +88,14 @@ class FuelInterceptor(DuplexChannel):
 
 class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
-        # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
+        # 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
         if "call_id" not in msg:
             msg["call_id"] = os.urandom(8).hex()
 
         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
         metadata = msg.get("metadata", {})
         
-        # 2. 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
+        # 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
         raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
         if raw_trace_id:
             # 전달받은 ID가 이미 32자리 OTLP 규격이라면 그대로 수용
@@ -121,7 +121,17 @@ class ContextBinder(DuplexChannel):
         ctx.set_attr("request_kwargs", msg)
         msg["system_meta"] = system_meta
         await ctx.fire_write(msg)
-
+    
+    async def channel_read(self, ctx: ChannelContext, msg: Any):
+        meta = ctx.get_attr("system_meta")
+        if meta is not None:
+            try:
+                # Pydantic 모델이나 일반 객체에 속성 부여
+                msg.system_meta = meta
+            except Exception:
+                # 불변(Immutable) 객체이거나 속성 할당이 불가능한 경우 무시
+                pass
+        await ctx.fire_channel_read(msg)
 
 class ChannelObserver(DuplexChannel):
     def __init__(self):
@@ -147,7 +157,6 @@ class ChannelObserver(DuplexChannel):
         req: dict = ctx.get_attr("request_kwargs")
         is_stream = hasattr(msg, "__aiter__")
 
-        # ✨ [개선] 1. 단일이든 스트림이든 호출될 통합 '완료 및 과금' 함수 정의
         def execute_completion_and_billing(total_tokens: int):
             fuel_consumed = ctx.get_attr(DphiKey.FUEL_CONSUMED.value, 0)
             if fuel_consumed == 0 and total_tokens > 0:
@@ -160,7 +169,6 @@ class ChannelObserver(DuplexChannel):
             duration_ms = (time.time() - ctx.get_attr("start_time")) * 1000
             meta.framework_flags["duration_ms"] = duration_ms
 
-            # 찐 완료 로그 출력 (스트림은 끝난 시점의 real duration이 계산됨)
             self.emitter.info(
                 "LLM Request Completed Successfully (Sealed)",
                 model=meta.base_model, provider=req.get("custom_llm_provider"),
@@ -222,7 +230,6 @@ class ChannelObserver(DuplexChannel):
             exc_info=show_trace
         )
         await ctx.fire_exception_caught(exc)
-
 
 class MockBypass(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
@@ -413,7 +420,6 @@ class CompletionTransport(DuplexChannel):
                 extra_kwargs=msg.original_kwargs
             )
             await ctx.fire_exception_caught(mapped_exc)
-
 
 class EmbeddingTransport(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Any):

@@ -39,7 +39,12 @@ class LLMInstalledScanner:
     def _extract_meta(self, obj: Any) -> Dict[str, Any]:
         mro = inspect.getmro(obj)
         lineage = [c.__name__ for c in mro if c.__name__ not in ("object", "BaseModel", "Generic")]
-        fields = getattr(obj, "model_fields", getattr(obj, "__fields__", {}))
+        # fields = getattr(obj, "model_fields", getattr(obj, "__fields__", {}))
+        if hasattr(obj, "model_fields"):
+            fields = obj.model_fields
+        else:
+            fields = getattr(obj, "__fields__", {})
+
         kwargs = set(fields.keys()) | {"additional_kwargs", "callback_manager", "system_prompt"}
 
         caps = LLMCapabilities(
@@ -145,7 +150,7 @@ DEFAULT_LLM_REGISTRY = {
         },
         "accepted_kwargs": [
             "model", "temperature", "max_tokens", "additional_kwargs", 
-            "max_retries", "api_key", "system_prompt"
+            "max_retries", "api_key", "system_prompt", "timeout", "api_base"
         ]
     }
 }
