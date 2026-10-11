@@ -43,13 +43,13 @@ STANDARD_PROMPTS = [
 def _resolve_target_dir(model: str, target_dir: Optional[str]) -> tuple[str, str, str]:
     _, resolved_provider, dynamic_api_key, _ = get_llm_provider(model=model)
     safe_model_name = model.replace("/", "_").replace(":", "_")
-    
     if target_dir:
-        target_dir = target_dir
+        final_dir = target_dir
     else:
-        target_dir = os.path.join(os.getcwd(), "fiber-compats", resolved_provider, safe_model_name)
-        
-    return target_dir, resolved_provider, dynamic_api_key
+        default_compats_base = os.path.join(os.getcwd(), "fiber-compats")
+        compats_base = os.getenv("FIBER_COMPATS_DIR", default_compats_base)
+        final_dir = os.path.join(compats_base, "adapters", resolved_provider, safe_model_name)
+    return final_dir, resolved_provider, dynamic_api_key
 
 def _init_vcr(mode: str, target_dir: str, include_raw: bool = False):
     os.environ["VCR_MODE"] = mode

@@ -128,11 +128,48 @@ response = await acompletion(
 
 The Offline Fixture Engine serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables zero-cost, deterministic offline testing and precise historical latency emulation without altering business logic.
 
-Fiber provides two approaches for injecting the local fixture engine:
+> **Why Fiber VCR?**
+> Standard HTTP mockers (like vcrpy) capture network-layer raw bytes, which breaks stream timing and bloats memory during LLM testing. Fiber’s Application-Layer VCR natively understands LLM semantics—autonomously coalescing micro-chunks via time-windows (e.g., 100ms) and ensuring strict duck-typing parity for SDKs like LiteLLM. This delivers perfect stream recreation and chaos emulation without the network-layer noise.
+
+Fiber provides three approaches for injecting the local fixture engine:
+
+**Automated Testing (Pytest Standard)**
+
+Adopting the industry-standard VCR pattern, Fiber empowers your pytest suites to act as the single source of truth. By toggling the VCR_MODE environment variable, a single test script can autonomously generate its own fixtures against live APIs (Record) and subsequently execute offline in CI/CD environments (Replay)—preventing any drift between request payloads and assertions.
+
+```python
+import os, pytest
+from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
+from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+from fiber.llm.entry import acompletion
+
+@pytest.fixture(scope="module", autouse=True)
+def inject_vcr():
+    """Injects the VCR engine and safely restores original adapters upon teardown."""
+    vcr_mode = os.getenv("VCR_MODE", "replay")
+    config = VCRPlaybackConfig(mode=vcr_mode, speed="max", record_tick_ms=100.0)
+    
+    # Context manager cleanly scopes the proxy injection to a target suite directory
+    with VCRInjector.use_cassette(config=config, fixture_dir="../fiber-compats/suites/router_suite"):
+        yield
+
+@pytest.mark.asyncio
+async def test_semantic_routing_pipeline():
+    # VCR transparently intercepts this call based on the injected context
+    response = await acompletion(
+        model="auto",
+        messages=[{"role": "user", "content": "Format this to JSON."}],
+        metadata={
+            "vcr_scenario": "soft_rule_intent",
+            "vcr_filename": "fixture_soft_rule_intent.json" # Explicit naming for clarity
+        }
+    )
+    assert response is not None
+```
 
 **Native Integration**
 
-If using Fiber's SDK, this fixture engine (implemented as the VCR module) can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee idempotent replay matching.
+If using Fiber's SDK in standalone application scripts, the fixture engine can be injected globally. It wraps the AdapterRegistry, making standard acompletion calls recordable. The architecture enforces deterministic Trace ID generation and metadata tunneling to guarantee idempotent replay matching.
 
 ```python
 import os, asyncio
@@ -228,20 +265,28 @@ if __name__ == "__main__":
 
 **The Record & Replay Flow**
 
+Fiber unifies the operational workflow across all integration methods (Pytest, Native, Legacy) using environmental toggles.
+
 * **Step 1: Record (Capture & Coalesce Network I/O)**
 Executes live API calls to the target LLM. The engine autonomously coalesces micro-chunks using a time-window (e.g., 100ms) and persists the normalized payloads and network metrics into strict, human-readable local fixtures.
 
 ```bash
-# Record with 100ms chunk coalescing to optimize future playback
-python -m fiber.dev.ex.recorder --vcr record --vcr-tick 100.0
+# Pytest: Generate suites via live API calls
+$ VCR_MODE=record pytest -v fiber/dev/trace/llm/tests/router.py
+
+# CLI: Record standard executions with 100ms tick optimization
+$ python -m fiber.dev.ex.recorder --vcr record --vcr-tick 100.0
 ```
 
 * **Step 2: Replay (Deterministic Playback & Chaos Injection)**
 Streams the recorded fixture fully offline with zero network I/O. You can emulate exact historical latencies (`--vcr-speed real`), run at maximum velocity for CI/CD pipelines (`--vcr-speed max`), or inject artificial latency jitter (`--vcr-chaos`) to validate your application's timeout resilience.
 
 ```bash
-# Replay in real-time with a 500ms artificial chaos jitter
-python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
+# Pytest: Run suites entirely offline with maximum velocity (default replay mode)
+$ pytest -v fiber/dev/trace/llm/tests/router.py
+
+# CLI: Replay in real-time with a 500ms artificial chaos jitter
+$ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
 ```
 
 ---

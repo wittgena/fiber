@@ -30,46 +30,52 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: 📥 Checkout Fiber
+      - name: Checkout Fiber
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      
+      - name: Checkout fiber-compats (Fixtures)
+        uses: actions/checkout@v4
+        with:
+          repository: wittgena/fiber-compats
+          path: fiber-compats
 
-      - name: 🐍 Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
-      - name: 🦕 Setup Deno
+      - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
 
-      - name: 🟢 Setup Node.js (for Wrangler)
+      - name: Setup Node.js (for Wrangler)
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           
-      - name: 🌩️ Install Cloudflare Wrangler
+      - name: Install Cloudflare Wrangler
         run: npm install -g wrangler
 
-      - name: ⚙️ Install dependencies
+      - name: Install dependencies
         run: |
           pip install uv hatch
           uv pip install --system -e .[dev]
 
-      - name: 🗺️ Bootstrap Topology Boundary
+      - name: Bootstrap Topology Boundary
         run: |
           python -m xphi.kernel.space.bind.around
       
-      - name: 🔑 Set up Node Identity (SSH Key)
+      - name: Set up Node Identity (SSH Key)
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.DEV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: 🚀 Boot Kernel (Background)
+      - name: Boot Kernel (Background)
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
@@ -81,9 +87,9 @@ jobs:
 
           echo "Waiting for Kernel to become ready on port 8000..."
           timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/compliance/keys > /dev/null; do sleep 1; done'
-          echo "✅ Kernel is fully up and running!"
+          echo "Kernel is fully up and running!"
 
-      - name: 🧪 Run E2E Edge Test
+      - name: Run E2E Edge Test
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           DPHI_ENV: "local"
@@ -104,16 +110,16 @@ jobs:
             echo "Reaper did not terminate the process. Forcing kill..."
             kill ${{ env.KERNEL_PID }} || true
           fi
-          echo "✅ Kernel reaped cleanly."
+          echo "Kernel reaped cleanly."
 
-      - name: 📄 Upload Kernel Log on Failure
+      - name: Upload Kernel Log on Failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: kernel-error-logs
           path: kernel_boot.log
 
-      - name: 🧪 Run Remaining E2E Tests
+      - name: Run Remaining E2E Tests
         env:
           REDIS_URL: "redis://localhost:6379/0" 
         run: |
@@ -121,3 +127,10 @@ jobs:
           fiber e2e wasm.phase
           VCR_MODE=replay python -m fiber.dev.ex.switch
           fiber e2e plane.flare --mode dev
+      
+      - name: Run Router Semantic Routing Tests
+        env:
+          VCR_MODE: replay
+          FIBER_COMPATS_DIR: ${{ github.workspace }}/fiber-compats
+        run: |
+          pytest -v -s fiber/dev/trace/llm/tests/router.py
