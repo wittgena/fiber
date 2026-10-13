@@ -2,17 +2,17 @@
 import time
 import orjson
 from typing import Dict, Any, List, Optional, Union
-from fastapi import Body, Header, status, Request, HTTPException
+from fastapi import Body, status, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from fiber.llm.entry import acompletion, aembedding
 from fiber.llm.response import ModelResponse, EmbeddingResponse
+from fiber.gateway.llm.pipeline import PipelineBootstrap 
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
+from fiber.gateway.rest.security import KernelAuthenticator
 from fiber.phase.contract.router import ContractRouter
 
-from xphi.arch.model.dphi.auth import DphiKey, DphiAction, KernelAuthPayload
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.arch.model.dphi.auth import DphiKey, DphiAction
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("serv.llm")
@@ -21,7 +21,7 @@ llm_edge = ContractRouter(
     namespace="llm",  
     prefix="/v1", 
     tags=["LLM Gateway"],
-    description="OpenAI-Compatible Zero-Trust LLM Gateway"
+    description="Deterministic LLM Gateway"
 )
 
 class ChatCompletionRequest(BaseModel):
@@ -31,49 +31,42 @@ class ChatCompletionRequest(BaseModel):
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = None
     tools: Optional[List[Dict[str, Any]]] = None
-    model_config = {
-        "extra": "allow" 
-    }
+    model_config = {"extra": "allow" }
 
 @llm_edge.post(
     "/chat/completions",
-    summary="Create Chat Completion (OpenAI Compatible)",
+    summary="Chat Completion(OpenAI Compatible)",
     response_model=ModelResponse
 )
 async def public_chat_completions(
     request: Request,
-    payload: ChatCompletionRequest = Body(...),
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt", description="Payment/Audit proof"),
+    payload: ChatCompletionRequest = Body(...)
 ):
     req_id = f"llm_chat_{int(time.time() * 1000)}"
     with flow_scope(phase="LLM_ORCHESTRATION", bound="edge.llm", req_id=req_id):
         try:
-            broker: DphiBroker = request.app.state.broker
-            intent_payload = {
-                "action": DphiAction.LLM_COMPUTE.value,
-                "model": payload.model,
-                "max_tokens_requested": payload.max_tokens,
-                "receipt": x402_receipt
-            }
+            kernel_auth = await KernelAuthenticator.authorize_intent(
+                request=request,
+                action=DphiAction.LLM_COMPUTE.value,
+                model=payload.model,
+                max_tokens=payload.max_tokens
+            )
             
-            auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
-            if not auth_res.success:
-                raise HTTPException(
-                    status_code=status.HTTP_402_PAYMENT_REQUIRED, 
-                    detail=f"Kernel Authorization Rejected: {auth_res.error}",
-                    headers={"WWW-Authenticate": 'x402_signed_proof=""'}
-                )
-            
-            kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
             kwargs = payload.model_dump(exclude={"model", "messages"}, exclude_none=True)
-            metadata = kwargs.get("metadata", {})
             
-            metadata[DphiKey.X402_RECEIPT.value] = x402_receipt
+            kwargs.pop("base_url", None)
+            kwargs.pop("api_base", None)
+            kwargs.pop("headers", None)
+            
+            internal_receipt = getattr(request.state, "x402_receipt", None)
+            
+            metadata = kwargs.get("metadata", {})
+            metadata[DphiKey.X402_RECEIPT.value] = internal_receipt
             metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
             metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
             kwargs["metadata"] = metadata
 
-            response = await acompletion(
+            response = await PipelineBootstrap.execute_completion(
                 model=payload.model,
                 messages=payload.messages,
                 **kwargs
@@ -90,13 +83,11 @@ async def public_chat_completions(
                 
                 return StreamingResponse(sse_generator(), media_type="text/event-stream")
             return response
-        
         except HTTPException:
             raise
         except Exception as e:
             log.error(f"[LLM Gateway] Completion Failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Downstream LLM Error: {str(e)}")
-
 
 @llm_edge.post(
     "/embeddings",
@@ -107,33 +98,38 @@ async def public_embeddings(
     request: Request,
     model: str = Body(...),
     input: Union[str, List[str]] = Body(...),
-    kwargs: Dict[str, Any] = Body(default={}),
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    kwargs: Dict[str, Any] = Body(default={})
 ):
+    # TEMPORARY DISABLED
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="The Embedding API is temporarily unsupported."
+    )
+
     try:
-        broker: DphiBroker = request.app.state.broker
-        intent_payload = {
-            "action": DphiAction.LLM_EMBEDDING.value,
-            "model": model,
-            "receipt": x402_receipt
-        }
+        kernel_auth = await KernelAuthenticator.authorize_intent(
+            request=request,
+            action=DphiAction.LLM_EMBEDDING.value,
+            model=model
+        )
         
-        auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
-        if not auth_res.success:
-            raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED, 
-                detail=f"Kernel Authorization Rejected: {auth_res.error}",
-                headers={"WWW-Authenticate": 'x402_signed_proof=""'}
-            )
-        kernel_auth = KernelAuthPayload.model_validate_json(auth_res.output)
-        
+        kwargs.pop("base_url", None)
+        kwargs.pop("api_base", None)
+        kwargs.pop("headers", None)
+
+        internal_receipt = getattr(request.state, "x402_receipt", None)
+
         metadata = kwargs.get("metadata", {})
-        metadata[DphiKey.X402_RECEIPT.value] = x402_receipt
+        metadata[DphiKey.X402_RECEIPT.value] = internal_receipt
         metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
         metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
         kwargs["metadata"] = metadata
 
-        response = await aembedding(model=model, input=input, **kwargs)
+        response = await PipelineBootstrap.execute_embedding(
+            model=model, 
+            input_data=input, 
+            **kwargs
+        )
         return response
     except HTTPException:
         raise

@@ -1,3 +1,4 @@
+# fiber.gateway.llm.channel.fuel
 from __future__ import annotations
 
 import os
@@ -15,13 +16,13 @@ class FuelBreaker(DuplexChannel):
         self.finops_watcher = finops_watcher
 
     async def write(self, ctx: ChannelContext, msg: Any):
-        # 1. 💡 [책임 이관] ContextBinder가 앞단에서 주입한 tenant_id를 신뢰 (중복 추출 제거)
+        # ContextBinder가 앞단에서 주입한 tenant_id를 신뢰
         tenant_id = ctx.get_attr("tenant_id", "anonymous")
         
         req_kwargs = ctx.get_attr("request_kwargs", {})
         metadata = req_kwargs.get("metadata", {})
         
-        # 2. 권한 인가 및 예산(Budget) 제어를 위한 순수 Auth Payload 파싱
+        # 권한 인가 및 예산(Budget) 제어를 위한 순수 Auth Payload 파싱
         raw_auth = metadata.get(DphiKey.KERNEL_AUTH.value, {})
         kernel_auth = KernelAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or KernelAuthPayload())
         
@@ -33,7 +34,7 @@ class FuelBreaker(DuplexChannel):
             log_pipeline.warning(f"[Security] Unauthorized API Access Attempt blocked. Tenant: {tenant_id}")
             raise PermissionError(f"Strict Quota Enforcement is active. Missing valid Kernel Auth for tenant: {tenant_id}")
         
-        # 3. 예산 통제 로직
+        # 예산 통제 로직
         fuel_budget = getattr(kernel_auth, "fuel_budget", float('inf'))
         
         if self.finops_watcher and hasattr(self.finops_watcher, "local_budget_cache"):
@@ -41,9 +42,7 @@ class FuelBreaker(DuplexChannel):
                 fuel_budget = self.finops_watcher.local_budget_cache[tenant_id]
                 log_pipeline.debug(f"[FuelBreaker] Applied dynamic FinOps budget for {tenant_id}: {fuel_budget}")
 
-        # 💡 [정리됨] ctx.set_attr("tenant_id", tenant_id) 삭제됨 (ContextBinder로 책임 이전)
-        
-        # 4. 차단기(Breaker) 가동을 위한 Context 상태 초기화
+        # 차단기(Breaker) 가동을 위한 Context 상태 초기화
         ctx.set_attr(DphiKey.FUEL_BUDGET.value, fuel_budget)
         ctx.set_attr(DphiKey.FUEL_CONSUMED.value, 0)
         ctx.set_attr(DphiKey.AUDIT_HASH.value, getattr(kernel_auth, "audit_hash", None))
@@ -91,7 +90,6 @@ class FuelBreaker(DuplexChannel):
             log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
             raise
 
-
 class BillingObserver(DuplexChannel):
     def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):
         self.tenant_eco = tenant_eco
@@ -131,7 +129,7 @@ class BillingObserver(DuplexChannel):
                                 intent = calc_res.get("consume_intent", {})
                                 final_consume_amount = intent.get("amount_to_consume", final_consume_amount)
                         
-                        from fiber.infra.rpc.fuel import execute_direct_fuel_consume
+                        from fiber.infra.rpc.handler.fuel import execute_direct_fuel_consume
                         await execute_direct_fuel_consume(
                             tenant_id=tenant_id, 
                             consumed_fuel=final_consume_amount, 

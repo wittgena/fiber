@@ -31,12 +31,10 @@ class TransitionBridge:
         log.info("[TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.")
 
     async def _is_x402_required(self, target_server_id: str) -> bool:
-        """개별 서버/워커별 X402 과금 활성화 Flag 여부를 동적으로 확인합니다."""
         try:
             tunnel = await TunnelFactory.get_default()
             policy = await tunnel.get(f"config:x402:{target_server_id}")
             if policy is not None:
-                # Redis 클라이언트 반환 타입(bytes or str) 안전 처리
                 return policy.decode('utf-8') == "1" if isinstance(policy, bytes) else str(policy) == "1"
         except Exception as e:
             log.warning(f"[Bridge:Config] Failed to fetch X402 flag for {target_server_id}: {e}")
@@ -117,12 +115,12 @@ class TransitionBridge:
             # Bypass strict auth and fuel checks for discovery phases
             log.debug(f"[Bridge:Auth] Bypassing strict auth for discovery method: {mcp_method}", extra=trace_ctx)
         else:
-            # 1. DPoP 필수 검증 (Mandatory)
+            # DPoP 필수 검증 (Mandatory)
             if not identity.proof_of_possession or not DPoPValidator.verify_token(identity.proof_of_possession, identity.nonce, target_uri, target_method):
                 log.warning(f"[Bridge:Auth] DPoP Verification Failed or Missing", extra=trace_ctx)
                 raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
 
-            # 2. X402 영수증 선택적 검증 (Flag 기반)
+            # X402 영수증 선택적 검증 (Flag 기반)
             if await self._is_x402_required(identity.target_server_id):
                 if not identity.receipt:
                     log.warning(f"[Bridge:Fuel] Missing X402 Receipt for billing-enabled server", extra=trace_ctx)
@@ -224,19 +222,21 @@ async def invoke_mcp_stateless(
     request: Request,
     target_server_id: str,
     payload: Dict[str, Any] = Body(...),
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    # x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     x_idempotency_key: str = Header(..., alias="x-idempotency-key"),
     x_nonce: str = Header(..., alias="x-nonce"),
     x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),
     x_spiffe_id: Optional[str] = Header(None, alias="x-spiffe-id"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
+    internal_receipt = getattr(request.state, "x402_receipt", None)
     try:
         identity = AgentIdentity(
             target_server_id=target_server_id,
             agent_uri=x_spiffe_id or "spiffe://public/agent",
             proof_of_possession=x_dpop_proof,
-            receipt=x402_receipt,
+            # receipt=x402_receipt,
+            receipt=internal_receipt,
             client_ip=request.client.host if request.client else "0.0.0.0",
             nonce=x_nonce,
             idempotency_key=x_idempotency_key
