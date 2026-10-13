@@ -9,9 +9,9 @@ from typing import Any
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
 
-from fiber.dev.trace.llm.debugger import DebugTracer
+from fiber.dev.trace.llm.interceptor import DebugTracer
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
-from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+from fiber.dev.trace.llm.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
@@ -40,8 +40,8 @@ class LlmVcrWorkflow(E2EBaseWorkflow):
 
     async def execute(self) -> None:
         self.log.info("=" * 120)
-        self.log.info(f"🧪 [MASTER SUITE] Igniting LLM VCR Trace Suite ({self.target_model})")
-        self.log.info(f"⚙️  [VCR ENGINE] Mode: {self.config.mode.upper()} | Speed: {self.config.speed.upper()} | Chaos Jitter: {self.config.chaos_latency_ms}ms")
+        self.log.info(f"[MASTER SUITE] Igniting LLM VCR Trace Suite ({self.target_model})")
+        self.log.info(f"[VCR ENGINE] Mode: {self.config.mode.upper()} | Speed: {self.config.speed.upper()} | Chaos Jitter: {self.config.chaos_latency_ms}ms")
         self.log.info("=" * 120)
         self.post_message(StartTraceMsg())
         await self.run()
@@ -79,7 +79,7 @@ class LlmVcrWorkflow(E2EBaseWorkflow):
 
     @step
     async def phase_tracer_only(self, msg: StartTraceMsg) -> WorkflowMessage:
-        self.log.info(f"\n[{self.name}] 🔄 [Phase 1] SINGULAR TRACING: Synchronous I/O Isolation")
+        self.log.info(f"\n[{self.name}] [Phase 1] SINGULAR TRACING: Synchronous I/O Isolation")
         t0 = time.perf_counter()
         
         scenario = "phase_1_singular"
@@ -113,7 +113,7 @@ class LlmVcrWorkflow(E2EBaseWorkflow):
 
     @step
     async def phase_stream_trace(self, msg: StreamTraceMsg) -> WorkflowMessage:
-        self.log.info(f"\n[{self.name}] 🔄 [Phase 2] STREAM TRACING: Asynchronous Chunk Tracking")
+        self.log.info(f"\n[{self.name}] [Phase 2] STREAM TRACING: Asynchronous Chunk Tracking")
         t0 = time.perf_counter()
         
         scenario = "phase_2_stream"
@@ -148,9 +148,7 @@ class LlmVcrWorkflow(E2EBaseWorkflow):
                 **trace_ctx
             )
             
-            # 스트림을 끝까지 소진하여 청크 데이터를 모두 소비
             async for _ in response_stream: pass 
-            
             if hasattr(response_stream, "accumulator"):
                 complete_res = response_stream.accumulator.get_complete_response()
                 usage_tokens = StateTraverser.resolve(complete_res, "usage.total_tokens", "N/A")
@@ -165,7 +163,7 @@ class LlmVcrWorkflow(E2EBaseWorkflow):
 
     @step
     async def phase_error_trace(self, msg: ErrorTraceMsg) -> WorkflowMessage:
-        self.log.info(f"\n[{self.name}] 🔄 [Phase 3] ERROR TRACING: Exception Boundary Verification")
+        self.log.info(f"\n[{self.name}] [Phase 3] ERROR TRACING: Exception Boundary Verification")
         t0 = time.perf_counter()
         
         scenario = "phase_3_error"
@@ -200,7 +198,7 @@ class LlmVcrWorkflow(E2EBaseWorkflow):
 
     @step
     async def phase_fallback_trace(self, msg: FallbackTraceMsg) -> WorkflowMessage:
-        self.log.info(f"\n[{self.name}] 🔄 [Phase 4] FALLBACK TRACING: Idempotent Retry & Deepcopy Shield")
+        self.log.info(f"\n[{self.name}] [Phase 4] FALLBACK TRACING: Idempotent Retry & Deepcopy Shield")
         t0 = time.perf_counter()
         
         scenario = "phase_4_fallback"

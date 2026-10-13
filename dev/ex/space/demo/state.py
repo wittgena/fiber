@@ -6,7 +6,7 @@ from typing import List, Literal, Union
 
 from pydantic import BaseModel, Field
 
-from fiber.llm.model.message import Message, TextContent, MessageToolCall
+from fiber.dev.ex.model.message import Message, TextContent, MessageToolCall
 
 class BaseStateEvent(BaseModel):
     """Base class for trajectory events."""

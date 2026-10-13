@@ -7,7 +7,7 @@ import httpx
 from pydantic import BaseModel
 from openai.lib import _parsing, _pydantic
 
-from fiber.llm.model.provider.resolver import _resolver_instance
+from fiber.llm.provider.resolver import _resolver_instance
 from fiber.llm.types.provider.core import Usage
 from fiber.llm.exception.eco import UnsupportedParamsError
 from fiber.llm.types.provider.openai import ValidUserMessageContentTypes

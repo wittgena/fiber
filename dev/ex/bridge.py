@@ -26,7 +26,7 @@ def _init_bridge(mode: str, fixture_dir: str):
     })
 
     from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-    from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+    from fiber.dev.trace.llm.vcr.injector import VCRInjector
     config = VCRPlaybackConfig(mode=mode, speed="real", record_tick_ms=100.0)
     VCRInjector.apply(config=config, fixture_dir=fixture_dir)
     

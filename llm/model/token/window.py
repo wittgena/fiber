@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import tiktoken
 
 from fiber.llm.model.token.encoder import get_default_encoding
-from fiber.llm.model.provider.registry import model_cost
+from fiber.llm.provider.cost.registry import model_cost
 from fiber.llm.types.provider.openai import AllMessageValues
 from xphi.arch.bound.client.constants import DEFAULT_TRIM_RATIO
 

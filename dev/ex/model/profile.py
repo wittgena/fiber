@@ -1,4 +1,5 @@
-# fiber.llm.model.profile
+# fiber.dev.ex.model.profile
+## @lineage: fiber.llm.model.profile
 from __future__ import annotations
 
 import os
@@ -8,7 +9,7 @@ from typing import Any, Literal, Final
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from pydantic.json_schema import SkipJsonSchema
 
-from fiber.llm.model.provider.secret import validate_secret
+from fiber.llm.provider.secret import validate_secret
 from fiber.llm.exception.types import LLMContextWindowTooSmallError
 
 MIN_CONTEXT_WINDOW_TOKENS: Final[int] = 16384

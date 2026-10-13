@@ -17,7 +17,7 @@ class RpcMethod(str, Enum):
     EXCHANGE_CLEARING_SETTLEMENT = "exchange.clearing.settlement"
     EXCHANGE_INVOICE_ISSUE = "exchange.invoice.issue"
     EXCHANGE_GET_BALANCE = "exchange.get.balance"
-    EXCHANGE_FUEL_DEDUCT = "exchange.fuel.deduct"
+    EXCHANGE_FUEL_CONSUME = "exchange.fuel.consume"
 
     # Compute & Execution
     ECO_INTENT_ESTIMATE = "eco.intent.estimate"
