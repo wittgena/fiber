@@ -19,8 +19,8 @@ from fiber.dev.ex.agent.mcp.client import (
 from fiber.dev.ex.agent.protocol.executor import AsyncExecutor
 from fiber.dev.ex.agent.llm.driver import LLMFacade, OpenAIToolConvertible
 from fiber.dev.ex.agent.llm.response import LLMResponse
-from fiber.llm.model.message import Message, TextContent, MessageToolCall
-from fiber.llm.model.profile import BaseLLMProfile
+from fiber.dev.ex.model.message import Message, TextContent, MessageToolCall
+from fiber.dev.ex.model.profile import BaseLLMProfile
 from fiber.llm.response import ChatCompletionToolParam
 
 from xphi.kernel.space.tunnel.factory import UniversalFacade

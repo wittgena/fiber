@@ -20,7 +20,7 @@ from fiber.llm.response import (
     ModelResponse, 
     ChatCompletionToolParam
 )
-from fiber.llm.model.message import Message
+from fiber.dev.ex.model.message import Message
 from fiber.llm.exception.eco import (
     APIConnectionError,
     InternalServerError,
@@ -29,7 +29,7 @@ from fiber.llm.exception.eco import (
     Timeout,
 )
 
-from fiber.llm.model.profile import BaseLLMProfile
+from fiber.dev.ex.model.profile import BaseLLMProfile
 from fiber.dev.ex.agent.llm.observer import extract_usage 
 from fiber.dev.ex.agent.llm.response import LLMResponse
 from fiber.dev.ex.agent.llm.strategy.retry import create_retry_decorator, LLM_RETRY_EXCEPTIONS

@@ -5,13 +5,13 @@ import asyncio
 import time
 from typing import Optional
 
-from fiber.llm.model.provider.resolver import get_llm_provider
+from fiber.llm.provider.resolver import get_llm_provider
 import fiber.llm.entry as llm_entry 
 
 from fiber.gateway.llm.state.traverser import StateMapper
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+from fiber.dev.trace.llm.vcr.injector import VCRInjector
 
 from xphi.watcher.plane.emitter import get_emitter
 

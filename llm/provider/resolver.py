@@ -1,14 +1,14 @@
-# fiber.llm.model.provider.resolver
+# fiber.llm.provider.resolver
 from __future__ import annotations
 
 import re
 from urllib.parse import urlparse
 from typing import Tuple, Optional, Union, Dict, List
 
-from fiber.llm.model.provider.registry import ModelCostRegistry, model_cost, lookup_base_model_info
+from fiber.llm.provider.cost.registry import ModelCostRegistry, model_cost, lookup_base_model_info
 from xphi.arch.bound.client.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 from fiber.llm.types.param.legacy import LegacyParams
-from fiber.llm.model.provider.secret import get_secret_str, get_secret
+from fiber.llm.provider.secret import get_secret_str, get_secret
 from xphi.arch.contract.config.resolver import config
 from xphi.watcher.plane.emitter import get_emitter 
 
@@ -132,28 +132,18 @@ class LLMProviderResolver:
         self._provider_configs = PROVIDER_REGISTRY
         self._lowercase_model_map: Optional[Dict[str, str]] = None
 
-    # ==========================================
-    # Layer 1: Core Routing
-    # ==========================================
     def resolve(
         self,
         model: str,
         custom_llm_provider: Optional[str] = None,
         api_base: Optional[str] = None,
         api_key: Optional[str] = None,
-        litellm_params: Optional[LegacyParams] = None,
     ) -> Tuple[str, str, Optional[str], Optional[str]]:
         
         if not model:
             raise ValueError("model parameter is required.")
 
-        if litellm_params:
-            custom_llm_provider = litellm_params.custom_llm_provider
-            api_base = litellm_params.api_base
-            api_key = litellm_params.api_key
-
         dynamic_api_key = None
-
         model, custom_llm_provider, is_resolved = self._resolve_special_cases(model, custom_llm_provider)
         if is_resolved:
             return model, custom_llm_provider, dynamic_api_key, api_base
@@ -213,9 +203,6 @@ class LLMProviderResolver:
 
         return None
 
-    # ==========================================
-    # Layer 2: Model Capabilities
-    # ==========================================
     def _get_cost_key(self, potential_key: str) -> Optional[str]:
         if potential_key in model_cost:
             return potential_key
@@ -229,7 +216,6 @@ class LLMProviderResolver:
         if matched_key and matched_key in model_cost:
             return matched_key
 
-        # 런타임 업데이트 대비 재캐싱
         self._lowercase_model_map = {k.lower(): k for k in model_cost}
         matched_key = self._lowercase_model_map.get(potential_key_lower)
         if matched_key and matched_key in model_cost:
@@ -239,7 +225,6 @@ class LLMProviderResolver:
 
     def check_capability(self, model: str, custom_llm_provider: Optional[str], key: str, default_if_none: bool = False) -> bool:
         try:
-            # 외부 get_llm_provider 호출 대신 내부 resolve 사용으로 오버헤드 제거
             resolved_model, resolved_provider, _, _ = self.resolve(model=model, custom_llm_provider=custom_llm_provider)
             model_info = lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
             
@@ -260,10 +245,6 @@ class LLMProviderResolver:
     def supports_function_calling(self, model: str, custom_llm_provider: Optional[str] = None) -> bool:
         return self.check_capability(model, custom_llm_provider, "supports_function_calling", default_if_none=False)
 
-
-    # ==========================================
-    # Layer 3: Provider Traits & Params
-    # ==========================================
     def supports_httpx_timeout(self, custom_llm_provider: str) -> bool:
         return custom_llm_provider in ["openai"]
 
@@ -319,13 +300,6 @@ class LLMProviderResolver:
                 
         model, custom_llm_provider = handle_cohere_chat_model_custom_llm_provider(model, custom_llm_provider)
         model, custom_llm_provider = handle_anthropic_text_model_custom_llm_provider(model, custom_llm_provider)
-        
-        # if custom_llm_provider == "openrouter" and model.startswith("openrouter/"):
-        #     remainder = model[len("openrouter/"):]
-        #     if "/" in remainder:
-        #         return remainder, custom_llm_provider, True
-        #     return model, custom_llm_provider, True
-
         return model, custom_llm_provider, False
 
     def _resolve_by_prefix(self, model: str, api_base: Optional[str], api_key: Optional[str]):
@@ -384,9 +358,7 @@ class LLMProviderResolver:
         return None
 
 
-# ==========================================
-# Global Export Wrappers 
-# ==========================================
+"""Global Export Wrappers"""
 _resolver_instance = LLMProviderResolver()
 
 def get_llm_provider(
@@ -394,7 +366,6 @@ def get_llm_provider(
     custom_llm_provider: Optional[str] = None,
     api_base: Optional[str] = None,
     api_key: Optional[str] = None,
-    litellm_params: Optional[LegacyParams] = None,
 ) -> Tuple[str, str, Optional[str], Optional[str]]:
     try:
         return _resolver_instance.resolve(
@@ -402,7 +373,6 @@ def get_llm_provider(
             custom_llm_provider=custom_llm_provider,
             api_base=api_base,
             api_key=api_key,
-            litellm_params=litellm_params
         )
     except Exception as e:
         if isinstance(e, GateBadRequestError):

@@ -12,7 +12,7 @@ from fiber.dev.trace.llm.base import (
     build_e2e_context, 
     ReportMsg
 )
-from fiber.dev.trace.llm.debugger import DebugTracer
+from fiber.dev.trace.llm.interceptor import DebugTracer
 from fiber.dev.trace.llm.router import OnnxSemanticRouter
 from fiber.gateway.llm.state.traverser import StateTraverser
 from xphi.arch.contract.workflow import WorkflowMessage, step
@@ -66,7 +66,6 @@ class LlmRoutingWorkflow(E2EBaseWorkflow):
             mock_intent_probs=mock_probs
         )
 
-    # ✅ 중복 코드를 제거하고 검증을 표준화한 핵심 헬퍼 메서드
     async def _execute_and_verify_routing(
         self, 
         phase: int, 
@@ -101,7 +100,6 @@ class LlmRoutingWorkflow(E2EBaseWorkflow):
             if expected_model not in actual_model:
                 raise ValueError(f"Routing mismatch. Expected [{expected_model}], but Pipeline executed [{actual_model}]")
             
-            # ✅ 객체/딕셔너리 다형성을 완벽히 지원하는 프레임워크 표준 방식으로 토큰 추출
             usage_tokens = StateTraverser.resolve(response, "usage.total_tokens", 0)
             is_success = True
             

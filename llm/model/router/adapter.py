@@ -10,7 +10,7 @@ from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import CompletionContext, EmbeddingContext
 from fiber.llm.model.router.llm import LLMRouter, ModuleMissingError
 from fiber.llm.model.router.embedding import EmbeddingRouter
-from fiber.llm.model.provider.resolver import get_llm_provider
+from fiber.llm.provider.resolver import get_llm_provider
 
 from fiber.llm.exception.mapping import exception_type
 from fiber.gateway.llm.state.traverser import StateMapper, StateTraverser
@@ -134,9 +134,7 @@ class InterLLMAdapter(BaseProviderAdapter):
         resolved_api_key = ctx.api_key
         if not resolved_api_key or resolved_api_key == "not-needed":
             try:
-                _, _, dynamic_key, _ = get_llm_provider(
-                    model=ctx.model, custom_llm_provider=ctx.custom_llm_provider
-                )
+                _, _, dynamic_key, _ = get_llm_provider(model=ctx.model, custom_llm_provider=ctx.custom_llm_provider)
                 if dynamic_key:
                     resolved_api_key = dynamic_key
             except Exception as e:

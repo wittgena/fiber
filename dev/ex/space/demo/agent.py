@@ -11,8 +11,8 @@ from fiber.dev.ex.agent.mcp.client import (
 from fiber.dev.ex.agent.protocol.executor import AsyncExecutor
 from fiber.dev.ex.agent.llm.driver import LLMFacade
 from fiber.dev.ex.agent.llm.response import LLMResponse
-from fiber.llm.model.message import TextContent
-from fiber.llm.model.profile import BaseLLMProfile
+from fiber.dev.ex.model.message import TextContent
+from fiber.dev.ex.model.profile import BaseLLMProfile
 from fiber.dev.ex.agent.mcp.orchestrator import MCPToolWrapper
 
 from fiber.dev.ex.demo.state import (

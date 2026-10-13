@@ -35,7 +35,7 @@ def init_vcr_environment(mode: str, speed: str, chaos_ms: float, tick_ms: float)
         sys.exit(1)
 
     from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-    from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+    from fiber.dev.trace.llm.vcr.injector import VCRInjector
     
     config = VCRPlaybackConfig(
         mode=mode, 
@@ -55,7 +55,7 @@ async def run_scenario(
     messages_data: list[dict],
     stream: bool = True
 ):
-    from fiber.llm.model.message import Message
+    from fiber.dev.ex.model.message import Message
     from fiber.dev.ex.agent.llm.driver import LLMFacade
     import fiber.dev.ex.agent.llm.observer 
     from fiber.gateway.llm.state.traverser import StateTraverser
@@ -183,7 +183,7 @@ async def run_scenario(
 
 async def execute_scenarios(args: argparse.Namespace):
     log.info("Fiber VCR Utility Interactive Demonstration")
-    from fiber.llm.model.profile import BaseLLMProfile
+    from fiber.dev.ex.model.profile import BaseLLMProfile
     
     primary_profile = BaseLLMProfile(
         model=args.model,

@@ -140,7 +140,7 @@ Adopting the industry-standard VCR pattern, Fiber empowers your pytest suites to
 ```python
 import os, pytest
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+from fiber.dev.trace.llm.vcr.injector import VCRInjector
 from fiber.llm.entry import acompletion
 
 @pytest.fixture(scope="module", autouse=True)
@@ -177,7 +177,7 @@ from fiber.llm.entry import acompletion
 
 # Decoupled Fixture architecture: Storage & Interceptor
 from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
-from fiber.dev.trace.llm.vcr.proxy import VCRInjector
+from fiber.dev.trace.llm.vcr.injector import VCRInjector
 from xphi.arch.bound.event.next import next_trace_id
 
 # Inject VCR globally with Time-Window Coalescing

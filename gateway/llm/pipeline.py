@@ -9,17 +9,13 @@ from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge
 
-from fiber.gateway.llm.channel import (
-    CompletionTransport, EmbeddingTransport, FuelInterceptor, 
-    StreamAggregator, PayloadTranslator, FallbackHandler, 
-    MockBypass, ChannelObserver, ContextBinder
-)
+from fiber.gateway.llm.channel.core import CompletionTransport, EmbeddingTransport, StreamAggregator, PayloadTranslator, FallbackHandler, MockBypass, ContextBinder
+from fiber.gateway.llm.channel.fuel import FuelBreaker, BillingObserver
 
 class PipelineSlot(Enum):
     PRE_TRANSLATE = "pre_translate"       # Type: dict
     POST_TRANSLATE = "post_translate"     # Type: Processor Object
     PRE_OBSERVER = "pre_observer"         # Type: Any (Legacy llm_tracers 위치)
-
 
 class PipelineBootstrap:
     @classmethod
@@ -35,10 +31,12 @@ class PipelineBootstrap:
         bridge = RpcBridge()
         
         pipeline_hooks: Dict[PipelineSlot, List[DuplexChannel]] = kwargs.pop("pipeline_hooks", {})
-        
+        fuel_breaker = kwargs.pop("fuel_breaker", FuelBreaker())
+        billing_observer = kwargs.pop("billing_observer", BillingObserver())
+
         ## Head
         pipeline.add_last(CompletionTransport())
-        pipeline.add_last(FuelInterceptor())
+        pipeline.add_last(fuel_breaker)
 
         ## Middle
         pipeline.add_last(StreamAggregator())       
@@ -61,7 +59,7 @@ class PipelineBootstrap:
             
         ## Tail
         # Legacy Core: 절대 순서 유지
-        pipeline.add_last(ChannelObserver())        
+        pipeline.add_last(billing_observer)        
         pipeline.add_last(ContextBinder())          
         pipeline.add_last(bridge)
 
@@ -75,10 +73,12 @@ class PipelineBootstrap:
         bridge = RpcBridge()
         
         pipeline_hooks: Dict[PipelineSlot, List[DuplexChannel]] = kwargs.pop("pipeline_hooks", {})
+        fuel_breaker = kwargs.pop("fuel_breaker", FuelBreaker())
+        billing_observer = kwargs.pop("billing_observer", BillingObserver())
         
         ## Head
         pipeline.add_last(EmbeddingTransport())
-        pipeline.add_last(FuelInterceptor())
+        pipeline.add_last(fuel_breaker)
         
         ## Middle
         cls._inject_hooks(pipeline, pipeline_hooks.get(PipelineSlot.POST_TRANSLATE, []), PipelineSlot.POST_TRANSLATE.name)
@@ -97,7 +97,7 @@ class PipelineBootstrap:
             
         ## Tail
         # Core: 절대 순서 유지
-        pipeline.add_last(ChannelObserver())
+        pipeline.add_last(billing_observer)
         pipeline.add_last(ContextBinder())
         pipeline.add_last(bridge)
 

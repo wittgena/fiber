@@ -10,7 +10,7 @@ import time
 from dataclasses import dataclass
 from typing import List, Tuple, Any, Optional
 
-from fiber.llm.model.tier import model_tier_registry
+from fiber.dev.ex.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step

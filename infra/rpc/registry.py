@@ -22,7 +22,7 @@ from fiber.infra.rpc.exchange import (
 )
 
 from fiber.infra.rpc.validator import handle_compute_margin_calculate, ValidatorService, handle_fuel_receipt_validate
-from fiber.infra.rpc.fuel import handle_fuel_deduction
+from fiber.infra.rpc.fuel import handle_fuel_consume
 
 def build_internal_rpc_registry(validator_service: Optional[ValidatorService] = None) -> Dict[str, Callable]:
     registry = {
@@ -37,7 +37,7 @@ def build_internal_rpc_registry(validator_service: Optional[ValidatorService] = 
         RpcMethod.EXCHANGE_CLEARING_SETTLEMENT: handle_clearing_settlement,
         RpcMethod.EXCHANGE_INVOICE_ISSUE: handle_invoice_issue,
         RpcMethod.EXCHANGE_GET_BALANCE: handle_get_balance,
-        RpcMethod.EXCHANGE_FUEL_DEDUCT: handle_fuel_deduction,
+        RpcMethod.EXCHANGE_FUEL_CONSUME: handle_fuel_consume,
 
         RpcMethod.ECO_INTENT_ESTIMATE: handle_intent_estimate,
         RpcMethod.ECO_PROFILE_EXECUTE: handle_profile_execute,
