@@ -12,8 +12,8 @@ from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
 
 from fiber.infra.rpc.registry import build_internal_rpc_registry
-from fiber.infra.rpc.handler import WorkerContext
-from fiber.infra.rpc.validator import ValidatorService
+from fiber.infra.rpc.handler.core import WorkerContext
+from fiber.infra.rpc.handler.validator import ValidatorService
 
 from xphi.arch.contract.config import env
 from xphi.arch.contract.registry.unified import contract

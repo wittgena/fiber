@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Dict, Callable, Optional
 
 from fiber.infra.rpc.method import RpcMethod
-from fiber.infra.rpc.handler import (
+from fiber.infra.rpc.handler.core import (
     handle_phase_store_stream_append,
     handle_phase_store_anchor_seal,
     handle_phase_store_receipt_verify,
@@ -13,16 +13,16 @@ from fiber.infra.rpc.handler import (
     handle_compute_intent_validate
 )
 
-from fiber.infra.rpc.exchange import (
+from fiber.infra.rpc.handler.exchange import (
     handle_clearing_settlement,
     handle_invoice_issue,
     handle_get_balance,
-    handle_intent_estimate,
-    handle_profile_execute,
+    handle_compute_intent_estimate,
+    handle_compute_profile_execute,
 )
 
-from fiber.infra.rpc.validator import handle_compute_margin_calculate, ValidatorService, handle_fuel_receipt_validate
-from fiber.infra.rpc.fuel import handle_fuel_consume
+from fiber.infra.rpc.handler.validator import handle_compute_margin_calculate, ValidatorService, handle_fuel_receipt_validate
+from fiber.infra.rpc.handler.fuel import handle_fuel_consume
 
 def build_internal_rpc_registry(validator_service: Optional[ValidatorService] = None) -> Dict[str, Callable]:
     registry = {
@@ -39,8 +39,8 @@ def build_internal_rpc_registry(validator_service: Optional[ValidatorService] = 
         RpcMethod.EXCHANGE_GET_BALANCE: handle_get_balance,
         RpcMethod.EXCHANGE_FUEL_CONSUME: handle_fuel_consume,
 
-        RpcMethod.ECO_INTENT_ESTIMATE: handle_intent_estimate,
-        RpcMethod.ECO_PROFILE_EXECUTE: handle_profile_execute,
+        RpcMethod.COMPUTE_INTENT_ESTIMATE: handle_compute_intent_estimate,
+        RpcMethod.COMPUTE_PROFILE_EXECUTE: handle_compute_profile_execute,
 
         RpcMethod.VALIDATE_FUEL_RECEIPT: handle_fuel_receipt_validate,
         RpcMethod.VALIDATE_COMPUTE_INTENT: handle_compute_intent_validate,

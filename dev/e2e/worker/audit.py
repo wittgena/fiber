@@ -26,7 +26,7 @@ import fiber.dev.ex.worker.deployer as worker_deployer
 import fiber.dev.ex.worker.sentinel as worker_sentinel
 
 from fiber.gateway.mcp.connector import MCPServerConnector
-from fiber.infra.rpc.validator import ValidatorService
+from fiber.infra.rpc.handler.validator import ValidatorService
 import fiber.infra.rpc.registry as rpc_registry
 
 from xphi.state.phase.reactor import PhaseReactor

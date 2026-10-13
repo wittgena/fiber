@@ -80,13 +80,15 @@ async def get_trust_keys(request: Request):
     status_code=status.HTTP_200_OK
 )
 async def otlp_logs_export(
+    request: Request,
     payload: ExportLogsServiceRequest = Body(...),
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    # x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
     broker: DphiBroker = Depends(get_wasm_broker),
     otlp_engine: OtlpExtractionEngine = Depends(get_otlp_engine)
 ):
+    internal_receipt = getattr(request.state, "x402_receipt", None)
     try:
         payload_dict = payload.model_dump(exclude_none=True)
         raw_json_bytes = orjson.dumps(payload_dict)
@@ -105,7 +107,8 @@ async def otlp_logs_export(
         kernel_req_dict = KernelOtlpRecord(
             content_hash=content_hash,
             metrics_summary=extracted_metrics,
-            receipt_ref=x402_receipt
+            # receipt_ref=x402_receipt
+            receipt_ref=internal_receipt,
         ).model_dump(exclude_none=True)
         
         evo_ctx = StateAdapter.build_evolution_context(phase_root={})
@@ -145,11 +148,13 @@ async def otlp_logs_export(
     summary="Secure Audit Event Recording & Conditional Cryptographic Proof Issuance"
 )
 async def audit_log(
+    request: Request,
     payload: AuditLogRequest,
-    x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    # x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
+    internal_receipt = getattr(request.state, "x402_receipt", None)
     request_time = str(time.time())
     try:
         event_dict = payload.event.model_dump(exclude_none=True)
@@ -161,7 +166,8 @@ async def audit_log(
             detail=f"Audit event validation failed: {str(e)}."
         )
 
-    sanitized_event["_billing_ref"] = x402_receipt
+    # sanitized_event["_billing_ref"] = x402_receipt
+    sanitized_event["_billing_ref"] = internal_receipt
     
     evo_ctx = StateAdapter.build_evolution_context(phase_root={})
     transition_payload = StateAdapter.build_transition_payload(

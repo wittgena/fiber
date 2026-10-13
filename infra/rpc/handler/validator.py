@@ -1,4 +1,4 @@
-# fiber.infra.rpc.validator
+# fiber.infra.rpc.handler.validator
 import os
 import json
 import time
@@ -8,7 +8,6 @@ import hashlib
 import base64
 import struct
 from typing import Dict, Any
-
 from pydantic import BaseModel, Field, ValidationError
 
 from cryptography.hazmat.primitives import hashes
@@ -16,7 +15,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.infra.rpc.handler import WorkerContext, _build_error
+from fiber.infra.rpc.handler.core import WorkerContext, _build_error
 
 from xphi.arch.contract.config.env import DPHI_ENV
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
@@ -24,7 +23,7 @@ from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("rpc.validator")
+log = get_emitter("rpc.handler.validator")
 
 """Margin & Pricing Validator"""
 class ComputeMarginRequest(BaseModel):
@@ -258,5 +257,5 @@ class ValidatorService:
             return {"error": True, "code": -500, "message": "Internal Crypto Error."}
 
         signature = self.signing_key.sign(bytes.fromhex(payload_hash_hex))
-        log.info(f"✅ OTP Validated. Attestation Signature issued for {user_id}.")
+        log.info(f"OTP Validated. Attestation Signature issued for {user_id}.")
         return {"success": True, "signature": signature.hex()}

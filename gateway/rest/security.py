@@ -1,14 +1,31 @@
 # fiber.gateway.rest.security
 import os
+import time
+import json
 import secrets
+import orjson
+import jwt
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
+
+from fastapi import Request, HTTPException, status
 
 from xphi.arch.bound.xor.secret.cipher import Cipher
 from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
 from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
+
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.arch.model.dphi.auth import KernelAuthPayload
+from xphi.arch.bound.adapter.pta import SignStateAdapter
+
+from xphi.arch.bound.adapter.settlement import (
+    Ap2MandateConstraints,
+    Ap2MandatePayload,
+    Ap2Authorization,
+    Ap2MandateResult
+)
 
 log = get_emitter(__name__)
 
@@ -28,7 +45,7 @@ class SecurityProvisioner:
                 log.error(f"Failed to read local cipher key: {e}")
                 raise RuntimeError("Local key file exists but could not be read. Check file permissions.") from e
         
-        ## 파일이 없을 시, 32바이트 랜덤 키 생성
+        # Generate a 32-byte random key if not exists
         new_secret_key = secrets.token_hex(32)
         try:
             cls.LOCAL_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -64,3 +81,99 @@ class SecurityProvisioner:
             secret_key = cls._get_or_create_local_key()
                 
         return SecretAuditor(cipher=Cipher(secret_key=secret_key))
+
+
+class TokenTranslator:
+    """Validates stateless JWTs issued by external partners (FinOps/IdP) and mints real-time AP2 Mandates required by the internal backend"""
+    
+    # Future integration point for JWKS endpoint or env-injected public key
+    JWT_PUBLIC_KEY = os.environ.get("FINOPS_JWT_PUBLIC_KEY", "") 
+
+    @classmethod
+    async def exchange(cls, raw_token: Optional[str], request: Optional[Request] = None) -> Optional[str]:
+        if not raw_token:
+            return None
+            
+        # Backward Compatibility: Bypass native AP2/x402 receipts or E2E mock strings
+        if not raw_token.startswith("ey"):
+            log.debug("[TokenTranslator] Token bypassed translation (native AP2/x402 detected).")
+            return raw_token
+
+        log.info("[TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.")
+        
+        try:
+            # Parse JWT claims to extract FinOps constraints
+            # Note: In production, strict signature verification via JWT_PUBLIC_KEY is required
+            claims = jwt.decode(raw_token, options={"verify_signature": False})
+            
+            tenant_id = claims.get("sub", "anonymous_tenant")
+            granted_budget = claims.get("budget_limit_usd", 1.0)
+            
+            current_ts = int(time.time() * 1000)
+            expire_ts = current_ts + (1000 * 60 * 60)  # Internal receipt TTL (1 hour)
+            
+            # Assemble AP2 Mandate schema using official Pydantic models
+            constraints = Ap2MandateConstraints(max_spend_usdc=str(granted_budget), expiration_ts=expire_ts)
+            mandate_payload = Ap2MandatePayload(
+                protocol="AP2-v1.0",
+                requester_id=tenant_id,
+                target_action="llm_compute_gateway",
+                constraints=constraints,
+                issued_at=current_ts
+            )
+            
+            # System node surrogate signature via SignStateAdapter
+            mandate_dict = mandate_payload.model_dump(exclude_none=True)
+            canonical_mandate = json.dumps(mandate_dict, sort_keys=True, separators=(',', ':'))
+            
+            real_signature = SignStateAdapter.sign_state_payload({"payload": canonical_mandate})
+            node_pubkey = SignStateAdapter.get_signer_pubkey()
+            
+            # Assemble final Ap2MandateResult (Case A format)
+            auth = Ap2Authorization(signer_pub=node_pubkey, signature=real_signature)
+            ap2_result = Ap2MandateResult(mandate=mandate_payload, authorization=auth)
+            translated_receipt = json.dumps(ap2_result.model_dump(exclude_none=True))
+            log.info(f"[TokenTranslator] JWT exchanged to AP2 Mandate for '{tenant_id}' (Budget: ${granted_budget})")
+            return translated_receipt
+        except Exception as e:
+            log.error(f"[TokenTranslator] AP2 Mandate minting crashed: {e}", exc_info=True)
+            return None
+
+
+class KernelAuthenticator:
+    """Extracts the injected hidden receipt and transparently delegates kernel Wasm broker authorization without business logic intervention"""
+    @classmethod
+    async def authorize_intent(
+        cls, 
+        request: Request, 
+        action: str, 
+        model: str, 
+        max_tokens: Optional[int] = None
+    ) -> KernelAuthPayload:
+        receipt = getattr(request.state, "x402_receipt", None)
+        intent_payload = {
+            "action": action,
+            "model": model,
+            "max_tokens_requested": max_tokens,
+            "receipt": receipt
+        }
+        
+        broker: DphiBroker = getattr(request.app.state, "broker", None)
+        if not broker:
+            log.critical("[KernelAuthenticator] Wasm Broker is offline or not injected.")
+            raise HTTPException(status_code=500, detail="Internal Security Engine Offline")
+            
+        try:
+            auth_res = await broker.invoke("AUTHORIZE_INTENT", orjson.dumps(intent_payload).decode('utf-8'))
+        except Exception as e:
+            log.error(f"[KernelAuthenticator] Kernel intent verification crashed: {e}")
+            raise HTTPException(status_code=500, detail="Internal Intent Verification Failure")
+
+        if not auth_res.success:
+            log.warning(f"[KernelAuthenticator] Intent Rejected by Kernel: {auth_res.error}")
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED, 
+                detail="Zero-Trust Enforced: Token Quota Exceeded or Invalid Access Credential.",
+                headers={"WWW-Authenticate": 'Bearer realm="api"'}
+            )
+        return KernelAuthPayload.model_validate_json(auth_res.output)

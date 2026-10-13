@@ -13,7 +13,7 @@ from xphi.arch.bound.client.rpc import RpcException
 from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtector, TransitionBridge, mcp_bridge
 from fiber.gateway.rest.serv.compliance import compliance_edge
 from fiber.gateway.rest.serv.llm import llm_edge
-from fiber.gateway.rest.security import SecurityProvisioner
+from fiber.gateway.rest.security import SecurityProvisioner, TokenTranslator
 from fiber.phase.contract.origin import OriginRegistry
 from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
@@ -43,10 +43,51 @@ class Config(BaseModel):
 def get_default_config() -> Config:
     return Config()
 
-async def verify_access_credential(
-    request: Request,
-    api_key: str = Security(api_key_header)
-):
+# async def verify_access_credential(
+#     request: Request,
+#     api_key: str = Security(api_key_header)
+# ):
+#     path = request.url.path
+#     whitelist = {
+#         "/v1/compliance/audit/verify",
+#         "/v1/compliance/keys",
+#         "/openapi.json",
+#         "/docs",
+#         "/redoc",
+#         "/_health"
+#     }
+    
+#     if path in whitelist:
+#         return None
+
+#     if path.startswith("/v1/mcp-gateway/"):
+#         return None
+
+#     config: Config = request.app.state.config
+#     if config.session_api_keys and api_key in config.session_api_keys:
+#         return api_key
+
+#     x402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
+#     if x402_header:
+#         return x402_header
+
+#     raise HTTPException(
+#         status_code=status.HTTP_402_PAYMENT_REQUIRED, 
+#         detail="Zero-Trust Enforced: Payment Required. Please provide a stablecoin/x402 receipt.",
+#         headers={"WWW-Authenticate": 'x402_signed_proof=""'}
+#     )
+
+async def verify_access_credential(request: Request, api_key: str = Security(api_key_header)):
+    raw_token = request.headers.get("Authorization") or request.headers.get("X-X402-Receipt")
+    translated_receipt = None
+    if raw_token:
+        if raw_token.startswith("Bearer "):
+            jwt_token = raw_token.removeprefix("Bearer ").strip()
+            translated_receipt = await TokenTranslator.exchange(jwt_token)
+        else:
+            translated_receipt = raw_token
+            
+    request.state.x402_receipt = translated_receipt
     path = request.url.path
     whitelist = {
         "/v1/compliance/audit/verify",
@@ -57,25 +98,21 @@ async def verify_access_credential(
         "/_health"
     }
     
-    if path in whitelist:
-        return None
-
-    if path.startswith("/v1/mcp-gateway/"):
+    if path in whitelist or path.startswith("/v1/mcp-gateway/"):
         return None
 
     config: Config = request.app.state.config
     if config.session_api_keys and api_key in config.session_api_keys:
         return api_key
 
-    x402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
-    if x402_header:
-        return x402_header
-
-    raise HTTPException(
-        status_code=status.HTTP_402_PAYMENT_REQUIRED, 
-        detail="Zero-Trust Enforced: Payment Required. Please provide a stablecoin/x402 receipt.",
-        headers={"WWW-Authenticate": 'x402_signed_proof=""'}
-    )
+    if not request.state.x402_receipt:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED, 
+            detail="Zero-Trust Enforced: Valid Token or Payment Required.",
+            headers={"WWW-Authenticate": 'Bearer realm="api"'}
+        )
+        
+    return request.state.x402_receipt
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -1,9 +1,9 @@
-# fiber.infra.rpc.fuel
+# fiber.infra.rpc.handler.fuel
 import asyncio
 import logging
 from typing import Dict, Any, List, Optional
 
-from fiber.infra.rpc.handler import WorkerContext
+from fiber.infra.rpc.handler.core import WorkerContext
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.arch.bound.adapter.pta import (
     PtaAdapter, 
@@ -35,9 +35,7 @@ async def execute_direct_fuel_consume(
         pta_adapter = PtaAdapter(broker=broker)
     
     try:
-        # 💡 [정렬 포인트 1] 로컬 캐시 직접 접근 제거, Oracle을 통한 완벽한 UTXO 수화(Hydration)
         available_outputs = await pta_adapter.get_available_inputs(tenant_id, "fuel")
-        
         total_available = sum(item["amount"] for item in available_outputs)
         actual_consume = min(consumed_fuel, total_available) if total_available > 0 else consumed_fuel
         
@@ -45,11 +43,8 @@ async def execute_direct_fuel_consume(
         outputs: List[PtaOutput] = []
         accumulated = 0
         
-        # 💡 [정렬 포인트 2] 시스템 노드의 공식 퍼블릭 키 추출
         node_pubkey = SignStateAdapter.get_signer_pubkey()
-        
         for item in available_outputs:
-            # 💡 [정렬 포인트 3] 가짜 텍스트 대신, Ed25519 기반의 진짜 서명 생성
             canonical_payload = item["pointer"].to_key()
             real_signature = SignStateAdapter.sign_state_payload({"payload": canonical_payload})
             
@@ -69,7 +64,6 @@ async def execute_direct_fuel_consume(
             outputs.append(PtaOutput(amount=change, owner=tenant_id, asset_type="fuel"))
             
         outputs.append(PtaOutput(amount=actual_consume, owner="system_treasury", asset_type="fuel"))
-        
         tx = PtaTransaction(
             inputs=inputs, 
             outputs=outputs, 
@@ -83,7 +77,6 @@ async def execute_direct_fuel_consume(
     finally:
         if owns_broker and broker:
             await broker.close()
-
 
 # RPC Queue Handler (Daemon Mode)
 def _build_error(code: int, message: str) -> dict:
@@ -101,9 +94,7 @@ async def handle_fuel_consume(params: dict, ctx: WorkerContext) -> dict:
     try:
         pta_adapter = ctx.pta_adapter
         
-        # 💡 [정렬 포인트 1] Oracle을 통한 완벽한 UTXO 수화(Hydration)
         available_outputs = await pta_adapter.get_available_inputs(tenant_id, "fuel")
-
         total_available = sum(item["amount"] for item in available_outputs)
         actual_consume = min(consumed_fuel, total_available) if total_available > 0 else consumed_fuel
 
@@ -111,11 +102,8 @@ async def handle_fuel_consume(params: dict, ctx: WorkerContext) -> dict:
         outputs: List[PtaOutput] = []
         accumulated = 0
         
-        # 💡 [정렬 포인트 2] 시스템 노드의 공식 퍼블릭 키 추출
         node_pubkey = SignStateAdapter.get_signer_pubkey()
-
         for item in available_outputs:
-            # 💡 [정렬 포인트 3] 가짜 텍스트 대신, Ed25519 기반의 진짜 서명 생성
             canonical_payload = item["pointer"].to_key()
             real_signature = SignStateAdapter.sign_state_payload({"payload": canonical_payload})
             
@@ -135,7 +123,6 @@ async def handle_fuel_consume(params: dict, ctx: WorkerContext) -> dict:
             outputs.append(PtaOutput(amount=change, owner=tenant_id, asset_type="fuel"))
             
         outputs.append(PtaOutput(amount=actual_consume, owner="system_treasury", asset_type="fuel"))
-
         tx = PtaTransaction(
             inputs=inputs, 
             outputs=outputs, 
