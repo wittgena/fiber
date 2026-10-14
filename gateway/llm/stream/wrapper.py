@@ -1,5 +1,4 @@
 # fiber.gateway.llm.stream.wrapper
-## @lineage: fiber.llm.router.stream.wrapper
 import asyncio
 import collections.abc
 import time

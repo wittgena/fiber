@@ -1,14 +1,14 @@
-# fiber.dev.e2e.wasm.gateway 
+# fiber.dev.e2e.inter.wasm.gateway 
 import sys
 import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, List, Callable
 
+from xphi.arch.bound.adapter.gateway import GatewayAdapter
 from xphi.arch.dev.wasm.builder import WasmBuilder
+from xphi.kernel.wasm.gateway import GatewayWasm
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.bound.adapter.gateway import GatewayAdapter
-from xphi.kernel.wasm.gateway import GatewayWasm
 
 log = get_emitter("e2e.wasm.gateway")
 

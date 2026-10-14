@@ -1,4 +1,4 @@
-# fiber.dev.e2e.worker.gateway
+# fiber.dev.e2e.gateway.worker.router
 import sys
 import time
 import uuid
@@ -24,12 +24,12 @@ from xphi.state.phase.reactor import PhaseReactor
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 
-class CoreRoutingPipeline(BaseBridgePipeline):
+class MCPRouterPipeline(BaseBridgePipeline):
     def __init__(self, config: E2EConfig):
         super().__init__(
             config=config, 
             name="Core Routing & Performance Suite", 
-            scope_name="MCP_CORE_SUITE"
+            scope_name="MCP_ROUTER_SUITE"
         )
 
         self.oracle_id = "oracle-01"
@@ -37,9 +37,7 @@ class CoreRoutingPipeline(BaseBridgePipeline):
         self.margin_id = "margin-01"
         self.search_id = "search-archive-01"
 
-        # [추가] E2E 클라이언트용 DPoP 생성기
         self.dpop_client = DPoPClientGenerator(key_size=2048)
-
         self.set_phases([
             Phase("Phase 1: Event-Driven Zero-Latency Proof", self.phase_zero_latency),
             Phase("Phase 2: High-Throughput Linear Queue Stress (FinLib)", self.phase_finlib_linear_queue),
@@ -51,9 +49,7 @@ class CoreRoutingPipeline(BaseBridgePipeline):
             Phase("Phase 8: Autonomic Dynamic Pricing Alignment", self.phase_dynamic_pricing_alignment),
         ])
 
-    # =====================================================================
-    # Lifecycle Overrides (Pricing Daemon 관리)
-    # =====================================================================
+    # Lifecycle Overrides
     async def setup_custom_context(self):
         class MockPricingCtx:
             pass
@@ -86,13 +82,9 @@ class CoreRoutingPipeline(BaseBridgePipeline):
         search_cmd = f"{sys.executable} -m {worker_search.__name__}"
         self.connectors.append(MCPServerConnector(target_id=self.search_id, execution_target=search_cmd, mode="multiplex"))
 
-    # =====================================================================
     # Test Phases (1 ~ 8) 
-    # =====================================================================
     async def phase_zero_latency(self):
         payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "100 * 50"}}}
-        
-        # [변경] DPoP 헤더 동적 주입 (영수증 값은 원본 "valid_x402" 그대로 유지)
         nonce = uuid.uuid4().hex
         url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
@@ -176,11 +168,9 @@ class CoreRoutingPipeline(BaseBridgePipeline):
         tunnel = await TunnelFactory.get_default()
         redis_key = f"config:x402:{self.finlib_id}"
         
-        # [변경] 상태 격리: X402 플래그를 이 Phase에서만 임시 활성화
         await tunnel.set(redis_key, "1")
         try:
             payload = {"jsonrpc": "2.0", "id": 300, "method": "tools/call", "params": {"name": "eval_math", "arguments": {"expression": "1 + 1"}}}
-            
             nonce = uuid.uuid4().hex
             url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
@@ -190,7 +180,6 @@ class CoreRoutingPipeline(BaseBridgePipeline):
                 res = await client.post(url, json=payload, headers=headers)
                 if res.status_code != 402: raise RuntimeError(f"Expected HTTP 402, got {res.status_code}")
         finally:
-            # 상태 복구 (다른 테스트에 영향 주지 않음)
             await tunnel.delete(redis_key)
 
     async def phase_error_routing(self):
@@ -300,7 +289,7 @@ class CoreSuiteRunner:
 
     async def execute(self):
         net_config = E2EConfig(host="127.0.0.1", port=8355, protocol="http")
-        self.results.extend(await CoreRoutingPipeline(config=net_config).run_pipeline())
+        self.results.extend(await MCPRouterPipeline(config=net_config).run_pipeline())
         self._print_report()
 
     def _print_report(self):
@@ -319,9 +308,9 @@ class CoreSuiteRunner:
         report_buffer.append("-" * 80)
         
         if all_passed: 
-            report_buffer.append("🎉 CORE ROUTING PIPELINE VALIDATED SUCCESSFULLY.")
+            report_buffer.append("CORE ROUTING PIPELINE VALIDATED SUCCESSFULLY.")
         else: 
-            report_buffer.append("💥 CORE ROUTING FAILURE DETECTED. Check logs for details.")
+            report_buffer.append("CORE ROUTING FAILURE DETECTED. Check logs for details.")
             
         report_buffer.append("=" * 80 + "\n")
         aggregated_report = "\n".join(report_buffer)

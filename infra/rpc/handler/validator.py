@@ -15,8 +15,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
-from fiber.infra.rpc.handler.core import WorkerContext, _build_error
-
+from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 from xphi.arch.contract.config.env import DPHI_ENV
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
 from xphi.kernel.space.bind.resolver import resolve_path

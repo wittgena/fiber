@@ -51,9 +51,8 @@ class EcoEgressTracer(PipelineRunner):
                 except Exception: pass
                 await asyncio.sleep(0.2)
 
-        # Connector 없이 SDK 클라이언트만 초기화
         self.sdk_client = DphiPublicClient(base_url=self.local_url)
-        log.info("✅ Egress SDK Client Ready.")
+        log.info("Egress SDK Client Ready.")
 
     async def phase_telemetry_egress(self):
         """SDK를 통해 생성한 OTLP 페이로드가 파싱 엔진을 무사히 통과하는지 검증"""
@@ -66,7 +65,7 @@ class EcoEgressTracer(PipelineRunner):
         
         res = await self.sdk_client.push_telemetry(otlp_payload, fuel_receipt=self.mock_receipt)
         if res.get("status") == "success" and res.get("fingerprint") != "N/A":
-            log.info(f"✅ OTLP Telemetry sealed and mapped to kernel fingerprint: {res['fingerprint']}")
+            log.info(f"OTLP Telemetry sealed and mapped to kernel fingerprint: {res['fingerprint']}")
         else:
             raise RuntimeError(f"OTLP Trace failed. Response: {res}")
 
@@ -80,7 +79,7 @@ class EcoEgressTracer(PipelineRunner):
         
         res = await self.sdk_client.record_audit_event(audit_payload, fuel_receipt=self.mock_receipt)
         if "hash" in res:
-            log.info(f"✅ Audit Event sealed securely. Hash: {res['hash']}")
+            log.info(f"Audit Event sealed securely. Hash: {res['hash']}")
         else:
             raise RuntimeError(f"Audit Trace failed. Response: {res}")
 

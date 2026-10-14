@@ -94,8 +94,8 @@ jobs:
           REDIS_URL: "redis://localhost:6379/0" 
           DPHI_ENV: "local"
         run: |
-          python -m fiber.dev.e2e.edge.compliance
-          python -m fiber.dev.e2e.edge.security
+          python -m fiber.dev.e2e.gateway.edge.compliance
+          python -m fiber.dev.e2e.gateway.edge.security
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()
@@ -123,10 +123,10 @@ jobs:
         env:
           REDIS_URL: "redis://localhost:6379/0" 
         run: |
-          fiber e2e wasm.gateway
-          fiber e2e wasm.phase
+          fiber e2e inter.wasm.gateway
+          fiber e2e inter.wasm.phase
           VCR_MODE=replay python -m fiber.dev.ex.switch
-          fiber e2e plane.flare --mode dev
+          fiber e2e inter.plane.flare --mode dev
       
       - name: Run Router Semantic Routing Tests
         env:
