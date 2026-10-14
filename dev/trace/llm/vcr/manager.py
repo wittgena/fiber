@@ -3,6 +3,7 @@ import os
 import json
 import hashlib
 import glob
+import argparse
 from dataclasses import dataclass
 from typing import Optional, Any, Dict, List
 
@@ -36,6 +37,21 @@ class VCRFixtureTraceState(DynamicSurgeModel):
 
 log = get_emitter("llm.vcr.manager")
 
+def add_vcr_arguments(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    """Inject standardized VCR CLI arguments into an existing parser."""
+    group = parser.add_argument_group("VCR Engine Options")
+    group.add_argument("--vcr", type=str, choices=["live", "record", "replay"], default="live", 
+                       help="VCR mode for API Mocking")
+    group.add_argument("--vcr-speed", type=str, choices=["max", "real"], default="max", 
+                       help="Replay speed control")
+    group.add_argument("--vcr-chaos", type=float, default=0.0, 
+                       help="Latency jitter (ms) for real-world simulation")
+    group.add_argument("--vcr-tick", type=float, default=100.0, 
+                       help="Time-window (ms) for coalescing chunks during record (0 for raw)")
+    group.add_argument("--vcr-targets", type=str, default="", 
+                       help="Specific trace IDs to target (e.g., 'scenario:trace_id')")
+    return parser
+
 @dataclass
 class VCRPlaybackConfig:
     mode: str = "live"
@@ -44,6 +60,17 @@ class VCRPlaybackConfig:
     target_traces: str = ""
     record_tick_ms: float = 100.0
     include_raw_payload: bool = env.VCR_INCLUDE_RAW.lower() == "true"
+
+    @classmethod
+    def from_args(cls, args: argparse.Namespace) -> "VCRPlaybackConfig":
+        """Create a VCRPlaybackConfig from parsed argparse arguments safely."""
+        return cls(
+            mode=getattr(args, "vcr", "live"),
+            speed=getattr(args, "vcr_speed", "max"),
+            chaos_latency_ms=getattr(args, "vcr_chaos", 0.0),
+            target_traces=getattr(args, "vcr_targets", ""),
+            record_tick_ms=getattr(args, "vcr_tick", 100.0)
+        )
 
 class VCRIdentityRule:
     @staticmethod

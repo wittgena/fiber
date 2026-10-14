@@ -7,7 +7,11 @@ import time
 from typing import Any
 from pathlib import Path
 
-from fiber.dev.trace.llm.vcr.manager import VCRIdentityRule
+from fiber.dev.trace.llm.vcr.manager import (
+    VCRIdentityRule, 
+    VCRPlaybackConfig, 
+    add_vcr_arguments
+)
 
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
@@ -17,16 +21,16 @@ log = get_emitter("ex.recorder")
 FIXTURE_ROOT = resolve_path("fixture")
 CURRENT_INVOKER, _ = get_invoker(Path(__file__))
 
-def init_vcr_environment(mode: str, speed: str, chaos_ms: float, tick_ms: float):
+def init_vcr_environment(config: VCRPlaybackConfig):
     """Initialize VCR sandbox and inject network proxies."""
-    if mode not in ("record", "replay"):
+    if config.mode not in ("record", "replay"):
         log.info("[VCR] Mode: LIVE (Integration Bypassed)")
         return
 
     try:
         from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
         verify_local_dev_environment(allow_ci=True)
-        create_security_sandbox(vcr_mode=mode)
+        create_security_sandbox(vcr_mode=config.mode)
         log.info("[Sandbox] Strict Security Policy Injected")
     except ImportError:
         log.warning("[Sandbox] Sandbox package not found, proceeding with injector only.")
@@ -34,20 +38,10 @@ def init_vcr_environment(mode: str, speed: str, chaos_ms: float, tick_ms: float)
         log.error(f"[SANDBOX VIOLATION] Execution Denied: {e}")
         sys.exit(1)
 
-    from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
     from fiber.dev.trace.llm.vcr.injector import VCRInjector
-    
-    config = VCRPlaybackConfig(
-        mode=mode, 
-        speed=speed, 
-        chaos_latency_ms=chaos_ms,
-        record_tick_ms=tick_ms
-    )
     VCRInjector.apply(config=config, fixture_dir=FIXTURE_ROOT)
-
-    log.info(f"[VCR] Status: ENGAGED ({mode.upper()}) | Speed: {speed} | Chaos: {chaos_ms}ms | Tick: {tick_ms}ms")
+    log.info(f"[VCR] Status: ENGAGED ({config.mode.upper()}) | Speed: {config.speed} | Chaos: {config.chaos_latency_ms}ms | Tick: {config.record_tick_ms}ms")
     log.info(f"[VCR] Fixture Storage: {os.path.abspath(FIXTURE_ROOT)}\n")
-
 
 async def run_scenario(
     scenario_name: str,
@@ -208,32 +202,30 @@ async def execute_scenarios(args: argparse.Namespace):
     )
 
     log.info("\n================================================================================")
-    if args.vcr == "record":
+    if getattr(args, 'vcr', 'live') == "record":
         log.info("[RECORD COMPLETE] Network I/O has been frozen into fixtures.")
         log.info(f"  Next Step: python -m dev.ex.agent.recorder -m {args.model} --vcr replay --vcr-speed real")
-    elif args.vcr == "replay":
+    elif getattr(args, 'vcr', 'live') == "replay":
         log.info("[REPLAY COMPLETE] Time-travel API mocking successful.")
     else:
         log.info("[LIVE COMPLETE] Normal API execution without VCR.")
     log.info("================================================================================\n")
 
+
 def main(args: list[str] = None):
     parser = argparse.ArgumentParser(description="Fiber Facade VCR Utility")
     parser.add_argument("-m", "--model", type=str, default="gemini/gemini-3.1-flash-lite", help="Target LLM model")
-    parser.add_argument("--vcr", type=str, choices=["live", "record", "replay"], default="record", help="VCR mode")
-    parser.add_argument("--vcr-speed", type=str, choices=["max", "real"], default="max", help="Replay speed")
-    parser.add_argument("--vcr-chaos", type=float, default=0.0, help="Latency jitter (ms)")
-    parser.add_argument("--vcr-tick", type=float, default=100.0, help="Time-window (ms) for coalescing chunks during record (0 for raw)")
     
+    # VCR 파라미터 일괄 주입
+    add_vcr_arguments(parser)
     parsed_args, _ = parser.parse_known_args(args)
-    os.environ["VCR_MODE"] = parsed_args.vcr
+    
+    # 통합 팩토리 메서드를 통해 config 생성
+    vcr_config = VCRPlaybackConfig.from_args(parsed_args)
+    os.environ["VCR_MODE"] = vcr_config.mode
     os.makedirs(FIXTURE_ROOT, exist_ok=True)
-    init_vcr_environment(
-        mode=parsed_args.vcr, 
-        speed=parsed_args.vcr_speed, 
-        chaos_ms=parsed_args.vcr_chaos,
-        tick_ms=parsed_args.vcr_tick
-    )
+    
+    init_vcr_environment(vcr_config)
     asyncio.run(execute_scenarios(parsed_args))
 
 if __name__ == "__main__":

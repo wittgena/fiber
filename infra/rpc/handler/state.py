@@ -1,4 +1,4 @@
-# fiber.infra.rpc.handler.core
+# fiber.infra.rpc.handler.state
 import json
 import time
 import uuid
@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from xphi.arch.model.edge.receptor import EdgeState, AnchorProposalRequest, IntentValidationRequest, ExecuteComputeRequest
 from xphi.arch.model.edge.receipt import PhaseStoreAppendRecord
 from xphi.arch.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
+from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 
 from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
 from xphi.kernel.space.tunnel.factory import TunnelFactory
@@ -15,24 +16,6 @@ from xphi.state.anchor.nexus import AnchorProposal, StreamAppendRequest
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("rpc.handler")
-
-class WorkerContext:
-    def __init__(
-        self, broker: DphiBroker, store: Any, nexus: Any, exchange_adapter: Any,
-        pta_adapter: Any, policy_engine: Any, profile_service: Any, phase_store: Any = None 
-    ):
-        self.broker = broker
-        self.store = store
-        self.nexus = nexus
-        self.exchange_adapter = exchange_adapter
-        self.pta_adapter = pta_adapter
-        self.policy_engine = policy_engine
-        self.profile_service = profile_service
-        self.phase_store = phase_store
-
-def _build_error(code: int, message: str) -> dict:
-    """RPC 표준 에러 응답 빌더"""
-    return {"error": True, "code": code, "message": message}
 
 """State Transition & Gateway Handlers"""
 async def handle_mcp_state_query(params: dict, ctx: WorkerContext) -> dict:

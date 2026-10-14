@@ -1,5 +1,4 @@
-# fiber.dev.e2e.wasm.phase
-## @lineage: fiber.dev.e2e.dphi.wasm.phase
+# fiber.dev.e2e.inter.wasm.phase
 import sys
 import argparse
 import importlib
@@ -15,7 +14,7 @@ from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("e2e.wasm.phase")
+log = get_emitter("inter.wasm.phase")
 
 MODULE_PATH = scene_module.__name__
 

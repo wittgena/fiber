@@ -64,11 +64,8 @@ def run_daemon(
     """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
     _load_env(env_file)
     PRESETS = {
-        "core": "rest_edge,rpc_worker",                           # Base MCP Bridge
-        "eco": "rest_edge,rpc_worker,dynamic_pricing",            # Bridge + Pricing
-        "full": "rest_edge,rpc_worker,dynamic_pricing,risk_vault",# Entire Eco-system
-        "edge_only": "rest_edge",                                 # API Ingress only
-        "compute_only": "rpc_worker"                              # Headless RPC only
+        "edge": "rest_edge,rpc_worker",
+        "ALL": "rest_edge,rpc_worker,dynamic_pricing,risk_vault",
     }
     
     resolved_daemons = PRESETS.get(start.lower(), start)
@@ -84,31 +81,6 @@ def run_daemon(
         os.environ["NODE_PROFILE"] = "ALL"
         
     boot_kernel("Gateway Daemon")
-
-@app.command("trace")
-def run_trace(
-    target: Annotated[str, typer.Option("--target", "-t")],
-    config: Annotated[Optional[str], typer.Option("--config", "-c")] = None,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    _load_env(env_file)
-    os.environ["KERNEL_DAEMONS"] = "tracer_controller"
-    os.environ["TRACE_TARGET"] = target
-    os.environ["NODE_PROFILE"] = "CONTROL"
-    if config:
-        os.environ["TRACE_CONFIG_PATH"] = config
-    boot_kernel("Master Hypervisor")
-
-@app.command("deploy")
-def run_deploy(
-    topology: Annotated[str, typer.Option("--topology", "-t")] = "master",
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    _load_env(env_file)
-    os.environ["KERNEL_DAEMONS"] = "topology_manager"
-    os.environ["DEPLOY_TOPOLOGY"] = topology
-    os.environ["NODE_PROFILE"] = "CONTROL"
-    boot_kernel("Deployment Manager")
 
 @app.command("shell")
 def run_shell(
@@ -137,7 +109,7 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["llm.trace", "edge.compliance", "wasm.phase", "plane.flare"]
+    KNOWN_SUITES = ["llm.trace", "gateway.edge.compliance", "inter.wasm.phase", "inter.plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")

@@ -185,7 +185,7 @@ class BaseBridgePipeline(PipelineRunner):
         rest_app = create_app(
             config=Config(wasm_timeout=5.0),
             tunnel=tunnel,            
-            ledger=self.mock_store   
+            phase_store=self.mock_store   
         )
         u_config = uvicorn.Config(
             app=rest_app, host="127.0.0.1", port=self.config.port, 
@@ -216,13 +216,13 @@ class BaseBridgePipeline(PipelineRunner):
         results = []
         try:
             for idx, phase in enumerate(self.phases, 1):
-                log.info(f"\n▶️ [PHASE {idx}/{len(self.phases)}] {phase.name}")
+                log.info(f"\n[PHASE {idx}/{len(self.phases)}] {phase.name}")
                 try:
                     await phase.action()
                     results.append(TestResult(self.scope_name, phase.name, True, True))
-                    log.info("  └─ Status: PASSED ✅")
+                    log.info("  └─ Status: PASSED")
                 except Exception as e:
-                    log.error(f"  └─ Halted: {str(e)} ❌", exc_info=True)
+                    log.error(f"  └─ Halted: {str(e)} X", exc_info=True)
                     results.append(TestResult(self.scope_name, phase.name, False, True))
         finally:
             await self._teardown_all()
@@ -232,18 +232,15 @@ class BaseBridgePipeline(PipelineRunner):
     async def _teardown_all(self):
         log.info(f"\n[BasePipeline] Teardown sequence initiated...")
         
-        # 자식 클래스 커스텀 티어다운
         await self.teardown_custom()
-
-        # 커넥터 종료
         for conn in self.connectors: conn.running = False
         for task in self._connector_tasks: task.cancel()
 
-        # 백그라운드 데몬 종료
+        # background daemon stop
         if self.worker_daemon: self.worker_daemon.running = False
         if self._worker_task: self._worker_task.cancel()
 
-        # 서버 종료
+        # server down
         if self.server: self.server.should_exit = True
         if self._server_task: await self._server_task
             

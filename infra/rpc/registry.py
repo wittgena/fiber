@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Dict, Callable, Optional
 
 from fiber.infra.rpc.method import RpcMethod
-from fiber.infra.rpc.handler.core import (
+from fiber.infra.rpc.handler.state import (
     handle_phase_store_stream_append,
     handle_phase_store_anchor_seal,
     handle_phase_store_receipt_verify,

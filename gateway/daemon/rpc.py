@@ -12,9 +12,9 @@ from contextlib import suppress
 from typing import Optional, Dict, Callable, List, Any
 
 from fiber.infra.rpc.registry import build_internal_rpc_registry
-from fiber.infra.rpc.handler.core import WorkerContext
 from fiber.infra.rpc.handler.validator import ValidatorService
 
+from xphi.arch.contract.protocol.rpc import WorkerContext
 from xphi.arch.contract.config import env
 from xphi.arch.contract.registry.unified import contract
 from xphi.arch.bound.adapter.settlement import ClearingAdapter

@@ -137,7 +137,7 @@ class E2EBaseApplication:
 
 def create_e2e_parser(description: str = "LLM E2E Test Runner") -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("-m", "--model", type=str, help="Target LLM model to use (ex: ollama/gemma:2b)")
+    parser.add_argument("-m", "--model", type=str, help="Target LLM model (default: auto-resolved via Tier Registry or Offline state)")
     parser.add_argument("-p", "--proxy", action="store_true", help="Enable remote proxy extension layout.")
     return parser
 

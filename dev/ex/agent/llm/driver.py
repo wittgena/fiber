@@ -1,5 +1,4 @@
 # fiber.dev.ex.agent.llm.driver
-## @lineage: fiber.dev.ex.facade.driver
 from __future__ import annotations
 
 import asyncio
@@ -200,7 +199,8 @@ class DriverIO:
                             else:
                                 on_token(chunk)
                         
-                        accumulator = resp.pipeline.attributes["accumulator"]
+                        # [핵심 수정됨] 불필요한 파이프라인 우회 로직 제거, 직접 accumulator 호출
+                        accumulator = resp.accumulator
                         final_response = accumulator.get_complete_response()
 
                         if getattr(final_response.usage, "prompt_tokens", 0) == 0 and getattr(final_response.usage, "completion_tokens", 0) == 0:

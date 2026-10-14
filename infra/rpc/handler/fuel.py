@@ -3,8 +3,7 @@ import asyncio
 import logging
 from typing import Dict, Any, List, Optional
 
-from fiber.infra.rpc.handler.core import WorkerContext
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.arch.contract.protocol.rpc import WorkerContext
 from xphi.arch.bound.adapter.pta import (
     PtaAdapter, 
     PtaTransaction, 
@@ -13,6 +12,7 @@ from xphi.arch.bound.adapter.pta import (
     PtaOutput,
     SignStateAdapter
 )
+from xphi.kernel.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("rpc.fuel")

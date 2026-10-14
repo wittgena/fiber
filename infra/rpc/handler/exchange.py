@@ -2,15 +2,13 @@
 import json
 import time
 from typing import Dict, Any
-
 from pydantic import ValidationError
 
-from fiber.infra.rpc.handler.core import WorkerContext, _build_error
-
-from xphi.kernel.space.sandbox.config import tier_config, fuel_config
+from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 from xphi.arch.model.edge.receptor import EdgeState, TradeIngressRequest, EpochInitPayload, ClearingReceiptRequest
 from xphi.arch.model.edge.receipt import BilledExecutionRequest
 
+from xphi.kernel.space.sandbox.config import tier_config, fuel_config
 from xphi.kernel.wasm.broker import DphiMethod
 from xphi.kernel.wasm.quota import Tier
 from xphi.watcher.plane.emitter import get_emitter

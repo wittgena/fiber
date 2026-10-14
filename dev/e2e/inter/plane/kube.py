@@ -1,4 +1,4 @@
-# fiber.dev.e2e.plane.kube
+# fiber.dev.e2e.inter.plane.kube
 import os
 import sys
 import argparse

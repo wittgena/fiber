@@ -1,4 +1,10 @@
-# fiber.dev.e2e.edge.compliance
+# fiber.dev.e2e.gateway.edge.compliance
+"""
+@requirements: fiber daemon 
+$ fiber daemon -s edge
+or
+$ XPHI_WORKERS=1 python -m xphi.kernel.ops.boot
+"""
 import asyncio
 import random
 from dataclasses import dataclass
@@ -12,7 +18,7 @@ from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
 
-log = get_emitter("e2e.edge.compliance")
+log = get_emitter("e2e.gateway.edge.compliance")
 
 """Workflow Messages (Phase Transitions)"""
 class StartComplianceMsg(WorkflowMessage): pass
