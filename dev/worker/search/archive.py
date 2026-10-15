@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.search.archive
+# fiber.dev.worker.search.archive
 import os
 import sys
 import json

@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.sentinel
+# fiber.dev.worker.sentinel
 import asyncio
 import time
 import json
@@ -22,7 +22,6 @@ class AgentSentinel(WorkerProtocol):
         }
 
     def handle_tools_list(self, req_id: Any):
-        """MCP 2026 규격: 외부 AI나 관리자가 수동으로 Sentinel을 조작할 수 있도록 도구 노출"""
         tools = [{
             "name": "trigger_manual_reconciliation",
             "description": "Force an immediate ledger sweep to detect and rollback orphaned transactions.",
@@ -36,16 +35,13 @@ class AgentSentinel(WorkerProtocol):
         self.send_response(req_id, {"tools": tools})
 
     def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
-        """MCP 2026 규격: 도구 실행 라우팅"""
         if tool_name == "trigger_manual_reconciliation":
             override = arguments.get("override_threshold")
-            # 비동기 로직을 동기 브릿지로 호출 (이벤트 루프에 태스크 위임)
             asyncio.create_task(self._manual_sweep_task(req_id, override))
         else:
             self.send_error(req_id, -32601, f"Unknown tool: {tool_name}")
 
     async def _manual_sweep_task(self, req_id: Any, override_ttl: float = None):
-        """수동 스윕 실행 후 MCP 클라이언트에게 결과 반환"""
         try:
             original_pending = self.ttl_thresholds["dphi.transition.pending"]
             if override_ttl:
@@ -65,7 +61,6 @@ class AgentSentinel(WorkerProtocol):
             self.send_error(req_id, -32000, str(e))
 
     async def ignite(self):
-        """컨트롤 플레인의 백그라운드 태스크로 동작하는 무한 루프"""
         self.running = True
         self.log.info("👁️ Sentinel Agent Ignited. Commencing Autonomous Entropy Sweeps...")
         try:
@@ -78,7 +73,6 @@ class AgentSentinel(WorkerProtocol):
             self.log.critical(f"Sentinel core fracture: {e}", exc_info=True)
 
     async def _sweep_and_reconcile(self) -> int:
-        """원장을 스캔하여 임계 시간을 초과한 상태를 색출"""
         now = time.time()
         stale_streams = await self.ledger.query_stale_streams(now, self.ttl_thresholds)
         if not stale_streams:
@@ -132,8 +126,7 @@ class AgentSentinel(WorkerProtocol):
                 "risk_score": risk_score
             }
         )
-        self.log.info(f"✅ Reverted {handle_id}. Entropy cleared and ledger marked for future reconciliation.")
-
+        self.log.info(f"Reverted {handle_id}. Entropy cleared and ledger marked for future reconciliation.")
 
 async def main():
     class MockStore:

@@ -55,7 +55,7 @@ This system is tightly coupled with DPHI's core observability module (`xphi.watc
 
 The `TenantEco` class and `UnitCostCalculator` compute estimated token costs based on the pricing matrix defined in `model_cost_registry.json`.
 
-### 🧾 3.1. Tenant Billing
+### 3.1. Tenant Billing
 
 This module is utilized to calculate and charge costs to specific users (Tenants) operating within the agentic system.
 
@@ -77,7 +77,7 @@ if billing_result["status"] == "success":
 
 ```
 
-### ⚠️ 3.2. Cost Calculator Constraints (Heuristic Limitations)
+### 3.2. Cost Calculator Constraints (Heuristic Limitations)
 
 Relying purely on runtime cost calculation (`UnitCostCalculator.generic_cost_per_token`) carries inherent industry-wide limitations due to rapidly evolving provider billing schemas:
 
@@ -91,7 +91,7 @@ When integrating the Cost module into core business logic, adopt a **conservativ
 * For mission-critical financial settlements, aggregate the raw `total_usage` metrics and process the final fiat billing via an isolated, authoritative external billing server.
 * Internal cost calculators should primarily serve as Observability Metrics or as input thresholds for DPHI Kernel governance.
 
-### ⛽ 3.3. Fuel vs. Token Usage (Separation of Concerns)
+### 3.3. Fuel vs. Token Usage (Separation of Concerns)
 
 The DPHI architecture enforces strict isolation between Token Usage (Observability) and Kernel Fuel (Security).
 

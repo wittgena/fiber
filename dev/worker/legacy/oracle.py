@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.legacy.oracle
+# fiber.dev.worker.legacy.oracle
 import sys
 import json
 import time

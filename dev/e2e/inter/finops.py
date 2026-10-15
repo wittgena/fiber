@@ -18,7 +18,7 @@ from fiber.gateway.llm.channel.fuel import FuelBreaker, BillingObserver
 from fiber.gateway.rest.security import TokenTranslator
 from fiber.gateway.mcp.connector import MCPServerConnector
 
-from fiber.dev.trace.llm.billing.watcher import default_finops_watcher
+from fiber.dev.trace.billing.watcher import default_finops_watcher
 from fiber.dev.trace.llm.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 
@@ -26,7 +26,7 @@ from fiber.dev.trace.llm.vcr.manager import (
 )
 from fiber.dev.trace.llm.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
-import fiber.dev.ex.worker.finops as worker_finops
+import fiber.dev.worker.finops as worker_finops
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.bound.event.next import next_trace_id

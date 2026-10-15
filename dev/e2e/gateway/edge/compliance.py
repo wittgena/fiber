@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 import httpx
 
-from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory, Endpoints
+from fiber.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
@@ -38,7 +38,7 @@ class ComplianceSuiteWorkflow(Workflow):
         super().__init__(name="EDGE_COMPLIANCE_SUITE")
         self.base_url = base_url
         
-        self.sdk_client = DphiPublicClient(base_url=self.base_url)
+        self.sdk_client = GatewayClient(base_url=self.base_url)
         self.raw_client = httpx.AsyncClient(base_url=self.base_url, timeout=10.0, follow_redirects=True)
         
         self.log = get_emitter("workflow.compliance", phase="AUDIT")

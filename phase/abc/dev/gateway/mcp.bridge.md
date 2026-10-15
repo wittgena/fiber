@@ -50,13 +50,13 @@ Agent C (Replay) ───────┘        │   - JSON ↔ LogicStream Tr
 
 ```
 
-* **Cryptographic Adapter (ACL 계층):** 다양한 암호화 스펙(Ed25519, RSA, EC)을 정규화하고, 매 요청마다 **DPoP 서명**과 **x402 결제 영수증**을 검증합니다. Check-Then-Act 동시성 이슈를 방지하는 분산 락(`IdempotencyMapper`)과 난수 캐시(`NonceReplayProtector`)를 통해 리플레이 공격을 엣지 계층에서 차단합니다.
-* **Transition Bridge (동기-비동기 파사드):** 클라이언트의 REST 요청을 비동기 인텐트(`LogicStream`)로 변환합니다. 타임아웃 발생 시 즉각 `FORCE_ROLLBACK`을 발행하여 응답 없는(Zombie) 워커 프로세스를 차단하고 504를 반환하는 롤백 매커니즘을 수행합니다.
-* **State Transition (상태 전이 및 제어):** 워커 샌드박스가 사용자 개입(OTP 등)을 요구하며 대기 상태로 전환될 때(`ephemeral/multiplex`), 시스템은 프로세스를 유휴(Park) 상태로 두고 `YIELD` 상태를 원장에 보고합니다. 브리지는 즉시 루프를 해제하고 클라이언트에게 `HTTP 202 Accepted`를 반환하여 안정적인 비동기 대화형 제어(Elicitation Trap)를 지원합니다.
+* **Cryptographic Adapter:** 다양한 암호화 스펙(Ed25519, RSA, EC)을 정규화하고, 매 요청마다 **DPoP 서명**과 **x402 결제 영수증**을 검증합니다. Check-Then-Act 동시성 이슈를 방지하는 분산 락(`IdempotencyMapper`)과 난수 캐시(`NonceReplayProtector`)를 통해 리플레이 공격을 엣지 계층에서 차단합니다.
+* **Transition Bridge:** 클라이언트의 REST 요청을 비동기 인텐트(`LogicStream`)로 변환합니다. 타임아웃 발생 시 즉각 `FORCE_ROLLBACK`을 발행하여 응답 없는(Zombie) 워커 프로세스를 차단하고 504를 반환하는 롤백 매커니즘을 수행합니다.
+* **State Transition:** 워커 샌드박스가 사용자 개입(OTP 등)을 요구하며 대기 상태로 전환될 때(`ephemeral/multiplex`), 시스템은 프로세스를 유휴(Park) 상태로 두고 `YIELD` 상태를 원장에 보고합니다. 브리지는 즉시 루프를 해제하고 클라이언트에게 `HTTP 202 Accepted`를 반환하여 안정적인 비동기 대화형 제어(Elicitation Trap)를 지원합니다.
 
 ---
 
-## 3. Ingress: 클라이언트 연동 규격 (Client ➔ Gateway)
+## 3. Ingress: 클라이언트 연동 규격 (Client -> Gateway)
 
 Gateway는 상태 제어용 봉투(FSM Envelope)를 헤더 프로토콜로 추상화합니다.
 
@@ -74,7 +74,7 @@ Gateway는 상태 제어용 봉투(FSM Envelope)를 헤더 프로토콜로 추�
 
 ---
 
-## 4. 트랜잭션 라이프사이클 (The Sync-Async Facade)
+## 4. 트랜잭션 라이프사이클
 
 클라이언트는 동기식 API 형태로 요청을 전송하지만, Gateway 내부에서는 FSM 이벤트 소싱이 오케스트레이션 됩니다.
 
@@ -98,7 +98,7 @@ Gateway는 상태 제어용 봉투(FSM Envelope)를 헤더 프로토콜로 추�
 
 ---
 
-## 5. Egress: 3단계 동시성 커넥터 규격 (Provider ➔ Core)
+## 5. Egress: 동시성 커넥터 규격 (Provider -> Core)
 
 제공자(Provider)는 단일 CLI 명령어를 사용하여 스크립트 특성에 맞는 동시성 모드를 선택하고 A2A 노드로 연동할 수 있습니다.
 

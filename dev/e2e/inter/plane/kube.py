@@ -8,7 +8,7 @@ import random
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.dev.ex.sdk.gateway import DphiPublicClient, StrictPayloadFactory, Endpoints
+from fiber.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from fiber.infra.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
@@ -103,7 +103,7 @@ class KubeWorkflowScene:
                 raise RuntimeError("Failed to establish port-forwarding for SDK tests.")
 
             # 2. Initialize SDK Client pointing to local tunnel
-            sdk_client = DphiPublicClient(base_url=f"http://127.0.0.1:{local_port}")
+            sdk_client = GatewayClient(base_url=f"http://127.0.0.1:{local_port}")
 
             # 3. Test 1: Telemetry Golden Path
             self.log.info("  ├─ Testing: OTLP Telemetry Seal (Golden Path)...")

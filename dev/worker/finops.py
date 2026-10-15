@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.finops
+# fiber.dev.worker.finops
 import os
 import json
 import time

@@ -23,8 +23,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
-import fiber.dev.ex.worker.deployer as worker_deployer
-import fiber.dev.ex.worker.sentinel as worker_sentinel
+import fiber.dev.worker.deployer as worker_deployer
+import fiber.dev.worker.sentinel as worker_sentinel
 
 from fiber.gateway.mcp.connector import MCPServerConnector
 from fiber.infra.rpc.handler.validator import ValidatorService

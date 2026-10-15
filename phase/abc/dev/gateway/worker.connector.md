@@ -1,9 +1,9 @@
-# fiber.phase.abc.dev.gateway.connector
-**@desc:** Fiber Protocol Specification: Egress Architecture & Canonical A2A Workload Topologies
+# fiber.phase.abc.dev.gateway.worker.connector
+**@desc:** Gateway Worker Connector Protocol Spec
 
 ## 0. 개요 (Abstract)
 
-본 명세는 Fiber 생태계의 Egress 아키텍처를 정의하며, `worker.connector` 및 세 가지 표준 워크로드 아키타입(`ephemeral`, `linear`, `multiplex`)을 중심으로 구성됩니다. 본 아키텍처는 격리된 형태의 기존 Web2 시스템을 A2A(Agent-to-Agent) 네트워크 내의 결정론적(Deterministic)이고 과금 가능한(Monetizable) 노드로 연합(Federate)하기 위한 구조적 방법론을 확립합니다. 이 모든 통합 과정은 기반 비즈니스 로직에 대한 코드 무수정(Zero-code modification) 원칙을 준수합니다.
+본 명세는 `worker.connector` 및 세 가지 표준 워크로드 아키타입(`ephemeral`, `linear`, `multiplex`)을 통해 worker -> gateway egress 연동 스펙을 정의합니다. 본 아키텍처는 격리된 형태의 기존 Web2 시스템 또는 MCP Server를 결정론적(Deterministic), 격리된 환경, 과금 가능한(Monetizable) 노드로 제공하기 위한 구조적 방법을 제공합니다.
 
 ---
 
@@ -16,7 +16,7 @@
 * **아웃바운드 풀 기반 NAT 순회 (Outbound Pull & NAT Traversal):** 커넥터는 인바운드 방화벽 개방을 요구하지 않고, DPHI 버스(`TunnelFactory`)를 향한 아웃바운드 터널링을 통해 구독(Subscribe) 모델로 작동합니다. 이는 제로 트러스트(Zero-Trust) 보안 원칙을 준수하며, 인프라 운영자의 네트워크 컴플라이언스 오버헤드를 최소화합니다.
 * **I/O 추상화 및 프로세스 격리 (I/O Abstraction & Process Isolation):** 기존 애플리케이션은 벤더 종속적인 SDK나 네트워킹 라이브러리를 요구하지 않습니다. 커넥터는 격리된 서브프로세스를 생성하고 표준 입출력 파이프(`stdin`/`stdout`)를 통해서만 IPC(Inter-Process Communication)를 수행하여, 통신 로직과 비즈니스 실행 컨텍스트를 물리적으로 분리합니다.
 
-### 1.2. 3단계 동시성 토폴로지 (Tri-Track Concurrency Topologies)
+### 1.2. Tri-Track Concurrency Topologies
 
 타겟 워커(Worker)의 특성 및 I/O 바운드 유무에 따라 커넥터는 다음 3가지 실행 토폴로지 모드를 동적으로 라우팅합니다:
 
@@ -34,9 +34,7 @@
 
 ---
 
-## 2. 표준 워크로드 아키타입 (Canonical Workload Archetypes)
-
-기존 애플리케이션 및 시스템은 다음 3가지 토폴로지 아키타입 중 하나로 수렴됩니다. Egress 커넥터는 이들을 A2A 생태계의 자율 노드로 통합합니다.
+## 2. 표준 워크로드 Archetype
 
 ### Archetype Alpha: 상태 유지형 제어 및 Human-in-the-Loop (`agent.deploy`)
 
@@ -46,7 +44,7 @@
 * **메커니즘:** 운영 DB에 대한 `DROP/TRUNCATE` 등의 인텐트 수신 시, 워커는 실행을 중단하고 승인된 관리자의 6자리 TOTP를 요구하는 `elicitation`을 발행합니다.
 * **아키텍처 가치:** 기존 CLI 스크립트를 비동기적 코드 재작성 없이 인간의 승인을 대기하는 유한 상태 기계(FSM) 구조로 캡슐화합니다. 인프라 운영자는 시스템 제어권(Control)을 유지한 상태로 에이전트를 프로덕션 환경에 배포할 수 있습니다.
 
-### Archetype Beta: 무상태 결정론적 연산 데몬 (`agent.finlib`)
+### Archetype Beta: 무상태 연산 데몬 (`agent.finlib`)
 
 **목적:** WASM 샌드박스의 물리적 제약(C-Bindings 부재)을 우회하고 시스템적 연산 자원 낭비를 최소화.
 
@@ -64,10 +62,10 @@
 
 ---
 
-## 3. 종합 및 시스템적 수렴 (Synthesis & Systemic Convergence)
+## 3. 종합 특징
 
-`worker.connector`와 3대 워크로드 아키타입은 파편화된 기존 인프라스트럭처를 범용 A2A 네트워크로 연합(Federate)하기 위한 표준 프레임워크를 제공합니다. 본 아키텍처는 다음과 같은 경제적/구조적 효율성을 시스템 레벨에서 보장합니다:
+`worker.connector`와 3개의 워크로드 아키타입은 기존 인프라를 범용 MCP Server로 안전하게 브릿지할수 있는 프레임워크를 제공하며, 다음과 같은 경제적/구조적 효율성을 시스템 레벨에서 보장합니다.
 
-1. **개발 상호운용성 (Developmental Interoperability):** 기존의 코드베이스를 3가지 아키타입(ephemeral, linear, multiplex)의 특성에 맞춰 매핑함으로써, 기반 로직의 구조적 리팩토링 없이 A2A 경제에 편입될 수 있습니다.
-2. **보안 및 컴플라이언스 (Security & Compliance):** NAT 순회, 샌드박스 결함 격리, DPoP 및 x402 결제 유효성 검증 등의 암호학적 검증 처리를 엣지 노드(Edge Node)가 전담하므로, 내부 인프라의 외부 노출 및 보안 컴플라이언스 이슈가 해결됩니다.
-3. **경제적 결정론 (Economic Determinism):** 데몬 및 다중화를 통한 초기화 오버헤드 제거와 락-프리(Lock-free) 기반의 O(1) 동시성 처리를 통해, 연산 노드의 한계 운영 비용(Marginal Cost)을 최소화하며 프로토콜 전반의 분산 라우팅 효율성을 높입니다.
+1. **개발 상호운용성:** 기존의 코드베이스를 3가지 아키타입(ephemeral, linear, multiplex)의 특성에 맞춰 매핑함으로써, 기반 로직의 구조적 리팩토링 없이 MCP Bridging이 가능합니다.
+3. **보안 및 컴플라이언스 (Security & Compliance):** NAT 순회, 샌드박스 결함 격리, DPoP 및 x402 결제 유효성 검증 등의 암호학적 검증 처리를 Fiber Gateway가 전담하므로, 내부 인프라의 외부 노출 및 보안 컴플라이언스 이슈가 해결됩니다.
+4. **경제적 결정론 (Economic Determinism):** 데몬 및 다중화를 통한 초기화 오버헤드 제거와 락-프리(Lock-free) 기반의 O(1) 동시성 처리를 통해, Worker나 노드의 운영 비용(Marginal Cost)을 최소화하며 프로토콜 전반의 분산 라우팅 효율성을 높입니다.

@@ -7,7 +7,7 @@ VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 def _init_bridge(mode: str, fixture_dir: str):
     """Init the VCR sandbox and direct modules aliasing"""
     from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
-    from fiber.dev.ex.space.bind.redirector import PhaseAirlock
+    from fiber.dev.bind.redirector import PhaseAirlock
     
     try:
         verify_local_dev_environment(allow_ci=True)

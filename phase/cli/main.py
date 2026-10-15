@@ -141,8 +141,8 @@ def run_connector(
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     _load_env(env_file)
-    import fiber.dev.ex.worker.deployer as worker_deployer
-    import fiber.dev.ex.worker.legacy.oracle as worker_oracle
+    import fiber.dev.worker.deployer as worker_deployer
+    import fiber.dev.worker.legacy.oracle as worker_oracle
 
     KNOWN_WORKERS = {
         "worker.deploy": f"{sys.executable} -m {worker_deployer.__name__}",
