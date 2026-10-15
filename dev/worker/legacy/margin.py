@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.legacy.margin
+# fiber.dev.worker.legacy.margin
 import sys
 import json
 import logging

@@ -12,7 +12,7 @@ from fiber.gateway.mcp.connector import MCPServerConnector
 from xphi.state.phase.reactor import PhaseReactor
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
-import fiber.dev.ex.worker.finops as worker_finops
+import fiber.dev.worker.finops as worker_finops
 
 class FinopsIntegrationPipeline(BaseBridgePipeline):
     def __init__(self, config: E2EConfig):

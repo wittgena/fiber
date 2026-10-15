@@ -1,13 +1,13 @@
-# fiber.phase.abc.dev.llm.trace
-@desc: Fiber LLM Trace & Interceptor Guide
+# fiber.phase.abc.dev.llm.pipeline
+@desc: LLM Pipeline & Interceptor Guide
 
 This document defines the architectural specifications and integration patterns for injecting custom telemetry (Tracer), caching, and security (Guardrail) middleware into the Fiber LLM router (`fiber.llm.entry`).
 
-Fiber enforces strict, Netty-style physical pipeline stability while providing developers with a Pythonic, flat-list dependency injection interface (`interceptors=[]`) known as the UX Facade.
+Fiber enforces strict, duplex channel pipeline stability while providing developers with a Pythonic, flat-list dependency injection interface (`interceptors=[]`).
 
 ---
 
-## 1. Pipeline Flow & Slots (Architecture Overview)
+## 1. Pipeline Flow & Slots
 
 Fiber enforces strict, Netty-style pipeline stability while providing developers with a simple, flat-list injection interface (`interceptors=[]`). The UX Facade deterministically auto-routes your plugins into three logical Execution Zones.
 

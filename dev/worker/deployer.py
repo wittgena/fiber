@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.deployer
+# fiber.dev.worker.deployer
 import os
 import sys
 import json

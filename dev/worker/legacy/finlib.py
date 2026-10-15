@@ -1,4 +1,4 @@
-# fiber.dev.ex.worker.legacy.finlib
+# fiber.dev.worker.legacy.finlib
 import sys
 import json
 import logging

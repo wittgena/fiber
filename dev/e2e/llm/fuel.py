@@ -10,17 +10,9 @@ from typing import Optional
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.pipeline import PipelineSlot
-
-from xphi.arch.contract.workflow import StopMessage, WorkflowMessage, step
-from xphi.kernel.wasm.broker import DphiBroker
-from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
-from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
-from xphi.arch.bound.event.next import next_trace_id
-from xphi.watcher.plane.emitter import get_emitter
-
 from fiber.gateway.llm.channel.fuel import BillingObserver, FuelBreaker
-from fiber.dev.trace.llm.billing.watcher import default_finops_watcher
+
+from fiber.dev.trace.billing.watcher import default_finops_watcher
 from fiber.dev.trace.llm.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 
@@ -34,6 +26,15 @@ from fiber.dev.trace.llm.base import (
     build_e2e_context, 
     ReportMsg
 )
+
+from xphi.arch.contract.workflow import StopMessage, WorkflowMessage, step
+from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
+from xphi.arch.bound.event.next import next_trace_id
+
+from xphi.kernel.wasm.broker import DphiBroker
+from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.llm.fuel")
 FIXTURE_ROOT = "fiber-compats/suites/e2e" 

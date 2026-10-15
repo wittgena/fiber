@@ -1,4 +1,4 @@
-# fiber.dev.ex.sdk.gateway
+# fiber.gateway.client
 import time
 import logging
 from dataclasses import dataclass, asdict
@@ -101,7 +101,7 @@ class StrictPayloadFactory:
         )
 
 """Core SDK Client"""
-class DphiPublicClient:
+class GatewayClient:
     def __init__(self, base_url: str = "http://localhost:8000", api_key: str = ""):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
