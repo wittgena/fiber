@@ -348,7 +348,7 @@ pyenv local fiber-user
 
 ## 2. Install via local source OR remote git reference
 uv pip install /path/to/local/self/fiber
-# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.1
+# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.2
 
 ## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help
