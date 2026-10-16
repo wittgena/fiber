@@ -1,4 +1,4 @@
-# fiber.dev.ex.bridge
+# fiber.dev.bridge.vcr
 import os
 import sys
 
@@ -6,8 +6,8 @@ VCR_MODE = os.environ.get("VCR_MODE", "live").lower()
 
 def _init_bridge(mode: str, fixture_dir: str):
     """Init the VCR sandbox and direct modules aliasing"""
-    from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
-    from fiber.dev.bind.redirector import PhaseAirlock
+    from fiber.dev.bridge.sandbox import verify_local_dev_environment, create_security_sandbox
+    from fiber.dev.bridge.redirector import PhaseAirlock
     
     try:
         verify_local_dev_environment(allow_ci=True)
@@ -25,8 +25,8 @@ def _init_bridge(mode: str, fixture_dir: str):
         "litellm.types.utils": llm_response.__name__
     })
 
-    from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-    from fiber.dev.trace.llm.vcr.injector import VCRInjector
+    from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
+    from fiber.dev.trace.vcr.injector import VCRInjector
     config = VCRPlaybackConfig(mode=mode, speed="real", record_tick_ms=100.0)
     VCRInjector.apply(config=config, fixture_dir=fixture_dir)
     
@@ -40,7 +40,7 @@ def inspect_fixture(scenario_id: str, fixture_dir: str):
         print("[VCR] Fixture directory was not initialized.")
         return
 
-    from fiber.dev.trace.llm.vcr.manager import VCRIdentityRule
+    from fiber.dev.trace.vcr.manager import VCRIdentityRule
     
     class MockCtx:
         system_meta = type('Meta', (), {'metadata': {'vcr_scenario': scenario_id, 'vcr_invoker': "ex.switch"}})()

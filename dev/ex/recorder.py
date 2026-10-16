@@ -7,19 +7,20 @@ import time
 from typing import Any
 from pathlib import Path
 
-from fiber.dev.trace.llm.vcr.manager import (
+from fiber.dev.trace.vcr.manager import (
     VCRIdentityRule, 
     VCRPlaybackConfig, 
     add_vcr_arguments
 )
 
-from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
 from xphi.arch.bound.event.next import next_trace_id
+from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
+from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("ex.recorder")
 FIXTURE_ROOT = resolve_path("fixture")
 CURRENT_INVOKER, _ = get_invoker(Path(__file__))
+
 
 def init_vcr_environment(config: VCRPlaybackConfig):
     """Initialize VCR sandbox and inject network proxies."""
@@ -28,7 +29,7 @@ def init_vcr_environment(config: VCRPlaybackConfig):
         return
 
     try:
-        from fiber.phase.cli.sandbox import verify_local_dev_environment, create_security_sandbox
+        from fiber.dev.bridge.sandbox import verify_local_dev_environment, create_security_sandbox
         verify_local_dev_environment(allow_ci=True)
         create_security_sandbox(vcr_mode=config.mode)
         log.info("[Sandbox] Strict Security Policy Injected")
@@ -38,10 +39,11 @@ def init_vcr_environment(config: VCRPlaybackConfig):
         log.error(f"[SANDBOX VIOLATION] Execution Denied: {e}")
         sys.exit(1)
 
-    from fiber.dev.trace.llm.vcr.injector import VCRInjector
+    from fiber.dev.trace.vcr.injector import VCRInjector
     VCRInjector.apply(config=config, fixture_dir=FIXTURE_ROOT)
     log.info(f"[VCR] Status: ENGAGED ({config.mode.upper()}) | Speed: {config.speed} | Chaos: {config.chaos_latency_ms}ms | Tick: {config.record_tick_ms}ms")
     log.info(f"[VCR] Fixture Storage: {os.path.abspath(FIXTURE_ROOT)}\n")
+
 
 async def run_scenario(
     scenario_name: str,
@@ -52,7 +54,7 @@ async def run_scenario(
     from fiber.dev.ex.model.message import Message
     from fiber.dev.ex.agent.llm.driver import LLMFacade
     import fiber.dev.ex.agent.llm.observer 
-    from fiber.gateway.llm.state.traverser import StateTraverser
+    from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
     
     try:
         from fiber.llm.response import ModelResponseStream
@@ -62,17 +64,19 @@ async def run_scenario(
     log.info(f"\n--- Starting Scenario: {scenario_name} ---")
     log.info(f"Payload: model={profile.model}, stream={stream}")
 
+    provider = profile.model.split("/")[0] if "/" in profile.model else None
     messages = []
     for m_data in messages_data:
-        content = m_data.get("content")
+        m_copy = m_data.copy()
+        content = m_copy.get("content")
         if isinstance(content, str):
-            m_data["content"] = [{"type": "text", "text": content}]
+            m_copy["content"] = [{"type": "text", "text": content}]
         
         try:
-            messages.append(Message.model_validate(m_data))
+            messages.append(Message.model_validate(m_copy))
         except Exception as e:
             log.warning(f"Message validation failed, falling back to raw init: {e}")
-            messages.append(Message(**m_data))
+            messages.append(Message(**m_copy))
 
     counters = {
         "chunk_count": 0,
@@ -96,19 +100,22 @@ async def run_scenario(
         try:
             if hasattr(chunk, "choices") and chunk.choices:
                 legacy_content = chunk.choices[0].delta.content or ""
-            elif isinstance(chunk, dict) and "choices" in chunk:
-                legacy_content = chunk["choices"][0].get("delta", {}).get("content", "")
+            elif isinstance(chunk, dict) and "choices" in chunk and chunk["choices"]:
+                legacy_content = chunk["choices"][0].get("delta", {}).get("content") or ""
                 
             if legacy_content:
                 counters["legacy_valid"] += 1
         except Exception:
             pass
 
+        fiber_content = ""
         try:
-            fiber_content = StateTraverser.extract_stream_content(chunk, default="")
+            parsed = StreamChunkParser.parse(provider, chunk)
+            fiber_content = (parsed.get("text") if parsed else "") or ""
             if fiber_content:
                 counters["fiber_valid"] += 1
-        except Exception:
+        except Exception as e:
+            log.debug(f"[Recorder] StreamChunkParser failed: {e}")
             fiber_content = ""
 
         if legacy_content != fiber_content:
@@ -149,11 +156,11 @@ async def run_scenario(
         duration = (time.perf_counter() - start_time) * 1000
         
         if stream:
-            print("\n\n" + "-"*40)
+            print("\n\n" + "-" * 40)
             log.info(f"[STREAM CLOSED] Duration: {duration:.2f}ms")
             log.info(f"   ├─ Total Chunks Received : {counters['chunk_count']}")
             log.info(f"   ├─ Direct Extracted      : {counters['legacy_valid']}")
-            log.info(f"   ├─ Fiber Mapper Extracted: {counters['fiber_valid']}")
+            log.info(f"   ├─ Fiber Parser Extracted: {counters['fiber_valid']}")
             log.info(f"   └─ Data Mismatch Count   : {counters['mismatch']}\n")
         else:
             safe_text = response.message.content if response.message else ""
@@ -165,7 +172,7 @@ async def run_scenario(
         
         if metrics.accumulated_token_usage:
             u = metrics.accumulated_token_usage
-            total = getattr(u, 'total_tokens', getattr(u, 'prompt_tokens', 0) + getattr(u, 'completion_tokens', 0))
+            total = getattr(u, "total_tokens", getattr(u, "prompt_tokens", 0) + getattr(u, "completion_tokens", 0))
             log.info(f"Tokens: [Prompt: {getattr(u, 'prompt_tokens', 0)} / Completion: {getattr(u, 'completion_tokens', 0)} / Total: {total}]")
 
     except Exception as e:
@@ -202,10 +209,10 @@ async def execute_scenarios(args: argparse.Namespace):
     )
 
     log.info("\n================================================================================")
-    if getattr(args, 'vcr', 'live') == "record":
+    if getattr(args, "vcr", "live") == "record":
         log.info("[RECORD COMPLETE] Network I/O has been frozen into fixtures.")
         log.info(f"  Next Step: python -m dev.ex.agent.recorder -m {args.model} --vcr replay --vcr-speed real")
-    elif getattr(args, 'vcr', 'live') == "replay":
+    elif getattr(args, "vcr", "live") == "replay":
         log.info("[REPLAY COMPLETE] Time-travel API mocking successful.")
     else:
         log.info("[LIVE COMPLETE] Normal API execution without VCR.")
@@ -216,17 +223,16 @@ def main(args: list[str] = None):
     parser = argparse.ArgumentParser(description="Fiber Facade VCR Utility")
     parser.add_argument("-m", "--model", type=str, default="gemini/gemini-3.1-flash-lite", help="Target LLM model")
     
-    # VCR 파라미터 일괄 주입
     add_vcr_arguments(parser)
     parsed_args, _ = parser.parse_known_args(args)
     
-    # 통합 팩토리 메서드를 통해 config 생성
     vcr_config = VCRPlaybackConfig.from_args(parsed_args)
     os.environ["VCR_MODE"] = vcr_config.mode
     os.makedirs(FIXTURE_ROOT, exist_ok=True)
     
     init_vcr_environment(vcr_config)
     asyncio.run(execute_scenarios(parsed_args))
+
 
 if __name__ == "__main__":
     main()

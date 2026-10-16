@@ -1,5 +1,4 @@
-# fiber.dev.bind.redirector
-## @lineage: fiber.dev.ex.space.bind.redirector
+# fiber.dev.bridge.redirector
 import sys
 import types
 import importlib.util
@@ -8,7 +7,7 @@ from typing import Optional, Union
 from xphi.kernel.space.bind.resolver import find_current_self
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("bind.redirector")
+log = get_emitter("bridge.redirector")
 
 SELF_ROOT = find_current_self()
 

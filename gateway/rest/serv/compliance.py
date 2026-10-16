@@ -1,8 +1,4 @@
 # fiber.gateway.rest.serv.compliance
-"""
-@requirements: rest_edge boot
-$ XPHI_WORKERS=1 python -m xphi.kernel.ops.boot
-"""
 import os
 import json
 import time

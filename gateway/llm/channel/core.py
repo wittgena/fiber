@@ -33,7 +33,7 @@ _TRACE_ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
 class ContextBinder(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
-        # 1. 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
+        # 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
         call_id = msg.get("call_id")
         if not call_id:
             call_id = os.urandom(8).hex()
@@ -42,7 +42,7 @@ class ContextBinder(DuplexChannel):
         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
         metadata = msg.get("metadata", {})
         
-        # 2. 논리적 트랜잭션 ID (Trace ID) 정밀 검증
+        # 논리적 트랜잭션 ID (Trace ID) 정밀 검증
         raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
         if raw_trace_id and isinstance(raw_trace_id, str) and _TRACE_ID_PATTERN.match(raw_trace_id):
             resolved_trace_id = raw_trace_id
@@ -53,9 +53,6 @@ class ContextBinder(DuplexChannel):
             resolved_trace_id = next_trace_id(deterministic_seed=None)
 
         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
-
-        # 3. 💡 [핵심 아키텍처 개선] 전역 컨텍스트 조기 주입 (Short-circuit 방어)
-        # Mocking 등으로 인해 FuelBreaker가 실행되지 않더라도 BillingObserver가 동작할 수 있도록 보장
         kernel_auth = metadata.get(DphiKey.KERNEL_AUTH.value, {})
         if isinstance(kernel_auth, dict):
             tenant_id = kernel_auth.get("tenant_id", "anonymous")
@@ -64,7 +61,7 @@ class ContextBinder(DuplexChannel):
         
         ctx.set_attr("tenant_id", tenant_id)
 
-        # 4. 시스템 메타데이터 조립
+        # 시스템 메타데이터 조립
         system_meta = ExecutionMetadata(
             session_id=resolved_session_id,
             trace_id=resolved_trace_id,
@@ -87,53 +84,6 @@ class ContextBinder(DuplexChannel):
                 pass
         
         await ctx.fire_channel_read(msg)
-
-# class ContextBinder(DuplexChannel):
-#     async def write(self, ctx: ChannelContext, msg: Dict[str, Any]):
-#         # 물리적 호출 ID (Span ID) - OTel 표준: 16자리 소문자 16진수 (8-byte)
-#         if "call_id" not in msg:
-#             msg["call_id"] = os.urandom(8).hex()
-
-#         ctx.set_attr("trace_errors", msg.get("trace_errors", False))
-#         metadata = msg.get("metadata", {})
-        
-#         # 논리적 트랜잭션 ID (Trace ID) - OTel 표준: 32자리 소문자 16진수 (16-byte)
-#         raw_trace_id = msg.get("trace_id") or metadata.get("trace_id")
-#         if raw_trace_id:
-#             # 전달받은 ID가 이미 32자리 OTLP 규격이라면 그대로 수용
-#             if len(raw_trace_id) == 32:
-#                 resolved_trace_id = raw_trace_id
-#             # 32자리가 아니라면 이를 시드로 삼아 32자리 OTLP Hex로 결정론적 변환
-#             else:
-#                 resolved_trace_id = next_trace_id(deterministic_seed=str(raw_trace_id))
-#         else:
-#             resolved_trace_id = next_trace_id(deterministic_seed=None)
-        
-#         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
-
-#         system_meta = ExecutionMetadata(
-#             session_id=resolved_session_id,
-#             trace_id=resolved_trace_id,
-#             call_id=msg["call_id"],
-#             metadata=metadata,
-#             base_model=msg.get("model", "unknown")
-#         )
-        
-#         ctx.set_attr("system_meta", system_meta)
-#         ctx.set_attr("request_kwargs", msg)
-#         msg["system_meta"] = system_meta
-#         await ctx.fire_write(msg)
-    
-#     async def channel_read(self, ctx: ChannelContext, msg: Any):
-#         meta = ctx.get_attr("system_meta")
-#         if meta is not None:
-#             try:
-#                 # Pydantic 모델이나 일반 객체에 속성 부여
-#                 msg.system_meta = meta
-#             except Exception:
-#                 # 불변(Immutable) 객체이거나 속성 할당이 불가능한 경우 무시
-#                 pass
-#         await ctx.fire_channel_read(msg)
 
 class MockBypass(DuplexChannel):
     async def write(self, ctx: ChannelContext, msg: dict):
@@ -206,6 +156,11 @@ class FallbackHandler(DuplexChannel):
             retry_msg.update(fallback_config)
         else:
             retry_msg["model"] = next_fallback
+        
+        if sys_meta := ctx.get_attr("system_meta"):
+            sys_meta.base_model = retry_msg["model"]
+        if req_kwargs := ctx.get_attr("request_kwargs"):
+            req_kwargs["model"] = retry_msg["model"]
 
         log_handlers.warning(f"Fallback attempt triggered. Retrying with model: {retry_msg['model']}", error=str(exc))
         

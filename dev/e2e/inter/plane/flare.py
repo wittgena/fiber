@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass, field
 from typing import List, Dict
 
-import fiber.infra.scene as scene_module
+import fiber.infra.e2e.scene as scene_module
 
 from xphi.kernel.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor

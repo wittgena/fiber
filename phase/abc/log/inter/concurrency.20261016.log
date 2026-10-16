@@ -1,0 +1,164 @@
+wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.inter.concurrency --vcr replay --model llama_server/gemma-3-1b-it-Q4_K_M.gguf
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-58544
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Core Pipeline VCR Concurrency & Load Profile Suite ===
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Init Secure MCP Server...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | CRIT  |  rpc.handler.validator: ⚠️ DPHI_MASTER_PASSPHRASE missing. Validator cannot operate.
+ LOG | SYSTEM | WARN  |  rpc.handler.validator: Generating Ephemeral Signing Key for Validator.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-58544] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  config.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/kernel/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  config.origin: ✅ Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.kernel.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 0 Connectors...
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/3] Phase 1: Concurrent Unary Burst & Context Isolation
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Executing 50 unary requests across 50 VUs (Mode: replay)...
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [📊 LOAD PROFILE: Phase 1 - Unary Pipeline Burst] ──────────────────────────────────────
+  │ • Throughput :    777.3 req/s  |     777.3 chunks/s (Reqs: 50/50, Chunks: 50)
+  │ • Latency E2E: p50=  0.98ms | p90=  1.76ms | p95=  2.38ms | p99=  4.07ms
+  │ • TTFT       : p50=  0.98ms | p95=  2.38ms | Min/Max=0.7/5.3ms
+  └ • Runtime    : MemPeak= 0.39MB | LoopLag=54.00ms | Wall=64.3ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/3] Phase 2: Concurrent Stream Interleaving & Throughput Profile
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Launching 50 interleaved streams across 50 VUs (Mode: replay)...
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [📊 LOAD PROFILE: Phase 2 - Interleaved Stream Fan-Out] ──────────────────────────────────────
+  │ • Throughput :      7.6 req/s  |     790.9 chunks/s (Reqs: 50/50, Chunks: 5200)
+  │ • Latency E2E: p50=6533.99ms | p90=6556.74ms | p95=6559.86ms | p99=6562.73ms
+  │ • TTFT       : p50=  1.07ms | p95=  1.48ms | Min/Max=6509.4/6563.7ms
+  └ • Runtime    : MemPeak= 5.31MB | LoopLag=4867.00ms | Wall=6575.1ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/3] Phase 3: Heterogeneous Sustained VU Pool (Unary + Stream + Aggregated)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Running 50 heterogeneous tasks across 50 VUs...
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [📊 LOAD PROFILE: Phase 3 - Mixed Workload (Unary/Stream/Aggregated)] ──────────────────────────────────────
+  │ • Throughput :     11.8 req/s  |     426.8 chunks/s (Reqs: 50/50, Chunks: 1801)
+  │ • Latency E2E: p50=120.07ms | p90=138.69ms | p95=144.95ms | p99=153.77ms
+  │ • TTFT       : p50=  1.04ms | p95=139.26ms | Min/Max=0.8/159.2ms
+  └ • Runtime    : MemPeak= 0.60MB | LoopLag=4210.00ms | Wall=4220.1ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[BasePipeline] Teardown sequence initiated...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: API Payload Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Teardown complete.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: PIPELINE CONCURRENCY & LOAD PROFILE SUITE VALIDATED SUCCESSFULLY.
+[Reactor] 🏁 Lifecycle terminated cleanly.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.inter.concurrency --vcr replay --concurrency 200 --model llama_server/gemma-3-1b-it-Q4_K_M.gguf
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+[Reactor] ⚡ macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] 🚀 UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-58885
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Core Pipeline VCR Concurrency & Load Profile Suite ===
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Init Secure MCP Server...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | CRIT  |  rpc.handler.validator: ⚠️ DPHI_MASTER_PASSPHRASE missing. Validator cannot operate.
+ LOG | SYSTEM | WARN  |  rpc.handler.validator: Generating Ephemeral Signing Key for Validator.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-58885] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  config.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/kernel/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  config.origin: ✅ Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.kernel.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 0 Connectors...
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/3] Phase 1: Concurrent Unary Burst & Context Isolation
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Executing 200 unary requests across 200 VUs (Mode: replay)...
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [📊 LOAD PROFILE: Phase 1 - Unary Pipeline Burst] ──────────────────────────────────────
+  │ • Throughput :   1057.3 req/s  |    1057.3 chunks/s (Reqs: 200/200, Chunks: 200)
+  │ • Latency E2E: p50=  0.71ms | p90=  1.26ms | p95=  1.74ms | p99=  2.72ms
+  │ • TTFT       : p50=  0.71ms | p95=  1.74ms | Min/Max=0.6/5.2ms
+  └ • Runtime    : MemPeak= 0.71MB | LoopLag=175.00ms | Wall=189.2ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/3] Phase 2: Concurrent Stream Interleaving & Throughput Profile
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Launching 200 interleaved streams across 200 VUs (Mode: replay)...
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [📊 LOAD PROFILE: Phase 2 - Interleaved Stream Fan-Out] ──────────────────────────────────────
+  │ • Throughput :      7.8 req/s  |     810.5 chunks/s (Reqs: 200/200, Chunks: 20800)
+  │ • Latency E2E: p50=25497.67ms | p90=25581.27ms | p95=25592.81ms | p99=25605.08ms
+  │ • TTFT       : p50=  1.03ms | p95=  1.24ms | Min/Max=25398.7/25616.2ms
+  └ • Runtime    : MemPeak= 9.58MB | LoopLag=18800.00ms | Wall=25663.4ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/3] Phase 3: Heterogeneous Sustained VU Pool (Unary + Stream + Aggregated)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Running 200 heterogeneous tasks across 200 VUs...
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [📊 LOAD PROFILE: Phase 3 - Mixed Workload (Unary/Stream/Aggregated)] ──────────────────────────────────────
+  │ • Throughput :     11.8 req/s  |     418.5 chunks/s (Reqs: 200/200, Chunks: 7101)
+  │ • Latency E2E: p50=120.59ms | p90=128.56ms | p95=141.47ms | p99=145.20ms
+  │ • TTFT       : p50=  1.06ms | p95=140.81ms | Min/Max=0.8/157.1ms
+  └ • Runtime    : MemPeak= 0.90MB | LoopLag=16956.00ms | Wall=16966.4ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[BasePipeline] Teardown sequence initiated...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: API Payload Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Teardown complete.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: PIPELINE CONCURRENCY & LOAD PROFILE SUITE VALIDATED SUCCESSFULLY.
+[Reactor] 🏁 Lifecycle terminated cleanly.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.

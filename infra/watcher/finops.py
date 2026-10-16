@@ -1,5 +1,4 @@
-# fiber.dev.trace.billing.watcher
-## @lineage: fiber.dev.trace.llm.billing.watcher
+# fiber.infra.watcher.finops
 import asyncio
 import json
 import logging
@@ -21,13 +20,10 @@ from xphi.arch.contract.config.resolver import config as global_config
 from xphi.arch.bound.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor, get_emitter
 
-logger = logging.getLogger("trace.billing.watcher")
+logger = logging.getLogger("infra.watcher.finops")
 finops_emitter = get_emitter("tenant.finops", phase="BILLING")
 
-# =====================================================================
-# 1. Usage Tracker & Tenant Eco (Outbound Billing System)
-# =====================================================================
-
+"""Usage Tracker & Tenant Eco (Outbound Billing System)"""
 class UsageTracker:
     def __init__(self):
         self.usage_data = defaultdict(list)
@@ -175,17 +171,13 @@ class TenantEco:
                 "message": str(e)
             }
 
-
-# =====================================================================
-# 2. FinOps Watcher (Inbound: 외부 정책 실시간 동기화)
-# =====================================================================
-
+"""FinOps Watcher (Inbound: 외부 정책 실시간 동기화)"""
 class FinOpsWatcher:
     def __init__(self):
         self.local_budget_cache: Dict[str, float] = {}
         self._sync_task: Optional[asyncio.Task] = None
         self._running: bool = False
-        self.is_ready = asyncio.Event()  # 💡 [핵심] 구독 완료 상태 동기화 이벤트
+        self.is_ready = asyncio.Event()
 
     def start(self):
         if self._sync_task is None or self._sync_task.done():
@@ -196,17 +188,13 @@ class FinOpsWatcher:
 
     def stop(self):
         self._running = False
-        self.is_ready.clear()  # 종료 시 상태 즉시 해제
+        self.is_ready.clear()
         if self._sync_task and not self._sync_task.done():
             self._sync_task.cancel()
             logger.info("[FinOpsWatcher] Stopped background policy sync daemon.")
 
     async def wait_until_ready(self, timeout: float = 5.0):
-        """
-        💡 [핵심 유틸리티]
-        메시지를 발행(Publish)하기 전에 이 메서드를 호출하여
-        구독(Subscription)이 완전히 맺어질 때까지 안전하게 대기합니다.
-        """
+        """메시지를 발행(Publish)하기 전에 이 메서드를 호출하여 구독(Subscription)이 완전히 맺어질 때까지 대기"""
         try:
             await asyncio.wait_for(self.is_ready.wait(), timeout=timeout)
         except asyncio.TimeoutError:
@@ -220,10 +208,8 @@ class FinOpsWatcher:
                 pubsub = tunnel.pubsub()
                 await pubsub.subscribe("finops:control_plane")
                 
-                # 💡 [핵심] Redis Subscribe 성공 직후 상태를 Ready로 전환!
                 self.is_ready.set()
                 logger.info("[FinOpsWatcher] Connected to FinOps Control Plane via Tunnel.")
-                
                 async for message in pubsub.listen():
                     if not self._running:
                         break
@@ -298,10 +284,7 @@ class FinOpsWatcher:
             logger.error(f"[FinOpsWatcher] Failed to process event: {e}", exc_info=True)
 
 
-# =====================================================================
-# 3. Interceptors & Exportable Singleton Instances
-# =====================================================================
-
+"""Interceptors & Exportable Singleton Instances"""
 def _usage_tracking_interceptor(event: LogEvent):
     ctx = event.context or {}
     tracker = ctx.get("usage_tracker")

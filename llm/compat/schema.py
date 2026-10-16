@@ -1,55 +1,55 @@
 # fiber.llm.compat.schema
-from typing import List, Dict, Union, Any, Optional, Literal
-from pydantic import BaseModel, Field
+from typing import Dict, List, Optional, Union, Any
+from pydantic import BaseModel, ConfigDict
 
-class UsageDictSchema(BaseModel):
-    """Usage 매핑 규칙 - (예: {"prompt_tokens": "usage.input_tokens", ...})"""
-    prompt_tokens: Union[str, List[str]]
-    completion_tokens: Union[str, List[str]]
-    total_tokens: Optional[Union[str, List[str]]] = None
+PathType = Union[str, List[str]]
 
-class ConditionSchema(BaseModel):
-    """스트림 종료 조건을 평가하기 위한 구조체"""
+
+class UsageTokenMappingSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prompt_tokens: Optional[PathType] = None
+    completion_tokens: Optional[PathType] = None
+    total_tokens: Optional[PathType] = None
+
+
+class FinishedConditionSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     path: str
     value: Any
 
-# STATE_EXTRACTION_RULES 스키마
-class StateExtractionRuleSchema(BaseModel):
-    fallback_tool_name: Optional[str] = None
-    fallback_tool_args: Optional[str] = None
-    sync_content_paths: Optional[List[str]] = None
-    
-    # usage는 "usage" 같은 단순 문자열일 수도 있고, 상세 매핑을 담은 Dict일 수도 있음
-    sync_usage_paths: Optional[List[Union[str, UsageDictSchema]]] = None
-    
-    # defaults 용 (기본값 설정)
+
+class ExtractionRuleSchema(BaseModel):
+    """단일화된 LLM 응답(Sync & Stream) 추출 규칙 스키마"""
+    model_config = ConfigDict(extra="forbid")
+
+    # 1. 공통 데이터 추출 경로
+    text: Optional[PathType] = None
+    finish_reason: Optional[PathType] = None
+    usage: Optional[Union[PathType, UsageTokenMappingSchema, List[Union[str, UsageTokenMappingSchema]]]] = None
+    tool_calls: Optional[PathType] = None
+    logprobs: Optional[PathType] = None
+    id: Optional[PathType] = None
+    system_fingerprint: Optional[PathType] = None
+    provider_specific_fields: Optional[PathType] = None
+    error: Optional[PathType] = None
+
+    # 2. 스트림 종료 판별 조건
+    is_finished_cond: Optional[FinishedConditionSchema] = None
+    is_finished_static: Optional[bool] = None
+    finish_reason_static: Optional[str] = None
+
+    # 3. Tool Call 복구 경로 및 Defaults 정적 상수
+    fallback_tool_name: Optional[PathType] = None
+    fallback_tool_args: Optional[PathType] = None
     role: Optional[str] = None
     finish_stop: Optional[str] = None
     finish_tool: Optional[str] = None
-    stream_content_paths: Optional[List[str]] = None
 
 class ProviderParamRuleSchema(BaseModel):
-    supported: List[str] = Field(default_factory=list)
-    mapping: Dict[str, str] = Field(default_factory=dict)
-    wrap_in: Dict[str, List[str]] = Field(default_factory=dict)
-    tool_format: Literal["standard", "gemini_strict", "anthropic"] = "standard"
-    
-    role_mapping: Dict[str, str] = Field(default_factory=dict)
-    system_param: Optional[str] = None
-    supports_tools: bool = False
+    """요청 파라미터 변환 규칙 스키마"""
+    model_config = ConfigDict(extra="allow")
 
-class StreamExtractionRuleSchema(BaseModel):
-    # text와 finish_reason 등은 단일 경로(str) 혹은 폴백 경로(List[str])를 가짐
-    text: Union[str, List[str]]
-    finish_reason: Optional[Union[str, List[str]]] = None
-    logprobs: Optional[Union[str, List[str]]] = None
-    tool_calls: Optional[Union[str, List[str]]] = None
-    error: Optional[Union[str, List[str]]] = None
-    
-    # STREAM의 usage는 "usage" 문자열, 상세 Dict, 혹은 이 둘의 혼합 리스트 형태를 띰
-    usage: Optional[Union[str, UsageDictSchema, List[Union[str, UsageDictSchema]]]] = None
-    
-    # 정적/동적 종료 조건
-    is_finished_cond: Optional[ConditionSchema] = None
-    is_finished_static: Optional[bool] = None
-    finish_reason_static: Optional[str] = None
+    message_schema: Optional[str] = "openai_array"
+    mapping: Optional[Dict[str, str]] = None

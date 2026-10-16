@@ -1,4 +1,4 @@
-# fiber.dev.e2e.gateway.edge.compliance
+# fiber.dev.e2e.gateway.compliance
 """
 @requirements: fiber daemon 
 $ fiber daemon -s edge
@@ -18,7 +18,7 @@ from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
 
-log = get_emitter("e2e.gateway.edge.compliance")
+log = get_emitter("e2e.gateway.compliance")
 
 """Workflow Messages (Phase Transitions)"""
 class StartComplianceMsg(WorkflowMessage): pass
