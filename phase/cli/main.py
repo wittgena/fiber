@@ -4,6 +4,7 @@ import sys
 import asyncio
 import inspect
 import importlib
+from pathlib import Path
 from typing import Annotated, Optional
 import typer
 
@@ -64,8 +65,8 @@ def run_daemon(
     """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
     _load_env(env_file)
     PRESETS = {
-        "edge": "rest_edge,rpc_worker",
-        "ALL": "rest_edge,rpc_worker,dynamic_pricing,risk_vault",
+        "edge": "rest_edge,rpc_worker,mcp_worker",
+        "ALL": "rest_edge,rpc_worker,mcp_worker,dynamic_pricing,risk_vault",
     }
     
     resolved_daemons = PRESETS.get(start.lower(), start)
@@ -136,32 +137,87 @@ def run_e2e(
 
 @app.command("connect")
 def run_connector(
-    target: Annotated[str, typer.Option("--target", "-t")],
-    exec_cmd: Annotated[str, typer.Option("--exec", "-e")],
+    target: Annotated[str, typer.Option("--target", "-t", help="Target ID (e.g., db-server-01)")],
+    exec_cmd: Annotated[str, typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")],
+    mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Execution mode: ephemeral, linear, or multiplex")] = None,
+    transport: Annotated[Optional[str], typer.Option("--transport", "-tr", help="Transport layer: stdio or network")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
+    """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers into DPHI Bus."""
     _load_env(env_file)
-    import fiber.dev.worker.deployer as worker_deployer
-    import fiber.dev.worker.legacy.oracle as worker_oracle
+    from fiber.phase.cli.connect import run_connect
+    run_connect(target=target, exec_cmd=exec_cmd, mode=mode, transport=transport)
 
-    KNOWN_WORKERS = {
-        "worker.deploy": f"{sys.executable} -m {worker_deployer.__name__}",
-        "worker.oracle": f"{sys.executable} -m {worker_oracle.__name__}"
-    }
-    resolved_cmd = KNOWN_WORKERS.get(exec_cmd, exec_cmd)
+# @app.command("connect")
+# def run_connector(
+#     target: Annotated[str, typer.Option("--target", "-t", help="Target ID (e.g., db-server-01)")],
+#     exec_cmd: Annotated[str, typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")],
+#     mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Execution mode: ephemeral, linear, or multiplex")] = None,
+#     transport: Annotated[Optional[str], typer.Option("--transport", "-tr", help="Transport layer: stdio or network")] = None,
+#     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+# ):
+#     """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers into DPHI Bus."""
+#     _load_env(env_file)
+#     from fiber.gateway.daemon.mcp import build_known_workers_map
+#     KNOWN_WORKERS = build_known_workers_map()
+#     # import fiber.dev.worker.deployer as worker_deployer
+#     # import fiber.dev.worker.legacy.oracle as worker_oracle
+#     # KNOWN_WORKERS = {
+#     #     "worker.deploy": f"{sys.executable} -m {worker_deployer.__name__}",
+#     #     "worker.oracle": f"{sys.executable} -m {worker_oracle.__name__}"
+#     # }
 
-    async def _launch_connector():
-        from fiber.gateway.mcp.connector import MCPServerConnector
-        log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the MCP Server Connector...")
-        daemon = MCPServerConnector(target_id=target, execution_target=resolved_cmd)
-        try:
-            await daemon.run()
-        finally:
-            log.info("[Fiber] Disconnected from A2A Network.")
-    try:
-        asyncio.run(_launch_connector())
-    except KeyboardInterrupt:
-        log.info("\n[Fiber] Connector shutting down...")
+#     resolved_cmd = KNOWN_WORKERS.get(exec_cmd, exec_cmd).strip()
+
+#     # 2. 실행 타겟 유형 정밀 판별
+#     # - NetworkTransport Unmanaged: http:// 또는 https:// 로 시작하는 Local/Remote URL
+#     # - NetworkTransport Managed: WorkerRuntimeBootstrap용 로컬 바이너리(phix-*.jar) 루트 디렉터리
+#     is_http_url = resolved_cmd.startswith(("http://", "https://"))
+#     is_managed_bin_dir = not is_http_url and Path(resolved_cmd).is_dir()
+
+#     # 3. Transport 결정 (명시적 인자 우선 -> 자동 추론 -> 기본값 'stdio')
+#     if transport is not None:
+#         resolved_transport = transport.lower().strip()
+#     else:
+#         resolved_transport = "network" if (is_http_url or is_managed_bin_dir) else "stdio"
+
+#     if resolved_transport not in ("stdio", "network"):
+#         log.error(f"[Fiber] Invalid transport '{resolved_transport}'. Allowed values: 'stdio', 'network'.")
+#         raise typer.Exit(1)
+
+#     # 4. Mode 결정 (명시적 인자 우선 -> Transport별 최적 기본값 적용)
+#     # - 기존 stdio 호출 시 기본값 'ephemeral' 완벽 보존
+#     # - network(URL 또는 Managed JVM) 호출 시 커넥션/프로세스 공유를 위해 'multiplex' 기본 적용
+#     if mode is not None:
+#         resolved_mode = mode.lower().strip()
+#     else:
+#         resolved_mode = "multiplex" if resolved_transport == "network" else "ephemeral"
+
+#     if resolved_mode not in ("ephemeral", "linear", "multiplex"):
+#         log.error(f"[Fiber] Invalid mode '{resolved_mode}'. Allowed values: 'ephemeral', 'linear', 'multiplex'.")
+#         raise typer.Exit(1)
+
+#     async def _launch_connector():
+#         from fiber.gateway.mcp.connector import MCPServerConnector
+#         log.info(
+#             f"[Fiber] 🔌 Sublimating server [{target}] into the MCP Server Connector "
+#             f"(Mode: {resolved_mode.upper()}, Transport: {resolved_transport.upper()})..."
+#         )
+#         daemon = MCPServerConnector(
+#             target_id=target,
+#             execution_target=resolved_cmd,
+#             mode=resolved_mode,
+#             transport_type=resolved_transport
+#         )
+#         try:
+#             await daemon.run()
+#         finally:
+#             log.info("[Fiber] Disconnected from A2A Network.")
+
+#     try:
+#         asyncio.run(_launch_connector())
+#     except KeyboardInterrupt:
+#         log.info("\n[Fiber] Connector shutting down...")
 
 @app.command("observe")
 def start_observer(

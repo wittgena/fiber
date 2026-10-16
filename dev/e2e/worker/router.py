@@ -1,4 +1,4 @@
-# fiber.dev.e2e.gateway.worker.router
+# fiber.dev.e2e.worker.router
 import sys
 import time
 import uuid

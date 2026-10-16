@@ -1,4 +1,4 @@
-# fiber.dev.e2e.gateway.worker.discovery
+# fiber.dev.e2e.worker.discovery
 import sys
 import uuid
 import time
