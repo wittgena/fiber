@@ -1,10 +1,11 @@
-# fiber.dev.trace.llm.vcr.injector
+# fiber.dev.trace.vcr.injector
+## @lineage: fiber.dev.trace.llm.vcr.injector
 from typing import Optional
 from contextlib import contextmanager
 
 from fiber.llm.model.router.adapter import AdapterRegistry
-from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRManager
-from fiber.dev.trace.llm.vcr.proxy import VCRAdapterProxy
+from fiber.dev.trace.vcr.manager import VCRPlaybackConfig, VCRManager
+from fiber.dev.trace.vcr.proxy import VCRAdapterProxy
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.vcr.injector")

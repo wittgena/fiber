@@ -10,8 +10,8 @@ import fiber.llm.entry as llm_entry
 
 from fiber.gateway.llm.state.traverser import StateMapper
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
-from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-from fiber.dev.trace.llm.vcr.injector import VCRInjector
+from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
+from fiber.dev.trace.vcr.injector import VCRInjector
 
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -125,7 +125,7 @@ async def _execute_suite(model: str, final_api_key: str, invoker_mode: str, prov
                         if has_real_value:
                             usage_info = str(chunk_usage)
             else:
-                content, usage_dict = StateMapper.extract_sync_response(response, provider)
+                content, usage_dict = StateMapper.extract_response(response, provider)
                 full_content = content or ""
                 if usage_dict:
                     usage_info = str(usage_dict)

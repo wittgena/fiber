@@ -1,4 +1,5 @@
-# fiber.dev.trace.llm.vcr.proxy
+# fiber.dev.trace.vcr.proxy
+## @lineage: fiber.dev.trace.llm.vcr.proxy
 import asyncio
 import time
 import copy
@@ -12,7 +13,7 @@ from fiber.llm.types.provider.core import Usage
 from fiber.gateway.llm.state.traverser import StateTraverser, StateMapper
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 from fiber.llm.model.router.adapter import AdapterRegistry
-from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRManager
+from fiber.dev.trace.vcr.manager import VCRPlaybackConfig, VCRManager
 
 from fiber.llm.exception.mapping import STATUS_CODE_MAPPING, SEMANTIC_ERROR_REGEX
 import fiber.llm.exception.eco as eco_exceptions
@@ -293,7 +294,7 @@ class VCRAdapterProxy:
                         model_name = getattr(safe_ctx, "model", "")
                         provider = model_name.split("/")[0] if "/" in model_name else "openai"
 
-                    content, usage_dict = StateMapper.extract_sync_response(response, provider)
+                    content, usage_dict = StateMapper.extract_response(response, provider)
                     if getattr(self.config, "include_raw_payload", False):
                         try:
                             raw_data = getattr(response, "raw", response)

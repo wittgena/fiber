@@ -1,13 +1,13 @@
 # fiber.gateway.llm.stream.parser.chunk
-## @lineage: fiber.llm.router.stream.parser.chunk
 import json
 from typing import Any, Dict, List, Optional, Union
 from typing_extensions import TypedDict
-from fiber.llm.compat.registry import STREAM_EXTRACTION_RULES
-from fiber.llm.compat.stream import PROVIDER_RULE_ALIAS
+from fiber.llm.compat.registry import EXTRACTION_RULES
+from fiber.llm.compat.extraction import PROVIDER_RULE_ALIAS
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("chunk.parser")
+
 
 class ParsedChunk(TypedDict):
     """Parser가 Accumulator로 넘겨주는 단일화된 표준 데이터 규격"""
@@ -21,6 +21,7 @@ class ParsedChunk(TypedDict):
     system_fingerprint: Optional[str]
     provider_specific_fields: Optional[Dict[str, Any]]
     original_chunk: Any
+
 
 class StateTraverser:
     """Dict, List, Object 혼합 토폴로지를 Dot(.) 표기법으로 안전하게 탐색"""
@@ -69,6 +70,7 @@ class StateTraverser:
                 return current
         return default
 
+
 class StreamChunkParser:
     @staticmethod
     def _preprocess_chunk(chunk: Any) -> Any:
@@ -85,7 +87,6 @@ class StreamChunkParser:
                 
             # SSE Prefix 제거 (data: 또는 data: )
             if chunk.startswith("data:"):
-                # 공백 무시를 위해 .strip() 추가
                 chunk = chunk.replace("data:", "", 1).strip()
                 
             # JSON 파싱 시도
@@ -103,10 +104,10 @@ class StreamChunkParser:
     def get_ruleset(cls, provider: Optional[str]) -> Dict[str, Any]:
         """Provider 문자열을 기반으로 적절한 룰셋을 로드합니다."""
         if not provider:
-            return STREAM_EXTRACTION_RULES["openai"]
+            return EXTRACTION_RULES["openai"]
             
         rule_key = PROVIDER_RULE_ALIAS.get(provider, provider)
-        return STREAM_EXTRACTION_RULES.get(rule_key, STREAM_EXTRACTION_RULES.get("openai")) # 폴백은 openai
+        return EXTRACTION_RULES.get(rule_key, EXTRACTION_RULES.get("openai"))
 
     @classmethod
     def parse(cls, provider: Optional[str], raw_chunk: Any) -> Optional[ParsedChunk]:
@@ -177,10 +178,10 @@ class StreamChunkParser:
 
     @staticmethod
     def _extract_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, Any]]:
-        if not usage_rule:
+        if not usage_rule or obj is None or isinstance(obj, str):
             return None
             
-        # 다중 룰(리스트)인 경우 순차적으로 탐색(Fallback)
+        # 1. 다중 룰(리스트)인 경우 순차적으로 탐색(Fallback)
         if isinstance(usage_rule, list):
             for rule in usage_rule:
                 res = StreamChunkParser._extract_usage(obj, rule)
@@ -188,14 +189,65 @@ class StreamChunkParser:
                     return res
             return None
 
-        # 단일 Dict 룰인 경우
+        # 2. Dict 매핑 룰인 경우 (prompt_tokens, completion_tokens, total_tokens)
         if isinstance(usage_rule, dict):
-            return {
-                "prompt_tokens": StateTraverser.resolve(obj, usage_rule.get("prompt_tokens")),
-                "completion_tokens": StateTraverser.resolve(obj, usage_rule.get("completion_tokens"))
-            }
+            p_raw = StateTraverser.resolve(obj, usage_rule.get("prompt_tokens"))
+            c_raw = StateTraverser.resolve(obj, usage_rule.get("completion_tokens"))
+            t_raw = StateTraverser.resolve(obj, usage_rule.get("total_tokens"))
             
-        return StateTraverser.resolve(obj, usage_rule, None)
+            # 세 필드 모두 추출되지 않은 일반 청크면 즉시 None 반환 (빈 Dict 반환 방지)
+            if p_raw is None and c_raw is None and t_raw is None:
+                return None
+
+            def _to_int(val: Any) -> Optional[int]:
+                if val is None:
+                    return None
+                try:
+                    return int(val)
+                except (ValueError, TypeError):
+                    return None
+
+            p_tokens = _to_int(p_raw)
+            c_tokens = _to_int(c_raw)
+            t_tokens = _to_int(t_raw)
+
+            # total_tokens가 없는데 prompt나 completion이 있으면 합산 보정
+            if t_tokens is None and (p_tokens is not None or c_tokens is not None):
+                t_tokens = (p_tokens or 0) + (c_tokens or 0)
+
+            # 기존 Accumulator 하위 호환성을 위해 키 구조 유지
+            result: Dict[str, Any] = {
+                "prompt_tokens": p_tokens,
+                "completion_tokens": c_tokens,
+            }
+            if t_tokens is not None:
+                result["total_tokens"] = t_tokens
+
+            return result if any(v is not None for v in result.values()) else None
+            
+        # 3. 단일 문자열 경로(예: "usage", "usage_metadata")인 경우
+        usage_obj = StateTraverser.resolve(obj, usage_rule, None)
+        if usage_obj is None:
+            return None
+
+        if isinstance(usage_obj, dict):
+            return usage_obj if any(v is not None for v in usage_obj.values()) else None
+            
+        if hasattr(usage_obj, "model_dump") and callable(getattr(usage_obj, "model_dump")):
+            try:
+                dumped = usage_obj.model_dump(exclude_unset=True)
+                return dumped if dumped else None
+            except Exception:
+                pass
+                
+        if hasattr(usage_obj, "__dict__"):
+            dumped = {k: v for k, v in vars(usage_obj).items() if not k.startswith("_") and v is not None}
+            return dumped if dumped else None
+
+        try:
+            return dict(usage_obj)
+        except Exception:
+            return None
 
     @staticmethod
     def _empty_parsed_chunk(is_finished: bool = False, finish_reason: Optional[str] = None) -> ParsedChunk:

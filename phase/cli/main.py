@@ -109,7 +109,7 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["llm.trace", "gateway.edge.compliance", "inter.wasm.phase", "inter.plane.flare"]
+    KNOWN_SUITES = ["llm.trace", "gateway.compliance", "inter.wasm.phase", "inter.plane.flare"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")
@@ -181,17 +181,17 @@ def start_observer(
 @compat_app.command("fixture")
 def manage_compat_fixtures(
     model: Annotated[str, typer.Option("--model", "-m", help="Model name (e.g., ollama/gemma:2b)")],
-    vcr_mode: Annotated[str, typer.Option("--vcr-mode", "-v", help="Mode: 'record' (gen) or 'replay' (test)")] = "record",
+    vcr: Annotated[str, typer.Option("--vcr", "-v", help="Mode: 'record' (gen) or 'replay' (test)")] = "record",
     api_key: Annotated[Optional[str], typer.Option("--api-key", "-k", envvar="COMPAT_API_KEY", help="API Key (Optional if set in Env)")] = None,
     target_dir: Annotated[Optional[str], typer.Option("--target-dir", "-o", help="Custom target directory for fixtures")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     """
     @desc: Manages VCR fixtures for compatibility testing
-    - Use '--vcr-mode record' to generate raw payloads, or '--vcr-mode replay' to verify extraction rules offline.
+    - Use '--vcr record' to generate raw payloads, or '--vcr replay' to verify extraction rules offline.
     """
     _load_env(env_file)
-    mode = vcr_mode.lower()
+    mode = vcr.lower()
     if mode in ("record", "gen", "generate"):
         from fiber.phase.cli.compat import run_gen_fixture
         try:
@@ -211,7 +211,7 @@ def manage_compat_fixtures(
             log.error(f"[Fiber] Fixture testing failed: {e}", exc_info=True)
             sys.exit(1)
     else:
-        log.error(f"[Fiber] Invalid VCR mode: '{vcr_mode}'. Supported modes are 'record' (gen) or 'replay' (test).")
+        log.error(f"[Fiber] Invalid VCR mode: '{vcr}'. Supported modes are 'record' (gen) or 'replay' (test).")
         raise typer.Exit(1)
 
 def main():

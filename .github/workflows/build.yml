@@ -94,8 +94,8 @@ jobs:
           REDIS_URL: "redis://localhost:6379/0" 
           DPHI_ENV: "local"
         run: |
-          python -m fiber.dev.e2e.gateway.edge.compliance
-          python -m fiber.dev.e2e.gateway.edge.security
+          python -m fiber.dev.e2e.gateway.compliance
+          python -m fiber.dev.e2e.gateway.security
 
       - name: 🧹 Execute Reaper (Teardown)
         if: always()

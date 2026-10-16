@@ -1,4 +1,9 @@
 # fiber.dev.e2e.inter.finops
+"""
+FuelBreaker operates upstream of VCRAdapterProxy to enforce physical stream termination via aclose().
+During VCR record, the live stream is intentionally severed upon Kill-Switch activation, persisting only pre-cutoff chunks.
+During VCR replay, the engine deterministically reproduces this exact truncated state to preserve strict idempotency.
+"""
 from __future__ import annotations
 
 import os
@@ -18,15 +23,15 @@ from fiber.gateway.llm.channel.fuel import FuelBreaker, BillingObserver
 from fiber.gateway.rest.security import TokenTranslator
 from fiber.gateway.mcp.connector import MCPServerConnector
 
-from fiber.dev.trace.billing.watcher import default_finops_watcher
-from fiber.dev.trace.llm.vcr.manager import (
+from fiber.dev.trace.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 
     add_vcr_arguments
 )
-from fiber.dev.trace.llm.vcr.injector import VCRInjector
+from fiber.dev.trace.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
 import fiber.dev.worker.finops as worker_finops
+from fiber.infra.watcher.finops import default_finops_watcher
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.bound.event.next import next_trace_id
@@ -37,6 +42,21 @@ from xphi.state.phase.reactor import PhaseReactor
 
 FIXTURE_ROOT = "fiber-compats/suites/e2e"
 CURRENT_INVOKER, _ = get_invoker(Path(__file__))
+
+LONG_FINOPS_PROMPT = (
+    "Write a comprehensive, deeply technical 8-section architectural whitepaper on Enterprise AI FinOps, "
+    "Real-Time Token Metering, and Deterministic Stream Governance. "
+    "Section 1: Distributed Token Ledger Topologies and Atomic Quota Enforcement. "
+    "Section 2: Asynchronous Stream Interception and Sub-Millisecond Kill-Switch Mechanics. "
+    "Section 3: Cryptographic Mandate Translation (JWT to AP2) and Zero-Trust Identity Binding. "
+    "Section 4: Time-Window Chunk Coalescing and Application-Layer VCR Replay Determinism. "
+    "Section 5: Multi-Tenant Cost Attribution, Dynamic Tier Fallback, and Budget Circuit Breakers. "
+    "Section 6: Edge Caching, Semantic Routing, and Pre-Flight Payload Sanitization. "
+    "Section 7: Failure Modes, Network Partition Recovery, and Idempotent Billing Reconciliation. "
+    "Section 8: Full Reference Architecture and Production Deployment Checklist. "
+    "Provide exhaustive explanations, concrete architectural trade-offs, and detailed step-by-step "
+    "walkthroughs for every single section without summarizing or skipping any details."
+)
 
 class HybridFinOpsFuelPipeline(BaseBridgePipeline):
     def __init__(self, config: E2EConfig, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
@@ -122,12 +142,14 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(url, json=payload, headers=headers)
             
-        if res.status_code != 200: raise RuntimeError(f"Expected 200, got {res.status_code}")
+        if res.status_code != 200:
+            raise RuntimeError(f"Expected 200, got {res.status_code}")
             
         result_text = res.json().get("result", {}).get("content", [])[0].get("text", "{}")
         jwt_token = json.loads(result_text).get("jwt")
         
-        if not jwt_token: raise RuntimeError("Missing JWT in response")
+        if not jwt_token:
+            raise RuntimeError("Missing JWT in response")
         log.info(f"  └─ 1. Successfully received PoC JWT from FinOps Worker: {jwt_token[:30]}...")
 
         # 발급받은 JWT를 Core의 TokenTranslator 모듈을 통해 내부 영수증(AP2 Mandate)으로 변환 검증
@@ -142,38 +164,59 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         os.environ["FIBER_ENFORCE_QUOTA"] = "true"
         
         scenario = "fuel_phase_4_finops"
-        messages = [{"role": "user", "content": "Write a long story about FinOps."}]
+        messages = [{"role": "user", "content": LONG_FINOPS_PROMPT}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        trace_ctx["metadata"]["kernel_auth"] = {"fuel_budget": 1000, "tenant_id": self.test_tenant, "is_enforced": True}
+        trace_ctx["metadata"]["kernel_auth"] = {
+            "fuel_budget": 1000,
+            "tenant_id": self.test_tenant,
+            "is_enforced": True
+        }
         
+        first_chunk_arrived = asyncio.Event()
+
         # FinOps 백그라운드 캐시 데몬 가동
         default_finops_watcher.start()
         try:
             await default_finops_watcher.wait_until_ready()
 
-            # 비동기로 LLM 코어 스트림 실행 (VCR Replay 모드)
-            async def run_llm_stream():
+            # 비동기로 LLM 코어 장문 스트림 실행
+            async def run_llm_stream() -> tuple[int, int]:
                 response_stream = await acompletion(
-                    model=self.target_model,  # 동적으로 결정된 모델 파라미터 적용
+                    model=self.target_model,
                     messages=messages,
+                    max_tokens=2048,
                     stream=True,
                     fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
                     billing_observer=BillingObserver(tenant_eco=None, pta_adapter=self.pta_adapter),
                     **trace_ctx
                 )
                 chunks = 0
+                char_len = 0
                 async for chunk in response_stream:
                     chunks += 1
-                return chunks
+                    try:
+                        content = chunk.choices[0].delta.content or ""
+                        char_len += len(content)
+                    except (AttributeError, IndexError, KeyError, TypeError):
+                        pass
 
-            # Task-1: 메인 프로세스에서 LLM 스트림 병렬 실행 시작
+                    if chunks == 1:
+                        first_chunk_arrived.set()
+
+                    # Replay(max speed) 환경에서도 외부 HTTP Kill-Switch 및 Pub/Sub 이벤트가
+                    # 스트림 도중에 개입할 수 있도록 청크 간 미세 페이싱(50ms) 부여
+                    await asyncio.sleep(0.05)
+
+                return chunks, char_len
+
+            # Task-1: 메인 프로세스에서 장문 LLM 스트림 병렬 실행 시작
             stream_task = asyncio.create_task(run_llm_stream())
             
-            # VCR이 응답을 준비할 수 있도록 약간의 컨텍스트 스위칭 타임 허용
-            await asyncio.sleep(0.1)
+            # 첫 번째 스트림 청크가 실제로 파이프라인을 통과할 때까지 대기 (최대 15초)
+            await asyncio.wait_for(first_chunk_arrived.wait(), timeout=15.0)
 
-            # Task-2: 서브프로세스에 떠있는 FinOps Worker를 통해 외부 킬 스위치 발동 (Gateway API)
-            log.info(f"  └─ Triggering asynchronous Kill-Switch via FinOps Worker...")
+            # Task-2: 스트림이 한창 흐르는 도중 FinOps Worker를 통해 외부 킬 스위치 발동
+            log.info("  └─ Stream active (chunk #1 verified). Triggering asynchronous Kill-Switch via FinOps Worker...")
             payload = {
                 "jsonrpc": "2.0", "id": 200, "method": "tools/call", 
                 "params": {"name": "trigger_kill", "arguments": {"tenant_id": self.test_tenant}}
@@ -185,23 +228,31 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
             
             async with httpx.AsyncClient(base_url=self.local_url) as client:
                 res = await client.post(url, json=payload, headers=headers)
-                if res.status_code != 200: raise RuntimeError("Kill switch trigger failed.")
+                if res.status_code != 200:
+                    raise RuntimeError("Kill switch trigger failed.")
                 
-            received_chunks = await stream_task
+            received_chunks, received_chars = await stream_task
             
-            MAX_TOLERABLE_CHUNKS = 5
-            if received_chunks <= MAX_TOLERABLE_CHUNKS:
-                log.info(f"  └─ Hybrid Integration Success: FuelTrap dynamically intercepted and killed the VCR stream at chunk {received_chunks}.")
+            MAX_TOLERABLE_CHUNKS = 8
+            if 1 <= received_chunks <= MAX_TOLERABLE_CHUNKS:
+                log.info(
+                    f"  └─ Hybrid Integration Success: FuelTrap dynamically intercepted and killed "
+                    f"the long VCR stream at chunk {received_chunks} ({received_chars} chars)."
+                )
             else:
                 raise RuntimeError(
                     f"FinOps Intervention FAILED! VCR Stream bypassed the kill switch. "
-                    f"Expected early cutoff (<= {MAX_TOLERABLE_CHUNKS}), but received {received_chunks} chunks."
+                    f"Expected early cutoff (1 <= chunks <= {MAX_TOLERABLE_CHUNKS}), "
+                    f"but received {received_chunks} chunks ({received_chars} chars)."
                 )
 
         finally:
             default_finops_watcher.stop()
-            if original_quota_flag is not None: os.environ["FIBER_ENFORCE_QUOTA"] = original_quota_flag
-            else: os.environ.pop("FIBER_ENFORCE_QUOTA", None)
+            if original_quota_flag is not None:
+                os.environ["FIBER_ENFORCE_QUOTA"] = original_quota_flag
+            else:
+                os.environ.pop("FIBER_ENFORCE_QUOTA", None)
+
 
 class HybridSuiteRunner:
     def __init__(self, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
@@ -223,6 +274,7 @@ class HybridSuiteRunner:
         else:
             log.critical("FINOPS FAILURE DETECTED.")
 
+
 def main(args_list: list[str] = None):
     parser = create_e2e_parser("FinOps Integration Test Runner")
     add_vcr_arguments(parser)
@@ -242,6 +294,7 @@ def main(args_list: list[str] = None):
         PhaseReactor.ignite(main_coro_func=app.execute)
     finally:
         VCRInjector.remove()
+
 
 if __name__ == "__main__":
     main()

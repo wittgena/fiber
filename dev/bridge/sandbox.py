@@ -1,4 +1,4 @@
-# fiber.phase.cli.sandbox
+# fiber.dev.bridge.sandbox
 """
 WARNING: Local Dev Sandbox Only. Do not use in production.
 """
@@ -12,7 +12,7 @@ from pathlib import Path
 
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("cli.sandbox")
+log = get_emitter("bridge.sandbox")
 
 """Environment Fencing (Local Dev Only)"""
 class EnvironmentViolationError(Exception):
@@ -103,8 +103,7 @@ def _resolve_transitive_dependencies() -> list[str]:
 
 """Enhanced Security Sandbox"""
 AUTHORIZED_FIBER_PATHS = [
-    "fiber/dev/trace", "xphi/kernel", "fiber/llm/entry", "fiber/phase/cli",
-    "lib/python"
+    "fiber/dev", "fiber.gateway", "fiber/infra", "fiber/llm", "fiber.phase", "xphi/kernel", "lib/python"
 ] + _resolve_transitive_dependencies()
 
 _audit_hook_local = threading.local()
@@ -116,7 +115,7 @@ def get_caller_origin(limit: int = 15) -> str:
         count = 0
         while frame and count < limit:
             path = frame.f_code.co_filename.replace('\\', '/')
-            if "cli/sandbox.py" not in path and "importlib" not in path:
+            if "bridge/sandbox.py" not in path and "importlib" not in path:
                 return path
             frame = frame.f_back
             count += 1

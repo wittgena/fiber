@@ -11,14 +11,12 @@ from typing import Optional
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.pipeline import PipelineSlot
 from fiber.gateway.llm.channel.fuel import BillingObserver, FuelBreaker
-
-from fiber.dev.trace.billing.watcher import default_finops_watcher
-from fiber.dev.trace.llm.vcr.manager import (
+from fiber.dev.trace.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 
     add_vcr_arguments
 )
-from fiber.dev.trace.llm.vcr.injector import VCRInjector
+from fiber.dev.trace.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
@@ -26,6 +24,8 @@ from fiber.dev.trace.llm.base import (
     build_e2e_context, 
     ReportMsg
 )
+
+from fiber.infra.watcher.finops import default_finops_watcher
 
 from xphi.arch.contract.workflow import StopMessage, WorkflowMessage, step
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput

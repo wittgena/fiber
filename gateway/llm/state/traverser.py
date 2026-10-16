@@ -6,8 +6,8 @@ import functools
 from pathlib import Path
 from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional, Union, Dict
 
-from fiber.llm.compat.registry import STATE_EXTRACTION_RULES
-from fiber.llm.compat.state import ENDPOINT_ROUTING_RULES
+from fiber.llm.compat.registry import EXTRACTION_RULES
+from fiber.llm.compat.extraction import ENDPOINT_ROUTING_RULES
 from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
 
@@ -100,13 +100,13 @@ class ImperativeFallbackRule:
 
 class StateMapper:
     @staticmethod
-    def _extract_sync_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, int]]:
+    def _extract_usage(obj: Any, usage_rule: Any) -> Optional[Dict[str, int]]:
         if not usage_rule:
             return None
             
         if isinstance(usage_rule, list):
             for rule in usage_rule:
-                res = StateMapper._extract_sync_usage(obj, rule)
+                res = StateMapper._extract_usage(obj, rule)
                 if res and any(v is not None for v in res.values()):
                     return res
             return None
@@ -138,15 +138,15 @@ class StateMapper:
             except Exception: return None
     
     @staticmethod
-    def extract_sync_response(response: Any, provider: Optional[str] = None) -> Tuple[str, Optional[Dict]]:
-        rules = STATE_EXTRACTION_RULES.get(provider) or STATE_EXTRACTION_RULES["defaults"]
+    def extract_response(response: Any, provider: Optional[str] = None) -> Tuple[str, Optional[Dict]]:
+        rules = EXTRACTION_RULES.get(provider) or EXTRACTION_RULES["defaults"]
         
-        content_paths = rules.get("sync_content_paths", STATE_EXTRACTION_RULES["defaults"]["sync_content_paths"])
-        raw_content = StateTraverser.resolve(response, content_paths)
+        text = rules.get("text", EXTRACTION_RULES["defaults"]["text"])
+        raw_content = StateTraverser.resolve(response, text)
         content = ImperativeFallbackRule.parse_content_blocks(raw_content) or ""
 
-        usage_paths = rules.get("sync_usage_paths", STATE_EXTRACTION_RULES["defaults"]["sync_usage_paths"])
-        usage_dict = StateMapper._extract_sync_usage(response, usage_paths)
+        usage = rules.get("usage", EXTRACTION_RULES["defaults"]["usage"])
+        usage_dict = StateMapper._extract_usage(response, usage)
 
         return content, usage_dict
 
@@ -170,32 +170,14 @@ class StateMapper:
                 if clean_base.endswith("/v1"):
                     return f"{clean_base}/chat"
                 return f"{clean_base}{rules['native_suffix']}"
-
-        # if provider == "ollama":
-        #     rules = ENDPOINT_ROUTING_RULES["ollama"]
-        #     if clean_base.endswith(rules["v1_indicator"]):
-        #         return f"{clean_base}{rules['openai_suffix']}"
-        #     return f"{clean_base}{rules['v1_indicator']}{rules['openai_suffix']}"
-            
         default_suffix = ENDPOINT_ROUTING_RULES["defaults"]["openai_suffix"]
         return f"{clean_base}{default_suffix}"
-
-    @staticmethod
-    def extract_stream_content(chunk: Any, default: str = "") -> str:
-        paths = STATE_EXTRACTION_RULES["defaults"]["stream_content_paths"]
-        content = StateTraverser.resolve(chunk, paths)
-        
-        if content:
-            return content
-            
-        log.debug(f"[Traverser] Failed to extract content from chunk type: {type(chunk)}")
-        return default
 
     @staticmethod
     def to_chat_messages(messages: List[dict]) -> List[ChatMessage]:
         chat_messages = []
         for msg in messages:
-            role = StateTraverser.resolve(msg, "role") or msg.get("role", STATE_EXTRACTION_RULES["defaults"]["role"])
+            role = StateTraverser.resolve(msg, "role") or msg.get("role", EXTRACTION_RULES["defaults"]["role"])
             raw_content = StateTraverser.resolve(msg, "content") or msg.get("content", "")
             
             parsed_content = ImperativeFallbackRule.parse_content_blocks(raw_content)
@@ -212,12 +194,12 @@ class StateMapper:
         if tool_calls is None and hasattr(response, "message"):
             tool_calls = response.message.additional_kwargs.get("tool_calls", None)
 
-        role_val = StateTraverser.resolve(response, "message.role.value") or STATE_EXTRACTION_RULES["defaults"]["role"]
+        role_val = StateTraverser.resolve(response, "message.role.value") or EXTRACTION_RULES["defaults"]["role"]
 
         if not tool_calls and hasattr(response, "raw") and response.raw:
             f_name, f_args = None, None
             
-            rule = STATE_EXTRACTION_RULES.get(provider, STATE_EXTRACTION_RULES.get("gemini", {}))
+            rule = EXTRACTION_RULES.get(provider, EXTRACTION_RULES.get("gemini", {}))
             try:
                 f_name = StateTraverser.resolve(response.raw, rule.get("fallback_tool_name"))
                 f_args = StateTraverser.resolve(response.raw, rule.get("fallback_tool_args"))
@@ -249,11 +231,11 @@ class StateMapper:
                 "role": role_val,
                 "content": message_content,
             },
-            "finish_reason": STATE_EXTRACTION_RULES["defaults"]["finish_stop"]
+            "finish_reason": EXTRACTION_RULES["defaults"]["finish_stop"]
         }
         
         if tool_calls:
             choice_data["message"]["tool_calls"] = tool_calls
-            choice_data["finish_reason"] = STATE_EXTRACTION_RULES["defaults"]["finish_tool"]
+            choice_data["finish_reason"] = EXTRACTION_RULES["defaults"]["finish_tool"]
             
         return choice_data

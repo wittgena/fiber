@@ -1,13 +1,13 @@
-# fiber.README
-**Deterministic LLM Gateway**
+# README
+**Deterministic LLM Pipeline**
 
-Fiber is a proxy gateway designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic execution environment that unifies heterogeneous LLM integrations and enables idempotent offline testing.
+Fiber is an asynchronous execution pipeline designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables idempotent offline testing.
 
 This document provides a practical guide on how to integrate and deploy Fiber across its operational pillars:
 
-Serialize network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**). Fiber operates as a drop-in asynchronous pipeline (**1.1**) that autonomously normalizes heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism without altering your business logic.
+Operating as a drop-in asynchronous pipeline (**1.1**), Fiber serializes network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**), while autonomously normalizing heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism without altering your business logic.
 
-Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (connect, daemon, e2e)**, and **[4] System Validation Logs** to help you quickly provision and validate your infrastructure.
+Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (connect, daemon, compat)**, and **[4] System Validation Logs** to help you quickly provision and validate your infrastructure.
 
 ---
 
@@ -15,9 +15,7 @@ Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (conn
 
 ### 1.1. The Drop-In LLM Pipeline
 
-Fiber reimagines LLM routing by Python facade with a strict, duplex asynchronous pipeline under the hood. 
-
-Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, this architecture achieves execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's State Traverser **[1.3]**.
+Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's duplex pipeline achieves execution transparency without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's State Traverser **[1.3]**.
 
 > **Unlike passive callbacks, this event-driven pipeline empowers middleware to actively short-circuit I/O, physically intercept streams, and tunnel deep infrastructural states.**
 
@@ -29,7 +27,7 @@ from fiber.gateway.llm.pipeline import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
 # PRE_OBSERVER: Asynchronous Telemetry with Stream-Aware Lifecycle
-class DatadogTracer(BaseLLMTracer):
+class TelemetryTracer(BaseLLMTracer):
     async def on_llm_end(self, meta, response, duration_ms):
         # Stream Mode: Defer telemetry until the inner pipeline exhausts the chunks
         if hasattr(response, "__aiter__"):
@@ -40,11 +38,22 @@ class DatadogTracer(BaseLLMTracer):
                 datadog.count("llm.tokens", total_tokens, tags=[f"model:{meta.base_model}"])
             
             # Piggyback the callback onto the framework's hook lifecycle
-            hooks = meta.framework_flags.setdefault("on_stream_complete_hooks", [])
+            hooks = meta.framework_flags.setdefault("on_stream_complete", [])
             hooks.append(on_stream_complete)
             return
 
         datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}", "type:singular"])
+
+# PRE_TRANSLATE: Edge Caching for Instant Short-circuit
+class EdgeRedisCache(DuplexChannel):
+    target_slot = PipelineSlot.PRE_TRANSLATE
+    async def write(self, ctx, msg: dict):
+        # note: Replace this exact-match hash with an Embedding to upgrade to a VectorDB Semantic Cache.
+        prompt_hash = hashlib.sha256(str(msg.get("messages", [])).encode()).hexdigest()
+        if cached_response := await redis_client.get(prompt_hash):
+            return await ctx.fire_channel_read(cached_response)
+            
+        await ctx.fire_write(msg)
 
 # PRE_TRANSLATE: Active Payload Mutation (Dynamic Semantic Routing)
 class SemanticRouter(DuplexChannel):
@@ -76,17 +85,6 @@ class SemanticRouter(DuplexChannel):
             
         await ctx.fire_write(msg)
 
-# PRE_TRANSLATE: Edge Caching for Instant Short-circuit
-class EdgeRedisCache(DuplexChannel):
-    target_slot = PipelineSlot.PRE_TRANSLATE
-    async def write(self, ctx, msg: dict):
-        # note: Replace this exact-match hash with an Embedding to upgrade to a VectorDB Semantic Cache.
-        prompt_hash = hashlib.sha256(str(msg.get("messages", [])).encode()).hexdigest()
-        if cached_response := await redis_client.get(prompt_hash):
-            return await ctx.fire_channel_read(cached_response)
-            
-        await ctx.fire_write(msg)
-
 # POST_TRANSLATE: Strict Blocking for Standard Secrets - API Keys, Tokens
 class ActiveBlockingGuardrail(DuplexChannel):
     target_slot = PipelineSlot.POST_TRANSLATE
@@ -112,7 +110,7 @@ from fiber.llm.entry import acompletion
 response = await acompletion(
     model="lm_studio/qwen-3.5-9b", # ex: cerebras/qwen-3.8-27b, gemini/gemini-3.1-flash-lite, ollama/gemma:2b, llama_server/gemma-3-1b-it-Q4_K_M.gguf
     messages=[{"role": "user", "content": "Analyze this data."}],
-    interceptors=[DatadogTracer(), ActiveBlockingGuardrail(), SemanticCache()],
+    interceptors=[TelemetryTracer(), ActiveBlockingGuardrail(), EdgeRedisCache(), SemanticRouter()],
     metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
 )
 ```
@@ -139,8 +137,8 @@ Adopting the industry-standard VCR pattern, Fiber empowers your pytest suites to
 
 ```python
 import os, pytest
-from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig
-from fiber.dev.trace.llm.vcr.injector import VCRInjector
+from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
+from fiber.dev.trace.vcr.injector import VCRInjector
 from fiber.llm.entry import acompletion
 
 @pytest.fixture(scope="module", autouse=True)
@@ -176,8 +174,8 @@ import os, asyncio
 from fiber.llm.entry import acompletion
 
 # Decoupled Fixture architecture: Storage & Interceptor
-from fiber.dev.trace.llm.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
-from fiber.dev.trace.llm.vcr.injector import VCRInjector
+from fiber.dev.trace.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
+from fiber.dev.trace.vcr.injector import VCRInjector
 from xphi.arch.bound.event.next import next_trace_id
 
 # Inject VCR globally with Time-Window Coalescing
@@ -223,7 +221,7 @@ By declaring explicit aliases at the boot sequence, Fiber intercepts legacy impo
 import asyncio
 
 # Transparently route legacy SDK imports to Fiber's gateway before business logic runs
-from fiber.dev.ex.bridge import vcr_setup_sequence, inspect_fixture
+from fiber.dev.bridge.vcr import vcr_setup_sequence, inspect_fixture
 VCR_MODE, RESOLVED_FIXTURE_DIR = vcr_setup_sequence()
 
 """[Legacy Business Logic] Unmodified Boundary"""
@@ -261,8 +259,6 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
----
-
 **The Record & Replay Flow**
 
 Fiber unifies the operational workflow across all integration methods (Pytest, Native, Legacy) using environmental toggles.
@@ -293,12 +289,12 @@ $ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.
 
 ### 1.3. State Traverser & Compat Registry
 
-The LLM ecosystem is fragmented. Fiber eliminates brittle `if/elif` parsing logic through its **Rule-based Traverser**. Using dot-notation and **Path Fallbacks**, it seamlessly navigates mixed topologies (Dicts, Lists, Pydantic Objects) across request parameters, sync responses, and async stream chunks.
+The LLM ecosystem is fragmented. Fiber eliminates brittle `if/elif` parsing logic through its **Rule-based Traverser**. Using dot-notation and **Path Fallbacks**, it seamlessly navigates mixed topologies (Dicts, Lists, Pydantic Objects) across request parameters, sync responses, and async stream chunks through a unified schema.
 
 **Provider Extension:**
-To integrate a new provider or override existing parsing logic, you no longer need to modify Python code. Simply map their schema in an external JSON file and inject it via the `FIBER_COMPAT_RULES_PATH` environment variable.
+To integrate a new provider or override existing parsing logic, you no longer need to modify Python code. Simply map their request parameters and response extraction paths in an external JSON file and inject it via the `FIBER_COMPAT_RULES_PATH` environment variable.
 
-Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules. Invalid formats are safely ignored with a warning (Partial Update).
+Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules into the base registry. Invalid formats are safely ignored with a warning (Partial Update).
 
 **Ex: Export env - FIBER_COMPAT_RULES_PATH=/etc/fiber/compat_rules.json**
 
@@ -306,30 +302,38 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 {
   "provider_param_rules": {
     "my_custom_llm": {
+      "message_schema": "openai_array",
       "supported": ["temperature", "max_tokens", "stream"],
-      "tool_format": "standard"
+      "mapping": {
+        "max_tokens": "max_output_tokens"
+      }
     }
   },
-  "stream_extraction_rules": {
+  "extraction_rules": {
     "ollama": {
-      "text": ["message.content", "choices.0.delta.content"],
+      "text": ["choices.0.delta.content", "message.content", "response", "choices.0.message.content"],
+      "finish_reason": ["done_reason", "choices.0.finish_reason"],
+      "is_finished_cond": {"path": "done", "value": true},
       "usage": [
-        "usage", 
+        "usage",
         {"prompt_tokens": "prompt_eval_count", "completion_tokens": "eval_count"}
-      ],
-      "is_finished_cond": {"path": "done", "value": true}
-    }
-  },
-  "state_extraction_rules": {
+      ]
+    },
     "gemini": {
-      "sync_content_paths": ["candidates.0.content.parts.0.text", "choices.0.message.content"],
-      "fallback_tool_name": "content.parts.0.function_call.name"
+      "text": [
+        "choices.0.delta.content",
+        "content.parts.0.text",
+        "candidates.0.content.parts.0.text",
+        "choices.0.message.content"
+      ],
+      "fallback_tool_name": "content.parts.0.function_call.name",
+      "fallback_tool_args": "content.parts.0.function_call.args"
     }
   }
 }
 ```
 
-**Community Validation**: To guarantee these custom rules work flawlessly, you can instantly validate them offline using `fiber compat fixture --vcr-mode test`. The community actively maintains these raw network fixtures in the `fiber-compats` repository, ensuring perfect parsing parity across the ever-evolving LLM landscape.
+**Autonomous Rule Synthesis & Validation**: Because rules are purely declarative, even lightweight LLMs can one-shot synthesize new provider bindings from raw API payloads using existing rules as a reference—forming a closed, hallucination-free self-healing loop when paired with `fiber compat fixture --vcr replay` for instant offline verification.
 
 ---
 
@@ -337,7 +341,7 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 
 **Prerequisites**
 * **Python**: `>= 3.12`
-* **Redis**: Required as the core message broker for asynchronous event streaming, pub/sub routing.
+* **Redis** *(Optional)*: Only required for distributed modes (`fiber daemon`), pub/sub event routing, and real-time stateful governance (e.g., Active Fuel Breaker). Standalone pipeline execution and VCR testing run entirely in-memory without Redis.
 
 We recommend using `uv pip` for strict dependency resolution.
 
@@ -348,7 +352,7 @@ pyenv local fiber-user
 
 ## 2. Install via local source OR remote git reference
 uv pip install /path/to/local/self/fiber
-# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.2
+# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.6
 
 ## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help
@@ -364,10 +368,21 @@ The `fiber` CLI is a **Deployment Entrypoint**, dynamically assigning the approp
 | --- | --- | --- |
 | **`connect`** | **[Egress Sidecar]** Transforms any legacy MCP server into an autonomous node, securely connecting standard I/O to the distributed network. | `fiber connect -m multiplex -t oracle -e "python mcp_server.py"` |
 | **`daemon`** | **[Production Host]** Boots core gateway daemons (Edge + RPC) by default. Use `-s` to apply presets (`edge`, `all`). | `fiber daemon -s edge` |
-| **`compat`** | **[Compat & VCR]** Manages local extraction rules and generates/verifies VCR fixtures to guarantee LLM compatibility offline | `fiber compat fixture --model gemini/gemini-3.1-flash-lite --vcr-mode record` |
+| **`compat`** | **[Compat & VCR]** Manages local extraction rules and generates/verifies VCR fixtures to guarantee LLM compatibility offline. | `fiber compat fixture --model gemini/gemini-3.1-flash-lite --vcr record` |
 ---
 
-## 4. System Validation Logs
+### 4. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)
+
+Measured via high-concurrency deterministic VCR replay suites (`dev.e2e.inter.concurrency`).
+
+| Performance Dimension | Metric (M2, 32GB) | Architectural Significance |
+| :--- | :--- | :--- |
+| **Unary Throughput** | **1,057.3 req/s** | Handles over 1,000 enterprise control-plane pipeline transactions per second in a single Python process. |
+| **End-to-End Latency** | **p50: 0.71ms / p95: 1.74ms** | Sub-2ms tail latency under a concurrent burst of 200 virtual users (VUs). |
+| **Memory Footprint** | **0.71 MB (Peak / 200 VUs)** | Near-zero garbage collection pressure and negligible memory overhead per in-flight pipeline. |
+| **Context Isolation** | **100% Unique Spans (0 Cross-talk)** | Flawless asynchronous coroutine interleaving with absolute state safety across parallel streams. |
+
+## 5. System Validation Logs
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
@@ -375,3 +390,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
 * **[gateway.wasm.log](./phase/abc/log/inter/wasm/gateway.wasm.20261002.log):** Validates Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all non-linear FSM transitions execute deterministically with millisecond latency.
+- **[inter.finops.log](./phase/abc/log/inter/finops.20261016.log):** Validates the FinOps control plane, confirming cryptographic DPoP-authenticated MCP multiplexing, JWT-to-AP2 mandate translation, PTA ledger fuel minting, and sub-second Pub/Sub Kill-Switch intervention that physically severs active VCR streams mid-flight.

@@ -1,4 +1,5 @@
-# fiber.infra.scene.flare
+# fiber.infra.e2e.scene.flare
+## @lineage: fiber.infra.scene.flare
 import time
 import asyncio
 import json

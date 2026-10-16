@@ -7,10 +7,11 @@ import asyncio
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.infra.plane.compose import ComposeOrchestrator, ComposeContext
+from fiber.infra.watcher.plane.compose import ComposeOrchestrator, ComposeContext
+
+from xphi.kernel.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.bind.resolver import resolve_path
 
 FIBER_ROOT = resolve_path("fiber")
 log = get_emitter("e2e.plane.compose")
@@ -59,9 +60,9 @@ echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
 timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
 echo "Kernel is fully up and running!"
 
-echo "[CI-SYNC] 4. Executing Core E2E Client..."
-python -m fiber.dev.e2e.gateway.edge.compliance
-python -m fiber.dev.e2e.gateway.edge.security
+echo "[CI-SYNC] 4. Executing E2E Gateway Client..."
+python -m fiber.dev.e2e.gateway.compliance
+python -m fiber.dev.e2e.gateway.security
 
 echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
 fiber e2e inter.wasm.gateway

@@ -1,5 +1,4 @@
-# fiber.dev.e2e.gateway.edge.security
-## @lineage: fiber.dev.e2e.edge.security
+# fiber.dev.e2e.gateway.security
 """
 @requirements: fiber daemon 
 $ fiber daemon -s edge
@@ -26,7 +25,7 @@ from xphi.kernel.space.tunnel.factory import TunnelFactory
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
 
-log = get_emitter("e2e.gateway.edge.security")
+log = get_emitter("e2e.gateway.security")
 
 """Workflow Messages (Phase Transitions)"""
 class StartSecuritySweepMsg(WorkflowMessage): pass
