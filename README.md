@@ -294,53 +294,62 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 ## 2. Installation & Infra Provisioning
 
 **Prerequisites**
-* **Python**: `>= 3.12`
-* **Redis** *(Optional)*: Only required for distributed modes (`fiber daemon`), pub/sub event routing, and real-time stateful governance (e.g., Active Fuel Breaker). Standalone pipeline execution and VCR testing run entirely in-memory without Redis.
+- **Python**: `>= 3.12`
+- **Redis** *(Optional)*: Only required for distributed modes (`fiber daemon`), pub/sub event routing, and real-time stateful governance (e.g., Active Fuel Breaker). Standalone pipeline execution and VCR testing run entirely in-memory without Redis.
 
-We recommend using `uv pip` for strict dependency resolution.
+### 2.1. Python Environment via `uv pip` (Recommended for SDK & VCR Testing)
+Best suited for application-level integration (`from fiber.llm.entry import acompletion`), offline VCR fixture testing, and running `pytest` suites. We recommend using `uv pip` for strict dependency resolution:
 
 ```bash
-## 1. Create a dedicated sandbox environment
+## Create a dedicated sandbox environment
 mkdir -p ~/fiber-user && cd ~/fiber-user
 pyenv local fiber-user
 
-## 2. Install via local source OR remote git reference
-uv pip install /path/to/local/self/fiber
-# OR: uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.6
+## Install via remote git reference OR local source
+uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.7
+# OR: uv pip install /path/to/local/self/fiber
 
-## 3. Verify anchor (Anchors to ~/.anchor/bound.json)
+## Verify anchor (Anchors to ~/.anchor/bound.json)
 fiber --help
+```
+
+### 2.2. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
+
+Best suited for running Fiber as a standalone background service (`fiber daemon`) to govern local AI agents via the **MCP Gateway** without managing Python virtual environments.
+
+> **Note (Experimental):** The Homebrew packaging pipeline is currently undergoing stabilization across macOS environments (e.g., Xcode Command Line Tools & build metadata bindings). If you encounter environment-specific build issues, please fall back to the `uv pip` installation above.
+
+```bash
+## Install Fiber and its isolated runtime in a single command
+brew install wittgena/fiber/fiber
+
+## Verify CLI or start the background daemon service
+fiber --help
+brew services start wittgena/fiber/fiber
 ```
 
 ---
 
-## 3. Fiber Connect & CLI Deployment
+## 3. MCP Gateway & Fiber Connect
 
-The `fiber` CLI serves as the unified **Deployment & Orchestration Entrypoint**. It dynamically configures node profiles, mounts autonomous MCP workers(servers) onto the distributed DPHI Bus, and delegates execution across local and remote boundaries with zero boilerplate.
+The **Fiber Connect CLI** (`fiber`) is the unified deployment and orchestration entrypoint. It dynamically configures node profiles, mounts autonomous MCP workers onto the distributed Tunnel Bus, and delegates execution across local and remote boundaries with zero boilerplate.
 
-### 3.1. Core CLI Command Matrix
+### 3.1. MCP Gateway
 
-| Command | Role | Architectural Function & Lifecycle | Example |
-| :--- | :--- | :--- | :--- |
-| **`connect`** | **[Egress Sidecar]** | Resolves built-in workers, agent config files (`mcp.json`), or remote HTTP/SSE endpoints and sublimates them into governed nodes on the DPHI Bus. | `fiber connect -e worker.docs` |
-| **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
-| **`compat`** | **[Compat & VCR]** | Generates raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) to guarantee schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
-
-### 3.2. MCP Gateway & Agent Integration
-
-Connecting AI agents (Claude Code, Cursor, VSCode, Zed) directly to raw MCP servers via point-to-point pipes exposes host systems to retry-induced state corruption, unapproved tool execution, and credential leaks. Fiber resolves this by absorbing your existing agent configurations onto the DPHI Bus and exposing them through a stateless **MCP Gateway** (`/v1/mcp-gateway/invoke` & `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`).
+Connecting AI agents (Claude Code, Cursor, VSCode, Zed) directly to raw MCP servers via point-to-point pipes exposes host systems to retry-induced state corruption, unapproved tool execution, and credential leaks. Fiber resolves this by absorbing your existing agent configurations onto the Tunnel Bus and exposing them through a stateless **MCP Gateway** (`/v1/mcp-gateway/invoke`, `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`).
 
 **Why MCP Gateway?**
-Standard MCP clients treat tool calls as fire-and-forget pipes: if a network timeout occurs, the agent blindly retries or hallucinates alternative parameters, triggering duplicate database writes or runaway API charges. Fiber’s MCP Gateway interposes a deterministic control plane between the agent and the tool:
- 
-  - **Idempotent Execution:** Maps every invocation to a deterministic transaction handle. Duplicate requests from agent retry loops immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
-  - **Human-in-the-Loop Authorization:** When an agent invokes a high-risk operation (e.g., security findings, destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and requests explicit user approval (TOTP/CLI confirmation) before resuming from the exact suspended state.
-  - **Credential Isolation & Stream Sanitization:** Injects external SaaS API keys (`Bearer` tokens) strictly at the egress boundary so secrets never enter the agent's prompt context, while sanitizing non-JSON stdout noise before it corrupts the agent's parser.
+Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeouts, agents blindly retry or hallucinate parameters, causing duplicate database writes or runaway API charges. Fiber’s MCP Gateway interposes a deterministic control plane between the agent and the tool:
+
+  - **Idempotent Execution:** Maps every invocation to a deterministic transaction handle. Duplicate agent retries immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
+  
+  - **Human-in-the-Loop Authorization:** On high-risk operations (e.g., destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and awaits explicit user approval (TOTP/CLI) before resuming from the exact suspended state.
+  - **Credential Isolation & Stream Sanitization:** Injects external API keys (`Bearer` tokens) strictly at the egress boundary so secrets never enter the agent's context, while stripping non-JSON `stdout` noise before it corrupts the agent's parser.
 
 **Agent Onboarding**
-Instead of manually supervising fragmented MCP processes, `McpWorkerDaemon` and `McpConfigMapper` automatically scan and normalize existing agent config files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, etc.) alongside Fiber's built-in workers.
+Instead of manually supervising fragmented MCP processes, Fiber automatically scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) alongside built-in workers.
 
-To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file
+To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file:
 
 ```json
 {
@@ -356,11 +365,10 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
 }
 ```
 
-* **Coexistence:** Fiber's declarative mapper automatically ignores the self-referential `fiber-gateway` entry during scanning while mounting the remaining servers. Once verified through the gateway, you can progressively remove or disable redundant direct entries in `mcp.json` at your own pace.
-* **Unified Namespacing:** Tools mounted across all active workers are aggregated under `<target_id>__<tool_name>` on the unified endpoint (or accessed individually via `/v1/mcp-gateway/{target_id}/invoke`).
+**Coexistence**: Fiber's declarative mapper automatically ignores the self-referential fiber-gateway entry during scanning while mounting the remaining servers. Once verified, you can progressively remove redundant direct entries at your own pace.
 
-**Sidecar Provisioning (`fiber connect`)**
-While `fiber daemon` autonomously manages built-in and discovered workers in production, `fiber connect` serves as a flexible sidecar utility to mount specific config files or individual workers on demand, automatically inferring transport (`stdio` vs. `network`) and concurrency modes (`multiplex`, `linear`, `ephemeral`):
+**Sidecar Provisioning (fiber connect)**
+While fiber daemon autonomously manages workers in production, `fiber connect` acts as an on-demand sidecar to mount specific config files or individual workers, automatically inferring transport (`stdio` vs. `network`) and concurrency modes (`multiplex`, `linear`, `ephemeral`):
 
 ```bash
 # Auto-Scan or Explicit Config: Mounts all servers defined in mcp.json
@@ -372,6 +380,16 @@ $ fiber connect -e worker.docs
 # Remote Commercial MCP: HTTP/SSE multiplexing with Bearer auth injection
 $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 ```
+
+### 3.2. Fiber Connect CLI
+
+| Command | Role | Architectural Function & Lifecycle | Example |
+| :--- | :--- | :--- | :--- |
+| **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (mcp.json), or remote HTTP/SSE endpoints as governed nodes on the Tunnel Bus. | `fiber connect -e worker.docs` |
+| **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
+| **`compat`** | **[Compat & VCR]** | Records raw provider payloads (record) and verifies declarative extraction rules offline (replay) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
+
+---
 
 ## 4. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)
 
