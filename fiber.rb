@@ -1,12 +1,15 @@
 class Fiber < Formula
   desc "The Universal Integration Boundary for heterogeneous AI ecosystems"
   homepage "https://github.com/wittgena/fiber"
-  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.6.tar.gz"
-  sha256 "ea375e7756a8190450612ba64b224247374153c51442832ed07ec01c4ed338ad"
+  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.7.tar.gz"
+  sha256 "0239da342b14075265f32955f3884123a2eb9d4c2a1ec366b7f1acbf44410163"
   
   depends_on "python@3.12"
 
   def install
+    # .git 폴더가 없는 tarball 빌드 시 hatch-vcs(setuptools-scm)에 버전 강제 주입
+    ENV["SETUPTOOLS_SCM_PRETEND_VERSION"] = version.to_s
+
     # libexec에 격리된 venv 생성 및 파이썬 패키지 설치
     system "python3.12", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "-U", "pip"

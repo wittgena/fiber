@@ -5,21 +5,17 @@ import hashlib
 from pathlib import Path
 from xphi.node.space.bind.resolver import resolve_path
 
-# =====================================================================
 # Configuration Constants
-# =====================================================================
 GITHUB_REPO = "wittgena/fiber"
 PYTHON_VERSION = "3.12"
 PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
 PROJECT_DESC = "The Universal Integration Boundary for heterogeneous AI ecosystems"
-DEFAULT_VERSION = "v1.1.4.6"
+DEFAULT_VERSION = "v1.1.4.7"
 
 FIBER_ROOT = resolve_path("fiber")
 
-# =====================================================================
 # Formula Template
-# =====================================================================
 FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
   desc "{{PROJECT_DESC}}"
   homepage "https://github.com/{{GITHUB_REPO}}"
@@ -29,6 +25,9 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
   depends_on "python@{{PYTHON_VERSION}}"
 
   def install
+    # .git 폴더가 없는 tarball 빌드 시 hatch-vcs(setuptools-scm)에 버전 강제 주입
+    ENV["SETUPTOOLS_SCM_PRETEND_VERSION"] = version.to_s
+
     # libexec에 격리된 venv 생성 및 파이썬 패키지 설치
     system "python{{PYTHON_VERSION}}", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "-U", "pip"
@@ -54,35 +53,36 @@ end
 """
 
 def generate_formula(version: str):
-    tarball_url = f"https://github.com/{GITHUB_REPO}/archive/refs/tags/{version}.tar.gz"
+    tag_version = version if version.startswith("v") else f"v{version}"
+    tarball_url = f"https://github.com/{GITHUB_REPO}/archive/refs/tags/{tag_version}.tar.gz"
     output_path = FIBER_ROOT / f"{PROJECT_NAME_LOWER}.rb"
     
-    print(f"[*] Target Version: {version}")
+    print(f"[*] Target Version: {tag_version}")
     print(f"[*] Downloading {tarball_url}...")
     
     try:
-        response = urllib.request.urlopen(tarball_url)
-        tar_data = response.read()
+        req = urllib.request.Request(tarball_url, headers={"User-Agent": "Fiber-Formula-Generator"})
+        with urllib.request.urlopen(req, timeout=30) as response:
+            tar_data = response.read()
         sha256_hash = hashlib.sha256(tar_data).hexdigest()
         print(f"[*] Calculated SHA256: {sha256_hash}")
     except Exception as e:
         print(f"[!] Failed to download or calculate hash: {e}")
         sys.exit(1)
         
-    # 템플릿 상수 치환 (Chain of replaces)
-    rendered_content = FORMULA_TEMPLATE \
-        .replace("{{PROJECT_NAME_TITLE}}", PROJECT_NAME_TITLE) \
-        .replace("{{PROJECT_NAME_LOWER}}", PROJECT_NAME_LOWER) \
-        .replace("{{PROJECT_DESC}}", PROJECT_DESC) \
-        .replace("{{GITHUB_REPO}}", GITHUB_REPO) \
-        .replace("{{PYTHON_VERSION}}", PYTHON_VERSION) \
-        .replace("{{TARBALL_URL}}", tarball_url) \
+    rendered_content = (
+        FORMULA_TEMPLATE
+        .replace("{{PROJECT_NAME_TITLE}}", PROJECT_NAME_TITLE)
+        .replace("{{PROJECT_NAME_LOWER}}", PROJECT_NAME_LOWER)
+        .replace("{{PROJECT_DESC}}", PROJECT_DESC)
+        .replace("{{GITHUB_REPO}}", GITHUB_REPO)
+        .replace("{{PYTHON_VERSION}}", PYTHON_VERSION)
+        .replace("{{TARBALL_URL}}", tarball_url)
         .replace("{{SHA256_HASH}}", sha256_hash)
+    )
         
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(rendered_content)
+    output_path.write_text(rendered_content, encoding="utf-8")
         
-    # FIBER_ROOT를 기준으로 상대 경로 출력
     try:
         rel_path = output_path.relative_to(FIBER_ROOT.parent)
     except ValueError:
@@ -90,10 +90,10 @@ def generate_formula(version: str):
     print(f"[+] Successfully generated Homebrew formula at: {rel_path}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python -m fiber.phase.gen.brew <version>")
+    if len(sys.argv) > 2:
+        print("Usage: python -m fiber.phase.gen.brew [version]")
         print(f"Example: python -m fiber.phase.gen.brew {DEFAULT_VERSION}")
         sys.exit(1)
         
-    target_version = sys.argv[1]
+    target_version = sys.argv[1] if len(sys.argv) == 2 else DEFAULT_VERSION
     generate_formula(target_version)
