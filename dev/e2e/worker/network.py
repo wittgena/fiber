@@ -79,7 +79,7 @@ class MCPNetworkPipeline(BaseBridgePipeline):
         headers = {
             "x-idempotency-key": uuid.uuid4().hex,
             "x-nonce": nonce,
-            "X-X402-Receipt": "valid_x402",
+            "Fuel-Receipt": "valid_receipt",
             "DPoP": self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce),
         }
         return await self.http_client.post(url, json=payload, headers=headers, timeout=timeout)

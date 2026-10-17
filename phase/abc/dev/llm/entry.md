@@ -143,13 +143,13 @@ This architecture allows the framework to execute internal middleware logic with
 
 ## 6. Edge LLM Gateway Integration (Zero-Trust API)
 
-The `fiber.llm` module includes a FastAPI-based API Gateway (`edge.llm`) for distributed environments and Agent-to-Agent (A2A) communications. It conforms to the OpenAI API specification and integrates with the DPHI infrastructure's economic system (x402).
+The `fiber.llm` module includes a FastAPI-based API Gateway (`edge.llm`) for distributed environments and Agent-to-Agent (A2A) communications. It conforms to the OpenAI API specification and integrates with the DPHI infrastructure's payment system.
 
-### 6.1. X-X402-Receipt & Kernel Authorization
+### 6.1. Fuel-Receipt & Kernel Authorization
 
 External invocations of DPHI computing resources require payment proofs. Before routing the LLM call, the gateway executes the following sequence:
 
-1. **Receipt Extraction**: Extracts the `X-X402-Receipt` from the HTTP headers.
+1. **Receipt Extraction**: Extracts the `Fuel-Receipt` from the HTTP headers.
 2. **Kernel Intent (DphiBroker)**: Issues an `AUTHORIZE_INTENT` to the WASM kernel to validate the receipt and retrieve the authorized Fuel Budget and audit hash.
 3. **Pipeline Injection**: Injects the `kernel_auth` payload into the `metadata` kwargs of the `acompletion` function, delegating budget enforcement to the pipeline middlewares.
 
@@ -168,5 +168,5 @@ Client-side agents can interact with the DPHI Gateway by updating the Base URL a
 
 Authorization failures and LLM timeouts are mapped to standard HTTP error codes.
 
-* **402 Payment Required**: Triggered upon budget exhaustion or invalid receipts. Includes a `WWW-Authenticate: x402_signed_proof=""` header to initiate automated settlement logic on the agent side.
+* **402 Payment Required**: Triggered upon budget exhaustion or invalid receipts. Includes a `WWW-Authenticate: receipt_signed_proof=""` header to initiate automated settlement logic on the agent side.
 * **502 Bad Gateway**: Triggered by downstream pipeline errors, returning the origin error context for debugging.

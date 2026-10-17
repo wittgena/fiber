@@ -36,8 +36,8 @@ from fiber.infra.watcher.finops import default_finops_watcher
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.bound.event.next import next_trace_id
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
-from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.space.bind.resolver import resolve_path, get_invoker
+from xphi.node.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
 
 FIXTURE_ROOT = "fiber-compats/suites/e2e"

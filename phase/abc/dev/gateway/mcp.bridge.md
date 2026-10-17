@@ -33,8 +33,8 @@
 [ Stateless Environment ]            [ edge.mcp (Complexity Sink) ]             [ Deterministic State ]
                                                                                                        
 Agent A (EXECUTE) ──────┐        ┌────────────────────────────────────┐        ┌──────────────────────┐
-  + DPoP / x402         │        │ 1. Cryptographic Adapter (ACL)     │        │ DPHI Core Ledger     │
-                        ├─(REST)▶│   - Validate JWK, DPoP, x402       │───┐    │ ┌──────────────────┐ │
+  + DPoP / Fuel Receipt │        │ 1. Cryptographic Adapter (ACL)     │        │ DPHI Core Ledger     │
+                        ├─(REST)▶│   - Validate JWK, DPoP,Fuel Receipt│───┐    │ ┌──────────────────┐ │
 Agent B (RESUME) ───────┤        │   - Nonce & Idempotency Mapping    │   │    │ │ ID: txn_A (Exec) │ │
   + TOTP (Elicitation)  │        ├────────────────────────────────────┤   ├───▶│ │ ID: txn_B (YIELD)│ │
                         │        │ 2. Transition Bridge (Facade)      │   │    │ └─────────┬────────┘ │
@@ -50,7 +50,7 @@ Agent C (Replay) ───────┘        │   - JSON ↔ LogicStream Tr
 
 ```
 
-* **Cryptographic Adapter:** 다양한 암호화 스펙(Ed25519, RSA, EC)을 정규화하고, 매 요청마다 **DPoP 서명**과 **x402 결제 영수증**을 검증합니다. Check-Then-Act 동시성 이슈를 방지하는 분산 락(`IdempotencyMapper`)과 난수 캐시(`NonceReplayProtector`)를 통해 리플레이 공격을 엣지 계층에서 차단합니다.
+* **Cryptographic Adapter:** 다양한 암호화 스펙(Ed25519, RSA, EC)을 정규화하고, 매 요청마다 **DPoP 서명**과 **결제 영수증**을 검증합니다. Check-Then-Act 동시성 이슈를 방지하는 분산 락(`IdempotencyMapper`)과 난수 캐시(`NonceReplayProtector`)를 통해 리플레이 공격을 엣지 계층에서 차단합니다.
 * **Transition Bridge:** 클라이언트의 REST 요청을 비동기 인텐트(`LogicStream`)로 변환합니다. 타임아웃 발생 시 즉각 `FORCE_ROLLBACK`을 발행하여 응답 없는(Zombie) 워커 프로세스를 차단하고 504를 반환하는 롤백 매커니즘을 수행합니다.
 * **State Transition:** 워커 샌드박스가 사용자 개입(OTP 등)을 요구하며 대기 상태로 전환될 때(`ephemeral/multiplex`), 시스템은 프로세스를 유휴(Park) 상태로 두고 `YIELD` 상태를 원장에 보고합니다. 브리지는 즉시 루프를 해제하고 클라이언트에게 `HTTP 202 Accepted`를 반환하여 안정적인 비동기 대화형 제어(Elicitation Trap)를 지원합니다.
 
@@ -69,7 +69,7 @@ Gateway는 상태 제어용 봉투(FSM Envelope)를 헤더 프로토콜로 추�
 | --- | --- | --- | --- |
 | `x_idempotency_key` | String | **필수** | 분산 트랜잭션의 고유 식별자(Handle ID). 타임아웃 재시도 및 YIELD-RESUME 맵핑 시 원장 상태와 결속됩니다. |
 | `x_nonce` | String | **필수** | Replay Attack 방지용 1회성 난수. |
-| `X-X402-Receipt` | String | 선택 (Track A) | **[A2A 종량제 과금]** M2M 연산 연료(Fuel) 결제 증명. |
+| `Fuel-Receipt` | String | 선택 (Track A) | **[A2A 종량제 과금]** M2M 연산 연료(Fuel) 결제 증명. |
 | `DPoP` | String | 선택 (Track B) | **[엔터프라이즈 인가]** RFC 9449 기반 탈취 방지 서명 및 신원(SPIFFE) 증명. |
 
 ---
@@ -84,7 +84,7 @@ Gateway는 상태 제어용 봉투(FSM Envelope)를 헤더 프로토콜로 추�
 
 2. **Intent Broadcast & Propose:**
 
-* x402 결제를 승인하고 원장에 `PENDING` 상태 전이를 기록한 뒤, RPC 버스를 통해 타겟 서버 커넥터로 인텐트를 브로드캐스트합니다.
+* 결제를 승인하고 원장에 `PENDING` 상태 전이를 기록한 뒤, RPC 버스를 통해 타겟 서버 커넥터로 인텐트를 브로드캐스트합니다.
 
 3. **The Facade Loop (동기-비동기 대기 및 롤백 방어):**
 
@@ -135,4 +135,4 @@ $ fiber connect --mode multiplex --target "oracle" --exec "python oracle.py"
 
 * 제공자는 기존 스크립트 대신 `wasmtime run duckdb_mcp.wasm`과 같이 실행 엔진을 교체하여 WASM 런타임을 도입할 수 있습니다.
 * WASM 런타임 내부의 로직은 WASI(Virtual File System)를 통해 외부 스토리지에 접근하며, 커넥터가 이 통신을 안정적으로 중계합니다.
-* AI 에이전트의 연산 리소스 사용량은 WASM 인스트럭션 사이클(Instruction Cycle) 단위로 측정되어, 정밀한 **x402 Fuel(연료) 과금 종량제**를 구현할 수 있습니다.
+* AI 에이전트의 연산 리소스 사용량은 WASM 인스트럭션 사이클(Instruction Cycle) 단위로 측정되어, 정밀한 **Fuel(연료) 과금 종량제**를 구현할 수 있습니다.

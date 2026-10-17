@@ -13,7 +13,7 @@ from fiber.gateway.mcp.payload import McpPayloadBuilder
 from fiber.gateway.mcp.registry import AdapterRegistry
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("mcp.connector")

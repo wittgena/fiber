@@ -9,8 +9,8 @@ import fiber.infra.e2e.scene as scene_module
 
 from xphi.arch.dev.wasm.builder import WasmBuilder
 from xphi.arch.dev.wasm.tester import WasmTester
-from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.tunnel.factory import TunnelFactory
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

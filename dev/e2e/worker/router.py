@@ -12,14 +12,14 @@ from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.gateway.mcp.connector import MCPServerConnector
-import fiber.dev.worker.legacy.oracle as worker_oracle
-import fiber.dev.worker.legacy.finlib as worker_finlib
-import fiber.dev.worker.legacy.margin as worker_margin
+import fiber.dev.worker.eco.oracle as worker_oracle
+import fiber.dev.worker.eco.finlib as worker_finlib
+import fiber.dev.worker.eco.margin as worker_margin
 import fiber.dev.worker.search.archive as worker_search
 
 from fiber.gateway.daemon.economy.pricing import DynamicPricingDaemon
 from xphi.arch.bound.client.rpc import InternalRpcClient
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
@@ -43,7 +43,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
             Phase("Phase 2: High-Throughput Linear Queue Stress (FinLib)", self.phase_finlib_linear_queue),
             Phase("Phase 3: Native Async Multiplexing Concurrency (Oracle)", self.phase_oracle_multiplexing),
             Phase("Phase 4: Unit Economics Vectorization (Margin BI)", self.phase_margin_simulation),
-            Phase("Phase 5: x402 Billing Rejection (Free-Rider Defense)", self.phase_x402_rejection),
+            Phase("Phase 5: Billing Rejection (Free-Rider Defense)", self.phase_billing_rejection),
             Phase("Phase 6: Precise Error Routing (Invalid Params)", self.phase_error_routing),
             Phase("Phase 7: Data-Intensive Async Multiplexing (DuckDB Search)", self.phase_duckdb_search_worker),
             Phase("Phase 8: Autonomic Dynamic Pricing Alignment", self.phase_dynamic_pricing_alignment),
@@ -88,7 +88,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
         nonce = uuid.uuid4().hex
         url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "valid_receipt", "DPoP": dpop_proof}
         
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(url, json=payload, headers=headers)
@@ -101,7 +101,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
             nonce = uuid.uuid4().hex
             url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "valid_receipt", "DPoP": dpop_proof}
             
             async with httpx.AsyncClient(base_url=self.local_url, timeout=10.0) as client:
                 return await client.post(url, json=payload, headers=headers)
@@ -120,7 +120,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
             nonce = uuid.uuid4().hex
             url = f"{self.local_url}/v1/mcp-gateway/{self.oracle_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "valid_receipt", "DPoP": dpop_proof}
             
             async with httpx.AsyncClient(base_url=self.local_url, timeout=15.0) as client:
                 return await client.post(url, json=payload, headers=headers)
@@ -147,7 +147,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
                         "arn:bybit": {"rate": 0.00012, "time": int(time.time())}
                     },
                     "trade_size_usd": 10000.0,
-                    "pricing": {"base_x402_fee_usd": 0.002, "profit_share_ratio": 0.05},
+                    "pricing": {"base_fee_usd": 0.002, "profit_share_ratio": 0.05},
                     "infra": {"monthly_fixed_cost_usd": 30.0, "compute_cost_per_sec_usd": 0.00001, "avg_latency_sec": 0.05},
                     "tps_range": [1.0, 10.0, 50.0]
                 }
@@ -157,16 +157,16 @@ class MCPRouterPipeline(BaseBridgePipeline):
         nonce = uuid.uuid4().hex
         url = f"{self.local_url}/v1/mcp-gateway/{self.margin_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "valid_receipt", "DPoP": dpop_proof}
         
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(url, json=payload, headers=headers)
             if res.status_code != 200: 
                 raise RuntimeError(f"Margin Sim Failed: Expected 200, got {res.status_code} ({res.text})")
 
-    async def phase_x402_rejection(self):
+    async def phase_billing_rejection(self):
         tunnel = await TunnelFactory.get_default()
-        redis_key = f"config:x402:{self.finlib_id}"
+        redis_key = f"config:fuel:{self.finlib_id}"
         
         await tunnel.set(redis_key, "1")
         try:
@@ -174,7 +174,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
             nonce = uuid.uuid4().hex
             url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "invalid_receipt", "DPoP": dpop_proof}
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "invalid_receipt", "DPoP": dpop_proof}
             
             async with httpx.AsyncClient(base_url=self.local_url) as client:
                 res = await client.post(url, json=payload, headers=headers)
@@ -188,7 +188,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
         nonce = uuid.uuid4().hex
         url = f"{self.local_url}/v1/mcp-gateway/{self.finlib_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "valid_receipt", "DPoP": dpop_proof}
         
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(url, json=payload, headers=headers)
@@ -204,7 +204,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
         nonce = uuid.uuid4().hex
         url = f"{self.local_url}/v1/mcp-gateway/{self.search_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "valid_x402", "DPoP": dpop_proof}
+        headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "valid_receipt", "DPoP": dpop_proof}
         
         start_time = time.time()
         async with httpx.AsyncClient(base_url=self.local_url, timeout=60.0) as client:
@@ -232,9 +232,8 @@ class MCPRouterPipeline(BaseBridgePipeline):
 
     async def phase_dynamic_pricing_alignment(self):
         tunnel = await TunnelFactory.get_default()
-        redis_key = f"config:x402:{self.search_id}"
+        redis_key = f"config:fuel:{self.search_id}"
         
-        # [변경] 상태 격리: X402 플래그 임시 활성화
         await tunnel.set(redis_key, "1")
         try:
             await asyncio.sleep(1.0)
@@ -262,7 +261,7 @@ class MCPRouterPipeline(BaseBridgePipeline):
             nonce = uuid.uuid4().hex
             url = f"{self.local_url}/v1/mcp-gateway/{self.search_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "X-X402-Receipt": "invalid_receipt", "DPoP": dpop_proof}
+            headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "Fuel-Receipt": "invalid_receipt", "DPoP": dpop_proof}
             
             async with httpx.AsyncClient(base_url=self.local_url) as client:
                 res = await client.post(url, json=payload, headers=headers)

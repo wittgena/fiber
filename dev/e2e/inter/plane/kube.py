@@ -12,7 +12,7 @@ from fiber.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from fiber.infra.watcher.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

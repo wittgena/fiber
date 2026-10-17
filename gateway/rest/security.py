@@ -12,11 +12,11 @@ from fastapi import Request, HTTPException, status
 
 from xphi.arch.bound.xor.secret.cipher import Cipher
 from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.wasm.broker import DphiBroker
 from xphi.arch.model.dphi.auth import KernelAuthPayload
 from xphi.arch.bound.adapter.pta import SignStateAdapter
 
@@ -94,9 +94,9 @@ class TokenTranslator:
         if not raw_token:
             return None
             
-        # Backward Compatibility: Bypass native AP2/x402 receipts or E2E mock strings
+        # Backward Compatibility: Bypass native AP2/fuel receipts or E2E mock strings
         if not raw_token.startswith("ey"):
-            log.debug("[TokenTranslator] Token bypassed translation (native AP2/x402 detected).")
+            log.debug("[TokenTranslator] Token bypassed translation (native AP2/receipt detected).")
             return raw_token
 
         log.info("[TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.")
@@ -150,7 +150,7 @@ class KernelAuthenticator:
         model: str, 
         max_tokens: Optional[int] = None
     ) -> KernelAuthPayload:
-        receipt = getattr(request.state, "x402_receipt", None)
+        receipt = getattr(request.state, "fuel_receipt", None)
         intent_payload = {
             "action": action,
             "model": model,

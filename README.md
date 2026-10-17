@@ -322,44 +322,54 @@ The `fiber` CLI serves as the unified **Deployment & Orchestration Entrypoint**.
 
 | Command | Role | Architectural Function & Lifecycle | Example |
 | :--- | :--- | :--- | :--- |
-| **`connect`** | **[Egress Sidecar]** | Resolves built-in workers, third-party packages, or remote HTTP/SSE endpoints and sublimates them into governed nodes on the DPHI Bus. | `fiber connect -t docs -e worker.docs` |
+| **`connect`** | **[Egress Sidecar]** | Resolves built-in workers, agent config files (`mcp.json`), or remote HTTP/SSE endpoints and sublimates them into governed nodes on the DPHI Bus. | `fiber connect -e worker.docs` |
 | **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
 | **`compat`** | **[Compat & VCR]** | Generates raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) to guarantee schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
-| **`e2e`** | **[Verification]** | Executes deterministic end-to-end validation suites across LLM tracing, WASM firewall boundaries, and MCP network transports. | `fiber e2e worker.network` |
 
-### 3.2. fiber connect & MCP Gateway
+### 3.2. MCP Gateway & Agent Integration
 
-Connecting AI agents directly to raw MCP servers via point-to-point pipes exposes host systems to retry-induced state corruption, unapproved tool execution, and credential leaks. Fiber resolves this by routing every mounted server through its stateless **MCP Gateway** (`/v1/mcp-gateway/{target_id}/invoke` & `/tools`), while `fiber connect` serves as the unified provisioning bridge that attaches any local or remote tool to this gateway in a single command.
+Connecting AI agents (Claude Code, Cursor, VSCode, Zed) directly to raw MCP servers via point-to-point pipes exposes host systems to retry-induced state corruption, unapproved tool execution, and credential leaks. Fiber resolves this by absorbing your existing agent configurations onto the DPHI Bus and exposing them through a stateless **MCP Gateway** (`/v1/mcp-gateway/invoke` & `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`).
 
 **Why MCP Gateway?**
 Standard MCP clients treat tool calls as fire-and-forget pipes: if a network timeout occurs, the agent blindly retries or hallucinates alternative parameters, triggering duplicate database writes or runaway API charges. Fiber’s MCP Gateway interposes a deterministic control plane between the agent and the tool:
  
-  - **Idempotent Execution (Hallucination & Retry Defense):** Maps every invocation to a deterministic transaction handle. Duplicate requests from agent retry loops immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
-  - **Human-in-the-Loop Authorization (Interactive Pause & Resume):** When an agent invokes a high-risk operation (e.g., security findings, destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and requests explicit user approval (TOTP/CLI confirmation) before resuming from the exact suspended state.
+  - **Idempotent Execution:** Maps every invocation to a deterministic transaction handle. Duplicate requests from agent retry loops immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
+  - **Human-in-the-Loop Authorization:** When an agent invokes a high-risk operation (e.g., security findings, destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and requests explicit user approval (TOTP/CLI confirmation) before resuming from the exact suspended state.
   - **Credential Isolation & Stream Sanitization:** Injects external SaaS API keys (`Bearer` tokens) strictly at the egress boundary so secrets never enter the agent's prompt context, while sanitizing non-JSON stdout noise before it corrupts the agent's parser.
-  - **Telemetry-Driven Budget Breakers:** Extracts real-time execution metrics (scanned bytes, latency, saved tokens) from tool responses to dynamically adjust `x402` usage fees and cut off infinite agent loops.
 
-**Why `fiber connect`?**
-Even with a robust gateway, managing heterogeneous MCP servers—spanning Python scripts, Node.js packages, JVM binaries, and remote SaaS URLs—typically requires fragmented configuration files and manual process supervision. `fiber connect` unifies this entire lifecycle. Whether invoked manually via CLI or autonomously at boot time via `McpWorkerDaemon`, it inspects the `--exec` (`-e`) target and automatically handles environment scanning, on-demand provisioning, and transport multiplexing:
+**Agent Onboarding**
+Instead of manually supervising fragmented MCP processes, `McpWorkerDaemon` and `McpConfigMapper` automatically scan and normalize existing agent config files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, etc.) alongside Fiber's built-in workers.
 
-1. **Built-in Worker Discovery (`fiber.dev.worker.*`):**
-   Automatically discovers internal workers via zero-import AST inspection. Asynchronous workers (e.g., `worker.data`, `worker.docs`) are mounted in `multiplex` mode with local DuckDB caching and automatic context compression (preventing massive tool outputs from overflowing the main LLM context), while synchronous workers default to safe `linear` queuing.
+To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file
 
-2. **Delegated Third-Party Provisioning (`EXTERNAL_MCP_CATALOG`):**
-   For open-source MCP packages (e.g., `worker.repomix`, `worker.office`), Fiber first scans the local environment (`PATH`) for pre-installed binaries to achieve zero cold-start latency. If absent, it transparently delegates on-demand download and execution to native ecosystem runners (`npx -y`, `uvx`, or isolated `pip`) while filtering out installation logs to keep the JSON-RPC stream clean.
+```json
+{
+  "mcpServers": {
+    "fiber-gateway": {
+      "url": "http://127.0.0.1:8356/v1/mcp-gateway/invoke"
+    },
+    "repomix": {
+      "command": "npx",
+      "args": ["-y", "repomix", "--mcp"]
+    }
+  }
+}
+```
 
-3. **Zero-Config Transport & Mode Inference (`stdio` vs. `network`):**
-  - **Local Commands (`stdio`):** Standard shell commands default to isolated `ephemeral` (or `linear`) execution to prevent memory leaks and zombie processes.
-  - **Managed Binaries & Remote Endpoints (`network`):** Local binary directories (`phix-*.jar`) and `http(s)://` URLs automatically switch to asynchronous `multiplex` mode, natively managing Streamable HTTP (`text/event-stream` SSE), `Mcp-Session-Id` persistence, and Bearer token injection from environment files (`-f .env`).
+* **Coexistence:** Fiber's declarative mapper automatically ignores the self-referential `fiber-gateway` entry during scanning while mounting the remaining servers. Once verified through the gateway, you can progressively remove or disable redundant direct entries in `mcp.json` at your own pace.
+* **Unified Namespacing:** Tools mounted across all active workers are aggregated under `<target_id>__<tool_name>` on the unified endpoint (or accessed individually via `/v1/mcp-gateway/{target_id}/invoke`).
+
+**Sidecar Provisioning (`fiber connect`)**
+While `fiber daemon` autonomously manages built-in and discovered workers in production, `fiber connect` serves as a flexible sidecar utility to mount specific config files or individual workers on demand, automatically inferring transport (`stdio` vs. `network`) and concurrency modes (`multiplex`, `linear`, `ephemeral`):
 
 ```bash
-# 1. Built-in Worker: Mounts AST-discovered DuckDB/Context7 worker (stdio / multiplex)
-$ fiber connect -t docs -e worker.docs
+# Auto-Scan or Explicit Config: Mounts all servers defined in mcp.json
+$ fiber connect -c .mcp.json
 
-# 2. Delegated External MCP: Probes local binary or auto-provisions via npx/uvx (stdio / multiplex)
-$ fiber connect -t repomix -e worker.repomix
+# Built-in Worker: Mounts worker with auto-inferred target & mode
+$ fiber connect -e worker.docs
 
-# 3. Remote Commercial MCP: Auto-switches to HTTP/SSE multiplexing with Bearer auth injection (network / multiplex)
+# Remote Commercial MCP: HTTP/SSE multiplexing with Bearer auth injection
 $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 ```
 

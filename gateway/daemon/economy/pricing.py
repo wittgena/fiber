@@ -8,8 +8,8 @@ from fiber.infra.rpc.method import RpcMethod
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.ops.daemon.base import AbstractDaemon
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.pricing")
@@ -70,7 +70,7 @@ class PricingVault:
 
         safe_price = await self.risk.calculate_and_verify_price(telemetry)
         await self.tunnel.set(f"eco:price_tag:{target_id}", safe_price)
-        log.info(f"⚖️ [Pricing Enforcer] Updated X402 Fee for {target_id} -> ${safe_price:.4f}")
+        log.info(f"⚖️ [Pricing Enforcer] Updated Fuel Fee for {target_id} -> ${safe_price:.4f}")
 
 @contract.daemon("dynamic_pricing")
 class DynamicPricingDaemon(AbstractDaemon):

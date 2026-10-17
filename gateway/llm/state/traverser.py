@@ -12,7 +12,7 @@ from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
 
 from xphi.arch.bound.event.next import uuid4 
-from xphi.kernel.space.bind.resolver import get_invoker
+from xphi.node.space.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))

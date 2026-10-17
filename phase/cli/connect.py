@@ -1,16 +1,18 @@
 # fiber.phase.cli.connect
+import os
 import sys
 import ast
-import shutil
+import shlex
 import asyncio
-import subprocess
 import importlib.util
 from pathlib import Path
+from urllib.parse import urlparse
 from dataclasses import dataclass
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, List
 
 import typer
 from fiber.gateway.mcp.connector import MCPServerConnector
+from fiber.gateway.mcp.mapper.config import McpConfigMapper, MappedMcpEntry
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fiber.cli.connect")
@@ -24,49 +26,17 @@ class ResolvedTarget:
     transport: str
 
 
-# 1. 내장 워커 표준 별칭 (기존 하위호환성 유지)
 BUILTIN_ALIASES: Dict[str, str] = {
-    "deployer": "worker.deploy",
-    "oracle": "worker.oracle",
-    "finlib": "worker.finlib",
-    "margin": "worker.margin",
-    "archive": "worker.data",
-    "context7": "worker.docs",
-    "security": "worker.sec",
+    "deployer": "worker.deployer",
+    "oracle": "worker.eco.oracle",
+    "finlib": "worker.eco.finlib",
+    "margin": "worker.eco.margin",
+    "archive": "worker.eco.archive",
 }
 
-# 2. 외부 오픈소스 MCP 스캔 및 프로비저닝 대행 카탈로그
-# (내장 워커로 직접 구현되어 있지 않을 때, 로컬 설치 스캔 후 npx/uvx/pip로 실행 대행)
-EXTERNAL_MCP_CATALOG: Dict[str, Dict[str, str]] = {
-    "worker.repomix": {
-        "bin": "repomix",
-        "args": "--mcp",
-        "ecosystem": "node",
-        "pkg": "repomix",
-        "default_mode": "multiplex",
-    },
-    "worker.office": {
-        "bin": "markitdown-mcp",
-        "args": "",
-        "ecosystem": "python",
-        "pkg": "markitdown-mcp",
-        "default_mode": "multiplex",
-    },
-    "worker.playwright": {
-        "bin": "mcp-server-playwright",
-        "args": "",
-        "ecosystem": "node",
-        "pkg": "@playwright/mcp@latest",
-        "default_mode": "linear",
-    },
-}
-
-
-def discover_builtin_workers(base_package: str = "fiber.dev.worker") -> Dict[str, Tuple[str, str]]:
-    """
-    fiber.dev.worker 하위를 AST로 스캔하여 {target_id: (exec_cmd, default_mode)} 매핑을 반환합니다.
-    """
-    discovered: Dict[str, Tuple[str, str]] = {}
+def discover_builtin_workers(base_package: str = "fiber.dev.worker") -> Dict[str, Tuple[str, str, str]]:
+    """내장 워커 AST 스캔 -> {매칭키: (canonical_id, cmd, default_mode)} 반환"""
+    discovered: Dict[str, Tuple[str, str, str]] = {}
     try:
         spec = importlib.util.find_spec(base_package)
         if not spec or not spec.submodule_search_locations:
@@ -97,95 +67,57 @@ def discover_builtin_workers(base_package: str = "fiber.dev.worker") -> Dict[str
             if not matched:
                 continue
 
-            # 기본값을 기존 stdio 동작과 맞추거나 프로토콜 특성에 따라 설정
             default_mode = "multiplex" if "AsyncWorkerProtocol" in matched else "linear"
             leaf = rel_parts[-1]
             canonical_id = BUILTIN_ALIASES.get(leaf, f"worker.{leaf}")
             cmd = f"{sys.executable} -m {module_path}"
 
-            discovered[canonical_id] = (cmd, default_mode)
-            discovered[f"worker.{'.'.join(rel_parts)}"] = (cmd, default_mode)
+            entry = (canonical_id, cmd, default_mode)
+            discovered[leaf] = entry
+            discovered[canonical_id] = entry
+            discovered[f"worker.{'.'.join(rel_parts)}"] = entry
             break
 
     return discovered
 
 
-def _provision_and_resolve_external(preset_key: str, spec: Dict[str, str]) -> str:
-    """
-    외부 MCP 서버의 로컬 설치 여부를 스캔하고, 미설치 시 npx / uvx / pip 대행 명령어를 구성합니다.
-    """
-    bin_name = spec["bin"]
-    args = spec.get("args", "").strip()
-    ecosystem = spec.get("ecosystem", "node")
-    pkg = spec["pkg"]
-
-    # Step 1: 로컬에 이미 바이너리가 설치되어 있는지 스캔 (가장 빠른 경로)
-    local_bin = shutil.which(bin_name)
-    if local_bin:
-        log.info(f"[Fiber:Connect] ✅ Found local binary for '{preset_key}': {local_bin}")
-        return f"{local_bin} {args}".strip()
-
-    # Step 2: 미설치 시 생태계별 런타임 대행(Delegation)
-    if ecosystem == "node":
-        npx_bin = shutil.which("npx")
-        if not npx_bin:
-            log.error(f"[Fiber:Connect] '{preset_key}' requires Node.js ('npx'), which was not found in PATH.")
-            raise typer.Exit(1)
-        log.info(f"[Fiber:Connect] 📦 Delegating '{preset_key}' execution to npx ({pkg})...")
-        return f"{npx_bin} -y {pkg} {args}".strip()
-
-    elif ecosystem == "python":
-        uvx_bin = shutil.which("uvx")
-        if uvx_bin:
-            log.info(f"[Fiber:Connect] 📦 Delegating '{preset_key}' execution to uvx ({pkg})...")
-            return f"{uvx_bin} {pkg} {args}".strip()
-
-        # uvx가 없을 경우 현재 Python 가상환경에 자동 pip 설치 대행 후 바이너리 연결
-        log.info(f"[Fiber:Connect] 📦 '{bin_name}' not found. Auto-installing '{pkg}' via pip...")
-        try:
-            subprocess.run(
-                [sys.executable, "-m", "pip", "install", "--quiet", pkg],
-                check=True,
-            )
-        except subprocess.CalledProcessError as e:
-            log.error(f"[Fiber:Connect] Failed to auto-install '{pkg}': {e}")
-            raise typer.Exit(1)
-
-        installed_bin = shutil.which(bin_name) or str(Path(sys.executable).parent / bin_name)
-        return f"{installed_bin} {args}".strip()
-
-    return f"{bin_name} {args}".strip()
+def _infer_fallback_target_id(raw_cmd: str, is_http_url: bool) -> str:
+    if is_http_url:
+        parsed = urlparse(raw_cmd)
+        return parsed.hostname or "remote-mcp"
+    try:
+        parts = shlex.split(raw_cmd)
+    except ValueError:
+        parts = raw_cmd.split()
+    return Path(parts[0]).stem if parts else "local-mcp"
 
 
 def resolve_connector_spec(
-    target: str,
-    exec_cmd: str,
+    target: Optional[str] = None,
+    exec_cmd: str = "",
     mode: Optional[str] = None,
     transport: Optional[str] = None,
 ) -> ResolvedTarget:
-    """
-    내장 워커 -> 외부 대행 카탈로그 -> URL/디렉토리/일반 명령어 순으로 실행 스펙을 확정합니다.
-    """
     raw_cmd = exec_cmd.strip()
+    if not raw_cmd:
+        log.error("[Fiber] Empty execution command provided.")
+        raise typer.Exit(1)
+
+    inferred_target: Optional[str] = None
     inferred_default_mode: Optional[str] = None
 
     # 1. 내장 워커(fiber.dev.worker.*) 동적 탐색 매칭
     builtin_map = discover_builtin_workers()
     if raw_cmd in builtin_map:
-        resolved_cmd, inferred_default_mode = builtin_map[raw_cmd]
-    # 2. 외부 오픈소스 MCP 카탈로그 스캔 및 대행 매칭
-    elif raw_cmd in EXTERNAL_MCP_CATALOG:
-        ext_spec = EXTERNAL_MCP_CATALOG[raw_cmd]
-        resolved_cmd = _provision_and_resolve_external(raw_cmd, ext_spec)
-        inferred_default_mode = ext_spec.get("default_mode")
+        inferred_target, resolved_cmd, inferred_default_mode = builtin_map[raw_cmd]
     else:
         resolved_cmd = raw_cmd
 
-    # 3. 실행 타겟 유형 정밀 판별 (기존 로직 100% 보존)
+    # 2. 실행 타겟 유형 판별
     is_http_url = resolved_cmd.startswith(("http://", "https://"))
     is_managed_bin_dir = not is_http_url and Path(resolved_cmd).is_dir()
 
-    # 4. Transport 결정 (명시적 인자 우선 -> 자동 추론 -> 기본값 'stdio')
+    # 3. Transport 결정 (명시적 인자 우선 -> URL/디렉토리 기반 자동 추론 -> 'stdio')
     if transport is not None:
         resolved_transport = transport.lower().strip()
     else:
@@ -195,9 +127,18 @@ def resolve_connector_spec(
         log.error(f"[Fiber] Invalid transport '{resolved_transport}'. Allowed values: 'stdio', 'network'.")
         raise typer.Exit(1)
 
-    # 5. Mode 결정 (명시적 인자 우선 -> Transport별 기본값 보존: stdio='ephemeral', network='multiplex')
+    # 4. Target ID 결정 (명시적 인자 -> 내장 워커 정규화 ID -> 명령어/URL 기반 추론)
+    resolved_target = (
+        target
+        or inferred_target
+        or _infer_fallback_target_id(resolved_cmd, is_http_url)
+    ).strip()
+
+    # 5. Mode 결정 (명시적 인자 -> 내장 워커 프로토콜 추론 -> Transport별 기본값)
     if mode is not None:
         resolved_mode = mode.lower().strip()
+    elif inferred_default_mode is not None:
+        resolved_mode = inferred_default_mode
     else:
         resolved_mode = "multiplex" if resolved_transport == "network" else "ephemeral"
 
@@ -206,16 +147,37 @@ def resolve_connector_spec(
         raise typer.Exit(1)
 
     return ResolvedTarget(
-        target_id=target,
+        target_id=resolved_target,
         exec_cmd=resolved_cmd,
         mode=resolved_mode,
         transport=resolved_transport,
     )
 
 
+def _specs_from_mapped_entries(
+    entries: List[MappedMcpEntry],
+    target_filter: Optional[str] = None,
+    mode_override: Optional[str] = None,
+) -> List[ResolvedTarget]:
+    specs: List[ResolvedTarget] = []
+    for entry in entries:
+        if target_filter and entry.target_id != target_filter:
+            continue
+        if entry.env:
+            os.environ.update(entry.env)
+        specs.append(
+            resolve_connector_spec(
+                target=entry.target_id,
+                exec_cmd=entry.exec_cmd,
+                mode=mode_override,
+            )
+        )
+    return specs
+
+
 async def launch_connector_async(spec: ResolvedTarget):
     log.info(
-        f"[Fiber] 🔌 Sublimating server [{spec.target_id}] into the MCP Server Connector "
+        f"[Fiber] Sublimating server [{spec.target_id}] into the MCP Server Connector "
         f"(Mode: {spec.mode.upper()}, Transport: {spec.transport.upper()})..."
     )
     daemon = MCPServerConnector(
@@ -227,18 +189,43 @@ async def launch_connector_async(spec: ResolvedTarget):
     try:
         await daemon.run()
     finally:
-        log.info("[Fiber] Disconnected from A2A Network.")
+        log.info(f"[Fiber] [{spec.target_id}] Disconnected from A2A Network.")
+
+
+async def _launch_all_async(specs: List[ResolvedTarget]):
+    if len(specs) == 1:
+        await launch_connector_async(specs[0])
+    else:
+        await asyncio.gather(*(launch_connector_async(spec) for spec in specs))
 
 
 def run_connect(
-    target: str,
-    exec_cmd: str,
+    exec_cmd: Optional[str] = None,
+    config: Optional[Path] = None,
+    target: Optional[str] = None,
     mode: Optional[str] = None,
-    transport: Optional[str] = None,
 ):
-    """cli.main에서 직접 호출하는 동기 진입점"""
-    spec = resolve_connector_spec(target=target, exec_cmd=exec_cmd, mode=mode, transport=transport)
+    specs: List[ResolvedTarget] = []
+
+    # 1. 명시적 설정 파일(--config) 로드
+    if config is not None:
+        mapped_entries = McpConfigMapper.parse_file(config)
+        specs.extend(_specs_from_mapped_entries(mapped_entries, target_filter=target, mode_override=mode))
+
+    # 2. 단건 실행 명령어/프리셋(--exec) 로드
+    if exec_cmd is not None:
+        specs.append(resolve_connector_spec(target=target, exec_cmd=exec_cmd, mode=mode))
+
+    # 3. 인자가 모두 생략된 경우 로컬 에이전트 설정 자동 스캔 폴백
+    if config is None and exec_cmd is None:
+        mapped_entries = McpConfigMapper.scan_and_parse()
+        specs.extend(_specs_from_mapped_entries(mapped_entries, target_filter=target, mode_override=mode))
+
+    if not specs:
+        log.error("[Fiber] No valid MCP target resolved. Provide --exec (-e), --config (-c), or ensure agent config exists.")
+        raise typer.Exit(1)
+
     try:
-        asyncio.run(launch_connector_async(spec))
+        asyncio.run(_launch_all_async(specs))
     except KeyboardInterrupt:
         log.info("\n[Fiber] Connector shutting down...")

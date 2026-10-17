@@ -13,7 +13,7 @@ from typing import Dict, Any
 import httpx
 import duckdb
 
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
 IO_ROOT = resolve_path("io")

@@ -14,8 +14,8 @@ from xphi.watcher.receptor.trajectory import (
 )
 
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.ops.daemon.base import AbstractDaemon
+from xphi.node.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.risk")

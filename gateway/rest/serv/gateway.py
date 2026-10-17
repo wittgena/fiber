@@ -14,7 +14,7 @@ from fiber.gateway.rest.serv.depend import get_rpc_client
 from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
 from xphi.arch.bound.xor.parser.mcp import McpPayloadParser
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("serv.gateway")
@@ -30,14 +30,14 @@ class TransitionBridge:
         self.nonce_protector = nonce_protector
         log.info("[TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.")
 
-    async def _is_x402_required(self, target_server_id: str) -> bool:
+    async def _is_receipt_required(self, target_server_id: str) -> bool:
         try:
             tunnel = await TunnelFactory.get_default()
-            policy = await tunnel.get(f"config:x402:{target_server_id}")
+            policy = await tunnel.get(f"config:fuel:{target_server_id}")
             if policy is not None:
                 return policy.decode('utf-8') == "1" if isinstance(policy, bytes) else str(policy) == "1"
         except Exception as e:
-            log.warning(f"[Bridge:Config] Failed to fetch X402 flag for {target_server_id}: {e}")
+            log.warning(f"[Bridge:Config] Failed to fetch receipt flag for {target_server_id}: {e}")
         return False
 
     async def invoke_mcp_sync(
@@ -110,7 +110,7 @@ class TransitionBridge:
         mcp_method = payload.get("method", "")
         is_discovery_phase = mcp_method in ("initialize", "tools/list", "prompts/list", "resources/list")
 
-        # Authentication (DPoP Mandatory) & Fuel Validation (X402 Conditional)
+        # Authentication (DPoP Mandatory) & Fuel Validation
         if is_discovery_phase:
             # Bypass strict auth and fuel checks for discovery phases
             log.debug(f"[Bridge:Auth] Bypassing strict auth for discovery method: {mcp_method}", extra=trace_ctx)
@@ -120,11 +120,11 @@ class TransitionBridge:
                 log.warning(f"[Bridge:Auth] DPoP Verification Failed or Missing", extra=trace_ctx)
                 raise HTTPException(status_code=401, detail="CRYPTOGRAPHIC_BINDING_FAILED")
 
-            # X402 영수증 선택적 검증 (Flag 기반)
-            if await self._is_x402_required(identity.target_server_id):
+            # 영수증 선택적 검증 (Flag 기반)
+            if await self._is_receipt_required(identity.target_server_id):
                 if not identity.receipt:
-                    log.warning(f"[Bridge:Fuel] Missing X402 Receipt for billing-enabled server", extra=trace_ctx)
-                    raise HTTPException(status_code=402, detail="Payment Required: X402 Receipt Missing")
+                    log.warning(f"[Bridge:Fuel] Missing Receipt for billing-enabled server", extra=trace_ctx)
+                    raise HTTPException(status_code=402, detail="Payment Required: Receipt Missing")
                 
                 try:
                     await rpc.call(RpcMethod.VALIDATE_FUEL_RECEIPT,{
@@ -222,20 +222,20 @@ async def invoke_mcp_stateless(
     request: Request,
     target_server_id: str,
     payload: Dict[str, Any] = Body(...),
-    # x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
     x_idempotency_key: str = Header(..., alias="x-idempotency-key"),
     x_nonce: str = Header(..., alias="x-nonce"),
     x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),
     x_spiffe_id: Optional[str] = Header(None, alias="x-spiffe-id"),
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
-    internal_receipt = getattr(request.state, "x402_receipt", None)
+    internal_receipt = getattr(request.state, "fuel_receipt", None)
     try:
         identity = AgentIdentity(
             target_server_id=target_server_id,
             agent_uri=x_spiffe_id or "spiffe://public/agent",
             proof_of_possession=x_dpop_proof,
-            # receipt=x402_receipt,
+            # receipt=fuel_receipt,
             receipt=internal_receipt,
             client_ip=request.client.host if request.client else "0.0.0.0",
             nonce=x_nonce,
@@ -292,3 +292,102 @@ async def discover_tools(
     except Exception as e:
         log.error(f"[Gateway:Discovery] Failed to fetch tools for {target_server_id}: {e}", exc_info=True)
         raise HTTPException(status_code=502, detail="Tool discovery failed due to internal error.")
+
+
+ACTIVE_TARGETS_TUNNEL_KEY = "mcp:registry:active_targets"
+NAMESPACE_DELIM = "__"
+
+
+async def _get_active_targets(request: Request) -> list[str]:
+    try:
+        tunnel = getattr(request.app.state, "tunnel", None) or await TunnelFactory.get_default()
+        if tunnel:
+            raw = await tunnel.get(ACTIVE_TARGETS_TUNNEL_KEY)
+            if raw:
+                data = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+                if isinstance(data, list) and data:
+                    return [str(x) for x in data]
+    except Exception as e:
+        log.warning(f"[Gateway:Unified] Failed to read active targets from tunnel: {e}")
+
+    fallback = getattr(request.app.state, "mcp_active_targets", None)
+    return [str(x) for x in fallback] if isinstance(fallback, list) else []
+
+
+@mcp_bridge.get("/tools")
+async def discover_unified_tools(
+    request: Request,
+    rpc: InternalRpcClient = Depends(get_rpc_client),
+):
+    targets = await _get_active_targets(request)
+
+    async def _fetch(tid: str) -> list[Dict[str, Any]]:
+        try:
+            res = await discover_tools(request=request, target_server_id=tid, rpc=rpc)
+            tools = res.get("result", {}).get("tools", []) if isinstance(res, dict) else []
+            return [
+                {**t, "name": f"{tid}{NAMESPACE_DELIM}{t['name']}"}
+                for t in tools if isinstance(t, dict) and "name" in t
+            ]
+        except Exception as e:
+            log.warning(f"[Gateway:Unified] Tool discovery skipped for '{tid}': {e}")
+            return []
+
+    results = await asyncio.gather(*(_fetch(t) for t in targets)) if targets else []
+    merged_tools = [tool for group in results for tool in group]
+    return {"jsonrpc": "2.0", "id": "unified_discovery", "result": {"tools": merged_tools}}
+
+
+@mcp_bridge.post("/invoke")
+async def invoke_unified_mcp(
+    request: Request,
+    payload: Dict[str, Any] = Body(...),
+    x_idempotency_key: Optional[str] = Header(None, alias="x-idempotency-key"),
+    x_nonce: Optional[str] = Header(None, alias="x-nonce"),
+    x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),
+    x_spiffe_id: Optional[str] = Header(None, alias="x-spiffe-id"),
+    rpc: InternalRpcClient = Depends(get_rpc_client),
+):
+    req_id = payload.get("id")
+    method = payload.get("method", "")
+
+    if method == "initialize":
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {"tools": {}},
+                "serverInfo": {"name": "fiber-mcp-gateway", "version": "1.0.0"},
+            },
+        }
+    if method.startswith("notifications/"):
+        return JSONResponse(status_code=202, content={})
+
+    if method == "tools/list":
+        res = await discover_unified_tools(request=request, rpc=rpc)
+        res["id"] = req_id
+        return res
+
+    params = dict(payload.get("params") or {})
+    raw_name = str(params.get("name", ""))
+    if NAMESPACE_DELIM not in raw_name:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tool name must be namespaced as '<target>{NAMESPACE_DELIM}<tool>', got '{raw_name}'",
+        )
+
+    target_server_id, actual_tool_name = raw_name.split(NAMESPACE_DELIM, 1)
+    params["name"] = actual_tool_name
+    routed_payload = {**payload, "params": params}
+
+    return await invoke_mcp_stateless(
+        request=request,
+        target_server_id=target_server_id,
+        payload=routed_payload,
+        x_idempotency_key=x_idempotency_key or uuid.uuid4().hex,
+        x_nonce=x_nonce or uuid.uuid4().hex,
+        x_dpop_proof=x_dpop_proof,
+        x_spiffe_id=x_spiffe_id,
+        rpc=rpc,
+    )

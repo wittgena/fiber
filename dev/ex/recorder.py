@@ -14,7 +14,7 @@ from fiber.dev.trace.vcr.manager import (
 )
 
 from xphi.arch.bound.event.next import next_trace_id
-from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
+from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("ex.recorder")

@@ -4,7 +4,7 @@ import types
 import importlib.util
 from pathlib import Path
 from typing import Optional, Union
-from xphi.kernel.space.bind.resolver import find_current_self
+from xphi.node.space.bind.resolver import find_current_self
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("bridge.redirector")

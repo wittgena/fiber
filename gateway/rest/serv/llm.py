@@ -58,10 +58,10 @@ async def public_chat_completions(
             kwargs.pop("api_base", None)
             kwargs.pop("headers", None)
             
-            internal_receipt = getattr(request.state, "x402_receipt", None)
+            internal_receipt = getattr(request.state, "fuel_receipt", None)
             
             metadata = kwargs.get("metadata", {})
-            metadata[DphiKey.X402_RECEIPT.value] = internal_receipt
+            metadata[DphiKey.FUEL_RECEIPT.value] = internal_receipt
             metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
             metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
             kwargs["metadata"] = metadata
@@ -117,10 +117,10 @@ async def public_embeddings(
         kwargs.pop("api_base", None)
         kwargs.pop("headers", None)
 
-        internal_receipt = getattr(request.state, "x402_receipt", None)
+        internal_receipt = getattr(request.state, "fuel_receipt", None)
 
         metadata = kwargs.get("metadata", {})
-        metadata[DphiKey.X402_RECEIPT.value] = internal_receipt
+        metadata[DphiKey.FUEL_RECEIPT.value] = internal_receipt
         metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
         metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
         kwargs["metadata"] = metadata

@@ -3,7 +3,7 @@
 @requirements: fiber daemon 
 $ fiber daemon -s edge
 or
-$ XPHI_WORKERS=1 python -m xphi.kernel.ops.boot
+$ XPHI_WORKERS=1 python -m xphi.node.ops.boot
 """
 import asyncio
 import random
@@ -115,7 +115,7 @@ class ComplianceSuiteWorkflow(Workflow):
             
             res = await self.sdk_client.record_audit_event(
                 request=payload,
-                fuel_receipt="mock_x402_trade"
+                fuel_receipt="mock_receipt_trade"
             )
             
             # ✅ [FIX APPLIED] : API 응답의 중첩된 'result' 객체 내부의 증명(Proof) 데이터를 참조
@@ -134,10 +134,9 @@ class ComplianceSuiteWorkflow(Workflow):
         self.log.info("\n--- [Phase 4/4] Audit Schema Enforcement (Negative) ---")
         try:
             malformed_payload = {"verbose": True, "some_data": "invalid"}
-            headers = {"X-X402-Receipt": "mock_x402_trade"}
+            headers = {"Fuel-Receipt": "mock_receipt_trade"}
             
             res = await self.raw_client.post(Endpoints.AUDIT_EVENT, json=malformed_payload, headers=headers)
-            
             if res.status_code != 422:
                 raise RuntimeError(f"Failed to block malformed audit request. Expected 422, got {res.status_code}")
                 

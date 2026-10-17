@@ -67,7 +67,7 @@ jobs:
 
       - name: Bootstrap Topology Boundary
         run: |
-          python -m xphi.kernel.space.bind.around
+          python -m xphi.node.space.bind.around
       
       - name: Set up Node Identity (SSH Key)
         run: |
@@ -82,7 +82,7 @@ jobs:
           XPHI_WORKERS: "2"
         run: |
           echo "Starting Kernel in background..."
-          nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
+          nohup python -u -m xphi.node.ops.boot > kernel_boot.log 2>&1 &
           echo "KERNEL_PID=\(!" >>\)GITHUB_ENV
 
           echo "Waiting for Kernel to become ready on port 8000..."
@@ -103,21 +103,21 @@ jobs:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
         run: |
-          echo "Executing Kernel Reaper..."
-          python -m xphi.kernel.ops.reaper
+          echo "Executing Node Reaper..."
+          python -m xphi.node.ops.reaper
           
           if kill -0 ${{ env.KERNEL_PID }} 2>/dev/null; then
             echo "Reaper did not terminate the process. Forcing kill..."
             kill ${{ env.KERNEL_PID }} || true
           fi
-          echo "Kernel reaped cleanly."
+          echo "Node reaped cleanly."
 
-      - name: Upload Kernel Log on Failure
+      - name: Upload Node Log on Failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-error-logs
-          path: kernel_boot.log
+          name: node-error-logs
+          path: node_boot.log
 
       - name: Run Remaining E2E Tests
         env:

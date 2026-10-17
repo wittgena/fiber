@@ -138,7 +138,7 @@ class GatewayClient:
 
     async def push_telemetry(self, request: ExportLogsServiceRequest, fuel_receipt: Optional[str] = None) -> Dict[str, Any]:
         verifier = self._get_verified_client()
-        headers = {"X-X402-Receipt": fuel_receipt} if fuel_receipt else {}
+        headers = {"Fuel-Receipt": fuel_receipt} if fuel_receipt else {}
         try:
             response = await verifier.async_post_verified(
                 Endpoints.TELEMETRY_LOGS, 
@@ -167,7 +167,7 @@ class GatewayClient:
     async def record_audit_event(self, request: AuditLogRequest, fuel_receipt: Optional[str] = None) -> Dict[str, Any]:
         """Gateway returns AuditLogResponse schema containing 'request_id' and 'result.hash'"""
         verifier = self._get_verified_client()
-        headers = {"X-X402-Receipt": fuel_receipt} if fuel_receipt else {}
+        headers = {"Fuel-Receipt": fuel_receipt} if fuel_receipt else {}
         try:
             response = await verifier.async_post_verified(
                 Endpoints.AUDIT_EVENT, 
@@ -200,15 +200,15 @@ class GatewayClient:
             response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload)
             
             if response.status_code == 402:
-                self.log.warning("[SDK] 402 Fuel Receipt Required. Initiating auto x402 Handshake...")
+                self.log.warning("[SDK] 402 Fuel Receipt Required. Initiating auto Handshake...")
                 hs_res = await self.request_handshake(HandshakeIntent(
                     client_id=intent.client_id, action="LLM_COMPUTE", payload="", max_fuel=intent.max_tokens, signature="sig"
                 ))
-                x402_receipt = hs_res.get("x402_receipt")
-                if not x402_receipt:
-                    raise Exception("Failed to procure x402_receipt from Handshake")
+                fuel_receipt = hs_res.get("fuel_receipt")
+                if not fuel_receipt:
+                    raise Exception("Failed to procure fuel_receipt from Handshake")
                     
-                headers = {"X-X402-Receipt": x402_receipt}
+                headers = {"Fuel-Receipt": fuel_receipt}
                 response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload, headers=headers)
                 
             response.raise_for_status()

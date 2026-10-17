@@ -11,10 +11,10 @@ import aiohttp
 
 from xphi.arch.contract.config.attestation import attestation_config, delegation_config
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.ops.daemon.base import AbstractDaemon
+from xphi.node.ops.daemon.base import AbstractDaemon
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.origin")
@@ -89,7 +89,7 @@ class OriginDelegatorDaemon(AbstractDaemon):
         log.info(f"[Delegator:{handle_id}] Forwarding intent to Origin -> {action}")
 
         try:
-            # @phase.1: DPoP Wrapping & X402 Injection
+            # @phase.1: DPoP Wrapping & Receipt Injection
             # 오리진으로 보낼 요청을 게이트웨이의 프라이빗 키로 서명하여 무결성 보장
             target_endpoint = f"{self.origin_url}/v1/mcp-gateway/invoke"
             wrapped_headers = self._build_delegation_headers(target_endpoint, payload)
@@ -137,24 +137,23 @@ class OriginDelegatorDaemon(AbstractDaemon):
         dpop_message = f"POST:{target_url}:{payload_hash}:{nonce}:{timestamp}"
         signature = self.signer.sign_payload(dpop_message.encode())
         
-        master_receipt = os.getenv("GATEWAY_MASTER_X402_RECEIPT", "gateway_sponsored_x402_mock")
+        master_receipt = os.getenv("GATEWAY_MASTER_RECEIPT", "gateway_sponsored_receipt_mock")
         return {
             "Content-Type": "application/json",
             "x-spiffe-id": f"spiffe://gateway/{self.signer.pubkey_hex[:16]}",
             "x-nonce": nonce,
             "x-timestamp": str(timestamp),
             "DPoP": signature,
-            "X-X402-Receipt": master_receipt,
+            "Fuel-Receipt": master_receipt,
             "X-Delegated-From": "local_mesh"
         }
 
     def _verify_and_unwrap(self, origin_response: dict) -> dict:
-        """오리진에서 반환한 결과가 위조되지 않았음을 수학적으로 증명"""
-        # 1. 일반적인 엣지 에러나 거절(Reject)인 경우 검증 패스 (에러는 바로 던짐)
+        # 일반적인 엣지 에러나 거절(Reject)인 경우 검증 패스 (에러는 바로 던짐)
         if origin_response.get("error"):
             raise RuntimeError(origin_response.get("error").get("message", "Origin Returned Error"))
 
-        # 2. 오리진은 성공 시 반드시 attestation(증명) 객체를 포함해야 함
+        # 오리진은 성공 시 반드시 attestation(증명) 객체를 포함해야 함
         attestation = origin_response.get("attestation")
         if not attestation:
             log.warning("Origin response missing 'attestation' block. Assuming untrusted or legacy response.")
@@ -164,7 +163,7 @@ class OriginDelegatorDaemon(AbstractDaemon):
         canonical_root = attestation.get("canonical_root")
         signature = attestation.get("signature")
 
-        # 3. 서명 검증 (로컬에 저장된 위원회 공개키 활용)
+        # 서명 검증 (로컬에 저장된 위원회 공개키 활용)
         is_valid = False
         for pubkey in self.trusted_witnesses:
             if self.signer.verify_signature_static(canonical_root.encode(), signature, pubkey):

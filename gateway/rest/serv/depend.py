@@ -5,8 +5,8 @@ from fastapi import Request, HTTPException, status
 from xphi.arch.bound.client.rpc import InternalRpcClient
 
 from xphi.watcher.receptor.warden import SecretAuditor
-from xphi.kernel.space.tunnel.subs import DistributedPubSub
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.space.tunnel.subs import DistributedPubSub
+from xphi.node.wasm.broker import DphiBroker
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 

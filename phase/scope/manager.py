@@ -15,7 +15,7 @@ import httpx
 from fiber.phase.scope.local.llama import LlamaServer
 
 from xphi.arch.contract.config import env
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.dev.tracer.scope import scope_trace, get_current_trace_path
 

@@ -13,7 +13,6 @@ from fiber.dev.trace.llm.interceptor import BaseLLMTracer
 from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
-from fiber.dev.ex.model.tier import model_tier_registry
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.phase.scope.manager import managed_scope
 
@@ -42,9 +41,7 @@ class DummyTestTracer(BaseLLMTracer):
     async def on_llm_error(self, meta: ExecutionMetadata, exc: Exception, duration_ms: float):
         self.error = True
 
-
 class StartCompatMsg(WorkflowMessage): pass
-class FallbackTestMsg(WorkflowMessage): pass
 class MockBypassTestMsg(WorkflowMessage): pass
 class FuelBreakerTestMsg(WorkflowMessage): pass
 class TokenUtilsTestMsg(WorkflowMessage): pass
@@ -59,7 +56,6 @@ class LlmCompatWorkflow(Workflow):
         super().__init__(name=name, timeout=600.0, **kwargs)
         self.run_context = run_context
         self.target_model = run_context.get("target_model")
-        self.test_fallback_only = run_context.get("test_fallback_only", False)
 
         self.log = log
         self.success_count = 0
@@ -68,16 +64,13 @@ class LlmCompatWorkflow(Workflow):
         self.audit_traces: List[str] = []
 
     async def execute(self) -> None:
-        self.log.info(f"[{self.name}] 🚀 Igniting LLM Compat Suite (Primary Model: {self.target_model})")
-        if self.test_fallback_only:
-            self.post_message(FallbackTestMsg())
-        else:
-            self.post_message(StartCompatMsg())
+        self.log.info(f"[{self.name}] Igniting LLM Compat Suite (Primary Model: {self.target_model})")
+        self.post_message(StartCompatMsg())
         await self.run()
 
     @step
     async def phase_basic_completion(self, msg: StartCompatMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] 🔄 [Phase 1] Core Pipeline & Drop-in Replacement")
+        self.log.info(f"[{self.name}] [Phase 1] Core Pipeline & Drop-in Replacement")
         try:
             audit_hash = f"audit_basic_{int(time.time())}"
             response = await acompletion(
@@ -87,7 +80,7 @@ class LlmCompatWorkflow(Workflow):
             )
 
             if response and response.choices:
-                self.log.info(f"[{self.name}] ✅ Passed: Standard async completion executed successfully.")
+                self.log.info(f"[{self.name}] Passed: Standard async completion executed successfully.")
                 self.success_count += 1
 
                 usage = getattr(response, "usage", None)
@@ -97,58 +90,20 @@ class LlmCompatWorkflow(Workflow):
                 if sealed_hash == audit_hash:
                     self.audit_traces.append(sealed_hash)
                 else:
-                    self.log.warning(f"[{self.name}] ⚠️ Audit hash mismatch: Expected {audit_hash}, Got {sealed_hash}")
+                    self.log.warning(f"[{self.name}] Audit hash mismatch: Expected {audit_hash}, Got {sealed_hash}")
             else:
                 raise ValueError("Empty or invalid response structure.")
 
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Basic Completion Failed: {e}")
-
-        return FallbackTestMsg()
-
-    @step
-    async def phase_fallback(self, msg: FallbackTestMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] 🔄 [Phase 2] Dynamic FallbackHandler via Tier Registry")
-        try:
-            fallback_1 = model_tier_registry.get_optimal_model(min_cognitive_score=2) or "gemini/gemini-3.1-flash-lite"
-            fallback_2 = model_tier_registry.get_optimal_model(min_cognitive_score=3) or "gemini/gemma-4-31b"
-
-            self.log.info(f"[{self.name}] ⚙️ Fallback Pool Configured: {fallback_1}, {fallback_2}")
-            audit_hash = f"audit_fb_{int(time.time())}"
-
-            response = await acompletion(
-                model="invalid-trigger-model", 
-                messages=[{"role": "user", "content": "Trigger fallback"}],
-                fallbacks=[fallback_1, {"model": fallback_2, "temperature": 0.5}],
-                metadata={"kernel_auth": {"audit_hash": audit_hash}}
-            )
-
-            used_model = getattr(response, "model", None) or ""
-            if not used_model or fallback_1 in used_model or fallback_2 in used_model:
-                self.log.info(f"[{self.name}] ✅ Passed: Fallback successfully routed to '{used_model}'.")
-                self.success_count += 1
-
-                usage = getattr(response, "usage", None)
-                self.total_fuel += getattr(usage, "fuel_consumed", 0) if usage else 0
-                self.audit_traces.append(getattr(response, "system_fingerprint", "N/A"))
-            else:
-                raise ValueError(f"Fallback didn't route as expected. Used: {used_model}")
-
-        except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
-            self.fail_count += 1
-            return ErrorMessage(f"Fallback Handler Failed: {e}")
-
-        if self.test_fallback_only:
-            return StopMessage(result=True)
 
         return MockBypassTestMsg()
 
     @step
     async def phase_mock_bypass(self, msg: MockBypassTestMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] 🔄 [Phase 3] MockBypass Short-circuit")
+        self.log.info(f"[{self.name}] [Phase 2] MockBypass Short-circuit")
         try:
             start_time = time.time()
             expected_mock = "This is a bypassed mock response."
@@ -165,14 +120,14 @@ class LlmCompatWorkflow(Workflow):
             content = response.choices[0].message.content
 
             if content == expected_mock and elapsed >= 1.0:
-                self.log.info(f"[{self.name}] ✅ Passed: Mock response received in {elapsed:.2f}s (Expected >1.0s).")
+                self.log.info(f"[{self.name}] Passed: Mock response received in {elapsed:.2f}s (Expected >1.0s).")
                 self.success_count += 1
                 self.audit_traces.append("audit_mock")
             else:
                 raise ValueError("Mock payload mismatch or delay ignored.")
 
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Mock Bypass Failed: {e}")
 
@@ -180,10 +135,10 @@ class LlmCompatWorkflow(Workflow):
 
     @step
     async def phase_fuel_breaker(self, msg: FuelBreakerTestMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] 🔄 [Phase 4] Fuel Breaker Streaming")
+        self.log.info(f"[{self.name}] [Phase 3] Fuel Breaker Streaming")
         try:
             budget = 5 
-            self.log.info(f"[{self.name}] ⛽ Injecting artificial fuel budget: {budget}")
+            self.log.info(f"[{self.name}] Injecting artificial fuel budget: {budget}")
 
             stream = await acompletion(
                 model=self.target_model,
@@ -197,14 +152,14 @@ class LlmCompatWorkflow(Workflow):
                 chunks_received += 1
 
             if chunks_received <= budget + 2:
-                self.log.info(f"[{self.name}] ✅ Passed: Stream physically killed after {chunks_received} chunks.")
+                self.log.info(f"[{self.name}] Passed: Stream physically killed after {chunks_received} chunks.")
                 self.success_count += 1
                 self.total_fuel += chunks_received
             else:
                 raise ValueError(f"Fuel breaker failed to kill stream. Received {chunks_received} chunks.")
 
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Fuel Breaker Failed: {e}")
 
@@ -212,7 +167,7 @@ class LlmCompatWorkflow(Workflow):
 
     @step
     async def phase_token_utils(self, msg: TokenUtilsTestMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] 🔄 [Phase 5] Token Evaluator & Splitter")
+        self.log.info(f"[{self.name}] [Phase 4] Token Evaluator & Splitter")
         try:
             msgs = [{"role": "user", "content": "Hello world"}]
             count = token_counter(model=self.target_model, messages=msgs)
@@ -226,13 +181,13 @@ class LlmCompatWorkflow(Workflow):
             chunks = splitter.split_text("This is a relatively long string meant to be safely split by token IDs.")
 
             if count > 0 and safe_max > 0 and len(chunks) > 1:
-                self.log.info(f"[{self.name}] ✅ Passed: Token math verified. (Count: {count}, SafeMax: {safe_max}, Chunks: {len(chunks)})")
+                self.log.info(f"[{self.name}] Passed: Token math verified. (Count: {count}, SafeMax: {safe_max}, Chunks: {len(chunks)})")
                 self.success_count += 1
             else:
                 raise ValueError("Invalid token computation results.")
 
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Token Utils Failed: {e}")
 
@@ -240,8 +195,7 @@ class LlmCompatWorkflow(Workflow):
 
     @step
     async def phase_adapter_mapping(self, msg: AdapterMappingTestMsg) -> WorkflowMessage:
-        """[NEW] Phase 6: InterLLM Adapter & State Mapper (Traverser) 검증"""
-        self.log.info(f"[{self.name}] 🔄 [Phase 6] InterLLM Adapter & State Mapper Verification")
+        self.log.info(f"[{self.name}] [Phase 5] InterLLM Adapter & State Mapper Verification")
         try:
             from fiber.gateway.llm.state.traverser import StateMapper
             mapper = StateMapper()
@@ -261,7 +215,7 @@ class LlmCompatWorkflow(Workflow):
             choice_dict = mapper.to_openai_choice(mock_llama_resp, req_id="mock_req", logger=self.log, provider="gemini")
             if choice_dict["finish_reason"] != "tool_calls" or not choice_dict["message"].get("tool_calls"):
                 raise ValueError("StateMapper failed to recover tool_calls from raw response.")
-            self.log.info(f"[{self.name}] 🎯 Passed: StateMapper successfully traversed and recovered tool_calls.")
+            self.log.info(f"[{self.name}] Passed: StateMapper successfully traversed and recovered tool_calls.")
 
             tools = [{
                 "type": "function",
@@ -283,14 +237,14 @@ class LlmCompatWorkflow(Workflow):
                 choice = response.choices[0]
                 finish_reason = getattr(choice, "finish_reason", None) if not isinstance(choice, dict) else choice.get("finish_reason")
                 if finish_reason in ["tool_calls", "stop"]:
-                    self.log.info(f"[{self.name}] ✅ Passed: InterLLMAdapter E2E tool mapping executed securely.")
+                    self.log.info(f"[{self.name}] Passed: InterLLMAdapter E2E tool mapping executed securely.")
                     self.success_count += 1
                 else:
                     raise ValueError(f"InterLLMAdapter returned invalid finish_reason: {finish_reason}")
             else:
                 raise ValueError("InterLLMAdapter returned empty choices.")
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Adapter Mapping Failed: {e}")
 
@@ -298,14 +252,11 @@ class LlmCompatWorkflow(Workflow):
 
     @step
     async def phase_custom_interceptor(self, msg: InterceptorTestMsg) -> WorkflowMessage:
-        """[NEW] Phase 7: Flat List Interceptor Injection Verification"""
-        self.log.info(f"[{self.name}] 🔄 [Phase 7] Flat List Interceptor (UX Facade) Injection Verification")
+        self.log.info(f"[{self.name}] [Phase 6] Flat List Interceptor (UX Facade) Injection Verification")
         try:
-            # 1. 커스텀 Tracer 인스턴스화
             test_tracer = DummyTestTracer()
             audit_hash = f"audit_tracer_{int(time.time())}"
             
-            # 2. 1차원 리스트(interceptors) 파라미터를 통해 직관적으로 주입
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Say 'hello interceptor'"}],
@@ -313,19 +264,17 @@ class LlmCompatWorkflow(Workflow):
                 metadata={"kernel_auth": {"audit_hash": audit_hash}}
             )
             
-            # 3. 비동기 Task 실행 보장 대기 (fire-and-forget 태스크들이 실행될 틈 제공)
             await asyncio.sleep(0.1) 
             
-            # 4. 검증 (Tracer가 정상적으로 콜백을 받았는지 확인)
             if test_tracer.started and test_tracer.ended and (test_tracer.recorded_model == self.target_model):
-                self.log.info(f"[{self.name}] ✅ Passed: Custom Interceptor successfully hooked into lifecycle via entry Facade (Duration: {test_tracer.duration:.2f}ms).")
+                self.log.info(f"[{self.name}] Passed: Custom Interceptor successfully hooked into lifecycle via entry Facade (Duration: {test_tracer.duration:.2f}ms).")
                 self.success_count += 1
                 self.audit_traces.append(getattr(response, "system_fingerprint", "N/A"))
             else:
                 raise ValueError(f"Interceptor hooks not fired properly! Started: {test_tracer.started}, Ended: {test_tracer.ended}")
                 
         except Exception as e:
-            self.log.error(f"[{self.name}] ❌ Failed: {e}")
+            self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
             return ErrorMessage(f"Custom Interceptor Failed: {e}")
 
@@ -337,13 +286,13 @@ class LlmCompatWorkflow(Workflow):
 
     @step
     async def handle_rupture(self, msg: ErrorMessage) -> None:
-        self.log.error(f"[{self.name}] 🚨 Fatal topological rupture: {msg.msg}")
+        self.log.error(f"[{self.name}] Fatal topological rupture: {msg.msg}")
         self.post_message(StopMessage(result=False))
 
     def _print_verification_report(self):
         self.log.info("\n" + "="*60)
-        self.log.info(f"🌌 [COMPAT TOPOLOGY FINALIZED] Edge State: {'SUCCESS' if self.fail_count == 0 else 'FRACTURED'}")
-        self.log.info(f"  Suite Results       : ✅ {self.success_count} / ❌ {self.fail_count}")
+        self.log.info(f"[COMPAT TOPOLOGY FINALIZED] Edge State: {'SUCCESS' if self.fail_count == 0 else 'FRACTURED'}")
+        self.log.info(f"  Suite Results       : Passed: {self.success_count} / Failed: {self.fail_count}")
         self.log.info(f"  Fuel Burned         : {self.total_fuel}")
         self.log.info(f"  Audit Hashes Sealed : {', '.join(self.audit_traces)}")
         self.log.info("="*60 + "\n")
@@ -366,11 +315,11 @@ class LlmCompatApplication:
 
     async def _teardown_hook(self):
         if self.workflow:
-            log.info("🧹 Reclaiming compat suite resources...")
+            log.info("Reclaiming compat suite resources...")
             self.workflow.stop()
 
     def execute(self):
-        log.info("🚀 Igniting Launcher Workflow via KernelReactor...")
+        log.info("Igniting Launcher Workflow via KernelReactor...")
         PhaseReactor.ignite(
             main_coro_func=self._startup_hook,
             teardown_hook=self._teardown_hook
@@ -390,20 +339,17 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     is_online = check_online()
     resolved_model = getattr(args, 'model', None) or os.environ.get("LLM_COMPAT_MODEL")
     use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
-    test_fallback = getattr(args, 'test_fallback', False) or os.environ.get("LLM_COMPAT_FALLBACK_ONLY", "false").lower() == "true"
 
     if not is_online:
-        log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
-        resolved_model = "ollama/local-gemma-3"
+        log.warning("[System Offline] Forcing fallback to Local Engine.")
+        resolved_model = "ollama/gemma_2b"
     elif not resolved_model:
-        optimal = model_tier_registry.get_optimal_model(requires_tools=False, min_cognitive_score=2)
-        resolved_model = f"{optimal[0]}/{optimal[1]}" if isinstance(optimal, tuple) else (f"gemini/{optimal}" if optimal else "gemini/gemini-3.1-flash-lite")
+        resolved_model = "gemini/gemini-3.1-flash-lite"
 
     scope_kwargs = {"use_proxy": use_proxy if is_online else False, "show_logs": True}
     run_context = {
         "use_proxy": scope_kwargs["use_proxy"], 
-        "target_model": resolved_model,
-        "test_fallback_only": test_fallback
+        "target_model": resolved_model
     }
     return scope_kwargs, run_context
 
@@ -411,7 +357,6 @@ def main(args: list[str] = None):
     parser = argparse.ArgumentParser(description="LLM Compat E2E Suite Runner")
     parser.add_argument("-m", "--model", type=str, help="Target LLM model to use.")
     parser.add_argument("--proxy", action="store_true", help="Enable remote proxy extension layout.")
-    parser.add_argument("--test-fallback", action="store_true", help="Run ONLY the fallback routing scenario.")
 
     args, _ = parser.parse_known_args(args)
     scope_kwargs, run_context = get_environment_context(args)

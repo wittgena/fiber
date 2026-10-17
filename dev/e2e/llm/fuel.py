@@ -31,9 +31,9 @@ from xphi.arch.contract.workflow import StopMessage, WorkflowMessage, step
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.arch.bound.event.next import next_trace_id
 
-from xphi.kernel.wasm.broker import DphiBroker
-from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
+from xphi.node.wasm.broker import DphiBroker
+from xphi.node.space.tunnel.factory import TunnelFactory
+from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.llm.fuel")

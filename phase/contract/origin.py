@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 
 ORIGIN_ROOT = resolve_path("origin")
 log = get_emitter("config.origin")
@@ -23,10 +23,6 @@ class TrustedOriginState(BaseModel):
     root_pubkey: str
 
 class OriginRegistry:
-    """
-    Origin Config JSON 파일의 변조 여부를 자가 검증(Self-Verification)하고
-    안전한 읽기 전용 상태를 Edge 애플리케이션에 제공하는 레지스트리
-    """
     def __init__(self, config_path: Optional[str] = None):
         if not config_path:
             self.config_path = os.path.join(str(ORIGIN_ROOT), "config.json")
@@ -56,14 +52,12 @@ class OriginRegistry:
             if not root_pubkey_hex or not root_signature_hex:
                 raise ValueError("Attestation payload (root_pubkey, pre_signed_root_sig) is missing.")
 
-            # 서명 원본 데이터 복원 (CLI와 동일하게 Canonicalization)
             val_pubs = [v["pubkey"] for v in validators]
             payload_dict = {"active_signers": val_pubs}
             
             canonical_bytes = StateAdapter.to_canonical_bytes(payload_dict)
             payload_hash_str = hashlib.sha256(canonical_bytes).hexdigest()
 
-            # PyNaCl (Ed25519) 서명 자가 검증
             verify_key = nacl.signing.VerifyKey(root_pubkey_hex, encoder=nacl.encoding.HexEncoder)
             try:
                 verify_key.verify(
@@ -74,14 +68,13 @@ class OriginRegistry:
                 log.critical("[SECURITY_ALERT] Origin config tampering detected! Signature mismatch.")
                 raise ValueError("Cryptographic verification failed. File has been tampered with.")
 
-            # 검증 통과 후 상태 락(Lock)
             self._state = TrustedOriginState(
                 network=network,
                 active_signers=val_pubs,
                 root_signature=root_signature_hex,
                 root_pubkey=root_pubkey_hex
             )
-            log.info(f"✅ Origin Config cryptographically verified. (Network: {network}, Signers: {len(val_pubs)})")
+            log.info(f"Origin Config cryptographically verified. (Network: {network}, Signers: {len(val_pubs)})")
             return self._state
         except Exception as e:
             log.error(f"Failed to initialize OriginRegistry: {e}")
@@ -92,7 +85,6 @@ class OriginRegistry:
         return self._state is not None
 
     def get_state(self) -> TrustedOriginState:
-        """라우터(Endpoint)에서 접근하는 안전한 Getter 메서드"""
         if not self._state:
             raise RuntimeError("OriginRegistry is not initialized. Must call load_and_verify() first.")
         return self._state

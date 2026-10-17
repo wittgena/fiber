@@ -19,8 +19,8 @@ from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddlew
 from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
-from xphi.kernel.space.tunnel.subs import DistributedPubSub
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.space.tunnel.subs import DistributedPubSub
+from xphi.node.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
@@ -43,42 +43,8 @@ class Config(BaseModel):
 def get_default_config() -> Config:
     return Config()
 
-# async def verify_access_credential(
-#     request: Request,
-#     api_key: str = Security(api_key_header)
-# ):
-#     path = request.url.path
-#     whitelist = {
-#         "/v1/compliance/audit/verify",
-#         "/v1/compliance/keys",
-#         "/openapi.json",
-#         "/docs",
-#         "/redoc",
-#         "/_health"
-#     }
-    
-#     if path in whitelist:
-#         return None
-
-#     if path.startswith("/v1/mcp-gateway/"):
-#         return None
-
-#     config: Config = request.app.state.config
-#     if config.session_api_keys and api_key in config.session_api_keys:
-#         return api_key
-
-#     x402_header = request.headers.get("X-X402-Receipt") or request.headers.get("Authorization")
-#     if x402_header:
-#         return x402_header
-
-#     raise HTTPException(
-#         status_code=status.HTTP_402_PAYMENT_REQUIRED, 
-#         detail="Zero-Trust Enforced: Payment Required. Please provide a stablecoin/x402 receipt.",
-#         headers={"WWW-Authenticate": 'x402_signed_proof=""'}
-#     )
-
 async def verify_access_credential(request: Request, api_key: str = Security(api_key_header)):
-    raw_token = request.headers.get("Authorization") or request.headers.get("X-X402-Receipt")
+    raw_token = request.headers.get("Authorization") or request.headers.get("Fuel-Receipt")
     translated_receipt = None
     if raw_token:
         if raw_token.startswith("Bearer "):
@@ -87,7 +53,7 @@ async def verify_access_credential(request: Request, api_key: str = Security(api
         else:
             translated_receipt = raw_token
             
-    request.state.x402_receipt = translated_receipt
+    request.state.fuel_receipt = translated_receipt
     path = request.url.path
     whitelist = {
         "/v1/compliance/audit/verify",
@@ -105,14 +71,14 @@ async def verify_access_credential(request: Request, api_key: str = Security(api
     if config.session_api_keys and api_key in config.session_api_keys:
         return api_key
 
-    if not request.state.x402_receipt:
+    if not request.state.fuel_receipt:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED, 
             detail="Zero-Trust Enforced: Valid Token or Payment Required.",
             headers={"WWW-Authenticate": 'Bearer realm="api"'}
         )
         
-    return request.state.x402_receipt
+    return request.state.fuel_receipt
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

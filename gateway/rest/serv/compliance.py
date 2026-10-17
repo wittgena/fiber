@@ -24,8 +24,8 @@ from fiber.phase.contract.router import ContractRouter
 from xphi.arch.model.edge.receptor import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 
-from xphi.kernel.space.tunnel.subs import DistributedPubSub
-from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
+from xphi.node.space.tunnel.subs import DistributedPubSub
+from xphi.node.wasm.broker import DphiBroker, DphiMethod
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.model.edge.receipt import (
     HandshakeIntent,
@@ -82,13 +82,13 @@ async def get_trust_keys(request: Request):
 async def otlp_logs_export(
     request: Request,
     payload: ExportLogsServiceRequest = Body(...),
-    # x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
     broker: DphiBroker = Depends(get_wasm_broker),
     otlp_engine: OtlpExtractionEngine = Depends(get_otlp_engine)
 ):
-    internal_receipt = getattr(request.state, "x402_receipt", None)
+    internal_receipt = getattr(request.state, "fuel_receipt", None)
     try:
         payload_dict = payload.model_dump(exclude_none=True)
         raw_json_bytes = orjson.dumps(payload_dict)
@@ -107,7 +107,7 @@ async def otlp_logs_export(
         kernel_req_dict = KernelOtlpRecord(
             content_hash=content_hash,
             metrics_summary=extracted_metrics,
-            # receipt_ref=x402_receipt
+            # receipt_ref=fuel_receipt
             receipt_ref=internal_receipt,
         ).model_dump(exclude_none=True)
         
@@ -150,11 +150,11 @@ async def otlp_logs_export(
 async def audit_log(
     request: Request,
     payload: AuditLogRequest,
-    # x402_receipt: Optional[str] = Header(None, alias="X-X402-Receipt"),
+    # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: DphiBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
-    internal_receipt = getattr(request.state, "x402_receipt", None)
+    internal_receipt = getattr(request.state, "fuel_receipt", None)
     request_time = str(time.time())
     try:
         event_dict = payload.event.model_dump(exclude_none=True)
@@ -166,7 +166,7 @@ async def audit_log(
             detail=f"Audit event validation failed: {str(e)}."
         )
 
-    # sanitized_event["_billing_ref"] = x402_receipt
+    # sanitized_event["_billing_ref"] = fuel_receipt
     sanitized_event["_billing_ref"] = internal_receipt
     
     evo_ctx = StateAdapter.build_evolution_context(phase_root={})

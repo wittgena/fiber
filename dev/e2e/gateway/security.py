@@ -3,7 +3,7 @@
 @requirements: fiber daemon 
 $ fiber daemon -s edge
 or
-$ XPHI_WORKERS=1 python -m xphi.kernel.ops.boot
+$ XPHI_WORKERS=1 python -m xphi.node.ops.boot
 """
 import asyncio
 import os
@@ -21,7 +21,7 @@ from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, Wor
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
 
@@ -30,7 +30,7 @@ log = get_emitter("e2e.gateway.security")
 """Workflow Messages (Phase Transitions)"""
 class StartSecuritySweepMsg(WorkflowMessage): pass
 class VolumetricAttackMsg(WorkflowMessage): pass
-class X402BypassAttackMsg(WorkflowMessage): pass
+class ReceiptBypassAttackMsg(WorkflowMessage): pass
 class SmugglingAttackMsg(WorkflowMessage): pass
 class McpPoisoningMsg(WorkflowMessage): pass
 class SignatureTamperMsg(WorkflowMessage): pass
@@ -97,11 +97,10 @@ class SecurityBoundWorkflow(Workflow):
             message=huge_message
         )
         
-        # 유효한 스키마 + 유효한 결제 영수증 전송
         res_large = await self.client.post(
             Endpoints.TELEMETRY_LOGS, 
             json=payload_model.model_dump(exclude_none=True),
-            headers={"X-X402-Receipt": "valid_x402"}
+            headers={"Fuel-Receipt": "valid_receipt"}
         )
         
         self._record("Volumetric Exceed", "Funded Heavy Load", (200, 200), res_large.status_code, "Large payload processed successfully via Economic Firewall (Metered).")
@@ -109,7 +108,7 @@ class SecurityBoundWorkflow(Workflow):
             res_chunk = await self.client.post(
                 Endpoints.TELEMETRY_LOGS, 
                 content=b"malicious_chunk", 
-                headers={"Transfer-Encoding": "chunked", "X-X402-Receipt": "valid_x402"}
+                headers={"Transfer-Encoding": "chunked", "Fuel-Receipt": "valid_receipt"}
             )
             chunk_status = res_chunk.status_code
         except httpx.ReadError:
@@ -121,13 +120,13 @@ class SecurityBoundWorkflow(Workflow):
 
         # Chunked 인코딩 공격은 프로토콜 레벨의 비정상 접근이므로 결제 여부와 무관하게 차단되어야 함
         self._record("Transfer-Encoding", "Chunked Smuggling", (411, 411), chunk_status, "Chunked encoding explicitly forbidden (Connection Dropped).")
-        return X402BypassAttackMsg()
+        return ReceiptBypassAttackMsg()
 
     @step
-    async def phase_x402_bypass(self, msg: X402BypassAttackMsg) -> WorkflowMessage:
-        self.log.info("\n--- [Phase 2] x402 Economic Firewall Bypass ---")
+    async def phase_receipt_bypass(self, msg: ReceiptBypassAttackMsg) -> WorkflowMessage:
+        self.log.info("\n--- [Phase 2] Receipt Firewall Bypass ---")
         res_unauth = await self.client.post(Endpoints.AUDIT_EVENT, json={"dummy": "payload"})
-        self._record("Auth Bypass", "x402 Evasion", (402, 402), res_unauth.status_code, "Access to restricted endpoint blocked. HTTP 402 Payment Required enforced.")
+        self._record("Auth Bypass", "Receipt Evasion", (402, 402), res_unauth.status_code, "Access to restricted endpoint blocked. HTTP 402 Payment Required enforced.")
         return SmugglingAttackMsg()
 
     @step
@@ -135,18 +134,18 @@ class SecurityBoundWorkflow(Workflow):
         self.log.info("\n--- [Phase 3] Protocol Smuggling & State Corruption ---")
         smuggling_vectors = ChaosPayloadLibrary.SMUGGLING + ChaosPayloadLibrary.INVALID_STATE
         for idx, payload_func in enumerate(smuggling_vectors):
-            res = await self.client.post(Endpoints.TELEMETRY_LOGS, content=payload_func(), headers={"X-X402-Receipt": "valid_x402"})
+            res = await self.client.post(Endpoints.TELEMETRY_LOGS, content=payload_func(), headers={"Fuel-Receipt": "valid_receipt"})
             self._record(f"Smuggling/Corruption {idx}", "Malformed JSON/Protocol", (400, 422), res.status_code, "Malformed payload rejected by SpecValidator.")
         return McpPoisoningMsg()
 
     @step
     async def phase_mcp_poisoning(self, msg: McpPoisoningMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 4] MCP Privilege Escalation & Injection ---")
-        res_rce = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_COMMAND_INJECTION[0](), headers={"Content-Type": "application/json", "X-X402-Receipt": "valid_x402"})
+        res_rce = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_COMMAND_INJECTION[0](), headers={"Content-Type": "application/json", "Fuel-Receipt": "valid_receipt"})
         blocked = res_rce.status_code in [400, 401, 403]
         self._record("MCP CVE-2026-42271", "Command Injection", (200, 403), res_rce.status_code, "RCE attempt via MCP tool intercepted." if blocked else "RCE Block verification")
         
-        res_path = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_PATH_TRAVERSAL[0](), headers={"Content-Type": "application/json", "X-X402-Receipt": "valid_x402"})
+        res_path = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_PATH_TRAVERSAL[0](), headers={"Content-Type": "application/json", "Fuel-Receipt": "valid_receipt"})
         blocked_path = res_path.status_code in [400, 401, 403]
         self._record("MCP Traversal", "Path Traversal", (200, 403), res_path.status_code, "Path Traversal via MCP intercepted." if blocked_path else "Traversal Block verification")
         return SignatureTamperMsg()
@@ -154,9 +153,6 @@ class SecurityBoundWorkflow(Workflow):
     @step
     async def phase_signature_tamper(self, msg: SignatureTamperMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 5] Cryptographic Attestation Tampering ---")
-        # dummy_intent = {"client_id": "hacker_client", "action": "COMPUTE_TEST", "payload": "print('malicious')", "max_fuel": 100, "signature": "0xdeadbeef_invalid_signature"}
-        # res = await self.client.post(Endpoints.SANDBOX_QUOTE, json=dummy_intent, headers={"X-X402-Receipt": "valid_x402"})
-        # self._record("Crypto Tamper", "Invalid Signature", (401, 422), res.status_code, "Cryptographic signature mismatch accurately detected and blocked.")
         return McpGatewayMsg()
 
     @step
@@ -193,7 +189,7 @@ class SecurityBoundWorkflow(Workflow):
             # 타임아웃 에러를 정상적인 보안벽 통과(504)로 간주
             init_status = 504
             
-        self._record("Gateway Init", "X402 Bypass / Init", (200, 504), init_status, "Security bypassed smoothly. Hit backend timeout (504).")
+        self._record("Gateway Init", "Receipt Bypass / Init", (200, 504), init_status, "Security bypassed smoothly. Hit backend timeout (504).")
 
         # Gateway Idempotency Attack Test
         idem_attack_key = f"idem_attack_{uuid.uuid4().hex[:8]}"

@@ -8,9 +8,9 @@ from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 from xphi.arch.model.edge.receptor import EdgeState, TradeIngressRequest, EpochInitPayload, ClearingReceiptRequest
 from xphi.arch.model.edge.receipt import BilledExecutionRequest
 
-from xphi.kernel.space.sandbox.config import tier_config, fuel_config
-from xphi.kernel.wasm.broker import DphiMethod
-from xphi.kernel.wasm.quota import Tier
+from xphi.node.space.sandbox.config import tier_config, fuel_config
+from xphi.node.wasm.broker import DphiMethod
+from xphi.node.wasm.quota import Tier
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("rpc.handler.exchange")
@@ -34,7 +34,7 @@ async def handle_invoice_issue(params: dict, ctx: WorkerContext) -> dict:
 
     try:
         from xphi.arch.bound.adapter.settlement import MandateAdapter
-        invoice = MandateAdapter.build_x402_invoice(payee_address=payee_address, amount_usdc=amount_usdc, resource_id=resource_id)
+        invoice = MandateAdapter.build_payment_invoice(payee_address=payee_address, amount_usdc=amount_usdc, resource_id=resource_id)
         return {"status": "INVOICE_ISSUED", "invoice": invoice.model_dump() if hasattr(invoice, "model_dump") else invoice.__dict__}
     except Exception as e:
         return _build_error(500, f"Invoice Issue Failed: {str(e)}")

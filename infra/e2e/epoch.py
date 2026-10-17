@@ -8,10 +8,10 @@ from typing import Any, Dict, List, Optional
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
+from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.kernel.space.sandbox.runner import SchemeRunner
-from xphi.kernel.wasm.method import DphiMethod
+from xphi.node.space.sandbox.runner import SchemeRunner
+from xphi.node.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.e2e.epoch")
@@ -62,8 +62,8 @@ class EpochBase(SchemeRunner):
             repos = await self.hook_inscribe_nodes(parity_triplet)
 
             log.info("--- [Flow 2.5] Economy: Off-chain Capability Token Issuance / Metering ---")
-            x402_receipt = await self.hook_process_payment(ap2_mandate)
-            economy_state = MandateAdapter.embed_economy_state({}, ap2_mandate, x402_receipt)
+            fuel_receipt = await self.hook_process_payment(ap2_mandate)
+            economy_state = MandateAdapter.embed_economy_state({}, ap2_mandate, fuel_receipt)
             
             log.info("--- [Flow 3] Sealing: Cryptographic Epoch Alignment ---")
             seal_payload_dict = await self.hook_seal_epoch(parity_triplet, repos, economy_state, current_ts)
@@ -117,7 +117,7 @@ class EpochBase(SchemeRunner):
     async def hook_inscribe_nodes(self, parity_triplet: Dict[str, Any]) -> Dict[str, str]: 
         raise NotImplementedError
         
-    async def hook_process_payment(self, mandate: Optional[Ap2MandateResult] = None) -> Optional[X402SettlementReceipt]: 
+    async def hook_process_payment(self, mandate: Optional[Ap2MandateResult] = None) -> Optional[SettlementReceipt]: 
         if mandate:
             log.info(f"  └─ Issuing Capability Receipt based on Mandate: {mandate.mandate.constraints.max_spend_usdc} USDC")
             return MandateAdapter.issue_deferred_receipt(mandate)
@@ -127,11 +127,11 @@ class EpochBase(SchemeRunner):
             return None
 
         mock_tx_hash = f"0x_mock_push_{os.urandom(8).hex()}"
-        return X402SettlementReceipt(
+        return SettlementReceipt(
             receipt_id=f"rcpt_push_{mock_tx_hash[2:14]}",
             receipt_type="INSTANT_PUSH",
             tx_hash=mock_tx_hash,
-            network="x402/base-sepolia",
+            network="base-sepolia",
             amount_usdc=mock_amount,
             payer_wallet="0x0000000000000000000000000000000000000000",
             settled_at=int(time.time() * 1000)

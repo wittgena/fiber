@@ -15,11 +15,11 @@ except ImportError:
 
 from fiber.phase.cli.observer import run_observer
 
-from xphi.kernel.ops.shell import ShellEntry
+from xphi.node.ops.shell import ShellEntry
 from xphi.state.phase.reactor import PhaseReactor
-from xphi.kernel.ops.boot import main_async, teardown
+from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 
 log = get_emitter("fiber.cli")
 
@@ -72,7 +72,7 @@ def run_daemon(
     resolved_daemons = PRESETS.get(start.lower(), start)
     daemons_list = [d.strip() for d in resolved_daemons.split(",")]
     
-    os.environ["KERNEL_DAEMONS"] = resolved_daemons
+    os.environ["NODE_DAEMONS"] = resolved_daemons
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
 
     is_edge_only = all(d in ["rest_edge"] for d in daemons_list)
@@ -137,87 +137,16 @@ def run_e2e(
 
 @app.command("connect")
 def run_connector(
-    target: Annotated[str, typer.Option("--target", "-t", help="Target ID (e.g., db-server-01)")],
-    exec_cmd: Annotated[str, typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")],
-    mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Execution mode: ephemeral, linear, or multiplex")] = None,
-    transport: Annotated[Optional[str], typer.Option("--transport", "-tr", help="Transport layer: stdio or network")] = None,
+    exec_cmd: Annotated[Optional[str], typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")] = None,
+    config: Annotated[Optional[Path], typer.Option("--config", "-c", exists=True, help="Path to standard mcp.json file")] = None,
+    target: Annotated[Optional[str], typer.Option("--target", "-t", help="Optional Target ID override (auto-inferred if omitted)")] = None,
+    mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers into DPHI Bus."""
+    """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers"""
     _load_env(env_file)
     from fiber.phase.cli.connect import run_connect
-    run_connect(target=target, exec_cmd=exec_cmd, mode=mode, transport=transport)
-
-# @app.command("connect")
-# def run_connector(
-#     target: Annotated[str, typer.Option("--target", "-t", help="Target ID (e.g., db-server-01)")],
-#     exec_cmd: Annotated[str, typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")],
-#     mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Execution mode: ephemeral, linear, or multiplex")] = None,
-#     transport: Annotated[Optional[str], typer.Option("--transport", "-tr", help="Transport layer: stdio or network")] = None,
-#     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-# ):
-#     """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers into DPHI Bus."""
-#     _load_env(env_file)
-#     from fiber.gateway.daemon.mcp import build_known_workers_map
-#     KNOWN_WORKERS = build_known_workers_map()
-#     # import fiber.dev.worker.deployer as worker_deployer
-#     # import fiber.dev.worker.legacy.oracle as worker_oracle
-#     # KNOWN_WORKERS = {
-#     #     "worker.deploy": f"{sys.executable} -m {worker_deployer.__name__}",
-#     #     "worker.oracle": f"{sys.executable} -m {worker_oracle.__name__}"
-#     # }
-
-#     resolved_cmd = KNOWN_WORKERS.get(exec_cmd, exec_cmd).strip()
-
-#     # 2. 실행 타겟 유형 정밀 판별
-#     # - NetworkTransport Unmanaged: http:// 또는 https:// 로 시작하는 Local/Remote URL
-#     # - NetworkTransport Managed: WorkerRuntimeBootstrap용 로컬 바이너리(phix-*.jar) 루트 디렉터리
-#     is_http_url = resolved_cmd.startswith(("http://", "https://"))
-#     is_managed_bin_dir = not is_http_url and Path(resolved_cmd).is_dir()
-
-#     # 3. Transport 결정 (명시적 인자 우선 -> 자동 추론 -> 기본값 'stdio')
-#     if transport is not None:
-#         resolved_transport = transport.lower().strip()
-#     else:
-#         resolved_transport = "network" if (is_http_url or is_managed_bin_dir) else "stdio"
-
-#     if resolved_transport not in ("stdio", "network"):
-#         log.error(f"[Fiber] Invalid transport '{resolved_transport}'. Allowed values: 'stdio', 'network'.")
-#         raise typer.Exit(1)
-
-#     # 4. Mode 결정 (명시적 인자 우선 -> Transport별 최적 기본값 적용)
-#     # - 기존 stdio 호출 시 기본값 'ephemeral' 완벽 보존
-#     # - network(URL 또는 Managed JVM) 호출 시 커넥션/프로세스 공유를 위해 'multiplex' 기본 적용
-#     if mode is not None:
-#         resolved_mode = mode.lower().strip()
-#     else:
-#         resolved_mode = "multiplex" if resolved_transport == "network" else "ephemeral"
-
-#     if resolved_mode not in ("ephemeral", "linear", "multiplex"):
-#         log.error(f"[Fiber] Invalid mode '{resolved_mode}'. Allowed values: 'ephemeral', 'linear', 'multiplex'.")
-#         raise typer.Exit(1)
-
-#     async def _launch_connector():
-#         from fiber.gateway.mcp.connector import MCPServerConnector
-#         log.info(
-#             f"[Fiber] 🔌 Sublimating server [{target}] into the MCP Server Connector "
-#             f"(Mode: {resolved_mode.upper()}, Transport: {resolved_transport.upper()})..."
-#         )
-#         daemon = MCPServerConnector(
-#             target_id=target,
-#             execution_target=resolved_cmd,
-#             mode=resolved_mode,
-#             transport_type=resolved_transport
-#         )
-#         try:
-#             await daemon.run()
-#         finally:
-#             log.info("[Fiber] Disconnected from A2A Network.")
-
-#     try:
-#         asyncio.run(_launch_connector())
-#     except KeyboardInterrupt:
-#         log.info("\n[Fiber] Connector shutting down...")
+    run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode)
 
 @app.command("observe")
 def start_observer(

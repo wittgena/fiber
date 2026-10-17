@@ -9,7 +9,7 @@ from typing import Any, List, Dict
 
 from fiber.infra.watcher.plane.compose import ComposeOrchestrator, ComposeContext
 
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -34,10 +34,10 @@ class ComposeWorkflowScene:
         
         e2e_bash_script = """
 set -e
-trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ] && [ -f kernel_boot.log ]; then echo -e "\\n🔥 [FATAL] E2E CLIENT FAILED! DUMPING KERNEL LOG: 🔥\\n"; cat kernel_boot.log; echo -e "\\n[CI-SYNC] 💾 Saving kernel log to artifact mount..."; cp kernel_boot.log /artifact_mount/kernel_error_dump.log || true; fi; echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.kernel.ops.reaper; exit $EXIT_CODE' EXIT
+trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ] && [ -f kernel_boot.log ]; then echo -e "\\n🔥 [FATAL] E2E CLIENT FAILED! DUMPING KERNEL LOG: 🔥\\n"; cat kernel_boot.log; echo -e "\\n[CI-SYNC] 💾 Saving kernel log to artifact mount..."; cp kernel_boot.log /artifact_mount/kernel_error_dump.log || true; fi; echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.node.ops.reaper; exit $EXIT_CODE' EXIT
 
 echo "[CI-SYNC] 1. Bootstrap Topology Boundary..."
-python -m xphi.kernel.space.bind.around
+python -m xphi.node.space.bind.around
 
 echo "[CI-SYNC] 1.5. Injecting Mock Node Identity..."
 mkdir -p ~/.ssh
@@ -54,7 +54,7 @@ EOF
 chmod 600 ~/.ssh/id_ed25519
 
 echo "[CI-SYNC] 2. Booting Kernel (Background)..."
-nohup python -u -m xphi.kernel.ops.boot > kernel_boot.log 2>&1 &
+nohup python -u -m xphi.node.ops.boot > kernel_boot.log 2>&1 &
 
 echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
 timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }

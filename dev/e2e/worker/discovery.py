@@ -11,12 +11,12 @@ from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.gateway.mcp.connector import MCPServerConnector
-import fiber.dev.worker.legacy.finlib as worker_finlib
-import fiber.dev.worker.legacy.oracle as worker_oracle
+import fiber.dev.worker.eco.finlib as worker_finlib
+import fiber.dev.worker.eco.oracle as worker_oracle
 import fiber.dev.worker.search.archive as worker_archive_search
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 
 class ToolDiscoveryPipeline(BaseBridgePipeline):
