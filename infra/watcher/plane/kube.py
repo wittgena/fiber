@@ -12,7 +12,7 @@ from xphi.arch.dev.tracer.kube import KubeTracer, KubeStatusAuditor
 from xphi.arch.dev.tracer.base import SystemBound, PhaseOp, ExecutorOp
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.watcher.plane.infra.yaml.deployment import KubeBlueprint
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 
 COMPOSE_ROOT = resolve_path("time") / "compose"
 

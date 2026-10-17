@@ -10,7 +10,7 @@ from typing import List, Dict
 
 import fiber.infra.e2e.scene as scene_module
 
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.flare.tunnel import FlareTunnelFactory
 from xphi.watcher.plane.flare.controller import FlareController

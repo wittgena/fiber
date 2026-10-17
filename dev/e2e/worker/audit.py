@@ -1,5 +1,4 @@
-# fiber.dev.e2e.gateway.worker.audit
-## @lineage: fiber.dev.e2e.worker.audit
+# fiber.dev.e2e.worker.audit
 import os
 import sys
 import time
@@ -158,7 +157,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         headers1 = {
             "x-idempotency-key": self.idem_key_otp, 
             "x-nonce": nonce1, 
-            "X-X402-Receipt": "valid_x402",
+            "Fuel-Receipt": "valid_receipt",
             "x-spiffe-id": self.test_spiffe_id,
             "DPoP": dpop_proof1
         }
@@ -205,7 +204,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         headers = {
             "x-idempotency-key": self.idem_key_otp,
             "x-nonce": nonce, 
-            "X-X402-Receipt": "valid_x402",
+            "Fuel-Receipt": "valid_receipt",
             "x-spiffe-id": self.test_spiffe_id,
             "DPoP": dpop_proof
         }
@@ -220,38 +219,6 @@ class AuditSecurityPipeline(BaseBridgePipeline):
             raise RuntimeError(f"Resume succeeded, but payload failed: {final_result}")
         log.info("  └─ ✨ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.")
 
-    # async def phase_sentinel_reconciliation(self):
-    #     self.mock_ledger.stale_timeout = 1.0
-    #     idem_key_sentinel = uuid.uuid4().hex
-    #     payload = {
-    #         "jsonrpc": "2.0", "id": 888, "method": "tools/call",
-    #         "params": {"name": "execute_db_migration", "arguments": {"service_name": "billing", "target_env": "production", "sql_script": "DROP TABLE"}}
-    #     }
-        
-    #     # Sentinel 강제 롤백 유도용 DPoP 발급
-    #     nonce = uuid.uuid4().hex
-    #     url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
-    #     dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        
-    #     headers = {
-    #         "x-idempotency-key": idem_key_sentinel, 
-    #         "x-nonce": nonce, 
-    #         "X-X402-Receipt": "valid_x402", 
-    #         "x-spiffe-id": self.test_spiffe_id,
-    #         "DPoP": dpop_proof
-    #     }
-
-    #     async with httpx.AsyncClient(base_url=self.local_url) as client:
-    #         await client.post(url, json=payload, headers=headers)
-
-    #     handle_id = self.captured_handle_ids.get("latest")
-    #     await asyncio.sleep(3.0)
-
-    #     final_state = await self.mock_ledger.query_state(handle_id)
-    #     if not final_state or final_state.metadata.get("status") != "FAULTED":
-    #         raise RuntimeError("Sentinel failed to rollback.")
-    #     log.info(f"  └─ ✨ Sentinel Autonomous Reconciliation Successful.")
-    
     async def phase_sentinel_reconciliation(self):
         self.mock_store.stale_timeout = 1.0
         idem_key_sentinel = uuid.uuid4().hex
@@ -267,7 +234,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         headers = {
             "x-idempotency-key": idem_key_sentinel, 
             "x-nonce": nonce, 
-            "X-X402-Receipt": "valid_x402", 
+            "Fuel-Receipt": "valid_receipt", 
             "x-spiffe-id": self.test_spiffe_id,
             "DPoP": dpop_proof
         }
@@ -299,7 +266,6 @@ class AuditSecurityPipeline(BaseBridgePipeline):
             raise RuntimeError(f"Sentinel failed to rollback within {max_retries * retry_interval}s. Current status: {current_status}")
             
         log.info(f"  └─ ✨ Sentinel Autonomous Reconciliation Successful.")
-
 
 class AuditSuiteRunner:
     def __init__(self):

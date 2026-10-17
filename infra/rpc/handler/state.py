@@ -10,8 +10,8 @@ from xphi.arch.model.edge.receipt import PhaseStoreAppendRecord
 from xphi.arch.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
 from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 
-from xphi.kernel.wasm.broker import DphiBroker, DphiMethod
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.wasm.broker import DphiBroker, DphiMethod
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.nexus import AnchorProposal, StreamAppendRequest
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Callable
 
 from xphi.arch.bound.adapter.gateway import GatewayAdapter
 from xphi.arch.dev.wasm.builder import WasmBuilder
-from xphi.kernel.wasm.gateway import GatewayWasm
+from xphi.node.wasm.gateway import GatewayWasm
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

@@ -1,5 +1,4 @@
-# fiber.dev.e2e.gateway.worker.finops
-## @lineage: fiber.dev.e2e.worker.finops
+# fiber.dev.e2e.worker.finops
 import sys
 import uuid
 import json

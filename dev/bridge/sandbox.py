@@ -103,7 +103,7 @@ def _resolve_transitive_dependencies() -> list[str]:
 
 """Enhanced Security Sandbox"""
 AUTHORIZED_FIBER_PATHS = [
-    "fiber/dev", "fiber.gateway", "fiber/infra", "fiber/llm", "fiber.phase", "xphi/kernel", "lib/python"
+    "fiber/dev", "fiber/gateway", "fiber/infra", "fiber/llm", "fiber/phase", "xphi/node", "lib/python"
 ] + _resolve_transitive_dependencies()
 
 _audit_hook_local = threading.local()

@@ -5,7 +5,6 @@ import pkgutil
 from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
-from fiber.llm.provider.cost.registry import get_model_cost_registry
 from fiber.llm.types.inter.llm import LLMBase
 import fiber.gateway.llm.inter as llm_pkg 
 from xphi.watcher.plane.emitter import get_emitter
@@ -39,7 +38,6 @@ class LLMInstalledScanner:
     def _extract_meta(self, obj: Any) -> Dict[str, Any]:
         mro = inspect.getmro(obj)
         lineage = [c.__name__ for c in mro if c.__name__ not in ("object", "BaseModel", "Generic")]
-        # fields = getattr(obj, "model_fields", getattr(obj, "__fields__", {}))
         if hasattr(obj, "model_fields"):
             fields = obj.model_fields
         else:
@@ -101,7 +99,6 @@ class LLMInstalledScanner:
         return {k: asdict(v) for k, v in registry.items()}
 
 class ModuleMissingError(Exception):
-    """해당 모듈이 시스템에 존재하지 않을 때 발생하는 치명적 오류"""
     pass
 
 DEFAULT_LLM_REGISTRY = {
@@ -184,24 +181,10 @@ class LLMRouter:
             
         registry_log.info(f"[Router] Registry Ready: {len(DEFAULT_LLM_REGISTRY)} Native, {dynamic_count} Dynamic modules.")
 
-    def _fallback_provider_match(self, model_name: str) -> Optional[str]:
-        for provider, meta in self.registry.items():
-            if provider in model_name:
-                return provider
-            if any(tag in model_name for tag in meta["tags"]):
-                return provider
-        return None
-
-    def route_and_load(self, model_name: str, custom_llm_provider: Optional[str] = None, **kwargs) -> Any:
+    def route_and_load(self, model_name: str, custom_llm_provider: str, **kwargs) -> Any:
         provider = custom_llm_provider
         if not provider:
-            provider = get_model_cost_registry(model_name)
-            
-        if not provider:
-            provider = self._fallback_provider_match(model_name)
-            
-        if not provider:
-            raise ModuleMissingError(f"[Error] 모델 '{model_name}'에 대한 Provider를 식별할 수 없습니다.")
+            raise ModuleMissingError(f"[Error] 모델 '{model_name}'에 대한 Provider를 식별할 수 없습니다. (custom_llm_provider 필수)")
 
         if provider in self._blacklisted_providers:
             raise ModuleMissingError(

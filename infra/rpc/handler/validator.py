@@ -17,9 +17,9 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 from xphi.arch.contract.config.env import DPHI_ENV
-from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, X402SettlementReceipt
-from xphi.kernel.space.bind.resolver import resolve_path
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt
+from xphi.node.space.bind.resolver import resolve_path
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("rpc.handler.validator")
@@ -121,11 +121,11 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
     # E2E Testing Fast-Path
     is_test_env = DPHI_ENV in ("test", "e2e", "local")
     if is_test_env and isinstance(receipt_data, str):
-        if receipt_data == "valid_x402":
+        if receipt_data == "valid_receipt":
             log.warning(f"[SECURITY] Mock E2E receipt used. Environment: {DPHI_ENV}")
             return {"status": "VALIDATED", "clearance": "GRANTED", "type": "MOCK_E2E", "fee_deducted": required_fee}
         elif receipt_data == "invalid_receipt":
-            return _build_error(402, f"x402 Payment Required: Insufficient balance. Required: ${required_fee:.4f}")
+            return _build_error(402, f"Payment Required: Insufficient balance. Required: ${required_fee:.4f}")
 
     # Production Cryptographic Path
     try:
@@ -149,19 +149,19 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
             log.info(f"AP2 Mandate Validated for {mandate_obj.mandate.requester_id} (Fee Authorized: ${required_fee:.4f})")
             return {"status": "VALIDATED", "clearance": "GRANTED", "type": "AP2_MANDATE", "fee_deducted": required_fee}
             
-        # Case B: X402 Settlement Receipt
+        # Case B: Settlement Receipt
         elif "receipt_id" in payload and "tx_hash" in payload:
-            receipt_obj = X402SettlementReceipt(**payload)
+            receipt_obj = SettlementReceipt(**payload)
             is_valid_lineage = await ctx.pta_adapter.verify_lineage(receipt_obj.tx_hash, depth=2)
             if not is_valid_lineage:
-                log.warning(f"X402 Receipt lineage verification failed for {receipt_obj.receipt_id}")
+                log.warning(f"Fuel Receipt lineage verification failed for {receipt_obj.receipt_id}")
                 
             actual_balance = getattr(receipt_obj, 'amount_usd', 0.0)
             if required_fee > actual_balance:
-                log.warning(f"X402 Receipt insufficient for {target_server_id}. Required: {required_fee}, Provided: {actual_balance}")
-                return _build_error(402, f"Payment Required: Insufficient X402 Receipt value. Required: ${required_fee:.4f}")
-            log.info(f"X402 Receipt Validated: {receipt_obj.receipt_id} (Fee Deducted: ${required_fee:.4f})")
-            return {"status": "VALIDATED", "clearance": "GRANTED", "type": "X402_RECEIPT", "fee_deducted": required_fee}
+                log.warning(f"Fuel Receipt insufficient for {target_server_id}. Required: {required_fee}, Provided: {actual_balance}")
+                return _build_error(402, f"Payment Required: Insufficient Receipt value. Required: ${required_fee:.4f}")
+            log.info(f"Fuel Receipt Validated: {receipt_obj.receipt_id} (Fee Deducted: ${required_fee:.4f})")
+            return {"status": "VALIDATED", "clearance": "GRANTED", "type": "FUEL_RECEIPT", "fee_deducted": required_fee}
         else:
             return _build_error(400, "Unknown receipt format: Payload missing required cryptographic bounds")
     except json.JSONDecodeError:

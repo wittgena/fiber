@@ -21,7 +21,7 @@ from fiber.dev.trace.llm.base import (
 )
 
 from xphi.arch.contract.workflow import WorkflowMessage, step
-from xphi.kernel.space.bind.resolver import resolve_path, get_invoker
+from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.arch.bound.event.next import next_trace_id
 
 FIXTURE_ROOT = resolve_path("fixture")

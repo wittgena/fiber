@@ -15,7 +15,7 @@ from fiber.llm.provider.cost.unit import UnitCostCalculator
 from fiber.llm.provider.cost.policy import CostPolicy
 from fiber.llm.model.usage import Usage
 
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.arch.contract.config.resolver import config as global_config
 from xphi.arch.bound.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor, get_emitter

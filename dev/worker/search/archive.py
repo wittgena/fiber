@@ -13,7 +13,10 @@ from typing import Dict, Any
 import httpx
 import duckdb
 
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
+
+IO_ROOT = resolve_path("io")
 
 class SearchTelemetry:
     """데이터 처리량 및 구간별 소요 시간을 구조적으로 추적하는 계측기"""
@@ -49,17 +52,13 @@ class SearchTelemetry:
             **self.timing_metrics
         }
 
-
-# =====================================================================
-# Main Worker Class
-# =====================================================================
 class ArchiveSearchWorker(AsyncWorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="search.archive.worker")
         
         self.log.info("Initializing DuckDB In-Memory Engine & Filters...")
         
-        self.data_dir = './github_data'
+        self.data_dir = IO_ROOT / 'archive_data'
         self.data_path = f'{self.data_dir}/*.json.gz'
         self.target_repos = ['BerriAI/litellm', 'langchain-ai/langchain', 'microsoft/autogen']
         
@@ -81,14 +80,13 @@ class ArchiveSearchWorker(AsyncWorkerProtocol):
         if glob.glob(self.data_path):
             return
 
-        self.log.warning("⚠️ No local archive data found. Initiating auto-download of real data for testing...")
-        
+        self.log.warning("No local archive data found. Initiating auto-download of real data for testing...")
         target_date = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
         target_file = f"{target_date}-0.json.gz"
         url = f"https://data.gharchive.org/{target_file}"
         save_path = os.path.join(self.data_dir, target_file)
 
-        self.log.info(f"⬇️ Downloading actual GHArchive data from: {url}")
+        self.log.info(f"Downloading actual GHArchive data from: {url}")
         
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -100,7 +98,7 @@ class ArchiveSearchWorker(AsyncWorkerProtocol):
                         async for chunk in response.aiter_bytes(chunk_size=8192):
                             f.write(chunk)
                             
-            self.log.info(f"✅ Real data downloaded successfully: {save_path}")
+            self.log.info(f"Real data downloaded successfully: {save_path}")
         except Exception as e:
             self.log.error(f"Failed to auto-download archive data: {e}")
             raise RuntimeError(f"Data fetching failed: {e}")
@@ -150,10 +148,7 @@ class ArchiveSearchWorker(AsyncWorkerProtocol):
             await self.send_error(req_id, code=-32000, message=f"Search Execution Failed: {str(e)}")
 
     def _sync_duckdb_scan_and_filter(self, target_domain: str, limit: int) -> Dict[str, Any]:
-        """
-        동기 블록: 데이터 추출 및 정규식 필터링
-        SearchTelemetry 클래스를 활용하여 각 구간을 우아하게 계측합니다.
-        """
+        """동기 블록: 데이터 추출 및 정규식 필터링"""
         telemetry = SearchTelemetry()
         telemetry.measure_storage(self.data_path)
 
@@ -241,7 +236,7 @@ class ArchiveSearchWorker(AsyncWorkerProtocol):
         return {
             "query_domain": target_domain, 
             "extracted_threads_count": len(final_output),
-            "telemetry": telemetry.to_dict(),  # 분리된 객체의 결과를 단일 라인으로 주입
+            "telemetry": telemetry.to_dict(),
             "results": final_output
         }
 

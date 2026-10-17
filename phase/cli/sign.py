@@ -25,7 +25,7 @@ except ImportError:
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 
 SIGN_ROOT = resolve_path("sign")
 DEFAULT_DB_PATH = os.path.join(str(SIGN_ROOT), "deploy_audit.sqlite")
@@ -121,9 +121,9 @@ def _generate_evm_wallet(name: str) -> tuple[str, str]:
 def flow_gen_evm(
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True, help="Path to .env file")] = None,
 ):
-    """Generate secp256k1 EOA Wallets for X402 Billing and Agent Identities."""
+    """Generate secp256k1 EOA Wallets for Billing and Agent Identities."""
     _load_env(env_file)
-    log_sign.info("🚀 Generating EVM Wallets for X402 Billing & A2A Economy...\n")
+    log_sign.info("🚀 Generating EVM Wallets for Billing & A2A Economy...\n")
 
     alpha_pkey, _ = _generate_evm_wallet("Alpha (Compute Provider)")
     beta_pkey, _ = _generate_evm_wallet("Data Consumer Beta")

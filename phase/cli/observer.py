@@ -13,7 +13,7 @@ from xphi.arch.dev.infra.topos import (
     LeakObserverAuditor,
     HANG_VERDICT_TABLE
 )
-from xphi.kernel.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fiber.cli.observer")

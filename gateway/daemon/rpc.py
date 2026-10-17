@@ -26,10 +26,10 @@ from xphi.arch.model.edge.stream import LogicStream, StreamMetadata, StreamIdent
 from xphi.state.anchor.gateway import StoreGateway
 from xphi.state.anchor.nexus import NexusAnchor
 
-from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.kernel.space.tunnel.factory import TunnelFactory
-from xphi.kernel.space.sandbox.resolver import BenchProfile
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.ops.daemon.base import AbstractDaemon
+from xphi.node.space.tunnel.factory import TunnelFactory
+from xphi.node.space.sandbox.resolver import BenchProfile
+from xphi.node.wasm.broker import DphiBroker
 
 from xphi.watcher.receptor.warden import AuditWarden
 from xphi.watcher.plane.emitter import get_emitter

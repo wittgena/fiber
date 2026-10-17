@@ -12,9 +12,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from fiber.gateway.rest.payload import create_app, Config
 from xphi.arch.contract.registry.unified import contract
-from xphi.kernel.ops.daemon.base import AbstractDaemon
-from xphi.kernel.ops.reaper import SystemOps
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.ops.daemon.base import AbstractDaemon
+from xphi.node.ops.reaper import SystemOps
+from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.consensus import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 

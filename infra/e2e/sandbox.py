@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 import httpx
 from pydantic import BaseModel, Field
 
-from xphi.kernel.space.sandbox.runner import SchemeRunner
+from xphi.node.space.sandbox.runner import SchemeRunner
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.e2e.sandbox")

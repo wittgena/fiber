@@ -96,7 +96,7 @@ When integrating the Cost module into core business logic, adopt a **conservativ
 The DPHI architecture enforces strict isolation between Token Usage (Observability) and Kernel Fuel (Security).
 
 * **Usage (Token Count):** The actual prompt/completion token count returned by the API provider. This is utilized strictly for **post-billing** and analytics via `TenantEco` and `UsageTracker`.
-* **Fuel (Kernel Budget):** The **pre-allocated token budget** explicitly authorized by the DPHI Kernel (X402 Economy) prior to the request. This is monitored in real-time within the pipeline (e.g., `StreamAggregator`) to execute **Kill-switches (Physical stream termination)** upon budget exhaustion.
+* **Fuel (Kernel Budget):** The **pre-allocated token budget** explicitly authorized by the DPHI Kernel (Payment System) prior to the request. This is monitored in real-time within the pipeline (e.g., `StreamAggregator`) to execute **Kill-switches (Physical stream termination)** upon budget exhaustion.
 
 The `ChannelObserver` cleanly segregates these two telemetry streams during emission:
 

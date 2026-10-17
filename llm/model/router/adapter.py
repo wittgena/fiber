@@ -19,7 +19,7 @@ from fiber.llm.compat.param import PROVIDER_PARAM_RULES
 
 from xphi.arch.bound.client.http import get_client
 from xphi.arch.bound.event.next import uuid4 
-from xphi.kernel.space.bind.resolver import get_invoker
+from xphi.node.space.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 
 _invoker_full, MODULE_NAMESPACE = get_invoker(Path(__file__))

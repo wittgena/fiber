@@ -74,7 +74,7 @@ def vcr_setup_sequence():
 
     resolved_fixture_dir = None
     if VCR_MODE in ("record", "replay"):
-        from xphi.kernel.space.bind.resolver import resolve_path
+        from xphi.node.space.bind.resolver import resolve_path
         resolved_fixture_dir = str(resolve_path("abc") / "fixture")
         _init_bridge(mode=VCR_MODE, fixture_dir=resolved_fixture_dir)
     else:

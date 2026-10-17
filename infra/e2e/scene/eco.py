@@ -11,9 +11,9 @@ from fiber.infra.e2e.epoch import EpochBase
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from xphi.state.anchor.nexus import ActorIdentity
 
-from xphi.kernel.space.sandbox.runner import SchemeRunner
+from xphi.node.space.sandbox.runner import SchemeRunner
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.kernel.wasm.method import DphiMethod
+from xphi.node.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.eco")

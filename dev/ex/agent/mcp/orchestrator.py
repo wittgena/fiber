@@ -23,7 +23,7 @@ from fiber.dev.ex.model.message import Message, TextContent, MessageToolCall
 from fiber.dev.ex.model.profile import BaseLLMProfile
 from fiber.llm.response import ChatCompletionToolParam
 
-from xphi.kernel.space.tunnel.factory import UniversalFacade
+from xphi.node.space.tunnel.factory import UniversalFacade
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("agent.mcp.orchestrator")

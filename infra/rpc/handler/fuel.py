@@ -12,7 +12,7 @@ from xphi.arch.bound.adapter.pta import (
     PtaOutput,
     SignStateAdapter
 )
-from xphi.kernel.wasm.broker import DphiBroker
+from xphi.node.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("rpc.fuel")

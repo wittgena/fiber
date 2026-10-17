@@ -4,6 +4,7 @@ import sys
 import asyncio
 import inspect
 import importlib
+from pathlib import Path
 from typing import Annotated, Optional
 import typer
 
@@ -14,11 +15,11 @@ except ImportError:
 
 from fiber.phase.cli.observer import run_observer
 
-from xphi.kernel.ops.shell import ShellEntry
+from xphi.node.ops.shell import ShellEntry
 from xphi.state.phase.reactor import PhaseReactor
-from xphi.kernel.ops.boot import main_async, teardown
+from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 
 log = get_emitter("fiber.cli")
 
@@ -64,14 +65,14 @@ def run_daemon(
     """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
     _load_env(env_file)
     PRESETS = {
-        "edge": "rest_edge,rpc_worker",
-        "ALL": "rest_edge,rpc_worker,dynamic_pricing,risk_vault",
+        "edge": "rest_edge,rpc_worker,mcp_worker",
+        "ALL": "rest_edge,rpc_worker,mcp_worker,dynamic_pricing,risk_vault",
     }
     
     resolved_daemons = PRESETS.get(start.lower(), start)
     daemons_list = [d.strip() for d in resolved_daemons.split(",")]
     
-    os.environ["KERNEL_DAEMONS"] = resolved_daemons
+    os.environ["NODE_DAEMONS"] = resolved_daemons
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
 
     is_edge_only = all(d in ["rest_edge"] for d in daemons_list)
@@ -136,32 +137,16 @@ def run_e2e(
 
 @app.command("connect")
 def run_connector(
-    target: Annotated[str, typer.Option("--target", "-t")],
-    exec_cmd: Annotated[str, typer.Option("--exec", "-e")],
+    exec_cmd: Annotated[Optional[str], typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")] = None,
+    config: Annotated[Optional[Path], typer.Option("--config", "-c", exists=True, help="Path to standard mcp.json file")] = None,
+    target: Annotated[Optional[str], typer.Option("--target", "-t", help="Optional Target ID override (auto-inferred if omitted)")] = None,
+    mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
+    """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers"""
     _load_env(env_file)
-    import fiber.dev.worker.deployer as worker_deployer
-    import fiber.dev.worker.legacy.oracle as worker_oracle
-
-    KNOWN_WORKERS = {
-        "worker.deploy": f"{sys.executable} -m {worker_deployer.__name__}",
-        "worker.oracle": f"{sys.executable} -m {worker_oracle.__name__}"
-    }
-    resolved_cmd = KNOWN_WORKERS.get(exec_cmd, exec_cmd)
-
-    async def _launch_connector():
-        from fiber.gateway.mcp.connector import MCPServerConnector
-        log.info(f"[Fiber] 🔌 Sublimating legacy server [{target}] into the MCP Server Connector...")
-        daemon = MCPServerConnector(target_id=target, execution_target=resolved_cmd)
-        try:
-            await daemon.run()
-        finally:
-            log.info("[Fiber] Disconnected from A2A Network.")
-    try:
-        asyncio.run(_launch_connector())
-    except KeyboardInterrupt:
-        log.info("\n[Fiber] Connector shutting down...")
+    from fiber.phase.cli.connect import run_connect
+    run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode)
 
 @app.command("observe")
 def start_observer(

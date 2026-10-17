@@ -5,7 +5,7 @@ import re
 from urllib.parse import urlparse
 from typing import Tuple, Optional, Union, Dict, List
 
-from fiber.llm.provider.cost.registry import ModelCostRegistry, model_cost, lookup_base_model_info
+from fiber.llm.provider.cost.registry import ModelCostRegistry
 from xphi.arch.bound.client.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
 from fiber.llm.types.param.legacy import LegacyParams
 from fiber.llm.provider.secret import get_secret_str, get_secret
@@ -36,7 +36,6 @@ PROVIDER_REGISTRY = {
     "fireworks_ai": ("https://api.fireworks.ai/inference/v1", ["FIREWORKS_AI_API_KEY"]),
     "ai21": ("https://api.ai21.com/studio/v1", ["AI21_API_KEY"]),
     "nvidia": ("https://integrate.api.nvidia.com/v1", ["NVIDIA_API_KEY", "NVIDIA_NIM_API_KEY"]),
-    "cerebras": ("https://api.cerebras.ai/v1", ["CEREBRAS_API_KEY"]),
     "sambanova": ("https://api.sambanova.ai/v1", ["SAMBANOVA_API_KEY"]),
     "empower": ("https://app.empower.dev/api/v1", ["EMPOWER_API_KEY"]),
     "nebius": ("https://api.studio.nebius.ai/v1", ["NEBIUS_API_KEY"]),
@@ -126,11 +125,9 @@ def _endpoint_matches_api_base(endpoint: str, api_base: str) -> bool:
     url_path = parsed_url.path.rstrip("/")
     return url_path == endpoint_path or url_path.rstrip("/").startswith(endpoint_path + "/")
 
-
 class LLMProviderResolver:
     def __init__(self):
         self._provider_configs = PROVIDER_REGISTRY
-        self._lowercase_model_map: Optional[Dict[str, str]] = None
 
     def resolve(
         self,
@@ -204,36 +201,19 @@ class LLMProviderResolver:
         return None
 
     def _get_cost_key(self, potential_key: str) -> Optional[str]:
-        if potential_key in model_cost:
-            return potential_key
-
-        if self._lowercase_model_map is None:
-            self._lowercase_model_map = {k.lower(): k for k in model_cost}
-
-        potential_key_lower = potential_key.lower()
-        matched_key = self._lowercase_model_map.get(potential_key_lower)
-        
-        if matched_key and matched_key in model_cost:
-            return matched_key
-
-        self._lowercase_model_map = {k.lower(): k for k in model_cost}
-        matched_key = self._lowercase_model_map.get(potential_key_lower)
-        if matched_key and matched_key in model_cost:
-            return matched_key
-
-        return None
+        return ModelCostRegistry.get_model_key_case_insensitive(potential_key)
 
     def check_capability(self, model: str, custom_llm_provider: Optional[str], key: str, default_if_none: bool = False) -> bool:
         try:
             resolved_model, resolved_provider, _, _ = self.resolve(model=model, custom_llm_provider=custom_llm_provider)
-            model_info = lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
+            model_info = ModelCostRegistry.lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
             
             if model_info.get(key) is not None:
                 return bool(model_info.get(key))
 
             bare_model_key = self._get_cost_key(resolved_model)
             if bare_model_key:
-                bare_entry = model_cost.get(bare_model_key) or {}
+                bare_entry = ModelCostRegistry.get_cost(bare_model_key)
                 if bare_entry.get(key) is not None:
                     return bool(bare_entry.get(key))
 

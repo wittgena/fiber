@@ -10,7 +10,7 @@ from fiber.llm.compat.param import PROVIDER_PARAM_RULES as BASE_PROVIDER_PARAM_R
 from fiber.llm.compat.extraction import EXTRACTION_RULES as BASE_EXTRACTION_RULES
 
 from xphi.arch.contract.config.env import FIBER_COMPAT_RULES_PATH
-from xphi.kernel.space.bind.resolver import resolve_path 
+from xphi.node.space.bind.resolver import resolve_path 
 from xphi.watcher.plane.emitter import get_emitter 
 
 log_compat = get_emitter("compat.registry")

@@ -7,7 +7,7 @@ import asyncio
 from typing import Dict, Any
 
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
-from xphi.kernel.space.tunnel.factory import TunnelFactory
+from xphi.node.space.tunnel.factory import TunnelFactory
 
 class FinopsSystemWorker(AsyncWorkerProtocol):
     def __init__(self):

@@ -1,13 +1,11 @@
 # fiber.llm.provider.cost.registry
-## @lineage: fiber.llm.model.provider.registry
 from __future__ import annotations
 
 import json
 from typing import Dict, Tuple, Optional, Union
 
-from fiber.llm.types.provider.support import ProviderTypes
 from xphi.arch.contract.config.resolver import config
-from xphi.kernel.space.bind.resolver import resolve_path 
+from xphi.node.space.bind.resolver import resolve_path 
 from xphi.watcher.plane.emitter import get_emitter 
 
 log_cost = get_emitter("provider.registry")
@@ -15,21 +13,6 @@ REGISTRY_ROOT = resolve_path("abc") / "registry"
 DEFAULT_REGISTRY_FILENAME = "model_prices_and_context_window.json"
 PROVIDER_KEY = "model_provider"
 
-class ProviderKeyResolver:
-    """@desc: Helper to resolve provider logic and skip-patterns before registration."""
-    SKIP_PROVIDERS = frozenset({ProviderTypes.GITHUB_COPILOT.value, ProviderTypes.CHATGPT.value})
-
-    @classmethod
-    def extract_provider(cls, spec: dict) -> str:
-        return str(spec.get(PROVIDER_KEY, "")).strip()
-
-    @classmethod
-    def should_skip_model_lookup(cls, provider: str, model_key: str) -> bool:
-        if provider in cls.SKIP_PROVIDERS:
-            return True
-        if any(model_key.startswith(f"{p}/") for p in cls.SKIP_PROVIDERS):
-            return True
-        return False
 
 class RegistryIO:
     @classmethod
@@ -100,14 +83,22 @@ class RegistryIO:
                 expanded[model_name] = cls._optimize_memory(spec)
         return expanded
 
-# Global Initialization
-model_cost = RegistryIO.get_model_cost_map()
-
-
-# =====================================================================
-# 3. Model Cost Registry Engine
-# =====================================================================
 class ModelCostRegistry:
+    """단일 진입점(Single Source of Truth)으로 비용 레지스트리를 관리합니다."""
+    
+    _model_cost: dict = RegistryIO.get_model_cost_map()
+    _lowercase_model_map: dict = {k.lower(): k for k in _model_cost}
+    
+    @classmethod
+    def get_cost(cls, model_name: str) -> dict:
+        return cls._model_cost.get(model_name, {})
+
+    @classmethod
+    def get_model_key_case_insensitive(cls, potential_key: str) -> str | None:
+        if potential_key in cls._model_cost:
+            return potential_key
+        return cls._lowercase_model_map.get(potential_key.lower())
+
     @classmethod
     def lookup_base_model_info(
         cls,
@@ -131,8 +122,8 @@ class ModelCostRegistry:
         matched_key = None
 
         for key in potential_keys:
-            if key in model_cost:
-                matched_info = model_cost[key]
+            if key in cls._model_cost:
+                matched_info = cls._model_cost[key]
                 matched_key = key
                 break
 
@@ -148,8 +139,7 @@ class ModelCostRegistry:
 
     @classmethod
     def get_provider(cls, model_name: str) -> str | None:
-        # 💡 상수를 통해 접근
-        return model_cost.get(model_name, {}).get(PROVIDER_KEY)
+        return cls._model_cost.get(model_name, {}).get(PROVIDER_KEY)
 
     @classmethod
     def register(cls, new_model_cost: Union[str, dict]) -> dict:
@@ -160,25 +150,24 @@ class ModelCostRegistry:
             loaded_cost = RegistryIO.get_model_cost_map(filename=new_model_cost)
 
         for key, value in loaded_cost.items():
-            key_str = str(key)
-            provider = ProviderKeyResolver.extract_provider(value)
+            provider = str(value.get(PROVIDER_KEY, "")).strip()
             
-            if ProviderKeyResolver.should_skip_model_lookup(provider, key_str):
-                existing_model = model_cost.get(key, {})
+            # [수정됨] 스킵 조건 분기가 사라지며 등록 로직이 대폭 간결해짐
+            try:
+                existing_model = cls.lookup_base_model_info(model=key)
+                model_cost_key = existing_model.get("key", key)
+            except Exception:
+                existing_model = {}
                 model_cost_key = key
-            else:
-                try:
-                    existing_model = cls.lookup_base_model_info(model=key)
-                    model_cost_key = existing_model.get("key", key)
-                except Exception:
-                    existing_model = {}
-                    model_cost_key = key
                     
             if existing_model.get(PROVIDER_KEY) is None:
                 existing_model.pop(PROVIDER_KEY, None)
                 
             updated_dict = cls._merge_dicts(existing_model, value)
-            model_cost.setdefault(model_cost_key, {}).update(updated_dict)
+            cls._model_cost.setdefault(model_cost_key, {}).update(updated_dict)
+            
+            cls._lowercase_model_map[model_cost_key.lower()] = model_cost_key
+            
             log_cost.debug(f"Added/updated model={model_cost_key} in model_cost")
             cls._update_provider_models(key, provider)
             
@@ -215,15 +204,3 @@ class ModelCostRegistry:
             anthropic_models = config.get("anthropic_models")
             if anthropic_models is not None:
                 anthropic_models.add(key)
-
-
-# ==========================================
-# Exports & Legacy Bindings
-# ==========================================
-get_model_cost_registry = ModelCostRegistry.get_provider
-lookup_base_model_info = ModelCostRegistry.lookup_base_model_info
-register_model = ModelCostRegistry.register
-
-config.model_cost = model_cost
-config.register_model = register_model
-config._get_model_info_helper = lookup_base_model_info

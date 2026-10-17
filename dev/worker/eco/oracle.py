@@ -1,4 +1,4 @@
-# fiber.dev.worker.legacy.oracle
+# fiber.dev.worker.eco.oracle
 import sys
 import json
 import time
@@ -8,9 +8,9 @@ from typing import Dict, Any
 from xphi.arch.bound.xor.oracle.receptor import OracleReceptor
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
-class OracleMcpServer(AsyncWorkerProtocol):
+class EcoOracleServer(AsyncWorkerProtocol):
     def __init__(self):
-        super().__init__(agent_name="agent.oracle")
+        super().__init__(agent_name="eco.oracle")
         
         self.log.info("Initializing Async Deterministic Oracle Receptor...")
         try:
@@ -77,7 +77,7 @@ class OracleMcpServer(AsyncWorkerProtocol):
             await self.send_error(req_id, code=-32000, message=f"Oracle Tool Execution Failed: {str(e)}")
 
 def main():
-    server = OracleMcpServer()
+    server = EcoOracleServer()
     try:
         asyncio.run(server.serve_forever_async())
     except KeyboardInterrupt:
