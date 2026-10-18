@@ -6,7 +6,7 @@ import asyncio
 from typing import Any, Dict, Optional, Tuple
 
 from xphi.state.phase.channel import ChannelContext, DuplexChannel
-from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
+from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
 
 log_pipeline = get_emitter("channel.fuel")
@@ -54,8 +54,8 @@ class FuelBreaker(DuplexChannel):
         metadata = req_kwargs.get("metadata", {})
         
         # 권한 인가 및 예산(Budget) 제어를 위한 순수 Auth Payload 파싱
-        raw_auth = metadata.get(DphiKey.KERNEL_AUTH.value, {})
-        kernel_auth = KernelAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or KernelAuthPayload())
+        raw_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
+        kernel_auth = NodeAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or NodeAuthPayload())
         
         enforce_quota = os.getenv("FIBER_ENFORCE_QUOTA", "false").lower() == "true"
         is_enforced = getattr(kernel_auth, "is_enforced", False)
@@ -81,9 +81,9 @@ class FuelBreaker(DuplexChannel):
             raise PermissionError(f"Fuel budget exhausted for tenant: {tenant_id}")
 
         # 차단기(Breaker) 가동을 위한 Context 상태 초기화
-        ctx.set_attr(DphiKey.FUEL_BUDGET.value, fuel_budget)
-        ctx.set_attr(DphiKey.FUEL_CONSUMED.value, 0)
-        ctx.set_attr(DphiKey.AUDIT_HASH.value, getattr(kernel_auth, "audit_hash", None))
+        ctx.set_attr(BrokerKey.FUEL_BUDGET.value, fuel_budget)
+        ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, 0)
+        ctx.set_attr(BrokerKey.AUDIT_HASH.value, getattr(kernel_auth, "audit_hash", None))
         
         return await ctx.fire_write(msg)
 
@@ -91,14 +91,14 @@ class FuelBreaker(DuplexChannel):
         req: dict = ctx.get_attr("request_kwargs", {})
         is_stream = req.get("stream", False) or "stream" in req.get("call_type", "")
         
-        fuel_budget = ctx.get_attr(DphiKey.FUEL_BUDGET.value, float('inf'))
-        audit_hash = ctx.get_attr(DphiKey.AUDIT_HASH.value)
+        fuel_budget = ctx.get_attr(BrokerKey.FUEL_BUDGET.value, float('inf'))
+        audit_hash = ctx.get_attr(BrokerKey.AUDIT_HASH.value)
 
         # 단일 응답(Non-stream) 처리
         if not is_stream and not hasattr(msg, "__aiter__"):
             total_tokens, _ = _extract_usage_info(msg)
             if total_tokens > 0:
-                ctx.set_attr(DphiKey.FUEL_CONSUMED.value, total_tokens)
+                ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, total_tokens)
 
             if audit_hash and hasattr(msg, "system_fingerprint"):
                 try:
@@ -119,13 +119,13 @@ class FuelBreaker(DuplexChannel):
         try:
             async for raw_chunk in raw_stream:
                 consumed += 1 
-                context.set_attr(DphiKey.FUEL_CONSUMED.value, consumed)
+                context.set_attr(BrokerKey.FUEL_CONSUMED.value, consumed)
 
                 # 스트리밍 도중 Pub/Sub으로 갱신된 실시간 예산(예: Kill-Switch 0.0)을 매 청크마다 즉시 반영
                 if self.finops_watcher and hasattr(self.finops_watcher, "local_budget_cache"):
                     if tenant_id in self.finops_watcher.local_budget_cache:
                         current_budget = self.finops_watcher.local_budget_cache[tenant_id]
-                        context.set_attr(DphiKey.FUEL_BUDGET.value, current_budget)
+                        context.set_attr(BrokerKey.FUEL_BUDGET.value, current_budget)
 
                 if consumed > current_budget:
                     log_pipeline.warning(f"[FuelTrap] Fuel exhausted ({current_budget}). Killing stream physically.")
@@ -155,12 +155,12 @@ class BillingObserver(DuplexChannel):
         is_stream = hasattr(msg, "__aiter__")
 
         def execute_billing(total_tokens: int = 0, raw_usage: Any = None):
-            fuel_consumed = ctx.get_attr(DphiKey.FUEL_CONSUMED.value, 0)
+            fuel_consumed = ctx.get_attr(BrokerKey.FUEL_CONSUMED.value, 0)
             
             # 실제 집계된 total_tokens가 있으면 최우선 적용하고, 스트림 강제 중단 등으로 0일 때만 청크 카운트(fuel_consumed)로 폴백
             effective_fuel = total_tokens if (total_tokens and total_tokens > 0) else fuel_consumed
             if effective_fuel > 0:
-                ctx.set_attr(DphiKey.FUEL_CONSUMED.value, effective_fuel)
+                ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, effective_fuel)
                 
             tenant_id = ctx.get_attr("tenant_id", "unknown")
             

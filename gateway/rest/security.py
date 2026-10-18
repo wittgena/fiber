@@ -17,7 +17,7 @@ from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
 
 from xphi.node.wasm.broker import DphiBroker
-from xphi.arch.model.dphi.auth import KernelAuthPayload
+from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.pta import SignStateAdapter
 
 from xphi.arch.bound.adapter.settlement import (
@@ -149,7 +149,7 @@ class KernelAuthenticator:
         action: str, 
         model: str, 
         max_tokens: Optional[int] = None
-    ) -> KernelAuthPayload:
+    ) -> NodeAuthPayload:
         receipt = getattr(request.state, "fuel_receipt", None)
         intent_payload = {
             "action": action,
@@ -176,4 +176,4 @@ class KernelAuthenticator:
                 detail="Zero-Trust Enforced: Token Quota Exceeded or Invalid Access Credential.",
                 headers={"WWW-Authenticate": 'Bearer realm="api"'}
             )
-        return KernelAuthPayload.model_validate_json(auth_res.output)
+        return NodeAuthPayload.model_validate_json(auth_res.output)

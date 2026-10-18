@@ -5,8 +5,8 @@ from typing import Dict, Any
 from pydantic import ValidationError
 
 from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
-from xphi.arch.model.edge.receptor import EdgeState, TradeIngressRequest, EpochInitPayload, ClearingReceiptRequest
-from xphi.arch.model.edge.receipt import BilledExecutionRequest
+from fiber.infra.rpc.schema.receipt import EdgeState, TradeIngressRequest, EpochInitPayload, ClearingReceiptRequest
+from xphi.arch.model.schema.audit import BilledExecutionRequest
 
 from xphi.node.space.sandbox.config import tier_config, fuel_config
 from xphi.node.wasm.broker import DphiMethod

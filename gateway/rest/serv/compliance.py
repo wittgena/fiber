@@ -21,13 +21,13 @@ from fiber.gateway.rest.serv.depend import (
 )
 from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from fiber.phase.contract.router import ContractRouter
-from xphi.arch.model.edge.receptor import EdgeState, EdgeHeader, IntentValidationRequest
+from fiber.infra.rpc.schema.receipt import EdgeState, EdgeHeader, IntentValidationRequest
 from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
 
 from xphi.node.space.tunnel.subs import DistributedPubSub
 from xphi.node.wasm.broker import DphiBroker, DphiMethod
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.arch.model.edge.receipt import (
+from xphi.arch.model.schema.audit import (
     HandshakeIntent,
     AuditReceipt,
     ExportLogsServiceRequest, 

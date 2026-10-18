@@ -16,7 +16,7 @@ from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.phase.scope.manager import managed_scope
 
-from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 

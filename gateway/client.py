@@ -6,8 +6,8 @@ from typing import Dict, Any, Optional, List
 import httpx
 
 from xphi.arch.bound.client.http import VerifiedHttpClient
-from xphi.arch.model.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest, ResourceLogs, ScopeLogs, LogRecord, KeyValue
-from xphi.arch.model.edge.receptor import EdgeHeader
+from xphi.arch.model.schema.audit import AuditLogRequest, AuditEvent, ExportLogsServiceRequest, ResourceLogs, ScopeLogs, LogRecord, KeyValue
+from fiber.infra.rpc.schema.receipt import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for Edge Gateway"""

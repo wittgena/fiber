@@ -12,7 +12,7 @@ from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.gateway.rest.security import KernelAuthenticator
 from fiber.phase.contract.router import ContractRouter
 
-from xphi.arch.model.dphi.auth import DphiKey, DphiAction
+from xphi.arch.model.auth import BrokerKey, BrokerAction
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("serv.llm")
@@ -47,7 +47,7 @@ async def public_chat_completions(
         try:
             kernel_auth = await KernelAuthenticator.authorize_intent(
                 request=request,
-                action=DphiAction.LLM_COMPUTE.value,
+                action=BrokerAction.LLM_COMPUTE.value,
                 model=payload.model,
                 max_tokens=payload.max_tokens
             )
@@ -61,9 +61,9 @@ async def public_chat_completions(
             internal_receipt = getattr(request.state, "fuel_receipt", None)
             
             metadata = kwargs.get("metadata", {})
-            metadata[DphiKey.FUEL_RECEIPT.value] = internal_receipt
-            metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
-            metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
+            metadata[BrokerKey.FUEL_RECEIPT.value] = internal_receipt
+            metadata[BrokerKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
+            metadata[BrokerKey.NODE_AUTH.value] = kernel_auth.model_dump()
             kwargs["metadata"] = metadata
 
             response = await PipelineBootstrap.execute_completion(
@@ -109,7 +109,7 @@ async def public_embeddings(
     try:
         kernel_auth = await KernelAuthenticator.authorize_intent(
             request=request,
-            action=DphiAction.LLM_EMBEDDING.value,
+            action=BrokerAction.LLM_EMBEDDING.value,
             model=model
         )
         
@@ -120,9 +120,9 @@ async def public_embeddings(
         internal_receipt = getattr(request.state, "fuel_receipt", None)
 
         metadata = kwargs.get("metadata", {})
-        metadata[DphiKey.FUEL_RECEIPT.value] = internal_receipt
-        metadata[DphiKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
-        metadata[DphiKey.KERNEL_AUTH.value] = kernel_auth.model_dump()
+        metadata[BrokerKey.FUEL_RECEIPT.value] = internal_receipt
+        metadata[BrokerKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
+        metadata[BrokerKey.NODE_AUTH.value] = kernel_auth.model_dump()
         kwargs["metadata"] = metadata
 
         response = await PipelineBootstrap.execute_embedding(

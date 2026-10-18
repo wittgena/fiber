@@ -13,7 +13,7 @@ from typing import List, Tuple, Any, Optional
 from fiber.dev.ex.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
 
-from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter
 
