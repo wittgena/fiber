@@ -50,7 +50,7 @@ STREAM_PROMPT = (
 )
 
 
-def _get_free_port(default_port: int = 8355) -> int:
+def _get_free_port(default_port: int = 8356) -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         if s.connect_ex(("127.0.0.1", default_port)) != 0:
             return default_port
@@ -85,6 +85,14 @@ class PipelineConcurrencySuite(BaseBridgePipeline):
             Phase("Phase 2: Concurrent Stream Interleaving & Throughput Profile", self.phase_stream_concurrency),
             Phase("Phase 3: Heterogeneous Sustained VU Pool (Unary + Stream + Aggregated)", self.phase_mixed_workload),
         ])
+
+        # 💡 [개선 포인트] VCR Replay 모드 시 벤치마크 지표의 실제 측정 대상 명시
+        if not self.is_record:
+            log.info(
+                "💡 [Benchmark Notice] VCR Replay mode active. "
+                "Metrics (TTFT, Latency) strictly measure Core Pipeline Engine overhead "
+                "(event-loop routing, stream backpressure), NOT actual LLM inference times."
+            )
 
     @property
     def is_record(self) -> bool:
@@ -129,7 +137,9 @@ class PipelineConcurrencySuite(BaseBridgePipeline):
         vu_count = 1 if self.is_record else self.concurrency
         total_iters = 1 if self.is_record else self.iterations
 
-        log.info(f"  └─ Executing {total_iters} unary requests across {vu_count} VUs (Mode: {self.vcr_config.mode})...")
+        # 💡 [개선 포인트] 로깅 메시지에 실행 모드의 목적 명시
+        mode_info = "Record (Actual LLM Network)" if self.is_record else "Replay (Zero-Network Engine Benchmark)"
+        log.info(f"  └─ Executing {total_iters} unary requests across {vu_count} VUs (Mode: {mode_info})...")
 
         profiler = PipelineLoadProfiler("Phase 1 - Unary Pipeline Burst")
 
@@ -205,7 +215,9 @@ class PipelineConcurrencySuite(BaseBridgePipeline):
         vu_count = 1 if self.is_record else self.concurrency
         total_iters = 1 if self.is_record else self.iterations
 
-        log.info(f"  └─ Launching {total_iters} interleaved streams across {vu_count} VUs (Mode: {self.vcr_config.mode})...")
+        # 💡 [개선 포인트] 로깅 메시지에 실행 모드의 목적 명시
+        mode_info = "Record (Actual LLM Network)" if self.is_record else "Replay (Zero-Network Engine Benchmark)"
+        log.info(f"  └─ Launching {total_iters} interleaved streams across {vu_count} VUs (Mode: {mode_info})...")
 
         profiler = PipelineLoadProfiler("Phase 2 - Interleaved Stream Fan-Out")
 
@@ -294,7 +306,10 @@ class PipelineConcurrencySuite(BaseBridgePipeline):
 
         vu_count = self.concurrency
         total_iters = self.iterations
-        log.info(f"  └─ Running {total_iters} heterogeneous tasks across {vu_count} VUs...")
+        
+        # 💡 [개선 포인트] 로깅 메시지에 실행 모드의 목적 명시
+        mode_info = "Record (Actual LLM Network)" if self.is_record else "Replay (Zero-Network Engine Benchmark)"
+        log.info(f"  └─ Running {total_iters} heterogeneous tasks across {vu_count} VUs (Mode: {mode_info})...")
 
         profiler = PipelineLoadProfiler("Phase 3 - Mixed Workload (Unary/Stream/Aggregated)")
 
@@ -395,7 +410,7 @@ class ConcurrencySuiteRunner:
         self.iterations = iterations
 
     async def execute(self):
-        free_port = _get_free_port(8355)
+        free_port = _get_free_port(8356)
         net_config = E2EConfig(host="127.0.0.1", port=free_port, protocol="http")
         results = await PipelineConcurrencySuite(
             config=net_config,

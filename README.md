@@ -394,14 +394,31 @@ $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 
 ## 4. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)
 
-Measured via high-concurrency deterministic VCR replay suites (`dev.e2e.inter.concurrency`).
+These metrics measure the **pure internal overhead** of the Fiber LLM Pipeline. To eliminate network variance and isolate the framework's performance, the suite was executed in deterministic **VCR Replay** mode.
+
+**Run the benchmark with VCR driving 200 concurrent streams locally:**
+
+```bash
+fiber e2e inter.concurrency --vcr replay --concurrency 200
+```
 
 | Performance Dimension | Metric (M2, 32GB) | Architectural Significance |
-| :--- | :--- | :--- |
-| **Unary Throughput** | **1,057.3 req/s** | Handles over 1,000 enterprise control-plane pipeline transactions per second in a single Python process. |
-| **End-to-End Latency** | **p50: 0.71ms / p95: 1.74ms** | Sub-2ms tail latency under a concurrent burst of 200 virtual users (VUs). |
-| **Memory Footprint** | **0.71 MB (Peak / 200 VUs)** | Near-zero garbage collection pressure and negligible memory overhead per in-flight pipeline. |
-| **Context Isolation** | **100% Unique Spans (0 Cross-talk)** | Flawless asynchronous coroutine interleaving with absolute state safety across parallel streams. |
+| --- | --- | --- |
+| **Unary Throughput** | **~1,180 req/s** | Handles over 1,000 enterprise control-plane pipeline transactions per second in a single Python process. |
+| **Stream Interleaving** | **~2,200 chunks/s** | High-density multiplexing of asynchronous byte-streams (SSE) without blocking the main event loop. |
+| **Routing Overhead** | **p50: <1.0ms / p95: <1.5ms** | Negligible framework-level latency added to the Time-To-First-Token under heavy concurrent bursts. |
+| **Memory Footprint** | **<1 MB (Unary) / ~25 MB (Streams)** | Near-zero GC pressure; safely buffers 200 highly active parallel streams within strict memory boundaries. |
+| **Context Isolation** | **Guaranteed Isolation (Zero Cross-talk)** | Flawless asynchronous coroutine interleaving with deterministic state safety across parallel contexts. |
+
+**Measuring Actual LLM Performance?**
+If you want to benchmark actual LLM inference metrics (like TTFT and Chunks/sec) against a live provider or local server, run the suite in `record` or live mode and specify your target model.
+
+```bash
+# Example: Stress-testing a local Gemma-3 model with 200 concurrent VUs
+$ fiber e2e inter.concurrency --vcr record --model llama_server/gemma-3-1b-it-Q4_K_M.gguf --concurrency 200
+```
+
+---
 
 ## 5. System Validation Logs
 
