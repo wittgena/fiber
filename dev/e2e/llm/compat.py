@@ -76,7 +76,7 @@ class LlmCompatWorkflow(Workflow):
             response = await acompletion(
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Hello, DPHI Kernel!"}],
-                metadata={"kernel_auth": {"audit_hash": audit_hash}}
+                metadata={"node_auth": {"audit_hash": audit_hash}}
             )
 
             if response and response.choices:
@@ -113,7 +113,7 @@ class LlmCompatWorkflow(Workflow):
                 messages=[{"role": "user", "content": "Cost me nothing!"}],
                 mock_response=expected_mock,
                 mock_delay=1.0,
-                metadata={"kernel_auth": {"audit_hash": "audit_mock"}}
+                metadata={"node_auth": {"audit_hash": "audit_mock"}}
             )
 
             elapsed = time.time() - start_time
@@ -144,7 +144,7 @@ class LlmCompatWorkflow(Workflow):
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Write a very long essay about the history of the universe."}],
                 stream=True,
-                metadata={"kernel_auth": {"fuel_budget": budget}}
+                metadata={"node_auth": {"fuel_budget": budget}}
             )
 
             chunks_received = 0
@@ -230,7 +230,7 @@ class LlmCompatWorkflow(Workflow):
                 model=self.target_model,
                 messages=[{"role": "user", "content": "What time is it right now? Use the tool."}],
                 tools=tools,
-                metadata={"kernel_auth": {"audit_hash": "audit_tool_test"}}
+                metadata={"node_auth": {"audit_hash": "audit_tool_test"}}
             )
 
             if response.choices:
@@ -261,7 +261,7 @@ class LlmCompatWorkflow(Workflow):
                 model=self.target_model,
                 messages=[{"role": "user", "content": "Say 'hello interceptor'"}],
                 interceptors=[test_tracer],
-                metadata={"kernel_auth": {"audit_hash": audit_hash}}
+                metadata={"node_auth": {"audit_hash": audit_hash}}
             )
             
             await asyncio.sleep(0.1) 

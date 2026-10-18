@@ -112,7 +112,7 @@ response = await acompletion(
     model="lm_studio/qwen-3.5-9b", # ex: cerebras/qwen-3.8-27b, gemini/gemini-3.1-flash-lite, ollama/gemma:2b, llama_server/gemma-3-1b-it-Q4_K_M.gguf
     messages=[{"role": "user", "content": "Analyze this data."}],
     interceptors=[TelemetryTracer(), ActiveBlockingGuardrail(), EdgeRedisCache(), SemanticRouter()],
-    metadata={"kernel_auth": {"audit_hash": "audit_12345"}} 
+    metadata={"node_auth": {"audit_hash": "audit_12345"}} 
 )
 ```
 

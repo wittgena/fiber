@@ -177,7 +177,7 @@ async def main():
             # UX Facade: The framework resolves order dependency autonomously based on target_slots.
             # Order of items within the list does not dictate execution sequence across different slots.
             interceptors=[tracer, guardrail, cache], 
-            metadata={"kernel_auth": {"audit_hash": "audit-tx-999"}}
+            metadata={"node_auth": {"audit_hash": "audit-tx-999"}}
         )
         print(f"Response: {response.choices[0].message.content}")
         

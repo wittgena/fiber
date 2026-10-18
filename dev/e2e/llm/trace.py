@@ -251,7 +251,7 @@ class LlmTraceWorkflow(E2EBaseWorkflow):
                 await acompletion(
                     model=self.target_model,
                     messages=[{"role": "user", "content": "Hack the planet."}],
-                    metadata={"kernel_auth": {"fuel_budget": 999999, "tenant_id": "hacker"}}, 
+                    metadata={"node_auth": {"fuel_budget": 999999, "tenant_id": "hacker"}}, 
                     interceptors=[test_tracer]
                 )
                 raise RuntimeError("FuelInterceptor failed to block unauthorized payload.")

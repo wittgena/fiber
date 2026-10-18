@@ -64,7 +64,7 @@ In addition to standard parameters (`model`, `messages`, `temperature`, `stream`
 
 Governs kernel-level resource allocation via the `ContextBinder` and `StreamAggregator` middlewares.
 
-* `metadata={"kernel_auth": {"fuel_budget": 1000}}`: Sets the maximum allowed token (Fuel) budget.
+* `metadata={"node_auth": {"fuel_budget": 1000}}`: Sets the maximum allowed token (Fuel) budget.
 * **Fuel Breaker**: During streaming (`stream=True`), if consumed tokens exceed the allocated budget, the pipeline terminates the connection to enforce the budget limit.
 * The consumed fuel is recorded in `ModelResponse.usage.fuel_consumed`.
 * `audit_hash`: An injected kernel audit hash is embedded into the OpenAI-spec `system_fingerprint` field for auditing purposes.
@@ -128,7 +128,7 @@ The entrypoint is implemented as an asynchronous `ChannelPipeline`.
 **Execution Sequence (Request Outbound Flow: Tail → Head):**
 When a request is initiated, data propagates from the Tail of the pipeline toward the Head prior to network egress.
 
-1. **ContextBinder (Tail)**: Allocates UUIDs, injects kernel authorization (`kernel_auth`), and registers metadata.
+1. **ContextBinder (Tail)**: Allocates UUIDs, injects node authorization (`node_auth`), and registers metadata.
 2. **ChannelObserver**: Initializes duration tracking and telemetry scopes.
 3. **MockBypass**: Checks for `mock_response` attributes; if present, short-circuits the outbound flow.
 4. **PromptTransformer**: Injects text based on `prompt_id` and formats tools.
@@ -151,7 +151,7 @@ External invocations of DPHI computing resources require payment proofs. Before 
 
 1. **Receipt Extraction**: Extracts the `Fuel-Receipt` from the HTTP headers.
 2. **Kernel Intent (DphiBroker)**: Issues an `AUTHORIZE_INTENT` to the WASM kernel to validate the receipt and retrieve the authorized Fuel Budget and audit hash.
-3. **Pipeline Injection**: Injects the `kernel_auth` payload into the `metadata` kwargs of the `acompletion` function, delegating budget enforcement to the pipeline middlewares.
+3. **Pipeline Injection**: Injects the `node_auth` payload into the `metadata` kwargs of the `acompletion` function, delegating budget enforcement to the pipeline middlewares.
 
 ### 6.2. Drop-in Replacement
 

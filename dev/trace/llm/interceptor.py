@@ -184,7 +184,7 @@ class LlmTraceProfile:
             "mock_response": "This is a bypassed mock response.",
             "mock_delay": 0.1,
             "stream": False,
-            "metadata": {"kernel_auth": {"audit_hash": "audit_mock_shared"}}
+            "metadata": {"node_auth": {"audit_hash": "audit_mock_shared"}}
         }
 
     def verify_mock_bypass(self, response: Union[Dict[str, Any], Any]) -> bool:
@@ -206,7 +206,7 @@ class LlmTraceProfile:
             "model": self.target_model,
             "messages": [{"role": "user", "content": "Write a very long essay about the universe."}],
             "stream": True,
-            "metadata": {"kernel_auth": {"fuel_budget": budget}}
+            "metadata": {"node_auth": {"fuel_budget": budget}}
         }
 
     def extract_stream_finish_reason(self, chunk: Union[Dict[str, Any], Any]) -> Optional[str]:
@@ -224,7 +224,7 @@ class LlmTraceProfile:
             "messages": [{"role": "user", "content": "Trigger fallback mechanism"}],
             "fallbacks": fallbacks,
             "stream": False,
-            "metadata": {"kernel_auth": {"audit_hash": "audit_fallback_shared"}}
+            "metadata": {"node_auth": {"audit_hash": "audit_fallback_shared"}}
         }
 
     def verify_fallback(self, response: Union[Dict[str, Any], Any], expected_models: List[str]) -> bool:
@@ -251,9 +251,9 @@ class LlmTraceProfile:
         return {
             "model": self.target_model,
             "messages": [{"role": "user", "content": "Testing prompt transformer"}],
-            "tools": [],  # 빈 리스트 주입 (의도적 Mutation 유발)
+            "tools": [],
             "stream": False,
-            "metadata": {"kernel_auth": {"audit_hash": "audit_mutation_shared"}}
+            "metadata": {"node_auth": {"audit_hash": "audit_mutation_shared"}}
         }
 
     def verify_prompt_mutation(self, response: Union[Dict[str, Any], Any]) -> bool:
