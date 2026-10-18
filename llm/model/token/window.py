@@ -6,7 +6,7 @@ import tiktoken
 from fiber.llm.model.token.encoder import get_default_encoding
 from fiber.llm.provider.cost.registry import ModelCostRegistry
 from fiber.llm.types.provider.openai import AllMessageValues
-from xphi.arch.bound.client.constants import DEFAULT_TRIM_RATIO
+from xphi.arch.contract.config.constants import DEFAULT_TRIM_RATIO
 
 from fiber.llm.model.token.counter import token_counter
 from xphi.watcher.plane.emitter import get_emitter

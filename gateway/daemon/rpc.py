@@ -81,7 +81,7 @@ class IngressPolicyEngine:
         )
 
 class LogStreamStore:
-    def __init__(self, gateway: StoreGateway = None, storage_endpoint: str = "http://internal-store:8000"):
+    def __init__(self, gateway: StoreGateway = None, storage_endpoint: str = "http://internal-store:8356"):
         self.gateway = gateway or StoreGateway()
         self.storage_endpoint = storage_endpoint
         self._client = httpx.AsyncClient(base_url=self.storage_endpoint, timeout=5.0)

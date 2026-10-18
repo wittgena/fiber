@@ -48,7 +48,7 @@ from fiber.llm.types.inter.response import (
 
 from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
 from fiber.gateway.llm.inter.callback.manager import CallbackManager, llm_chat_callback, llm_completion_callback
-from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
+from xphi.arch.contract.config.constants import DEFAULT_TEMPERATURE
 from fiber.gateway.llm.inter.base import InterLLM
 from fiber.gateway.llm.inter.handler.util import ToolSelection
 from fiber.llm.types.inter.base import Model

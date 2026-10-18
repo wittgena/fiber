@@ -16,7 +16,7 @@ from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, Workf
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
+from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, DPHI_ENV
 
 log = get_emitter("e2e.gateway.compliance")
 
@@ -157,7 +157,7 @@ class ComplianceSuiteWorkflow(Workflow):
 class ComplianceSuiteRunner:
     def __init__(self):
         self.log = log
-        self.base_url = XPHI_BASE
+        self.base_url = FIBER_GATEWAY_URL
         self.workflow = ComplianceSuiteWorkflow(base_url=self.base_url)
 
     def _print_report(self):

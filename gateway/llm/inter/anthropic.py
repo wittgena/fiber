@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from fiber.llm.types.inter.tool import BaseTool
 
 from xphi.arch.contract.config import env
-from xphi.arch.bound.client.constants import DEFAULT_TEMPERATURE
+from xphi.arch.contract.config.constants import DEFAULT_TEMPERATURE
 
 logger = logging.getLogger(__name__)
 DEFAULT_ANTHROPIC_MODEL = "claude-2.1"

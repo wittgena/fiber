@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from fiber.gateway.llm.inter.embedding.base import BaseEmbedding
 from fiber.gateway.llm.state.pydantic import Field, PrivateAttr
-from xphi.arch.bound.client.constants import DEFAULT_EMBED_BATCH_SIZE
+from xphi.arch.contract.config.constants import DEFAULT_EMBED_BATCH_SIZE
 from fiber.gateway.llm.inter.callback.manager import CallbackManager
 from ollama import Client, AsyncClient
 

@@ -30,7 +30,7 @@ api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 class Config(BaseModel):
     web_url: str = ""
-    internal_edge_url: str = ""
+    gateway_url: str = ""
     allow_cors_origins: list[str] = ["http://localhost:3000"] 
     session_api_keys: list[str] = []
     pubsub_channel: str = "audit_channel"

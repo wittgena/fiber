@@ -33,7 +33,7 @@ from fiber.gateway.llm.state.pydantic import (
 from fiber.llm.types.inter.component import ImageDocument
 from fiber.gateway.llm.inter.handler.util import resolve_binary
 from fiber.llm.model.token.encoder import get_tokenizer
-from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
+from xphi.arch.contract.config.constants import DEFAULT_CONTEXT_WINDOW, DEFAULT_NUM_OUTPUTS
 
 _logger = logging.getLogger(__name__)
 
