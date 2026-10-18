@@ -11,6 +11,7 @@ from typing import Any, List, Dict
 from fiber.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from fiber.infra.watcher.plane.kube import KubeOrchestrator, KubeContext
 
+from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
@@ -91,13 +92,14 @@ class KubeWorkflowScene:
 
     # SCENE B: External SDK Ingress Validation (Port Forwarding & Compliance)
     async def phase_compliance_sdk_test(self):
-        self.log.info("  ▶️ [TEST-B1] Edge Compliance & WAF Audit (via Port Forwarding)")
-        local_port = 8000
-        
+        self.log.info("[TEST-B1] Edge Compliance & WAF Audit (via Port Forwarding)")
+        local_port = DEFAULT_GATEWAY_PORT
+        target_port = DEFAULT_GATEWAY_PORT
+
         try:
             # 1. Start Port Forwarding Tunnel
             tunnel_ok = await self.adapter.start_port_forward(
-                local_port=local_port, target_port=8000, service_name="fiber-gateway"
+                local_port=local_port, target_port=target_port, service_name="fiber-gateway"
             )
             if not tunnel_ok:
                 raise RuntimeError("Failed to establish port-forwarding for SDK tests.")

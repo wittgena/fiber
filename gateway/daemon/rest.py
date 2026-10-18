@@ -10,6 +10,8 @@ from contextlib import suppress
 from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT, FIBER_GATEWAY_URL, REDIS_URL, PUBSUB_CHANNEL
+from xphi.arch.contract.config.constants import MAX_PAYLOAD_SIZE, WASM_TIMEOUT
 from fiber.gateway.rest.payload import create_app, Config
 from xphi.arch.contract.registry.unified import contract
 from xphi.node.ops.daemon.base import AbstractDaemon
@@ -53,10 +55,9 @@ class RestEdgeDaemon(AbstractDaemon):
     def __init__(self, ctx):
         super().__init__("RestEdgeDaemon")
         self.ctx = ctx
-        self.target_port = int(os.getenv("REST_PORT", 8000))
+        self.target_port = DEFAULT_GATEWAY_PORT
         self.server: Optional[uvicorn.Server] = None
         self._server_task: Optional[asyncio.Task] = None
-        
         self._tunnel = None
 
     async def run(self):
@@ -70,13 +71,13 @@ class RestEdgeDaemon(AbstractDaemon):
                 log.info(f"[{self.name}] PhaseStore not found in context. Bootstrapping local PhaseStore.")
                 phase_store = PhaseStore()
 
-            resolved_internal_url = os.getenv("INTERNAL_EDGE_URL", f"http://127.0.0.1:{self.target_port}")
+            resolved_url = os.getenv("FIBER_GATEWAY_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
-                internal_edge_url=resolved_internal_url,
-                redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"),
-                max_payload_size=int(os.getenv("MAX_PAYLOAD_SIZE", 1024 * 1024 * 10)),
-                wasm_timeout=float(os.getenv("WASM_TIMEOUT", 10.0)),
-                pubsub_channel=os.getenv("PUBSUB_CHANNEL", "audit_channel")
+                internal_edge_url=resolved_url,
+                redis_url=REDIS_URL,
+                max_payload_size=MAX_PAYLOAD_SIZE, 
+                wasm_timeout=WASM_TIMEOUT,
+                pubsub_channel=PUBSUB_CHANNEL,
             )
 
             injected_app = create_app(
@@ -97,7 +98,7 @@ class RestEdgeDaemon(AbstractDaemon):
             
             self._server_task = asyncio.create_task(self.server.serve())
             log.info(f"[{self.name}] REST Edge listening on http://127.0.0.1:{self.target_port}")
-            log.info(f"[{self.name}] Routing internal traffic to: {resolved_internal_url}")
+            log.info(f"[{self.name}] Routing internal traffic to: {resolved_url}")
             
             while self.running:
                 if self._server_task.done():

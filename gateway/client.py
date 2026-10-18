@@ -5,9 +5,10 @@ from dataclasses import dataclass, asdict
 from typing import Dict, Any, Optional, List
 import httpx
 
+from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.arch.bound.client.http import VerifiedHttpClient
-from xphi.arch.model.edge.receipt import AuditLogRequest, AuditEvent, ExportLogsServiceRequest, ResourceLogs, ScopeLogs, LogRecord, KeyValue
-from xphi.arch.model.edge.receptor import EdgeHeader
+from xphi.arch.model.schema.audit import AuditLogRequest, AuditEvent, ExportLogsServiceRequest, ResourceLogs, ScopeLogs, LogRecord, KeyValue
+from fiber.infra.rpc.schema.receipt import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for Edge Gateway"""
@@ -102,7 +103,7 @@ class StrictPayloadFactory:
 
 """Core SDK Client"""
 class GatewayClient:
-    def __init__(self, base_url: str = "http://localhost:8000", api_key: str = ""):
+    def __init__(self, base_url: str = f"http://localhost:{DEFAULT_GATEWAY_PORT}", api_key: str = ""):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.http_timeout = httpx.Timeout(60.0, connect=5.0)

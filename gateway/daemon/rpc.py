@@ -20,8 +20,8 @@ from xphi.arch.contract.registry.unified import contract
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from xphi.arch.bound.adapter.pta import PtaAdapter
 from xphi.arch.bound.adapter.pta import NodeSigner
-from xphi.arch.model.edge.receipt import LogstEvent
-from xphi.arch.model.edge.stream import LogicStream, StreamMetadata, StreamIdentity, LogicPayload, ActionIntent, ProtocolSource
+from xphi.arch.model.schema.audit import LogstEvent
+from xphi.arch.model.schema.stream import LogicStream, StreamMetadata, StreamIdentity, LogicPayload, ActionIntent, ProtocolSource
 
 from xphi.state.anchor.gateway import StoreGateway
 from xphi.state.anchor.nexus import NexusAnchor
@@ -81,7 +81,7 @@ class IngressPolicyEngine:
         )
 
 class LogStreamStore:
-    def __init__(self, gateway: StoreGateway = None, storage_endpoint: str = "http://internal-store:8000"):
+    def __init__(self, gateway: StoreGateway = None, storage_endpoint: str = "http://internal-store:8356"):
         self.gateway = gateway or StoreGateway()
         self.storage_endpoint = storage_endpoint
         self._client = httpx.AsyncClient(base_url=self.storage_endpoint, timeout=5.0)

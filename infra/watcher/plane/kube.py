@@ -8,11 +8,13 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple, Optional, Type
 
+from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.arch.dev.tracer.kube import KubeTracer, KubeStatusAuditor
 from xphi.arch.dev.tracer.base import SystemBound, PhaseOp, ExecutorOp
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.watcher.plane.infra.yaml.deployment import KubeBlueprint
 from xphi.node.space.bind.resolver import resolve_path
+
 
 COMPOSE_ROOT = resolve_path("time") / "compose"
 
@@ -62,7 +64,7 @@ class MinikubeNativeAdapter:
         code, out, _ = await self.boundary.run_command(cmd, capture=True)
         return out.strip().replace("'", "") if code == 0 else ""
 
-    async def start_port_forward(self, local_port: int = 8000, target_port: int = 8000, service_name: str = "fiber-gateway") -> bool:
+    async def start_port_forward(self, local_port: int = DEFAULT_GATEWAY_PORT, target_port: int = DEFAULT_GATEWAY_PORT, service_name: str = "fiber-gateway") -> bool:
         if local_port in self._port_forward_processes:
             self.log.warning(f"  ├─ [PortForward] Local port {local_port} is already being forwarded.")
             return True

@@ -17,13 +17,13 @@ from contextlib import suppress
 import httpx
 
 from fiber.gateway.client import Endpoints, StrictPayloadFactory, Endpoints
-from xphi.arch.contract.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
+from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
-from xphi.arch.contract.config.env import XPHI_BASE, DPHI_ENV
+from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, DPHI_ENV
 
 log = get_emitter("e2e.gateway.security")
 
@@ -243,7 +243,7 @@ class SecuritySuiteRunner:
             self.log.critical(f"⚠ SECURITY HALT: Cannot run E2E penetration tests in strict environment ({DPHI_ENV}).")
             exit(1)
             
-        self.base_url = XPHI_BASE
+        self.base_url = FIBER_GATEWAY_URL
         self.workflow = SecurityBoundWorkflow(base_url=self.base_url)
 
     def _print_report(self):

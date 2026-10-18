@@ -5,8 +5,8 @@ import uuid
 from typing import Dict, Any
 from pydantic import ValidationError
 
-from xphi.arch.model.edge.receptor import EdgeState, AnchorProposalRequest, IntentValidationRequest, ExecuteComputeRequest
-from xphi.arch.model.edge.receipt import PhaseStoreAppendRecord
+from fiber.infra.rpc.schema.receipt import EdgeState, AnchorProposalRequest, IntentValidationRequest, ExecuteComputeRequest
+from xphi.arch.model.schema.audit import PhaseStoreAppendRecord
 from xphi.arch.bound.adapter.pta import PtaTransaction, PtaInput, PtaPointer, create_state_anchor
 from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 

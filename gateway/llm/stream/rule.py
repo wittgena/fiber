@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Union
 from jsonschema import ValidationError, validate
 from typing import Optional
 
-from xphi.arch.bound.client.constants import DEFAULT_MAX_RECURSE_DEPTH
+from xphi.arch.contract.config.constants import DEFAULT_MAX_RECURSE_DEPTH
 from fiber.llm.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
 from xphi.arch.contract.config.resolver import config

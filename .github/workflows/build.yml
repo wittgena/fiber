@@ -75,19 +75,19 @@ jobs:
           echo "${{ secrets.DEV_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Boot Kernel (Background)
+      - name: Boot Node (Background)
         env:
           REDIS_URL: "redis://localhost:6379/0" 
           XPHI_ENV: "ci"
           XPHI_WORKERS: "2"
         run: |
-          echo "Starting Kernel in background..."
-          nohup python -u -m xphi.node.ops.boot > kernel_boot.log 2>&1 &
-          echo "KERNEL_PID=\(!" >>\)GITHUB_ENV
+          echo "Starting Node in background..."
+          nohup python -u -m xphi.node.ops.boot > node_boot.log 2>&1 &
+          echo "NODE_PID=\(!" >>\)GITHUB_ENV
 
-          echo "Waiting for Kernel to become ready on port 8000..."
-          timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/compliance/keys > /dev/null; do sleep 1; done'
-          echo "Kernel is fully up and running!"
+          echo "Waiting for Node to become ready on port 8356..."
+          timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8356/v1/compliance/keys > /dev/null; do sleep 1; done'
+          echo "Node is fully up and running!"
 
       - name: Run E2E Edge Test
         env:
@@ -97,7 +97,7 @@ jobs:
           python -m fiber.dev.e2e.gateway.compliance
           python -m fiber.dev.e2e.gateway.security
 
-      - name: 🧹 Execute Reaper (Teardown)
+      - name: Execute Reaper (Teardown)
         if: always()
         env:
           REDIS_URL: "redis://localhost:6379/0" 
@@ -106,9 +106,9 @@ jobs:
           echo "Executing Node Reaper..."
           python -m xphi.node.ops.reaper
           
-          if kill -0 ${{ env.KERNEL_PID }} 2>/dev/null; then
+          if kill -0 ${{ env.NODE_PID }} 2>/dev/null; then
             echo "Reaper did not terminate the process. Forcing kill..."
-            kill ${{ env.KERNEL_PID }} || true
+            kill ${{ env.NODE_PID }} || true
           fi
           echo "Node reaped cleanly."
 

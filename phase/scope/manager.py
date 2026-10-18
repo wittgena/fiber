@@ -14,6 +14,7 @@ import httpx
 
 from fiber.phase.scope.local.llama import LlamaServer
 
+from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.arch.contract.config import env
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
@@ -38,11 +39,11 @@ def get_free_port(starting_port: int, max_port: int = 8999) -> int:
 class SurfaceConfig:
     surface_type: str = "local"
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = DEFAULT_GATEWAY_PORT
     timeout: int = 30
     show_logs: bool = True
     use_proxy: bool = False
-    server_url: str = "http://localhost:8000"
+    server_url: str = f"http://localhost:{DEFAULT_GATEWAY_PORT}"
     workspace_ref: Optional[str] = None
     session_api_key: Optional[str] = None
     engine_factory: Optional[Callable[..., Any]] = None

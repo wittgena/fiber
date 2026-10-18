@@ -14,7 +14,7 @@ from fiber.gateway.llm.state.pydantic import Field
 from fiber.gateway.llm.inter.handler.converter import async_stream_completion_response_to_chat_response, completion_response_to_chat_response, stream_completion_response_to_chat_response
 from fiber.gateway.llm.inter.openai import OpenAI, Tokenizer
 
-from xphi.arch.bound.client.constants import DEFAULT_CONTEXT_WINDOW
+from xphi.arch.contract.config.constants import DEFAULT_CONTEXT_WINDOW
 
 class OpenAILike(OpenAI):
     context_window: int = Field(

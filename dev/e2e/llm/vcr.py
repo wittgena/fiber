@@ -20,7 +20,7 @@ from fiber.dev.trace.llm.base import (
     ReportMsg
 )
 
-from xphi.arch.contract.workflow import WorkflowMessage, step
+from xphi.state.topos.workflow import WorkflowMessage, step
 from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.arch.bound.event.next import next_trace_id
 

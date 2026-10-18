@@ -15,7 +15,7 @@ from fiber.dev.trace.llm.base import (
 from fiber.dev.trace.llm.interceptor import DebugTracer
 from fiber.dev.trace.llm.router import OnnxSemanticRouter
 from fiber.gateway.llm.state.traverser import StateTraverser
-from xphi.arch.contract.workflow import WorkflowMessage, step
+from xphi.state.topos.workflow import WorkflowMessage, step
 
 class HardRuleMsg(WorkflowMessage): pass
 class SoftRuleMsg(WorkflowMessage): pass

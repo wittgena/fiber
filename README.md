@@ -1,4 +1,5 @@
-# README
+# fiber.README
+@lineage: README
 **Deterministic LLM Pipeline**
 
 Fiber is an asynchronous execution pipeline designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables idempotent offline testing.

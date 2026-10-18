@@ -57,7 +57,7 @@ echo "[CI-SYNC] 2. Booting Kernel (Background)..."
 nohup python -u -m xphi.node.ops.boot > kernel_boot.log 2>&1 &
 
 echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
-timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8000/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
+timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8356/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
 echo "Kernel is fully up and running!"
 
 echo "[CI-SYNC] 4. Executing E2E Gateway Client..."

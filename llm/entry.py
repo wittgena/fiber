@@ -12,7 +12,7 @@ from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.eco import UnsupportedParamsError
 
-from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
+from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("llm.entry")
@@ -56,9 +56,9 @@ def _ensure_kernel_auth(kwargs: Dict[str, Any]) -> Dict[str, Any]:
         metadata = {}
         kwargs["metadata"] = metadata
         
-    if DphiKey.KERNEL_AUTH.value not in metadata:
+    if BrokerKey.NODE_AUTH.value not in metadata:
         tenant_id = kwargs.pop("tenant_id", "internal_system")
-        metadata[DphiKey.KERNEL_AUTH.value] = KernelAuthPayload(
+        metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload(
             tenant_id=tenant_id,
             fuel_budget=float('inf'),
             is_enforced=False

@@ -6,7 +6,7 @@ import struct
 from typing import Tuple, Union
 
 from xphi.arch.bound.client.http import get_client, SafeHttpClient
-from xphi.arch.bound.client.constants import (
+from xphi.arch.contract.config.constants import (
     DEFAULT_IMAGE_HEIGHT,
     DEFAULT_IMAGE_WIDTH,
     MAX_IMAGE_URL_DOWNLOAD_SIZE_MB,

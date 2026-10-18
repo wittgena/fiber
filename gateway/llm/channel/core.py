@@ -21,7 +21,7 @@ from fiber.gateway.llm.param.processor import CompletionProcessor, EmbeddingProc
 from fiber.llm.model.router.adapter import AdapterRegistry
 
 from xphi.arch.bound.event.next import next_trace_id
-from xphi.arch.model.dphi.auth import DphiKey, KernelAuthPayload
+from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.state.phase.channel import ChannelPipeline, ChannelContext, DuplexChannel, RpcBridge
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -53,7 +53,7 @@ class ContextBinder(DuplexChannel):
             resolved_trace_id = next_trace_id(deterministic_seed=None)
 
         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
-        kernel_auth = metadata.get(DphiKey.KERNEL_AUTH.value, {})
+        kernel_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
         if isinstance(kernel_auth, dict):
             tenant_id = kernel_auth.get("tenant_id", "anonymous")
         else:

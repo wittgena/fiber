@@ -27,7 +27,7 @@ from fiber.dev.trace.llm.base import (
 
 from fiber.infra.watcher.finops import default_finops_watcher
 
-from xphi.arch.contract.workflow import StopMessage, WorkflowMessage, step
+from xphi.state.topos.workflow import StopMessage, WorkflowMessage, step
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.arch.bound.event.next import next_trace_id
 

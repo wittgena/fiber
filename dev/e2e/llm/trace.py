@@ -17,7 +17,7 @@ from fiber.dev.trace.llm.base import (
 from fiber.dev.trace.llm.interceptor import DebugTracer
 from fiber.dev.trace.llm.cache import EdgeRedisCache
 from fiber.dev.trace.llm.guardrail import CustomRegexBlockingGuardrail
-from xphi.arch.contract.workflow import WorkflowMessage, step
+from xphi.state.topos.workflow import WorkflowMessage, step
 
 class BaselineTraceMsg(WorkflowMessage): pass
 class StreamTraceMsg(WorkflowMessage): pass

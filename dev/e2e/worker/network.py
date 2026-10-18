@@ -14,6 +14,7 @@ from fiber.phase.cli.connect import resolve_connector_spec
 from fiber.gateway.mcp.connector import MCPServerConnector
 from fiber.gateway.mcp.payload import McpPayloadBuilder
 
+from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 
@@ -164,7 +165,7 @@ class MCPNetworkPipeline(BaseBridgePipeline):
 
 
 async def run_suite() -> None:
-    pipeline = MCPNetworkPipeline(E2EConfig(host="127.0.0.1", port=8356, protocol="http"))
+    pipeline = MCPNetworkPipeline(E2EConfig(host="127.0.0.1", port=DEFAULT_GATEWAY_PORT, protocol="http"))
     results: List[TestResult] = await pipeline.run_pipeline()
     all_passed = all(r.passed for r in results)
 
