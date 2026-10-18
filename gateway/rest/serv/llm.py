@@ -45,7 +45,7 @@ async def public_chat_completions(
     req_id = f"llm_chat_{int(time.time() * 1000)}"
     with flow_scope(phase="LLM_ORCHESTRATION", bound="edge.llm", req_id=req_id):
         try:
-            kernel_auth = await KernelAuthenticator.authorize_intent(
+            node_auth = await KernelAuthenticator.authorize_intent(
                 request=request,
                 action=BrokerAction.LLM_COMPUTE.value,
                 model=payload.model,
@@ -63,7 +63,7 @@ async def public_chat_completions(
             metadata = kwargs.get("metadata", {})
             metadata[BrokerKey.FUEL_RECEIPT.value] = internal_receipt
             metadata[BrokerKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
-            metadata[BrokerKey.NODE_AUTH.value] = kernel_auth.model_dump()
+            metadata[BrokerKey.NODE_AUTH.value] = node_auth.model_dump()
             kwargs["metadata"] = metadata
 
             response = await PipelineBootstrap.execute_completion(
@@ -107,7 +107,7 @@ async def public_embeddings(
     )
 
     try:
-        kernel_auth = await KernelAuthenticator.authorize_intent(
+        node_auth = await KernelAuthenticator.authorize_intent(
             request=request,
             action=BrokerAction.LLM_EMBEDDING.value,
             model=model
@@ -122,7 +122,7 @@ async def public_embeddings(
         metadata = kwargs.get("metadata", {})
         metadata[BrokerKey.FUEL_RECEIPT.value] = internal_receipt
         metadata[BrokerKey.CLIENT_HOST.value] = request.client.host if request.client else "unknown"
-        metadata[BrokerKey.NODE_AUTH.value] = kernel_auth.model_dump()
+        metadata[BrokerKey.NODE_AUTH.value] = node_auth.model_dump()
         kwargs["metadata"] = metadata
 
         response = await PipelineBootstrap.execute_embedding(

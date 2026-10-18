@@ -53,11 +53,11 @@ class ContextBinder(DuplexChannel):
             resolved_trace_id = next_trace_id(deterministic_seed=None)
 
         resolved_session_id = msg.get("session_id") or metadata.get("session_id")
-        kernel_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
-        if isinstance(kernel_auth, dict):
-            tenant_id = kernel_auth.get("tenant_id", "anonymous")
+        node_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
+        if isinstance(node_auth, dict):
+            tenant_id = node_auth.get("tenant_id", "anonymous")
         else:
-            tenant_id = getattr(kernel_auth, "tenant_id", "anonymous")
+            tenant_id = getattr(node_auth, "tenant_id", "anonymous")
         
         ctx.set_attr("tenant_id", tenant_id)
 

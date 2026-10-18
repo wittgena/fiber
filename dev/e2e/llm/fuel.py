@@ -27,6 +27,7 @@ from fiber.dev.trace.llm.base import (
 
 from fiber.infra.watcher.finops import default_finops_watcher
 
+from xphi.arch.model.auth import NodeAuthPayload
 from xphi.state.topos.workflow import StopMessage, WorkflowMessage, step
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.arch.bound.event.next import next_trace_id
@@ -129,7 +130,12 @@ class LlmFuelWorkflow(E2EBaseWorkflow):
         scenario = "fuel_phase_2_consume"
         messages = [{"role": "user", "content": "Explain quantum computing in 2 sentences."}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        trace_ctx["metadata"]["kernel_auth"] = {"fuel_budget": 1000, "tenant_id": self.test_tenant, "is_enforced": True}
+        # trace_ctx["metadata"]["node_auth"] = {"fuel_budget": 1000, "tenant_id": self.test_tenant, "is_enforced": True}
+        trace_ctx["metadata"]["node_auth"] = NodeAuthPayload(
+            fuel_budget=1000,
+            tenant_id=self.test_tenant,
+            is_enforced=True
+        )
         
         try:
             os.environ["FIBER_ENFORCE_QUOTA"] = "false"
@@ -173,7 +179,11 @@ class LlmFuelWorkflow(E2EBaseWorkflow):
         scenario = "fuel_phase_3_hack"
         messages = [{"role": "user", "content": "Hack the planet"}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        trace_ctx["metadata"]["kernel_auth"] = {"fuel_budget": 999999, "tenant_id": "hacker"}
+        # trace_ctx["metadata"]["node_auth"] = {"fuel_budget": 999999, "tenant_id": "hacker"}
+        trace_ctx["metadata"]["node_auth"] = NodeAuthPayload(
+            fuel_budget=999999,
+            tenant_id="hacker",
+        )
         
         try:
             os.environ["FIBER_ENFORCE_QUOTA"] = "true"
@@ -211,7 +221,7 @@ class LlmFuelWorkflow(E2EBaseWorkflow):
         scenario = "fuel_phase_4_finops"
         messages = [{"role": "user", "content": "Write a long story about FinOps."}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        trace_ctx["metadata"]["kernel_auth"] = {"fuel_budget": 1000, "tenant_id": self.test_tenant, "is_enforced": True}
+        trace_ctx["metadata"]["node_auth"] = {"fuel_budget": 1000, "tenant_id": self.test_tenant, "is_enforced": True}
         
         default_finops_watcher.start()
         try:

@@ -10,7 +10,6 @@ import time
 from dataclasses import dataclass
 from typing import List, Tuple, Any, Optional
 
-from fiber.dev.ex.model.tier import model_tier_registry
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
@@ -160,9 +159,6 @@ def build_e2e_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     if not is_online and vcr_mode != "replay":
         log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
         resolved_model = "ollama/local-gemma-3"
-    elif not resolved_model:
-        optimal = model_tier_registry.get_optimal_model(requires_tools=False, min_cognitive_score=2)
-        resolved_model = f"{optimal[0]}/{optimal[1]}" if isinstance(optimal, tuple) else (f"gemini/{optimal}" if optimal else "gemini/gemini-3.1-flash-lite")
 
     scope_kwargs = {"use_proxy": use_proxy if is_online else False, "show_logs": True}
     run_context = {

@@ -54,19 +54,23 @@ class FuelBreaker(DuplexChannel):
         metadata = req_kwargs.get("metadata", {})
         
         # 권한 인가 및 예산(Budget) 제어를 위한 순수 Auth Payload 파싱
-        raw_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
-        kernel_auth = NodeAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or NodeAuthPayload())
-        
+        # raw_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
+        # node_auth = NodeAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or NodeAuthPayload())
         enforce_quota = os.getenv("FIBER_ENFORCE_QUOTA", "false").lower() == "true"
-        is_enforced = getattr(kernel_auth, "is_enforced", False)
+        # is_enforced = getattr(node_auth, "is_enforced", False)
+
+        node_auth: NodeAuthPayload = metadata.get(BrokerKey.NODE_AUTH.value)
+        if node_auth.is_enforced and node_auth.is_anonymous():
+            raise PermissionError("Strict Quota Enforcement blocked anonymous tenant.")
+        ctx.set_attr(BrokerKey.AUDIT_HASH.value, node_auth.audit_hash)
 
         # 보안 검증
-        if enforce_quota and not is_enforced:
-            log_pipeline.warning(f"[Security] Unauthorized API Access Attempt blocked. Tenant: {tenant_id}")
-            raise PermissionError(f"Strict Quota Enforcement is active. Missing valid Kernel Auth for tenant: {tenant_id}")
+        # if enforce_quota and not is_enforced:
+        #     log_pipeline.warning(f"[Security] Unauthorized API Access Attempt blocked. Tenant: {tenant_id}")
+        #     raise PermissionError(f"Strict Quota Enforcement is active. Missing valid Kernel Auth for tenant: {tenant_id}")
         
         # 예산 통제 로직
-        fuel_budget = getattr(kernel_auth, "fuel_budget", float('inf'))
+        fuel_budget = getattr(node_auth, "fuel_budget", float('inf'))
         if fuel_budget is None:
             fuel_budget = float('inf')
         
@@ -83,7 +87,7 @@ class FuelBreaker(DuplexChannel):
         # 차단기(Breaker) 가동을 위한 Context 상태 초기화
         ctx.set_attr(BrokerKey.FUEL_BUDGET.value, fuel_budget)
         ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, 0)
-        ctx.set_attr(BrokerKey.AUDIT_HASH.value, getattr(kernel_auth, "audit_hash", None))
+        ctx.set_attr(BrokerKey.AUDIT_HASH.value, getattr(node_auth, "audit_hash", None))
         
         return await ctx.fire_write(msg)
 
@@ -140,7 +144,6 @@ class FuelBreaker(DuplexChannel):
                     await raw_stream.aclose()
                 except Exception:
                     pass
-
 
 class BillingObserver(DuplexChannel):
     def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):

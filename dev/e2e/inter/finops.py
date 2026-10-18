@@ -33,6 +33,7 @@ from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
 import fiber.dev.worker.finops as worker_finops
 from fiber.infra.watcher.finops import default_finops_watcher
 
+from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.bound.event.next import next_trace_id
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
@@ -166,11 +167,16 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         scenario = "fuel_phase_4_finops"
         messages = [{"role": "user", "content": LONG_FINOPS_PROMPT}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        trace_ctx["metadata"]["kernel_auth"] = {
-            "fuel_budget": 1000,
-            "tenant_id": self.test_tenant,
-            "is_enforced": True
-        }
+        # trace_ctx["metadata"]["node_auth"] = {
+        #     "fuel_budget": 1000,
+        #     "tenant_id": self.test_tenant,
+        #     "is_enforced": True
+        # }
+        trace_ctx["metadata"]["node_auth"] = NodeAuthPayload(
+            fuel_budget=1000,
+            tenant_id=self.test_tenant,
+            is_enforced=True
+        )
         
         first_chunk_arrived = asyncio.Event()
 
@@ -203,10 +209,8 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
                     if chunks == 1:
                         first_chunk_arrived.set()
 
-                    # Replay(max speed) 환경에서도 외부 HTTP Kill-Switch 및 Pub/Sub 이벤트가
                     # 스트림 도중에 개입할 수 있도록 청크 간 미세 페이싱(50ms) 부여
                     await asyncio.sleep(0.05)
-
                 return chunks, char_len
 
             # Task-1: 메인 프로세스에서 장문 LLM 스트림 병렬 실행 시작
@@ -253,7 +257,6 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
             else:
                 os.environ.pop("FIBER_ENFORCE_QUOTA", None)
 
-
 class HybridSuiteRunner:
     def __init__(self, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
         self.vcr_config = vcr_config
@@ -274,7 +277,6 @@ class HybridSuiteRunner:
         else:
             log.critical("FINOPS FAILURE DETECTED.")
 
-
 def main(args_list: list[str] = None):
     parser = create_e2e_parser("FinOps Integration Test Runner")
     add_vcr_arguments(parser)
@@ -294,7 +296,6 @@ def main(args_list: list[str] = None):
         PhaseReactor.ignite(main_coro_func=app.execute)
     finally:
         VCRInjector.remove()
-
 
 if __name__ == "__main__":
     main()

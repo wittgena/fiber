@@ -50,21 +50,33 @@ def _route_interceptors(kwargs: Dict[str, Any]) -> Dict[str, Any]:
     kwargs["pipeline_hooks"] = hooks
     return kwargs
 
-def _ensure_kernel_auth(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-    metadata = kwargs.get("metadata")
-    if metadata is None:
-        metadata = {}
-        kwargs["metadata"] = metadata
-        
-    if BrokerKey.NODE_AUTH.value not in metadata:
-        tenant_id = kwargs.pop("tenant_id", "internal_system")
-        metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload(
-            tenant_id=tenant_id,
-            fuel_budget=float('inf'),
-            is_enforced=False
-        ).model_dump()
-        
+def _ensure_node_auth(kwargs: dict) -> dict:
+    metadata = kwargs.setdefault("metadata", {})
+    raw_auth = metadata.get(BrokerKey.NODE_AUTH.value)
+    
+    if isinstance(raw_auth, NodeAuthPayload):
+        pass
+    elif isinstance(raw_auth, dict):
+        metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload.model_validate(raw_auth)
+    else:
+        metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload()
     return kwargs
+
+# def _ensure_node_auth(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+#     metadata = kwargs.get("metadata")
+#     if metadata is None:
+#         metadata = {}
+#         kwargs["metadata"] = metadata
+        
+#     if BrokerKey.NODE_AUTH.value not in metadata:
+#         tenant_id = kwargs.pop("tenant_id", "internal_system")
+#         metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload(
+#             tenant_id=tenant_id,
+#             fuel_budget=float('inf'),
+#             is_enforced=False
+#         ).model_dump()
+        
+#     return kwargs
 
 """원격 Gateway 우회(Bypass) 전용 HTTP 클라이언트 로직"""
 async def _forward_completion_to_gateway(base_url: str, model: str, messages: List, **kwargs) -> Any:
@@ -122,7 +134,7 @@ async def acompletion(model: str, messages: List = None, **kwargs) -> Any:
         return await _forward_completion_to_gateway(base_url, model, messages, **kwargs)
     
     kwargs = _route_interceptors(kwargs)
-    kwargs = _ensure_kernel_auth(kwargs)
+    kwargs = _ensure_node_auth(kwargs)
     return await PipelineBootstrap.execute_completion(model, messages, **kwargs)
 
 def completion(model: str, messages: List = None, **kwargs) -> Any:
@@ -149,7 +161,7 @@ async def aembedding(*args, **kwargs) -> EmbeddingResponse:
         return await _forward_embedding_to_gateway(base_url, model, input_data, **kwargs)
         
     kwargs = _route_interceptors(kwargs)
-    kwargs = _ensure_kernel_auth(kwargs)
+    kwargs = _ensure_node_auth(kwargs)
     return await PipelineBootstrap.execute_embedding(model=model, input_data=input_data, **kwargs)
 
 def embedding(*args, **kwargs) -> EmbeddingResponse:
