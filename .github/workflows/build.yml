@@ -128,6 +128,12 @@ jobs:
           VCR_MODE=replay python -m fiber.dev.ex.switch
           fiber e2e inter.plane.flare --mode dev
       
+      - name: Run E2E Concurrency & Load Benchmark
+        env:
+          REDIS_URL: "redis://localhost:6379/0" 
+        run: |
+          fiber e2e inter.concurrency --vcr replay --concurrency 50
+
       - name: Run Router Semantic Routing Tests
         env:
           VCR_MODE: replay
