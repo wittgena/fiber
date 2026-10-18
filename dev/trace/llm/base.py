@@ -10,6 +10,7 @@ import time
 from dataclasses import dataclass
 from typing import List, Tuple, Any, Optional
 
+from fiber.dev.ex.model.fallback import fallback_model_registry
 from fiber.phase.scope.manager import managed_scope
 
 from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
@@ -35,7 +36,6 @@ class TraceTestResult:
     def status_icon(self) -> str:
         return "✅ PASS" if self.success else "❌ FAIL"
 
-# 워크플로우 공통 메시지
 class ReportMsg(WorkflowMessage): pass
 
 class E2EBaseWorkflow(Workflow):
@@ -142,7 +142,7 @@ def create_e2e_parser(description: str = "LLM E2E Test Runner") -> argparse.Argu
 
 def build_e2e_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     """네트워크 상태, 프록시, 최적 모델 등의 런타임 환경 컨텍스트를 구성합니다."""
-    def check_online(host: str = "8.8.8.8", port: int = 53, timeout: float = 0.5) -> bool:
+    def check_online(host: str = "8.8.8.8", port: int = 8356, timeout: float = 0.5) -> bool:
         try:
             socket.setdefaulttimeout(timeout)
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -156,14 +156,20 @@ def build_e2e_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
     vcr_mode = getattr(args, 'vcr', "live")
     
-    if not is_online and vcr_mode != "replay":
-        log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
-        resolved_model = "ollama/local-gemma-3"
+    if not resolved_model:
+        resolved_model = fallback_model_registry.get_fallback_model(is_online=is_online, test_mode=True)
+        log.info("[System Offline] fallback model: {resolved_model}")
+
+    # if not is_online and vcr_mode != "replay":
+    #     log.warning("🚨 [System Offline] Forcing fallback to Local Engine.")
+    #     resolved_model = "ollama/local-gemma-3"
+    # elif not resolved_model:
+    #     optimal = fallback_model_registry.get_optimal_model(requires_tools=False, min_cognitive_score=2)
+    #     resolved_model = f"{optimal[0]}/{optimal[1]}" if isinstance(optimal, tuple) else (f"gemini/{optimal}" if optimal else "gemini/gemini-3.1-flash-lite")
 
     scope_kwargs = {"use_proxy": use_proxy if is_online else False, "show_logs": True}
     run_context = {
         "use_proxy": scope_kwargs["use_proxy"], 
         "target_model": resolved_model,
     }
-    
     return scope_kwargs, run_context

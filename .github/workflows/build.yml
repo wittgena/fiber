@@ -123,6 +123,7 @@ jobs:
         env:
           REDIS_URL: "redis://localhost:6379/0" 
         run: |
+          fiber e2e inter.finops --vcr replay
           fiber e2e inter.wasm.gateway
           fiber e2e inter.wasm.phase
           VCR_MODE=replay python -m fiber.dev.ex.switch

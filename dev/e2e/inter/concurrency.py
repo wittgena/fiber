@@ -86,10 +86,9 @@ class PipelineConcurrencySuite(BaseBridgePipeline):
             Phase("Phase 3: Heterogeneous Sustained VU Pool (Unary + Stream + Aggregated)", self.phase_mixed_workload),
         ])
 
-        # 💡 [개선 포인트] VCR Replay 모드 시 벤치마크 지표의 실제 측정 대상 명시
         if not self.is_record:
             log.info(
-                "💡 [Benchmark Notice] VCR Replay mode active. "
+                "[Benchmark Notice] VCR Replay mode active. "
                 "Metrics (TTFT, Latency) strictly measure Core Pipeline Engine overhead "
                 "(event-loop routing, stream backpressure), NOT actual LLM inference times."
             )

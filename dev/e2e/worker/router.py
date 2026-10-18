@@ -10,6 +10,7 @@ import httpx
 
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.daemon.economy.pricing import DynamicPricingDaemon
 
 from fiber.gateway.mcp.connector import MCPServerConnector
 import fiber.dev.worker.eco.oracle as worker_oracle
@@ -17,7 +18,6 @@ import fiber.dev.worker.eco.finlib as worker_finlib
 import fiber.dev.worker.eco.margin as worker_margin
 import fiber.dev.worker.search.archive as worker_search
 
-from fiber.gateway.daemon.economy.pricing import DynamicPricingDaemon
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor

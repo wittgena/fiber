@@ -4,7 +4,7 @@ import hashlib
 import uuid
 from typing import Any, Dict, Optional
 
-from fiber.gateway.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
 from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.core import Usage
 

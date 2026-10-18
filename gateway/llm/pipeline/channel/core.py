@@ -1,4 +1,5 @@
-# fiber.gateway.llm.channel.core
+# fiber.gateway.llm.pipeline.channel.core
+## @lineage: fiber.gateway.llm.channel.core
 from __future__ import annotations
 
 import re
@@ -17,7 +18,7 @@ from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.mapping import exception_type
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
-from fiber.gateway.llm.param.processor import CompletionProcessor, EmbeddingProcessor
+from fiber.gateway.llm.stream.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.llm.model.router.adapter import AdapterRegistry
 
 from xphi.arch.bound.event.next import next_trace_id

@@ -19,7 +19,7 @@ from fiber.infra.e2e.config import Phase, E2EConfig
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.channel.fuel import FuelBreaker, BillingObserver
+from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 from fiber.gateway.rest.security import TokenTranslator
 from fiber.gateway.mcp.connector import MCPServerConnector
 

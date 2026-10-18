@@ -17,7 +17,7 @@ from fiber.infra.e2e.config import (
 )
 
 import fiber.infra.rpc.registry as rpc_registry
-from fiber.gateway.daemon.rpc import RpcWorkerDaemon
+from fiber.infra.daemon.rpc import RpcWorkerDaemon
 from fiber.gateway.rest.payload import create_app, Config
 
 from xphi.node.space.tunnel.factory import TunnelFactory
