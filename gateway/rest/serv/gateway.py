@@ -136,6 +136,10 @@ class TransitionBridge:
                     log.warning(f"[Bridge:Fuel] Fuel validation rejected", extra={"status_code": e.status_code, "detail": e.detail, **trace_ctx})
                     raise HTTPException(status_code=402, detail=f"Fuel/Intent Rejected: {e.detail}")
 
+        # [추가] 기성 IDE(Cursor/Claude)의 Long-Polling 지원을 위해 payload._meta.hold_on_yield 플래그 추출
+        hold_on_yield = payload.get("params", {}).get("_meta", {}).get("hold_on_yield", False)
+        trace_ctx["hold_on_yield"] = hold_on_yield
+
         await rpc.call(RpcMethod.MCP_STATE_PENDING_SEAL, {
             "handle_id": handle_id,
             "payload": payload,
@@ -160,9 +164,12 @@ class TransitionBridge:
 
         # 202 응답 시 제공될 Location 헤더
         location_header = {"Location": f"/v1/mcp-gateway/{target_server_id}/status/{handle_id}"}
+        
+        # 기성 IDE를 위한 Long-Hold 모드일 경우 타임아웃을 300초(5분)로 대폭 연장
+        wait_timeout = 300.0 if trace_ctx.get("hold_on_yield") else 30.0
 
         try:
-            async with asyncio.timeout(30.0):
+            async with asyncio.timeout(wait_timeout):
                 async for msg in pubsub.listen():
                     if msg and msg["type"] == "message":
                         state_data = json.loads(msg["data"])
@@ -173,7 +180,28 @@ class TransitionBridge:
                         
                         if status == "YIELD":
                             log.info(f"[Bridge:PubSub:Yield] Agent prompted for input", extra=trace_ctx)
-                            return JSONResponse(status_code=202, content=state_data.get("executable_payload", {}), headers=location_header)
+                            prompt_payload = state_data.get("executable_payload", {})
+                            
+                            # 외부 Side-Channel Glue(CLI, Telegram, Slack)가 즉시 인지하도록 이벤트 버스 발행
+                            yield_event = {
+                                "event": "MCP_PHASE_YIELD",
+                                "handle_id": handle_id,
+                                "target_server_id": target_server_id,
+                                "agent": trace_ctx.get("agent"),
+                                "prompt": prompt_payload
+                            }
+                            try:
+                                await tunnel.publish("eco.telemetry.events", json.dumps(yield_event))
+                                log.debug(f"[Bridge:Telemetry] YIELD event broadcasted to eco.telemetry.events", extra=trace_ctx)
+                            except Exception as emit_err:
+                                log.error(f"[Bridge:Telemetry:Error] Failed to broadcast YIELD: {emit_err}", extra=trace_ctx)
+                            
+                            # 기성 IDE(Cursor 등) 호환 모드일 경우 202로 끊지 않고 동일한 루프에서 RESOLVED 대기 연장
+                            if trace_ctx.get("hold_on_yield"):
+                                log.info(f"[Bridge:Hold] Holding HTTP connection for Out-of-Band RESUME...", extra=trace_ctx)
+                                continue
+                                
+                            return JSONResponse(status_code=202, content=prompt_payload, headers=location_header)
                         
                         elif status == "FAULTED":
                             raw_err = state_data.get("error_detail", "Execution Fault")
@@ -197,7 +225,7 @@ class TransitionBridge:
                                     
                             return executable_payload
         except asyncio.TimeoutError:
-            log.warning(f"[Bridge:PubSub:Timeout] 30s timeout reached. Broadcasting FORCE_ROLLBACK", extra=trace_ctx)
+            log.warning(f"[Bridge:PubSub:Timeout] {wait_timeout}s timeout reached. Broadcasting FORCE_ROLLBACK", extra=trace_ctx)
             
             try:
                 await rpc.publish_intent(
@@ -227,6 +255,7 @@ async def invoke_mcp_stateless(
     x_nonce: str = Header(..., alias="x-nonce"),
     x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),
     x_spiffe_id: Optional[str] = Header(None, alias="x-spiffe-id"),
+    x_fiber_hitl_mode: Optional[str] = Header(None, alias="x-fiber-hitl-mode"),  # hold_on_yield 명시적 요청
     rpc: InternalRpcClient = Depends(get_rpc_client)
 ):
     internal_receipt = getattr(request.state, "fuel_receipt", None)
@@ -235,7 +264,6 @@ async def invoke_mcp_stateless(
             target_server_id=target_server_id,
             agent_uri=x_spiffe_id or "spiffe://public/agent",
             proof_of_possession=x_dpop_proof,
-            # receipt=fuel_receipt,
             receipt=internal_receipt,
             client_ip=request.client.host if request.client else "0.0.0.0",
             nonce=x_nonce,
@@ -246,6 +274,15 @@ async def invoke_mcp_stateless(
         target_uri = str(request.url)
         target_method = request.method
         
+        # Unified endpoint 경유 여부 확인
+        is_unified = getattr(request.state, "is_unified_mcp", False)
+        
+        # 클라이언트가 명시적으로 'hold'를 요청했거나, Unified 라우팅을 거친 클라이언트(보통 기성 IDE)의 경우 Hold On Yield 활성화
+        if x_fiber_hitl_mode == "hold" or is_unified:
+            if "params" not in payload: payload["params"] = {}
+            if "_meta" not in payload["params"]: payload["params"]["_meta"] = {}
+            payload["params"]["_meta"]["hold_on_yield"] = True
+
         result = await adapter.invoke_mcp_sync(identity, payload, target_uri, target_method, rpc)
         return result
     except HTTPException:
@@ -380,6 +417,9 @@ async def invoke_unified_mcp(
     target_server_id, actual_tool_name = raw_name.split(NAMESPACE_DELIM, 1)
     params["name"] = actual_tool_name
     routed_payload = {**payload, "params": params}
+
+    # Unified Endpoint 경유 플래그 설정 (invoke_mcp_stateless 내부에서 hold_on_yield 처리에 활용됨)
+    request.state.is_unified_mcp = True
 
     return await invoke_mcp_stateless(
         request=request,

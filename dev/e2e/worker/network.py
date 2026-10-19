@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 
 import httpx
 
-from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.e2e.config import Phase, E2EConfig, TestResult, get_free_port
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 from fiber.infra.e2e.mcp.server import MockMcpServer
 from fiber.phase.cli.connect import resolve_connector_spec
@@ -165,7 +165,7 @@ class MCPNetworkPipeline(BaseBridgePipeline):
 
 
 async def run_suite() -> None:
-    pipeline = MCPNetworkPipeline(E2EConfig(host="127.0.0.1", port=DEFAULT_GATEWAY_PORT, protocol="http"))
+    pipeline = MCPNetworkPipeline(E2EConfig(host="127.0.0.1", port=get_free_port(DEFAULT_GATEWAY_PORT), protocol="http"))
     results: List[TestResult] = await pipeline.run_pipeline()
     all_passed = all(r.passed for r in results)
 

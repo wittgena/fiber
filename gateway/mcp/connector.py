@@ -8,15 +8,16 @@ from typing import Dict, Any, Optional, Protocol
 
 import orjson
 
-from fiber.infra.rpc.method import RpcMethod
 from fiber.gateway.mcp.payload import McpPayloadBuilder
 from fiber.gateway.mcp.registry import AdapterRegistry
+from fiber.gateway.mcp.intent import IntentLifecycleFSM, IntentState
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("mcp.connector")
+
 
 class MCPServerTransport(Protocol):
     async def start(self) -> None: ...
@@ -28,7 +29,14 @@ class MCPServerTransport(Protocol):
 
 
 class MCPServerConnector:
-    def __init__(self, target_id: str, execution_target: str, mode: str = "ephemeral", transport_type: str = "stdio"):
+    def __init__(
+        self,
+        target_id: str,
+        execution_target: str,
+        mode: str = "ephemeral",
+        transport_type: str = "stdio",
+        preflight_pattern: Optional[str] = None
+    ):
         self.target_id = target_id
         self.execution_target = execution_target.strip()
         self.mode = mode.lower().strip()
@@ -40,7 +48,6 @@ class MCPServerConnector:
         if self.transport_type not in ("stdio", "network"):
             raise ValueError(f"Invalid transport: {self.transport_type}. Must be stdio or network.")
 
-        # Unmanaged HTTP(S) URL 여부 판별 (표준 JSON-RPC 규격 준수 분기용)
         self.is_remote_url = (
             self.transport_type == "network"
             and self.execution_target.startswith(("http://", "https://"))
@@ -48,6 +55,9 @@ class MCPServerConnector:
 
         self.tunnel = None
         self.rpc = InternalRpcClient()
+        
+        # [확장] IntentLifecycleFSM에 preflight_pattern을 주입하여 서드파티 워커 대리 검증 기능 활성화
+        self.fsm = IntentLifecycleFSM(self.target_id, self.rpc, preflight_pattern=preflight_pattern)
         self.listen_channel = f"mcp.intent.queue.{self.target_id}"
         self.running = False
 
@@ -60,7 +70,6 @@ class MCPServerConnector:
         self._listener_task: Optional[asyncio.Task] = None
 
     def _create_transport(self, handle_id: str) -> MCPServerTransport:
-        """Transport 팩토리: 설정된 타입에 따라 적절한 전송 계층 객체를 동적으로 생성"""
         if self.transport_type == "network":
             from xphi.state.phase.network.transport import NetworkTransport
             return NetworkTransport(execution_target=self.execution_target, handle_id=handle_id)
@@ -68,32 +77,36 @@ class MCPServerConnector:
             from xphi.state.phase.network.transport import StdioTransport
             return StdioTransport(command=self.execution_target, handle_id=handle_id)
 
-    # MCP Payload 정규화 및 위임(Delegation) 공통 헬퍼
     def _prepare_ingress_payload(
         self, handle_id: str, payload: Dict[str, Any], is_resume: bool = False
     ) -> Dict[str, Any]:
         """
-        1) 요청 ID(handle_id) 바인딩
-        2) RESUME 액션일 때 내부 워커(최상단 키) vs 원격 표준 MCP 서버(params._meta) 분기 처리
-        3) 어댑터를 통한 데이터 정제 및 인증 헤더(_http_headers) 주입
+        내부 워커(AsyncWorkerProtocol)의 RESUME 언래핑 규격({"action": "RESUME", "payload": {...}})과
+        원격 표준 MCP 서버(params._meta.fiber_action) 규격을 정확히 분리하여 원본 prompt_id 유실을 방지합니다.
         """
-        rpc_payload = dict(payload)
-        rpc_payload["id"] = handle_id
-
         if is_resume:
             if not self.is_remote_url:
-                rpc_payload["action"] = "RESUME"
-            elif isinstance(rpc_payload.get("params"), dict):
-                params_copy = dict(rpc_payload["params"])
-                meta_copy = dict(params_copy.get("_meta", {}))
-                meta_copy["fiber_action"] = "RESUME"
-                params_copy["_meta"] = meta_copy
-                rpc_payload["params"] = params_copy
+                rpc_payload = {
+                    "id": handle_id,
+                    "action": "RESUME",
+                    "payload": dict(payload),  # 내부의 {"id": "prompt_txn_...", "result": ...} 보존
+                }
+            else:
+                rpc_payload = dict(payload)
+                rpc_payload["id"] = handle_id
+                if isinstance(rpc_payload.get("params"), dict):
+                    params_copy = dict(rpc_payload["params"])
+                    meta_copy = dict(params_copy.get("_meta", {}))
+                    meta_copy["fiber_action"] = "RESUME"
+                    params_copy["_meta"] = meta_copy
+                    rpc_payload["params"] = params_copy
+        else:
+            rpc_payload = dict(payload)
+            rpc_payload["id"] = handle_id
 
         return self.quarantine.translate_ingress(rpc_payload)
 
     async def _delegate_to_core(self, rpc_req: Dict[str, Any]) -> Dict[str, Any]:
-        """에이전트의 rpc_delegate 요청을 코어 RPC로 위임하고 McpPayloadBuilder로 표준 응답 생성"""
         call_id = rpc_req.get("id")
         params = rpc_req.get("params") or {}
         target_method = params.get("target_method")
@@ -106,27 +119,16 @@ class MCPServerConnector:
             log.error(f"[Connector] Failed to delegate agent RPC ({target_method}): {e}")
             return McpPayloadBuilder.error(call_id, -32000, f"Core delegation failure: {e}")
 
-    async def _resolve_bridge_state(
-        self,
-        handle_id: str,
-        status: str,
-        executable_payload: Optional[Dict[str, Any]] = None,
-        error_detail: Optional[str] = None,
-    ) -> None:
-        """Core 브릿지로 인텐트 최종 상태(RESOLVED / YIELD / FAULTED) 보고"""
-        state_msg: Dict[str, Any] = {"handle_id": handle_id, "status": status}
-        if executable_payload is not None:
-            state_msg["executable_payload"] = executable_payload
-        if error_detail is not None:
-            state_msg["error_detail"] = error_detail
-        await self.rpc.call(RpcMethod.MCP_BRIDGE_RESOLVE_STATE, state_msg)
-
     @staticmethod
     def _is_elicitation(response: Dict[str, Any]) -> bool:
         method = response.get("method")
         return bool(method and "elicitation" in str(method))
 
-    # Connector Lifecycle & IO Loops
+    def _clear_pending_future(self, handle_id: str):
+        future = self.pending_requests.pop(handle_id, None)
+        if future and not future.done():
+            future.cancel()
+
     async def run(self):
         self.tunnel = await TunnelFactory.get_default()
         pubsub = self.tunnel.pubsub()
@@ -160,9 +162,8 @@ class MCPServerConnector:
             await pubsub.unsubscribe(self.listen_channel)
             await pubsub.close()
 
-            for future in self.pending_requests.values():
-                if not future.done():
-                    future.cancel()
+            for handle_id in list(self.pending_requests.keys()):
+                self._clear_pending_future(handle_id)
             self.pending_requests.clear()
 
             if self.shared_transport:
@@ -176,7 +177,6 @@ class MCPServerConnector:
             self.active_sandboxes.clear()
 
     async def _shared_stdout_listener(self):
-        """linear/multiplex 모드에서 백그라운드로 Egress Stream을 수신하여 Future를 Resolve"""
         while self.running and self.shared_transport:
             try:
                 raw_output = await self.shared_transport.read_egress_stream()
@@ -188,30 +188,24 @@ class MCPServerConnector:
                     continue
 
                 response = self.quarantine.translate_egress(raw_str)
-                if not response:
-                    # SSE 제어 프레임('event: message', ': keep-alive') 등 빈 dict 반환 시 즉시 스킵
-                    continue
-                if not isinstance(response, dict):
-                    log.warning(f"[Connector] Ignored non-dict egress payload: {response}")
+                if not response or not isinstance(response, dict):
                     continue
 
                 req_id = response.get("id")
 
-                # In-Bus Worker Chaining (rpc_delegate) 처리
                 if response.get("method") == "rpc_delegate":
                     asyncio.create_task(self._handle_agent_rpc_delegation(response))
                     continue
 
-                # MRTR Elicitation (YIELD) 감지 및 파킹
                 if self._is_elicitation(response):
-                    log.warning(f"[Connector] TRAP: Elicitation (YIELD) detected for {req_id}")
+                    # [정렬] multiplex/linear 큐 모드에서 prompt_ 접두사를 제거하여 원본 트랜잭션 handle_id를 복원합니다.
+                    canonical_id = str(req_id).removeprefix("prompt_")
+                    log.warning(f"[Connector] TRAP: Elicitation (YIELD) detected for {canonical_id}")
                     if self.mode == "linear":
                         log.error("FATAL: Linear mode worker yielded! This blocks the entire queue.")
 
-                    await self._resolve_bridge_state(req_id, "YIELD", executable_payload=response)
-                    future = self.pending_requests.pop(req_id, None)
-                    if future and not future.done():
-                        future.cancel()
+                    await self.fsm.transition(canonical_id, IntentState.YIELDED, executable_payload=response)
+                    self._clear_pending_future(canonical_id)
                     continue
 
                 future = self.pending_requests.pop(req_id, None)
@@ -243,46 +237,66 @@ class MCPServerConnector:
 
         try:
             if action == "EXECUTE":
-                if self.mode == "ephemeral":
-                    await self._execute_ephemeral(handle_id, payload)
-                elif self.mode == "linear":
-                    await self._execute_shared(handle_id, payload, use_lock=True)
-                elif self.mode == "multiplex":
-                    await self._execute_shared(handle_id, payload, use_lock=False)
+                is_preflight_trapped = await self.fsm.check_preflight_trap(handle_id, payload)
+                if is_preflight_trapped:
+                    return
+
+                if await self.fsm.transition(handle_id, IntentState.EXECUTING):
+                    if self.mode == "ephemeral":
+                        await self._execute_ephemeral(handle_id, payload)
+                    elif self.mode == "linear":
+                        await self._execute_shared(handle_id, payload, use_lock=True)
+                    elif self.mode == "multiplex":
+                        await self._execute_shared(handle_id, payload, use_lock=False)
+
             elif action == "RESUME":
                 if self.mode == "linear":
                     log.warning(f"RESUME not supported in Linear Mode. Ignoring {handle_id}.")
                     return
-                elif self.mode == "multiplex":
-                    log.info(f"[Connector] Multiplexing RESUME to Shared Transport: {handle_id}")
-                    await self._execute_shared(handle_id, payload, use_lock=False, is_resume=True)
-                elif self.mode == "ephemeral":
-                    transport = self.active_sandboxes.get(handle_id)
-                    if not transport:
-                        log.error(f"Cannot RESUME {handle_id}: Sandbox not found.")
-                        return
-                    log.info(f"[Connector] Resuming Parked Intent: {handle_id}")
-                    await self._cycle_io(handle_id, payload, transport)
+
+                verified_payload = await self.fsm.verify_preflight_resume(handle_id, payload)
+                target_payload = verified_payload if verified_payload else payload
+                if await self.fsm.transition(handle_id, IntentState.RESUMING):
+                    is_resume_flag = False if verified_payload else True
+
+                    if self.mode == "multiplex":
+                        log.info(f"[Connector] Multiplexing RESUME to Shared Transport: {handle_id}")
+                        await self._execute_shared(handle_id, target_payload, use_lock=False, is_resume=is_resume_flag)
+                    elif self.mode == "ephemeral":
+                        transport = self.active_sandboxes.get(handle_id)
+                        if not transport:
+                            if verified_payload:
+                                await self._execute_ephemeral(handle_id, target_payload)
+                                return
+                            log.error(f"Cannot RESUME {handle_id}: Sandbox not found.")
+                            await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail="Sandbox not found for RESUME")
+                            return
+                        log.info(f"[Connector] Resuming Parked Intent: {handle_id}")
+                        await self._cycle_io(handle_id, target_payload, transport, is_resume=is_resume_flag)
+
             elif action in ("RESUME_OR_KILL", "FORCE_ROLLBACK"):
-                if self.mode in ("linear", "multiplex"):
-                    future = self.pending_requests.pop(handle_id, None)
-                    if future and not future.done():
-                        future.cancel()
-                    await self._report_fault(handle_id, "SYSTEM_SENTINEL_TIMEOUT: Request aborted.")
-                else:
-                    transport = self.active_sandboxes.get(handle_id)
-                    if transport:
-                        log.warning(f"[Connector] Sentinel enforced ROLLBACK on {handle_id}")
-                        await self._cycle_io(handle_id, payload, transport, is_rollback=True)
+                if await self.fsm.transition(handle_id, IntentState.ROLLED_BACK, error_detail="SYSTEM_SENTINEL_TIMEOUT: Request aborted."):
+                    self._clear_pending_future(handle_id)
+                    if self.mode == "ephemeral":
+                        log.warning(f"[Connector] Sentinel enforced ROLLBACK on {handle_id}. Terminating parked sandbox.")
+                        await self._destroy_sandbox(handle_id)
+                    self.fsm.cleanup(handle_id)
+
         except Exception as e:
             if not self.running:
                 log.debug(f"[Connector] Intent {handle_id} aborted cleanly due to graceful shutdown (Expected EOF).")
                 return
 
+            if self.fsm.get_state(handle_id) == IntentState.ROLLED_BACK:
+                log.debug(f"[Connector] Suppressed expected EOF for rolled-back intent: {handle_id}")
+                return
+
             log.error(f"[Connector] Lifecycle Crash for {handle_id}: {e}", exc_info=True)
-            await self._report_fault(handle_id, str(e))
+            await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail=str(e))
+            self._clear_pending_future(handle_id)
             if self.mode == "ephemeral":
                 await self._destroy_sandbox(handle_id)
+            self.fsm.cleanup(handle_id)
 
     async def _execute_shared(
         self, handle_id: str, payload: Dict[str, Any], use_lock: bool, is_resume: bool = False
@@ -296,33 +310,27 @@ class MCPServerConnector:
         try:
             if use_lock:
                 async with self.linear_lock:
-                    log.debug(f"[Connector] Linear Enqueue: {handle_id}")
                     await self.shared_transport.send_payload(safe_payload)
                     await self._wait_and_resolve_shared(handle_id, future)
             else:
-                log.debug(f"[Connector] Multiplexing Intent: {handle_id}")
                 await self.shared_transport.send_payload(safe_payload)
                 await self._wait_and_resolve_shared(handle_id, future)
         except Exception:
-            self.pending_requests.pop(handle_id, None)
+            self._clear_pending_future(handle_id)
             raise
 
     async def _wait_and_resolve_shared(self, handle_id: str, future: asyncio.Future):
         try:
             response = await future
             if "error" in response:
-                status = "FAULTED"
-                log.error(
-                    f"[Connector:FAULT] Shared Sandbox execution failed. Error details: {response['error']}",
-                    extra={"handle_id": handle_id},
-                )
+                await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail=str(response["error"]))
             else:
-                status = "RESOLVED"
-
-            log.info(f"[Connector] Shared Intent {handle_id} {status}.")
-            await self._resolve_bridge_state(handle_id, status, executable_payload=response)
+                await self.fsm.transition(handle_id, IntentState.RESOLVED, executable_payload=response)
         except asyncio.CancelledError:
             log.warning(f"Shared request {handle_id} was cancelled or yielded.")
+        finally:
+            if self.fsm.get_state(handle_id) in self.fsm.TERMINAL_STATES:
+                self.fsm.cleanup(handle_id)
 
     async def _execute_ephemeral(self, handle_id: str, payload: Dict[str, Any]):
         if handle_id in self.active_sandboxes:
@@ -333,14 +341,13 @@ class MCPServerConnector:
         await transport.start()
         self.active_sandboxes[handle_id] = transport
 
-        log.debug(f"[Connector] Injecting New Ephemeral Intent: {handle_id}")
-        await self._cycle_io(handle_id, payload, transport)
+        await self._cycle_io(handle_id, payload, transport, is_resume=False)
 
     async def _cycle_io(
-        self, handle_id: str, payload: Dict[str, Any], transport: MCPServerTransport, is_rollback: bool = False
+        self, handle_id: str, payload: Dict[str, Any], transport: MCPServerTransport, is_resume: bool = False
     ):
         try:
-            safe_payload = self._prepare_ingress_payload(handle_id, payload)
+            safe_payload = self._prepare_ingress_payload(handle_id, payload, is_resume=is_resume)
             await transport.send_payload(safe_payload)
 
             raw_output = await transport.receive_raw()
@@ -354,21 +361,18 @@ class MCPServerConnector:
 
             if self._is_elicitation(response):
                 log.warning(f"[Connector] TRAP: Elicitation detected. Parking {handle_id} (YIELD).")
-                await self._resolve_bridge_state(handle_id, "YIELD", executable_payload=response)
+                await self.fsm.transition(handle_id, IntentState.YIELDED, executable_payload=response)
             else:
-                if is_rollback or "error" in response:
-                    status = "FAULTED"
-                    if "error" in response:
-                        log.error(
-                            f"[Connector:FAULT] Ephemeral Sandbox execution failed. Error details: {response['error']}",
-                            extra={"handle_id": handle_id},
-                        )
+                if "error" in response:
+                    error_detail = response["error"]
+                    log.error(f"[Connector:FAULT] Ephemeral Sandbox execution failed: {error_detail}", extra={"handle_id": handle_id})
+                    await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail=str(error_detail))
                 else:
-                    status = "RESOLVED"
+                    log.info(f"[Connector] Intent {handle_id} RESOLVED.")
+                    await self.fsm.transition(handle_id, IntentState.RESOLVED, executable_payload=response)
 
-                log.info(f"[Connector] Intent {handle_id} {status}.")
-                await self._resolve_bridge_state(handle_id, status, executable_payload=response)
                 await self._destroy_sandbox(handle_id)
+                self.fsm.cleanup(handle_id)
 
         except Exception as e:
             raise RuntimeError(f"IO Cycle Failed: {e}")
@@ -378,30 +382,17 @@ class MCPServerConnector:
         if transport:
             await transport.close()
 
-    async def _report_fault(self, handle_id: str, error_detail: str):
-        try:
-            await self._resolve_bridge_state(handle_id, "FAULTED", error_detail=error_detail)
-        except Exception as rpc_e:
-            log.critical(f"[Connector] Failed to report FAULT to Core: {rpc_e}")
-
 
 def main():
     parser = argparse.ArgumentParser(description="Fiber MCP Worker Egress Connector")
-    parser.add_argument("--target", required=True, help="Target ID (e.g., db-server-01)")
-    parser.add_argument("--exec", required=True, help="Legacy command, Binary root path, or HTTP(S) URL")
-    parser.add_argument(
-        "--mode",
-        default=None,
-        choices=["ephemeral", "linear", "multiplex"],
-        help="Execution mode: ephemeral (isolation), linear (sequential queue), multiplex (async routing)",
-    )
-    parser.add_argument(
-        "--transport",
-        default=None,
-        choices=["stdio", "network"],
-        help="Transport layer: stdio (subprocess I/O) or network (HTTP multiplexing)",
-    )
+    parser.add_argument("--target", required=True, help="Target ID")
+    parser.add_argument("--exec", required=True, help="Command, Binary root path, or HTTP(S) URL")
+    parser.add_argument("--mode", default=None, choices=["ephemeral", "linear", "multiplex"])
+    parser.add_argument("--transport", default=None, choices=["stdio", "network"])
+    parser.add_argument("--preflight", default=None, help="Regex pattern to trigger YIELD before worker execution")
+    
     args = parser.parse_args()
+
     exec_target = args.exec.strip()
     is_http_url = exec_target.startswith(("http://", "https://"))
     is_managed_bin_dir = not is_http_url and Path(exec_target).is_dir()
@@ -415,6 +406,7 @@ def main():
         execution_target=exec_target,
         mode=resolved_mode,
         transport_type=resolved_transport,
+        preflight_pattern=args.preflight
     )
 
     try:
