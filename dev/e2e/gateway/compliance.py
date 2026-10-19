@@ -14,7 +14,7 @@ import httpx
 from fiber.dev.ex.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
-from fiber.infra.e2e.chaos.payload import ChaosPayloadLibrary
+from fiber.infra.bound.e2e.chaos.payload import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, DPHI_ENV
 

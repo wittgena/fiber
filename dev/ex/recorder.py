@@ -29,7 +29,7 @@ def init_vcr_environment(config: VCRPlaybackConfig):
         return
 
     try:
-        from fiber.dev.bridge.sandbox import verify_local_dev_environment, create_security_sandbox
+        from fiber.gateway.bridge.sandbox import verify_local_dev_environment, create_security_sandbox
         verify_local_dev_environment(allow_ci=True)
         create_security_sandbox(vcr_mode=config.mode)
         log.info("[Sandbox] Strict Security Policy Injected")

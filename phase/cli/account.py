@@ -28,7 +28,7 @@ from fiber.infra.bound.account.manager import (
     RevokeCommand,
     DEFAULT_INITIAL_FUEL
 )
-from fiber.gateway.rest.security import TokenTranslator
+from fiber.gateway.security import TokenTranslator
 
 async def run_lifecycle_demo(tenant_id: str):
     """Validates full account lifecycle visually via console output using Command DTOs."""

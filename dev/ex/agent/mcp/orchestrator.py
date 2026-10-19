@@ -16,7 +16,7 @@ from fiber.dev.ex.agent.mcp.client import (
     MCPConfig,
     MCPError
 )
-from fiber.dev.ex.agent.protocol.executor import AsyncExecutor
+from xphi.arch.contract.protocol.executor import AsyncExecutor
 from fiber.dev.ex.agent.llm.driver import LLMFacade, OpenAIToolConvertible
 from fiber.dev.ex.agent.llm.response import LLMResponse
 from fiber.dev.ex.model.message import Message, TextContent, MessageToolCall
@@ -202,25 +202,19 @@ class MCPOrchestrator:
                     continue
 
                 await self._emit_response(tunnel, response_topic, {"type": "tool_start", "tool_name": tool_name})
-                
-                # [핵심 정렬] Fiber의 턴 ID와 LLM의 Tool Call ID를 결합한 완벽한 합성 멱등성 키 생성
                 composite_idempotency_key = f"{turn_id}::{tool_call.id}"
                 token = current_idempotency_key.set(composite_idempotency_key)
-                
                 try:
-                    # Gateway 타격 (mcp.client 내부에서 SDK가 HTTP POST 발송)
                     result = await call_mcp_tool_raw(
                         client=self._mcp_client,
                         tool_name=tool_name,
                         arguments=arguments
                     )
                     
-                    # 툴 응답 결과가 Gateway의 거절(에러)을 포함하는지 확인
                     result_dump = result.model_dump()
                     is_error = result.isError if hasattr(result, 'isError') else False
                     
                     if is_error:
-                        # Gateway가 반환한 로직/권한 에러를 LLM이 인지할 수 있도록 피드백
                         error_str = f"Gateway Execution Error: {result_dump.get('content', 'Unknown infrastructure error')}"
                         log.warning(f"[{self.name}] Gateway denied tool '{tool_name}': {error_str}")
                         
@@ -229,7 +223,6 @@ class MCPOrchestrator:
                             "type": "tool_result", "tool_name": tool_name, "status": "error", "message": error_str
                         })
                     else:
-                        # 정상 응답
                         result_str = json.dumps(result_dump)
                         messages.append(Message(role="tool", tool_call_id=tool_call.id, content=[TextContent(text=result_str)]))
                         await self._emit_response(tunnel, response_topic, {
@@ -237,7 +230,6 @@ class MCPOrchestrator:
                         })
                         
                 except Exception as e:
-                    # 네트워크 단절 등 치명적 에러 발생 시 처리
                     log.error(f"[{self.name}] Tool '{tool_name}' failed to execute: {e}")
                     error_str = f"System Error executing tool via Gateway: {str(e)}"
                     messages.append(Message(role="tool", tool_call_id=tool_call.id, content=[TextContent(text=error_str)]))
@@ -245,7 +237,6 @@ class MCPOrchestrator:
                         "type": "tool_result", "tool_name": tool_name, "status": "error", "message": error_str
                     })
                 finally:
-                    # 다음 도구 실행을 위해 멱등성 키 컨텍스트 초기화
                     current_idempotency_key.reset(token)
 
     def _extract_tool_calls(self, message: Message) -> list[MessageToolCall]:

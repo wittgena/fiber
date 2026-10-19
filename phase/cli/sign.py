@@ -204,10 +204,7 @@ def flow_bootstrap_origin(
         log_sign.error(f"🚨 Signature Generation Failed: {e}")
         sys.exit(1)
 
-    # 4. JSON 포맷 설정 파일 생성 (GitOps 및 무결성 검증용)
     json_config_path = os.path.join(out_dir, "origin_config.json")
-    
-    # [수정완료] CLI 옵션(location) 반영 및 불필요한 env_injection, root_key_path 완벽 제거
     config_data = {
         "location": location,
         "network": "fiber.origin",
@@ -220,7 +217,6 @@ def flow_bootstrap_origin(
     
     _write_secure_file(json_config_path, json.dumps(config_data, indent=4), is_private=False)
 
-    # 5. 결과 출력 및 격리 가이드 (로거 텔레메트리 차단을 피하기 위해 print() 사용)
     print("\n✅ Origin Bootstrapping Complete. Keys are written to disk with chmod 600/644.")
     print("=" * 70)
     print(f"Root Key      : {os.path.join(out_dir, 'master_root.key')}")
@@ -240,10 +236,6 @@ def flow_bootstrap_origin(
     print(f"2. Move your Master Root Key to Cold Storage immediately:")
     print(f"-> mv {os.path.join(out_dir, 'master_root.key')} /Volumes/SECURE_USB/\n")
 
-
-# ==========================================
-# Domain 2: Human Identity (Admin TOTP)
-# ==========================================
 admin_app = typer.Typer(
     help="Manage Human Administrators and Encrypted TOTP Provisioning",
     no_args_is_help=True

@@ -8,8 +8,8 @@ from typing import List
 
 import httpx
 
-from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
-from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 from fiber.infra.daemon.economy.pricing import DynamicPricingDaemon
 
 from fiber.infra.mcp.connector import MCPServerConnector

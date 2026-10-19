@@ -4,7 +4,7 @@ from enum import Enum, auto
 from typing import Dict, Any, Optional
 
 from xphi.node.rpc.method import RpcMethod
-from fiber.gateway.mcp.preflight import PreflightGuard
+from fiber.infra.mcp.preflight import PreflightGuard
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.watcher.plane.emitter import get_emitter
 

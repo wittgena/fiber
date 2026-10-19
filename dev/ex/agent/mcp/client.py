@@ -18,7 +18,7 @@ from mcp.client.stdio import stdio_client, StdioServerParameters
 from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamable_http_client
 
-from fiber.dev.ex.agent.protocol.executor import AsyncExecutorProtocol
+from xphi.arch.contract.protocol.executor import AsyncExecutorProtocol
 from fiber.dev.ex.agent.mcp.config import MCPConfig
 
 from xphi.arch.contract.event.next import LogEvent

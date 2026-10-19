@@ -15,12 +15,12 @@ from typing import Any, Dict, List
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from fiber.infra.e2e.config import Phase, E2EConfig, get_free_port
-from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.config import Phase, E2EConfig, get_free_port
+from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
-from fiber.dev.trace.profile.metrics import PipelineLoadProfiler, LoadSLO
+from fiber.infra.watcher.profile.metrics import PipelineLoadProfiler, LoadSLO
 from fiber.dev.trace.vcr.manager import (
     VCRPlaybackConfig,
     VCRIdentityRule,

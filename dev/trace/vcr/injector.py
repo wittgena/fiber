@@ -1,5 +1,4 @@
 # fiber.dev.trace.vcr.injector
-## @lineage: fiber.dev.trace.llm.vcr.injector
 from typing import Optional
 from contextlib import contextmanager
 

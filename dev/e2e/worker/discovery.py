@@ -7,8 +7,8 @@ from typing import List
 
 import httpx
 
-from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
-from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.infra.mcp.connector import MCPServerConnector
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib

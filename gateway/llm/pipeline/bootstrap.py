@@ -1,5 +1,4 @@
 # fiber.gateway.llm.pipeline.bootstrap
-## @lineage: fiber.gateway.llm.pipeline
 from __future__ import annotations
 
 from enum import Enum

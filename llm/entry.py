@@ -11,6 +11,7 @@ from fiber.gateway.llm.pipeline.bootstrap import PipelineBootstrap, PipelineSlot
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.eco import UnsupportedParamsError
+from fiber.llm.response import ModelResponse
 
 from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
@@ -108,7 +109,7 @@ async def _forward_completion_to_gateway(base_url: str, model: str, messages: Li
         async with httpx.AsyncClient() as client:
             response = await client.post(target_url, json=payload, headers=headers)
             response.raise_for_status()
-            return response.json()
+            return ModelResponse(**response.json())
 
 async def _forward_embedding_to_gateway(base_url: str, model: str, input_data: Any, **kwargs) -> Any:
     headers = kwargs.pop("headers", {})
@@ -129,7 +130,8 @@ async def _forward_embedding_to_gateway(base_url: str, model: str, input_data: A
 async def acompletion(model: str, messages: List = None, **kwargs) -> Any:
     """비동기 LLM 호출 진입점"""
     messages = messages or []
-    base_url = kwargs.pop("base_url", None) or kwargs.pop("api_base", None)
+    # base_url = kwargs.pop("base_url", None) or kwargs.pop("api_base", None)
+    base_url = kwargs.pop("api_base", None)
     if base_url:
         return await _forward_completion_to_gateway(base_url, model, messages, **kwargs)
     

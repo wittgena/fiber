@@ -4,7 +4,7 @@ import json
 import asyncio
 from typing import Dict, Any, Optional
 
-from fiber.gateway.rest.token.gen import FinOpsTokenGenerator, FinOpsOpType
+from fiber.gateway.contract.token.gen import FinOpsTokenGenerator, FinOpsOpType
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 from xphi.node.space.tunnel.factory import TunnelFactory
 

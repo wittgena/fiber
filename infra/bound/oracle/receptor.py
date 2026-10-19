@@ -1,5 +1,4 @@
 # fiber.infra.bound.oracle.receptor
-## @lineage: xphi.arch.bound.xor.oracle.receptor
 import os
 import time
 import hashlib

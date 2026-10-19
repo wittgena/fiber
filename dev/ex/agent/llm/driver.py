@@ -101,7 +101,6 @@ class DriverIO:
         on_token: TokenCallbackType | None = None,
         **kwargs,
     ) -> ModelResponse:
-        
         enable_streaming = kwargs.get("stream", driver.stream)
         if enable_streaming and on_token is None:
             raise ValueError("Streaming requires an on_token callback")
@@ -125,8 +124,6 @@ class DriverIO:
             "extra_headers": driver.extra_headers,
             "extra_body": driver.extra_body,
         }
-        
-        # 순수 LLM 파라미터만 raw_intent에 병합
         for k, v in kwargs.items():
             if v is not None:
                 raw_intent[k] = v
@@ -360,8 +357,6 @@ class LLMFacade:
                 raw_msg = SimpleNamespace(**raw_msg)
 
             message = Message.from_llm_chat_message(raw_msg)
-            
-            # 1회 호출에 대한 비용 영수증(Receipt) 래핑
             parsed_usage = getattr(raw_response, "_parsed_usage", None)
             if parsed_usage:
                 token_usage = TokenUsage(

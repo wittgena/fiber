@@ -16,13 +16,13 @@ from pathlib import Path
 from typing import Optional
 import httpx
 
-from fiber.infra.e2e.config import Phase, E2EConfig
-from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.config import Phase, E2EConfig
+from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
-from fiber.gateway.rest.security import TokenTranslator
-from fiber.gateway.rest.token.gen import FinOpsTokenGenerator
+from fiber.gateway.security import TokenTranslator
+from fiber.gateway.contract.token.gen import FinOpsTokenGenerator
 from fiber.infra.mcp.connector import MCPServerConnector
 
 from fiber.dev.trace.vcr.manager import (

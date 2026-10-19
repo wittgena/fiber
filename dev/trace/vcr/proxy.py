@@ -1,5 +1,4 @@
 # fiber.dev.trace.vcr.proxy
-## @lineage: fiber.dev.trace.llm.vcr.proxy
 import asyncio
 import time
 import copy
