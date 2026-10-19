@@ -1,12 +1,11 @@
-# fiber.README
-@lineage: README
+# README
 **Deterministic LLM Pipeline**
 
 Fiber is an asynchronous execution pipeline designed to secure and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables idempotent offline testing.
 
 This document provides a practical guide on how to integrate and deploy Fiber across its operational pillars:
 
-Operating as a drop-in asynchronous pipeline (**1.1**), Fiber serializes network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**), while autonomously normalizing heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism without altering your business logic.
+Operating as a drop-in asynchronous pipeline with real-time quota enforcement and mid-stream kill-switches (**1.1**), Fiber serializes network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**), while autonomously normalizing heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism and strict cost governance without altering your business logic.
 
 Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (connect, daemon, compat)**, and **[4] System Validation Logs** to help you quickly provision and validate your infrastructure.
 
@@ -24,7 +23,7 @@ Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's d
 
 ```python
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
-from fiber.gateway.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
 # PRE_OBSERVER: Asynchronous Telemetry with Stream-Aware Lifecycle
@@ -105,14 +104,21 @@ class ActiveBlockingGuardrail(DuplexChannel):
 
 ```python
 from fiber.llm.entry import acompletion
+from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
+from xphi.arch.model.auth import NodeAuthPayload
 
 # The framework autonomously restructures the flat list into the strict pipeline:
-# [Cache] ➔ [Translator] ➔ [Active Guardrail] ➔ [Tracer] ➔ [Network I/O]
+# [Cache] ➔ [Translator] ➔ [Active Guardrail] ➔ [FuelBreaker] ➔ [Tracer] ➔ [Network I/O]
 response = await acompletion(
-    model="lm_studio/qwen-3.5-9b", # ex: cerebras/qwen-3.8-27b, gemini/gemini-3.1-flash-lite, ollama/gemma:2b, llama_server/gemma-3-1b-it-Q4_K_M.gguf
+    model="lm_studio/qwen-3.5-9b", # ex: cerebras/qwen-3.8-27b, gemini/gemini-3.1-flash-lite, ollama/gemma:2b
     messages=[{"role": "user", "content": "Analyze this data."}],
+    stream=True,
     interceptors=[TelemetryTracer(), ActiveBlockingGuardrail(), EdgeRedisCache(), SemanticRouter()],
-    metadata={"node_auth": {"audit_hash": "audit_12345"}} 
+    # Real-time FinOps Governance: Gracefully terminates active streams mid-flight upon budget exhaustion or policy revocation
+    fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
+    billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
+    metadata={"node_auth": NodeAuthPayload(tenant_id="accounting_dept", fuel_budget=50000, is_enforced=True)}
 )
 ```
 
@@ -128,7 +134,8 @@ response = await acompletion(
 The Offline Fixture Engine serializes LLM network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables zero-cost, deterministic offline testing and precise historical latency emulation without altering business logic.
 
 > **Why Fiber VCR?**
-> Standard HTTP mockers (like vcrpy) capture network-layer raw bytes, which breaks stream timing and bloats memory during LLM testing. Fiber’s Application-Layer VCR natively understands LLM semantics—autonomously coalescing micro-chunks via time-windows (e.g., 100ms) and ensuring strict duck-typing parity for SDKs like LiteLLM. This delivers perfect stream recreation and chaos emulation without the network-layer noise.
+Standard HTTP mockers (like vcrpy) capture network-layer raw bytes, which breaks stream timing and bloats memory during LLM testing. Fiber’s Application-Layer VCR natively understands LLM semantics—autonomously coalescing micro-chunks via time-windows (e.g., 100ms) and ensuring strict duck-typing parity for SDKs like LiteLLM. 
+Furthermore, because `FuelBreaker` is natively integrated into the recording lifecycle, streams terminated mid-flight by a budget kill-switch capture only the pre-cutoff chunks—allowing you to deterministically replay and test exact quota-exhaustion states offline.
 
 Fiber provides three approaches for injecting the local fixture engine:
 
@@ -345,7 +352,10 @@ Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeo
   - **Idempotent Execution:** Maps every invocation to a deterministic transaction handle. Duplicate agent retries immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
   
   - **Human-in-the-Loop Authorization:** On high-risk operations (e.g., destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and awaits explicit user approval (TOTP/CLI) before resuming from the exact suspended state.
+
   - **Credential Isolation & Stream Sanitization:** Injects external API keys (`Bearer` tokens) strictly at the egress boundary so secrets never enter the agent's context, while stripping non-JSON `stdout` noise before it corrupts the agent's parser.
+
+  - **FinOps Governance**: Translates external, EdDSA-signed billing tokens into synchronized internal ledger states. It enforces strict transaction idempotency (preventing double-spending), rejects stale policy replays, and broadcasts sub-second kill-switches across the control plane to halt runaway costs instantly.
 
 **Agent Onboarding**
 Instead of manually supervising fragmented MCP processes, Fiber automatically scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) alongside built-in workers.
@@ -389,6 +399,21 @@ $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 | **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (mcp.json), or remote HTTP/SSE endpoints as governed nodes on the Tunnel Bus. | `fiber connect -e worker.docs` |
 | **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (record) and verifies declarative extraction rules offline (replay) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
+| **`account`** | **[FinOps & Quota]** | Manages tenant budgets, issues cryptographic billing tokens, synchronizes usage ledgers, and triggers real-time stream kill-switches. | `fiber account jwt --usd 50 --op PROVISION --sync` |
+
+**FinOps Account & Quota Governance (`fiber account`)**
+Provides a unified CLI to govern tenant quotas and billing lifecycles. It seamlessly translates stateless billing tokens into enforceable runtime quotas—handling idempotent top-ups, versioned policy enforcement, and instant kill-switch broadcasting without exposing underlying ledger complexities:
+
+```bash
+# Run full lifecycle walkthrough (Provision -> TopUp -> Stale Replay Check -> Revoke)
+$ fiber account demo
+
+# Provision $50.0 (50,000 Fuel) via EdDSA JWT and synchronize the PTA ledger
+$ fiber account --tenant accounting_dept jwt --usd 50.0 --op PROVISION --ver 1 --sync
+
+# Trigger a real-time Pub/Sub REVOKE kill-switch to sever active streams mid-flight
+$ fiber account --tenant accounting_dept kill --ver 99
+```
 
 ---
 
@@ -428,4 +453,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
 * **[gateway.wasm.log](./phase/abc/log/inter/wasm/gateway.wasm.20261002.log):** Validates Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all non-linear FSM transitions execute deterministically with millisecond latency.
-- **[inter.finops.log](./phase/abc/log/inter/finops.20261016.log):** Validates the FinOps control plane, confirming cryptographic DPoP-authenticated MCP multiplexing, JWT-to-AP2 mandate translation, PTA ledger fuel minting, and sub-second Pub/Sub Kill-Switch intervention that physically severs active VCR streams mid-flight.
+* **[inter.finops.log](./phase/abc/log/inter/finops.20261019.log):** Validates the FinOps control plane, confirming DPoP-authenticated MCP multiplexing, cryptographic mandate translation (with strict idempotency and replay protection), automated ledger reconciliation, and sub-second kill-switch intervention that cleanly severs active streams mid-flight.

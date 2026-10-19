@@ -7,7 +7,7 @@ from typing import Any, List, Dict, AsyncGenerator
 import httpx 
 
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer, TracerInterceptorChannel
-from fiber.gateway.llm.pipeline import PipelineBootstrap, PipelineSlot
+from fiber.gateway.llm.pipeline.bootstrap import PipelineBootstrap, PipelineSlot
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.eco import UnsupportedParamsError

@@ -1,4 +1,5 @@
-# fiber.gateway.llm.channel.fuel
+# fiber.gateway.llm.pipeline.channel.fuel
+## @lineage: fiber.gateway.llm.channel.fuel
 from __future__ import annotations
 
 import os

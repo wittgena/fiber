@@ -1,4 +1,6 @@
 # fiber.llm.compat.param
+from typing import Any, Dict, List, Optional
+
 FRAMEWORK_KWARGS = {
     "metadata", "session_id", "trace_id", "call_id", "completion_call_id", "preset_cache_key", "model_info", 
     "model_alias_map", "proxy_server_request", "input_cost_per_token", "output_cost_per_token", 
@@ -8,7 +10,9 @@ FRAMEWORK_KWARGS = {
     "aws_region_name", "supports_system_message", "litellm_system_prompt", "base_model",
     "drop_params", "allowed_openai_params", "additional_drop_params", "context_management"
 }
+
 AUTH_PREFIXES = ("aws_", "azure_", "vertex_", "tenant_id", "client_id", "client_secret", "bucket_name")
+
 FLAG_KEYS = {
     "no_log", "no-log", "custom_prompt_dict", "async_call", "ssl_verify", "merge_reasoning_content_in_choices", 
     "use_litellm_proxy", "logger_fn", "verbose", "disable_add_transform_inline_image_block", "log_delegator"
@@ -18,8 +22,10 @@ PROVIDER_ALIAS = {
     "vertex_ai_beta": "vertex_ai", "text-completion-openai": "openai", "azure_ai": "azure", "ollama_chat": "ollama",
     "claude": "anthropic", "anthropic_chat": "anthropic"
 }
+
 OPENAI_REGIONAL_HOSTS = {"eu.api.openai.com": "eu", "us.api.openai.com": "us"}
 
+"""Declarative Provider Parameter Rules"""
 PROVIDER_PARAM_RULES = {
     "defaults": {
         "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
@@ -28,23 +34,34 @@ PROVIDER_PARAM_RULES = {
         "tool_format": "standard",
         "role_mapping": {"developer": "system"}, 
         "system_param": None,
-        "message_schema": "openai_array"  # 기본값: [{"role": "...", "content": "..."}]
+        "message_schema": "openai_array",  # 기본값: [{"role": "...", "content": "..."}]
+        "supports_extra_body": False,
+        "conditional_inject": [],
+        "limits": {},
+        "unsupported_by_model": {}
     },
     "openai": {
-        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
+        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed", "dimensions"],
         "mapping": {},
         "wrap_in": {},
         "tool_format": "standard",
         "role_mapping": {}, 
-        "system_param": None
+        "system_param": None,
+        "supports_extra_body": True,
+        "limits": {"stop": 4},
+        "unsupported_by_model": {
+            "^(?!text-embedding-3).*": ["dimensions"]
+        }
     },
     "azure": {
-        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed"],
+        "supported": ["temperature", "top_p", "n", "stream", "stop", "max_tokens", "max_completion_tokens", "presence_penalty", "frequency_penalty", "user", "tools", "tool_choice", "logprobs", "top_logprobs", "response_format", "seed", "dimensions"],
         "mapping": {},
         "wrap_in": {},
         "tool_format": "standard",
         "role_mapping": {},
-        "system_param": None
+        "system_param": None,
+        "supports_extra_body": True,
+        "limits": {"stop": 4}
     },
     "gemini": {
         "supported": ["temperature", "top_p", "top_k", "max_tokens", "max_completion_tokens", "stream", "tools", "tool_choice", "response_format", "n", "stop", "presence_penalty", "frequency_penalty"],
@@ -53,7 +70,8 @@ PROVIDER_PARAM_RULES = {
         "tool_format": "gemini_strict",
         "role_mapping": {"developer": "system"},
         "system_param": None,
-        "supports_tools": True 
+        "supports_tools": True,
+        "limits": {"stop": 4}
     },
     "anthropic": {
         "supported": ["temperature", "top_p", "top_k", "stop", "stream", "max_tokens", "max_completion_tokens", "tools", "tool_choice", "thinking", "metadata", "user"],
@@ -64,12 +82,15 @@ PROVIDER_PARAM_RULES = {
         "system_param": None 
     },
     "ollama": {
-        "supported": ["temperature", "top_p", "top_k", "stream", "tools", "format", "options", "num_ctx", "seed"],
-        "mapping": {},
-        "wrap_in": {"options": ["temperature", "top_p", "top_k", "num_ctx", "seed"]},
+        "supported": ["temperature", "top_p", "top_k", "stream", "tools", "format", "options", "num_ctx", "seed", "max_tokens", "num_predict"],
+        "mapping": {"max_tokens": "num_predict"},
+        "wrap_in": {"options": ["temperature", "top_p", "top_k", "num_ctx", "seed", "num_predict"]},
         "tool_format": "standard",
         "role_mapping": {"developer": "system"},
-        "system_param": None
+        "system_param": None,
+        "conditional_inject": [
+            {"require_any": ["tools", "functions", "function_call"], "inject": {"format": "json"}}
+        ]
     },
     "cohere": {
         "supported": ["temperature", "p", "k", "max_tokens", "stream", "stop_sequences", "seed", "tools"],
@@ -80,7 +101,6 @@ PROVIDER_PARAM_RULES = {
         "system_param": None,
         "message_schema": "string_last"
     }
-
 }
 
 OPENAI_EMBEDDING_PARAMS = ["dimensions", "encoding_format", "user", "extra_headers", "extra_body"]

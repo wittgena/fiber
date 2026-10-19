@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Optional
 
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.pipeline import PipelineSlot
-from fiber.gateway.llm.channel.fuel import BillingObserver, FuelBreaker
+from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
+from fiber.gateway.llm.pipeline.channel.fuel import BillingObserver, FuelBreaker
 from fiber.dev.trace.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 

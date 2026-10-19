@@ -1,6 +1,8 @@
-# fiber.gateway.llm.param.processor
+# fiber.gateway.llm.stream.param.processor
+## @lineage: fiber.gateway.llm.param.processor
 from __future__ import annotations
 import copy
+import re
 from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional, Tuple, Union, Callable
 import httpx
@@ -34,7 +36,7 @@ def _delete_nested_path(data: Dict, path: str):
                 if isinstance(curr, dict) and k in curr:
                     curr = curr[k]
                 else:
-                    break  # 경로가 끊기면 안전하게 중단
+                    break
     except Exception:
         pass
 
@@ -47,9 +49,6 @@ def _to_json_schema(model_or_dict: Any) -> Optional[dict]:
         "json_schema": {"schema": _pydantic.to_strict_json_schema(model_or_dict), "name": model_or_dict.__name__, "strict": True}
     }
 
-# -------------------------------------------------------------
-# Tool Formatters (선언적 디스패치 전략)
-# -------------------------------------------------------------
 def _format_standard_tools(tools: List[dict], choice: Any) -> Dict[str, Any]:
     res: Dict[str, Any] = {"tools": tools}
     if choice: res["tool_choice"] = choice
@@ -102,9 +101,6 @@ TOOL_FORMATTERS: Dict[str, Callable[[List[dict], Any], Dict[str, Any]]] = {
     "gemini_strict": _format_gemini_strict_tools,
 }
 
-# -------------------------------------------------------------
-# Base Processor
-# -------------------------------------------------------------
 class BaseProcessor:
     def __init__(self, task_type: str, model: str, raw_kwargs: dict):
         self.task_type = task_type
@@ -169,12 +165,12 @@ class BaseProcessor:
         optional_params = {}
         mapping_rule = rules.get("mapping", {})
         
-        # 1. 선언적 1:1 맵핑
+        # 선언적 1:1 맵핑
         for key, val in non_defaults.items():
             mapped_key = mapping_rule.get(key, key)
             optional_params[mapped_key] = val
 
-        # 2. 선언적 구조화 (Wrap in Dict)
+        # 선언적 구조화 (Wrap in Dict)
         wrap_rule = rules.get("wrap_in", {})
         for wrap_key, target_keys in wrap_rule.items():
             wrap_dict = optional_params.get(wrap_key, {})
@@ -184,18 +180,19 @@ class BaseProcessor:
             if wrap_dict:
                 optional_params[wrap_key] = wrap_dict
 
-        # 3. Ollama 특수 룰
-        if self.provider_key == "ollama" and any(k in optional_params for k in ["functions", "tools", "function_call"]):
-            optional_params["format"] = "json"
+        # 선언적 조건부 파라미터 주입
+        conditional_inject = rules.get("conditional_inject", [])
+        for cond in conditional_inject:
+            if any(k in optional_params for k in cond.get("require_any", [])):
+                optional_params.update(cond.get("inject", {}))
 
-        # 4. Passthrough (extra_body) 처리
-        is_openai_compatible = self.provider in ["openai", "azure"] + getattr(config, "openai_compatible_providers", [])
-        if is_openai_compatible:
+        # 선언적 Passthrough (extra_body) 처리
+        if rules.get("supports_extra_body", False):
             extra = self.original_kwargs.get("extra_body", {})
             if extra:
                 optional_params["extra_body"] = {**optional_params.get("extra_body", {}), **extra}
 
-        # 5. 명시적 드롭 경로 처리
+        # 명시적 드롭 경로 처리
         add_drops = self.original_kwargs.get("additional_drop_params", [])
         for path in add_drops:
             if "." in path:
@@ -205,9 +202,6 @@ class BaseProcessor:
 
         return optional_params
 
-# -------------------------------------------------------------
-# Completion Processor
-# -------------------------------------------------------------
 class CompletionProcessor(BaseProcessor):
     def __init__(self, model: str, messages: List, kwargs: dict):
         super().__init__(task_type="chat", model=model, raw_kwargs=kwargs)
@@ -256,7 +250,6 @@ class CompletionProcessor(BaseProcessor):
             if params and "additionalProperties" in params and not params["additionalProperties"]:
                 params.pop("additionalProperties", None)
 
-        # 전략 패턴(Strategy)을 이용한 선언적 디스패치
         tool_format = rules.get("tool_format", "standard")
         formatter = TOOL_FORMATTERS.get(tool_format, _format_standard_tools)
         transformed = formatter(formatted_tools, choice)
@@ -271,7 +264,7 @@ class CompletionProcessor(BaseProcessor):
 
         for i, m in enumerate(copy.deepcopy(self.original_messages)):
             role = m.get("role", "assistant")
-            role = role_map.get(role, role) # 룰 기반 역할 치환 (하드코딩 제거)
+            role = role_map.get(role, role)
             m["role"] = role
             
             cleaned = {k: v for k, v in (m.model_dump(exclude_none=True) if isinstance(m, BaseModel) else m).items() if v is not None}
@@ -292,8 +285,9 @@ class CompletionProcessor(BaseProcessor):
         if "response_format" in non_defaults:
             non_defaults["response_format"] = _to_json_schema(non_defaults["response_format"])
 
-        if "stop" in non_defaults and isinstance(non_defaults["stop"], list) and not self.original_kwargs.get("disable_stop_limit", False):
-            non_defaults["stop"] = non_defaults["stop"][:4]
+        stop_limit = rules.get("limits", {}).get("stop")
+        if stop_limit and "stop" in non_defaults and isinstance(non_defaults["stop"], list) and not self.original_kwargs.get("disable_stop_limit", False):
+            non_defaults["stop"] = non_defaults["stop"][:stop_limit]
 
         payload = self._build_optional_params(non_defaults)
         
@@ -322,21 +316,22 @@ class CompletionProcessor(BaseProcessor):
             deployment_id=self.original_kwargs.get("deployment_id"), original_kwargs=self.original_kwargs
         )
 
-# -------------------------------------------------------------
-# Embedding Processor
-# -------------------------------------------------------------
 class EmbeddingProcessor(BaseProcessor):
     def __init__(self, model: str, input_data: Union[str, List[str]], kwargs: dict):
         super().__init__(task_type="embedding", model=model, raw_kwargs=kwargs)
         self.input = input_data
 
     def build(self) -> EmbeddingContext:
+        rules = PROVIDER_PARAM_RULES.get(self.provider_key, PROVIDER_PARAM_RULES["defaults"])
         non_defaults = self._extract_non_defaults()
-        
-        if self.provider == "openai" and "text-embedding-3" not in self.model and "dimensions" in non_defaults:
-            if "dimensions" not in self.original_kwargs.get("allowed_openai_params", []):
-                if self.drop_flag: non_defaults.pop("dimensions", None)
-                else: raise UnsupportedParamsError(status_code=500, message="dimensions not supported for older OpenAI models.")
+        unsupported_by_model = rules.get("unsupported_by_model", {})
+        for model_pattern, restricted_params in unsupported_by_model.items():
+            if re.match(model_pattern, self.model):
+                for p in restricted_params:
+                    if p in non_defaults:
+                        if not getattr(self, "drop_flag", False) and p not in self.original_kwargs.get("allowed_openai_params", []):
+                            raise UnsupportedParamsError(status_code=500, message=f"'{p}' not supported for model {self.model}.")
+                        non_defaults.pop(p, None)
 
         payload = self._build_optional_params(non_defaults)
         return EmbeddingContext(

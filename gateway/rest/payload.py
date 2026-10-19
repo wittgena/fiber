@@ -14,6 +14,7 @@ from fiber.gateway.rest.serv.gateway import IdempotencyMapper, NonceReplayProtec
 from fiber.gateway.rest.serv.compliance import compliance_edge
 from fiber.gateway.rest.serv.llm import llm_edge
 from fiber.gateway.rest.security import SecurityProvisioner, TokenTranslator
+from fiber.gateway.llm.pipeline.interceptor.registry import InterceptorConfigLoader
 from fiber.phase.contract.origin import OriginRegistry
 from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
@@ -101,6 +102,11 @@ async def lifespan(app: FastAPI):
 
         if not all([tunnel, phase_store]):
             log.warning("Some infrastructure dependencies (tunnel, phase_store) are missing from injection.")
+
+        app.state.pipeline_interceptors = InterceptorConfigLoader.load_from_config()
+        if app.state.pipeline_interceptors:
+            loaded_names = [type(i).__name__ for i in app.state.pipeline_interceptors]
+            log.info(f"Pipeline Interceptors Ready: {loaded_names}")
 
         pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
         await pubsub.start_listening()

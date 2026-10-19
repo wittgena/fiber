@@ -11,7 +11,7 @@ import onnxruntime as ort
 import os
 from typing import Optional, Dict, Any, List
 
-from fiber.gateway.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
 from fiber.llm.model.token.encoder import encode
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter

@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from fiber.llm.response import ModelResponse, EmbeddingResponse
-from fiber.gateway.llm.pipeline import PipelineBootstrap 
+from fiber.gateway.llm.pipeline.bootstrap import PipelineBootstrap 
+from fiber.gateway.llm.pipeline.interceptor.registry import InterceptorConfigLoader
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.gateway.rest.security import KernelAuthenticator
 from fiber.phase.contract.router import ContractRouter
@@ -24,6 +25,10 @@ llm_edge = ContractRouter(
     description="Deterministic LLM Gateway"
 )
 
+class InterceptorItem(BaseModel):
+    class_name: str = Field(alias="class", description="Interceptor class name (e.g. cache.EdgeRedisCache)")
+    kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
 class ChatCompletionRequest(BaseModel):
     model: str = Field(..., description="Target LLM model")
     messages: List[Dict[str, Any]] = Field(..., description="Conversation history")
@@ -31,6 +36,7 @@ class ChatCompletionRequest(BaseModel):
     temperature: Optional[float] = 0.7
     max_tokens: Optional[int] = None
     tools: Optional[List[Dict[str, Any]]] = None
+    interceptors: Optional[List[InterceptorItem]] = None
     model_config = {"extra": "allow" }
 
 @llm_edge.post(
@@ -38,7 +44,7 @@ class ChatCompletionRequest(BaseModel):
     summary="Chat Completion(OpenAI Compatible)",
     response_model=ModelResponse
 )
-async def public_chat_completions(
+async def chat_completions(
     request: Request,
     payload: ChatCompletionRequest = Body(...)
 ):
@@ -52,7 +58,8 @@ async def public_chat_completions(
                 max_tokens=payload.max_tokens
             )
             
-            kwargs = payload.model_dump(exclude={"model", "messages"}, exclude_none=True)
+            # 클라이언트가 주입한 interceptors 필드가 하위 LLM SDK로 누수되지 않도록 exclude 처리
+            kwargs = payload.model_dump(exclude={"model", "messages", "interceptors"}, exclude_none=True)
             
             kwargs.pop("base_url", None)
             kwargs.pop("api_base", None)
@@ -66,9 +73,27 @@ async def public_chat_completions(
             metadata[BrokerKey.NODE_AUTH.value] = node_auth.model_dump()
             kwargs["metadata"] = metadata
 
+            # 1. Boot-time loaded global interceptors (Immutable)
+            global_interceptors = getattr(request.app.state, "pipeline_interceptors", [])
+            
+            # 2. Client-requested interceptors (Additive)
+            client_interceptors = InterceptorConfigLoader.build_from_payload(payload.interceptors or [])
+            
+            # 3. Safe Merge (Deduplication & System Priority)
+            global_class_names = {type(i).__name__ for i in global_interceptors}
+            final_interceptors = list(global_interceptors)
+            
+            for ci in client_interceptors:
+                if type(ci).__name__ in global_class_names:
+                    log.warning(f"Client tried to override global interceptor '{type(ci).__name__}'. Override denied.")
+                    continue
+                final_interceptors.append(ci)
+
+            # 4. Execute Pipeline
             response = await PipelineBootstrap.execute_completion(
                 model=payload.model,
                 messages=payload.messages,
+                interceptors=final_interceptors,
                 **kwargs
             )
 
@@ -94,7 +119,7 @@ async def public_chat_completions(
     summary="Create Embeddings (OpenAI Compatible)",
     response_model=EmbeddingResponse
 )
-async def public_embeddings(
+async def embeddings(
     request: Request,
     model: str = Body(...),
     input: Union[str, List[str]] = Body(...),

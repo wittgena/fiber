@@ -1,4 +1,5 @@
-# fiber.gateway.llm.pipeline
+# fiber.gateway.llm.pipeline.bootstrap
+## @lineage: fiber.gateway.llm.pipeline
 from __future__ import annotations
 
 from enum import Enum
@@ -9,8 +10,8 @@ from fiber.llm.types.provider.general import EmbeddingResponse
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge
 
-from fiber.gateway.llm.channel.core import CompletionTransport, EmbeddingTransport, StreamAggregator, PayloadTranslator, FallbackHandler, MockBypass, ContextBinder
-from fiber.gateway.llm.channel.fuel import FuelBreaker, BillingObserver
+from fiber.gateway.llm.pipeline.channel.core import CompletionTransport, EmbeddingTransport, StreamAggregator, PayloadTranslator, FallbackHandler, MockBypass, ContextBinder
+from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 
 class PipelineSlot(Enum):
     PRE_TRANSLATE = "pre_translate"       # Type: dict

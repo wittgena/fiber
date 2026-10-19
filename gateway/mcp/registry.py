@@ -1,5 +1,4 @@
 # fiber.gateway.mcp.registry
-## @lineage: fiber.gateway.mcp.registry.quarantine
 import os
 import re
 import orjson

@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Union
 
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
-from fiber.gateway.llm.pipeline import PipelineSlot
+from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
 from fiber.gateway.llm.state.traverser import StateTraverser
 from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.core import Usage
