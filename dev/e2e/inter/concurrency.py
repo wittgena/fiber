@@ -29,7 +29,7 @@ from fiber.dev.trace.vcr.manager import (
 from fiber.dev.trace.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
 
-from xphi.arch.bound.event.next import next_trace_id
+from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import get_invoker
 from xphi.state.phase.reactor import PhaseReactor
 

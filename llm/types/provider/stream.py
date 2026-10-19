@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, Field, PrivateAttr
 
 from fiber.llm.types.provider.core import StreamingChoices, Usage
-from xphi.arch.bound.event.next import uuid
+from xphi.arch.contract.event.next import uuid
 from xphi.arch.model.surge.model import DynamicSurgeModel
 
 def _generate_id():

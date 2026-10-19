@@ -1,5 +1,4 @@
 # fiber.infra.daemon.rest
-## @lineage: fiber.gateway.daemon.rest
 import os
 import asyncio
 import json
@@ -11,10 +10,12 @@ from contextlib import suppress
 from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from fiber.gateway.rest.payload import create_app, Config
+
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT, FIBER_GATEWAY_URL, REDIS_URL, PUBSUB_CHANNEL
 from xphi.arch.contract.config.constants import MAX_PAYLOAD_SIZE, WASM_TIMEOUT
-from fiber.gateway.rest.payload import create_app, Config
 from xphi.arch.contract.registry.unified import contract
+
 from xphi.node.ops.daemon.base import AbstractDaemon
 from xphi.node.ops.reaper import SystemOps
 from xphi.node.space.tunnel.factory import TunnelFactory

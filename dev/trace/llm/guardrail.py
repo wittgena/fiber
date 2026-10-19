@@ -5,8 +5,8 @@ from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.bound.xor.secret.redact import redact_string, sanitize_payload, _REDACTED
-from xphi.arch.bound.xor.parser.ruleset.engine import FastRegexRedactionEngine
+from xphi.arch.xor.secret.redact import redact_string, sanitize_payload, _REDACTED
+from xphi.arch.xor.parser.ruleset.engine import FastRegexRedactionEngine
 
 guardrail_log = get_emitter("llm.guardrail")
 

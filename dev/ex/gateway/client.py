@@ -1,4 +1,5 @@
-# fiber.gateway.client
+# fiber.dev.ex.gateway.client
+## @lineage: fiber.gateway.client
 import time
 import logging
 from dataclasses import dataclass, asdict
@@ -8,7 +9,7 @@ import httpx
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.arch.bound.client.http import VerifiedHttpClient
 from xphi.arch.model.schema.audit import AuditLogRequest, AuditEvent, ExportLogsServiceRequest, ResourceLogs, ScopeLogs, LogRecord, KeyValue
-from fiber.infra.rpc.schema.receipt import EdgeHeader
+from xphi.node.rpc.schema.receipt import EdgeHeader
 
 class Endpoints:
     """Backend routing prefixes and endpoints for Edge Gateway"""

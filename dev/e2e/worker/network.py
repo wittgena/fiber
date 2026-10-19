@@ -11,7 +11,7 @@ from fiber.infra.e2e.config import Phase, E2EConfig, TestResult, get_free_port
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 from fiber.infra.e2e.mcp.server import MockMcpServer
 from fiber.phase.cli.connect import resolve_connector_spec
-from fiber.gateway.mcp.connector import MCPServerConnector
+from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.gateway.mcp.payload import McpPayloadBuilder
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT

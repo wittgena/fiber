@@ -23,7 +23,7 @@ from fiber.llm.entry import acompletion
 from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 from fiber.gateway.rest.security import TokenTranslator
 from fiber.gateway.rest.token.gen import FinOpsTokenGenerator
-from fiber.gateway.mcp.connector import MCPServerConnector
+from fiber.infra.mcp.connector import MCPServerConnector
 
 from fiber.dev.trace.vcr.manager import (
     VCRPlaybackConfig, 
@@ -32,15 +32,15 @@ from fiber.dev.trace.vcr.manager import (
 )
 from fiber.dev.trace.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
-import fiber.dev.worker.finops as worker_finops
+import fiber.infra.mcp.worker.finops as worker_finops
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
-from xphi.arch.bound.event.next import next_trace_id
+from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.node.space.bind.resolver import resolve_path, get_invoker
-from xphi.node.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
 
 FIXTURE_ROOT = "fiber-compats/suites/e2e"

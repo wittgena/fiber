@@ -12,7 +12,7 @@ from fiber.infra.e2e.sandbox import SandboxRunner, ScriptDef, TestScripts
 from xphi.state.anchor.nexus import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.node.wasm.method import DphiMethod
+from xphi.node.runtime.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")

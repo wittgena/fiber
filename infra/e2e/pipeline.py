@@ -8,6 +8,8 @@ from typing import Any, List, Dict, Optional, Callable
 
 import uvicorn
 
+from fiber.gateway.rest.payload import create_app, Config
+
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from fiber.infra.e2e.config import (
     PipelineRunner, 
@@ -16,10 +18,9 @@ from fiber.infra.e2e.config import (
     E2EConfig
 )
 
-import fiber.infra.rpc.registry as rpc_registry
-from fiber.infra.daemon.rpc import RpcWorkerDaemon
-from fiber.gateway.rest.payload import create_app, Config
-
+from xphi.arch.bound.client.rpc import InternalRpcClient
+import xphi.node.rpc.registry as rpc_registry
+from xphi.node.ops.daemon.rpc import RpcWorkerDaemon
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 

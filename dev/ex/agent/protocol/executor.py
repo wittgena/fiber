@@ -19,7 +19,7 @@ from typing import Any, Final, Protocol, runtime_checkable, TypeVar, Generic
 import anyio
 from anyio.from_thread import start_blocking_portal
 
-from xphi.arch.bound.xor.secret.redact import redact_string
+from xphi.arch.xor.secret.redact import redact_string
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

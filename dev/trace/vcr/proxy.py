@@ -18,7 +18,7 @@ from fiber.dev.trace.vcr.manager import VCRPlaybackConfig, VCRManager
 from fiber.llm.exception.mapping import STATUS_CODE_MAPPING, SEMANTIC_ERROR_REGEX
 import fiber.llm.exception.eco as eco_exceptions
 
-from xphi.arch.bound.event.next import next_trace_id
+from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.model.surge.model import DynamicSurgeModel, _melt_alien_objects
 from xphi.watcher.plane.emitter import get_emitter
 

@@ -5,7 +5,7 @@ from typing import Any
 from dataclasses import dataclass
 
 from fiber.llm.response import ModelResponse
-from xphi.arch.bound.event.next import LogEvent
+from xphi.arch.contract.event.next import LogEvent
 from xphi.watcher.plane.emitter import get_emitter, register_interceptor
 
 log = get_emitter("driver.observer")

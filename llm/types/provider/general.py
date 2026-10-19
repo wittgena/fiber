@@ -18,7 +18,7 @@ from fiber.llm.types.provider.core import Usage
 from fiber.llm.types.provider.openai import ChatCompletionToolCallChunk, ChatCompletionUsageBlock
 from fiber.llm.types.provider.openai import OpenAIChatCompletionFinishReason
 
-from xphi.arch.bound.event.next import uuid
+from xphi.arch.contract.event.next import uuid
 from xphi.arch.model.surge.model import DynamicSurgeModel
 from xphi.watcher.plane.emitter import get_emitter
 

@@ -5,7 +5,7 @@ import json
 from typing import Dict, Any
 from contextlib import suppress
 
-from fiber.infra.rpc.method import RpcMethod
+from xphi.node.rpc.method import RpcMethod
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.registry.unified import contract

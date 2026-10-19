@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, Any, Tuple
 
-from xphi.arch.dev.tracer.base import SystemBound
+from xphi.watcher.plane.tracer.base import SystemBound
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 

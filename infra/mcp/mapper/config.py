@@ -1,4 +1,5 @@
-# fiber.gateway.mcp.mapper.config
+# fiber.infra.mcp.mapper.config
+## @lineage: fiber.gateway.mcp.mapper.config
 import os
 import sys
 import copy

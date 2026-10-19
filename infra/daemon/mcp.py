@@ -7,8 +7,8 @@ from typing import Dict, List
 
 import orjson
 
-from fiber.gateway.mcp.connector import MCPServerConnector
-from fiber.gateway.mcp.mapper.config import McpConfigMapper
+from fiber.infra.mcp.connector import MCPServerConnector
+from fiber.infra.mcp.mapper.config import McpConfigMapper
 from fiber.phase.cli.connect import (
     ResolvedTarget,
     discover_builtin_workers,

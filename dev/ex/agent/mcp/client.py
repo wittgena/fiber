@@ -21,7 +21,7 @@ from mcp.client.streamable_http import streamable_http_client
 from fiber.dev.ex.agent.protocol.executor import AsyncExecutorProtocol
 from fiber.dev.ex.agent.mcp.config import MCPConfig
 
-from xphi.arch.bound.event.next import LogEvent
+from xphi.arch.contract.event.next import LogEvent
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

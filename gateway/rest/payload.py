@@ -19,9 +19,9 @@ from fiber.phase.contract.origin import OriginRegistry
 from fiber.phase.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from fiber.phase.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
-from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
+from xphi.arch.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)

@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import serialization
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.space.sandbox.runner import SchemeRunner
-from xphi.node.wasm.method import DphiMethod
+from xphi.node.runtime.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.e2e.epoch")
