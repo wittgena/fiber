@@ -8,12 +8,12 @@ from typing import Dict, Any, Optional, Union
 from fastapi import APIRouter, Body, Header, Request, HTTPException, Depends
 from fastapi.responses import JSONResponse
 
-from fiber.infra.rpc.method import RpcMethod
+from xphi.node.rpc.method import RpcMethod
 from fiber.gateway.rest.serv.depend import get_rpc_client
 
 from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from xphi.arch.bound.adapter.gateway import AgentIdentity, IdempotencyMapper, NonceReplayProtector, DPoPValidator
-from xphi.arch.bound.xor.parser.mcp import McpPayloadParser
+from xphi.arch.xor.parser.mcp import McpPayloadParser
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 

@@ -21,7 +21,7 @@ from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.gateway.llm.stream.param.processor import CompletionProcessor, EmbeddingProcessor
 from fiber.llm.model.router.adapter import AdapterRegistry
 
-from xphi.arch.bound.event.next import next_trace_id
+from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.state.phase.channel import ChannelPipeline, ChannelContext, DuplexChannel, RpcBridge
 from xphi.watcher.plane.emitter import get_emitter

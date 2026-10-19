@@ -12,7 +12,7 @@ from fiber.gateway.rest.token.gen import FinOpsTokenGenerator, FinOpsOpType
 from fiber.gateway.rest.security import TokenTranslator
 from fiber.infra.watcher.finops import default_finops_watcher
 
-from xphi.node.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.arch.bound.adapter.pta import (
     PtaAdapter, 
     PtaTransaction, 

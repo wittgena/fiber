@@ -30,9 +30,9 @@ from fiber.infra.watcher.finops import default_finops_watcher
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.state.topos.workflow import StopMessage, WorkflowMessage, step
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
-from xphi.arch.bound.event.next import next_trace_id
+from xphi.arch.contract.event.next import next_trace_id
 
-from xphi.node.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.watcher.plane.emitter import get_emitter

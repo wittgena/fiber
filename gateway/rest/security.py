@@ -11,13 +11,13 @@ from typing import Any, Optional, Tuple
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from fastapi import Request, HTTPException, status
 
-from xphi.arch.bound.xor.secret.cipher import Cipher
-from xphi.arch.bound.xor.secret.client import get_secret_from_vendor, KMSVendor
+from xphi.arch.xor.secret.cipher import Cipher
+from xphi.arch.xor.secret.client import get_secret_from_vendor, KMSVendor
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.node.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.pta import SignStateAdapter
 from xphi.arch.contract.config.env import FINOPS_JWT_PUBLIC_KEY

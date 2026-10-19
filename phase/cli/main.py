@@ -14,8 +14,6 @@ except ImportError:
     dotenv = None
 
 from fiber.phase.cli.observer import run_observer
-
-from xphi.node.ops.shell import ShellEntry
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
@@ -82,25 +80,6 @@ def run_daemon(
         os.environ["NODE_PROFILE"] = "ALL"
         
     boot_kernel("Gateway Daemon")
-
-@app.command("shell")
-def run_shell(
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    _load_env(env_file)
-    async def _launch_console():
-        tunnel = await TunnelFactory.get_default()
-        shell = ShellEntry(tunnel)
-        try:
-            await shell.run()
-        finally:
-            await shell.manifold.close()
-            await tunnel.close()
-            log.info("[Fiber] System resources released.")
-    try:
-        asyncio.run(_launch_console())
-    except KeyboardInterrupt:
-        log.info("\n[Fiber] Exiting Console...")
 
 @app.command("account", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_account(

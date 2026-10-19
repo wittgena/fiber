@@ -9,7 +9,7 @@ import atexit
 import argparse
 from dataclasses import dataclass
 
-from xphi.arch.bound.event.next import uuid4
+from xphi.arch.contract.event.next import uuid4
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter('local.llama')

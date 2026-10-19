@@ -1,5 +1,5 @@
 # fiber.llm.exception.types
-from xphi.arch.bound.event.next import ToposId
+from xphi.arch.contract.event.next import ToposId
 ConversationID = ToposId
 
 class DriverError(Exception):

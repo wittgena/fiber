@@ -13,7 +13,7 @@ from fiber.dev.trace.vcr.manager import (
     add_vcr_arguments
 )
 
-from xphi.arch.bound.event.next import next_trace_id
+from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 

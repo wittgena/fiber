@@ -3,10 +3,10 @@ import asyncio
 import sys
 from typing import List, Optional
 
-import xphi.arch.dev.tracer.chaos as chaos_module
-from xphi.arch.dev.tracer.base import SystemBound, ExecutorOp
-from xphi.arch.dev.tracer.kube import KubeStatusAuditor, KubeTracer
-from xphi.arch.dev.infra.topos import (
+import fiber.infra.e2e.chaos.payload as chaos_module
+from xphi.watcher.plane.tracer.base import SystemBound, ExecutorOp
+from xphi.watcher.plane.tracer.kube import KubeStatusAuditor, KubeTracer
+from xphi.watcher.plane.infra.topos import (
     ContainerStateAuditor,
     EntropyAuditor,
     UniversalLogAuditor,

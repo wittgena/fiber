@@ -8,7 +8,7 @@ from typing import Any, Dict, Generator, Optional, final
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from xphi.arch.bound.event.next import LogEvent
+from xphi.arch.contract.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor
 
 logger = logging.getLogger("model.usage")

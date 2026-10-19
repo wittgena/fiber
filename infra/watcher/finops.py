@@ -17,7 +17,7 @@ from fiber.llm.model.usage import Usage
 
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.arch.contract.config.resolver import config as global_config
-from xphi.arch.bound.event.next import LogEvent
+from xphi.arch.contract.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor, get_emitter
 
 logger = logging.getLogger("infra.watcher.finops")

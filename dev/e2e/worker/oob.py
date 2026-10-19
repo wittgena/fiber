@@ -12,10 +12,10 @@ from typing import List, Optional
 
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
-import fiber.dev.worker.deployer as worker_deployer
+import fiber.infra.mcp.worker.deployer as worker_deployer
 
-from fiber.gateway.mcp.connector import MCPServerConnector
-from fiber.gateway.mcp.bridge.slack import SlackHitlBridge
+from fiber.infra.mcp.connector import MCPServerConnector
+from fiber.dev.bridge.mcp.slack import SlackHitlBridge
 from fiber.dev.e2e.worker.fixture import AuditCryptoContext, MCPGatewayTestClient
 from xphi.state.phase.reactor import PhaseReactor
 

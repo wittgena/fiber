@@ -13,8 +13,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-from fiber.infra.rpc.handler.validator import ValidatorService
-import fiber.infra.rpc.registry as rpc_registry
+from xphi.node.rpc.handler.validator import ValidatorService
+import xphi.node.rpc.registry as rpc_registry
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.node.space.bind.resolver import resolve_path
 

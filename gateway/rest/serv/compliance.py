@@ -11,7 +11,7 @@ import orjson
 from fastapi import Body, Header, Response, status, Depends, BackgroundTasks, HTTPException, Query, Request
 from pydantic import BaseModel
 
-from fiber.infra.rpc.method import RpcMethod
+from xphi.node.rpc.method import RpcMethod
 from fiber.gateway.rest.serv.depend import (
     get_wasm_broker, 
     get_pubsub, 
@@ -21,11 +21,11 @@ from fiber.gateway.rest.serv.depend import (
 )
 from xphi.arch.bound.client.rpc import InternalRpcClient, RpcException
 from fiber.phase.contract.router import ContractRouter
-from fiber.infra.rpc.schema.receipt import EdgeState, EdgeHeader, IntentValidationRequest
-from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
+from xphi.node.rpc.schema.receipt import EdgeState, EdgeHeader, IntentValidationRequest
+from xphi.arch.xor.parser.ruleset.otlp import OtlpExtractionEngine
 
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.wasm.broker import DphiBroker, DphiMethod
+from xphi.node.runtime.wasm.broker import DphiBroker, DphiMethod
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.model.schema.audit import (
     HandshakeIntent,

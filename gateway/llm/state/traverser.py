@@ -11,7 +11,7 @@ from fiber.llm.compat.extraction import ENDPOINT_ROUTING_RULES
 from fiber.llm.types.inter.block import MessageRole
 from fiber.llm.types.inter.response import ChatMessage
 
-from xphi.arch.bound.event.next import uuid4 
+from xphi.arch.contract.event.next import uuid4 
 from xphi.node.space.bind.resolver import get_invoker
 from xphi.watcher.plane.emitter import get_emitter
 

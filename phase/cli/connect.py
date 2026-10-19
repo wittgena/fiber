@@ -11,9 +11,9 @@ from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, List
 
 import typer
-from fiber.gateway.mcp.connector import MCPServerConnector
+from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.gateway.mcp.preflight import PreflightGuard
-from fiber.gateway.mcp.mapper.config import McpConfigMapper, MappedMcpEntry
+from fiber.infra.mcp.mapper.config import McpConfigMapper, MappedMcpEntry
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fiber.cli.connect")

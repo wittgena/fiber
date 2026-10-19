@@ -8,11 +8,11 @@ import random
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
+from fiber.dev.ex.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from fiber.infra.watcher.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
-from xphi.arch.dev.transport.sentinel import ChaosPayloadLibrary
+from fiber.infra.e2e.chaos.payload import ChaosPayloadLibrary
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.emitter import get_emitter

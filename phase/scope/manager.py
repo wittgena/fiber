@@ -18,7 +18,7 @@ from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.arch.contract.config import env
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.dev.tracer.scope import scope_trace, get_current_trace_path
+from xphi.watcher.plane.tracer.scope import scope_trace, get_current_trace_path
 
 log_flow = get_emitter("scope.manager")
 log_local = get_emitter("surface.local")

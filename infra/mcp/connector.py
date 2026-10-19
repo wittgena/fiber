@@ -1,4 +1,5 @@
-# fiber.gateway.mcp.connector
+# fiber.infra.mcp.connector
+## @lineage: fiber.gateway.mcp.connector
 import sys
 import asyncio
 import logging
@@ -10,7 +11,7 @@ import orjson
 
 from fiber.gateway.mcp.payload import McpPayloadBuilder
 from fiber.gateway.mcp.registry import AdapterRegistry
-from fiber.gateway.mcp.intent import IntentLifecycleFSM, IntentState
+from fiber.infra.mcp.intent import IntentLifecycleFSM, IntentState
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory

@@ -13,7 +13,7 @@ from fiber.llm.types.inter.response import (
 )
 from fiber.gateway.llm.state.pydantic import ConfigDict, Field
 from fiber.gateway.llm.inter.handler.template import BasePromptTemplate
-from xphi.arch.bound.event.next import uuid4
+from xphi.arch.contract.event.next import uuid4
 
 class BaseEvent(BaseModel):
     model_config = ConfigDict(

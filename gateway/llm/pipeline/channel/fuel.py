@@ -197,7 +197,7 @@ class BillingObserver(DuplexChannel):
                                 intent = calc_res.get("consume_intent", {})
                                 final_consume_amount = intent.get("amount_to_consume", final_consume_amount)
                         
-                        from fiber.infra.rpc.handler.fuel import execute_direct_fuel_consume
+                        from xphi.node.rpc.handler.fuel import execute_direct_fuel_consume
                         await execute_direct_fuel_consume(
                             tenant_id=tenant_id, 
                             consumed_fuel=final_consume_amount, 

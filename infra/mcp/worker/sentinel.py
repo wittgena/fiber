@@ -1,4 +1,5 @@
-# fiber.dev.worker.sentinel
+# fiber.infra.mcp.worker.sentinel
+## @lineage: fiber.dev.worker.sentinel
 import asyncio
 import time
 import json

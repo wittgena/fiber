@@ -6,8 +6,8 @@ from xphi.arch.bound.client.rpc import InternalRpcClient
 
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.wasm.broker import DphiBroker
-from xphi.arch.bound.xor.parser.ruleset.otlp import OtlpExtractionEngine
+from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.arch.xor.parser.ruleset.otlp import OtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("dphi.depend")

@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("registry.quarantine")
+log = get_emitter("mcp.registry")
 
 _SSE_CONTROL_PREFIXES = ("event:", ":", "id:", "retry:")
 

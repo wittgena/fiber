@@ -1,4 +1,5 @@
-# fiber.gateway.mcp.bridge.slack
+# fiber.dev.bridge.mcp.slack
+## @lineage: fiber.gateway.mcp.bridge.slack
 ## @lineage: fiber.gateway.mcp.bridge.slack.py
 import os
 import json
@@ -12,7 +13,7 @@ from typing import Dict, Any, Optional, List
 
 import httpx
 
-from fiber.gateway.mcp.bridge.oob import OutOfBandApprovalBridge
+from fiber.dev.bridge.mcp.oob import OutOfBandApprovalBridge
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter

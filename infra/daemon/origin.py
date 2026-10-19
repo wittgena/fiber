@@ -1,5 +1,4 @@
 # fiber.infra.daemon.origin
-## @lineage: fiber.gateway.daemon.origin
 import os
 import json
 import time
@@ -10,11 +9,12 @@ from typing import Dict, Any, Optional
 
 import aiohttp
 
-from xphi.arch.contract.config.attestation import attestation_config, delegation_config
-from xphi.arch.contract.registry.unified import contract
-from xphi.node.ops.daemon.base import AbstractDaemon
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.adapter.state import StateAdapter
+from xphi.arch.contract.config.attestation import attestation_config, delegation_config
+from xphi.arch.contract.registry.unified import contract
+
+from xphi.node.ops.daemon.base import AbstractDaemon
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 

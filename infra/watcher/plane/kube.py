@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from typing import Dict, Any, Tuple, Optional, Type
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
-from xphi.arch.dev.tracer.kube import KubeTracer, KubeStatusAuditor
-from xphi.arch.dev.tracer.base import SystemBound, PhaseOp, ExecutorOp
+from xphi.watcher.plane.tracer.kube import KubeTracer, KubeStatusAuditor
+from xphi.watcher.plane.tracer.base import SystemBound, PhaseOp, ExecutorOp
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 from xphi.watcher.plane.infra.yaml.deployment import KubeBlueprint
 from xphi.node.space.bind.resolver import resolve_path
