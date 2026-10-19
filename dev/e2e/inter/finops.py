@@ -13,6 +13,7 @@ import json
 import asyncio
 import time
 from pathlib import Path
+from typing import Optional
 import httpx
 
 from fiber.infra.e2e.config import Phase, E2EConfig
@@ -21,6 +22,7 @@ from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 from fiber.gateway.rest.security import TokenTranslator
+from fiber.gateway.rest.token.gen import FinOpsTokenGenerator
 from fiber.gateway.mcp.connector import MCPServerConnector
 
 from fiber.dev.trace.vcr.manager import (
@@ -31,7 +33,7 @@ from fiber.dev.trace.vcr.manager import (
 from fiber.dev.trace.vcr.injector import VCRInjector
 from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
 import fiber.dev.worker.finops as worker_finops
-from fiber.infra.watcher.finops import default_finops_watcher
+from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
@@ -70,18 +72,20 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         self.vcr_manager = vcr_manager
         self.target_model = target_model
         
-        self.finops_id = "finops-poc-01"
+        self.finops_tenant_id = "finops-local-01"
         self.dpop_client = DPoPClientGenerator(key_size=2048)
+        self.token_gen = FinOpsTokenGenerator()
         
         self.test_tenant = "accounting_dept"
         self.initial_fuel = 1000
+        self.issued_jwt: Optional[str] = None
         
         self.broker = DphiBroker(timeout=5.0)
         self.pta_adapter = PtaAdapter(broker=self.broker)
         
         self.set_phases([
             Phase("Phase 1: PTA Infrastructure Setup", self.phase_pta_setup),
-            Phase("Phase 2: Track B - FinOps JWT Issuance & Internal AP2 Translation", self.phase_track_b_jwt),
+            Phase("Phase 2: Track B - FinOps JWT Issuance, Idempotency & Lifecycle Translation", self.phase_track_b_jwt),
             Phase("Phase 3: Track A - Dynamic Pub/Sub Kill Switch vs VCR Stream", self.phase_track_a_hybrid_kill),
         ])
 
@@ -91,9 +95,9 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
     async def setup_workers(self):
         finops_cmd = f"{sys.executable} -m {worker_finops.__name__}"
         self.connectors.append(
-            MCPServerConnector(target_id=self.finops_id, execution_target=finops_cmd, mode="multiplex")
+            MCPServerConnector(target_id=self.finops_tenant_id, execution_target=finops_cmd, mode="multiplex")
         )
-        log.info(f"Registered FinOps System Worker [{self.finops_id}]")
+        log.info(f"Registered FinOps System Worker [{self.finops_tenant_id}]")
 
     def _build_trace_context(self, scenario_name: str, messages: list) -> dict:
         seed = VCRIdentityRule.generate_seed(scenario_name=scenario_name, messages=messages, invoker=CURRENT_INVOKER)
@@ -129,14 +133,14 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         log.info(f"  └─ Produced Balance for '{self.test_tenant}': {balance} Fuel")
 
     async def phase_track_b_jwt(self):
-        # 외부 FinOps Worker에게 정적 예산이 담긴 JWT 발급 요청 (MCP Tools Call)
+        # 1. 외부 FinOps Worker에게 예산($50.0)이 담긴 JWT 발급 요청 (MCP Tools Call)
         payload = {
             "jsonrpc": "2.0", "id": 100, "method": "tools/call", 
             "params": {"name": "issue_jwt", "arguments": {"tenant_id": self.test_tenant, "budget_usd": 50.0}}
         }
         
         nonce = uuid.uuid4().hex
-        url = f"{self.local_url}/v1/mcp-gateway/{self.finops_id}/invoke"
+        url = f"{self.local_url}/v1/mcp-gateway/{self.finops_tenant_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
         headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "DPoP": dpop_proof}
         
@@ -151,14 +155,40 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         
         if not jwt_token:
             raise RuntimeError("Missing JWT in response")
+        self.issued_jwt = jwt_token
         log.info(f"  └─ 1. Successfully received PoC JWT from FinOps Worker: {jwt_token[:30]}...")
 
-        # 발급받은 JWT를 Core의 TokenTranslator 모듈을 통해 내부 영수증(AP2 Mandate)으로 변환 검증
+        # 2. 발급받은 JWT를 TokenTranslator를 통해 AP2 Mandate로 변환 및 Watcher 예산 동기화 검증
         translated_receipt = await TokenTranslator.exchange(jwt_token)
         if not translated_receipt or "AP2-v1.0" not in translated_receipt:
             raise RuntimeError("JWT to AP2 Translation failed.")
             
-        log.info("  └─ 2. FinOps JWT successfully translated to internal AP2 Mandate securely.")
+        synced_fuel = default_finops_watcher.local_budget_cache.get(self.test_tenant, 0.0)
+        if synced_fuel != 50000.0:
+            raise RuntimeError(f"Watcher budget sync mismatch: expected 50000.0 Fuel, got {synced_fuel}")
+        log.info(f"  └─ 2. FinOps JWT translated to AP2 Mandate & synced budget ({synced_fuel} Fuel).")
+
+        # 3. [중복 생성 방지 검증] 동일 JWT(동일 JTI)로 TOP_UP이나 재호출 시 예산이 중복 합산되지 않는지 확인
+        await TokenTranslator.exchange(jwt_token)
+        if default_finops_watcher.local_budget_cache.get(self.test_tenant) != 50000.0:
+            raise RuntimeError("JTI Idempotency failed: duplicate token exchange mutated budget.")
+        log.info("  └─ 3. JTI Idempotency verified (duplicate token exchange safely ignored).")
+
+        # 4. [변경(TOP_UP) 검증] 상위 버전(policy_ver=2) TOP_UP 토큰 주입 시 정상 합산되는지 확인
+        topup_jwt = self.token_gen.generate_token(
+            tenant_id=self.test_tenant, budget_usd=10.0, op="TOP_UP", policy_ver=2
+        )
+        await TokenTranslator.exchange(topup_jwt)
+        updated_fuel = default_finops_watcher.local_budget_cache.get(self.test_tenant, 0.0)
+        if updated_fuel != 60000.0:
+            raise RuntimeError(f"TOP_UP transition failed: expected 60000.0 Fuel, got {updated_fuel}")
+        log.info(f"  └─ 4. Policy version upgrade (v2 TOP_UP) verified: Budget -> {updated_fuel} Fuel.")
+
+        # 5. [구버전 차단 검증] v2가 적용된 상태에서 구버전(v1) 토큰 재사용 시 거부(None)되는지 확인
+        stale_res = await TokenTranslator.exchange(jwt_token)
+        if stale_res is not None:
+            raise RuntimeError("Stale policy version (v1) was not rejected after v2 upgrade.")
+        log.info("  └─ 5. Stale token version (v1) replay strictly rejected.")
 
     async def phase_track_a_hybrid_kill(self):
         original_quota_flag = os.environ.get("FIBER_ENFORCE_QUOTA")
@@ -167,13 +197,11 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         scenario = "fuel_phase_4_finops"
         messages = [{"role": "user", "content": LONG_FINOPS_PROMPT}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        # trace_ctx["metadata"]["node_auth"] = {
-        #     "fuel_budget": 1000,
-        #     "tenant_id": self.test_tenant,
-        #     "is_enforced": True
-        # }
+        
+        # Phase 2에서 동기화된 예산(없을 경우 initial_fuel)을 동적으로 연결
+        active_budget = int(default_finops_watcher.local_budget_cache.get(self.test_tenant, self.initial_fuel))
         trace_ctx["metadata"]["node_auth"] = NodeAuthPayload(
-            fuel_budget=1000,
+            fuel_budget=active_budget,
             tenant_id=self.test_tenant,
             is_enforced=True
         )
@@ -193,7 +221,7 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
                     max_tokens=2048,
                     stream=True,
                     fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
-                    billing_observer=BillingObserver(tenant_eco=None, pta_adapter=self.pta_adapter),
+                    billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
                     **trace_ctx
                 )
                 chunks = 0
@@ -226,7 +254,7 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
                 "params": {"name": "trigger_kill", "arguments": {"tenant_id": self.test_tenant}}
             }
             nonce = uuid.uuid4().hex
-            url = f"{self.local_url}/v1/mcp-gateway/{self.finops_id}/invoke"
+            url = f"{self.local_url}/v1/mcp-gateway/{self.finops_tenant_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
             headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "DPoP": dpop_proof}
             

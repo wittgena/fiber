@@ -6,8 +6,9 @@ import secrets
 import orjson
 import jwt
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from fastapi import Request, HTTPException, status
 
 from xphi.arch.bound.xor.secret.cipher import Cipher
@@ -19,6 +20,7 @@ from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.wasm.broker import DphiBroker
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.pta import SignStateAdapter
+from xphi.arch.contract.config.env import FINOPS_JWT_PUBLIC_KEY
 
 from xphi.arch.bound.adapter.settlement import (
     Ap2MandateConstraints,
@@ -26,6 +28,7 @@ from xphi.arch.bound.adapter.settlement import (
     Ap2Authorization,
     Ap2MandateResult
 )
+from fiber.infra.watcher.finops import default_finops_watcher
 
 log = get_emitter(__name__)
 
@@ -86,8 +89,97 @@ class SecurityProvisioner:
 class TokenTranslator:
     """Validates stateless JWTs issued by external partners (FinOps/IdP) and mints real-time AP2 Mandates required by the internal backend"""
     
-    # Future integration point for JWKS endpoint or env-injected public key
-    JWT_PUBLIC_KEY = os.environ.get("FINOPS_JWT_PUBLIC_KEY", "") 
+    @classmethod
+    def _resolve_public_key(cls, raw_pub_key: str) -> Any:
+        """Resolves either a 64-char Ed25519 Hex string or a standard PEM/SSH public key string."""
+        cleaned = raw_pub_key.strip()
+        if len(cleaned) == 64:
+            try:
+                return ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(cleaned))
+            except ValueError:
+                pass
+        return cleaned
+
+    @classmethod
+    def _decode_jwt(cls, raw_token: str) -> dict[str, Any]:
+        pub_key_str = FINOPS_JWT_PUBLIC_KEY or os.environ.get("FINOPS_JWT_PUBLIC_KEY", "")
+        if pub_key_str:
+            resolved_key = cls._resolve_public_key(pub_key_str)
+            return jwt.decode(raw_token, resolved_key, algorithms=["EdDSA", "RS256", "ES256"])
+        
+        return jwt.decode(raw_token, options={"verify_signature": False})
+
+    @classmethod
+    def _extract_and_sync_finops_state(cls, claims: dict[str, Any]) -> Tuple[bool, str, float]:
+        """
+        Extracts FinOps claims, enforces version validity & JTI idempotency via FinOpsWatcher,
+        and determines whether an AP2 Mandate should be issued.
+        Returns: (is_allowed, tenant_id, granted_budget)
+        """
+        tenant_id = str(claims.get("sub") or "anonymous_tenant")
+        jti = claims.get("jti")
+        finops_block = claims.get("finops") or {}
+
+        if "budget_usd" in finops_block:
+            granted_budget = float(finops_block["budget_usd"])
+        else:
+            granted_budget = float(claims.get("budget_limit_usd", 1.0))
+
+        op = str(finops_block.get("op") or claims.get("op") or "SYNC_QUOTA").upper()
+        exchange_rate = int(finops_block.get("exchange_rate") or 1000)
+        
+        # Default to version 1 if omitted so legacy/unversioned tokens cannot bypass v2+ upgrades
+        raw_ver = finops_block.get("policy_ver")
+        if raw_ver is None:
+            raw_ver = claims.get("policy_ver", 1)
+        policy_ver = int(raw_ver)
+
+        # 1. Version Check: Reject stale tokens immediately
+        if not default_finops_watcher.is_version_valid(tenant_id, policy_ver):
+            log.warning(f"[TokenTranslator] Rejected outdated token version (v{policy_ver}) for tenant '{tenant_id}'.")
+            return False, tenant_id, 0.0
+
+        # 2. State Synchronization (JTI idempotency & PROVISION / SYNC_QUOTA / TOP_UP / REVOKE)
+        default_finops_watcher.apply_finops_spec(
+            tenant_id=tenant_id,
+            op=op,
+            budget_usd=granted_budget,
+            exchange_rate=exchange_rate,
+            policy_ver=policy_ver,
+            jti=jti
+        )
+
+        # 3. Revocation / Zero-Budget Gate
+        if op == "REVOKE" or granted_budget <= 0.0:
+            log.warning(f"[TokenTranslator] Access revoked or zero budget for tenant '{tenant_id}' (op={op}).")
+            return False, tenant_id, 0.0
+
+        return True, tenant_id, granted_budget
+
+    @classmethod
+    def _mint_ap2_mandate(cls, tenant_id: str, granted_budget: float, ttl_ms: int = 3600 * 1000) -> str:
+        """Constructs and cryptographically signs the internal AP2 Mandate receipt."""
+        current_ts = int(time.time() * 1000)
+        expire_ts = current_ts + ttl_ms
+
+        constraints = Ap2MandateConstraints(max_spend_usdc=str(granted_budget), expiration_ts=expire_ts)
+        mandate_payload = Ap2MandatePayload(
+            protocol="AP2-v1.0",
+            requester_id=tenant_id,
+            target_action="llm_compute_gateway",
+            constraints=constraints,
+            issued_at=current_ts
+        )
+
+        mandate_dict = mandate_payload.model_dump(exclude_none=True)
+        canonical_mandate = json.dumps(mandate_dict, sort_keys=True, separators=(',', ':'))
+
+        real_signature = SignStateAdapter.sign_state_payload({"payload": canonical_mandate})
+        node_pubkey = SignStateAdapter.get_signer_pubkey()
+
+        auth = Ap2Authorization(signer_pub=node_pubkey, signature=real_signature)
+        ap2_result = Ap2MandateResult(mandate=mandate_payload, authorization=auth)
+        return json.dumps(ap2_result.model_dump(exclude_none=True))
 
     @classmethod
     async def exchange(cls, raw_token: Optional[str], request: Optional[Request] = None) -> Optional[str]:
@@ -102,37 +194,12 @@ class TokenTranslator:
         log.info("[TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.")
         
         try:
-            # Parse JWT claims to extract FinOps constraints
-            # Note: In production, strict signature verification via JWT_PUBLIC_KEY is required
-            claims = jwt.decode(raw_token, options={"verify_signature": False})
-            
-            tenant_id = claims.get("sub", "anonymous_tenant")
-            granted_budget = claims.get("budget_limit_usd", 1.0)
-            
-            current_ts = int(time.time() * 1000)
-            expire_ts = current_ts + (1000 * 60 * 60)  # Internal receipt TTL (1 hour)
-            
-            # Assemble AP2 Mandate schema using official Pydantic models
-            constraints = Ap2MandateConstraints(max_spend_usdc=str(granted_budget), expiration_ts=expire_ts)
-            mandate_payload = Ap2MandatePayload(
-                protocol="AP2-v1.0",
-                requester_id=tenant_id,
-                target_action="llm_compute_gateway",
-                constraints=constraints,
-                issued_at=current_ts
-            )
-            
-            # System node surrogate signature via SignStateAdapter
-            mandate_dict = mandate_payload.model_dump(exclude_none=True)
-            canonical_mandate = json.dumps(mandate_dict, sort_keys=True, separators=(',', ':'))
-            
-            real_signature = SignStateAdapter.sign_state_payload({"payload": canonical_mandate})
-            node_pubkey = SignStateAdapter.get_signer_pubkey()
-            
-            # Assemble final Ap2MandateResult (Case A format)
-            auth = Ap2Authorization(signer_pub=node_pubkey, signature=real_signature)
-            ap2_result = Ap2MandateResult(mandate=mandate_payload, authorization=auth)
-            translated_receipt = json.dumps(ap2_result.model_dump(exclude_none=True))
+            claims = cls._decode_jwt(raw_token)
+            is_allowed, tenant_id, granted_budget = cls._extract_and_sync_finops_state(claims)
+            if not is_allowed:
+                return None
+
+            translated_receipt = cls._mint_ap2_mandate(tenant_id=tenant_id, granted_budget=granted_budget)
             log.info(f"[TokenTranslator] JWT exchanged to AP2 Mandate for '{tenant_id}' (Budget: ${granted_budget})")
             return translated_receipt
         except Exception as e:

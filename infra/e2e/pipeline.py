@@ -170,7 +170,7 @@ class BaseBridgePipeline(PipelineRunner):
             return registry
             
         rpc_registry.build_internal_rpc_registry = bridge_mock_registry_builder
-        import fiber.gateway.daemon.rpc as daemon_module
+        import fiber.infra.daemon.rpc as daemon_module
         daemon_module.build_internal_rpc_registry = bridge_mock_registry_builder
 
         class MockDaemonCtx: broker = None; store = None

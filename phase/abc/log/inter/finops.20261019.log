@@ -1,0 +1,115 @@
+wittgena@wittgenas-MacBook-Pro self % python -m fiber.dev.e2e.inter.finops --vcr replay
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+ LOG | SYSTEM | INFO  |  model.fallback: Loaded 4 fallback models (Local-First).
+ LOG | SYSTEM | INFO  |  model.fallback: [Fallback Registry Diagnostics]
+ [P1] llama_server/gemma-3-1b-it-Q4_K_M.gguf: SELECTED
+ LOG | SYSTEM | INFO  |  e2e.base: [System Offline] fallback model: {resolved_model}
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-13052
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: FinOps Hybrid VCR Integration Suite ===
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Init Secure MCP Server...
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: Registered FinOps System Worker [finops-local-01]
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | CRIT  |  rpc.handler.validator: ⚠️ DPHI_MASTER_PASSPHRASE missing. Validator cannot operate.
+ LOG | SYSTEM | WARN  |  rpc.handler.validator: Generating Ephemeral Signing Key for Validator.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-13052] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  config.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/node/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  config.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  llm.interceptor.registry: No external interceptor config found. Using default pipeline configuration.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 1 Connectors...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:finops-local-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finops-local-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.dev.worker.finops
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finops-local-01] Sandbox running (PID: 13090)
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Async Agent 'finops.local.system' Ignited. Listening on async stdin...
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/3] Phase 1: PTA Infrastructure Setup
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Bootstrapping PTA Ledger for 'accounting_dept' with 1000 Fuel.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Produced Balance for 'accounting_dept': 1000 Fuel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/3] Phase 2: Track B - FinOps JWT Issuance, Idempotency & Lifecycle Translation
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] [LocalFinOps] Minted FinOps JWT for 'accounting_dept' (Budget: $50.0, Op: SYNC_QUOTA, Ver: v1)
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shared Intent txn_1792341598_6772b5b8d0f9 RESOLVED.
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finops-local-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 1. Successfully received PoC JWT from FinOps Worker: eyJhbGciOiJFZERTQSIsInR5cCI6Ik...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.
+[FinOpsWatcher] 🔄 SYNC_QUOTA executed: Tenant 'accounting_dept' -> 50000.0 Fuel.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] JWT exchanged to AP2 Mandate for 'accounting_dept' (Budget: $50.0)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 2. FinOps JWT translated to AP2 Mandate & synced budget (50000.0 Fuel).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] JWT exchanged to AP2 Mandate for 'accounting_dept' (Budget: $50.0)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 3. JTI Idempotency verified (duplicate token exchange safely ignored).
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.
+[FinOpsWatcher] ➕ TOP_UP executed: Tenant 'accounting_dept' +10000.0 -> 60000.0 Fuel.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] JWT exchanged to AP2 Mandate for 'accounting_dept' (Budget: $10.0)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 4. Policy version upgrade (v2 TOP_UP) verified: Budget -> 60000.0 Fuel.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.security: [TokenTranslator] Enterprise JWT detected. Initiating internal AP2 Mandate minting.
+ LOG | SYSTEM | WARN  |  fiber.gateway.rest.security: [TokenTranslator] Rejected outdated token version (v1) for tenant 'accounting_dept'.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 5. Stale token version (v1) replay strictly rejected.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] infra.e2e.bridge:   └─ Status: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] infra.e2e.bridge: 
+[PHASE 3/3] Phase 3: Track A - Dynamic Pub/Sub Kill Switch vs VCR Stream
+[FinOpsWatcher] Started background policy sync daemon.
+[FinOpsWatcher] Connected to FinOps Control Plane via Tunnel.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] infra.e2e.bridge:   └─ Stream active (chunk #1 verified). Triggering asynchronous Kill-Switch via FinOps Worker...
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+[FinOpsWatcher] 🚨 REVOKE executed: Tenant 'accounting_dept' budget frozen to 0.0 Fuel.
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox] 🚨 [LocalFinOps] Published KILL-SWITCH (REVOKE) for tenant 'accounting_dept' via Pub/Sub
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shared Intent txn_1792341598_4d2f54f29b7c RESOLVED.
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finops-local-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:infra.e2e.bridge' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] infra.e2e.bridge:   └─ Hybrid Integration Success: FuelTrap dynamically intercepted and killed the long VCR stream at chunk 1 (2 chars).
+[FinOpsWatcher] Stopped background policy sync daemon.
+[FinOpsWatcher] Watcher task cancelled.
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:mcp.connector'
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finops-local-01] Terminating sandbox (PID: 13090)
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  fiber.gateway.rest.payload: API Payload Teardown complete. Goodbye.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.9] infra.e2e.bridge: [BasePipeline] Teardown complete.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.1] infra.e2e.bridge: FINOPS SYSTEM VALIDATED SUCCESSFULLY.
+[Reactor] Lifecycle terminated cleanly.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.8] infra.e2e.bridge: [infra.e2e.bridge] Bursting logs suppressed... (x3)

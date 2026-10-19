@@ -102,6 +102,22 @@ def run_shell(
     except KeyboardInterrupt:
         log.info("\n[Fiber] Exiting Console...")
 
+@app.command("account", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def run_account(
+    ctx: typer.Context,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+):
+    """Manages local/tenant FinOps accounts, EdDSA JWT quotas, fuel allocate, and live Kill-Switches."""
+    _load_env(env_file)
+    from fiber.phase.cli.account import main as account_main
+    try:
+        account_main(ctx.args)
+    except KeyboardInterrupt:
+        log.info("\n[Fiber] Account operation manually terminated by user.")
+    except Exception as e:
+        log.error(f"[Fiber] Account command failed: {e}", exc_info=True)
+        sys.exit(1)
+
 @app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_e2e(
     ctx: typer.Context,
@@ -110,7 +126,7 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args 
-    KNOWN_SUITES = ["llm.trace", "gateway.compliance", "inter.wasm.phase", "inter.plane.flare"]
+    KNOWN_SUITES = ["llm.trace", "gateway.compliance", "inter.wasm.phase", "inter.plane.flare", "inter.finops"]
     targets = KNOWN_SUITES if target == "all" else [target]
     
     log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")

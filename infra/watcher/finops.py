@@ -5,7 +5,7 @@ import logging
 import time
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, Optional
+from typing import Any, Dict, Generator, Optional, Set
 
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ from xphi.arch.bound.event.next import LogEvent
 from xphi.watcher.plane.emitter import flow_scope, register_interceptor, get_emitter
 
 logger = logging.getLogger("infra.watcher.finops")
-finops_emitter = get_emitter("tenant.finops", phase="BILLING")
+finops_emitter = get_emitter("watcher.finops", phase="BILLING")
 
 """Usage Tracker & Tenant Eco (Outbound Billing System)"""
 class UsageTracker:
@@ -171,10 +171,13 @@ class TenantEco:
                 "message": str(e)
             }
 
-"""FinOps Watcher (Inbound: 외부 정책 실시간 동기화)"""
+"""FinOps Watcher (Inbound: 외부 정책 및 TokenGenerator 스펙 실시간 동기화)"""
 class FinOpsWatcher:
     def __init__(self):
         self.local_budget_cache: Dict[str, float] = {}
+        self.processed_jtis: Set[str] = set()
+        self.policy_versions: Dict[str, int] = {}
+        
         self._sync_task: Optional[asyncio.Task] = None
         self._running: bool = False
         self.is_ready = asyncio.Event()
@@ -199,6 +202,72 @@ class FinOpsWatcher:
             await asyncio.wait_for(self.is_ready.wait(), timeout=timeout)
         except asyncio.TimeoutError:
             logger.warning("[FinOpsWatcher] Timeout waiting for watcher to be ready.")
+
+    def is_version_valid(self, tenant_id: str, policy_ver: int) -> bool:
+        """구버전(Stale) JWT 재사용 여부 검증"""
+        return policy_ver >= self.policy_versions.get(tenant_id, 0)
+
+    def apply_finops_spec(
+        self,
+        tenant_id: str,
+        op: str = "SYNC_QUOTA",
+        budget_usd: Optional[float] = None,
+        fuel_budget: Optional[float] = None,
+        exchange_rate: int = 1000,
+        policy_ver: Optional[int] = None,
+        jti: Optional[str] = None
+    ) -> bool:
+        """
+        FinOpsTokenGenerator 스펙 및 Control Plane 이벤트를 처리하는 단일 진입점.
+        중복 생성을 막고 PROVISION / SYNC_QUOTA / TOP_UP / REVOKE를 명확히 구분합니다.
+        """
+        # 1. 버전 검증: 이미 더 높은 버전의 정책이 적용되었으면 무시/거부
+        current_ver = self.policy_versions.get(tenant_id, 0)
+        if policy_ver is not None and policy_ver < current_ver:
+            logger.warning(f"[FinOpsWatcher] Stale policy rejected for '{tenant_id}' (ver {policy_ver} < {current_ver}).")
+            return False
+
+        # 2. 멱등성(Idempotency) 검증: 이미 처리된 JTI라면 중복 생성/충전 스킵
+        if jti and jti in self.processed_jtis:
+            return False
+
+        # 3. 목표 Fuel 계산 (fuel_budget 직접 지정 또는 budget_usd * exchange_rate 환산)
+        if fuel_budget is not None:
+            target_fuel = float(fuel_budget)
+        elif budget_usd is not None:
+            target_fuel = float(budget_usd) * exchange_rate
+        else:
+            target_fuel = 0.0
+
+        # 4. 오퍼레이션(op) 별 분기 처리
+        op_upper = op.upper()
+        if op_upper == "REVOKE":
+            self.local_budget_cache[tenant_id] = 0.0
+            logger.warning(f"[FinOpsWatcher] 🚨 REVOKE executed: Tenant '{tenant_id}' budget frozen to 0.0 Fuel.")
+            
+        elif op_upper == "TOP_UP":
+            current_fuel = self.local_budget_cache.get(tenant_id, 0.0)
+            self.local_budget_cache[tenant_id] = current_fuel + target_fuel
+            logger.info(f"[FinOpsWatcher] TOP_UP executed: Tenant '{tenant_id}' +{target_fuel} -> {self.local_budget_cache[tenant_id]} Fuel.")
+            
+        elif op_upper == "PROVISION":
+            if tenant_id not in self.local_budget_cache:
+                self.local_budget_cache[tenant_id] = target_fuel
+                logger.info(f"[FinOpsWatcher] PROVISION executed: Tenant '{tenant_id}' initialized with {target_fuel} Fuel.")
+            else:
+                logger.debug(f"[FinOpsWatcher] PROVISION skipped: Tenant '{tenant_id}' already exists.")
+                
+        else:  
+            self.local_budget_cache[tenant_id] = target_fuel
+            logger.info(f"[FinOpsWatcher] SYNC_QUOTA executed: Tenant '{tenant_id}' -> {target_fuel} Fuel.")
+
+        # 5. 처리 완료된 JTI 및 최신 버전 기록
+        if jti:
+            self.processed_jtis.add(jti)
+        if policy_ver is not None:
+            self.policy_versions[tenant_id] = policy_ver
+
+        return True
 
     async def _watch_finops_events(self):
         while self._running:
@@ -274,11 +343,31 @@ class FinOpsWatcher:
 
             elif event_type == "update_budget":
                 tenant_id = payload.get("tenant_id")
+                if not tenant_id:
+                    return
+
+                # 기존 방식({"fuel_budget": 0.0})과 신규 finops 블록 스펙 모두 호환되도록 추출
+                finops_block = payload.get("finops", {})
+                op = finops_block.get("op") or payload.get("op", "SYNC_QUOTA")
                 fuel_budget = payload.get("fuel_budget")
-                
-                if tenant_id and fuel_budget is not None:
-                    self.local_budget_cache[tenant_id] = float(fuel_budget)
-                    logger.info(f"[FinOpsWatcher] Updated budget: Tenant {tenant_id} -> {fuel_budget}")
+                budget_usd = finops_block.get("budget_usd") if "budget_usd" in finops_block else payload.get("budget_usd")
+                exchange_rate = finops_block.get("exchange_rate") or payload.get("exchange_rate", 1000)
+                policy_ver = finops_block.get("policy_ver") or payload.get("policy_ver")
+                jti = payload.get("jti")
+
+                # fuel_budget이 0 이하로 들어온 경우(기존 킬 스위치 신호) 자동으로 REVOKE로 매핑
+                if fuel_budget is not None and float(fuel_budget) <= 0.0:
+                    op = "REVOKE"
+
+                self.apply_finops_spec(
+                    tenant_id=tenant_id,
+                    op=op,
+                    budget_usd=budget_usd,
+                    fuel_budget=fuel_budget,
+                    exchange_rate=exchange_rate,
+                    policy_ver=policy_ver,
+                    jti=jti
+                )
 
         except Exception as e:
             logger.error(f"[FinOpsWatcher] Failed to process event: {e}", exc_info=True)
