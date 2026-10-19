@@ -15,7 +15,7 @@ from typing import Any, Dict, List
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from fiber.infra.e2e.config import Phase, E2EConfig
+from fiber.infra.e2e.config import Phase, E2EConfig, get_free_port
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.llm.entry import acompletion
@@ -48,16 +48,6 @@ STREAM_PROMPT = (
     "framing, backpressure watermarks, and coroutine context propagation operate "
     "under high concurrency."
 )
-
-
-def _get_free_port(default_port: int = 8356) -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        if s.connect_ex(("127.0.0.1", default_port)) != 0:
-            return default_port
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return s.getsockname()[1]
-
 
 class PipelineConcurrencySuite(BaseBridgePipeline):
     def __init__(
@@ -409,7 +399,7 @@ class ConcurrencySuiteRunner:
         self.iterations = iterations
 
     async def execute(self):
-        free_port = _get_free_port(8356)
+        free_port = get_free_port(8356)
         net_config = E2EConfig(host="127.0.0.1", port=free_port, protocol="http")
         results = await PipelineConcurrencySuite(
             config=net_config,

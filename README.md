@@ -353,14 +353,14 @@ Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeo
   
   - **Human-in-the-Loop Authorization:** On high-risk operations (e.g., destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and awaits explicit user approval (TOTP/CLI) before resuming from the exact suspended state.
 
-  - **Credential Isolation & Stream Sanitization:** Injects external API keys (`Bearer` tokens) strictly at the egress boundary so secrets never enter the agent's context, while stripping non-JSON `stdout` noise before it corrupts the agent's parser.
+  - **Human-in-the-Loop & Pre-Flight Guard:** On high-risk operations—detected either natively by the worker or zero-code via pre-flight regex traps (`--preflight`)—the gateway parks the execution context (`YIELD`) and awaits cryptographic attestation (RFC-6238 TOTP + Ed25519 signature via Slack Socket Mode or CLI) before releasing the payload.
 
   - **FinOps Governance**: Translates external, EdDSA-signed billing tokens into synchronized internal ledger states. It enforces strict transaction idempotency (preventing double-spending), rejects stale policy replays, and broadcasts sub-second kill-switches across the control plane to halt runaway costs instantly.
 
 **Agent Onboarding**
 Instead of manually supervising fragmented MCP processes, Fiber automatically scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) alongside built-in workers.
 
-To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file:
+To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file (optionally attaching `FIBER_PREFLIGHT_PATTERN` in `env` to lock third-party servers without modifying their code):
 
 ```json
 {
@@ -370,7 +370,10 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
     },
     "repomix": {
       "command": "npx",
-      "args": ["-y", "repomix", "--mcp"]
+      "args": ["-y", "repomix", "--mcp"],
+      "env": {
+        "FIBER_PREFLIGHT_PATTERN": "DROP|TRUNCATE|DELETE"
+      }
     }
   }
 }
@@ -379,14 +382,14 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
 **Coexistence**: Fiber's declarative mapper automatically ignores the self-referential fiber-gateway entry during scanning while mounting the remaining servers. Once verified, you can progressively remove redundant direct entries at your own pace.
 
 **Sidecar Provisioning (fiber connect)**
-While fiber daemon autonomously manages workers in production, `fiber connect` acts as an on-demand sidecar to mount specific config files or individual workers, automatically inferring transport (`stdio` vs. `network`) and concurrency modes (`multiplex`, `linear`, `ephemeral`):
+While fiber daemon autonomously manages workers in production, `fiber connect` acts as an on-demand sidecar to mount specific config files or individual workers, automatically inferring transport (`stdio` vs. `network`), concurrency modes (`multiplex`, `linear`, `ephemeral`), , and pre-flight HITL guards (`-p / FIBER_PREFLIGHT_<TARGET>`):
 
 ```bash
 # Auto-Scan or Explicit Config: Mounts all servers defined in mcp.json
 $ fiber connect -c .mcp.json
 
-# Built-in Worker: Mounts worker with auto-inferred target & mode
-$ fiber connect -e worker.docs
+# Built-in or 3rd-Party Worker with Zero-Code Pre-Flight HITL Lock (-p / --preflight)
+$ fiber connect -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE"
 
 # Remote Commercial MCP: HTTP/SSE multiplexing with Bearer auth injection
 $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
@@ -396,7 +399,7 @@ $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 
 | Command | Role | Architectural Function & Lifecycle | Example |
 | :--- | :--- | :--- | :--- |
-| **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (mcp.json), or remote HTTP/SSE endpoints as governed nodes on the Tunnel Bus. | `fiber connect -e worker.docs` |
+| **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (`mcp.json`), or remote HTTP/SSE endpoints onto the Tunnel Bus with optional pre-flight HITL locks (`-p`). | `fiber connect -e worker.deployer -p "DROP"` |
 | **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (record) and verifies declarative extraction rules offline (replay) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
 | **`account`** | **[FinOps & Quota]** | Manages tenant budgets, issues cryptographic billing tokens, synchronizes usage ledgers, and triggers real-time stream kill-switches. | `fiber account jwt --usd 50 --op PROVISION --sync` |

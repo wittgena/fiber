@@ -1,24 +1,8 @@
 # fiber.dev.e2e.worker.audit
-import os
 import sys
-import time
 import uuid
-import json
 import asyncio
-import sqlite3
-import tempfile
-import base64
-import hmac
-import hashlib
-import struct
-from typing import List
-
-import httpx
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from typing import List, Optional
 
 from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
 from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
@@ -26,93 +10,49 @@ import fiber.dev.worker.deployer as worker_deployer
 import fiber.dev.worker.sentinel as worker_sentinel
 
 from fiber.gateway.mcp.connector import MCPServerConnector
-from fiber.infra.rpc.handler.validator import ValidatorService
-import fiber.infra.rpc.registry as rpc_registry
-
+from fiber.dev.e2e.worker.fixture import AuditCryptoContext, MCPGatewayTestClient
 from xphi.state.phase.reactor import PhaseReactor
-from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 
 class AuditSecurityPipeline(BaseBridgePipeline):
     def __init__(self, config: E2EConfig):
         super().__init__(
-            config=config, 
-            name="Stateful Security & Resilience Suite", 
-            scope_name="MCP_AUDIT_SUITE"
+            config=config,
+            name="Stateful Security & Resilience Suite",
+            scope_name="MCP_AUDIT_SUITE",
         )
 
         self.deploy_id = "legacy-01"
-        self.test_short_id = "fiber"
-        self.test_spiffe_id = f"spiffe://self/{self.test_short_id}"
-        self.mock_totp_secret = "JBSWY3DPEHPK3PXP"
+        self.crypto_ctx = AuditCryptoContext(spiffe_id="spiffe://self/fiber")
+        self.gw_client: Optional[MCPGatewayTestClient] = None
 
-        self.prompt_id = None
-        self.idem_key_otp = None
-        self.deploy_payload = None
+        # Phase 간 공유 상태
+        self.prompt_id: Optional[str] = None
+        self.idem_key_otp: Optional[str] = None
+        self.deploy_payload: Optional[dict] = None
 
-        self.sentinel = None
-        self._sentinel_task = None
-        self.temp_db_path = None
-        
-        # DPoP 클라이언트 인스턴스화
-        self.dpop_client = DPoPClientGenerator(key_size=2048)
+        self.sentinel: Optional[worker_sentinel.AgentSentinel] = None
+        self._sentinel_task: Optional[asyncio.Task] = None
 
         self.set_phases([
             Phase("Phase 1: Idempotency Fast-Path Defense (Trigger YIELD)", self.phase_idempotency_defense),
             Phase("Phase 2: MCP 2026-07-28 Stateless Re-issue & Resume", self.phase_stateless_otp_resume),
-            Phase("Phase 3: Autonomous Reconciliation (Sentinel)", self.phase_sentinel_reconciliation)
+            Phase("Phase 3: Autonomous Reconciliation (Sentinel)", self.phase_sentinel_reconciliation),
         ])
 
     async def setup_custom_context(self):
-        """환경 구축 및 E2E DB 프로비저닝, 그리고 안전한 Validator 인스턴스 주입"""
-        print("\n" + "="*80)
-        print("🔐 [Security Context] Zero-Trust Auth Validator Auto-Provisioning")
-        
-        self.test_passphrase = "test_master_passphrase_123"
-        fd, self.temp_db_path = tempfile.mkstemp(suffix='_audit.sqlite')
-        os.close(fd)
-        
-        salt = os.urandom(16)
-        nonce = os.urandom(12)
-        kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=600_000)
-        aesgcm = AESGCM(kdf.derive(self.test_passphrase.encode('utf-8')))
-        ciphertext = aesgcm.encrypt(nonce, self.mock_totp_secret.encode('utf-8'), None)
+        print("\n" + "=" * 80)
+        print("[Security Context] Zero-Trust Auth Validator Auto-Provisioning")
+        validator = self.crypto_ctx.provision()
+        print(f"Bound NodeSigner PubKey : {validator.pubkey_hex[:16]}...")
+        print(f"Injected Scoped Secret  : {self.crypto_ctx.temp_db_path}")
+        print("=" * 80 + "\n")
 
-        with sqlite3.connect(self.temp_db_path) as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS admin_users (
-                    user_id TEXT PRIMARY KEY, salt TEXT, nonce TEXT, ciphertext TEXT
-                )
-            """)
-            conn.execute("INSERT INTO admin_users VALUES (?, ?, ?, ?)", 
-                         (self.test_spiffe_id, salt.hex(), nonce.hex(), ciphertext.hex()))
-            conn.commit()
-
-        print(f"✅ Auto-injected Mock Secret into Temp DB: {self.temp_db_path}")
-        print("="*80 + "\n")
-
-        val_key = ed25519.Ed25519PrivateKey.generate()
-        self.val_priv_hex = val_key.private_bytes(serialization.Encoding.Raw, serialization.PrivateFormat.Raw, serialization.NoEncryption()).hex()
-        self.val_pub_hex = val_key.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
-        
-        os.environ["DPHI_VALIDATOR_PRIVATE_KEY"] = self.val_priv_hex
-        os.environ["DPHI_VALIDATOR_PUBLIC_KEY"] = self.val_pub_hex
-        os.environ["DPHI_MASTER_PASSPHRASE"] = self.test_passphrase
-        os.environ["DPHI_AUDIT_DB_PATH"] = self.temp_db_path
-        
-        self.validator_service = ValidatorService()
-        
-        # [수정] 여기서 os.environ.pop 하던 3줄을 삭제하고 teardown_custom으로 이동시켰습니다.
-        # 백엔드 데몬이 자체적으로 ValidatorService를 생성할 때 환경변수가 필요하기 때문입니다.
-
-        original_builder = rpc_registry.build_internal_rpc_registry
-        
-        def safe_mock_registry_builder(*args, **kwargs):
-            kwargs['validator_service'] = self.validator_service
-            return original_builder(*args, **kwargs)
-            
-        rpc_registry.build_internal_rpc_registry = safe_mock_registry_builder
-        
-        log.info("[AuditPipeline] Ephemeral DB Provisioned and Validator Instance Injected.")
+        self.gw_client = MCPGatewayTestClient(
+            base_url=self.local_url,
+            target_id=self.deploy_id,
+            spiffe_id=self.crypto_ctx.spiffe_id,
+        )
+        log.info("[AuditPipeline] Zero-Exposure Audit DB & Validator Context Aligned.")
 
     async def setup_workers(self):
         deploy_cmd = f"{sys.executable} -m {worker_deployer.__name__}"
@@ -120,152 +60,101 @@ class AuditSecurityPipeline(BaseBridgePipeline):
             MCPServerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
         )
 
-        self.sentinel = worker_sentinel.AgentSentinel(ledger=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0)
+        self.sentinel = worker_sentinel.AgentSentinel(
+            ledger=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0
+        )
         self._sentinel_task = asyncio.create_task(self.sentinel.ignite())
-        log.info("[AuditPipeline] Sentinel Autonomous Daemon & Worker Connectors Ignited. Environment Sanitized.")
+        log.info("[AuditPipeline] Sentinel Autonomous Daemon & Worker Connectors Ignited.")
 
     async def teardown_custom(self):
-        if self.sentinel: self.sentinel.running = False
-        if self._sentinel_task: self._sentinel_task.cancel()
-        if self.temp_db_path and os.path.exists(self.temp_db_path):
-            os.remove(self.temp_db_path)
-            
-        if hasattr(self, 'validator_service') and hasattr(self.validator_service, 'conn'):
-            try: self.validator_service.conn.close()
-            except: pass
-            
-        # [수정] 테스트 종료 시점에 환경변수들을 안전하게 삭제합니다.
-        os.environ.pop("DPHI_VALIDATOR_PRIVATE_KEY", None)
-        os.environ.pop("DPHI_MASTER_PASSPHRASE", None)
-        os.environ.pop("DPHI_AUDIT_DB_PATH", None)
-            
-        log.info("[AuditPipeline] Sentinel Autonomous Daemon Shutdown & Temp DB Cleared.")
+        if self.sentinel:
+            self.sentinel.running = False
+        if self._sentinel_task and not self._sentinel_task.done():
+            self._sentinel_task.cancel()
+            await asyncio.gather(self._sentinel_task, return_exceptions=True)
 
-    ## Test Phases
+        self.crypto_ctx.teardown()
+        log.info(
+            f"[AuditPipeline] Sentinel Daemon Shutdown & Scoped Record ({self.crypto_ctx.spiffe_id}) Purged."
+        )
+
+    # Test Phases
     async def phase_idempotency_defense(self):
         self.idem_key_otp = uuid.uuid4().hex
-        self.deploy_payload = {
-            "jsonrpc": "2.0", "id": 777, "method": "tools/call",
-            "params": {"name": "execute_db_migration", "arguments": {"service_name": "auth", "target_env": "production", "sql_script": "DROP TABLE"}}
-        }
-        
-        # 요청 1: DPoP 헤더 주입
-        nonce1 = uuid.uuid4().hex
-        url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
-        dpop_proof1 = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce1)
-        
-        headers1 = {
-            "x-idempotency-key": self.idem_key_otp, 
-            "x-nonce": nonce1, 
-            "Fuel-Receipt": "valid_receipt",
-            "x-spiffe-id": self.test_spiffe_id,
-            "DPoP": dpop_proof1
-        }
+        self.deploy_payload = self.gw_client.build_migration_payload(
+            req_id=777, service_name="auth", sql_script="DROP TABLE"
+        )
 
-        async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res1 = await client.post(url, json=self.deploy_payload, headers=headers1)
-            if res1.status_code != 202: raise RuntimeError(f"Expected HTTP 202 (YIELD), got {res1.status_code} - {res1.text}")
-            prompt_res = res1.json()
-            self.prompt_id = prompt_res.get("id")
+        # 1차 호출: 파괴적 쿼리 감지 -> Elicitation (HTTP 202 YIELD) 유도
+        res1 = await self.gw_client.invoke(self.deploy_payload, idempotency_key=self.idem_key_otp)
+        if res1.status_code != 202:
+            raise RuntimeError(f"Expected HTTP 202 (YIELD), got {res1.status_code} - {res1.text}")
 
-        # 요청 2(재시도 검증): 새로운 Nonce로 DPoP 재발급
-        nonce2 = uuid.uuid4().hex
-        dpop_proof2 = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce2)
-        headers2 = dict(headers1)
-        headers2.update({"x-nonce": nonce2, "DPoP": dpop_proof2})
-        
-        async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res2 = await client.post(url, json=self.deploy_payload, headers=headers2)
-            if res2.status_code != 202: raise RuntimeError(f"Fast-Path failed. Expected 202, got {res2.status_code}")
+        prompt_data = res1.json()
+        self.prompt_id = prompt_data.get("id")
+        if not self.prompt_id:
+            raise RuntimeError(f"Elicitation response missing prompt 'id': {prompt_data}")
 
-        log.info("  └─ ✨ Idempotency Shield deflected duplicate request without crashing Sandbox.")
+        # 2차 호출 (동일 Idempotency Key 재시도): 샌드박스 중복 실행 없이 캐싱된 202 즉시 반환 검증
+        res2 = await self.gw_client.invoke(self.deploy_payload, idempotency_key=self.idem_key_otp)
+        if res2.status_code != 202:
+            raise RuntimeError(f"Fast-Path failed. Expected 202, got {res2.status_code}")
+
+        log.info("   └─ ✨ Idempotency Shield deflected duplicate request without crashing Sandbox.")
 
     async def phase_stateless_otp_resume(self):
-        def _generate_totp(secret_b32: str) -> str:
-            key = base64.b32decode(secret_b32, True)
-            msg = struct.pack(">Q", int(time.time()) // 30)
-            h = hmac.new(key, msg, hashlib.sha1).digest()
-            o = h[19] & 15
-            h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
-            return f"{h:06d}"
+        valid_totp = self.crypto_ctx.generate_totp()
+        resume_payload = self.gw_client.attach_totp_resume(
+            base_payload=self.deploy_payload,
+            prompt_id=self.prompt_id,
+            totp_code=valid_totp,
+        )
 
-        valid_totp_code = _generate_totp(self.mock_totp_secret)
-        
-        resume_payload = dict(self.deploy_payload)
-        resume_payload["params"]["_meta"] = {
-            "inputResponses": {"jsonrpc": "2.0", "id": self.prompt_id, "result": {"value": valid_totp_code}}
-        }
-        
-        # Resume 요청용 DPoP 발급
-        nonce = uuid.uuid4().hex
-        url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
-        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        
-        headers = {
-            "x-idempotency-key": self.idem_key_otp,
-            "x-nonce": nonce, 
-            "Fuel-Receipt": "valid_receipt",
-            "x-spiffe-id": self.test_spiffe_id,
-            "DPoP": dpop_proof
-        }
+        # 동일 Idempotency Key로 TOTP 응답 주입 -> Parked 샌드박스 깨우기 및 NodeSigner 서명 검증
+        res = await self.gw_client.invoke(resume_payload, idempotency_key=self.idem_key_otp, timeout=10.0)
+        if res.status_code != 200:
+            raise RuntimeError(f"Bridge failed to Resume Sandbox. Expected 200 OK, got {res.status_code} ({res.text})")
 
-        async with httpx.AsyncClient(base_url=self.local_url, timeout=10.0) as client:
-            res = await client.post(url, json=resume_payload, headers=headers)
-            if res.status_code != 200:
-                raise RuntimeError(f"Bridge failed to Resume Sandbox. Expected 200 OK, got {res.status_code} ({res.text})")
+        body = res.json()
+        content_list = body.get("result", {}).get("content", [])
+        final_text = content_list[0].get("text", "") if content_list else ""
+        if "successfully" not in final_text:
+            raise RuntimeError(f"Resume succeeded, but payload failed: {body}")
 
-        final_result = res.json().get("result", {}).get("content", [{}])[0].get("text", "")
-        if "successfully" not in final_result:
-            raise RuntimeError(f"Resume succeeded, but payload failed: {final_result}")
-        log.info("  └─ ✨ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.")
+        log.info("   └─ ✨ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.")
 
     async def phase_sentinel_reconciliation(self):
+        # 고아 트랜잭션(Orphaned Stream) 빠른 감지를 위해 TTL 임계치를 1.0초로 단축
         self.mock_store.stale_timeout = 1.0
+        if self.sentinel:
+            self.sentinel.ttl_thresholds["dphi.transition.pending"] = 1.0
+
         idem_key_sentinel = uuid.uuid4().hex
-        payload = {
-            "jsonrpc": "2.0", "id": 888, "method": "tools/call",
-            "params": {"name": "execute_db_migration", "arguments": {"service_name": "billing", "target_env": "production", "sql_script": "DROP TABLE"}}
-        }
-        
-        nonce = uuid.uuid4().hex
-        url = f"{self.local_url}/v1/mcp-gateway/{self.deploy_id}/invoke"
-        dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
-        
-        headers = {
-            "x-idempotency-key": idem_key_sentinel, 
-            "x-nonce": nonce, 
-            "Fuel-Receipt": "valid_receipt", 
-            "x-spiffe-id": self.test_spiffe_id,
-            "DPoP": dpop_proof
-        }
+        payload = self.gw_client.build_migration_payload(
+            req_id=888, service_name="billing", sql_script="DROP TABLE"
+        )
 
-        async with httpx.AsyncClient(base_url=self.local_url) as client:
-            res = await client.post(url, json=payload, headers=headers)
-            
+        # 고의적으로 YIELD(202)를 유발한 뒤 TOTP를 입력하지 않고 방치
+        res = await self.gw_client.invoke(payload, idempotency_key=idem_key_sentinel)
+        if res.status_code != 202:
+            raise RuntimeError(f"Expected 202 on initial sentinel trigger, got {res.status_code} ({res.text})")
+
         location = res.headers.get("Location", "")
-        if "/" in location:
-            handle_id = location.split("/")[-1]
-        else:
-            handle_id = self.captured_handle_ids.get("latest")
+        handle_id = location.split("/")[-1] if "/" in location else self.captured_handle_ids.get("latest")
+        if not handle_id:
+            raise RuntimeError("Failed to extract handle_id from 202 Location header.")
 
-        # =========================================================================
-        # [변경] 하드코딩된 sleep(3.0) 대신, 최대 10초간 0.5초 간격으로 Polling
-        # =========================================================================
-        max_retries = 20
-        retry_interval = 0.5
+        # Sentinel이 백그라운드에서 고아 상태를 감지하고 FAULTED로 강제 롤백할 때까지 최대 10초간 폴링
         final_state = None
-        
-        for _ in range(max_retries):
+        for _ in range(20):
             final_state = await self.mock_store.query_state(handle_id)
             if final_state and final_state.metadata.get("status") == "FAULTED":
-                break  # Sentinel 롤백 완료됨!
-            await asyncio.sleep(retry_interval)
+                log.info("   └─ ✨ Sentinel Autonomous Reconciliation Successful.")
+                return
+            await asyncio.sleep(0.5)
 
-        if not final_state or final_state.metadata.get("status") != "FAULTED":
-            current_status = final_state.metadata.get('status') if final_state else 'None'
-            raise RuntimeError(f"Sentinel failed to rollback within {max_retries * retry_interval}s. Current status: {current_status}")
-            
-        log.info(f"  └─ ✨ Sentinel Autonomous Reconciliation Successful.")
+        current_status = final_state.metadata.get("status") if final_state else "None"
+        raise RuntimeError(f"Sentinel failed to rollback within 10.0s. Current status: {current_status}")
 
 class AuditSuiteRunner:
     def __init__(self):
@@ -278,22 +167,24 @@ class AuditSuiteRunner:
         self._print_report()
 
     def _print_report(self):
-        self.log.info("\n" + "="*80)
+        self.log.info("\n" + "=" * 80)
         self.log.info("🛡️ [SECURITY & AUDIT BENCHMARK REPORT]")
-        self.log.info("="*80)
+        self.log.info("=" * 80)
         all_passed = all(r.passed for r in self.results)
 
         for idx, res in enumerate(self.results, 1):
             status_icon = "✅" if res.passed else "❌"
-            self.log.info(f"{status_icon} {idx:02d}. [{res.target}]".ljust(22) + f"{res.scenario.ljust(50)} | {'PASSED' if res.passed else 'FAILED'}")
+            self.log.info(
+                f"{status_icon} {idx:02d}. [{res.target}]".ljust(22)
+                + f"{res.scenario.ljust(50)} | {'PASSED' if res.passed else 'FAILED'}"
+            )
 
         self.log.info("-" * 80)
-        if all_passed: 
-            self.log.info("🎉 SECURITY AUDIT PIPELINE VALIDATED SUCCESSFULLY.")
-        else: 
-            self.log.critical("💥 SECURITY FRACTURE DETECTED. Check logs for details.")
-        self.log.info("="*80 + "\n")
-
+        if all_passed:
+            self.log.info("SECURITY AUDIT PIPELINE VALIDATED SUCCESSFULLY.")
+        else:
+            self.log.critical("SECURITY FRACTURE DETECTED. Check logs for details.")
+        self.log.info("=" * 80 + "\n")
 
 def main(args_list: list[str] = None):
     app = AuditSuiteRunner()

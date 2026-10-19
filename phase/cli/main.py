@@ -157,12 +157,13 @@ def run_connector(
     config: Annotated[Optional[Path], typer.Option("--config", "-c", exists=True, help="Path to standard mcp.json file")] = None,
     target: Annotated[Optional[str], typer.Option("--target", "-t", help="Optional Target ID override (auto-inferred if omitted)")] = None,
     mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex")] = None,
+    preflight: Annotated[Optional[str], typer.Option("--preflight", "-p", help="Regex pattern to trigger Zero-Code HITL YIELD before worker execution")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers"""
     _load_env(env_file)
     from fiber.phase.cli.connect import run_connect
-    run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode)
+    run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode, preflight=preflight)
 
 @app.command("observe")
 def start_observer(

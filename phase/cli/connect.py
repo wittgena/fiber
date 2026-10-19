@@ -12,11 +12,11 @@ from typing import Dict, Tuple, Optional, List
 
 import typer
 from fiber.gateway.mcp.connector import MCPServerConnector
+from fiber.gateway.mcp.preflight import PreflightGuard
 from fiber.gateway.mcp.mapper.config import McpConfigMapper, MappedMcpEntry
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fiber.cli.connect")
-
 
 @dataclass(frozen=True)
 class ResolvedTarget:
@@ -24,6 +24,7 @@ class ResolvedTarget:
     exec_cmd: str
     mode: str
     transport: str
+    preflight: Optional[str] = None
 
 
 BUILTIN_ALIASES: Dict[str, str] = {
@@ -33,6 +34,7 @@ BUILTIN_ALIASES: Dict[str, str] = {
     "margin": "worker.eco.margin",
     "archive": "worker.eco.archive",
 }
+
 
 def discover_builtin_workers(base_package: str = "fiber.dev.worker") -> Dict[str, Tuple[str, str, str]]:
     """내장 워커 AST 스캔 -> {매칭키: (canonical_id, cmd, default_mode)} 반환"""
@@ -97,6 +99,7 @@ def resolve_connector_spec(
     exec_cmd: str = "",
     mode: Optional[str] = None,
     transport: Optional[str] = None,
+    preflight: Optional[str] = None,
 ) -> ResolvedTarget:
     raw_cmd = exec_cmd.strip()
     if not raw_cmd:
@@ -106,18 +109,18 @@ def resolve_connector_spec(
     inferred_target: Optional[str] = None
     inferred_default_mode: Optional[str] = None
 
-    # 1. 내장 워커(fiber.dev.worker.*) 동적 탐색 매칭
+    # 내장 워커(fiber.dev.worker.*) 동적 탐색 매칭
     builtin_map = discover_builtin_workers()
     if raw_cmd in builtin_map:
         inferred_target, resolved_cmd, inferred_default_mode = builtin_map[raw_cmd]
     else:
         resolved_cmd = raw_cmd
 
-    # 2. 실행 타겟 유형 판별
+    # 실행 타겟 유형 판별
     is_http_url = resolved_cmd.startswith(("http://", "https://"))
     is_managed_bin_dir = not is_http_url and Path(resolved_cmd).is_dir()
 
-    # 3. Transport 결정 (명시적 인자 우선 -> URL/디렉토리 기반 자동 추론 -> 'stdio')
+    # Transport 결정 (명시적 인자 우선 -> URL/디렉토리 기반 자동 추론 -> 'stdio')
     if transport is not None:
         resolved_transport = transport.lower().strip()
     else:
@@ -127,14 +130,14 @@ def resolve_connector_spec(
         log.error(f"[Fiber] Invalid transport '{resolved_transport}'. Allowed values: 'stdio', 'network'.")
         raise typer.Exit(1)
 
-    # 4. Target ID 결정 (명시적 인자 -> 내장 워커 정규화 ID -> 명령어/URL 기반 추론)
+    # Target ID 결정 (명시적 인자 -> 내장 워커 정규화 ID -> 명령어/URL 기반 추론)
     resolved_target = (
         target
         or inferred_target
         or _infer_fallback_target_id(resolved_cmd, is_http_url)
     ).strip()
 
-    # 5. Mode 결정 (명시적 인자 -> 내장 워커 프로토콜 추론 -> Transport별 기본값)
+    # Mode 결정 (명시적 인자 -> 내장 워커 프로토콜 추론 -> Transport별 기본값)
     if mode is not None:
         resolved_mode = mode.lower().strip()
     elif inferred_default_mode is not None:
@@ -146,45 +149,55 @@ def resolve_connector_spec(
         log.error(f"[Fiber] Invalid mode '{resolved_mode}'. Allowed values: 'ephemeral', 'linear', 'multiplex'.")
         raise typer.Exit(1)
 
+    # PreflightGuard의 단일 해석 메서드로 위임
+    resolved_preflight = PreflightGuard.resolve_pattern(resolved_target, preflight)
+
     return ResolvedTarget(
         target_id=resolved_target,
         exec_cmd=resolved_cmd,
         mode=resolved_mode,
         transport=resolved_transport,
+        preflight=resolved_preflight,
     )
-
 
 def _specs_from_mapped_entries(
     entries: List[MappedMcpEntry],
     target_filter: Optional[str] = None,
     mode_override: Optional[str] = None,
+    preflight_override: Optional[str] = None,
 ) -> List[ResolvedTarget]:
     specs: List[ResolvedTarget] = []
     for entry in entries:
         if target_filter and entry.target_id != target_filter:
             continue
-        if entry.env:
-            os.environ.update(entry.env)
+
+        entry_preflight, clean_env = PreflightGuard.extract_from_env_dict(entry.env, preflight_override)
+        if clean_env:
+            os.environ.update(clean_env)
+
         specs.append(
             resolve_connector_spec(
                 target=entry.target_id,
                 exec_cmd=entry.exec_cmd,
                 mode=mode_override,
+                preflight=entry_preflight,
             )
         )
     return specs
 
 
 async def launch_connector_async(spec: ResolvedTarget):
+    guard_badge = f", Pre-Flight: /{spec.preflight}/i" if spec.preflight else ""
     log.info(
         f"[Fiber] Sublimating server [{spec.target_id}] into the MCP Server Connector "
-        f"(Mode: {spec.mode.upper()}, Transport: {spec.transport.upper()})..."
+        f"(Mode: {spec.mode.upper()}, Transport: {spec.transport.upper()}{guard_badge})..."
     )
     daemon = MCPServerConnector(
         target_id=spec.target_id,
         execution_target=spec.exec_cmd,
         mode=spec.mode,
         transport_type=spec.transport,
+        preflight_pattern=spec.preflight,
     )
     try:
         await daemon.run()
@@ -204,22 +217,28 @@ def run_connect(
     config: Optional[Path] = None,
     target: Optional[str] = None,
     mode: Optional[str] = None,
+    preflight: Optional[str] = None,
 ):
     specs: List[ResolvedTarget] = []
 
-    # 1. 명시적 설정 파일(--config) 로드
     if config is not None:
         mapped_entries = McpConfigMapper.parse_file(config)
-        specs.extend(_specs_from_mapped_entries(mapped_entries, target_filter=target, mode_override=mode))
+        specs.extend(
+            _specs_from_mapped_entries(
+                mapped_entries, target_filter=target, mode_override=mode, preflight_override=preflight
+            )
+        )
 
-    # 2. 단건 실행 명령어/프리셋(--exec) 로드
     if exec_cmd is not None:
-        specs.append(resolve_connector_spec(target=target, exec_cmd=exec_cmd, mode=mode))
+        specs.append(resolve_connector_spec(target=target, exec_cmd=exec_cmd, mode=mode, preflight=preflight))
 
-    # 3. 인자가 모두 생략된 경우 로컬 에이전트 설정 자동 스캔 폴백
     if config is None and exec_cmd is None:
         mapped_entries = McpConfigMapper.scan_and_parse()
-        specs.extend(_specs_from_mapped_entries(mapped_entries, target_filter=target, mode_override=mode))
+        specs.extend(
+            _specs_from_mapped_entries(
+                mapped_entries, target_filter=target, mode_override=mode, preflight_override=preflight
+            )
+        )
 
     if not specs:
         log.error("[Fiber] No valid MCP target resolved. Provide --exec (-e), --config (-c), or ensure agent config exists.")

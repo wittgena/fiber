@@ -1,4 +1,5 @@
 # fiber.infra.rpc.handler.validator
+# fiber/infra/rpc/handler/validator.py
 import os
 import json
 import time
@@ -7,10 +8,11 @@ import hmac
 import hashlib
 import base64
 import struct
-from typing import Dict, Any
+from pathlib import Path
+from typing import Dict, Any, Tuple
 from pydantic import BaseModel, Field, ValidationError
 
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -18,6 +20,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from xphi.arch.contract.protocol.rpc import WorkerContext, _build_error
 from xphi.arch.contract.config.env import DPHI_ENV
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt
+from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
@@ -34,6 +37,7 @@ class ComputeMarginRequest(BaseModel):
     base_fee_usd: float = Field(0.002, description="Base API invocation cost")
     cost_per_mb_usd: float = Field(0.00005, description="Cost per MB of memory/disk I/O")
     cost_per_cpu_sec_usd: float = Field(0.0001, description="Cost per second of CPU time")
+
 
 async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> dict:
     try:
@@ -92,8 +96,10 @@ async def handle_compute_margin_calculate(params: dict, ctx: WorkerContext) -> d
         log.error(f"[Margin] Domain Logic Fracture: {e}", exc_info=True)
         return _build_error(500, "Internal Margin Calculation Error")
 
+
 """Billing Receipt Validator"""
 GENESIS_FLOOR_PRICE_USD = 0.002
+
 
 async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict:
     receipt_data = params.get("fuel_receipt")
@@ -141,7 +147,7 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
             if mandate_obj.mandate.constraints.expiration_ts < current_ts:
                 return _build_error(402, "AP2 Mandate Expired: Time-to-live exceeded")
                 
-            max_spend = getattr(mandate_obj.mandate.constraints, 'max_spend_usdc', 0.0)
+            max_spend = float(getattr(mandate_obj.mandate.constraints, 'max_spend_usdc', 0.0))
             if required_fee > max_spend:
                 log.warning(f"AP2 Mandate limit exceeded for {target_server_id}. Required: {required_fee}, Max: {max_spend}")
                 return _build_error(402, f"Payment Required: Mandate limit exceeded. Required fee is ${required_fee:.4f}")
@@ -156,7 +162,7 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
             if not is_valid_lineage:
                 log.warning(f"Fuel Receipt lineage verification failed for {receipt_obj.receipt_id}")
                 
-            actual_balance = getattr(receipt_obj, 'amount_usd', 0.0)
+            actual_balance = float(getattr(receipt_obj, 'amount_usd', 0.0))
             if required_fee > actual_balance:
                 log.warning(f"Fuel Receipt insufficient for {target_server_id}. Required: {required_fee}, Provided: {actual_balance}")
                 return _build_error(402, f"Payment Required: Insufficient Receipt value. Required: ${required_fee:.4f}")
@@ -173,6 +179,7 @@ async def handle_fuel_receipt_validate(params: dict, ctx: WorkerContext) -> dict
         log.error(f"Receipt Validation crashed: {e}", exc_info=True)
         return _build_error(500, "Internal Billing Validation Error")
 
+
 """Admin Attestation & TOTP Validator"""
 class AdminSecretVault:
     def __init__(self, passphrase: str):
@@ -185,6 +192,7 @@ class AdminSecretVault:
         kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=salt, iterations=600_000)
         aesgcm = AESGCM(kdf.derive(self.passphrase))
         return aesgcm.decrypt(nonce, ciphertext, None).decode('utf-8')
+
 
 class TotpValidator:
     def __init__(self, base32_secret: str):
@@ -202,25 +210,70 @@ class TotpValidator:
         intervals = int(time.time()) // 30
         return any(_get_totp(intervals + i) == str(token).zfill(6) for i in range(-window, window + 1))
 
+
 class ValidatorService:
     def __init__(self):
-        self.master_passphrase = os.environ.get("DPHI_MASTER_PASSPHRASE")
-        if not self.master_passphrase:
-            log.critical("⚠️ DPHI_MASTER_PASSPHRASE missing. Validator cannot operate.")
-            
+        # 1. 서명 키 로드: 명시적 환경변수가 없으면 NodeSigner의 공통 Ed25519 키쌍을 결정론적으로 공유
+        self.signing_key, self.pubkey_hex, raw_seed_bytes = self._load_signing_identity()
+
+        # 2. 마스터 패스프레이즈 로드: 환경변수 노출 없이 local_cipher.key 및 노드 키로부터 단방향 도메인 분리 유도
+        self.master_passphrase = self._derive_zero_exposure_passphrase(raw_seed_bytes)
+
+        db_path = os.environ.get(
+            "DPHI_AUDIT_DB_PATH",
+            os.path.join(str(resolve_path("sign")), "deploy_audit.sqlite")
+        )
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self.conn = sqlite3.connect(db_path, timeout=10.0, check_same_thread=False)
+        self._ensure_table_exists()
+
+    def _load_signing_identity(self) -> Tuple[ed25519.Ed25519PrivateKey, str, bytes]:
+        """
+        1순위: DPHI_VALIDATOR_PRIVATE_KEY 환경변수
+        2순위: NodeSigner 싱글톤의 32-byte raw seed (외부 데몬/테스트/샌드박스 간 자동 일치 보장)
+        """
         vault_key_hex = os.environ.get("DPHI_VALIDATOR_PRIVATE_KEY")
         if vault_key_hex:
-            self.signing_key = ed25519.Ed25519PrivateKey.from_private_bytes(bytes.fromhex(vault_key_hex))
-        else:
-            log.warning("Generating Ephemeral Signing Key for Validator.")
-            self.signing_key = ed25519.Ed25519PrivateKey.generate()
+            raw_seed = bytes.fromhex(vault_key_hex.strip())
+            priv_key = ed25519.Ed25519PrivateKey.from_private_bytes(raw_seed)
+            pub_hex = priv_key.public_key().public_bytes(
+                serialization.Encoding.Raw, serialization.PublicFormat.Raw
+            ).hex()
+            return priv_key, pub_hex, raw_seed
 
-        db_path = os.environ.get("DPHI_AUDIT_DB_PATH", os.path.join(str(resolve_path("sign")), "deploy_audit.sqlite"))
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
-        self._ensure_table_exists()
+        node_signer = NodeSigner.get_instance()
+        raw_seed = bytes(node_signer.signing_key)  # nacl.signing.SigningKey returns 32-byte seed
+        priv_key = ed25519.Ed25519PrivateKey.from_private_bytes(raw_seed)
+        return priv_key, node_signer.pubkey_hex, raw_seed
+
+    def _derive_zero_exposure_passphrase(self, fallback_seed: bytes) -> str:
+        """
+        환경변수(DPHI_MASTER_PASSPHRASE)가 없을 경우,
+        디스크의 영속 시크릿(local_cipher.key) 또는 NodeSigner 시드를 IKM으로 삼아
+        HMAC-SHA256 도메인 분리(Domain Separation) 파생 패스프레이즈를 결정론적으로 생성합니다.
+        """
+        explicit_pass = os.environ.get("DPHI_MASTER_PASSPHRASE")
+        if explicit_pass:
+            return explicit_pass
+
+        local_key_path = Path(str(resolve_path("sign"))) / "local_cipher.key"
+        ikm = fallback_seed
+
+        if local_key_path.exists():
+            try:
+                raw_local_key = local_key_path.read_text(encoding="utf-8").strip()
+                if raw_local_key:
+                    ikm = raw_local_key.encode("utf-8")
+            except Exception as e:
+                log.debug(f"[Validator] Fallback to node seed for passphrase derivation: {e}")
+
+        # 도메인 분리 컨텍스트: 원본 local_cipher.key가 메모리나 하위 계층에 노출되지 않도록 단방향 파생
+        domain_context = f"dphi:domain:admin_secret_vault:v1:{self.pubkey_hex}".encode("utf-8")
+        return hmac.new(ikm, domain_context, hashlib.sha256).hexdigest()
 
     def _ensure_table_exists(self):
         try:
+            self.conn.execute("PRAGMA journal_mode=WAL;")
             self.conn.execute("""
                 CREATE TABLE IF NOT EXISTS admin_users (
                     user_id TEXT PRIMARY KEY, salt TEXT, nonce TEXT, ciphertext TEXT
@@ -239,7 +292,9 @@ class ValidatorService:
         log.info(f"Verification requested by {user_id} for hash [{payload_hash_hex[:8]}...]")
 
         try:
-            row = self.conn.execute("SELECT salt, nonce, ciphertext FROM admin_users WHERE user_id = ?", (user_id,)).fetchone()
+            row = self.conn.execute(
+                "SELECT salt, nonce, ciphertext FROM admin_users WHERE user_id = ?", (user_id,)
+            ).fetchone()
             if not row:
                 log.warning(f"Validation failed: Unregistered Admin ({user_id})")
                 return {"error": True, "code": -32000, "message": f"Unregistered Admin: {user_id}"}

@@ -1,4 +1,5 @@
 # fiber.infra.e2e.config
+import socket
 import uvicorn
 from dataclasses import dataclass
 from typing import Any, Callable, Coroutine, List
@@ -50,3 +51,11 @@ class PipelineRunner:
     async def run_pipeline(self) -> List[TestResult]:
         """하위 클래스에서 오버라이드하여 파이프라인 실행 로직"""
         raise NotImplementedError("run_pipeline must be implemented by subclasses.")
+
+def get_free_port(default_port: int = 8356) -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        if s.connect_ex(("127.0.0.1", default_port)) != 0:
+            return default_port
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
