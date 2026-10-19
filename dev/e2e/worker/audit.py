@@ -4,8 +4,8 @@ import uuid
 import asyncio
 from typing import List, Optional
 
-from fiber.infra.e2e.config import Phase, E2EConfig, TestResult
-from fiber.infra.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult
+from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 import fiber.infra.mcp.worker.deployer as worker_deployer
 import fiber.infra.mcp.worker.sentinel as worker_sentinel
 

@@ -10,7 +10,7 @@ from contextlib import suppress
 from aiohttp import web, ClientSession
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from fiber.gateway.rest.payload import create_app, Config
+from fiber.gateway.payload import create_app, Config
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT, FIBER_GATEWAY_URL, REDIS_URL, PUBSUB_CHANNEL
 from xphi.arch.contract.config.constants import MAX_PAYLOAD_SIZE, WASM_TIMEOUT

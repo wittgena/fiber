@@ -1,0 +1,46 @@
+# fiber.gateway.serv.depend
+## @lineage: fiber.gateway.rest.serv.depend
+from typing import Any
+from fastapi import Request, HTTPException, status
+
+from xphi.arch.bound.client.rpc import InternalRpcClient
+
+from xphi.watcher.receptor.warden import SecretAuditor
+from xphi.node.space.tunnel.subs import DistributedPubSub
+from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.arch.xor.parser.ruleset.otlp import OtlpExtractionEngine
+from xphi.watcher.plane.emitter import get_emitter
+
+log = get_emitter("dphi.depend")
+
+def _get_state_attr(request: Request, attr_name: str) -> Any:
+    val = getattr(request.app.state, attr_name, None)
+    if val is None:
+        error_msg = f"Critical Service '{attr_name}' is not initialized in app.state."
+        log.error(f"[DI Error] {error_msg}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=error_msg
+        )
+    return val
+
+"""Gateway Dependencies (Only what the public edge needs)"""
+async def get_rpc_client() -> InternalRpcClient:
+    """내부망 워커와 통신하기 위한 메시지 버스 기반 RPC 클라이언트"""
+    return InternalRpcClient()
+
+async def get_wasm_broker(request: Request) -> DphiBroker:
+    """WASM 커널 제어 및 암호학적 증명(Fingerprint) 발급용 브로커"""
+    return _get_state_attr(request, "broker")
+
+async def get_pubsub(request: Request) -> DistributedPubSub:
+    """글로벌 브로드캐스트 및 이벤트 파이프라인 주입"""
+    return _get_state_attr(request, "pubsub")
+
+async def get_otlp_engine(request: Request) -> OtlpExtractionEngine:
+    """텔레메트리 파싱 엔진"""
+    return _get_state_attr(request, "otlp_engine")
+
+async def get_secret_auditor(request: Request) -> SecretAuditor:
+    """PII 마스킹 및 감사 로그 기록기"""
+    return _get_state_attr(request, "secret_auditor")

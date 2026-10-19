@@ -13,13 +13,12 @@ try:
 except ImportError:
     dotenv = None
 
-from fiber.phase.cli.observer import run_observer
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
 
-log = get_emitter("fiber.cli")
+log = get_emitter("phase.cli.main")
 
 app = typer.Typer(
     help="Fiber: The Universal Integration Boundary & OS Kernel",
@@ -143,21 +142,6 @@ def run_connector(
     _load_env(env_file)
     from fiber.phase.cli.connect import run_connect
     run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode, preflight=preflight)
-
-@app.command("observe")
-def start_observer(
-    target: Annotated[str, typer.Option("--target", "-t", help="Observation target or scenario name (e.g., kube, kube_oom)")] = "kube",
-    namespace: Annotated[str, typer.Option("--namespace", "-n", help="Namespace to observe")] = "fiber-topos",
-    delay: Annotated[int, typer.Option("--delay", "-d", help="Polling interval in seconds")] = 5,
-    chaos: Annotated[bool, typer.Option("--chaos", "-c", help="Enable Active Chaos Injection")] = False,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    """Starts a real-time observer daemon to stream infrastructure status, optionally injecting chaos."""
-    _load_env(env_file)
-    try:
-        asyncio.run(run_observer(target=target, namespace=namespace, delay=delay, chaos=chaos))
-    except KeyboardInterrupt:
-        log.info("\n[Fiber] Observer manually terminated by user.")
 
 @compat_app.command("fixture")
 def manage_compat_fixtures(

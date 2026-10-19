@@ -14,7 +14,7 @@ from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter
 from fiber.gateway.llm.context.metadata import ExecutionMetadata
-from fiber.phase.scope.manager import managed_scope
+from xphi.arch.bound.scope.manager import managed_scope
 
 from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor

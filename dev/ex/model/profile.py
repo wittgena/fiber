@@ -1,5 +1,4 @@
 # fiber.dev.ex.model.profile
-## @lineage: fiber.llm.model.profile
 from __future__ import annotations
 
 import os

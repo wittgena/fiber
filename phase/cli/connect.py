@@ -12,7 +12,7 @@ from typing import Dict, Tuple, Optional, List
 
 import typer
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.gateway.mcp.preflight import PreflightGuard
+from fiber.infra.mcp.preflight import PreflightGuard
 from fiber.infra.mcp.mapper.config import McpConfigMapper, MappedMcpEntry
 from xphi.watcher.plane.emitter import get_emitter
 

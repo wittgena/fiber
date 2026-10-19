@@ -8,8 +8,8 @@ from typing import Any, Dict, Optional, Protocol
 from dataclasses import dataclass
 
 from fiber.infra.bound.account.registry import LocalAccountRegistry, DEFAULT_TENANT_ID
-from fiber.gateway.rest.token.gen import FinOpsTokenGenerator, FinOpsOpType
-from fiber.gateway.rest.security import TokenTranslator
+from fiber.gateway.contract.token.gen import FinOpsTokenGenerator, FinOpsOpType
+from fiber.gateway.security import TokenTranslator
 from fiber.infra.watcher.finops import default_finops_watcher
 
 from xphi.node.runtime.wasm.broker import DphiBroker
