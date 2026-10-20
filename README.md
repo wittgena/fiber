@@ -9,8 +9,8 @@ Operating as a drop-in asynchronous pipeline with real-time quota enforcement an
 | Section | Target Focus & Key Capabilities | Quick Jump |
 | :--- | :--- | :--- |
 | **1. LLM Pipeline & VCR** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[1.1 Pipeline](#11-the-drop-in-llm-pipeline)** · **[1.2 VCR](#12-fixture-testing-llm-recordreplay)** · **[1.3 Traverser](#13-state-traverser--compat-registry)** |
-| **2. Installation** | Sandbox provisioning (`uv pip`) & macOS background service (`brew`) | **[2.1 Python SDK](#21-python-environment-via-uv-pip-recommended-for-sdk--vcr-testing)** · **[2.2 Homebrew](#22-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
-| **3. IDE & MCP Gateway** | Zero-Key IDE Routing (`continue.dev`), Pre-Flight HITL Locks, FinOps CLI | **[3.1 MCP & IDE Config](#31-mcp-gateway)** · **[3.2 Connect CLI](#32-fiber-connect-cli)** |
+| **2. Installation** | Sandbox provisioning (`uv pip`), Node Identity (`sign init`) & Homebrew | **[2.1 Python & CLI](#21-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[2.2 Homebrew](#22-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
+| **3. IDE & MCP Gateway** | Zero-Key IDE Routing (`continue.dev`), Pre-Flight HITL Locks, Sign & FinOps CLI | **[3.1 MCP & IDE Config](#31-mcp-gateway)** · **[3.2 Connect CLI](#32-fiber-connect-cli)** |
 | **4–5. Benchmarks & Logs** | 200-VU Concurrency Metrics & Cryptographic Validation Logs | **[4. Benchmarks](#4-pipeline-performance-benchmarks-apple-m2-32gb-ram)** · **[5. System Logs](#5-system-validation-logs)** |
 
 ---
@@ -404,11 +404,9 @@ Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeo
 
   - **Idempotent Execution:** Maps every invocation to a deterministic transaction handle. Duplicate agent retries immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
   
-  - **Human-in-the-Loop Authorization:** On high-risk operations (e.g., destructive mutations), the gateway parks the execution sandbox (`HTTP 202`) and awaits explicit user approval (TOTP/CLI) before resuming from the exact suspended state.
+  - **Pre-Flight HITL & Cryptographic Gate (`HTTP 202`):** On high-risk operations—detected either natively by the worker or zero-code prior to worker I/O via pre-flight regex traps (`--preflight`, guaranteeing *Zero-Spawn* until approved)—the gateway parks the transaction (`YIELD` / `HTTP 202`) and awaits **Ed25519 attestation** via **RFC-6238 TOTP** (default) or **1-Click Approve/Reject buttons** (`button:<regex>`) across Slack Socket Mode, CLI, or Control Studio before resuming.
 
-  - **Human-in-the-Loop & Pre-Flight Guard:** On high-risk operations—detected either natively by the worker or zero-code via pre-flight regex traps (`--preflight`)—the gateway parks the execution context (`YIELD`) and awaits cryptographic attestation (RFC-6238 TOTP + Ed25519 signature via Slack Socket Mode or CLI) before releasing the payload.
-
-  - **FinOps Governance**: Translates external, EdDSA-signed billing tokens into synchronized internal ledger states. It enforces strict transaction idempotency (preventing double-spending), rejects stale policy replays, and broadcasts sub-second kill-switches across the control plane to halt runaway costs instantly.
+  - **FinOps Governance:** Translates external, EdDSA-signed billing tokens into synchronized internal ledger states. It enforces strict transaction idempotency (preventing double-spending), rejects stale policy replays, and broadcasts sub-second kill-switches across the control plane to halt runaway costs instantly.
 
 **LLM & MCP Routing for IDEs**
 Alongside the MCP endpoint, the daemon simultaneously serves the LLM Gateway (`/v1/chat/completions`). By configuring your IDE's (e.g., Continue.dev, Cursor) API base URL to `http://127.0.0.1:8356/v1`, you can route all model requests through Fiber's guardrails. This eliminates the need to expose upstream provider API keys in client configs, as authentication is securely resolved by the daemon's host environment (.env files or local OS variables).
@@ -442,7 +440,7 @@ models:
 **Agent Onboarding**
 Instead of manually supervising fragmented MCP processes, Fiber automatically scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) alongside built-in workers.
 
-To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file (optionally attaching `FIBER_PREFLIGHT_PATTERN` in `env` to lock third-party servers without modifying their code):
+To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file (optionally attaching `FIBER_PREFLIGHT_PATTERN` in `env`—prefixed with `button:` for 1-Click Slack approval instead of default 6-digit TOTP—to lock third-party servers without modifying their code):
 
 ```json
 {
@@ -454,7 +452,7 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
       "command": "npx",
       "args": ["-y", "repomix", "--mcp"],
       "env": {
-        "FIBER_PREFLIGHT_PATTERN": "DROP|TRUNCATE|DELETE"
+        "FIBER_PREFLIGHT_PATTERN": "button:DROP|TRUNCATE|DELETE"
       }
     }
   }
@@ -464,14 +462,15 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
 **Coexistence**: Fiber's declarative mapper automatically ignores the self-referential fiber-gateway entry during scanning while mounting the remaining servers. Once verified, you can progressively remove redundant direct entries at your own pace.
 
 **Sidecar Provisioning (fiber connect)**
-While fiber daemon autonomously manages workers in production, `fiber connect` acts as an on-demand sidecar to mount specific config files or individual workers, automatically inferring transport (`stdio` vs. `network`), concurrency modes (`multiplex`, `linear`, `ephemeral`), , and pre-flight HITL guards (`-p / FIBER_PREFLIGHT_<TARGET>`):
+While fiber daemon autonomously manages workers in production, `fiber connect` acts as an on-demand sidecar to mount specific config files or individual workers, automatically inferring transport (`stdio` vs. `network`), concurrency modes (`multiplex`, `linear`, `ephemeral`), and pre-flight HITL guards (`-p / FIBER_PREFLIGHT_<TARGET>`):
 
 ```bash
 # Auto-Scan or Explicit Config: Mounts all servers defined in mcp.json
 $ fiber connect -c .mcp.json
 
-# Built-in or 3rd-Party Worker with Zero-Code Pre-Flight HITL Lock (-p / --preflight)
+# 3rd-Party Worker with Pre-Flight HITL Lock (Default: 6-digit TOTP | Prefix 'button:' for 1-Click Approval)
 $ fiber connect -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE"
+$ fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
 
 # Remote Commercial MCP: HTTP/SSE multiplexing with Bearer auth injection
 $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
@@ -481,20 +480,38 @@ $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 
 | Command | Role | Architectural Function & Lifecycle | Example |
 | :--- | :--- | :--- | :--- |
-| **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (`mcp.json`), or remote HTTP/SSE endpoints onto the Tunnel Bus with optional pre-flight HITL locks (`-p`). | `fiber connect -e worker.deployer -p "DROP"` |
+| **`sign`** | **[Identity & TOTP]** | Provisions Zero-Env node keys (`~/.ssh/fiber_ed25519` & `local_cipher.key`) and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
+| **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (`mcp.json`), or remote HTTP/SSE endpoints onto the Tunnel Bus with optional pre-flight HITL locks (`-p "<regex>"` for TOTP or `-p "button:<regex>"` for 1-Click). | `fiber connect -e worker.deployer -p "DROP"` |
 | **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (record) and verifies declarative extraction rules offline (replay) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
-| **`account`** | **[FinOps & Quota]** | Manages tenant budgets, issues cryptographic billing tokens, synchronizes usage ledgers, and triggers real-time stream kill-switches. | `fiber account jwt --usd 50 --op PROVISION --sync` |
+| **`account`** | **[FinOps & Quota]** | Manages tenant budgets, binds optional SPIFFE identities, issues cryptographic billing tokens, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
+
+**Zero-Exposure Node Identity & Admin TOTP (`fiber sign`)**
+Manages the node's local cryptographic keychain and human-in-the-loop (HITL) TOTP credentials:
+
+```bash
+# Inspect local node keys (~/.ssh/fiber_ed25519 & local_cipher.key), Node PubKey, and Audit
+$ fiber sign status
+
+# Enroll an administrator TOTP secret (renders terminal QR code for Google Authenticator / Authy)
+$ fiber sign enroll -u fiber
+
+# Verify AES-GCM decryption parity and test 6-digit TOTP attestation
+$ fiber sign verify -u fiber
+```
 
 **FinOps Account & Quota Governance (`fiber account`)**
-Provides a unified CLI to govern tenant quotas and billing lifecycles. It seamlessly translates stateless billing tokens into enforceable runtime quotas—handling idempotent top-ups, versioned policy enforcement, and instant kill-switch broadcasting without exposing underlying ledger complexities:
+Provides a unified CLI to govern tenant quotas and billing lifecycles. It seamlessly translates stateless billing tokens into enforceable runtime quotas—handling idempotent top-ups, versioned policy enforcement, and instant kill-switch broadcasting without exposing underlying ledger complexities. You can optionally bind a SPIFFE ID (`--spiffe`) to an account; if the identity is not yet enrolled in the local TOTP database, Fiber logs a non-blocking warning and proceeds without interrupting the operation:
 
 ```bash
 # Run full lifecycle walkthrough (Provision -> TopUp -> Stale Replay Check -> Revoke)
 $ fiber account demo
 
-# Provision $50.0 (50,000 Fuel) via EdDSA JWT and synchronize the PTA ledger
-$ fiber account --tenant accounting_dept jwt --usd 50.0 --op PROVISION --ver 1 --sync
+# List all tracked local accounts and their bound SPIFFE identities from the registry
+$ fiber account list
+
+# Provision $50.0 (50,000 Fuel) via EdDSA JWT, bind a SPIFFE ID, and synchronize the PTA ledger
+$ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROVISION --ver 1 --sync
 
 # Trigger a real-time Pub/Sub REVOKE kill-switch to sever active streams mid-flight
 $ fiber account --tenant accounting_dept kill --ver 99
@@ -534,8 +551,8 @@ $ fiber e2e inter.concurrency --vcr record --model llama_server/gemma-3-1b-it-Q4
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
-* **[llm.vcr.log](./phase/abc/log/vcr/e2e.vcr.20260920.log):** Validates the VCR engine's core orchestration, confirming offline network emulation, deterministic Trace ID assignment via context tunneling, and precise time-window (100ms) chunk coalescing for playback optimization.
 * **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
 * **[gateway.wasm.log](./phase/abc/log/inter/wasm/gateway.wasm.20261002.log):** Validates Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all non-linear FSM transitions execute deterministically with millisecond latency.
 * **[inter.finops.log](./phase/abc/log/inter/finops.20261019.log):** Validates the FinOps control plane, confirming DPoP-authenticated MCP multiplexing, cryptographic mandate translation (with strict idempotency and replay protection), automated ledger reconciliation, and sub-second kill-switch intervention that cleanly severs active streams mid-flight.
+* **[mcp.hitl.log](./phase/abc/log/worker/hitl.20261021.log):** Validates the Zero-Trust MCP Gateway, confirming pre-flight regex trapping (Zero-Spawn before approval), out-of-band Slack Socket Mode attestation (both 6-digit RFC-6238 TOTP and 1-Click Button modes), and deterministic sandbox resumption across HTTP/SSE and Stdio transports.

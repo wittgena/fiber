@@ -1,6 +1,12 @@
 # fiber.phase.cli.sign
+"""
+@desc: Local Node Keychain & Admin TOTP Attestation CLI
+- Provisions Zero-Env foundational keys (~/.ssh/fiber_ed25519 & local_cipher.key) as the node's Root of Trust.
+- Manages AES-GCM encrypted Admin TOTP secrets in SQLite via deterministic HMAC key derivation (distinct from tenant FinOps quotas in `fiber account`).
+"""
 import os
 import sys
+import socket
 import secrets
 import sqlite3
 import qrcode
@@ -28,6 +34,7 @@ SSH_PUB_KEY_PATH = SSH_DIR / "fiber_ed25519.pub"
 LOCAL_CIPHER_KEY_PATH = SIGN_ROOT / "local_cipher.key"
 DEFAULT_DB_PATH = str(SIGN_ROOT / "deploy_audit.sqlite")
 BASE_SPIFFE_DOMAIN = "spiffe://self/"
+TOTP_ISSUER_NAME = "Fiber"
 
 log_sign = get_emitter("fiber.cli.sign")
 
@@ -38,11 +45,42 @@ app = typer.Typer(
     add_completion=False,
 )
 
+
+# ==========================================
 # 1. Core Key Provisioning (~/.ssh/fiber_ed25519 & local_cipher.key)
+# ==========================================
 def _normalize_spiffe_id(user_id: str) -> str:
     if user_id.startswith("spiffe://"):
         return user_id
     return f"{BASE_SPIFFE_DOMAIN}{user_id}"
+
+
+def _resolve_target_user(conn: sqlite3.Connection, user_id: Optional[str] = None) -> str:
+    """Uses explicit user_id if given; otherwise picks the latest enrolled admin from SQLite."""
+    if user_id and user_id.strip():
+        return _normalize_spiffe_id(user_id.strip())
+    row = conn.execute(
+        "SELECT user_id FROM admin_users WHERE user_id NOT LIKE '%_e2e_%' ORDER BY rowid DESC LIMIT 1"
+    ).fetchone()
+    return row[0] if row else _normalize_spiffe_id("fiber")
+
+
+def _build_totp_provisioning_uri(secret: str, canonical_id: str, pubkey_hex: str = "") -> Tuple[str, str]:
+    """
+    Strips 'spiffe://self/' and colons (which break Authenticator app label parsing)
+    to produce a clean, human-readable label: e.g. 'fiber@MacBook-Pro (a1b2c3)' under issuer 'Fiber'.
+    """
+    short_user = canonical_id.replace(BASE_SPIFFE_DOMAIN, "").replace("spiffe://", "").replace(":", "/")
+    host = socket.gethostname().split(".")[0] or "local"
+    key_tag = f" ({pubkey_hex[:6]})" if pubkey_hex else ""
+    display_label = f"{short_user}@{host}{key_tag}"
+
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(
+        name=display_label,
+        issuer_name=TOTP_ISSUER_NAME,
+    )
+    return uri, display_label
+
 
 def ensure_node_keys(force_regenerate_cipher: bool = False) -> dict:
     """
@@ -77,7 +115,6 @@ def ensure_node_keys(force_regenerate_cipher: bool = False) -> dict:
             os.chmod(SSH_PUB_KEY_PATH, 0o644)
 
         ssh_created = True
-        # Reset NodeSigner singleton so it reloads the newly persisted SSH key
         NodeSigner._instance = None
 
     SIGN_ROOT.mkdir(parents=True, exist_ok=True)
@@ -96,6 +133,7 @@ def ensure_node_keys(force_regenerate_cipher: bool = False) -> dict:
         "node_pubkey": signer.pubkey_hex,
     }
 
+
 def _open_audit_db(db_path: str = DEFAULT_DB_PATH) -> sqlite3.Connection:
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path, timeout=10.0, check_same_thread=False)
@@ -112,7 +150,9 @@ def _open_audit_db(db_path: str = DEFAULT_DB_PATH) -> sqlite3.Connection:
     return conn
 
 
-# Zero-Exposure Crypto Vault (HMAC Derivation)
+# ==========================================
+# 2. Zero-Exposure Crypto Vault (HMAC Derivation)
+# ==========================================
 class AdminSecretVault:
     def __init__(self, passphrase: str):
         self.passphrase = passphrase.encode("utf-8")
@@ -133,6 +173,7 @@ class AdminSecretVault:
         aesgcm = AESGCM(kdf.derive(self.passphrase))
         return aesgcm.decrypt(nonce, ciphertext, None).decode("utf-8")
 
+
 def _resolve_vault_context() -> Tuple[str, str]:
     """
     Deterministically derives the vault passphrase strictly from `local_cipher.key`
@@ -150,7 +191,9 @@ def _resolve_vault_context() -> Tuple[str, str]:
     return derived_passphrase, pubkey_hex
 
 
-# CLI Commands (init, status, enroll, verify, revoke)
+# ==========================================
+# 3. CLI Commands (init, status, enroll, verify, revoke)
+# ==========================================
 @app.command("init")
 def cmd_init(
     rotate_cipher: Annotated[bool, typer.Option("--rotate-cipher", help="Regenerate local_cipher.key (invalidates existing TOTP DB)")] = False,
@@ -160,6 +203,7 @@ def cmd_init(
     log_sign.info("🔐 Node Cryptographic Identity Initialized:")
     print(json.dumps(info, indent=2, ensure_ascii=False))
 
+
 @app.command("status")
 def cmd_status(
     db_path: Annotated[str, typer.Option("--db", "-d", help="Path to SQLite Audit DB")] = DEFAULT_DB_PATH,
@@ -167,7 +211,8 @@ def cmd_status(
     """Inspect local node key files, active Public Key, and enrolled TOTP administrators."""
     signer = NodeSigner.get_instance()
     conn = _open_audit_db(db_path)
-    rows = conn.execute("SELECT user_id, substr(ciphertext, 1, 16) FROM admin_users ORDER BY user_id").fetchall()
+    rows = conn.execute("SELECT user_id, substr(ciphertext, 1, 16) FROM admin_users ORDER BY rowid DESC").fetchall()
+    active_admin = _resolve_target_user(conn, None) if rows else None
     conn.close()
 
     status_payload = {
@@ -181,38 +226,40 @@ def cmd_status(
         },
         "node_pubkey": signer.pubkey_hex,
         "audit_db": db_path,
+        "active_default_admin": active_admin,
         "enrolled_admins": [{"user_id": r[0], "cipher_prefix": f"{r[1]}..."} for r in rows],
     }
     print(json.dumps(status_payload, indent=2, ensure_ascii=False))
 
+
 @app.command("enroll")
 def cmd_enroll(
-    user_id: Annotated[str, typer.Option("--user", "-u", help="Administrator SPIFFE ID (e.g. fiber)")] = "fiber",
+    user_id: Annotated[Optional[str], typer.Option("--user", "-u", help="Administrator SPIFFE ID (defaults to latest or 'fiber')")] = None,
     db_path: Annotated[str, typer.Option("--db", "-d", help="Path to SQLite Audit DB")] = DEFAULT_DB_PATH,
     secret_override: Annotated[Optional[str], typer.Option("--secret", "-s", help="Optional Base32 secret override")] = None,
 ):
     """Ensure local keys exist, enroll an administrator TOTP secret into SQLite, and display the QR code."""
-    canonical_id = _normalize_spiffe_id(user_id)
     active_passphrase, pubkey_hex = _resolve_vault_context()
+    conn = _open_audit_db(db_path)
+    canonical_id = _resolve_target_user(conn, user_id)
 
     secret = secret_override or pyotp.random_base32()
-    totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
-        name=canonical_id,
-        issuer_name="Fiber_Local_Gateway"
-    )
+    totp_uri, display_label = _build_totp_provisioning_uri(secret, canonical_id, pubkey_hex)
 
     vault = AdminSecretVault(active_passphrase)
     salt_hex, nonce_hex, cipher_hex = vault.encrypt(secret)
 
-    conn = _open_audit_db(db_path)
+    # Delete existing row first so re-enrolling moves rowid to the latest (active default)
+    conn.execute("DELETE FROM admin_users WHERE user_id = ?", (canonical_id,))
     conn.execute(
-        "INSERT OR REPLACE INTO admin_users (user_id, salt, nonce, ciphertext) VALUES (?, ?, ?, ?)",
+        "INSERT INTO admin_users (user_id, salt, nonce, ciphertext) VALUES (?, ?, ?, ?)",
         (canonical_id, salt_hex, nonce_hex, cipher_hex),
     )
     conn.commit()
     conn.close()
 
-    log_sign.info(f"\n✅ TOTP Enrolled for '{canonical_id}' (Bound to Node PubKey: {pubkey_hex[:16]}...)")
+    log_sign.info(f"\n✅ TOTP Enrolled for '{canonical_id}' (Active Default Admin)")
+    log_sign.info(f"🏷️  Authenticator App Label : {TOTP_ISSUER_NAME} ({display_label})")
     log_sign.info("📱 Scan the QR code below with Google Authenticator or Authy:\n")
     qr = qrcode.QRCode(version=1, box_size=1, border=2)
     qr.add_data(totp_uri)
@@ -220,24 +267,25 @@ def cmd_enroll(
     qr.print_ascii(out=sys.stdout, invert=True)
     print(f"\nBase32 Manual Key: {secret}\n")
 
+
 @app.command("verify")
 def cmd_verify(
-    user_id: Annotated[str, typer.Option("--user", "-u", help="Administrator SPIFFE ID")] = "fiber",
+    user_id: Annotated[Optional[str], typer.Option("--user", "-u", help="Administrator SPIFFE ID (omit to use latest enrolled admin)")] = None,
     code: Annotated[Optional[str], typer.Option("--code", "-c", help="6-digit OTP code (omit for auto self-test)")] = None,
     db_path: Annotated[str, typer.Option("--db", "-d", help="Path to SQLite Audit DB")] = DEFAULT_DB_PATH,
 ):
     """Verify decryption parity and TOTP code against the local SQLite Audit DB."""
-    canonical_id = _normalize_spiffe_id(user_id)
     active_passphrase, pubkey_hex = _resolve_vault_context()
 
     conn = _open_audit_db(db_path)
+    canonical_id = _resolve_target_user(conn, user_id)
     row = conn.execute(
         "SELECT salt, nonce, ciphertext FROM admin_users WHERE user_id = ?", (canonical_id,)
     ).fetchone()
     conn.close()
 
     if not row:
-        log_sign.error(f"🚨 Unregistered Admin: {canonical_id}")
+        log_sign.error(f"🚨 Unregistered Admin: {canonical_id}. Run 'fiber sign enroll' first.")
         sys.exit(1)
 
     vault = AdminSecretVault(active_passphrase)
@@ -255,18 +303,20 @@ def cmd_verify(
     if not is_valid:
         sys.exit(1)
 
+
 @app.command("revoke")
 def cmd_revoke(
-    user_id: Annotated[str, typer.Option("--user", "-u", help="Administrator SPIFFE ID to revoke")] = "fiber",
+    user_id: Annotated[Optional[str], typer.Option("--user", "-u", help="Administrator SPIFFE ID to revoke (omit for latest enrolled)")] = None,
     db_path: Annotated[str, typer.Option("--db", "-d", help="Path to SQLite Audit DB")] = DEFAULT_DB_PATH,
 ):
     """Remove an administrator's TOTP record from the local SQLite Audit DB."""
-    canonical_id = _normalize_spiffe_id(user_id)
     conn = _open_audit_db(db_path)
+    canonical_id = _resolve_target_user(conn, user_id)
     conn.execute("DELETE FROM admin_users WHERE user_id = ?", (canonical_id,))
     conn.commit()
     conn.close()
     log_sign.info(f"✅ Revoked TOTP access for '{canonical_id}'.")
+
 
 # Maintain `fiber sign admin ...` sub-group alias for backward compatibility with existing scripts
 admin_app = typer.Typer(help="Alias group for admin TOTP commands")

@@ -34,7 +34,6 @@ compat_app = typer.Typer(
 app.add_typer(compat_app, name="compat")
 app.add_typer(sign_app, name="sign")
 
-
 def _load_env(env_file: Optional[str]):
     if env_file:
         if dotenv:

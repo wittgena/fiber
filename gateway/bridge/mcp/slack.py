@@ -1,7 +1,4 @@
 # fiber.gateway.bridge.mcp.slack
-## @lineage: fiber.dev.bridge.mcp.slack
-## @lineage: fiber.gateway.mcp.bridge.slack
-## @lineage: fiber.gateway.mcp.bridge.slack.py
 import os
 import json
 import time
@@ -23,11 +20,6 @@ log = get_emitter("mcp.bridge.slack")
 
 
 class SlackHitlBridge(OutOfBandApprovalBridge):
-    """
-    Developer-Laptop Friendly Slack HITL Bridge.
-    - Outbound Socket Mode(WebSocket)를 통해 포트포워딩/ngrok 없이 로컬 노트북에서 즉시 동작합니다.
-    - 승인/거부 완료 시 원본 메시지를 암호학적 감사 영수증(Cryptographic Receipt) Block Kit으로 즉시 변환합니다.
-    """
     SLACK_API_BASE = "https://slack.com/api"
 
     def __init__(
@@ -42,11 +34,6 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         self.bot_token = (bot_token or os.environ.get("FIBER_SLACK_BOT_TOKEN", "")).strip()
         self.app_token = (app_token or os.environ.get("FIBER_SLACK_APP_TOKEN", "")).strip()
         self.default_channel = (default_channel or os.environ.get("FIBER_SLACK_CHANNEL_ID", "")).strip()
-
-        # 개발자가 xoxb- 와 xapp- 토큰을 반대로 넣은 경우 자동 교정
-        if self.bot_token.startswith("xapp-") and self.app_token.startswith("xoxb-"):
-            self.bot_token, self.app_token = self.app_token, self.bot_token
-
         self.node_fp = self.signer.pubkey_hex[:16]
         self.running = False
         self._bg_tasks: List[asyncio.Task] = []
@@ -55,11 +42,14 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
     def is_live_configured(self) -> bool:
         return bool(self.bot_token and self.default_channel)
 
-    # =========================================================================
-    # 1. Node Fingerprint가 각인된 State Token 발급
-    # =========================================================================
+    # Node Fingerprint 및 인증 모드(require_totp)가 각인된 State Token 발급
     def mint_approval_state_token(
-        self, handle_id: str, target_id: str, prompt_id: str, ttl_sec: int = 300
+        self,
+        handle_id: str,
+        target_id: str,
+        prompt_id: str,
+        ttl_sec: int = 300,
+        require_totp: bool = True,
     ) -> Dict[str, Any]:
         exp = int(time.time()) + ttl_sec
         envelope = {
@@ -67,6 +57,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
             "target_id": target_id,
             "prompt_id": prompt_id,
             "node_fp": self.node_fp,
+            "require_totp": bool(require_totp),
             "exp": exp,
         }
         canonical = json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -78,9 +69,13 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         token_fp = envelope.get("node_fp")
         return (not token_fp) or (token_fp == self.node_fp)
 
-    # =========================================================================
-    # 2. Block Kit UI 조립 (요청 화면 & 승인 완료 후 영수증 화면)
-    # =========================================================================
+    def _resolve_wildcard_identity(self, normalized: Dict[str, Any]) -> None:
+        """Socket Mode와 HTTP Webhook 모두에서 동일하게 '*' 와일드카드 ID 매핑을 바인딩합니다."""
+        slack_uid = normalized.get("slack_user_id", "")
+        if slack_uid and slack_uid not in self.identity_map and "*" in self.identity_map:
+            self.identity_map[slack_uid] = self.identity_map["*"]
+
+    # Block Kit UI 조립 (TOTP 모드 vs 1-Click Button 모드 지원 & blocks[4] 인덱스 호환성 유지)
     def build_yield_message_blocks(
         self, yield_event: Dict[str, Any], channel: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -89,12 +84,50 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         agent_uri = yield_event.get("agent", "spiffe://public/agent")
         prompt_obj = yield_event.get("prompt", {})
         prompt_id = prompt_obj.get("id", f"prompt_{handle_id}")
-        prompt_msg = prompt_obj.get("params", {}).get("message", "Destructive operation requires TOTP.")
+        prompt_params = prompt_obj.get("params", {})
+
+        require_totp = bool(prompt_params.get("require_totp", True))
+        default_msg = (
+            "Destructive operation requires TOTP."
+            if require_totp
+            else "High-risk operation requires operator approval."
+        )
+        prompt_msg = prompt_params.get("message", default_msg)
 
         state_token = self.mint_approval_state_token(
-            handle_id=handle_id, target_id=target_id, prompt_id=prompt_id
+            handle_id=handle_id,
+            target_id=target_id,
+            prompt_id=prompt_id,
+            require_totp=require_totp,
         )
         token_str = json.dumps(state_token, separators=(",", ":"))
+
+        # blocks[3] 슬롯: TOTP 필수 시 입력창 렌더링, 버튼 단독 모드 시 1-Click 안내 컨텍스트 렌더링
+        # (이를 통해 fiber_decision_block이 항상 blocks[4]에 위치하여 기존 테스트 코드와 100% 호환됨)
+        if require_totp:
+            auth_slot_block: Dict[str, Any] = {
+                "type": "input",
+                "block_id": "fiber_totp_block",
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "fiber_totp_input",
+                    "placeholder": {"type": "plain_text", "text": "Enter 6-digit TOTP code"},
+                    "min_length": 6,
+                    "max_length": 6,
+                },
+                "label": {"type": "plain_text", "text": "🔐 Authenticator TOTP Code"},
+            }
+        else:
+            auth_slot_block = {
+                "type": "context",
+                "block_id": "fiber_button_mode_hint",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "⚡ *1-Click Approval Mode Active:* TOTP input is bypassed for this guard. Click below to attest with your Node Identity.",
+                    }
+                ],
+            }
 
         return {
             "channel": channel or self.default_channel,
@@ -117,18 +150,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                     "type": "section",
                     "text": {"type": "mrkdwn", "text": f"*Intercepted Prompt:* _{prompt_msg}_"},
                 },
-                {
-                    "type": "input",
-                    "block_id": "fiber_totp_block",
-                    "element": {
-                        "type": "plain_text_input",
-                        "action_id": "fiber_totp_input",
-                        "placeholder": {"type": "plain_text", "text": "Enter 6-digit TOTP code"},
-                        "min_length": 6,
-                        "max_length": 6,
-                    },
-                    "label": {"type": "plain_text", "text": "🔐 Authenticator TOTP Code"},
-                },
+                auth_slot_block,
                 {
                     "type": "actions",
                     "block_id": "fiber_decision_block",
@@ -155,12 +177,13 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
     def build_resolution_receipt_blocks(
         self, normalized: Dict[str, Any], result: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """승인/거부 직후 슬랙의 입력창을 지우고 엔터프라이즈 감사 영수증(Audit Receipt) 카드로 교체합니다."""
+        """승인/거부 직후 슬랙의 입력창/버튼을 지우고 엔터프라이즈 감사 영수증(Audit Receipt) 카드로 교체합니다."""
         is_approved = result.get("status") == "RESUMED"
         envelope = normalized.get("state_token", {}).get("envelope", {})
         sig_preview = normalized.get("state_token", {}).get("sig", "")[:24]
         handle_id = result.get("handle_id") or envelope.get("handle_id", "unknown")
         target_id = envelope.get("target_id", "legacy-01")
+        require_totp = envelope.get("require_totp", True)
         slack_user = normalized.get("slack_user_id", "operator")
         spiffe_id = result.get("attested_by", "spiffe://self/fiber")
         utc_now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -168,10 +191,11 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         if is_approved:
             header_text = "✅ Fiber HITL: Cryptographic Sudo Granted"
             status_badge = "🟢 `RESUMED -> EXECUTING`"
+            seal_type = "RFC-6238 TOTP + Ed25519" if require_totp else "1-Click Button + Ed25519"
             detail_md = (
                 f"🛡️ *Zero-Trust Attestation Receipt*\n"
                 f"• *Attested Identity:* `{spiffe_id}` (by <@{slack_user}>)\n"
-                f"• *Cryptographic Seal:* `RFC-6238 TOTP + Ed25519 ({sig_preview}...)`\n"
+                f"• *Cryptographic Seal:* `{seal_type} ({sig_preview}...)`\n"
                 f"• *Action Taken:* Parked sandbox unlocked & destructive payload released."
             )
         else:
@@ -217,9 +241,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
             ],
         }
 
-    # =========================================================================
-    # 3. Payload 추출 및 HTTP/SocketMode 핸들러
-    # =========================================================================
+    # Payload 추출 및 HTTP/SocketMode 핸들러
     @staticmethod
     def extract_interaction_from_block_actions(slack_payload: Dict[str, Any]) -> Dict[str, Any]:
         if "state_token" in slack_payload and "slack_user_id" in slack_payload:
@@ -236,19 +258,23 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
 
         raw_value = clicked.get("value", "{}")
         state_token = json.loads(raw_value) if isinstance(raw_value, str) else raw_value
+        require_totp = state_token.get("envelope", {}).get("require_totp", True)
 
         state_values = slack_payload.get("state", {}).get("values", {})
         otp_code = (
             state_values.get("fiber_totp_block", {})
             .get("fiber_totp_input", {})
-            .get("value", "")
+            .get("value")
         )
+        cleaned_otp = (otp_code or "").strip()
+        if not cleaned_otp and not require_totp:
+            cleaned_otp = "BUTTON_APPROVED"
 
         return {
             "state_token": state_token,
             "slack_user_id": user_id,
             "decision": decision,
-            "otp_code": (otp_code or "").strip(),
+            "otp_code": cleaned_otp,
             "response_url": slack_payload.get("response_url"),
         }
 
@@ -263,6 +289,8 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         normalized = self.extract_interaction_from_block_actions(slack_json)
         if not self.is_owned_by_this_node(normalized):
             return {"status": "IGNORED_FOREIGN_NODE"}
+
+        self._resolve_wildcard_identity(normalized)
 
         res = await self.handle_slack_interaction(
             timestamp=timestamp,
@@ -305,7 +333,10 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
             if not data.get("ok"):
                 log.error(f"[SlackBridge] chat.postMessage failed: {data.get('error')}")
                 return None
-            log.info(f"[SlackBridge] 📤 Sent HITL prompt to Slack channel {msg_payload['channel']} (ts: {data.get('ts')})")
+            mode_tag = "TOTP" if yield_event.get("prompt", {}).get("params", {}).get("require_totp", True) else "1-Click"
+            log.info(
+                f"[SlackBridge] 📤 Sent HITL ({mode_tag}) prompt to Slack channel {msg_payload['channel']} (ts: {data.get('ts')})"
+            )
             return data.get("ts")
 
     async def _update_slack_message_via_response_url(
@@ -381,9 +412,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                             if not self.is_owned_by_this_node(normalized):
                                 continue
 
-                            slack_uid = normalized["slack_user_id"]
-                            if slack_uid not in self.identity_map and "*" in self.identity_map:
-                                self.identity_map[slack_uid] = self.identity_map["*"]
+                            self._resolve_wildcard_identity(normalized)
 
                             ts = str(int(time.time()))
                             raw_bytes = json.dumps(normalized, separators=(",", ":")).encode("utf-8")

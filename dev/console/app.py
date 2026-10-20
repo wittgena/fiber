@@ -1,10 +1,10 @@
-# fiber.dev.ex.console.app
+# fiber.dev.console.app
 import asyncio
 from typing import Callable
 from nicegui import app, ui
 
-from fiber.dev.ex.console.state import state, refs
-import fiber.dev.ex.console.runtime as rt
+from fiber.dev.console.state import state, refs
+import fiber.dev.console.runtime as rt
 
 
 def render_split_studio(
@@ -28,7 +28,11 @@ def render_modals():
     """1) HTTP 202 HITL 승인 모달 (TOTP 연동) & 2) Admin TOTP QR 스캔 모달"""
     with ui.dialog().props("persistent") as refs.hitl_dialog, ui.card().classes("bg-slate-900 border-2 border-amber-500 w-[520px] p-5"):
         ui.label("⚠️ HTTP 202: Human-in-the-Loop Cryptographic Gate").classes("text-amber-400 font-bold text-base")
-        ui.label("High-risk MCP tool call parked. Requires RFC-6238 TOTP + Ed25519 attestation:").classes("text-xs text-slate-300")
+        ui.label().bind_text_from(
+            state.security,
+            "admin_user",
+            lambda u: f"High-risk MCP tool call parked. Requires RFC-6238 TOTP + Ed25519 attestation ({u}):",
+        ).classes("text-xs text-slate-300")
         refs.hitl_code = ui.code("{}", language="json").classes("w-full text-xs")
         ui.input("6-Digit Admin TOTP Code (Leave blank for Auto-Derived Self-Verify)").bind_value(
             state.security, "totp_input_code"
@@ -59,7 +63,8 @@ def finops_left_pane():
     f = state.finops
     with ui.row().classes("w-full gap-2"):
         ui.input("Target Tenant ID").bind_value(f, "tenant_id").props("dark outlined dense").classes("flex-1 font-mono text-xs")
-        ui.number("Policy Ver", min=1, max=99).bind_value(f, "policy_ver", forward=int).props("dark outlined dense").classes("w-24 font-mono text-xs")
+        ui.input("Bound SPIFFE ID (Optional)").bind_value(f, "spiffe_id").props("dark outlined dense").classes("flex-1 font-mono text-xs")
+        ui.number("Policy Ver", min=1, max=99).bind_value(f, "policy_ver", forward=int).props("dark outlined dense").classes("w-20 font-mono text-xs")
 
     with ui.row().classes("w-full gap-2 items-center"):
         ui.select(["PROVISION", "TOP_UP", "SYNC_QUOTA", "REVOKE"], label="Mandate Op").bind_value(f, "jwt_op").props("dark outlined dense").classes("flex-1 text-xs")
@@ -68,7 +73,14 @@ def finops_left_pane():
 
     with ui.row().classes("w-full gap-1.5"):
         ui.button("🔑 Issue JWT", on_click=rt.act_issue_account_jwt).props("color=emerald dense").classes("flex-1 text-xs font-bold")
-        ui.button("🔄 5-Step Demo", on_click=lambda: rt.run_fiber_cli("account", "--tenant", f.tenant_id, "demo")).props("outline color=cyan dense").classes("text-xs px-2")
+        ui.button(
+            "🔄 5-Step Demo",
+            on_click=lambda: rt.run_fiber_cli(
+                "account", "--tenant", f.tenant_id,
+                *(["--spiffe", f.spiffe_id.strip()] if f.spiffe_id and f.spiffe_id.strip() else []),
+                "demo"
+            ),
+        ).props("outline color=cyan dense").classes("text-xs px-2")
         ui.button("📋 Status", on_click=rt.act_refresh_account_status).props("outline color=slate-4 dense").classes("text-xs px-2")
         ui.button("📂 List", on_click=lambda: rt.run_fiber_cli("account", "list")).props("outline color=slate-4 dense").classes("text-xs px-2")
 

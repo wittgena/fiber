@@ -1,5 +1,4 @@
 # fiber.infra.mcp.connector
-## @lineage: fiber.gateway.mcp.connector
 import sys
 import asyncio
 import logging
