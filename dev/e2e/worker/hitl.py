@@ -61,7 +61,7 @@ class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
         # 3. HITL 서명 및 TOTP 검증 컨텍스트
         self.crypto_ctx = AuditCryptoContext(spiffe_id="spiffe://self/fiber")
         self.slack_bridge: Optional[SlackHitlBridge] = None
-        self.slack_admin_id = os.environ.get("FIBER_SLACK_ADMIN_USER", "U_SLACK_ADMIN_99")
+        self.slack_admin_id = os.environ.get("FIBER_SLACK_USER_ID", "U_SLACK_ADMIN_99")
         self.dpop_client = DPoPClientGenerator(key_size=2048)
         self.http_client: Optional[httpx.AsyncClient] = None
 

@@ -28,7 +28,7 @@ class OutOfBandAuditPipeline(BaseBridgePipeline):
             scope_name="MCP_OOB_SUITE",
         )
         self.deploy_id = "legacy-01"
-        self.slack_admin_id = os.environ.get("FIBER_SLACK_ADMIN_USER", "U_SLACK_ADMIN_99")
+        self.slack_admin_id = os.environ.get("FIBER_SLACK_USER_ID", "U_SLACK_ADMIN_99")
 
         self.crypto_ctx = AuditCryptoContext(spiffe_id="spiffe://self/fiber")
         self.gw_client: Optional[MCPGatewayTestClient] = None
