@@ -9,7 +9,7 @@ fiber account
 fiber account demo
 fiber account list
 fiber account status
-fiber account --tenant tenant_client_01 allocate --amount 10000
+fiber account --tenant tenant_client_01 --spiffe fiber allocate --amount 10000
 fiber account --tenant tenant_client_01 jwt --usd 100.0 --op SYNC_QUOTA --ver 1 --sync
 fiber account --tenant tenant_client_01 kill --ver 99
 """
@@ -30,14 +30,15 @@ from fiber.infra.bound.account.manager import (
 )
 from fiber.gateway.security import TokenTranslator
 
-async def run_lifecycle_demo(tenant_id: str):
+
+async def run_lifecycle_demo(tenant_id: str, spiffe_id: Optional[str] = None):
     """Validates full account lifecycle visually via console output using Command DTOs."""
     reg_name = LocalAccountRegistry.get_registry_path().name
     print(f"\n=== [LocalAccount Lifecycle Demo: '{tenant_id}' (Registry: {reg_name})] ===")
     
     async with LocalAccountManager(tenant_id=tenant_id) as manager:
-        # 1. Check initial state
-        LocalAccountRegistry.record(tenant_id, last_op="DEMO_START")
+        # 1. Check initial state (spiffe_id가 주어졌다면 함께 기록 및 TOTP 유무 체크)
+        LocalAccountRegistry.record(tenant_id, spiffe_id=spiffe_id, last_op="DEMO_START")
         st0 = await manager.get_status()
         print(f"1. Initial Status:\n   {json.dumps(st0, indent=2)}")
 
@@ -73,6 +74,7 @@ async def run_lifecycle_demo(tenant_id: str):
         print(f"   Core Balance        : {res_rev_status['core_state']['balance']} Fuel (Expected: 0)")
         print(f"   Active Quota        : {res_rev_status['finops_watcher']['active_quota']} Fuel (Expected: 0.0)\n")
 
+
 async def main_async(args: argparse.Namespace):
     """Routes parsed CLI arguments to the LocalAccount manager via Command DTOs."""
     if args.command == "list":
@@ -85,8 +87,12 @@ async def main_async(args: argparse.Namespace):
         return
 
     if args.command == "demo":
-        await run_lifecycle_demo(args.tenant)
+        await run_lifecycle_demo(args.tenant, args.spiffe)
         return
+
+    # --spiffe가 입력된 경우 Manager 동작 전에 Registry에 매핑 기록 (TOTP 미등록 시 Warning 출력)
+    if args.spiffe:
+        LocalAccountRegistry.record(args.tenant, spiffe_id=args.spiffe)
 
     # Initialize business logic manager
     async with LocalAccountManager(tenant_id=args.tenant) as manager:
@@ -127,6 +133,12 @@ def main(args_list: Optional[list[str]] = None):
         default=DEFAULT_TENANT_ID,
         help=f"Target tenant ID (default: {DEFAULT_TENANT_ID})"
     )
+    parser.add_argument(
+        "--spiffe",
+        type=str,
+        default=None,
+        help="Optional SPIFFE ID to bind with this account (e.g., 'fiber' or 'spiffe://self/fiber')"
+    )
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -151,6 +163,7 @@ def main(args_list: Optional[list[str]] = None):
         parsed_args.command = "demo"
 
     asyncio.run(main_async(parsed_args))
+
 
 if __name__ == "__main__":
     main()

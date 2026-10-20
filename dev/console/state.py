@@ -1,14 +1,16 @@
-# fiber.dev.ex.console.state
+# fiber.dev.console.state
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
-
 @dataclass
 class FinOpsState:
     """[1] FinOps, LocalAccount (`fiber account`) & Real-time Quota Telemetry"""
     tenant_id: str = "accounting_dept"
+    spiffe_id: str = "spiffe://self/fiber"
+    totp_enrolled: bool = False
+
     current_fuel: int = 50000
     core_balance: int = 50000
     budget_limit: int = 15000
@@ -34,9 +36,11 @@ class FinOpsState:
 
     @property
     def account_summary_badge(self) -> str:
+        totp_tag = "🟢 TOTP" if self.totp_enrolled else "⚠️ No-TOTP"
+        spiffe_short = self.spiffe_id.replace("spiffe://self/", "") if self.spiffe_id else "unassigned"
         return (
-            f"Tenant: {self.tenant_id} | Ver: v{self.policy_ver} | "
-            f"Last Op: {self.last_op} | Quota: {self.current_fuel:,} / Core: {self.core_balance:,} Fuel"
+            f"Tenant: {self.tenant_id} ({spiffe_short} | {totp_tag}) | "
+            f"v{self.policy_ver} | Quota: {self.current_fuel:,} / Core: {self.core_balance:,}"
         )
 
 
@@ -59,6 +63,7 @@ class SecurityState:
     node_pubkey: str = "uninitialized"
 
     admin_user: str = "spiffe://self/fiber"
+    enrolled_admins: List[str] = field(default_factory=list)
     enrolled_admins_count: int = 0
     totp_secret: str = ""
     totp_uri: str = ""
