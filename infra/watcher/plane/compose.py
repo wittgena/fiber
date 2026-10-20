@@ -54,7 +54,6 @@ class ComposeBlueprint:
         }
 
 class BaseComposeAdapter:
-    # 🎯 변경점: detach 인자 추가 (기본값 False로 E2E 호환성 유지)
     async def apply_job(self, job_name: str, env: Dict[str, str], detach: bool = False) -> bool:
         raise NotImplementedError
     async def teardown(self):
@@ -182,7 +181,6 @@ class ComposeContext:
     auditors: Dict[str, Any]
 
 class ComposeOrchestrator:
-    # 🎯 변경점: auto_teardown 인자 추가 (기본값 True로 E2E 호환성 유지)
     def __init__(self, mode: str = "dev", suites: Dict[str, Any] = None, rebuild: bool = False, auto_teardown: bool = True):
         self.mode = mode
         self.suites = suites or {}

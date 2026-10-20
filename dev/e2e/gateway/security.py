@@ -16,7 +16,7 @@ from contextlib import suppress
 
 import httpx
 
-from fiber.dev.ex.gateway.client import Endpoints, StrictPayloadFactory, Endpoints
+from fiber.dev.gateway.client import Endpoints, StrictPayloadFactory, Endpoints
 from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step
 from xphi.state.phase.reactor import PhaseReactor
 from fiber.infra.bound.e2e.chaos.payload import ChaosPayloadLibrary

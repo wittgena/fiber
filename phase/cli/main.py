@@ -17,6 +17,7 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
+from fiber.phase.cli.sign import app as sign_app
 
 log = get_emitter("phase.cli.main")
 
@@ -31,6 +32,8 @@ compat_app = typer.Typer(
     no_args_is_help=True
 )
 app.add_typer(compat_app, name="compat")
+app.add_typer(sign_app, name="sign")
+
 
 def _load_env(env_file: Optional[str]):
     if env_file:
@@ -44,6 +47,7 @@ def _load_env(env_file: Optional[str]):
         else:
             log.warning("[Fiber] python-dotenv is not installed. Ignoring --env-file option.")
 
+
 def boot_kernel(mode_name: str):
     log.info(f"[Fiber] Igniting Kernel in {mode_name.upper()} mode...")
     try:
@@ -53,6 +57,7 @@ def boot_kernel(mode_name: str):
     except Exception as e:
         log.error(f"[Fiber] FATAL Kernel panic: {e}", exc_info=True)
         sys.exit(1)
+
 
 @app.command("daemon")
 def run_daemon(
@@ -80,6 +85,7 @@ def run_daemon(
         
     boot_kernel("Gateway Daemon")
 
+
 @app.command("account", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_account(
     ctx: typer.Context,
@@ -95,6 +101,7 @@ def run_account(
     except Exception as e:
         log.error(f"[Fiber] Account command failed: {e}", exc_info=True)
         sys.exit(1)
+
 
 @app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def run_e2e(
@@ -124,10 +131,12 @@ def run_e2e(
                 continue
         except ImportError as e:
             log.error(f"[Fiber] Test module not found: {module_path} (Reason: {e})")
-            if target != "all": sys.exit(1)
+            if target != "all":
+                sys.exit(1)
         except Exception as e:
             log.error(f"[Fiber] E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
+
 
 @app.command("connect")
 def run_connector(
@@ -142,6 +151,7 @@ def run_connector(
     _load_env(env_file)
     from fiber.phase.cli.connect import run_connect
     run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode, preflight=preflight)
+
 
 @compat_app.command("fixture")
 def manage_compat_fixtures(
@@ -179,8 +189,10 @@ def manage_compat_fixtures(
         log.error(f"[Fiber] Invalid VCR mode: '{vcr}'. Supported modes are 'record' (gen) or 'replay' (test).")
         raise typer.Exit(1)
 
+
 def main():
     app()
+
 
 if __name__ == "__main__":
     main()

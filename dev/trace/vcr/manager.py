@@ -4,7 +4,7 @@ import json
 import hashlib
 import glob
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional, Any, Dict, List
 
 from xphi.arch.model.surge.model import DynamicSurgeModel
@@ -72,6 +72,40 @@ class VCRPlaybackConfig:
             record_tick_ms=getattr(args, "vcr_tick", 100.0)
         )
 
+    def resolve_for_ctx(self, ctx: Any) -> "VCRPlaybackConfig":
+        """
+        Resolve effective VCR config for a specific request context.
+        Allows per-request overrides via system_meta.metadata (e.g. REST Gateway calls).
+        """
+        system_meta = getattr(ctx, "system_meta", None)
+        meta = getattr(system_meta, "metadata", None) if system_meta else None
+        if not isinstance(meta, dict):
+            return self
+
+        req_mode = meta.get("vcr_mode") or meta.get("vcr") or self.mode
+        req_speed = meta.get("vcr_speed", self.speed)
+        req_chaos = float(meta["vcr_chaos"]) if "vcr_chaos" in meta else self.chaos_latency_ms
+        req_tick = float(meta["vcr_tick"]) if "vcr_tick" in meta else self.record_tick_ms
+        req_raw = bool(meta["vcr_include_raw"]) if "vcr_include_raw" in meta else self.include_raw_payload
+
+        if (
+            req_mode == self.mode
+            and req_speed == self.speed
+            and req_chaos == self.chaos_latency_ms
+            and req_tick == self.record_tick_ms
+            and req_raw == self.include_raw_payload
+        ):
+            return self
+
+        return replace(
+            self,
+            mode=str(req_mode).lower(),
+            speed=str(req_speed).lower(),
+            chaos_latency_ms=req_chaos,
+            record_tick_ms=req_tick,
+            include_raw_payload=req_raw,
+        )
+
 class VCRIdentityRule:
     @staticmethod
     def _get_flattened_invoker(invoker_path: Optional[str]) -> str:
@@ -124,7 +158,12 @@ class VCRManager:
         
         if self.config.mode in ("record", "replay"):
             os.makedirs(self.fixture_dir, exist_ok=True)
+        if self.config.target_traces:
             self._parse_and_resolve_targets(self.config.target_traces)
+
+    def resolve_config(self, ctx: Any) -> VCRPlaybackConfig:
+        """Helper to get the effective VCRPlaybackConfig for the current context."""
+        return self.config.resolve_for_ctx(ctx)
 
     def _parse_and_resolve_targets(self, trace_str: str):
         if not trace_str:
@@ -141,7 +180,7 @@ class VCRManager:
             else:
                 implicit_pool.add(item)
                 
-        if implicit_pool:
+        if implicit_pool and os.path.exists(self.fixture_dir):
             log.warning(f"[VCR] 암시적 Trace ID 감지됨. 디렉토리 프리-스캔 시작.")
             for filepath in glob.glob(os.path.join(self.fixture_dir, "*.json")):
                 if not implicit_pool:
@@ -165,10 +204,16 @@ class VCRManager:
                 log.error(f"[VCR] 다음 Trace ID를 어떤 픽스처 파일에서도 찾을 수 없습니다: {implicit_pool}")
 
     def _get_filepath(self, trace_id: str, ctx: Any) -> str:
+        system_meta = getattr(ctx, "system_meta", None)
+        custom_dir = None
+        if system_meta and isinstance(getattr(system_meta, "metadata", None), dict):
+            custom_dir = system_meta.metadata.get("vcr_fixture_dir")
+        target_dir = custom_dir or self.fixture_dir
         filename = VCRIdentityRule.get_fixture_filename(trace_id, ctx)
-        return os.path.join(self.fixture_dir, filename)
+        return os.path.join(target_dir, filename)
 
     def get_fixture(self, trace_id: str, ctx: Any, raise_on_missing: bool = True) -> Optional[dict]:
+        eff_config = self.resolve_config(ctx)
         filepath = self._get_filepath(trace_id, ctx)
         
         if filepath not in self.memory_fixtures:
@@ -176,21 +221,23 @@ class VCRManager:
                 with open(filepath, "r", encoding="utf-8") as f:
                     self.memory_fixtures[filepath] = json.load(f)
             else:
-                if self.config.mode == "replay" and raise_on_missing:
+                if eff_config.mode == "replay" and raise_on_missing:
                     raise FileNotFoundError(f"VCR Fixture not found for '{filepath}'.")
                 return None
                 
         file_data = self.memory_fixtures[filepath]
         
         system_meta = getattr(ctx, "system_meta", None)
-        scenario = system_meta.metadata.get("vcr_scenario") if system_meta and system_meta.metadata else "auto"
+        meta = getattr(system_meta, "metadata", None) if system_meta else None
+        scenario = meta.get("vcr_scenario") if isinstance(meta, dict) else "auto"
         
-        target_trace = self.trace_routing_map.get(scenario)
+        # Allow per-request explicit trace_id targeting via metadata["vcr_target_trace"]
+        target_trace = (meta.get("vcr_target_trace") if isinstance(meta, dict) else None) or self.trace_routing_map.get(scenario)
         if not target_trace:
             target_trace = file_data.get("latest_trace_id")
             
         if not target_trace or target_trace not in file_data.get("traces", {}):
-            if self.config.mode == "replay" and raise_on_missing:
+            if eff_config.mode == "replay" and raise_on_missing:
                 raise ValueError(f"Valid trace data not found in '{filepath}' for trace_id '{target_trace}'")
             return None
             
@@ -199,9 +246,12 @@ class VCRManager:
         return fixture
 
     def save_fixture(self, trace_id: str, fixture_data: dict, ctx: Any):
-        if self.config.mode != "record": return
+        eff_config = self.resolve_config(ctx)
+        if eff_config.mode != "record":
+            return
         
         filepath = self._get_filepath(trace_id, ctx)
+        os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
         file_data = {"scenario": "", "latest_trace_id": "", "history_keys": [], "traces": {}}
 
         if os.path.exists(filepath):
@@ -212,7 +262,8 @@ class VCRManager:
                 pass
 
         system_meta = getattr(ctx, "system_meta", None)
-        scenario = system_meta.metadata.get("vcr_scenario") if system_meta and system_meta.metadata else "auto"
+        meta = getattr(system_meta, "metadata", None) if system_meta else None
+        scenario = (meta.get("vcr_scenario") if isinstance(meta, dict) else None) or "auto"
 
         file_data["scenario"] = scenario
         file_data["latest_trace_id"] = trace_id

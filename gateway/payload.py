@@ -1,5 +1,5 @@
 # fiber.gateway.payload
-## @lineage: fiber.gateway.rest.payload
+import os
 from contextlib import asynccontextmanager
 from typing import Optional, Any
 from urllib.parse import urlparse
@@ -20,7 +20,11 @@ from fiber.gateway.contract.origin import OriginRegistry
 from fiber.gateway.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from fiber.gateway.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
+from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
+from fiber.dev.trace.vcr.injector import VCRInjector
+
 from xphi.arch.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.subs import DistributedPubSub
 from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
@@ -41,6 +45,9 @@ class Config(BaseModel):
     
     redis_url: str = "redis://localhost:6379"
     max_payload_size: int = 10485760  # 10MB
+    
+    vcr_default_mode: str = os.getenv("VCR_MODE", "live")
+    vcr_fixture_dir: str = os.getenv("VCR_FIXTURE_DIR", "")
 
 def get_default_config() -> Config:
     return Config()
@@ -58,6 +65,7 @@ async def verify_access_credential(request: Request, api_key: str = Security(api
     request.state.fuel_receipt = translated_receipt
     path = request.url.path
     whitelist = {
+        "/v1/chat/completions",
         "/v1/compliance/audit/verify",
         "/v1/compliance/keys",
         "/openapi.json",
@@ -109,6 +117,24 @@ async def lifespan(app: FastAPI):
             loaded_names = [type(i).__name__ for i in app.state.pipeline_interceptors]
             log.info(f"Pipeline Interceptors Ready: {loaded_names}")
 
+        # VCR Engine Proxy Mounting (Supports dynamic per-request live/record/replay switching)
+        fixture_root = config.vcr_fixture_dir or str(resolve_path("fixture"))
+        default_vcr_mode = (config.vcr_default_mode or "live").lower()
+        bootstrap_cfg = VCRPlaybackConfig(
+            mode="record" if default_vcr_mode == "live" else default_vcr_mode,
+            speed=os.getenv("VCR_SPEED", "max"),
+            chaos_latency_ms=float(os.getenv("VCR_CHAOS", "0.0")),
+            record_tick_ms=float(os.getenv("VCR_TICK", "100.0")),
+        )
+        vcr_manager = VCRInjector.apply(config=bootstrap_cfg, fixture_dir=fixture_root)
+        if vcr_manager:
+            vcr_manager.config.mode = default_vcr_mode
+            app.state.vcr_manager = vcr_manager
+            log.info(
+                f"VCRAdapterProxy mounted (Default Mode: {default_vcr_mode.upper()} | "
+                f"Fixture Root: {os.path.abspath(fixture_root)})"
+            )
+
         pubsub = DistributedPubSub(channel=config.pubsub_channel, tunnel=tunnel)
         await pubsub.start_listening()
         app.state.pubsub = pubsub
@@ -136,6 +162,11 @@ async def lifespan(app: FastAPI):
         app.state.is_ready = False
         log.info("Shutting down receptor.rest payload safely...")
         
+        try:
+            VCRInjector.remove()
+        except Exception as e:
+            log.error(f"Error removing VCRInjector: {e}")
+
         if hasattr(app.state, "pubsub"):
             try:
                 await app.state.pubsub.close()

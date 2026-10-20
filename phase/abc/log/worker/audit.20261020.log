@@ -1,0 +1,137 @@
+wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.worker.audit    
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-83251
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Stateful Security & Resilience Suite ===
+
+================================================================================
+[Security Context] Zero-Trust Auth Validator Auto-Provisioning
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+Bound NodeSigner PubKey : d9b397e19063ab9a...
+Injected Scoped Secret  : /usr/local/meta/anchor/sign/deploy_audit.sqlite (Scoped ID: spiffe://self/fiber_e2e_f8442d57)
+================================================================================
+
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [AuditPipeline] Zero-Exposure Audit DB & Validator Context Aligned.
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Init Secure MCP Server...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [AuditPipeline] Sentinel Autonomous Daemon & Worker Connectors Ignited.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-83251] listening on topic: internal.rpc.queue
+{"timestamp": "2026-10-20 22:48:42,008", "level": "INFO", "logger": "agent.sentinel", "req_id": "SYSTEM", "message": "\ud83d\udc41\ufe0f Sentinel Agent Ignited. Commencing Autonomous Entropy Sweeps..."}
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/node/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  contract.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  llm.interceptor.registry: No external interceptor config found. Using default pipeline configuration.
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /private/tmp/fiber/fixture)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 1 Connectors...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:legacy-01] Listening for Intents on DPHI Bus (Mode: EPHEMERAL, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/3] Phase 1: Idempotency Fast-Path Defense (Trigger YIELD)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792504124_b58f485b48f8] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.deployer
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792504124_b58f485b48f8] Sandbox running (PID: 83299)
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Async Agent 'execution.deployer' Ignited. Listening on async stdin...
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Migration Request -> auth [production] by spiffe://self/fiber_e2e_f8442d57
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox] ⚠️ DESTRUCTIVE PAYLOAD. Halting execution and delegating validation.
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] [BLOCKED] Waiting for TOTP input (Suspended execution context)...
+ LOG | SYSTEM | WARN  |  mcp.connector: [Connector] TRAP: Elicitation detected. Parking txn_1792504124_b58f485b48f8 (YIELD).
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Yield] Agent prompted for input
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/legacy-01/invoke "HTTP/1.1 202 Accepted"
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:State] Existing state found: YIELD
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/legacy-01/invoke "HTTP/1.1 202 Accepted"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:    └─ ✨ Idempotency Shield deflected duplicate request without crashing Sandbox.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/3] Phase 2: MCP 2026-07-28 Stateless Re-issue & Resume
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:State] Existing state found: YIELD
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Resume] TOTP Input detected. Resuming parked sandbox
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Resuming Parked Intent: txn_1792504124_b58f485b48f8
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.1] network.transport: [Sandbox] [Deploy] Waiting for Validator attestation via Connector delegation...
+ LOG | SYSTEM | INFO  |  rpc.handler.validator: Verification requested by spiffe://self/fiber_e2e_f8442d57 for hash [41fe2cf9...]
+ LOG | SYSTEM | INFO  |  rpc.handler.validator: OTP Validated. Attestation Signature issued for spiffe://self/fiber_e2e_f8442d57.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.4] network.transport: [Sandbox] 🛡️ Cryptographic Attestation Verified. Authorization Granted.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.5] network.transport: [Sandbox] ✅ Executing migration for auth
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Intent txn_1792504124_b58f485b48f8 RESOLVED.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.6] network.transport: [Transport:txn_1792504124_b58f485b48f8] Terminating sandbox (PID: 83299)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/legacy-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:    └─ ✨ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/3] Phase 3: Autonomous Reconciliation (Sentinel)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.5] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.8] network.transport: [Transport:txn_1792504125_f517da4050a5] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.deployer
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.9] network.transport: [Transport:txn_1792504125_f517da4050a5] Sandbox running (PID: 83300)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:0.2] network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:0.3] network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.5] [Acc:0.2] network.transport: [Sandbox:RAW] LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.4] network.transport: [Sandbox] Async Agent 'execution.deployer' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.5] network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.6] network.transport: [Sandbox] Migration Request -> billing [production] by spiffe://self/fiber_e2e_f8442d57
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.4] [Acc:0.7] network.transport: [Sandbox] ⚠️ DESTRUCTIVE PAYLOAD. Halting execution and delegating validation.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.8] network.transport: [Sandbox] [BLOCKED] Waiting for TOTP input (Suspended execution context)...
+ LOG | SYSTEM | WARN  |  mcp.connector: [Connector] TRAP: Elicitation detected. Parking txn_1792504125_f517da4050a5 (YIELD).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] serv.gateway: [Bridge:PubSub:Yield] Agent prompted for input
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/legacy-01/invoke "HTTP/1.1 202 Accepted"
+{"timestamp": "2026-10-20 22:48:47,015", "level": "WARNING", "logger": "agent.sentinel", "req_id": "SYSTEM", "message": "Detected 1 orphaned transactions. Initiating Rollback Protocol."}
+{"timestamp": "2026-10-20 22:48:47,015", "level": "INFO", "logger": "agent.sentinel", "req_id": "SYSTEM", "message": "Reconciling txn_1792504125_f517da4050a5 on target [legacy-01]..."}
+{"timestamp": "2026-10-20 22:48:47,019", "level": "INFO", "logger": "agent.sentinel", "req_id": "SYSTEM", "message": "Reverted txn_1792504125_f517da4050a5. Entropy cleared and ledger marked for future reconciliation."}
+ LOG | SYSTEM | WARN  |  mcp.connector: [Connector] Sentinel enforced ROLLBACK on txn_1792504125_f517da4050a5. Terminating parked sandbox.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.4] [Acc:0.5] network.transport: [Transport:txn_1792504125_f517da4050a5] Terminating sandbox (PID: 83300)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:    └─ ✨ Sentinel Autonomous Reconciliation Successful.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[BasePipeline] Teardown sequence initiated...
+{"timestamp": "2026-10-20 22:48:47,210", "level": "INFO", "logger": "agent.sentinel", "req_id": "SYSTEM", "message": "Sentinel shutting down gracefully."}
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [AuditPipeline] Sentinel Daemon Shutdown & Scoped Record (spiffe://self/fiber_e2e_f8442d57) Purged.
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: API Payload Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Teardown complete.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+================================================================================
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 🛡️ [SECURITY & AUDIT BENCHMARK REPORT]
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] infra.e2e.bridge: ================================================================================
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] infra.e2e.bridge: ✅ 01. [MCP_AUDIT_SUITE]Phase 1: Idempotency Fast-Path Defense (Trigger YIELD) | PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] infra.e2e.bridge: ✅ 02. [MCP_AUDIT_SUITE]Phase 2: MCP 2026-07-28 Stateless Re-issue & Resume | PASSED
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:infra.e2e.bridge' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] infra.e2e.bridge: ✅ 03. [MCP_AUDIT_SUITE]Phase 3: Autonomous Reconciliation (Sentinel)      | PASSED
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.9] infra.e2e.bridge: [infra.e2e.bridge] Bursting logs suppressed... (x4)

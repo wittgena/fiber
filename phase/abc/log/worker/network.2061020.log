@@ -1,0 +1,151 @@
+wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.worker.network
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-82618
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Network Transport (Local HTTP/SSE & Remote Context7 MCP) Suite ===
+ LOG | SYSTEM | INFO  |  e2e.mcp.server: [MockMcpServer] Listening on http://127.0.0.1:8359 (/mcp, /sse-mcp, /context7-mcp)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [E2E Network] Context7 Target: http://127.0.0.1:8359/context7-mcp
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Init Secure MCP Server...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-82618] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/node/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  contract.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  llm.interceptor.registry: No external interceptor config found. Using default pipeline configuration.
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /private/tmp/fiber/fixture)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 3 Connectors...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:net-sqlite-fs-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: NETWORK)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-sqlite-fs-01] Attaching to unmanaged endpoint: http://127.0.0.1:8359/mcp
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-sqlite-fs-01] Unmanaged worker attached. Direct HTTP multiplexing active.
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:net-context7-remote-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: NETWORK)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-context7-remote-01] Attaching to unmanaged endpoint: http://127.0.0.1:8359/context7-mcp
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-context7-remote-01] Unmanaged worker attached. Direct HTTP multiplexing active.
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:net-sse-stream-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: NETWORK)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-sse-stream-01] Attaching to unmanaged endpoint: http://127.0.0.1:8359/sse-mcp
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-sse-stream-01] Unmanaged worker attached. Direct HTTP multiplexing active.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/7] Phase 1: Connect Resolver & Mcp-Session-Id Header Persistence
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Captured Mcp-Session-Id: mcp-sess-5b63d59f (Resolver Mode: MULTIPLEX)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/7] Phase 2: Local URL Real SQLite3 Execution & Standard Telemetry
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ SQLite3 Rows Verified: 4 rows
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/7] Phase 3: High-Concurrency HTTP Multiplexing (Filesystem SHA-256)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] serv.gateway: [Bridge:Start] Ingress request received
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] serv.gateway: [Bridge:Start] Ingress request received
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 8 Concurrent HTTP File SHA-256 Checks in 0.05s (Hash: 5d566c748932...)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 4/7] Phase 4: Streamable HTTP (text/event-stream SSE) Parsing
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 3.52) Den: 15.50)
+HTTP Request: POST http://127.0.0.1:8359/sse-mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sse-stream-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] infra.e2e.bridge:   └─ SSE (text/event-stream) Frame Parsed & Resolved Successfully (total=4)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] infra.e2e.bridge:   └─ Status: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] infra.e2e.bridge: 
+[PHASE 5/7] Phase 5: Remote Context7 MCP Docs Search with Env CONTEXT7_API_KEY
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 3.86) Den: 17.00)
+HTTP Request: POST http://127.0.0.1:8359/context7-mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-context7-remote-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8359/context7-mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-context7-remote-01/invoke "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] infra.e2e.bridge:   └─ Context7 Docs Search (query-docs) Authorized & Executed (253 bytes)
+HTTP Request: POST http://127.0.0.1:8359/context7-mcp "HTTP/1.1 401 Unauthorized"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-context7-remote-01/invoke "HTTP/1.1 502 Bad Gateway"
+HTTP Request: POST http://127.0.0.1:8359/mcp "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:54375/v1/mcp-gateway/net-sqlite-fs-01/invoke "HTTP/1.1 502 Bad Gateway"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:mcp.connector'
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-sqlite-fs-01] Initiating graceful teardown of network transport...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-sse-stream-01] Initiating graceful teardown of network transport...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-net-context7-remote-01] Initiating graceful teardown of network transport...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: API Payload Teardown complete. Goodbye.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:infra.e2e.bridge' (Acc: 2.08) Den: 11.50)
+
+================================================================================
+🌐 [NETWORK TRANSPORT & REMOTE CONTEXT7 MCP E2E REPORT]
+================================================================================
+✅ 01. [MCP_NETWORK_SUITE]Phase 1: Connect Resolver & Mcp-Session-Id Header Persistence | PASSED
+✅ 02. [MCP_NETWORK_SUITE]Phase 2: Local URL Real SQLite3 Execution & Standard Telemetry | PASSED
+✅ 03. [MCP_NETWORK_SUITE]Phase 3: High-Concurrency HTTP Multiplexing (Filesystem SHA-256) | PASSED
+✅ 04. [MCP_NETWORK_SUITE]Phase 4: Streamable HTTP (text/event-stream SSE) Parsing | PASSED
+✅ 05. [MCP_NETWORK_SUITE]Phase 5: Remote Context7 MCP Docs Search with Env CONTEXT7_API_KEY | PASSED
+✅ 06. [MCP_NETWORK_SUITE]Phase 6: Remote API_KEY Tamper Defense (HTTP 401 -> Gateway 502) | PASSED
+✅ 07. [MCP_NETWORK_SUITE]Phase 7: Network Error Routing (502 Bad Gateway on SQL Reject) | PASSED
+--------------------------------------------------------------------------------
+NETWORK PIPELINE VALIDATED SUCCESSFULLY.
+================================================================================
+
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] serv.gateway: [Bridge:Start] Ingress request received (x3)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:5.1] serv.gateway: [serv.gateway] Bursting logs suppressed... (x32)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.1] infra.e2e.bridge: [infra.e2e.bridge] Bursting logs suppressed... (x10)

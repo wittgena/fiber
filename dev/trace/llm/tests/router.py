@@ -54,7 +54,12 @@ def inject_vcr_proxy():
     
     # Determine VCR mode (default to 'replay', override with 'record')
     vcr_mode = os.getenv("VCR_MODE", "replay")
-    config = VCRPlaybackConfig(mode=vcr_mode, speed="max", record_tick_ms=100.0)
+    config = VCRPlaybackConfig(
+        mode=vcr_mode,
+        speed=os.getenv("VCR_SPEED", "max"),
+        chaos_latency_ms=float(os.getenv("VCR_CHAOS", "0.0")),
+        record_tick_ms=float(os.getenv("VCR_TICK", "100.0")),
+    )
     
     # Inject VCR via Context Manager to ensure safe teardown
     with VCRInjector.use_cassette(config=config, fixture_dir=fixture_dir):

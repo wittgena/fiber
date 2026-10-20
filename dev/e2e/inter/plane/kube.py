@@ -8,7 +8,7 @@ import random
 from pathlib import Path
 from typing import Any, List, Dict
 
-from fiber.dev.ex.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
+from fiber.dev.gateway.client import GatewayClient, StrictPayloadFactory, Endpoints
 from fiber.infra.watcher.plane.kube import KubeOrchestrator, KubeContext
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT

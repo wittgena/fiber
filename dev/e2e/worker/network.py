@@ -53,7 +53,6 @@ class MCPNetworkPipeline(BaseBridgePipeline):
         ])
 
     async def setup_custom_context(self) -> None:
-        os.environ.setdefault("DPHI_MASTER_PASSPHRASE", "e2e-test-passphrase")
         self.http_client = httpx.AsyncClient(base_url=self.local_url, timeout=20.0)
         await self.mock_mcp.start()
         log.info(f"[E2E Network] Context7 Target: {self.active_context7_url}")

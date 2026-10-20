@@ -12,6 +12,7 @@ PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
 PROJECT_DESC = "The Universal Integration Boundary for heterogeneous AI ecosystems"
 DEFAULT_VERSION = "v1.1.4.7"
+BIND_MODULE = "xphi.node.space.bind.around"
 
 FIBER_ROOT = resolve_path("fiber")
 
@@ -25,32 +26,53 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
   depends_on "python@{{PYTHON_VERSION}}"
 
   def install
-    # .git 폴더가 없는 tarball 빌드 시 hatch-vcs(setuptools-scm)에 버전 강제 주입
+    # Inject pretend version for hatch-vcs (setuptools-scm) when building from tarball without .git
     ENV["SETUPTOOLS_SCM_PRETEND_VERSION"] = version.to_s
+    ENV["LDFLAGS"] = "-Wl,-headerpad_max_install_names"
 
-    # libexec에 격리된 venv 생성 및 파이썬 패키지 설치
+    # Create isolated virtualenv in libexec and install package
     system "python{{PYTHON_VERSION}}", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "-U", "pip"
-    # 소스 디렉토리에서 패키지 설치
     system libexec/"bin/pip", "install", "."
     
-    # pyproject.toml의 [project.scripts]에 의해 생성된 실행 파일을 PATH에 심볼릭 링크
+    # Symlink CLI entrypoint into Homebrew PATH
     bin.install_symlink libexec/"bin/{{PROJECT_NAME_LOWER}}"
+  end
+
+  def post_install
+    # Ensure log directory exists to prevent launchd exit 78 on service start
+    (var/"log/{{PROJECT_NAME_LOWER}}").mkpath
+  end
+
+  def caveats
+    <<~EOS
+      To complete local workspace binding and provision your Zero-Env node keys
+      (~/.ssh/fiber_ed25519 & local_cipher.key), run once in your terminal:
+
+        #{opt_libexec}/bin/python -m {{BIND_MODULE}}
+        {{PROJECT_NAME_LOWER}} sign init
+        {{PROJECT_NAME_LOWER}} sign status
+    EOS
   end
 
   service do
     run [opt_bin/"{{PROJECT_NAME_LOWER}}", "daemon", "-s", "all"]
     keep_alive true
-    environment_variables PATH: std_env_path
+    working_dir var
     log_path var/"log/{{PROJECT_NAME_LOWER}}/daemon.log"
     error_log_path var/"log/{{PROJECT_NAME_LOWER}}/daemon.error.log"
   end
 
   test do
-    system "#{bin}/{{PROJECT_NAME_LOWER}}", "--help"
+    ENV["HOME"] = testpath
+    system "#{libexec}/bin/python", "-m", "{{BIND_MODULE}}"
+    system "#{bin}/{{PROJECT_NAME_LOWER}}", "sign", "init"
+    system "#{bin}/{{PROJECT_NAME_LOWER}}", "sign", "status"
+    assert_predicate testpath/".ssh/fiber_ed25519", :exist?
   end
 end
 """
+
 
 def generate_formula(version: str):
     tag_version = version if version.startswith("v") else f"v{version}"
@@ -77,6 +99,7 @@ def generate_formula(version: str):
         .replace("{{PROJECT_DESC}}", PROJECT_DESC)
         .replace("{{GITHUB_REPO}}", GITHUB_REPO)
         .replace("{{PYTHON_VERSION}}", PYTHON_VERSION)
+        .replace("{{BIND_MODULE}}", BIND_MODULE)
         .replace("{{TARBALL_URL}}", tarball_url)
         .replace("{{SHA256_HASH}}", sha256_hash)
     )
@@ -88,6 +111,7 @@ def generate_formula(version: str):
     except ValueError:
         rel_path = output_path
     print(f"[+] Successfully generated Homebrew formula at: {rel_path}")
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 2:
