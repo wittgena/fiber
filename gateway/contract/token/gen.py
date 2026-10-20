@@ -1,21 +1,21 @@
-# fiber.gateway.token.gen
+# fiber.gateway.contract.token.gen
+## @lineage: fiber.gateway.token.gen
 import time
 import jwt
 from typing import Literal, Optional
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from xphi.arch.bound.adapter.pta import NodeSigner
-from xphi.arch.contract.config.env import FINOPS_JWT_PRIVATE_KEY
 
 FinOpsOpType = Literal["PROVISION", "SYNC_QUOTA", "TOP_UP", "REVOKE"]
 
+
 class FinOpsTokenGenerator:
     def __init__(self, private_key_hex: Optional[str] = None, issuer: str = "fiber_local_auth"):
-        raw_hex = private_key_hex or FINOPS_JWT_PRIVATE_KEY
-        if raw_hex:
-            seed_bytes = bytes.fromhex(raw_hex.strip())
+        if private_key_hex:
+            seed_bytes = bytes.fromhex(private_key_hex.strip())
         else:
             seed_bytes = bytes(NodeSigner.get_instance().signing_key)
-            
+
         self.private_key = ed25519.Ed25519PrivateKey.from_private_bytes(seed_bytes)
         self.issuer = issuer
         self.algorithm = "EdDSA"

@@ -36,41 +36,28 @@ class ComposeWorkflowScene:
 set -e
 trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ] && [ -f kernel_boot.log ]; then echo -e "\\n🔥 [FATAL] E2E CLIENT FAILED! DUMPING KERNEL LOG: 🔥\\n"; cat kernel_boot.log; echo -e "\\n[CI-SYNC] 💾 Saving kernel log to artifact mount..."; cp kernel_boot.log /artifact_mount/kernel_error_dump.log || true; fi; echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.node.ops.reaper; exit $EXIT_CODE' EXIT
 
-echo "[CI-SYNC] 1. Bootstrap Topology Boundary..."
-python -m xphi.node.space.bind.around
+echo "[CI-SYNC] Verifying Pre-initialized Node Identity (Baked in Image)..."
+fiber sign status
 
-echo "[CI-SYNC] 1.5. Injecting Mock Node Identity..."
-mkdir -p ~/.ssh
-cat << 'EOF' > ~/.ssh/id_ed25519
------BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-QyNTUxOQAAACC3e9qbo208kLZIK53Q9rso+2oqHzQGP5bqpKkQer1exgAAAKirLcH+qy3B
-/gAAAAtzc2gtZWQyNTUxOQAAACC3e9qbo208kLZIK53Q9rso+2oqHzQGP5bqpKkQer1exg
-AAAEBvdGKojS3foXcxfI4iAcxsuYLXS7w/X7K7VKaJt7yNd7d72pujbTyQtkgrndD2uyj7
-aiofNAY/luqkqRB6vV7GAAAAJHdpdHRnZW5hQHdpdHRnZW5hcy1NYWNCb29rLVByby5sb2
-NhbAE=
------END OPENSSH PRIVATE KEY-----
-EOF
-chmod 600 ~/.ssh/id_ed25519
-
-echo "[CI-SYNC] 2. Booting Kernel (Background)..."
+echo "[CI-SYNC] Booting Kernel (Background)..."
 nohup python -u -m xphi.node.ops.boot > kernel_boot.log 2>&1 &
 
-echo "[CI-SYNC] 3. Waiting for Kernel Healthcheck..."
+echo "[CI-SYNC] Waiting for Kernel Healthcheck..."
 timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8356/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
 echo "Kernel is fully up and running!"
 
-echo "[CI-SYNC] 4. Executing E2E Gateway Client..."
+echo "[CI-SYNC] Executing E2E Gateway Client..."
 python -m fiber.dev.e2e.gateway.compliance
 python -m fiber.dev.e2e.gateway.security
 
-echo "[CI-SYNC] 5. Executing WASM & Flare E2E Suites..."
+echo "[CI-SYNC] Executing FinOps, WASM & Flare E2E Suites..."
+fiber e2e inter.finops --vcr replay
 fiber e2e inter.wasm.gateway
 fiber e2e inter.wasm.phase
 VCR_MODE=replay python -m fiber.dev.ex.switch
 fiber e2e inter.plane.flare --mode dev
 """
-        
+
         try:
             success = await self.adapter.apply_job(
                 job_name="system-e2e-test", 
@@ -80,7 +67,6 @@ fiber e2e inter.plane.flare --mode dev
                     "FIBER_E2E_STEPS": e2e_bash_script.strip()
                 }
             )
-            
             if not success:
                 raise RuntimeError("System E2E job fractured. Check the streamed Docker Compose logs above for specific traceback.")
                 

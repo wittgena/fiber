@@ -12,16 +12,15 @@ PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
 
 FIBER_ROOT = resolve_path("fiber")
-
-# Install Script Template (Bash)
 INSTALL_TEMPLATE = """#!/usr/bin/env bash
 # ==============================================================================
 # {{PROJECT_NAME_TITLE}} Universal Installer (Linux / systemd)
-# 
-# 이 스크립트는 다음 작업을 수행:
-# 1. 'uv' 패키지 매니저 감지 및 자동 설치
-# 2. uv tool을 이용한 격리된 샌드박스(USER 모드) 환경에 {{PROJECT_NAME_TITLE}} 설치
-# 3. User-space Systemd 서비스 등록 및 데몬 백그라운드 구동
+#
+# Steps:
+# - Detect or install the 'uv' package manager
+# - Install {{PROJECT_NAME_TITLE}} in an isolated uv tool environment
+# - Bootstrap workspace anchor (bind.around) & Zero-Env keys (sign init)
+# - Register user-space systemd service & launch background daemon
 # ==============================================================================
 
 set -e
@@ -31,11 +30,11 @@ GREEN='\\033[0;32m'
 BLUE='\\033[0;34m'
 YELLOW='\\033[1;33m'
 RED='\\033[0;31m'
-NC='\\033[0m' # No Color
+NC='\\033[0m'
 
 echo -e "${BLUE}▶ Starting {{PROJECT_NAME_TITLE}} LLM Pipeline & MCP Gateway Installation...${NC}\\n"
 
-# 사용자가 버전을 명시했는지 확인 (예: curl ... | bash -s -- v1.1.4.6)
+# Parse optional target version (e.g., curl ... | bash -s -- v1.1.4.7)
 FIBER_VERSION=${1:-""}
 REPO_URL="git+https://github.com/{{GITHUB_REPO}}.git"
 
@@ -47,29 +46,44 @@ else
     echo -e "${BLUE}▶ Target Version: ${YELLOW}Latest (main branch)${NC}\\n"
 fi
 
-# uv 설치 확인 및 자동 설치
+# Ensure 'uv' is installed
 if ! command -v uv &> /dev/null; then
-    echo -e "${YELLOW}[1/4] 'uv' package manager not found. Installing uv...${NC}"
+    echo -e "${YELLOW}[1/5] 'uv' package manager not found. Installing uv...${NC}"
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.local/bin:$PATH"
 else
-    echo -e "${GREEN}[1/4] 'uv' package manager is already installed.${NC}"
+    echo -e "${GREEN}[1/5] 'uv' package manager is already installed.${NC}"
 fi
 
-# uv tool을 이용해 Fiber 설치
-echo -e "${BLUE}[2/4] Installing {{PROJECT_NAME_TITLE}} to isolated sandbox via uv tool...${NC}"
+# Install Fiber via uv tool
+echo -e "${BLUE}[2/5] Installing {{PROJECT_NAME_TITLE}} into isolated sandbox via uv tool...${NC}"
 uv tool install --python {{PYTHON_VERSION}} --force "$INSTALL_TARGET"
 
-# 실행 경로 검증
+# Verify binary and resolve isolated Python interpreter path
 FIBER_BIN="$HOME/.local/bin/{{PROJECT_NAME_LOWER}}"
 if [ ! -f "$FIBER_BIN" ]; then
     echo -e "${RED}Error: {{PROJECT_NAME_TITLE}} binary not found at $FIBER_BIN. Installation failed.${NC}"
     exit 1
 fi
-echo -e "${GREEN}[2/4] {{PROJECT_NAME_TITLE}} installed successfully at $FIBER_BIN.${NC}"
 
-# User-space Systemd 서비스 등록
-echo -e "${BLUE}[3/4] Configuring User-space Systemd Daemon (No sudo required)...${NC}"
+UV_TOOL_DIR="$(uv tool dir 2>/dev/null || echo "$HOME/.local/share/uv/tools")"
+FIBER_PYTHON="$UV_TOOL_DIR/{{PROJECT_NAME_LOWER}}/bin/python"
+if [ ! -x "$FIBER_PYTHON" ]; then
+    # Fallback: extract Python interpreter from entrypoint shebang
+    FIBER_PYTHON="$(head -n 1 "$FIBER_BIN" | sed 's/^#!//')"
+fi
+
+echo -e "${GREEN}[2/5] {{PROJECT_NAME_TITLE}} installed successfully at $FIBER_BIN.${NC}"
+
+# Bootstrap workspace anchor (bind.around) & Zero-Env keys (sign init)
+echo -e "${BLUE}[3/5] Bootstrapping Topology Anchor & Zero-Env Node Identity...${NC}"
+"$FIBER_PYTHON" -m xphi.node.space.bind.around
+"$FIBER_BIN" sign init
+"$FIBER_BIN" sign status
+echo -e "${GREEN}[3/5] Workspace anchor (~/.anchor/bound.json) and node keys (~/.ssh/fiber_ed25519 & local_cipher.key) provisioned.${NC}"
+
+# Configure user-space systemd service
+echo -e "${BLUE}[4/5] Configuring User-space Systemd Daemon (No sudo required)...${NC}"
 SERVICE_DIR="$HOME/.config/systemd/user"
 SERVICE_FILE="$SERVICE_DIR/{{PROJECT_NAME_LOWER}}.service"
 
@@ -90,23 +104,24 @@ Environment="PATH=$HOME/.local/bin:/usr/bin:/bin"
 WantedBy=default.target
 EOF
 
-echo -e "${GREEN}[3/4] Systemd service file created at $SERVICE_FILE.${NC}"
+echo -e "${GREEN}[4/5] Systemd service file created at $SERVICE_FILE.${NC}"
 
-# 4. Systemd 데몬 리로드 및 시작
-echo -e "${BLUE}[4/4] Starting {{PROJECT_NAME_TITLE}} Daemon in the background...${NC}"
+# Reload systemd & start daemon
+echo -e "${BLUE}[5/5] Starting {{PROJECT_NAME_TITLE}} Daemon in the background...${NC}"
 
 if command -v systemctl &> /dev/null && systemctl --user show-environment &> /dev/null; then
     systemctl --user daemon-reload
     systemctl --user enable --now {{PROJECT_NAME_LOWER}}.service
-    echo -e "${GREEN}[4/4] Daemon successfully started and enabled on boot!${NC}"
+    echo -e "${GREEN}[5/5] Daemon successfully started and enabled on boot!${NC}"
 else
     echo -e "${YELLOW}[!] Systemd is not running (e.g., inside basic WSL or Docker).${NC}"
     echo -e "You can manually start the daemon by running: ${BLUE}{{PROJECT_NAME_LOWER}} daemon -s all${NC}"
 fi
 
 echo -e "\\n============================================================"
-echo -e "${GREEN}🎉 {{PROJECT_NAME_TITLE}} Installation Complete!${NC}"
+echo -e "${GREEN}🎉 {{PROJECT_NAME_TITLE}} Installation & Key Provisioning Complete!${NC}"
 echo -e "============================================================"
+echo -e "  ${YELLOW}Check Identity      :${NC} {{PROJECT_NAME_LOWER}} sign status"
 echo -e "  ${YELLOW}Check Daemon Status :${NC} systemctl --user status {{PROJECT_NAME_LOWER}}"
 echo -e "  ${YELLOW}View Live Logs      :${NC} journalctl --user -fu {{PROJECT_NAME_LOWER}}"
 echo -e "  ${YELLOW}Test Gateway        :${NC} curl -s http://127.0.0.1:8356/v1/mcp-gateway/tools"
@@ -119,16 +134,19 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 fi
 """
 
+
 def generate_install_script():
     output_path = FIBER_ROOT / "phase" / "install.sh"
     
-    rendered_content = INSTALL_TEMPLATE \
-        .replace("{{PROJECT_NAME_TITLE}}", PROJECT_NAME_TITLE) \
-        .replace("{{PROJECT_NAME_LOWER}}", PROJECT_NAME_LOWER) \
-        .replace("{{GITHUB_REPO}}", GITHUB_REPO) \
+    rendered_content = (
+        INSTALL_TEMPLATE
+        .replace("{{PROJECT_NAME_TITLE}}", PROJECT_NAME_TITLE)
+        .replace("{{PROJECT_NAME_LOWER}}", PROJECT_NAME_LOWER)
+        .replace("{{GITHUB_REPO}}", GITHUB_REPO)
         .replace("{{PYTHON_VERSION}}", PYTHON_VERSION)
+    )
         
-    with open(output_path, "w", encoding="utf-8", newline='\n') as f:
+    with open(output_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(rendered_content)
         
     st = os.stat(output_path)
@@ -139,6 +157,7 @@ def generate_install_script():
     except ValueError:
         rel_path = output_path
     print(f"[+] Successfully generated Universal Installer at: {rel_path}")
+
 
 if __name__ == "__main__":
     generate_install_script()

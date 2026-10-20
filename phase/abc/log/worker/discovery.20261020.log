@@ -1,0 +1,133 @@
+wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.worker.discovery
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-82860
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: MCP Tool Discovery & Facade Suite ===
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [E2E Pipeline] Pricing Daemon bypassed for Discovery Suite.
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Init Secure MCP Server...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-82860] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/node/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  contract.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  llm.interceptor.registry: No external interceptor config found. Using default pipeline configuration.
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /private/tmp/fiber/fixture)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 3 Connectors...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:oracle-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-oracle-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.eco.oracle
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:search-archive-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-search-archive-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.search.archive
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:finlib-01] Listening for Intents on DPHI Bus (Mode: LINEAR, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finlib-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.eco.finlib
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-oracle-01] Sandbox running (PID: 82892)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-search-archive-01] Sandbox running (PID: 82893)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finlib-01] Sandbox running (PID: 82894)
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Initializing DuckDB In-Memory Engine & Filters...
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] DuckDB Search Worker successfully mounted. Ready for Intents.
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Async Agent 'search.archive.worker' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.9] [Acc:0.8] network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.0] network.transport: [Sandbox] Initializing Async Deterministic Oracle Receptor...
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.7] [Acc:1.1] network.transport: [Sandbox:RAW] LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.2] network.transport: [Sandbox] Async Oracle Receptor successfully mounted. Ready for A2A Intents.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.4] network.transport: [Sandbox] Async Agent 'eco.oracle' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.5] network.transport: [Sandbox] Sync Agent 'agent.finlib' Ignited. Listening on stdin...
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/6] Phase 1: Pure MCP Initialize (Auth Bypass)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.8] network.transport: [Sandbox] Incoming RPC payload recognized. Method: initialize
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Initialize Bypass Validated. Protocol: 2026-09-04
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/6] Phase 2: Standard POST tools/list Bypass (FinLib)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.9] network.transport: [Sandbox] Incoming RPC payload recognized. Method: tools/list
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ FinLib POST Tools Found: ['resolve_dates', 'normalize_order', 'calc_indicators_batch', 'eval_math', 'generate_fingerprint']
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/6] Phase 3: Standard POST tools/list Bypass (Oracle)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.1] network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/list
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Oracle POST Tools Found: ['fetch_aggregated_kline']
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 4/6] Phase 4: REST GET /tools Facade Routing (FinLib)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/tools "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] infra.e2e.bridge:   └─ GET Facade Validated. Successfully mapped tools/list JSON-RPC.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] infra.e2e.bridge:   └─ Status: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] infra.e2e.bridge: 
+[PHASE 5/6] Phase 5: Isolation Proof (No Cross-Talk)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] serv.gateway: [Bridge:Start] Ingress request received
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.7] network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/list
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/tools "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/tools "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/tools "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/tools "HTTP/1.1 200 OK"
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/tools "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] infra.e2e.bridge:   └─ Isolation Proof Passed. 5 concurrent Facade requests succeeded cleanly.
+HTTP Request: GET http://127.0.0.1:8355/v1/mcp-gateway/search-archive-01/tools "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:mcp.connector'
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:network.transport' (Acc: 2.42) Den: 11.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:mcp.connector'
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:network.transport' (Acc: 2.54) Den: 11.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:mcp.connector'
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:network.transport' (Acc: 2.65) Den: 12.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:daemon.rpc'
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: API Payload Teardown complete. Goodbye.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:1.4] infra.e2e.bridge: [BasePipeline] Teardown complete.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:infra.e2e.bridge' (Acc: 1.52) Den: 11.00)
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.8] [Acc:0.9] network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0 (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.3] network.transport: [Sandbox] Incoming RPC payload recognized. Method: tools/list (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:3.4] serv.gateway: [serv.gateway] Bursting logs suppressed... (x17)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:2.7] network.transport: [network.transport] Bursting logs suppressed... (x9)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.5] infra.e2e.bridge: [infra.e2e.bridge] Bursting logs suppressed... (x8)

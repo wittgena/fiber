@@ -35,6 +35,7 @@ def _sanitize_for_json(obj: Any) -> Any:
         return obj
     else:
         return str(obj)
+
 class VCRRawPayloadState(DynamicSurgeModel):
     sync_response: Optional[Any] = None
     stream_chunks: List[Any] = []
@@ -72,7 +73,7 @@ def _reconstruct_vcr_exception(exc_data: dict, provider: str, model: str) -> Exc
         except Exception:
             pass
 
-    error_class = __builtins__.get(error_type, Exception)
+    error_class = __builtins__.get(error_type, Exception) if isinstance(__builtins__, dict) else getattr(__builtins__, error_type, Exception)
     return error_class(replay_msg)
 
 
@@ -82,12 +83,14 @@ async def stream_recorder_proxy(
     manager: VCRManager, 
     trace_id: str, 
     start_time: float,
-    ctx: Any
+    ctx: Any,
+    config: Optional[VCRPlaybackConfig] = None
 ) -> AsyncGenerator:
+    eff_config = config or manager.resolve_config(ctx)
     last_time = start_time
     is_first = True
     
-    tick_ms = manager.config.record_tick_ms
+    tick_ms = eff_config.record_tick_ms
     buffer_text = ""
     buffer_time = 0.0
     
@@ -96,7 +99,7 @@ async def stream_recorder_proxy(
         model_name = getattr(ctx, "model", "")
         provider = model_name.split("/")[0] if "/" in model_name else "openai"
     
-    include_raw = getattr(manager.config, "include_raw_payload", False)
+    include_raw = getattr(eff_config, "include_raw_payload", False)
     payload_state = VCRRawPayloadState(stream_chunks=[]) if include_raw else None
 
     def flush_buffer(f_reason: Optional[str] = None):
@@ -219,6 +222,7 @@ async def stream_player_emulator(
         provider = fixture_data.get("request_context", {}).get("provider", "unknown")
         raise _reconstruct_vcr_exception(exc, provider, model_name)
 
+
 class VCRAdapterProxy:
     def __init__(self, original_adapter: Any, manager: VCRManager):
         self.original_adapter = original_adapter
@@ -226,6 +230,13 @@ class VCRAdapterProxy:
         self.config = manager.config
 
     async def execute(self, ctx: Any) -> Any:
+        # 1. Resolve per-request VCR configuration (checks ctx.system_meta.metadata first)
+        eff_config = self.manager.resolve_config(ctx)
+
+        # 2. Fast-path for LIVE mode: bypass deepcopy and fixture overhead completely
+        if eff_config.mode not in ("record", "replay"):
+            return await self.original_adapter.execute(ctx)
+
         safe_ctx = copy.deepcopy(ctx)
         
         system_meta = getattr(safe_ctx, "system_meta", None)
@@ -237,18 +248,18 @@ class VCRAdapterProxy:
         is_stream = getattr(safe_ctx, "stream", False)
         model_name = getattr(safe_ctx, "model", "vcr-mock-model")
         
-        if self.config.mode == "replay":
+        if eff_config.mode == "replay":
             fixture = self.manager.get_fixture(trace_id, safe_ctx) 
             if not fixture:
                 raise ValueError(f"No VCR fixture found for trace_id: '{trace_id}'")
 
             vcr_latency = fixture["network_metrics"].get("total_duration_ms", 0)
-            if system_meta and hasattr(system_meta, "metadata"):
-                system_meta.metadata["_vcr_injected_latency_ms"] = vcr_latency + self.config.chaos_latency_ms
+            if system_meta and hasattr(system_meta, "metadata") and isinstance(system_meta.metadata, dict):
+                system_meta.metadata["_vcr_injected_latency_ms"] = vcr_latency + eff_config.chaos_latency_ms
             
             if not is_stream and fixture["exception_boundary"]["occurred"]:
-                if self.config.chaos_latency_ms > 0:
-                    await asyncio.sleep(self.config.chaos_latency_ms / 1000.0)
+                if eff_config.chaos_latency_ms > 0:
+                    await asyncio.sleep(eff_config.chaos_latency_ms / 1000.0)
                 
                 provider = getattr(safe_ctx, "custom_llm_provider", None)
                 if not provider:
@@ -256,11 +267,11 @@ class VCRAdapterProxy:
                 raise _reconstruct_vcr_exception(fixture["exception_boundary"], provider, model_name)
 
             if is_stream:
-                return stream_player_emulator(fixture, self.config, model_name)
+                return stream_player_emulator(fixture, eff_config, model_name)
             else:
-                if self.config.chaos_latency_ms > 0:
-                    await asyncio.sleep(self.config.chaos_latency_ms / 1000.0)
-                if self.config.speed == "real":
+                if eff_config.chaos_latency_ms > 0:
+                    await asyncio.sleep(eff_config.chaos_latency_ms / 1000.0)
+                if eff_config.speed == "real":
                     await asyncio.sleep(vcr_latency / 1000.0)
                     
                 content = "".join([t["chunk"] for t in fixture["response_timeline"]])
@@ -278,14 +289,17 @@ class VCRAdapterProxy:
                     usage=usage_obj
                 )
 
+        # eff_config.mode == "record"
         start_time = time.perf_counter()
         fixture_data = self.manager.create_empty_fixture(trace_id, safe_ctx)
         try:
             response = await self.original_adapter.execute(safe_ctx)
             
-            if self.config.mode == "record":
+            if eff_config.mode == "record":
                 if is_stream:
-                    return stream_recorder_proxy(response, fixture_data, self.manager, trace_id, start_time, safe_ctx)
+                    return stream_recorder_proxy(
+                        response, fixture_data, self.manager, trace_id, start_time, safe_ctx, config=eff_config
+                    )
                 else:
                     duration = (time.perf_counter() - start_time) * 1000
                     provider = getattr(safe_ctx, "custom_llm_provider", None)
@@ -294,7 +308,7 @@ class VCRAdapterProxy:
                         provider = model_name.split("/")[0] if "/" in model_name else "openai"
 
                     content, usage_dict = StateMapper.extract_response(response, provider)
-                    if getattr(self.config, "include_raw_payload", False):
+                    if getattr(eff_config, "include_raw_payload", False):
                         try:
                             raw_data = getattr(response, "raw", response)
                             if isinstance(raw_data, bytes):
@@ -321,11 +335,11 @@ class VCRAdapterProxy:
                     fixture_data["response_timeline"].append({"delta_ms": 0, "chunk": content})
                     self.manager.save_fixture(trace_id, _sanitize_for_json(fixture_data), safe_ctx)
                     
-                    if system_meta and hasattr(system_meta, "metadata"):
+                    if system_meta and hasattr(system_meta, "metadata") and isinstance(system_meta.metadata, dict):
                         system_meta.metadata["_vcr_injected_latency_ms"] = duration
             return response
         except Exception as e:
-            if self.config.mode == "record":
+            if eff_config.mode == "record":
                 duration = (time.perf_counter() - start_time) * 1000
                 fixture_data["network_metrics"]["total_duration_ms"] = duration
                 fixture_data["exception_boundary"] = {

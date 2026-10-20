@@ -63,22 +63,6 @@ def _ensure_node_auth(kwargs: dict) -> dict:
         metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload()
     return kwargs
 
-# def _ensure_node_auth(kwargs: Dict[str, Any]) -> Dict[str, Any]:
-#     metadata = kwargs.get("metadata")
-#     if metadata is None:
-#         metadata = {}
-#         kwargs["metadata"] = metadata
-        
-#     if BrokerKey.NODE_AUTH.value not in metadata:
-#         tenant_id = kwargs.pop("tenant_id", "internal_system")
-#         metadata[BrokerKey.NODE_AUTH.value] = NodeAuthPayload(
-#             tenant_id=tenant_id,
-#             fuel_budget=float('inf'),
-#             is_enforced=False
-#         ).model_dump()
-        
-#     return kwargs
-
 """원격 Gateway 우회(Bypass) 전용 HTTP 클라이언트 로직"""
 async def _forward_completion_to_gateway(base_url: str, model: str, messages: List, **kwargs) -> Any:
     """Gateway로 직접 HTTP 통신을 수행 (Pipeline 우회)"""

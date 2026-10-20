@@ -6,7 +6,12 @@ This document provides a practical guide on how to integrate and deploy Fiber ac
 
 Operating as a drop-in asynchronous pipeline with real-time quota enforcement and mid-stream kill-switches (**1.1**), Fiber serializes network traffic into local JSON fixtures for idempotent offline testing and precise latency emulation (**1.2**), while autonomously normalizing heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism and strict cost governance without altering your business logic.
 
-Additionally, this guide covers **[2] Installation**, **[3] CLI Deployment (connect, daemon, compat)**, and **[4] System Validation Logs** to help you quickly provision and validate your infrastructure.
+| Section | Target Focus & Key Capabilities | Quick Jump |
+| :--- | :--- | :--- |
+| **1. LLM Pipeline & VCR** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[1.1 Pipeline](#11-the-drop-in-llm-pipeline)** · **[1.2 VCR](#12-fixture-testing-llm-recordreplay)** · **[1.3 Traverser](#13-state-traverser--compat-registry)** |
+| **2. Installation** | Sandbox provisioning (`uv pip`) & macOS background service (`brew`) | **[2.1 Python SDK](#21-python-environment-via-uv-pip-recommended-for-sdk--vcr-testing)** · **[2.2 Homebrew](#22-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
+| **3. IDE & MCP Gateway** | Zero-Key IDE Routing (`continue.dev`), Pre-Flight HITL Locks, FinOps CLI | **[3.1 MCP & IDE Config](#31-mcp-gateway)** · **[3.2 Connect CLI](#32-fiber-connect-cli)** |
+| **4–5. Benchmarks & Logs** | 200-VU Concurrency Metrics & Cryptographic Validation Logs | **[4. Benchmarks](#4-pipeline-performance-benchmarks-apple-m2-32gb-ram)** · **[5. System Logs](#5-system-validation-logs)** |
 
 ---
 
@@ -18,7 +23,12 @@ Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's d
 
 > **Unlike passive callbacks, this event-driven pipeline empowers middleware to actively short-circuit I/O, physically intercept streams, and tunnel deep infrastructural states.**
 
+> **Remote Gateway Mode:** Beyond the Python SDK, running `fiber daemon` exposes this exact pipeline as an OpenAI-compatible REST endpoint (`/v1/chat/completions`), allowing external agents to offload execution over HTTP.
+
 **1. Define Middleware by Target Slot:**
+
+<details>
+<summary><b>View Middleware Implementation Snippets (Telemetry, Cache, Router, Guardrail)</b></summary>
 
 ```python
 from fiber.dev.trace.llm.interceptor import BaseLLMTracer
@@ -96,6 +106,7 @@ class ActiveBlockingGuardrail(DuplexChannel):
                 raise PermissionError("Guardrail Block: Sensitive credential detected.") # Active pipeline break
         await ctx.fire_write(processed_msg)
 ```
+</details><br>
 
 **Out-of-the-box Guardrails**: The snippets above are conceptual examples. Fiber includes production-grade samples in `fiber.dev.trace.llm`—including INT8 Quantized ONNX Routers, Active Secret Blocking, and Custom C-Level Regex Injection—ready for enterprise deployment.
 
@@ -176,6 +187,9 @@ async def test_semantic_routing_pipeline():
 
 For applications heavily coupled to third-party SDKs (e.g., LiteLLM), establishing offline tests often requires complex refactoring. Fiber solves this through transparent runtime routing.
 
+<details>
+<summary><b>View Legacy SDK Aliasing & Duck-Typing Example (litellm)</b></summary>
+
 By declaring explicit aliases at the boot sequence, Fiber intercepts legacy imports and routes traffic directly to its offline fixture engine (VCR). This enables deterministic playback and time-window stream coalescing without altering your business logic. Fiber also maintains duck-typing parity, returning exact mock objects to satisfy strict legacy type checks.
 
 ```python
@@ -219,32 +233,67 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 ```
+</details><br>
 
-**The Record & Replay Flow**
+**Per-Request HTTP Gateway VCR (Language-Agnostic)**
 
-Fiber unifies the operational workflow across all integration methods (Pytest, Native, Legacy) using environmental toggles.
+When running `fiber daemon`, the REST Gateway (`/v1/chat/completions`) keeps the VCR proxy mounted in zero-overhead `live` passthrough mode. Any HTTP client (Node.js, Go, Rust, or `curl`) can dynamically trigger fixture recording or offline playback per request—without restarting the daemon—by passing `vcr` parameters in the JSON payload:
+
+<details>
+<summary><b>View Per-Request HTTP Record & Replay Snippets (curl)</b></summary>
+
+```bash
+# Dynamic Record: Executes live LLM call and freezes the response into a local fixture
+$ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama_server/gemma-3-1b-it-Q4_K_M.gguf",
+    "messages": [{"role": "user", "content": "Give me a 3-word motto."}],
+    "vcr": "record",
+    "vcr_scenario": "gateway_smoke_test"
+  }'
+
+# Dynamic Replay: Replays deterministically from disk (~3ms) with zero upstream I/O
+$ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama_server/gemma-3-1b-it-Q4_K_M.gguf",
+    "messages": [{"role": "user", "content": "Give me a 3-word motto."}],
+    "vcr": "replay",
+    "vcr_scenario": "gateway_smoke_test",
+    "vcr_speed": "max"
+  }'
+```
+
+</details><br>
+
+**Pytest Record & Replay**
+
+Fiber standardizes the testing lifecycle around pytest for CI/CD suites and gateway.tester for live HTTP daemon verification—eliminating the need for separate recording scripts.
+
 
 * **Step 1: Record (Capture & Coalesce Network I/O)**
-Executes live API calls to the target LLM. The engine autonomously coalesces micro-chunks using a time-window (e.g., 100ms) and persists the normalized payloads and network metrics into strict, human-readable local fixtures.
+Executes live API calls across your parameterized test matrix (`llama_server`, `cohere`, `gemini`, `cerebras`). The engine autonomously coalesces streaming micro-chunks within a 100ms time-window and persists normalized payloads into human-readable JSON fixtures (`fiber-compats/suites/router_suite/`).
 
 ```bash
 # Pytest: Generate suites via live API calls
 $ VCR_MODE=record pytest -v fiber/dev/trace/llm/tests/router.py
-
-# CLI: Record standard executions with 100ms tick optimization
-$ python -m fiber.dev.ex.recorder --vcr record --vcr-tick 100.0
 ```
 
-* **Step 2: Replay (Deterministic Playback & Chaos Injection)**
-Streams the recorded fixture fully offline with zero network I/O. You can emulate exact historical latencies (`--vcr-speed real`), run at maximum velocity for CI/CD pipelines (`--vcr-speed max`), or inject artificial latency jitter (`--vcr-chaos`) to validate your application's timeout resilience.
+* **Step 2: Replay (Deterministic CI/CD & Gateway Verification)**
+Executes the exact same test suite entirely offline (`VCR_MODE=replay` by default). You can run at maximum velocity for CI/CD pipelines, emulate historical latencies (`VCR_SPEED=real`), inject chaos jitter (`VCR_CHAOS=500.0`), or validate the live HTTP Gateway roundtrip.
 
 ```bash
-# Pytest: Run suites entirely offline with maximum velocity (default replay mode)
-$ pytest -v fiber/dev/trace/llm/tests/router.py
+# Pytest (Default Replay): Run the multi-provider suite offline at maximum velocity (~0ms I/O)
+$ pytest -v -s fiber/dev/trace/llm/tests/router.py
 
-# CLI: Replay in real-time with a 500ms artificial chaos jitter
-$ python -m fiber.dev.ex.recorder --vcr replay --vcr-speed real --vcr-chaos 500.0
+# Pytest (Chaos & Latency Emulation): Validate timeout resilience with real-time pacing + 500ms jitter
+$ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/dev/trace/llm/tests/router.py
+
+# HTTP Gateway Suite: Verify Unary, SSE Stream, and Dynamic Record ➔ Replay roundtrip against the daemon
+$ python -m fiber.dev.gateway.tester
 ```
+
 
 ---
 
@@ -257,7 +306,8 @@ To integrate a new provider or override existing parsing logic, you no longer ne
 
 Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules into the base registry. Invalid formats are safely ignored with a warning (Partial Update).
 
-**Ex: Export env - FIBER_COMPAT_RULES_PATH=/etc/fiber/compat_rules.json**
+<details>
+<summary><b>View Declarative Rule Registry Example (FIBER_COMPAT_RULES_PATH=/etc/fiber/compat_rules.json)</b></summary>
 
 ```json
 {
@@ -293,6 +343,7 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
   }
 }
 ```
+</details><br>
 
 **Autonomous Rule Synthesis & Validation**: Because rules are purely declarative, even lightweight LLMs can one-shot synthesize new provider bindings from raw API payloads using existing rules as a reference—forming a closed, hallucination-free self-healing loop when paired with `fiber compat fixture --vcr replay` for instant offline verification.
 
@@ -302,22 +353,25 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 
 **Prerequisites**
 - **Python**: `>= 3.12`
-- **Redis** *(Optional)*: Only required for distributed modes (`fiber daemon`), pub/sub event routing, and real-time stateful governance (e.g., Active Fuel Breaker). Standalone pipeline execution and VCR testing run entirely in-memory without Redis.
+- **Redis** *(Optional)*: Only required for distributed modes (`fiber daemon`), pub/sub event routing, and real-time stateful governance (e.g., Active Fuel Breaker). Standalone pipeline execution runs entirely in-memory without Redis.
 
-### 2.1. Python Environment via `uv pip` (Recommended for SDK & VCR Testing)
-Best suited for application-level integration (`from fiber.llm.entry import acompletion`), offline VCR fixture testing, and running `pytest` suites. We recommend using `uv pip` for strict dependency resolution:
+### 2.1. Python Environment via `uv pip` (Recommended for SDK & Local Control Plane)
+Best suited for full-stack integration—including the drop-in Python SDK (`from fiber.llm.entry import acompletion`), CLI orchestration, and local daemon deployment. We recommend using `uv pip` for deterministic dependency resolution:
 
 ```bash
-## Create a dedicated sandbox environment
+## 1. Create a dedicated sandbox environment & install Fiber
 mkdir -p ~/fiber-user && cd ~/fiber-user
 pyenv local fiber-user
 
-## Install via remote git reference OR local source
 uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.7
-# OR: uv pip install /path/to/local/self/fiber
+# OR: uv pip install -e /path/to/local/self/fiber
 
-## Verify anchor (Anchors to ~/.anchor/bound.json)
-fiber --help
+## 2. Bootstrap workspace topology (~/.anchor/bound.json)
+python -m xphi.node.space.bind.around
+
+## 3. Provision zero-env node identity (~/.ssh/fiber_ed25519 & local_cipher.key)
+fiber sign init
+fiber sign status
 ```
 
 ### 2.2. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
@@ -330,8 +384,8 @@ Best suited for running Fiber as a standalone background service (`fiber daemon`
 ## Install Fiber and its isolated runtime in a single command
 brew install wittgena/fiber/fiber
 
-## Verify CLI or start the background daemon service
-fiber --help
+## Initialize local node identity & start the background daemon service
+fiber sign init
 brew services start wittgena/fiber/fiber
 ```
 
@@ -355,6 +409,35 @@ Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeo
   - **Human-in-the-Loop & Pre-Flight Guard:** On high-risk operations—detected either natively by the worker or zero-code via pre-flight regex traps (`--preflight`)—the gateway parks the execution context (`YIELD`) and awaits cryptographic attestation (RFC-6238 TOTP + Ed25519 signature via Slack Socket Mode or CLI) before releasing the payload.
 
   - **FinOps Governance**: Translates external, EdDSA-signed billing tokens into synchronized internal ledger states. It enforces strict transaction idempotency (preventing double-spending), rejects stale policy replays, and broadcasts sub-second kill-switches across the control plane to halt runaway costs instantly.
+
+**LLM & MCP Routing for IDEs**
+Alongside the MCP endpoint, the daemon simultaneously serves the LLM Gateway (`/v1/chat/completions`). By configuring your IDE's (e.g., Continue.dev, Cursor) API base URL to `http://127.0.0.1:8356/v1`, you can route all model requests through Fiber's guardrails. This eliminates the need to expose upstream provider API keys in client configs, as authentication is securely resolved by the daemon's host environment (.env files or local OS variables).
+
+**Example: continue.dev LLM Config (config.yaml)**
+By setting the client provider to openai, Fiber enables IDEs to seamlessly interface with models they may not natively support. Simply append the target infrastructure prefix (e.g., cohere/, cerebras/, llama_server/) to the model string, and Fiber autonomously orchestrates the schema translation and OS credentials.
+
+```yaml
+models:
+  # apiKey: Omitted. The daemon securely resolves KEY from its host environment.
+  # Expand to Proprietary/Enterprise Models
+  - name: Command R (Cohere)
+    provider: openai
+    model: cohere/command-r-08-2024
+    apiBase: http://127.0.0.1:8356/v1
+
+  # Ultra-Low Latency Cloud Inference
+  - name: Qwen 3.8 27B (Cerebras)
+    provider: openai
+    model: cerebras/qwen-3.8-27b
+    apiBase: http://127.0.0.1:8356/v1
+
+  # Unified Local Execution (llama.cpp)
+  - name: Gemma 3 1B (Local Engine)
+    provider: openai
+    model: llama_server/gemma-3-1b-it-Q4_K_M.gguf
+    apiBase: http://127.0.0.1:8356/v1
+```
+
 
 **Agent Onboarding**
 Instead of manually supervising fragmented MCP processes, Fiber automatically scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) alongside built-in workers.

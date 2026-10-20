@@ -1,5 +1,4 @@
 # fiber.gateway.security
-## @lineage: fiber.gateway.rest.security
 import os
 import time
 import json
@@ -20,8 +19,7 @@ from xphi.watcher.plane.emitter import get_emitter
 
 from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.arch.model.auth import NodeAuthPayload
-from xphi.arch.bound.adapter.pta import SignStateAdapter
-from xphi.arch.contract.config.env import FINOPS_JWT_PUBLIC_KEY
+from xphi.arch.bound.adapter.pta import NodeSigner, SignStateAdapter
 
 from xphi.arch.bound.adapter.settlement import (
     Ap2MandateConstraints,
@@ -34,6 +32,7 @@ from fiber.infra.watcher.finops import default_finops_watcher
 log = get_emitter(__name__)
 
 SIGN_ROOT = resolve_path("sign")
+
 
 class SecurityProvisioner:
     LOCAL_KEY_PATH = Path(SIGN_ROOT) / "local_cipher.key"
@@ -88,35 +87,21 @@ class SecurityProvisioner:
 
 
 class TokenTranslator:
-    """Validates stateless JWTs issued by external partners (FinOps/IdP) and mints real-time AP2 Mandates required by the internal backend"""
+    """Validates stateless EdDSA JWTs signed by NodeSigner and mints real-time AP2 Mandates required by the internal backend."""
     
     @classmethod
-    def _resolve_public_key(cls, raw_pub_key: str) -> Any:
-        """Resolves either a 64-char Ed25519 Hex string or a standard PEM/SSH public key string."""
-        cleaned = raw_pub_key.strip()
-        if len(cleaned) == 64:
-            try:
-                return ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(cleaned))
-            except ValueError:
-                pass
-        return cleaned
+    def _resolve_public_key(cls, pub_key_hex: Optional[str] = None) -> ed25519.Ed25519PublicKey:
+        """Resolves the Ed25519VerifyKey directly from NodeSigner (or an explicit 64-char hex override)."""
+        target_hex = (pub_key_hex or NodeSigner.get_instance().pubkey_hex).strip()
+        return ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(target_hex))
 
     @classmethod
-    def _decode_jwt(cls, raw_token: str) -> dict[str, Any]:
-        pub_key_str = FINOPS_JWT_PUBLIC_KEY or os.environ.get("FINOPS_JWT_PUBLIC_KEY", "")
-        if pub_key_str:
-            resolved_key = cls._resolve_public_key(pub_key_str)
-            return jwt.decode(raw_token, resolved_key, algorithms=["EdDSA", "RS256", "ES256"])
-        
-        return jwt.decode(raw_token, options={"verify_signature": False})
+    def _decode_jwt(cls, raw_token: str, pub_key_hex: Optional[str] = None) -> dict[str, Any]:
+        resolved_key = cls._resolve_public_key(pub_key_hex)
+        return jwt.decode(raw_token, resolved_key, algorithms=["EdDSA"])
 
     @classmethod
     def _extract_and_sync_finops_state(cls, claims: dict[str, Any]) -> Tuple[bool, str, float]:
-        """
-        Extracts FinOps claims, enforces version validity & JTI idempotency via FinOpsWatcher,
-        and determines whether an AP2 Mandate should be issued.
-        Returns: (is_allowed, tenant_id, granted_budget)
-        """
         tenant_id = str(claims.get("sub") or "anonymous_tenant")
         jti = claims.get("jti")
         finops_block = claims.get("finops") or {}

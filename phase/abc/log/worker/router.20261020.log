@@ -1,0 +1,199 @@
+wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.worker.router   
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+[Registry] DAEMON Registered: dynamic_pricing -> DynamicPricingDaemon
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-82200
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Core Routing & Performance Suite ===
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [E2E Pipeline] DynamicPricingDaemon successfully injected into test lifecycle.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Init Secure MCP Server...
+ LOG | KERNEL | INFO  |  anchor.consensus: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped.
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+ LOG | SYSTEM | INFO  |  daemon.pricing: [DynamicPricingDaemon] Autonomous Pricing Daemon Started.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB in Read-Only mode. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 16 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] 🚀 Worker [worker-82200] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  daemon.pricing: [Vault] Pricing Sentinel deployed. Awaiting telemetry streams...
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/node/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  contract.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  llm.interceptor.registry: No external interceptor config found. Using default pipeline configuration.
+ LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
+ LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /private/tmp/fiber/fixture)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 4 Connectors...
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:oracle-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-oracle-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.eco.oracle
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:finlib-01] Listening for Intents on DPHI Bus (Mode: LINEAR, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finlib-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.eco.finlib
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:margin-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-margin-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.eco.margin
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector:search-archive-01] Listening for Intents on DPHI Bus (Mode: MULTIPLEX, Transport: STDIO)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-search-archive-01] Booting legacy sandbox: /Users/wittgena/.pyenv/versions/self/bin/python -m fiber.infra.mcp.worker.search.archive
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-oracle-01] Sandbox running (PID: 82232)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-finlib-01] Sandbox running (PID: 82233)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-margin-01] Sandbox running (PID: 82234)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-search-archive-01] Sandbox running (PID: 82235)
+ LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+ LOG | SYSTEM | INFO  |  network.transport: [Sandbox] Initializing DuckDB In-Memory Engine & Filters...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] network.transport: [Sandbox] DuckDB Search Worker successfully mounted. Ready for Intents.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] network.transport: [Sandbox] Async Agent 'search.archive.worker' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.8] [Acc:0.9] network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.0] network.transport: [Sandbox] Production Universal Margin Oracle online. Awaiting computation requests...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.1] network.transport: [Sandbox] Async Agent 'agent.margin' Ignited. Listening on async stdin...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:1.4] network.transport: [Sandbox] Initializing Async Deterministic Oracle Receptor...
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:network.transport' (Acc: 1.55) Den: 9.50)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:1.6] network.transport: [Sandbox:RAW] LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: d9b397e1...
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/8] Phase 1: Event-Driven Zero-Latency Proof
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.0] network.transport: [Sandbox] Incoming RPC payload recognized. Method: tools/call
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:1.1] network.transport: [Sandbox:RAW] /usr/local/self/fiber/infra/mcp/worker/eco/finlib.py:193: DeprecationWarning: ast.Num is deprecated and will be removed inPython 3.14; use ast.Constant instead
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:1.2] network.transport: [Sandbox:RAW] elif isinstance(node, ast.Num):
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/8] Phase 2: High-Throughput Linear Queue Stress (FinLib)
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+ LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] serv.gateway: [Bridge:Start] Ingress request received
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.59) Den: 7.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.6] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 200 OK"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/8] Phase 3: Native Async Multiplexing Concurrency (Oracle)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 3.86) Den: 17.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:network.transport'
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.8] network.transport: [Sandbox:RAW] HTTP Request: GET https://api.exchange.coinbase.com/products/BTC-USDT/candles?granularity=60&start=1792503840&end=1792503900 "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.9] network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  exchange.universal:   └─ [Universal Async Seal] Sig: cf7b53af8a6a...
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.2] serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.8] network.transport: [Sandbox:RAW] HTTP Request: GET https://api.exchange.coinbase.com/products/SOL-USDT/candles?granularity=60&start=1792503840&end=1792503900 "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.9] network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  exchange.universal:   └─ [Universal Async Seal] Sig: d36932d766a5...
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.7] network.transport: [Sandbox:RAW] HTTP Request: GET https://api.exchange.coinbase.com/products/ETH-USDT/candles?granularity=60&start=1792503840&end=1792503900 "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.8] network.transport: [Sandbox:RAW] LOG | SYSTEM | INFO  |  exchange.universal:   └─ [Universal Async Seal] Sig: 1f32eba9eb26...
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/oracle-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ 3 Concurrent Oracle Fetches Completed in 0.43s
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 4/8] Phase 4: Unit Economics Vectorization (Margin BI)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-0.2] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:0.9] network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/margin-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 5/8] Phase 5: Billing Rejection (Free-Rider Defense)
+ LOG | SYSTEM | WARN  |  client.rpc: [RPC Error] RpcMethod.VALIDATE_FUEL_RECEIPT failed: Payment Required: Insufficient balance. Required: $0.0020
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.2] [Acc:0.1] serv.gateway: [Bridge:Fuel] Fuel validation rejected
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 402 Payment Required"
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:0.5] infra.e2e.bridge:   └─ Status: PASSED
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.6] infra.e2e.bridge: 
+[PHASE 6/8] Phase 6: Precise Error Routing (Invalid Params)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.3] [Acc:0.5] network.transport: [Sandbox] Invalid Parameters for calc_indicators_batch: prices_matrix must be a list of arrays
+SUMMARY🔥| SYSTEM | ERROR |  [G:0.2] [Acc:0.4] serv.gateway: [Bridge:PubSub:Fault] Execution failed
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/finlib-01/invoke "HTTP/1.1 502 Bad Gateway"
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.8] infra.e2e.bridge: 
+[PHASE 7/8] Phase 7: Data-Intensive Async Multiplexing (DuckDB Search)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:0.8] network.transport: [Sandbox] Executing DuckDB Search -> Domain: Domain_1_Control_Failure, Limit: 2
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/search-archive-01/invoke "HTTP/1.1 200 OK"
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:-0.7] infra.e2e.bridge:   └─ Total E2E Latency: 0.83s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:-0.6] infra.e2e.bridge:   ├─ [DuckDB] Processed 5.65 MB
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:-0.5] infra.e2e.bridge:   ├─ [DuckDB] Extracted 1 events
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:-0.4] infra.e2e.bridge:   ├─ [DuckDB] Pure SQL Time: 0.8133s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.3] infra.e2e.bridge:   └─ [DuckDB] Python Time: 0.009s
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:-0.1] infra.e2e.bridge: 
+[PHASE 8/8] Phase 8: Autonomic Dynamic Pricing Alignment
+ LOG | SYSTEM | INFO  |  daemon.pricing: ⚖️ [Pricing Enforcer] Updated Fuel Fee for search-archive-01 -> $0.0024
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.6] infra.e2e.bridge:   ├─ Genesis Floor Price: $0.0020
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:0.7] infra.e2e.bridge:   ├─ New Dynamic Price  : $0.0024
+ LOG | SYSTEM | WARN  |  client.rpc: [RPC Error] RpcMethod.VALIDATE_FUEL_RECEIPT failed: Payment Required: Insufficient balance. Required: $0.0024
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:serv.gateway' (Acc: 1.52) Den: 7.50)
+HTTP Request: POST http://127.0.0.1:8355/v1/mcp-gateway/search-archive-01/invoke "HTTP/1.1 402 Payment Required"
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:infra.e2e.bridge'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.8] infra.e2e.bridge:   └─ Gateway precisely rejected underfunded request based on Dynamic Price ($0.0024).
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:1.1] infra.e2e.bridge: 
+[BasePipeline] Teardown sequence initiated...
+ LOG | SYSTEM | INFO  |  daemon.pricing: [DynamicPricingDaemon] Cancellation signal received.
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:shared-oracle-01] Terminating sandbox (PID: 82232)
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.2] network.transport: [Transport:shared-finlib-01] Terminating sandbox (PID: 82233)
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.4] network.transport: [Transport:shared-margin-01] Terminating sandbox (PID: 82234)
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Shutdown signal received.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.5] network.transport: [Transport:shared-search-archive-01] Terminating sandbox (PID: 82235)
+ LOG | SYSTEM | INFO  |  daemon.pricing: [DynamicPricingDaemon] Daemon evaporated cleanly.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  llm.vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: API Payload Teardown complete. Goodbye.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:0.1] infra.e2e.bridge: [BasePipeline] Teardown complete.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:0.2] infra.e2e.bridge: 
+================================================================================
+⚡ [CORE ROUTING BENCHMARK REPORT]
+================================================================================
+✅ 01. [MCP_ROUTER_SUITE]Phase 1: Event-Driven Zero-Latency Proof           | PASSED
+✅ 02. [MCP_ROUTER_SUITE]Phase 2: High-Throughput Linear Queue Stress (FinLib) | PASSED
+✅ 03. [MCP_ROUTER_SUITE]Phase 3: Native Async Multiplexing Concurrency (Oracle) | PASSED
+✅ 04. [MCP_ROUTER_SUITE]Phase 4: Unit Economics Vectorization (Margin BI)  | PASSED
+✅ 05. [MCP_ROUTER_SUITE]Phase 5: Billing Rejection (Free-Rider Defense)    | PASSED
+✅ 06. [MCP_ROUTER_SUITE]Phase 6: Precise Error Routing (Invalid Params)    | PASSED
+✅ 07. [MCP_ROUTER_SUITE]Phase 7: Data-Intensive Async Multiplexing (DuckDB Search) | PASSED
+✅ 08. [MCP_ROUTER_SUITE]Phase 8: Autonomic Dynamic Pricing Alignment       | PASSED
+--------------------------------------------------------------------------------
+CORE ROUTING PIPELINE VALIDATED SUCCESSFULLY.
+================================================================================
+
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.6] [Acc:1.3] network.transport: [Sandbox:RAW] [TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0 (x3)
+SUMMARY🔥| SYSTEM | WARN  |  [G:0.1] [Acc:2.2] network.transport: [network.transport] Bursting logs suppressed... (x29)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:0.4] network.transport: [Sandbox] Incoming RPC payload recognized. Method: tools/call (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:1.4] serv.gateway: [Bridge:Start] Ingress request received (x8)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:1.5] serv.gateway: [serv.gateway] Bursting logs suppressed... (x27)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:-2.9] serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully (x5)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.2] [Acc:0.6] serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue (x3)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.3] [Acc:0.7] network.transport: [Sandbox] Incoming RPC payload recognized. Action/Method: tools/call (x2)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:0.9] infra.e2e.bridge:   └─ Status: PASSED (x4)

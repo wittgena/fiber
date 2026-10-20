@@ -1,5 +1,4 @@
 # fiber.gateway.serv.gateway
-## @lineage: fiber.gateway.rest.serv.gateway
 import json
 import asyncio
 import time

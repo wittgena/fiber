@@ -65,15 +65,17 @@ jobs:
           pip install uv hatch
           uv pip install --system -e .[dev]
 
-      - name: Bootstrap Topology Boundary
+      - name: Bootstrap Topology & Initialize Node Keys
         run: |
           python -m xphi.node.space.bind.around
+          fiber sign init
+          fiber sign status
       
       - name: Set up Node Identity (SSH Key)
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEV_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.DEV_SSH_KEY }}" > ~/.ssh/fiber_ed25519
+          chmod 600 ~/.ssh/fiber_ed25519
 
       - name: Boot Node (Background)
         env:

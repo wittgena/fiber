@@ -11,8 +11,8 @@ log = get_emitter("llm.vcr.injector")
 
 class VCRInjector:
     @staticmethod
-    def apply(config: VCRPlaybackConfig, fixture_dir: str) -> Optional[VCRManager]:
-        if config.mode == "live":
+    def apply(config: VCRPlaybackConfig, fixture_dir: str, always_patch: bool = False) -> Optional[VCRManager]:
+        if config.mode == "live" and not always_patch:
             log.debug("VCRInjector: Mode is 'live', skipping proxy injection.")
             return None
             
