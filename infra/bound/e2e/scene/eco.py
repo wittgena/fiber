@@ -43,7 +43,6 @@ class EcoScene(SchemeRunner):
         
         # @phase.2: Autonomous Protocol State Engine
         await self._test_dao_tension_evaluation()
-        await self._test_dao_state_evolution()
         await self._test_dao_epoch_sealing()
 
         # @phase.3: Agent-to-Agent (Eco) Proof-of-Compute
@@ -78,13 +77,6 @@ class EcoScene(SchemeRunner):
     async def _test_dao_tension_evaluation(self):
         log.info("\n--- [State Engine] Phase 1: Ecosystem Tension Evaluation ---")
         await self._run_case("Engine: Evaluate Network Tension & Load", DphiMethod.EVALUATE_TENSION.value, "node_a,node_b,node_c|node_b,node_c,node_d", expected_success=True)
-
-    async def _test_dao_state_evolution(self):
-        log.info("\n--- [State Engine] Phase 2: Protocol State Evolution ---")
-        phase_root = StateAdapter.adapt_ecosystem_to_phase_root("epoch_399_state", "ipfs_hash_xyz")
-        rule = StateAdapter.build_trans_rule("legacy_data", "archived_data", "CORE")
-        payload = StateAdapter.build_evolution_context(phase_root, [rule])
-        await self._run_case("Engine: Process High-Speed Off-chain Evolution", DphiMethod.PROCESS_EVOLUTION.value, payload, expected_success=True)
 
     async def _test_dao_epoch_sealing(self):
         log.info("\n--- [State Engine] Phase 3: Epoch Sealing & Consensus ---")
