@@ -23,7 +23,7 @@ from fiber.infra.bound.e2e.chaos.payload import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
-from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, DPHI_ENV
+from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, XPHI_ENV
 
 log = get_emitter("e2e.gateway.security")
 
@@ -239,8 +239,8 @@ class SecuritySuiteRunner:
         self.log = log
         
         # 프로덕션 환경에서의 강제 실행 차단 장치
-        if DPHI_ENV not in ("test", "e2e", "local"):
-            self.log.critical(f"⚠ SECURITY HALT: Cannot run E2E penetration tests in strict environment ({DPHI_ENV}).")
+        if XPHI_ENV not in ("test", "e2e", "local"):
+            self.log.critical(f"⚠ SECURITY HALT: Cannot run E2E penetration tests in strict environment ({XPHI_ENV}).")
             exit(1)
             
         self.base_url = FIBER_GATEWAY_URL

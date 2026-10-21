@@ -16,7 +16,7 @@ from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, Workf
 from xphi.state.phase.reactor import PhaseReactor
 from fiber.infra.bound.e2e.chaos.payload import ChaosPayloadLibrary
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, DPHI_ENV
+from xphi.arch.contract.config.env import FIBER_GATEWAY_URL, XPHI_ENV
 
 log = get_emitter("e2e.gateway.compliance")
 

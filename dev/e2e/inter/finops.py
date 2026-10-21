@@ -39,12 +39,12 @@ from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
-from xphi.node.space.bind.resolver import resolve_path, get_invoker
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.state.phase.reactor import PhaseReactor
 
 FIXTURE_ROOT = "fiber-compats/suites/e2e"
-CURRENT_INVOKER, _ = get_invoker(Path(__file__))
+CURRENT_INVOKER = "fiber.dev.e2e.inter.finops"
 
 LONG_FINOPS_PROMPT = (
     "Write a comprehensive, deeply technical 8-section architectural whitepaper on Enterprise AI FinOps, "
