@@ -1,5 +1,4 @@
-# fiber.README
-@lineage: README
+# README
 
 Fiber is an asynchronous execution control plane and runtime harness designed to secure, govern, and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables deterministic offline replay.
 
