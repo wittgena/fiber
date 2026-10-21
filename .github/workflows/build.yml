@@ -74,7 +74,7 @@ jobs:
       - name: Boot Node (Background)
         env:
           REDIS_URL: "redis://localhost:6379/0" 
-          XPHI_ENV: "ci"
+          XPHI_ENV: "local"
           XPHI_WORKERS: "2"
         run: |
           echo "Starting Node in background..."
@@ -88,7 +88,7 @@ jobs:
       - name: Run E2E Edge Test
         env:
           REDIS_URL: "redis://localhost:6379/0" 
-          DPHI_ENV: "local"
+          XPHI_ENV: "local"
         run: |
           fiber e2e gateway.compliance
           fiber e2e gateway.security

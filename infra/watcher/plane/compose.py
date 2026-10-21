@@ -31,10 +31,9 @@ services:
     volumes:
       - ${FIBER_ARTIFACT_MOUNT:-/tmp}:/artifact_mount
     environment:
-      - XPHI_ENV=ci
+      - XPHI_ENV=local
       - XPHI_WORKERS=1          # CI 환경 동기화
       - PYTHONUNBUFFERED=1      # 로그 덤프용 버퍼링 해제
-      - DPHI_ENV=local
     
     network_mode: "service:redis"
     depends_on:
