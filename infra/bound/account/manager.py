@@ -23,6 +23,7 @@ from xphi.arch.bound.adapter.pta import (
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
+from xphi.state.anchor.key import KeyGen  # [추가] KeyGen 임포트
 
 log = get_emitter("bound.account.manager")
 DEFAULT_INITIAL_FUEL = 1000
@@ -73,7 +74,7 @@ class LocalAccountManager(AccountManagerProtocol):
 
     async def get_status(self) -> Dict[str, Any]:
         core_balance = await self._get_core_balance("fuel")
-        utxos = await self.pta_adapter.get_available_inputs(self.tenant_id, "fuel")
+        inputs = await self.pta_adapter.get_available_inputs(self.tenant_id, "fuel")
         watcher_quota = default_finops_watcher.local_budget_cache.get(self.tenant_id)
         policy_ver = default_finops_watcher.policy_versions.get(self.tenant_id, 0)
 
@@ -89,7 +90,7 @@ class LocalAccountManager(AccountManagerProtocol):
             "registry_file": str(LocalAccountRegistry.get_registry_path()),
             "core_state": {
                 "balance": core_balance, 
-                "active_allocations": len(utxos)
+                "active_allocations": len(inputs)
             },
             "finops_watcher": {
                 "active_quota": watcher_quota, 
@@ -110,7 +111,10 @@ class LocalAccountManager(AccountManagerProtocol):
             outputs=[PtaOutput(amount=cmd.amount, owner=self.tenant_id, asset_type="fuel")],
             metadata={"action": "allocate", "tenant_id": self.tenant_id}
         )
-        tx_hash = await self.pta_adapter.execute_transaction(produce_tx)
+        
+        # [개선] 테넌트 단위 독립 브랜치로 명시적 스트림 연결
+        stream_id = KeyGen.stream_fuel(self.tenant_id)
+        tx_hash = await self.pta_adapter.execute_transaction(produce_tx, stream_id=stream_id)
 
         start_ts = time.time()
         while time.time() - start_ts < 5.0:
@@ -162,12 +166,12 @@ class LocalAccountManager(AccountManagerProtocol):
         }
 
     async def revoke(self, cmd: RevokeCommand) -> Dict[str, Any]:
-        utxos = await self.pta_adapter.get_available_inputs(self.tenant_id, "fuel")
+        anchors = await self.pta_adapter.get_available_inputs(self.tenant_id, "fuel")
         burn_tx_hash = None
         
-        if utxos:
+        if anchors:
             inputs_to_spend = []
-            for u in utxos:
+            for u in anchors:
                 ptr = u["pointer"]
                 payload_dict = {"payload": ptr.to_key()}
                 canonical_bytes = StateAdapter.to_canonical_bytes(payload_dict)
@@ -183,7 +187,9 @@ class LocalAccountManager(AccountManagerProtocol):
                 metadata={"action": "revoke_burn", "tenant_id": self.tenant_id, "policy_ver": cmd.policy_ver}
             )
             
-            burn_tx_hash = await self.pta_adapter.execute_transaction(burn_tx)
+            # [개선] 테넌트 단위 독립 브랜치로 명시적 스트림 연결
+            stream_id = KeyGen.stream_fuel(self.tenant_id)
+            burn_tx_hash = await self.pta_adapter.execute_transaction(burn_tx, stream_id=stream_id)
             
             start_ts = time.time()
             while time.time() - start_ts < 5.0:

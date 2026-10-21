@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import httpx
+import redis.exceptions
 
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
 from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
@@ -27,6 +28,7 @@ from fiber.gateway.bridge.mcp.slack import SlackHitlBridge
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
+from xphi.node.space.tunnel.factory import TunnelFactory
 
 
 class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
@@ -61,7 +63,7 @@ class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
         # 3. HITL 서명 및 TOTP 검증 컨텍스트
         self.crypto_ctx = AuditCryptoContext(spiffe_id="spiffe://self/fiber")
         self.slack_bridge: Optional[SlackHitlBridge] = None
-        self.slack_admin_id = os.environ.get("FIBER_SLACK_ADMIN_USER", "U_SLACK_ADMIN_99")
+        self.slack_admin_id = os.environ.get("FIBER_SLACK_USER_ID", "U_SLACK_ADMIN_99")
         self.dpop_client = DPoPClientGenerator(key_size=2048)
         self.http_client: Optional[httpx.AsyncClient] = None
 
@@ -146,8 +148,9 @@ class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
         expect_totp: bool,
     ) -> str:
         """
-        expect_totp(True: TOTP 모드 / False: 1-Click Button 모드)가 Synthetic Prompt와
-        Slack Block-Kit UI에 정확히 반영되었는지 검증한 뒤, Live Slack 또는 로컬 에뮬레이션으로 승인합니다.
+        [이벤트 구동 & 경계 분리 리팩토링 적용]
+        UniversalPubSub(`tunnel.pubsub()`)을 통해 원장 상태 확정(Pub/Sub)과 
+        샌드박스 실행(Gateway Timeout)의 타임아웃 경계를 명확하게 분리합니다.
         """
         prompt_params = prompt_payload.get("params", {})
         actual_require_totp = bool(prompt_params.get("require_totp", True))
@@ -158,117 +161,153 @@ class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
 
         mode_badge = "TOTP-6DIGIT" if expect_totp else "1-CLICK BUTTON"
 
-        # 분기 A: Live Slack 모드 (실제 Slack 메시지 발송 및 사용자 액션 대기)
-        if self.slack_bridge.is_live_configured and self.slack_bridge.app_token:
-            await asyncio.sleep(0.4)
+        # 0. 레이스 컨디션 방지를 위해 액션 전에 미리 Pub/Sub 객체 생성 및 채널 구독
+        tunnel = await TunnelFactory.get_default()
+        pubsub_channel = f"mcp.intent.reply.{handle_id}"
+        pubsub = tunnel.pubsub()
+        await pubsub.subscribe(pubsub_channel)
 
-            print("\n" + "=" * 80)
-            print(f"📲 [LIVE SLACK PRE-FLIGHT HITL | Mode: {mode_badge}] Target: {target_id}")
-            print(f"   • Target Channel : {self.slack_bridge.default_channel}  |  Handle : {handle_id}")
-            print("-" * 80)
+        async def listen_for_ledger() -> Dict[str, Any]:
+            # UniversalFacade의 socket_timeout(5.0s)으로 인해 장시간 대기 시 발생할 수 있는
+            # redis.exceptions.TimeoutError를 무시하고 get_message 폴링/대기를 이어갑니다.
+            while True:
+                try:
+                    msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if msg and msg.get("type") == "message":
+                        raw_data = msg["data"]
+                        return json.loads(raw_data) if isinstance(raw_data, (str, bytes)) else raw_data
+                except redis.exceptions.TimeoutError:
+                    continue
+                await asyncio.sleep(0.05)
 
-            frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-            start_wait = time.time()
+        try:
+            # 분기 A: Live Slack 모드 (실제 Slack 메시지 발송 및 사용자 액션 대기)
+            if self.slack_bridge.is_live_configured and self.slack_bridge.app_token:
+                await asyncio.sleep(0.4)
 
-            for tick in range(300):
-                state_obj = await self.mock_store.query_state(handle_id)
-                cur_status = state_obj.metadata.get("status") if state_obj else "YIELD"
+                print("\n" + "=" * 80)
+                print(f"📲 [LIVE SLACK PRE-FLIGHT HITL | Mode: {mode_badge}] Target: {target_id}")
+                print(f"   • Target Channel : {self.slack_bridge.default_channel}  |  Handle : {handle_id}")
+                print("-" * 80)
 
-                if cur_status == "RESOLVED":
+                start_wait = time.time()
+
+                async def spinner_task():
+                    frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+                    tick = 0
+                    while True:
+                        elapsed = time.time() - start_wait
+                        spinner_icon = frames[tick % len(frames)]
+                        if expect_totp:
+                            totp_now = self.crypto_ctx.generate_totp()
+                            rem_sec = 30 - (int(time.time()) % 30)
+                            sys.stdout.write(
+                                f"\r\033[K   {spinner_icon} ⏳ [PARKED: TOTP] Enter TOTP [ \033[1;32m{totp_now}\033[0m ] "
+                                f"(renews in {rem_sec:02d}s) in Slack... ({elapsed:.1f}s)"
+                            )
+                        else:
+                            sys.stdout.write(
+                                f"\r\033[K   {spinner_icon} ⚡ [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] "
+                                f"button in Slack (No TOTP required)... ({elapsed:.1f}s)"
+                            )
+                        sys.stdout.flush()
+                        tick += 1
+                        await asyncio.sleep(0.2)
+
+                spinner = asyncio.create_task(spinner_task())
+
+                try:
+                    # 60초간 사용자 액션 및 원장 합의 이벤트를 대기
+                    event_data = await asyncio.wait_for(listen_for_ledger(), timeout=60.0)
+                except asyncio.TimeoutError:
+                    print("\n" + "=" * 80)
+                    raise RuntimeError("Timed out waiting for live Slack approval click (60s).")
+                finally:
+                    spinner.cancel()
+                    await asyncio.gather(spinner, return_exceptions=True)
+
+                status = event_data.get("status")
+                if status == "RESOLVED":
                     elapsed = time.time() - start_wait
                     sys.stdout.write(
                         f"\r\033[K   [SIGNAL RECEIVED] Slack {mode_badge} Verified & Pre-Flight Unlocked! ({elapsed:.1f}s)\n"
                     )
                     sys.stdout.flush()
                     print("=" * 80 + "\n")
-
-                    res_final = await self._post_gateway(target_id, orig_payload, idem_key=idem_key)
-                    if res_final.status_code == 200:
-                        return McpPayloadBuilder.extract_data(res_final.content, parse_json=False)
-                    raise RuntimeError(f"Expected 200 OK after resolution, got {res_final.status_code}: {res_final.text}")
-
-                if cur_status == "FAULTED":
-                    err_detail = state_obj.metadata.get("error", "Unknown") if state_obj else "Unknown"
+                elif status == "FAULTED":
+                    err_detail = event_data.get("error_detail", "Unknown")
                     sys.stdout.write(f"\r\033[K   [ABORTED] Execution Denied or Faulted: {err_detail}\n")
                     sys.stdout.flush()
                     print("=" * 80 + "\n")
                     raise RuntimeError(f"Execution faulted on {target_id}: {err_detail}")
 
-                elapsed = time.time() - start_wait
-                spinner = frames[tick % len(frames)]
+            # 분기 B: 로컬 웹훅 에뮬레이션 모드 (UI 블록 구조 및 State payload 정밀 검증)
+            else:
+                yield_event = {
+                    "event": "MCP_PHASE_YIELD",
+                    "handle_id": handle_id,
+                    "target_server_id": target_id,
+                    "agent": self.crypto_ctx.spiffe_id,
+                    "prompt": prompt_payload,
+                }
+                block_kit_msg = self.slack_bridge.build_yield_message_blocks(yield_event, channel="C_HITL_TEST")
+                auth_slot_block = block_kit_msg["blocks"][3]
+                approve_btn_val = block_kit_msg["blocks"][4]["elements"][0]["value"]
 
                 if expect_totp:
-                    totp_now = self.crypto_ctx.generate_totp()
-                    rem_sec = 30 - (int(time.time()) % 30)
-                    sys.stdout.write(
-                        f"\r\033[K   {spinner} ⏳ [PARKED: TOTP] Enter TOTP [ \033[1;32m{totp_now}\033[0m ] "
-                        f"(renews in {rem_sec:02d}s) in Slack... ({elapsed:.1f}s)"
-                    )
+                    if auth_slot_block.get("block_id") != "fiber_totp_block":
+                        raise RuntimeError("Expected 'fiber_totp_block' input in Block-Kit for TOTP mode.")
+                    state_values = {
+                        "fiber_totp_block": {
+                            "fiber_totp_input": {"type": "plain_text_input", "value": self.crypto_ctx.generate_totp()}
+                        }
+                    }
                 else:
-                    sys.stdout.write(
-                        f"\r\033[K   {spinner} ⚡ [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] "
-                        f"button in Slack (No TOTP required)... ({elapsed:.1f}s)"
-                    )
-                sys.stdout.flush()
-                await asyncio.sleep(0.2)
+                    if auth_slot_block.get("block_id") == "fiber_totp_block":
+                        raise RuntimeError("TOTP input block should NOT be rendered in 1-Click Button mode!")
+                    state_values = {}
 
-            print("\n" + "=" * 80)
-            raise RuntimeError("Timed out waiting for live Slack approval click (60s).")
-
-        # 분기 B: 로컬 웹훅 에뮬레이션 모드 (UI 블록 구조 및 State payload 정밀 검증)
-        yield_event = {
-            "event": "MCP_PHASE_YIELD",
-            "handle_id": handle_id,
-            "target_server_id": target_id,
-            "agent": self.crypto_ctx.spiffe_id,
-            "prompt": prompt_payload,
-        }
-        block_kit_msg = self.slack_bridge.build_yield_message_blocks(yield_event, channel="C_HITL_TEST")
-        auth_slot_block = block_kit_msg["blocks"][3]
-        approve_btn_val = block_kit_msg["blocks"][4]["elements"][0]["value"]
-
-        if expect_totp:
-            if auth_slot_block.get("block_id") != "fiber_totp_block":
-                raise RuntimeError("Expected 'fiber_totp_block' input in Block-Kit for TOTP mode.")
-            state_values = {
-                "fiber_totp_block": {
-                    "fiber_totp_input": {"type": "plain_text_input", "value": self.crypto_ctx.generate_totp()}
+                action_payload = {
+                    "type": "block_actions",
+                    "user": {"id": self.slack_admin_id, "username": "admin"},
+                    "actions": [{"action_id": "fiber_action_approve", "value": approve_btn_val}],
+                    "state": {"values": state_values},
                 }
-            }
-        else:
-            if auth_slot_block.get("block_id") == "fiber_totp_block":
-                raise RuntimeError("TOTP input block should NOT be rendered in 1-Click Button mode!")
-            # 1-Click 버튼 단독 모드에서는 TOTP 입력값 없이 빈 state로 클릭 전송
-            state_values = {}
+                form_body = urllib.parse.urlencode({"payload": json.dumps(action_payload)}).encode("utf-8")
+                ts = str(int(time.time()))
+                sig = "v0=" + hmac.new(self.slack_bridge.slack_secret, f"v0:{ts}:".encode() + form_body, hashlib.sha256).hexdigest()
 
-        action_payload = {
-            "type": "block_actions",
-            "user": {"id": self.slack_admin_id, "username": "admin"},
-            "actions": [{"action_id": "fiber_action_approve", "value": approve_btn_val}],
-            "state": {"values": state_values},
-        }
-        form_body = urllib.parse.urlencode({"payload": json.dumps(action_payload)}).encode("utf-8")
-        ts = str(int(time.time()))
-        sig = "v0=" + hmac.new(self.slack_bridge.slack_secret, f"v0:{ts}:".encode() + form_body, hashlib.sha256).hexdigest()
+                oob_res = await self.slack_bridge.handle_http_webhook(ts, form_body, sig)
+                if oob_res.get("status") != "RESUMED":
+                    raise RuntimeError(f"Expected OOB status RESUMED ({mode_badge}), got {oob_res}")
 
-        oob_res = await self.slack_bridge.handle_http_webhook(ts, form_body, sig)
-        if oob_res.get("status") != "RESUMED":
-            raise RuntimeError(f"Expected OOB status RESUMED ({mode_badge}), got {oob_res}")
+                # [경계 1] 원장 합의 대기 (순수 원장 I/O 및 실행 완료 통보 대기)
+                try:
+                    event_data = await asyncio.wait_for(listen_for_ledger(), timeout=15.0)
+                except asyncio.TimeoutError:
+                    raise RuntimeError(f"Handle {handle_id} on {target_id} did not resolve within timeout (Ledger Consensus stalled).")
 
-        for _ in range(40):
-            state_obj = await self.mock_store.query_state(handle_id)
-            cur_status = state_obj.metadata.get("status") if state_obj else "YIELD"
-            if cur_status == "RESOLVED":
-                res = await self._post_gateway(target_id, orig_payload, idem_key=idem_key)
-                if res.status_code != 200:
-                    raise RuntimeError(f"Expected 200 OK after RESUME, got {res.status_code}: {res.text}")
-                return McpPayloadBuilder.extract_data(res.content, parse_json=False)
-            if cur_status == "FAULTED":
-                err_detail = state_obj.metadata.get("error", "Unknown") if state_obj else "Unknown"
-                raise RuntimeError(f"Handle {handle_id} FAULTED after RESUME ({mode_badge}): {err_detail}")
-            await asyncio.sleep(0.25)
+                status = event_data.get("status")
+                if status == "RESOLVED":
+                    log.info(f"  ├─ [Boundary 1] Ledger Consensus verified via PubSub ({handle_id}).")
+                elif status == "FAULTED":
+                    err_detail = event_data.get("error_detail", "Unknown")
+                    raise RuntimeError(f"Handle {handle_id} FAULTED after RESUME ({mode_badge}): {err_detail}")
 
-        raise RuntimeError(f"Handle {handle_id} on {target_id} did not resolve within timeout.")
+            # [경계 2] 샌드박스 실행 및 게이트웨이 응답 대기 (OS 종속적: 느리고 불확정적인 구간, Timeout 25.0초)
+            res_final = await self._post_gateway(target_id, orig_payload, idem_key=idem_key, timeout=25.0)
+            if res_final.status_code == 200:
+                log.info(f"  ├─ [Boundary 2] External Sandbox Execution completed.")
+                return McpPayloadBuilder.extract_data(res_final.content, parse_json=False)
+
+            raise RuntimeError(f"Expected 200 OK after resolution, got {res_final.status_code}: {res_final.text}")
+
+        finally:
+            try:
+                await pubsub.unsubscribe(pubsub_channel)
+                await pubsub.close()
+            except Exception:
+                pass
 
     # =========================================================================
     # Phase 1: resolve_connector_spec 추론 및 Dual Mode(TOTP / Button) 장착 검증
@@ -411,8 +450,10 @@ async def run_suite() -> None:
     ])
     print("\n".join(lines), flush=True)
 
+
 def main(args_list: Optional[List[str]] = None) -> None:
     PhaseReactor.ignite(main_coro_func=run_suite)
+
 
 if __name__ == "__main__":
     main()

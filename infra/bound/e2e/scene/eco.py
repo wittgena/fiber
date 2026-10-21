@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives import serialization
 
 from fiber.infra.bound.e2e.epoch import EpochBase
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
-from xphi.state.anchor.nexus import ActorIdentity
+from fiber.infra.bound.e2e.epoch import ActorIdentity
 
 from xphi.node.space.sandbox.runner import SchemeRunner
 from xphi.arch.bound.adapter.state import StateAdapter

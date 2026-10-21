@@ -1,4 +1,4 @@
-# fiber.phase.abc.dev.llm.token
+# fiber.phase.abc.spec.llm.token
 
 ## 1. Overview
 

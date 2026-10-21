@@ -1,6 +1,4 @@
 # fiber.infra.bound.e2e.chaos.payload
-## @lineage: fiber.infra.e2e.chaos.payload
-## @lineage: xphi.arch.dev.transport.sentinel
 import asyncio
 import json
 import random
@@ -22,7 +20,6 @@ from xphi.arch.model.schema.stream import (
 )
 from xphi.watcher.plane.emitter import flow_scope, get_emitter
 from xphi.watcher.observer.span import span_context
-from xphi.state.anchor.gateway import StoreGateway
 
 log = get_emitter("transport.sentinel", phase="DEFENSE")
 
@@ -78,16 +75,11 @@ class StreamTransducer:
             intent=intent,
             parameters=parsed_json.get("params", {})
         )
-
-        ## @action: Trigger Pydantic schema validation (Raises ValidationError on failure)
         return LogicStream(meta=meta, identity=identity, payload=payload)
 
 
 class SpecValidator:
-    """
-    @desc: Formal topological validator. 
-    Enforces schema invariants within an observable phase context.
-    """
+    """@desc: Formal topological validator"""
     def __init__(self):
         self.transducer = StreamTransducer()
 
@@ -104,94 +96,6 @@ class SpecValidator:
             except Exception as e:
                 log.critical(f"Transduction collapse: {str(e)}")
                 raise
-
-
-# =========================================================================
-# 2. MEMBRANE SPATIAL FENCE SCHEMAS
-# =========================================================================
-class ActorRule(BaseModel):
-    blacklist_ip: Optional[list[str]] = None
-    require_auth: Optional[bool] = False
-
-class VectorRule(BaseModel):
-    max_uri_len: Optional[int] = 2048
-    path_regex: Optional[str] = None
-
-class AssetRule(BaseModel):
-    target_nominal: str
-    target_topology: Optional[str] = None
-    target_substance_hash: Optional[str] = None
-
-class MetaRuleDef(BaseModel):
-    actor: Optional[ActorRule] = None
-    vector: Optional[VectorRule] = None
-    asset: Optional[AssetRule] = None
-    action: str = Field(default="block", pattern="^(block|ledger_tension)$")
-
-@dataclass
-class SecurityContext:
-    origin_ip: str
-    auth_header: Optional[str]
-    envelope_path: str
-    envelope_method: str
-    nominal_name: str
-    topology_version: Optional[str]
-    substance_hash: Optional[str] = None
-
-
-class MembraneProjector:
-    def __init__(self, gateway: StoreGateway):
-        self.gateway = gateway
-        self.rules: Dict[str, MetaRuleDef] = {}
-
-    def load_rule(self, rule_id: str, rule_def: MetaRuleDef):
-        self.rules[rule_id] = rule_def
-
-    async def evaluate_pre_fetch(self, ctx: SecurityContext):
-        """@desc: Phase 1 Evaluation - executed immediately upon request receipt."""
-        for rule_id, rule in self.rules.items():
-            if self._is_match(ctx, rule, phase="pre"):
-                await self._trigger_action(rule.action, rule_id, ctx)
-
-    async def evaluate_post_fetch(self, ctx: SecurityContext):
-        """@desc: Phase 2 Evaluation - executed after payload substance (Hash) is confirmed."""
-        for rule_id, rule in self.rules.items():
-            if rule.asset and rule.asset.target_substance_hash:
-                if self._is_match(ctx, rule, phase="post"):
-                    await self._trigger_action(rule.action, rule_id, ctx)
-
-    def _is_match(self, ctx: SecurityContext, rule: MetaRuleDef, phase: str) -> bool:
-        if rule.actor:
-            actor_match = False
-            if rule.actor.blacklist_ip and ctx.origin_ip in rule.actor.blacklist_ip: actor_match = True
-            elif rule.actor.require_auth and not ctx.auth_header: actor_match = True
-            if not actor_match: return False
-
-        if rule.vector:
-            vector_match = False
-            if rule.vector.max_uri_len and len(ctx.envelope_path) > rule.vector.max_uri_len: vector_match = True
-            elif rule.vector.path_regex and re.search(rule.vector.path_regex, ctx.envelope_path): vector_match = True
-            if not vector_match: return False
-
-        if rule.asset:
-            if phase == "pre":
-                if ctx.nominal_name != rule.asset.target_nominal: return False
-                if rule.asset.target_topology and ctx.topology_version != rule.asset.target_topology: return False
-            elif phase == "post":
-                if rule.asset.target_substance_hash and ctx.substance_hash != rule.asset.target_substance_hash: return False
-
-        return True
-
-    async def _trigger_action(self, action: str, rule_id: str, ctx: SecurityContext):
-        if action == "ledger_tension":
-            await self.gateway.authorize(
-                action_id=f"proxy.tension.{rule_id}",
-                action="SECURITY_TENSION_ALERT",
-                payload={"rule": rule_id, "ip": ctx.origin_ip, "nominal": ctx.nominal_name},
-                metadata={"severity": "HIGH"}
-            )
-            raise web.HTTPForbidden(reason="Blocked by Kernel Topological Tension")
-        raise web.HTTPForbidden(reason=f"Blocked by Meta Projection (Rule: {rule_id})")
 
 class ChaosPayloadLibrary:
     """HTTP 방어벽 및 애플리케이션 파괴(Membrane Attack)를 위한 바이트/JSON 페이로드"""
@@ -263,105 +167,3 @@ class ChaosPayloadLibrary:
             ("Invalid_State_Transition", random.choice(cls.INVALID_STATE)),
             ("MCP_Path_Traversal", random.choice(cls.MCP_PATH_TRAVERSAL))
         ]
-
-
-class RpcChaosInjector:
-    @staticmethod
-    def corrupt_ap2_mandate(base_mandate: Dict[str, Any]) -> Dict[str, Any]:
-        """권한 위임장(AP2 Mandate)을 고의로 과거(만료) 시점으로 조작하여 반환"""
-        corrupted = base_mandate.copy()
-        corrupted["validity_ms"] = -3600000 
-        return corrupted
-
-    @staticmethod
-    def corrupt_consensus_signatures(signatures: list[str]) -> list[str]:
-        """M-of-N 다중 서명 배열 중 하나를 파괴하여 Byzantine Fault 유발"""
-        if not signatures:
-            return signatures
-        
-        corrupted = list(signatures)
-        corrupted[0] = "0xBAD_SIGNATURE_CORRUPTED_BY_CHAOS_INJECTOR"
-        return corrupted
-
-    @staticmethod
-    def corrupt_attestation_header(response: httpx.Response) -> httpx.Response:
-        if "X-Dphi-Signature" in response.headers:
-            mutable_headers = httpx.Headers(response.headers)
-            mutable_headers["X-Dphi-Signature"] = "0xdeadbeef_invalid_signature_chaos_injection"
-            response.headers = mutable_headers
-            
-        return response
-
-class IngressRouter:
-    """@desc: Internal router acting as the live target for the Sentinel."""
-    def __init__(self, gateway: StoreGateway):
-        self.validator = SpecValidator()
-        self.gateway = gateway
-
-    async def handle_request(self, headers: dict, raw_body: bytes, client_ip: str):
-        with flow_scope(phase="ingress.router.pipeline", auto_flush=True, client_ip=client_ip) as flow_ctx:
-            try:
-                safe_stream = self.validator.process_ingress(headers, raw_body, client_ip)
-                flow_ctx["stream_id"] = str(safe_stream.meta.stream_id)
-                flow_ctx["intent"] = safe_stream.payload.intent.value
-
-                is_authorized = await self.gateway.authorize_ingress(safe_stream)
-                if not is_authorized:
-                    flow_ctx["ledger_status"] = "denied"
-                    log.warning("Topological sealing denied by the WASM Kernel Spatial Fence.")
-                    return {"status": "denied"}
-                    
-                flow_ctx["ledger_status"] = "authorized"
-                log.info("Request successfully sealed into the manifold by Kernel Store.")
-                return {"status": "success", "intent": safe_stream.payload.intent.value}
-            except ValueError as ve:
-                log.warning(f"Ingress boundary dropped payload: {ve}")
-                return {"status": "dropped", "reason": "Spec invariant violation"}
-            except Exception as e:
-                log.error(f"Manifold routing collapsed: {e}")
-                return {"status": "error", "reason": "Internal boundary failure"}
-
-class DefenseSentinel:
-    """@desc: Chaos simulator that constantly attacks the router to ensure defensive integrity."""
-    def __init__(self, router: IngressRouter):
-        self.router = router
-        self.attack_categories = [
-            ("OOM_Parser_Exhaustion_Attack", ChaosPayloadLibrary.OOM),
-            ("Polymorphic_Protocol_Smuggling", ChaosPayloadLibrary.SMUGGLING),
-            ("Invalid_State_Transition_Bypass", ChaosPayloadLibrary.INVALID_STATE),
-            ("MCP_Indirect_Prompt_Injection", ChaosPayloadLibrary.MCP_PROMPT_INJECTION),
-            ("MCP_OS_Command_Injection", ChaosPayloadLibrary.MCP_COMMAND_INJECTION),
-            ("MCP_Path_Traversal", ChaosPayloadLibrary.MCP_PATH_TRAVERSAL)
-        ]
-
-    async def verify_boundary_resilience(self):
-        """@flow: Continuous endogenous vulnerability injection and boundary verification"""
-        while True:
-            for vector_name, rule_list in self.attack_categories:
-                payload_generator = random.choice(rule_list)
-                payload = payload_generator()
-
-                with flow_scope(execution_mode="SIMULATION", security_probe=vector_name):
-                    result: Dict[str, Any] = await self.router.handle_request(
-                        headers={"authorization": "Bearer SIMULATED_PROBE_TOKEN"},
-                        raw_body=payload,
-                        client_ip="127.0.0.1"
-                    )
-                    if result.get("status") not in ["dropped", "denied"]:
-                        log.critical(
-                            f"[BREACH_ALERT] Boundary Defenses Compromised! "
-                            f"Vector '{vector_name}' successfully bypassed the Ingress Validator. "
-                            f"Response Status: {result.get('status')}"
-                        )
-            
-            await asyncio.sleep(300)
-
-
-_projector_instance = None
-
-def get_projector() -> MembraneProjector:
-    """Singleton factory for the MembraneProjector."""
-    global _projector_instance
-    if _projector_instance is None:
-        _projector_instance = MembraneProjector(StoreGateway())
-    return _projector_instance

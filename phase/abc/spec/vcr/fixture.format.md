@@ -1,4 +1,5 @@
-# fiber.phase.abc.dev.vcr.fixture.format
+# fiber.phase.abc.spec.vcr.fixture.format
+@lineage: fiber.phase.abc.dev.vcr.fixture.format
 @desc: Fiber VCR Fixture Specification
 
 Fiber serializes LLM network traffic into local JSON fixtures to enable deterministic offline testing and exact latency emulation. The fixture format abstracts away raw provider-specific payloads, storing only the normalized text, token usage, and precise timing metrics required for seamless application-level replays.

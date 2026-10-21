@@ -1,5 +1,4 @@
 # fiber.infra.mcp.intent
-## @lineage: fiber.gateway.mcp.intent
 from enum import Enum, auto
 from typing import Dict, Any, Optional
 
