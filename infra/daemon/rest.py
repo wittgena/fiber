@@ -19,7 +19,7 @@ from xphi.arch.contract.registry.unified import contract
 from xphi.node.ops.daemon.base import AbstractDaemon
 from xphi.node.ops.reaper import SystemOps
 from xphi.node.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.consensus import PhaseStore
+from xphi.state.anchor.store import PhaseStore
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.rest")

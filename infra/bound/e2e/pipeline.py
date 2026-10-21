@@ -96,7 +96,6 @@ class MockPhaseStore:
 
 
 class BaseBridgePipeline(PipelineRunner):
-    """Gateway E2E 테스트를 위한 공통 파이프라인 - 공통 인프라(RPC, REST, Daemon)의 라이프사이클 관리"""
     def __init__(self, config: E2EConfig, name: str, scope_name: str):
         super().__init__(name=name, scope_name=scope_name)
         self.config = config

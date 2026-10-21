@@ -1,5 +1,4 @@
 # fiber.gateway.serv.depend
-## @lineage: fiber.gateway.rest.serv.depend
 from typing import Any
 from fastapi import Request, HTTPException, status
 

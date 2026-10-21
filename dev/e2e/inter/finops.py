@@ -133,7 +133,6 @@ class HybridFinOpsFuelPipeline(BaseBridgePipeline):
         log.info(f"  └─ Produced Balance for '{self.test_tenant}': {balance} Fuel")
 
     async def phase_track_b_jwt(self):
-        # 1. 외부 FinOps Worker에게 예산($50.0)이 담긴 JWT 발급 요청 (MCP Tools Call)
         payload = {
             "jsonrpc": "2.0", "id": 100, "method": "tools/call", 
             "params": {"name": "issue_jwt", "arguments": {"tenant_id": self.test_tenant, "budget_usd": 50.0}}

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
 from fiber.infra.bound.e2e.sandbox import SandboxRunner, ScriptDef, TestScripts
-from xphi.state.anchor.nexus import ActorIdentity
+from fiber.infra.bound.e2e.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.runtime.wasm.method import DphiMethod

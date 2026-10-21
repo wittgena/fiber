@@ -1,5 +1,4 @@
 # fiber.infra.bound.e2e.config
-## @lineage: fiber.infra.e2e.config
 import socket
 import uvicorn
 from dataclasses import dataclass

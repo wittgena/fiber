@@ -1,21 +1,41 @@
 # fiber.infra.bound.e2e.epoch
-## @lineage: fiber.infra.e2e.epoch
 import os
 import time
 import json
 import hashlib
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt
+from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt, TransactionReceipt
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.space.sandbox.runner import SchemeRunner
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.node.runtime.wasm.method import DphiMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.e2e.epoch")
+
+class ActorIdentity:
+    def __init__(self, name: str = "Anonymous"):
+        self.name = name
+        self.private_key = ed25519.Ed25519PrivateKey.generate()
+        self.pubkey_hex = self._generate_pub_hex()
+
+    def _generate_pub_hex(self) -> str:
+        return self.private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw, 
+            format=serialization.PublicFormat.Raw
+        ).hex()
+
+    def sign(self, commit_dict: dict) -> str:
+        canonical_bytes = StateAdapter.to_canonical_bytes(commit_dict)
+        commit_hash = hashlib.sha256(canonical_bytes).hexdigest()
+        return self.private_key.sign(commit_hash.encode('utf-8')).hex()
+
 
 class EpochBase(SchemeRunner):
     def __init__(self, broker: Any, scenario_name: str):

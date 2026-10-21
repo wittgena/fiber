@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any, Dict
 
 from fiber.infra.bound.e2e.sandbox import SandboxRunner, TestScripts
-from xphi.state.anchor.nexus import ActorIdentity
+from fiber.infra.bound.e2e.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.pta import compute_merkle_root

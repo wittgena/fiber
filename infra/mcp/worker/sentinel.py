@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.protocol.worker import WorkerProtocol
-from xphi.state.anchor.consensus import PhaseStore
+from xphi.state.anchor.store import PhaseStore
 
 class AgentSentinel(WorkerProtocol):
     def __init__(self, ledger: PhaseStore, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):

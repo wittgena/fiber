@@ -1,5 +1,4 @@
 # fiber.gateway.contract.server
-## @lineage: fiber.gateway.server
 import os
 import time
 import json
@@ -22,7 +21,6 @@ from mcp.server.mcpserver.server import MCPServer
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.observer.span import start_active_span, end_active_span
 from fiber.infra.bound.e2e.chaos.payload import SpecValidator
-from xphi.state.anchor.gateway import StoreGateway
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.adapter.state import StateAdapter
 
@@ -242,7 +240,6 @@ class FastAPIMCPAdapter:
 class SecureMCPServer(MCPServer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.gateway = StoreGateway()
 
     def bind_fastapi(self, app: FastAPI, allowed_tags: List[str] = ["mcp-exposed"]):
         """Binds a FastAPI application securely using Whitelist projection."""
@@ -251,18 +248,6 @@ class SecureMCPServer(MCPServer):
 
     async def _handle_call_tool(self, ctx, params):
         tool_name = params.name
-        is_authorized = await self.gateway.authorize(
-            action_id=f"invoke_tool_{tool_name}",
-            action="INVOKE_TOOL",
-            payload={"tool": tool_name, "params": params.arguments}
-        )
-        
-        if not is_authorized:
-            log.warning(f"[Security] Tool '{tool_name}' blocked by ToposGateway (Possible Prompt Injection).")
-            return type('Result', (), {'is_error': True, 'content': [
-                TextContent(type="text", text="Security Exception: Tool execution blocked by Sentinel Gateway.")
-            ]})()
-
         result = await super()._handle_call_tool(ctx, params)
         if getattr(result, "is_error", False):
             result.content = [
