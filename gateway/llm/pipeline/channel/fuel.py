@@ -1,16 +1,18 @@
 # fiber.gateway.llm.pipeline.channel.fuel
-## @lineage: fiber.gateway.llm.channel.fuel
 from __future__ import annotations
 
-import os
 import asyncio
+import math
+import os
+import time
 from typing import Any, Dict, Optional, Tuple
 
-from xphi.state.phase.channel import ChannelContext, DuplexChannel
+from fiber.dev.console.signal import UIKey, UIMetric, UISlot, UISlotStatus
 from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
+from xphi.state.phase.channel import ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
 
-log_pipeline = get_emitter("channel.fuel")
+log_pipeline = get_emitter("channel.fuel", phase="BILLING")
 
 
 def _extract_usage_info(msg: Any) -> Tuple[int, Dict[str, Any]]:
@@ -50,53 +52,88 @@ class FuelBreaker(DuplexChannel):
         self.finops_watcher = finops_watcher
 
     async def write(self, ctx: ChannelContext, msg: Any) -> Any:
+        t0 = time.perf_counter()
         tenant_id = ctx.get_attr("tenant_id", "anonymous")
         req_kwargs = ctx.get_attr("request_kwargs", {})
-        metadata = req_kwargs.get("metadata", {})
-        
-        # 권한 인가 및 예산(Budget) 제어를 위한 순수 Auth Payload 파싱
-        # raw_auth = metadata.get(BrokerKey.NODE_AUTH.value, {})
-        # node_auth = NodeAuthPayload(**raw_auth) if isinstance(raw_auth, dict) else (raw_auth or NodeAuthPayload())
+        metadata = req_kwargs.get("metadata", {}) if isinstance(req_kwargs, dict) else {}
+
         enforce_quota = os.getenv("FIBER_ENFORCE_QUOTA", "false").lower() == "true"
-        # is_enforced = getattr(node_auth, "is_enforced", False)
+        raw_auth = metadata.get(BrokerKey.NODE_AUTH.value)
+        node_auth: Optional[NodeAuthPayload] = (
+            NodeAuthPayload(**raw_auth)
+            if isinstance(raw_auth, dict)
+            else raw_auth
+        )
 
-        node_auth: NodeAuthPayload = metadata.get(BrokerKey.NODE_AUTH.value)
-        if node_auth.is_enforced and node_auth.is_anonymous():
+        if node_auth and getattr(node_auth, "is_enforced", False) and node_auth.is_anonymous():
+            elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
+            log_pipeline.signal(
+                f"[FuelBreaker] Strict Quota Enforcement blocked anonymous tenant ('{tenant_id}').",
+                **{
+                    UIKey.SLOT.value: UISlot.FUEL.value,
+                    UIKey.SLOT_STATUS.value: UISlotStatus.BLOCK.value,
+                    UIKey.LATENCY_MS.value: elapsed_ms,
+                    UIKey.TENANT_ID.value: tenant_id,
+                },
+            )
             raise PermissionError("Strict Quota Enforcement blocked anonymous tenant.")
-        ctx.set_attr(BrokerKey.AUDIT_HASH.value, node_auth.audit_hash)
 
-        # 보안 검증
-        # if enforce_quota and not is_enforced:
-        #     log_pipeline.warning(f"[Security] Unauthorized API Access Attempt blocked. Tenant: {tenant_id}")
-        #     raise PermissionError(f"Strict Quota Enforcement is active. Missing valid Kernel Auth for tenant: {tenant_id}")
-        
-        # 예산 통제 로직
-        fuel_budget = getattr(node_auth, "fuel_budget", float('inf'))
+        audit_hash = getattr(node_auth, "audit_hash", None) if node_auth else None
+        ctx.set_attr(BrokerKey.AUDIT_HASH.value, audit_hash)
+
+        fuel_budget = getattr(node_auth, "fuel_budget", float("inf")) if node_auth else float("inf")
         if fuel_budget is None:
-            fuel_budget = float('inf')
-        
+            fuel_budget = float("inf")
+
         if self.finops_watcher and hasattr(self.finops_watcher, "local_budget_cache"):
             if tenant_id in self.finops_watcher.local_budget_cache:
-                fuel_budget = self.finops_watcher.local_budget_cache[tenant_id]
-                log_pipeline.debug(f"[FuelBreaker] Applied dynamic FinOps budget for {tenant_id}: {fuel_budget}")
+                fuel_budget = float(self.finops_watcher.local_budget_cache[tenant_id])
+                log_pipeline.debug(
+                    f"[FuelBreaker] Applied dynamic FinOps budget for '{tenant_id}': {fuel_budget}",
+                    **{UIKey.TENANT_ID.value: tenant_id, UIKey.ACTIVE_QUOTA.value: int(fuel_budget)},
+                )
 
-        # 예산이 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단
+        elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
+
+        # 예산이 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단 (배압 우회 .signal)
         if enforce_quota and fuel_budget <= 0:
-            log_pipeline.warning(f"[FuelBreaker] Pre-flight blocked: Budget exhausted ({fuel_budget}) for tenant: {tenant_id}")
+            log_pipeline.signal(
+                f"[FuelBreaker] Pre-flight blocked: Budget exhausted ({fuel_budget}) for tenant '{tenant_id}'.",
+                **{
+                    UIKey.METRIC.value: UIMetric.KILL_SWITCH.value,
+                    UIKey.SLOT.value: UISlot.FUEL.value,
+                    UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
+                    UIKey.LATENCY_MS.value: elapsed_ms,
+                    UIKey.TENANT_ID.value: tenant_id,
+                    UIKey.ACTIVE_QUOTA.value: 0,
+                },
+            )
             raise PermissionError(f"Fuel budget exhausted for tenant: {tenant_id}")
 
-        # 차단기(Breaker) 가동을 위한 Context 상태 초기화
+        # 정상 통과 시 X-Ray 4번 슬롯(FuelBreaker) 점등 및 서브밀리초 오버헤드 기록
+        pass_payload: Dict[str, Any] = {
+            UIKey.SLOT.value: UISlot.FUEL.value,
+            UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
+            UIKey.LATENCY_MS.value: elapsed_ms,
+            UIKey.TENANT_ID.value: tenant_id,
+        }
+        if math.isfinite(fuel_budget):
+            pass_payload[UIKey.ACTIVE_QUOTA.value] = int(fuel_budget)
+
+        log_pipeline.info(
+            f"[FuelBreaker] Pre-flight passed for '{tenant_id}' ({elapsed_ms:.3f}ms).",
+            **pass_payload,
+        )
+
         ctx.set_attr(BrokerKey.FUEL_BUDGET.value, fuel_budget)
         ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, 0)
-        ctx.set_attr(BrokerKey.AUDIT_HASH.value, getattr(node_auth, "audit_hash", None))
-        
         return await ctx.fire_write(msg)
 
     async def channel_read(self, ctx: ChannelContext, msg: Any):
         req: dict = ctx.get_attr("request_kwargs", {})
-        is_stream = req.get("stream", False) or "stream" in req.get("call_type", "")
-        
-        fuel_budget = ctx.get_attr(BrokerKey.FUEL_BUDGET.value, float('inf'))
+        is_stream = req.get("stream", False) or "stream" in str(req.get("call_type", ""))
+
+        fuel_budget = ctx.get_attr(BrokerKey.FUEL_BUDGET.value, float("inf"))
         audit_hash = ctx.get_attr(BrokerKey.AUDIT_HASH.value)
 
         # 단일 응답(Non-stream) 처리
@@ -112,7 +149,7 @@ class FuelBreaker(DuplexChannel):
                     pass
 
         # 스트림(Stream) 킬 스위치 처리: 초기 예산이 유한하거나 동적 감시자(finops_watcher)가 연결된 경우 트랩 장착
-        elif hasattr(msg, "__aiter__") and (fuel_budget < float('inf') or self.finops_watcher is not None):
+        elif hasattr(msg, "__aiter__") and (fuel_budget < float("inf") or self.finops_watcher is not None):
             tenant_id = ctx.get_attr("tenant_id", "anonymous")
             msg = self._fuel_trap_generator(msg, fuel_budget, tenant_id, ctx)
 
@@ -121,30 +158,64 @@ class FuelBreaker(DuplexChannel):
     async def _fuel_trap_generator(self, raw_stream: Any, budget: float, tenant_id: str, context: ChannelContext):
         consumed = 0
         current_budget = budget
+        severed = False
         try:
             async for raw_chunk in raw_stream:
-                consumed += 1 
+                consumed += 1
                 context.set_attr(BrokerKey.FUEL_CONSUMED.value, consumed)
 
                 # 스트리밍 도중 Pub/Sub으로 갱신된 실시간 예산(예: Kill-Switch 0.0)을 매 청크마다 즉시 반영
                 if self.finops_watcher and hasattr(self.finops_watcher, "local_budget_cache"):
                     if tenant_id in self.finops_watcher.local_budget_cache:
-                        current_budget = self.finops_watcher.local_budget_cache[tenant_id]
+                        current_budget = float(self.finops_watcher.local_budget_cache[tenant_id])
                         context.set_attr(BrokerKey.FUEL_BUDGET.value, current_budget)
 
                 if consumed > current_budget:
-                    log_pipeline.warning(f"[FuelTrap] Fuel exhausted ({current_budget}). Killing stream physically.")
+                    severed = True
+                    log_pipeline.signal(
+                        f"[FuelTrap] Fuel exhausted or revoked (budget={current_budget}, consumed={consumed}) "
+                        f"for '{tenant_id}'. Severing stream physically via aclose().",
+                        **{
+                            UIKey.METRIC.value: UIMetric.KILL_SWITCH.value,
+                            UIKey.SLOT.value: UISlot.FUEL.value,
+                            UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
+                            UIKey.TENANT_ID.value: tenant_id,
+                            UIKey.ACTIVE_QUOTA.value: 0,
+                            UIKey.CHUNKS.value: consumed,
+                        },
+                    )
                     break
+
+                # 콘솔 차트 실시간 구동 (첫 청크 및 매 10청크 단위 스로틀링으로 이벤트 버스 부하 방지)
+                if math.isfinite(current_budget) and (consumed == 1 or consumed % 10 == 0):
+                    remaining = max(0, int(current_budget - consumed))
+                    log_pipeline.info(
+                        f"[FuelTrap] Stream metering '{tenant_id}': consumed={consumed}, remaining={remaining} Fuel",
+                        **{
+                            UIKey.METRIC.value: UIMetric.FUEL_TICK.value,
+                            UIKey.SLOT.value: UISlot.FUEL.value,
+                            UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
+                            UIKey.TENANT_ID.value: tenant_id,
+                            UIKey.ACTIVE_QUOTA.value: remaining,
+                            UIKey.CHUNKS.value: consumed,
+                        },
+                    )
+
                 yield raw_chunk
         except Exception as e:
-            log_pipeline.error(f"Stream interrupted during fuel metering: {e}")
+            log_pipeline.error(
+                f"[FuelTrap] Stream interrupted during fuel metering for '{tenant_id}': {e}",
+                exc_info=True,
+                **{UIKey.TENANT_ID.value: tenant_id},
+            )
             raise
         finally:
-            if consumed > current_budget and hasattr(raw_stream, "aclose") and callable(getattr(raw_stream, "aclose")):
+            if severed and hasattr(raw_stream, "aclose") and callable(getattr(raw_stream, "aclose")):
                 try:
                     await raw_stream.aclose()
                 except Exception:
                     pass
+
 
 class BillingObserver(DuplexChannel):
     def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):
@@ -160,21 +231,20 @@ class BillingObserver(DuplexChannel):
 
         def execute_billing(total_tokens: int = 0, raw_usage: Any = None):
             fuel_consumed = ctx.get_attr(BrokerKey.FUEL_CONSUMED.value, 0)
-            
+
             # 실제 집계된 total_tokens가 있으면 최우선 적용하고, 스트림 강제 중단 등으로 0일 때만 청크 카운트(fuel_consumed)로 폴백
             effective_fuel = total_tokens if (total_tokens and total_tokens > 0) else fuel_consumed
             if effective_fuel > 0:
                 ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, effective_fuel)
-                
+
             tenant_id = ctx.get_attr("tenant_id", "unknown")
-            
+
             if effective_fuel > 0 and tenant_id not in ("anonymous", "internal_system", "unknown"):
                 async def _process_billing_task():
                     try:
                         final_consume_amount = effective_fuel
-                        
+
                         if self.tenant_eco:
-                            # SemanticRouter나 FallbackHandler에 의해 변경된 최종 모델/프로바이더 우선 반영
                             model_name = (
                                 getattr(processed_ctx, "model", None)
                                 or getattr(meta, "base_model", None)
@@ -185,29 +255,32 @@ class BillingObserver(DuplexChannel):
                                 or req.get("custom_llm_provider")
                             )
                             usage_payload = raw_usage if raw_usage else {"total_tokens": effective_fuel}
-                            
+
                             calc_res = await self.tenant_eco.calculate_tenant_billing(
                                 tenant_id=tenant_id,
                                 usage=usage_payload,
                                 model_name=model_name,
-                                provider=provider
+                                provider=provider,
                             )
-                            
+
                             if isinstance(calc_res, dict) and calc_res.get("status") == "success":
                                 intent = calc_res.get("consume_intent", {})
                                 final_consume_amount = intent.get("amount_to_consume", final_consume_amount)
-                        
+
                         from xphi.node.rpc.handler.fuel import execute_direct_fuel_consume
                         await execute_direct_fuel_consume(
-                            tenant_id=tenant_id, 
-                            consumed_fuel=final_consume_amount, 
+                            tenant_id=tenant_id,
+                            consumed_fuel=final_consume_amount,
                             trace_id=meta.trace_id if meta else None,
-                            pta_adapter=self.pta_adapter
+                            pta_adapter=self.pta_adapter,
                         )
                     except Exception as e:
-                        log_pipeline.error(f"Failed to process billing pipeline for {tenant_id}: {e}")
+                        log_pipeline.error(
+                            f"[BillingObserver] Failed to process billing pipeline for '{tenant_id}': {e}",
+                            exc_info=True,
+                            **{UIKey.TENANT_ID.value: tenant_id},
+                        )
 
-                # 가비지 컬렉션(GC)에 의해 백그라운드 코루틴이 증발하는 현상 방지
                 task = asyncio.create_task(_process_billing_task())
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)

@@ -1,4 +1,5 @@
 # fiber.dev.console.app
+import os
 import asyncio
 from typing import Callable
 from nicegui import app, ui
@@ -46,7 +47,7 @@ def render_modals():
                     ui.notify("Rejected & Rolled back", type="warning"),
                 ),
             ).props("color=red outline")
-            ui.button("✓ Verify TOTP & Approve", on_click=rt.act_approve_hitl).props("color=emerald")
+            ui.button("✓ Verify TOTP & Approve", on_click=lambda: rt.act_approve_hitl()).props("color=emerald")
 
     with ui.dialog() as refs.qr_dialog, ui.card().classes("bg-slate-900 border border-cyan-500 w-[440px] p-5 items-center"):
         ui.label("📱 Scan Admin TOTP QR (Google Authenticator / Authy)").classes("text-cyan-400 font-bold text-sm")
@@ -72,17 +73,19 @@ def finops_left_pane():
         ui.switch("Sync Core").bind_value(f, "sync_ledger").props("color=emerald dense").classes("text-xs")
 
     with ui.row().classes("w-full gap-1.5"):
-        ui.button("🔑 Issue JWT", on_click=rt.act_issue_account_jwt).props("color=emerald dense").classes("flex-1 text-xs font-bold")
+        ui.button("🔑 Issue JWT", on_click=lambda: asyncio.create_task(rt.act_issue_account_jwt())).props("color=emerald dense").classes("flex-1 text-xs font-bold")
         ui.button(
             "🔄 5-Step Demo",
-            on_click=lambda: rt.run_fiber_cli(
-                "account", "--tenant", f.tenant_id,
-                *(["--spiffe", f.spiffe_id.strip()] if f.spiffe_id and f.spiffe_id.strip() else []),
-                "demo"
+            on_click=lambda: asyncio.create_task(
+                rt.run_fiber_cli(
+                    "account", "--tenant", f.tenant_id,
+                    *(["--spiffe", f.spiffe_id.strip()] if f.spiffe_id and f.spiffe_id.strip() else []),
+                    "demo"
+                )
             ),
         ).props("outline color=cyan dense").classes("text-xs px-2")
-        ui.button("📋 Status", on_click=rt.act_refresh_account_status).props("outline color=slate-4 dense").classes("text-xs px-2")
-        ui.button("📂 List", on_click=lambda: rt.run_fiber_cli("account", "list")).props("outline color=slate-4 dense").classes("text-xs px-2")
+        ui.button("📋 Status", on_click=lambda: asyncio.create_task(rt.act_refresh_account_status(silent=False))).props("outline color=slate-4 dense").classes("text-xs px-2")
+        ui.button("📂 List", on_click=lambda: asyncio.create_task(rt.run_fiber_cli("account", "list"))).props("outline color=slate-4 dense").classes("text-xs px-2")
 
     ui.label().bind_text_from(f, "last_jwt_preview", lambda j: f"Latest EdDSA JWT: {j}").classes(
         "text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800 w-full truncate"
@@ -90,7 +93,7 @@ def finops_left_pane():
 
     ui.label("Emergency Cutoff Threshold (Fuel Redline):").classes("text-xs text-amber-300 font-mono mt-1")
     ui.slider(min=0, max=60000, step=5000, on_change=lambda: setattr(f, "chart_dirty", True)).bind_value(f, "budget_limit").props("label-always color=red dense")
-    ui.button("▶ Simulate High-Speed Stream (Test FuelBreaker)", on_click=rt.act_simulate_stream).props("color=indigo").classes("w-full font-bold mt-auto")
+    ui.button("▶ Simulate High-Speed Stream (Test FuelBreaker)", on_click=lambda: asyncio.create_task(rt.act_simulate_stream())).props("color=indigo").classes("w-full font-bold mt-auto")
 
 
 def finops_right_pane():
@@ -130,8 +133,8 @@ def xray_left_pane():
     ui.select(["Strict Block (PermissionError)", "Redact (Mask with ***)"], label="Action on Match").bind_value(s, "guardrail_mode").classes("w-full text-xs").props("dark outlined dense")
     ui.input("Test Payload Prompt").bind_value(s, "test_prompt").classes("w-full font-mono text-xs mt-2").props("dark outlined dense")
     with ui.row().classes("w-full gap-2 mt-auto"):
-        ui.button("⚡ Test Secret Leak", on_click=lambda: rt.act_run_xray(s.test_prompt)).props("color=red").classes("flex-1 text-xs font-bold")
-        ui.button("✓ Clean Prompt", on_click=lambda: rt.act_run_xray("Summarize Q3 financial metrics.")).props("outline color=emerald").classes("flex-1 text-xs")
+        ui.button("⚡ Test Secret Leak", on_click=lambda: asyncio.create_task(rt.act_run_xray(s.test_prompt))).props("color=red").classes("flex-1 text-xs font-bold")
+        ui.button("✓ Clean Prompt", on_click=lambda: asyncio.create_task(rt.act_run_xray("Summarize Q3 financial metrics."))).props("outline color=emerald").classes("flex-1 text-xs")
 
 
 def xray_right_pane():
@@ -177,18 +180,17 @@ def mcp_left_pane():
     ui.label("🔐 Local Node Keys & TOTP Admin (`fiber sign`)").classes("text-xs font-bold text-amber-400 mt-1")
     with ui.row().classes("w-full gap-2 items-center"):
         ui.input("Admin SPIFFE ID").bind_value(s, "admin_user").props("dark outlined dense").classes("flex-1 font-mono text-xs")
-        ui.button("🔑 Init Keys", on_click=rt.act_init_node_keys).props("color=emerald outline dense").classes("text-xs px-2.5")
-        ui.button("🔄 Status", on_click=rt.act_refresh_sign_status).props("color=slate-4 outline dense").classes("text-xs px-2")
+        ui.button("🔑 Init Keys", on_click=lambda: asyncio.create_task(rt.act_init_node_keys())).props("color=emerald outline dense").classes("text-xs px-2.5")
+        ui.button("🔄 Status", on_click=lambda: asyncio.create_task(rt.act_refresh_sign_status(silent=False))).props("color=slate-4 outline dense").classes("text-xs px-2")
 
     with ui.row().classes("w-full gap-1.5 mt-auto"):
-        ui.button("📱 Enroll TOTP", on_click=rt.act_enroll_admin_totp).props("color=cyan").classes("flex-1 text-xs font-bold")
-        ui.button("✓ Verify TOTP", on_click=lambda: rt.act_verify_admin_totp()).props("color=emerald outline").classes("flex-1 text-xs")
-        ui.button("🗑️ Revoke", on_click=rt.act_revoke_admin_totp).props("color=red outline").classes("text-xs px-2.5")
+        ui.button("📱 Enroll TOTP", on_click=lambda: asyncio.create_task(rt.act_enroll_admin_totp())).props("color=cyan").classes("flex-1 text-xs font-bold")
+        ui.button("✓ Verify TOTP", on_click=lambda: asyncio.create_task(rt.act_verify_admin_totp())).props("color=emerald outline").classes("flex-1 text-xs")
+        ui.button("🗑️ Revoke", on_click=lambda: asyncio.create_task(rt.act_revoke_admin_totp())).props("color=red outline").classes("text-xs px-2.5")
 
 
 def mcp_right_pane():
     s = state.security
-    # 1. ~/.ssh/fiber_ed25519 및 local_cipher.key 물리 파일 존재 여부 가시성 카드
     with ui.row().classes("w-full gap-2"):
         with ui.card().classes("flex-1 bg-slate-950 border border-slate-800 p-2.5"):
             ui.label().bind_text_from(s, "ssh_badge_text").classes("text-xs font-mono font-bold text-emerald-400")
@@ -197,7 +199,6 @@ def mcp_right_pane():
             ui.label().bind_text_from(s, "cipher_badge_text").classes("text-xs font-mono font-bold text-cyan-400")
             ui.label().bind_text_from(s, "cipher_key_path", lambda p: f"Path: {p}").classes("text-[10px] font-mono text-slate-400 truncate")
 
-    # 2. NodeSigner Public Key 지문 & HTTP 202 HITL 샌드박스 트리거
     with ui.row().classes("w-full justify-between items-center bg-slate-950 px-3 py-2 rounded border border-slate-800"):
         ui.label().bind_text_from(s, "pubkey_short_text").classes("text-xs font-mono text-amber-300 font-bold")
         ui.button("🚨 Simulate 'drop_table' (HTTP 202)", on_click=lambda: rt.act_open_hitl_modal(
@@ -209,7 +210,7 @@ def mcp_right_pane():
 
 
 # ==========================================
-# Tab 4: VCR Time-Machine & HTTP Gateway Suite (`state.pipeline`)
+# Tab 4: Deterministic VCR & HTTP Gateway Suite (`state.pipeline`)
 # ==========================================
 def vcr_left_pane():
     p = state.pipeline
@@ -225,8 +226,8 @@ def vcr_left_pane():
 def vcr_right_pane():
     p = state.pipeline
     with ui.row().classes("w-full gap-2"):
-        ui.button("▶ Run 3-Step Gateway VCR Suite", on_click=rt.act_run_gateway_vcr_suite).props("color=emerald").classes("flex-1 text-xs font-bold")
-        ui.button("🧬 Verify Compat Fixture", on_click=lambda: rt.run_fiber_cli("compat", "fixture", "--vcr", "replay")).props("outline color=cyan").classes("text-xs")
+        ui.button("▶ Run 3-Step Gateway VCR Suite", on_click=lambda: asyncio.create_task(rt.act_run_gateway_vcr_suite())).props("color=emerald").classes("flex-1 text-xs font-bold")
+        ui.button("🧬 Verify Compat Fixture", on_click=lambda: asyncio.create_task(rt.run_fiber_cli("compat", "fixture", "--vcr", "replay"))).props("outline color=cyan").classes("text-xs")
 
     ui.label("Live LLM Network I/O vs. Deterministic VCR Replay Latency (ms):").classes("text-xs text-slate-400 mt-1")
     refs.vcr_chart = ui.echart({
@@ -263,7 +264,7 @@ def build_console_shell():
             ui.label().bind_text_from(state, "fuel_kpi_text").classes("text-xs font-mono font-bold text-emerald-400")
             ui.button(
                 "🚨 GLOBAL KILL-SWITCH",
-                on_click=lambda: rt.run_fiber_cli("account", "--tenant", state.finops.tenant_id, "kill", "--ver", "99")
+                on_click=lambda: asyncio.create_task(rt.run_fiber_cli("account", "--tenant", state.finops.tenant_id, "kill", "--ver", "99"))
             ).props("color=red dense").classes("font-bold text-xs px-3")
 
     # [중단: 4 Core Showcase Tabs]
@@ -301,20 +302,23 @@ def build_console_shell():
     ui.timer(0.1, rt.flush_100ms_ringbuffer)
     refs.push_cli("Fiber-Console initialized. Syncing local ~/.ssh/fiber_ed25519, local_cipher.key, and account ledgers...")
 
+def launch_console(port: int = 8357):
+    if os.environ.get("FIBER_CONSOLE_ACTIVE") == "1":
+        return
 
-def launch_console(port: int = 8356):
     url = f"http://127.0.0.1:{port}"
     if rt.is_port_active(port):
         print(f"Attached to running Fiber instance at {url}")
         rt.open_app_window(url)
         return
 
+    os.environ["FIBER_CONSOLE_ACTIVE"] = "1"
+
     build_console_shell()
-    app.on_startup(lambda: asyncio.create_task(rt.sync_initial_node_and_account_state()))
-    app.on_startup(lambda: asyncio.create_task(rt.redis_pubsub_worker()))
+    app.on_startup(rt.sync_initial_node_and_account_state)
+    app.on_startup(rt.redis_pubsub_worker)
     app.on_startup(lambda: rt.open_app_window(url))
     ui.run(host="127.0.0.1", port=port, title="Fiber Control Studio", show=False, reload=False)
 
-
-if __name__ in {"__main__", "__mp_main__"}:
-    launch_console(port=8356)
+if __name__ == "__main__":
+    launch_console(port=8357)
