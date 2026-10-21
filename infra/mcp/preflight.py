@@ -1,13 +1,14 @@
 # fiber.infra.mcp.preflight
+import hashlib
+import json
 import os
 import re
-import json
-import hashlib
-from typing import Dict, Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from xphi.arch.bound.client.rpc import InternalRpcClient
+from fiber.dev.console.signal import UIKey, UIModal, UISlot, UISlotStatus
 from xphi.arch.bound.adapter.pta import NodeSigner
+from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.watcher.plane.emitter import get_emitter
 
 
@@ -26,7 +27,7 @@ class PreflightGuard:
     ):
         self.target_id = target_id
         self.rpc = rpc
-        self.log = get_emitter(f"mcp.preflight.{self.target_id}")
+        self.log = get_emitter(f"mcp.preflight.{self.target_id}", phase="DEFENSE")
 
         raw_pattern = self.resolve_pattern(self.target_id, pattern)
         self.pattern_str, self.require_totp = self._parse_mode_and_pattern(
@@ -38,7 +39,12 @@ class PreflightGuard:
             auth_badge = "TOTP" if self.require_totp else "BUTTON-ONLY"
             self.log.info(
                 f"[PreFlight] Armed Zero-Code HITL Guard on '{self.target_id}' "
-                f"(Pattern: /{self.pattern_str}/i, Mode: {auth_badge})"
+                f"(Pattern: /{self.pattern_str}/i, Mode: {auth_badge})",
+                **{
+                    UIKey.TARGET_ID.value: self.target_id,
+                    "pattern": self.pattern_str,
+                    "auth_mode": auth_badge,
+                },
             )
 
         self.stashed_payloads: Dict[str, Dict[str, Any]] = {}
@@ -83,7 +89,6 @@ class PreflightGuard:
             or ""
         ).strip().lower()
 
-        # 기본값은 TOTP 필수(True), 환경변수에 button 계열이 지정된 경우 False로 초기화
         require_totp = explicit_require_totp if explicit_require_totp is not None else (
             env_mode not in cls.BUTTON_MODE_ALIASES
         )
@@ -132,12 +137,27 @@ class PreflightGuard:
 
         return extracted_pattern, clean_env
 
+    @staticmethod
+    def _extract_tool_meta(payload: Dict[str, Any], params_dict: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """JSON-RPC MCP 호출 페이로드에서 실제 툴 이름과 인자 딕셔너리를 정밀 추출합니다."""
+        tool_name = str(
+            params_dict.get("name")
+            or params_dict.get("tool")
+            or payload.get("method")
+            or "high_risk_tool"
+        )
+        raw_args = params_dict.get("arguments")
+        if raw_args is None:
+            raw_args = {k: v for k, v in params_dict.items() if k not in ("name", "tool", "_meta")}
+        tool_args = dict(raw_args) if isinstance(raw_args, dict) else {"value": raw_args}
+        return tool_name, tool_args
+
     def inspect_and_stash(self, handle_id: str, payload: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """위험 패턴 매칭 시 원본을 Stash하고 YIELD 전이용 Synthetic Prompt(require_totp 포함)를 반환"""
+        """위험 패턴 매칭 시 원본을 Stash하고 콘솔 HITL 202 모달 시그널을 즉시 송출한 뒤 Synthetic Prompt를 반환"""
         if not self.guard_regex:
             return None
 
-        params_dict = payload.get("params", {})
+        params_dict = payload.get("params") if isinstance(payload.get("params"), dict) else {}
         canonical_str = json.dumps(params_dict, sort_keys=True)
         match = self.guard_regex.search(canonical_str)
         if not match:
@@ -145,19 +165,38 @@ class PreflightGuard:
 
         matched_keyword = match.group(0)
         payload_hash = hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
+        tool_name, tool_args = self._extract_tool_meta(payload, params_dict)
+        meta_block = params_dict.get("_meta") if isinstance(params_dict.get("_meta"), dict) else {}
+        user_id = meta_block.get("user_id", "spiffe://public/agent")
+
         self.stashed_payloads[handle_id] = {
             "raw_payload": dict(payload),
             "payload_hash": payload_hash,
-            "user_id": params_dict.get("_meta", {}).get("user_id", "spiffe://public/agent"),
+            "user_id": user_id,
             "require_totp": self.require_totp,
+            "tool_name": tool_name,
         }
 
         mode_label = "TOTP" if self.require_totp else "BUTTON"
         action_prompt = "Enter TOTP:" if self.require_totp else "Approve or Reject execution:"
 
-        self.log.warning(
-            f"[PreFlight:{mode_label}] Intercepted high-risk call ('{matched_keyword}') "
-            f"for {handle_id}. Parking before worker I/O."
+        # [핵심 개선] 배압 폴딩을 즉시 우회하는 .signal()과 Enum 계약(UIModal.HITL_202)을 결합하여 콘솔 모달 직결
+        self.log.signal(
+            f"[PreFlight:{mode_label}] Intercepted high-risk call '{tool_name}' (matched '{matched_keyword}') "
+            f"for {handle_id}. Parking transaction (HTTP 202 YIELD).",
+            **{
+                UIKey.MODAL.value: UIModal.HITL_202.value,
+                UIKey.SLOT.value: UISlot.GUARDRAIL.value,
+                UIKey.SLOT_STATUS.value: UISlotStatus.BLOCK.value,
+                UIKey.TARGET_ID.value: self.target_id,
+                UIKey.TOOL_NAME.value: tool_name,
+                UIKey.TOOL_ARGS.value: {
+                    "matched_pattern": matched_keyword,
+                    "require_totp": self.require_totp,
+                    "arguments": tool_args,
+                },
+                UIKey.IDEM_KEY.value: handle_id,
+            },
         )
         return {
             "jsonrpc": "2.0",
@@ -192,6 +231,7 @@ class PreflightGuard:
         user_id = override_user or stashed["user_id"]
         payload_hash_hex = stashed["payload_hash"]
         require_totp = stashed.get("require_totp", self.require_totp)
+        tool_name = stashed.get("tool_name", "tool")
 
         res = await self.rpc.call(
             "validate.attest",
@@ -204,17 +244,36 @@ class PreflightGuard:
         )
         if not isinstance(res, dict) or res.get("error") or not res.get("signature"):
             err_msg = res.get("message", "Pre-flight attestation rejected") if isinstance(res, dict) else "RPC Error"
+            self.log.signal(
+                f"[PreFlight] Attestation REJECTED for {handle_id} ('{tool_name}'): {err_msg}",
+                **{
+                    UIKey.SLOT.value: UISlot.GUARDRAIL.value,
+                    UIKey.SLOT_STATUS.value: UISlotStatus.BLOCK.value,
+                    UIKey.TARGET_ID.value: self.target_id,
+                    UIKey.TOOL_NAME.value: tool_name,
+                    UIKey.IDEM_KEY.value: handle_id,
+                },
+            )
             raise PermissionError(err_msg)
 
         self.validator_pub_key.verify(bytes.fromhex(res["signature"]), bytes.fromhex(payload_hash_hex))
-
-        # 서명 검증이 완전히 통과된 후 Stash에서 최종 제거 및 반환
         self.stashed_payloads.pop(handle_id, None)
         mode_label = "TOTP" if require_totp else "Button"
         self.log.info(
-            f"[PreFlight] Proxy Attestation ({mode_label}) Verified for {handle_id}. Releasing stashed payload."
+            f"[PreFlight] Proxy Attestation ({mode_label}) Verified for {handle_id} ('{tool_name}'). Releasing stashed payload.",
+            **{
+                UIKey.SLOT.value: UISlot.GUARDRAIL.value,
+                UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
+                UIKey.TARGET_ID.value: self.target_id,
+                UIKey.TOOL_NAME.value: tool_name,
+                UIKey.IDEM_KEY.value: handle_id,
+            },
         )
         return stashed["raw_payload"]
 
     def clear(self, handle_id: str) -> None:
-        self.stashed_payloads.pop(handle_id, None)
+        if self.stashed_payloads.pop(handle_id, None) is not None:
+            self.log.info(
+                f"[PreFlight] Cleared stashed transaction {handle_id} on '{self.target_id}'.",
+                **{UIKey.TARGET_ID.value: self.target_id, UIKey.IDEM_KEY.value: handle_id},
+            )

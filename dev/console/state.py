@@ -4,9 +4,9 @@ from collections import deque
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+
 @dataclass
 class FinOpsState:
-    """[1] FinOps, LocalAccount (`fiber account`) & Real-time Quota Telemetry"""
     tenant_id: str = "accounting_dept"
     spiffe_id: str = "spiffe://self/fiber"
     totp_enrolled: bool = False
@@ -16,7 +16,6 @@ class FinOpsState:
     budget_limit: int = 15000
     policy_ver: int = 1
     last_op: str = "INIT"
-    tracked_tenants_text: str = "accounting_dept (v1)"
 
     jwt_op: str = "PROVISION"
     jwt_usd: float = 50.0
@@ -28,7 +27,6 @@ class FinOpsState:
     stream_active: bool = False
     stream_status_text: str = "IDLE"
 
-    # Time-series EChart Buffers
     chart_dirty: bool = False
     x_ticks: deque = field(default_factory=lambda: deque(["Init"], maxlen=30))
     y_fuel: deque = field(default_factory=lambda: deque([50000], maxlen=30))
@@ -38,16 +36,11 @@ class FinOpsState:
     def account_summary_badge(self) -> str:
         totp_tag = "🟢 TOTP" if self.totp_enrolled else "⚠️ No-TOTP"
         spiffe_short = self.spiffe_id.replace("spiffe://self/", "") if self.spiffe_id else "unassigned"
-        return (
-            f"Tenant: {self.tenant_id} ({spiffe_short} | {totp_tag}) | "
-            f"v{self.policy_ver} | Quota: {self.current_fuel:,} / Core: {self.core_balance:,}"
-        )
+        return f"Tenant: {self.tenant_id} ({spiffe_short} | {totp_tag}) | v{self.policy_ver} | Quota: {self.current_fuel:,} / Core: {self.core_balance:,}"
 
 
 @dataclass
 class SecurityState:
-    """[2] Pipeline X-Ray Guardrails, MCP Switchboard & Local Node Identity (`fiber sign`)"""
-    # Guardrail & X-Ray Config
     block_api_keys: bool = True
     custom_regex: str = r"sk-[a-zA-Z0-9]{20,}"
     guardrail_mode: str = "Strict Block (PermissionError)"
@@ -55,7 +48,6 @@ class SecurityState:
     xray_latencies: List[float] = field(default_factory=lambda: [0.12, 0.45, 0.14, 0.08])
     xray_chart_dirty: bool = False
 
-    # Dual-File Identity (~/.ssh/fiber_ed25519 & local_cipher.key) & TOTP Vault (`fiber sign`)
     ssh_key_exists: bool = False
     ssh_key_path: str = "~/.ssh/fiber_ed25519"
     cipher_key_exists: bool = False
@@ -63,12 +55,9 @@ class SecurityState:
     node_pubkey: str = "uninitialized"
 
     admin_user: str = "spiffe://self/fiber"
-    enrolled_admins: List[str] = field(default_factory=list)
-    enrolled_admins_count: int = 0
     totp_secret: str = ""
-    totp_uri: str = ""
     totp_input_code: str = ""
-    sign_status_json: str = "{\n  \"info\": \"Click 'Refresh Status' or 'Init Node Keys' to inspect local identity.\"\n}"
+    sign_status_json: str = '{\n  "info": "Click \'Status\' or \'Init Keys\' to inspect local identity."\n}'
 
     @property
     def ssh_badge_text(self) -> str:
@@ -87,7 +76,6 @@ class SecurityState:
 
 @dataclass
 class PipelineState:
-    """[3] Gateway VCR Engine, Compat Ruleset & Control-Plane Bus Telemetry"""
     redis_online: bool = False
     redis_url: str = "redis://localhost:6379"
     pubsub_eps: int = 0
@@ -95,7 +83,6 @@ class PipelineState:
     vcr_mode: str = "record"
     vcr_scenario: str = "console_suite"
     vcr_speed: str = "max"
-    vcr_chaos: float = 0.0
     compat_json: str = (
         '{\n  "extraction_rules": {\n    "llama_server": {\n'
         '      "text": ["choices.0.delta.content", "choices.0.message.content"]\n'
@@ -108,7 +95,6 @@ class PipelineState:
 
 @dataclass
 class StudioState:
-    """NiceGUI 콘솔 루트 상태 컨테이너 (3대 도메인 서브 상태로 구조화)"""
     finops: FinOpsState = field(default_factory=FinOpsState)
     security: SecurityState = field(default_factory=SecurityState)
     pipeline: PipelineState = field(default_factory=PipelineState)
@@ -130,7 +116,6 @@ class StudioState:
 
 @dataclass
 class UIRefs:
-    """런타임 컨트롤러에서 접근해야 하는 동적 위젯 컨테이너"""
     finops_chart: Any = None
     xray_chart: Any = None
     vcr_chart: Any = None
@@ -147,13 +132,11 @@ class UIRefs:
     pubsub_buffer: deque = field(default_factory=lambda: deque(maxlen=500))
 
     def push_cli(self, msg: str):
-        ts = time.strftime("%H:%M:%S")
-        self.cli_buffer.append(f"[{ts}] {msg}")
+        self.cli_buffer.append(f"[{time.strftime('%H:%M:%S')}] {msg}")
 
     def push_pubsub(self, channel: str, msg: str):
-        ts = time.strftime("%H:%M:%S.%f")[:-3]
         state.pipeline.pubsub_eps += 1
-        self.pubsub_buffer.append(f"[{ts}] [{channel}] {msg}")
+        self.pubsub_buffer.append(f"[{time.strftime('%H:%M:%S.%f')[:-3]}] [{channel}] {msg}")
 
 
 state = StudioState()
