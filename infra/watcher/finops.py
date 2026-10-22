@@ -8,7 +8,7 @@ from typing import Any, Dict, Generator, Optional, Set
 
 from pydantic import BaseModel
 
-from fiber.dev.console.signal import UIKey, UIMetric, UISlot, UISlotStatus
+from fiber.dev.console.bridge.signal import UIKey, UIMetric, UISlot, UISlotStatus
 from fiber.llm.model.usage import Usage
 from fiber.llm.provider.cost.policy import CostPolicy
 from fiber.llm.provider.cost.registry import ModelCostRegistry

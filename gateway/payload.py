@@ -15,13 +15,13 @@ from fiber.gateway.serv.gateway import IdempotencyMapper, NonceReplayProtector, 
 from fiber.gateway.serv.compliance import compliance_edge
 from fiber.gateway.serv.llm import llm_edge
 from fiber.gateway.security import SecurityProvisioner, TokenTranslator
-from fiber.gateway.llm.pipeline.interceptor.registry import InterceptorConfigLoader
+from fiber.llm.pipeline.interceptor.registry import InterceptorConfigLoader
 from fiber.gateway.contract.origin import OriginRegistry
 from fiber.gateway.contract.server import SecureMCPServer, SentinelFirewallMiddleware
 from fiber.gateway.contract.server import AttestationMiddleware, LocalMiddleware, WasTelemetry
 
-from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
-from fiber.dev.trace.vcr.injector import VCRInjector
+from fiber.infra.vcr.manager import VCRPlaybackConfig
+from fiber.infra.vcr.injector import VCRInjector
 
 from xphi.arch.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
 from xphi.node.space.bind.resolver import resolve_path

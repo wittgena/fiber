@@ -7,7 +7,7 @@ import time
 from typing import Any, Dict, List
 import httpx
 
-from fiber.dev.trace.vcr.manager import VCRIdentityRule, add_vcr_arguments
+from fiber.infra.vcr.manager import VCRIdentityRule, add_vcr_arguments
 from xphi.node.space.bind.resolver import resolve_path
 
 

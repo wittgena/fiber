@@ -97,8 +97,8 @@ Pass a flat list of `DuplexChannel` middlewares or `BaseLLMTracer` observers via
 
 ```python
 from fiber.llm.entry import acompletion
-from fiber.dev.trace.llm.interceptor import BaseLLMTracer
-from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.pipeline.tracer import BaseLLMTracer
+from fiber.llm.pipeline.bootstrap import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
 class SecretBlocker(DuplexChannel):
@@ -126,7 +126,7 @@ To enforce strict tenant quotas and terminate runaway streams mid-flight upon bu
 
 ```python
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 

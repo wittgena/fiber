@@ -9,7 +9,7 @@ import time
 from types import SimpleNamespace
 from typing import List, Tuple, Optional, Any, Dict
 
-from fiber.dev.trace.llm.interceptor import BaseLLMTracer
+from fiber.llm.pipeline.tracer import BaseLLMTracer
 from fiber.llm.entry import acompletion
 from fiber.llm.model.token.counter import token_counter, get_modified_max_tokens
 from fiber.llm.model.token.splitter import TokenSplitter

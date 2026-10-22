@@ -26,8 +26,8 @@ def _init_bridge(mode: str, fixture_dir: str):
         "litellm.types.utils": llm_response.__name__
     })
 
-    from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
-    from fiber.dev.trace.vcr.injector import VCRInjector
+    from fiber.infra.vcr.manager import VCRPlaybackConfig
+    from fiber.infra.vcr.injector import VCRInjector
     config = VCRPlaybackConfig(mode=mode, speed="real", record_tick_ms=100.0)
     VCRInjector.apply(config=config, fixture_dir=fixture_dir)
     
@@ -41,7 +41,7 @@ def inspect_fixture(scenario_id: str, fixture_dir: str):
         print("[VCR] Fixture directory was not initialized.")
         return
 
-    from fiber.dev.trace.vcr.manager import VCRIdentityRule
+    from fiber.infra.vcr.manager import VCRIdentityRule
     
     class MockCtx:
         system_meta = type('Meta', (), {'metadata': {'vcr_scenario': scenario_id, 'vcr_invoker': "ex.switch"}})()

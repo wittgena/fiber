@@ -23,7 +23,6 @@ class OutOfBandApprovalBridge:
         ).encode("utf-8")
 
         self._consumed_tokens: Set[str] = set()
-        # 외부 메신저 User ID -> 내부 SPIFFE ID 매핑 테이블
         self.identity_map: Dict[str, str] = {}
 
     def register_identity_mapping(self, external_user_id: str, spiffe_id: str) -> None:
