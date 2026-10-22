@@ -7,12 +7,12 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from fiber.llm.response import ModelResponse, EmbeddingResponse
-from fiber.gateway.llm.pipeline.bootstrap import PipelineBootstrap 
-from fiber.gateway.llm.pipeline.interceptor.registry import InterceptorConfigLoader
+from fiber.llm.pipeline.bootstrap import PipelineBootstrap 
+from fiber.llm.pipeline.interceptor.registry import InterceptorConfigLoader
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.gateway.security import KernelAuthenticator, NodeAuthPayload
 from fiber.gateway.contract.router import ContractRouter
-from fiber.dev.trace.vcr.manager import VCRIdentityRule
+from fiber.infra.vcr.manager import VCRIdentityRule
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.model.auth import BrokerKey, BrokerAction

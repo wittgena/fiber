@@ -56,7 +56,7 @@ Subclassing `BaseLLMTracer` automatically binds your plugin to `PipelineSlot.PRE
 ```python
 import time
 from typing import Any, Dict
-from fiber.dev.trace.llm.interceptor import BaseLLMTracer
+from fiber.llm.pipeline.tracer import BaseLLMTracer
 from fiber.llm.execution import ExecutionMetadata
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -102,7 +102,7 @@ Use `TunnelFactory.get_default()` to access Fiber's shared Redis connection pool
 
 ```python
 import json, hashlib, uuid
-from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.pipeline.bootstrap import PipelineSlot
 from fiber.llm.response import ModelResponse
 from fiber.llm.types.provider.core import Usage
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
@@ -140,7 +140,7 @@ When dynamically mutating `msg["model"]` at `PRE_TRANSLATE`, **always synchroniz
 
 ```python
 import asyncio
-from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.pipeline.bootstrap import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 
 class CustomSemanticRouter(DuplexChannel):
@@ -160,7 +160,7 @@ class CustomSemanticRouter(DuplexChannel):
             meta.base_model = target_model
 
     def _classify_sync(self, text: str) -> str:
-        # Replace with CPU-bound ONNX session.run() (see fiber.dev.trace.llm.router.OnnxSemanticRouter)
+        # Replace with CPU-bound ONNX session.run() (see fiber.llm.pipeline.interceptor.router.OnnxSemanticRouter)
         return "Transform" if "json" in text.lower() else "Complex_Reasoning"
 
     async def write(self, ctx: ChannelContext, payload: dict):
@@ -190,7 +190,7 @@ At `POST_TRANSLATE`, the raw dictionary has been normalized into a `processed_ms
 
 ```python
 from typing import Any, List
-from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.pipeline.bootstrap import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.arch.xor.secret.redact import redact_string, sanitize_payload
 from xphi.arch.xor.parser.ruleset.engine import FastRegexRedactionEngine
@@ -249,9 +249,9 @@ Pass instantiated objects in any order via `interceptors=[...]`. Fiber groups th
 
 ```python
 from fiber.llm.entry import acompletion
-from fiber.dev.trace.llm.cache import EdgeRedisCache
-from fiber.dev.trace.llm.guardrail import ActiveBlockingGuardrail, CustomRegexBlockingGuardrail
-from fiber.dev.trace.llm.router import OnnxSemanticRouter
+from fiber.llm.pipeline.interceptor.cache import EdgeRedisCache
+from fiber.llm.pipeline.interceptor.guardrail import ActiveBlockingGuardrail, CustomRegexBlockingGuardrail
+from fiber.llm.pipeline.interceptor.router import OnnxSemanticRouter
 
 router = OnnxSemanticRouter(
     routing_rules={"Transform": {"target": "ollama/gemma:2b", "threshold": 0.6}},
@@ -275,7 +275,7 @@ response = await acompletion(
 
 ### 3.2. Per-Request Injection via REST Gateway (`/v1/chat/completions`)
 
-When running `fiber daemon`, external HTTP clients can dynamically attach registered interceptors from `fiber.dev.trace.llm` per request by passing the `interceptors` array in the JSON payload.
+When running `fiber daemon`, external HTTP clients can dynamically attach registered interceptors from `fiber.llm.pipeline.interceptor` per request by passing the `interceptors` array in the JSON payload.
 *(Note: Client-supplied interceptors are additive and cannot override or disable global security interceptors mounted at daemon boot time.)*
 
 ```bash
@@ -294,7 +294,7 @@ $ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
 
 ---
 
-## 4. Reference Summary: Built-in Production Interceptors (`fiber.dev.trace.llm`)
+## 4. Reference Summary: Built-in Production Interceptors (`fiber.llm.pipeline.interceptor`)
 
 | Module & Class | Target Slot | Core Capability | Constructor Kwargs |
 | --- | --- | --- | --- |

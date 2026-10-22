@@ -31,8 +31,8 @@ Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's d
 <summary><b>View Middleware Implementation Snippets (Telemetry, Cache, Router, Guardrail)</b></summary>
 
 ```python
-from fiber.dev.trace.llm.interceptor import BaseLLMTracer
-from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.pipeline.tracer import BaseLLMTracer
+from fiber.llm.pipeline.bootstrap import PipelineSlot
 from xphi.state.phase.channel import DuplexChannel
 
 # PRE_OBSERVER: Asynchronous Telemetry with Stream-Aware Lifecycle
@@ -108,13 +108,13 @@ class ActiveBlockingGuardrail(DuplexChannel):
 ```
 </details><br>
 
-**Out-of-the-box Guardrails**: The snippets above are conceptual examples. Fiber includes production-grade samples in `fiber.dev.trace.llm`—including INT8 Quantized ONNX Routers, Active Secret Blocking, and Custom C-Level Regex Injection—ready for enterprise deployment.
+**Out-of-the-box Guardrails**: The snippets above are conceptual examples. Fiber includes production-grade samples in `fiber.dev.pipeline.interceptor`—including INT8 Quantized ONNX Routers, Active Secret Blocking, and Custom C-Level Regex Injection—ready for enterprise deployment.
 
 **2. Execute via Drop-in Facade:**
 
 ```python
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 
@@ -155,8 +155,8 @@ Adopting the industry-standard VCR pattern, Fiber empowers your pytest suites to
 
 ```python
 import os, pytest
-from fiber.dev.trace.vcr.manager import VCRPlaybackConfig
-from fiber.dev.trace.vcr.injector import VCRInjector
+from fiber.infra.vcr.manager import VCRPlaybackConfig
+from fiber.infra.vcr.injector import VCRInjector
 from fiber.llm.entry import acompletion
 
 @pytest.fixture(scope="module", autouse=True)
@@ -277,7 +277,7 @@ Executes live API calls across your parameterized test matrix (`llama_server`, `
 
 ```bash
 # Pytest: Generate suites via live API calls
-$ VCR_MODE=record pytest -v fiber/dev/trace/llm/tests/router.py
+$ VCR_MODE=record pytest -v fiber/llm/pipeline/interceptor/tests/router.py
 ```
 
 * **Step 2: Replay (Deterministic CI/CD & Gateway Verification)**
@@ -285,10 +285,10 @@ Executes the exact same test suite entirely offline (`VCR_MODE=replay` by defaul
 
 ```bash
 # Pytest (Default Replay): Run the multi-provider suite offline at maximum velocity (~0ms I/O)
-$ pytest -v -s fiber/dev/trace/llm/tests/router.py
+$ pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 
 # Pytest (Chaos & Latency Emulation): Validate timeout resilience with real-time pacing + 500ms jitter
-$ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/dev/trace/llm/tests/router.py
+$ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 
 # HTTP Gateway Suite: Verify Unary, SSE Stream, and Dynamic Record ➔ Replay roundtrip against the daemon
 $ python -m fiber.dev.gateway.tester

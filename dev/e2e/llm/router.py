@@ -5,15 +5,15 @@ import time
 from typing import Dict, Any, Optional, List
 
 from fiber.llm.entry import acompletion
-from fiber.dev.trace.llm.base import (
+from infra.bound.e2e.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 
     build_e2e_context, 
     ReportMsg
 )
-from fiber.dev.trace.llm.interceptor import DebugTracer
-from fiber.dev.trace.llm.router import OnnxSemanticRouter
+from fiber.llm.pipeline.tracer import DebugTracer
+from fiber.llm.pipeline.interceptor.router import OnnxSemanticRouter
 from fiber.gateway.llm.state.traverser import StateTraverser
 from xphi.state.topos.workflow import WorkflowMessage, step
 

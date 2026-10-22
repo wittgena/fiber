@@ -7,16 +7,16 @@ import time
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
-from fiber.dev.trace.llm.base import (
+from infra.bound.e2e.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 
     build_e2e_context, 
     ReportMsg
 )
-from fiber.dev.trace.llm.interceptor import DebugTracer
-from fiber.dev.trace.llm.cache import EdgeRedisCache
-from fiber.dev.trace.llm.guardrail import CustomRegexBlockingGuardrail
+from fiber.llm.pipeline.tracer import DebugTracer
+from fiber.llm.pipeline.interceptor.cache import EdgeRedisCache
+from fiber.llm.pipeline.interceptor.guardrail import CustomRegexBlockingGuardrail
 from xphi.state.topos.workflow import WorkflowMessage, step
 
 class BaselineTraceMsg(WorkflowMessage): pass

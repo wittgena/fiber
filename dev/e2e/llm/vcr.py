@@ -9,10 +9,10 @@ from typing import Any
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
 
-from fiber.dev.trace.llm.interceptor import DebugTracer
-from fiber.dev.trace.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
-from fiber.dev.trace.vcr.injector import VCRInjector
-from fiber.dev.trace.llm.base import (
+from fiber.llm.pipeline.tracer import DebugTracer
+from fiber.infra.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
+from fiber.infra.vcr.injector import VCRInjector
+from infra.bound.e2e.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 

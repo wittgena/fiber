@@ -6,7 +6,7 @@ import re
 from typing import Any, Dict, Optional, Tuple
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from fiber.dev.console.signal import UIKey, UIModal, UISlot, UISlotStatus
+from fiber.dev.console.bridge.signal import UIKey, UIModal, UISlot, UISlotStatus
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.watcher.plane.emitter import get_emitter

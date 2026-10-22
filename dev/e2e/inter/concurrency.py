@@ -21,13 +21,13 @@ from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
 from fiber.infra.watcher.profile.metrics import PipelineLoadProfiler, LoadSLO
-from fiber.dev.trace.vcr.manager import (
+from fiber.infra.vcr.manager import (
     VCRPlaybackConfig,
     VCRIdentityRule,
     add_vcr_arguments
 )
-from fiber.dev.trace.vcr.injector import VCRInjector
-from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
+from fiber.infra.vcr.injector import VCRInjector
+from infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import get_invoker

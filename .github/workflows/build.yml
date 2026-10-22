@@ -136,4 +136,4 @@ jobs:
           VCR_MODE: replay
           FIBER_COMPATS_DIR: ${{ github.workspace }}/fiber-compats
         run: |
-          pytest -v -s dev/trace/llm/tests/router.py
+          pytest -v -s llm/pipeline/interceptor/tests/router.py

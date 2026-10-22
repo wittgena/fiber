@@ -20,18 +20,18 @@ from fiber.infra.bound.e2e.config import Phase, E2EConfig
 from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
 
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
 from fiber.gateway.security import TokenTranslator
 from fiber.gateway.contract.token.gen import FinOpsTokenGenerator
 from fiber.infra.mcp.connector import MCPServerConnector
 
-from fiber.dev.trace.vcr.manager import (
+from fiber.infra.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 
     add_vcr_arguments
 )
-from fiber.dev.trace.vcr.injector import VCRInjector
-from fiber.dev.trace.llm.base import create_e2e_parser, build_e2e_context
+from fiber.infra.vcr.injector import VCRInjector
+from infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
 import fiber.infra.mcp.worker.finops as worker_finops
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 

@@ -9,15 +9,15 @@ from pathlib import Path
 from typing import Optional
 
 from fiber.llm.entry import acompletion
-from fiber.gateway.llm.pipeline.bootstrap import PipelineSlot
-from fiber.gateway.llm.pipeline.channel.fuel import BillingObserver, FuelBreaker
-from fiber.dev.trace.vcr.manager import (
+from fiber.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.pipeline.channel.fuel import BillingObserver, FuelBreaker
+from fiber.infra.vcr.manager import (
     VCRPlaybackConfig, 
     VCRIdentityRule, 
     add_vcr_arguments
 )
-from fiber.dev.trace.vcr.injector import VCRInjector
-from fiber.dev.trace.llm.base import (
+from fiber.infra.vcr.injector import VCRInjector
+from infra.bound.e2e.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 
