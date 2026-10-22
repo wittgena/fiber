@@ -27,7 +27,7 @@ from fiber.infra.vcr.manager import (
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
+from fiber.infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import get_invoker

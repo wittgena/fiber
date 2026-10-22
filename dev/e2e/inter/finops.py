@@ -31,7 +31,7 @@ from fiber.infra.vcr.manager import (
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
+from fiber.infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
 import fiber.infra.mcp.worker.finops as worker_finops
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 
