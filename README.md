@@ -1,6 +1,6 @@
 # README
 
-Fiber is an asynchronous execution control plane and runtime harness designed to secure, govern, and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables deterministic offline replay.
+Fiber is an asynchronous execution control plane and runtime harness designed to secure, govern, and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables zero-cost offline replay.
 
 This document provides a practical guide on how to integrate and deploy Fiber:
 
@@ -10,7 +10,7 @@ Operating as a drop-in asynchronous pipeline with real-time FinOps circuit break
 | :--- | :--- | :--- |
 | **1. LLM Pipeline & VCR** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[1.1 Pipeline](#11-the-drop-in-llm-pipeline)** · **[1.2 VCR](#12-fixture-testing-llm-recordreplay)** · **[1.3 Schema Traverser](#13-schema-traverser--compat-registry)** |
 | **2. Installation** | Sandbox provisioning (`uv pip`), Node Identity (`sign init`) & Homebrew | **[2.1 Python & CLI](#21-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[2.2 Homebrew](#22-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
-| **3. IDE & MCP Gateway** | Zero-Key IDE Routing (`continue.dev`), Pre-Flight HITL Locks, Sign & FinOps CLI | **[3.1 MCP & IDE Config](#31-mcp-gateway)** · **[3.2 Connect CLI](#32-fiber-connect-cli)** |
+| **3. IDE & MCP Gateway** | Zero-Key IDE Routing (`continue.dev`), Pre-Flight HITL Locks, Config Sync & FinOps CLI | **[3.1 MCP & IDE Config](#31-mcp-gateway)** · **[3.2 Connect CLI](#32-fiber-connect-cli)** |
 | **4–5. Benchmarks & Logs** | 200-VU Concurrency Metrics & Cryptographic Validation Logs | **[4. Benchmarks](#4-pipeline-performance-benchmarks-apple-m2-32gb-ram)** · **[5. System Logs](#5-system-validation-logs)** |
 
 ---
@@ -461,19 +461,24 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
 
 **Coexistence**: Fiber's declarative mapper automatically ignores the self-referential fiber-gateway entry during scanning while mounting the remaining servers. Once verified, you can progressively remove redundant direct entries at your own pace.
 
-**Sidecar Provisioning (fiber connect)**
-While `fiber daemon` autonomously manages workers in production, `fiber connect` acts as an on-demand sidecar to mount specific config files or individual workers, automatically inferring transport (`stdio` vs. `network`), concurrency modes (`multiplex`, `linear`, `ephemeral`), and pre-flight HITL guards (`-p / FIBER_PREFLIGHT_<TARGET>`):
+**Declarative Provisioning (`fiber connect copy`)**
+Rather than manually running separate background processes, `fiber connect copy` registers your built-in workers, IDE configs (`.mcp.json`), and third-party servers into Fiber's central configuration (`~/.anchor/mcp.json`). If `fiber daemon` is running, it automatically detects the updated config and hot-reloads the workers—inferring transport (`stdio` vs. `network`), concurrency modes (`multiplex`, `linear`, `ephemeral`), and pre-flight HITL guards (`-p`):
 
 ```bash
-# Auto-Scan or Explicit Config: Mounts all servers defined in mcp.json
-$ fiber connect -c .mcp.json
+# Auto-Scan & Sync: Registers all built-in workers and local IDE mcp.json configs
+$ fiber connect copy
 
-# 3rd-Party Worker with Pre-Flight HITL Lock (Default: 6-digit TOTP | Prefix 'button:' for 1-Click Approval)
+# Built-in Worker: Lock 'finlib' with a 6-digit TOTP Pre-Flight Guard (Default)
+$ fiber connect copy -t worker.eco.finlib -e finlib -p "normalize_order|pow\(|exp\("
+
+# 3rd-Party Stdio MCP: Lock with a 1-Click Slack Button ('button:' prefix)
+$ fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
+
+# Remote HTTP/SSE MCP: Register remote server with a 1-Click Pre-Flight Guard
+$ fiber connect copy -t net-context7-remote-01 -e https://mcp.context7.com/mcp -p "button:security|auth|secret"
+
+# Standalone Mode (without daemon): Omit 'copy' to run a worker directly in the foreground
 $ fiber connect -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE"
-$ fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
-
-# Remote Commercial MCP: HTTP/SSE multiplexing with Bearer auth injection
-$ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 ```
 
 ### 3.2. Fiber Connect CLI
@@ -481,9 +486,10 @@ $ fiber connect -t ctx7-remote -e https://mcp.context7.com/mcp -f .env
 | Command | Role | Architectural Function & Lifecycle | Example |
 | :--- | :--- | :--- | :--- |
 | **`sign`** | **[Identity & TOTP]** | Provisions Zero-Env node keys (`~/.ssh/fiber_ed25519` & `local_cipher.key`) and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
-| **`connect`** | **[Egress Sidecar]** | Mounts built-in workers, agent configs (`mcp.json`), or remote HTTP/SSE endpoints onto the Tunnel Bus with optional pre-flight HITL locks (`-p "<regex>"` for TOTP or `-p "button:<regex>"` for 1-Click). | `fiber connect -e worker.deployer -p "DROP"` |
-| **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`). Use `-s` to apply topology presets (`core`, `all`). | `fiber daemon -s all -f .env` |
-| **`compat`** | **[Compat & VCR]** | Records raw provider payloads (record) and verifies declarative extraction rules offline (replay) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
+| **`connect copy`** | **[Config Sync]** | Registers built-in workers, IDE configs (`mcp.json`), or third-party servers (with `-p` HITL guards) into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon`. | `fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets\|DELETE"` |
+| **`connect`** | **[Standalone Sidecar]** | Runs MCP workers or configs directly in the foreground without writing to `~/.anchor/mcp.json` (automatically skips targets already running in the daemon). | `fiber connect -e worker.deployer -p "DROP"` |
+| **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon -s all -f .env` |
+| **`compat`** | **[Compat & VCR]** | Records raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
 | **`account`** | **[FinOps & Quota]** | Manages tenant budgets, binds optional SPIFFE identities, issues cryptographic billing tokens, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
 
 **Zero-Exposure Node Identity & Admin TOTP (`fiber sign`)**
@@ -556,4 +562,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
 * **[gateway.wasm.log](./phase/abc/log/inter/wasm/gateway.wasm.20261002.log):** Validates Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all branching and linear PTA state transitions execute deterministically with millisecond latency.
 * **[inter.finops.log](./phase/abc/log/inter/finops.20261019.log):** Validates the FinOps control plane, confirming DPoP-authenticated MCP multiplexing, cryptographic mandate translation (with strict idempotency and replay protection), automated ledger reconciliation, and sub-second kill-switch intervention that cleanly severs active streams mid-flight.
-* **[mcp.hitl.log](./phase/abc/log/worker/hitl.20261022.log):** Validates the Zero-Trust MCP Gateway, confirming pre-flight regex trapping (Zero-Spawn before approval), out-of-band Slack Socket Mode attestation (both 6-digit RFC-6238 TOTP and 1-Click Button modes), and deterministic sandbox resumption across HTTP/SSE and Stdio transports.
+* **[mcp.guard.log](./phase/abc/log/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.

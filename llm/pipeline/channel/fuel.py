@@ -8,7 +8,7 @@ import os
 import time
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from fiber.dev.console.bridge.signal import UIKey, UIMetric, UISlot, UISlotStatus
+from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
 from fiber.llm.model.token.encoder import encode
 from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.state.phase.channel import ChannelContext, DuplexChannel

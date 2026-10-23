@@ -2,7 +2,7 @@
 import time
 from typing import Any, List
 
-from fiber.dev.console.bridge.signal import UIKey, UISlot, UISlotStatus
+from fiber.dev.console.observer.signal import UIKey, UISlot, UISlotStatus
 from fiber.llm.pipeline.bootstrap import PipelineSlot
 
 from xphi.arch.xor.parser.ruleset.engine import FastRegexRedactionEngine

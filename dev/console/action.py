@@ -1,4 +1,5 @@
-# fiber.dev.console.bridge.action
+# fiber.dev.console.action
+## @lineage: fiber.dev.console.bridge.action
 from __future__ import annotations
 
 import asyncio
@@ -10,10 +11,9 @@ import time
 from nicegui import ui
 import orjson
 
-import fiber.phase.action.console as console_act
+import fiber.phase.bridge.console as console_act
 from fiber.dev.console.state import state, refs
 import fiber.dev.console.ui.diag as diag
-
 
 class OobActionBridge:
     """Binds Node Identity (`fiber sign`), TOTP Vault, Slack HITL 202, and MCP Topology to `state.security`."""
@@ -162,7 +162,7 @@ class OobActionBridge:
 
     async def open_hitl_modal(self, tool: str, args: dict) -> None:
         """
-        콘솔 UI의 HITL 모달 및 상태 로그만 갱신합니다.
+        콘솔 UI의 HITL 모달 및 상태 로그만 갱신
         (실제 Slack OOB 메시지 발송은 serv.gateway 및 소유권을 가진 SlackHitlBridge에 위임하여 이중 발송 차단)
         """
         if refs.hitl_code:
@@ -201,22 +201,51 @@ class OobActionBridge:
         s = state.security
         try:
             snap = await console_act.scan_mcp_topology_and_health(s.gateway_url, force_parse=not silent)
-            prev_fp = json.dumps([s.discovered_configs, s.discovered_workers, s.gateway_online], sort_keys=True)
+            prev_fp = json.dumps(
+                [s.discovered_configs, s.discovered_workers, s.gateway_online, s.active_target_ids], sort_keys=True
+            )
+            active_ids = set(snap.active_target_ids or [])
+            try:
+                from xphi.node.space.tunnel.factory import TunnelFactory
+
+                tunnel = await TunnelFactory.get_default()
+                if tunnel:
+                    raw = await tunnel.get("mcp:registry:active_targets")
+                    if raw:
+                        parsed = orjson.loads(raw)
+                        if isinstance(parsed, list):
+                            active_ids.update(str(x) for x in parsed)
+            except Exception:
+                pass
+
+            # 각 워커의 is_live 플래그를 active_ids와 동기화
+            workers_dump = []
+            for w in snap.workers:
+                wd = w.model_dump()
+                if wd["target_id"] in active_ids:
+                    wd["is_live"] = True
+                elif wd.get("is_live"):
+                    active_ids.add(wd["target_id"])
+                workers_dump.append(wd)
 
             s.discovered_configs = [c.model_dump() for c in snap.configs]
-            s.discovered_workers = [w.model_dump() for w in snap.workers]
-            s.active_target_ids = snap.active_target_ids
-            s.gateway_online = snap.gateway_online
+            s.discovered_workers = workers_dump
+            s.active_target_ids = sorted(active_ids)
+            s.gateway_online = snap.gateway_online or bool(active_ids)
             s.gateway_latency_ms = snap.gateway_latency_ms
             s.gateway_last_check = snap.checked_at
 
-            new_fp = json.dumps([s.discovered_configs, s.discovered_workers, s.gateway_online], sort_keys=True)
+            new_fp = json.dumps(
+                [s.discovered_configs, s.discovered_workers, s.gateway_online, s.active_target_ids], sort_keys=True
+            )
             if prev_fp != new_fp:
                 s.mcp_topology_dirty = True
 
             if not silent:
-                found_cnt = sum(1 for c in snap.configs if c.exists)
-                ui.notify(f"🔍 Scanned {found_cnt} active config(s) & {len(snap.workers)} MCP worker(s)", type="info")
+                ui.notify(
+                    f"🔍 Active in Daemon: {len(s.active_target_ids)} / Total Discovered: {len(s.discovered_workers)}",
+                    type="info",
+                )
         except Exception as exc:
             diag.exception("Failed to scan MCP topology and gateway health", exc=exc)
 
@@ -225,16 +254,12 @@ class OobActionBridge:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
 
-
 class GovActionBridge:
     """Binds LocalAccountManager & EdDSA Mandate JWT operations to `state.finops`."""
-
     def __init__(self, oob: OobActionBridge) -> None:
         self._oob = oob
 
     async def refresh_account_status(self, silent: bool = False) -> None:
-        from fiber.dev.console.runtime import run_fiber_cli
-
         f = state.finops
         try:
             res = await console_act.fetch_account_status(f.tenant_id)
@@ -259,11 +284,11 @@ class GovActionBridge:
                 )
         except Exception:
             if not silent:
+                from fiber.phase.bridge.cli import run_fiber_cli
+
                 await run_fiber_cli("account", "--tenant", f.tenant_id, "status")
 
     async def issue_account_jwt(self) -> None:
-        from fiber.dev.console.runtime import run_fiber_cli
-
         f = state.finops
         spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
         try:
@@ -293,6 +318,8 @@ class GovActionBridge:
             )
             ui.notify(f"Mandate Applied: {f.jwt_op} (${f.jwt_usd:.1f}, v{f.policy_ver})", type="positive")
         except Exception:
+            from fiber.phase.bridge.cli import run_fiber_cli
+
             args = ["account", "--tenant", f.tenant_id]
             if spiffe_arg:
                 args.extend(["--spiffe", spiffe_arg])
@@ -300,7 +327,6 @@ class GovActionBridge:
             if f.sync_ledger:
                 args.append("--sync")
             await run_fiber_cli(*args)
-
 
 class PipelineActionBridge:
     """Binds FuelBreaker stream simulation, Guardrail X-Ray, and VCR benchmarks to Console UI."""
@@ -350,7 +376,7 @@ class PipelineActionBridge:
             f.stream_status_text = "⚠️ STREAM ERROR"
             diag.exception("Stream simulation crashed", exc=e)
 
-    async def run_xray(self, prompt: str) -> None:
+    async def run_pipeline_xray(self, prompt: str) -> None:
         s = state.security
         for key in ("cache", "router", "guardrail", "fuel"):
             if c := refs.slot_cards.get(key):
@@ -378,6 +404,8 @@ class PipelineActionBridge:
         s.xray_latencies = [0.11, 0.14, 0.42, 0.08]
         s.xray_chart_dirty = True
         ui.notify("✓ Pipeline passed (0.75ms total overhead)", type="positive")
+
+    run_xray = run_pipeline_xray
 
     async def run_gateway_vcr_suite(self) -> None:
         p = state.pipeline
@@ -416,7 +444,6 @@ class PipelineActionBridge:
         )
         ui.notify(f"VCR Roundtrip Verified ({speedup}x speedup)!", type="positive")
 
-# Singleton Instances & Flat Exports (Backward-Compatible)
 oob = OobActionBridge()
 gov = GovActionBridge(oob)
 pipeline = PipelineActionBridge()

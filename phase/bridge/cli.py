@@ -1,31 +1,16 @@
-# fiber.dev.console.runtime
+# fiber.phase.bridge.cli
+## @lineage: fiber.dev.console.bridge.cli
 from __future__ import annotations
 
 import asyncio
 import json
 import os
-from pathlib import Path
-import shutil
-import socket
-import subprocess
 import sys
-import time
-import webbrowser
 from nicegui import ui
 
-from fiber.dev.console.bridge.action import oob, gov, pipeline
-from fiber.dev.console.bridge.signal import UIKey, UIMetric, UISlot, UISlotStatus
-import fiber.dev.console.bridge.plane as plane
+from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
+import fiber.dev.console.observer.plane as plane
 from fiber.dev.console.state import state, refs
-
-ingest_surface_event = plane.ingest
-redis_pubsub_worker = plane.redis_pubsub_worker
-mcp_gateway_health_worker = oob.mcp_gateway_health_worker
-
-async def sync_initial_node_and_account_state() -> None:
-    await oob.refresh_sign_status(silent=True)
-    await gov.refresh_account_status(silent=True)
-    await oob.scan_mcp_topology_and_health(silent=True)
 
 async def run_fiber_cli(*args: str) -> None:
     refs.push_cli(f"$ fiber {' '.join(args)}")
@@ -56,10 +41,12 @@ async def run_fiber_cli(*args: str) -> None:
     except Exception:
         await _simulate_cli_fallback(args)
 
+
 async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
-    """CLI 성공 후 명령어 도메인에 대응하는 컨트롤러(oob, gov)의 상태 동기화 메서드 호출"""
     if not args:
         return
+
+    from fiber.dev.console.action import oob, gov
 
     domain_cmd = args[0]
     if domain_cmd == "connect":
@@ -83,6 +70,8 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
 
 
 async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
+    from fiber.dev.console.action import oob
+
     f, s = state.finops, state.security
     await asyncio.sleep(0.15)
     cmd = " ".join(args)
@@ -91,11 +80,19 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
         oob.sync_spiffe_and_check_totp(emit_warning=True)
 
     if args and args[0] == "connect":
+        is_copy = len(args) > 1 and args[1] == "copy"
         target_id = None
         if "-t" in args:
             idx = args.index("-t")
             if idx + 1 < len(args):
                 target_id = args[idx + 1]
+
+        if is_copy:
+            await oob.scan_mcp_topology_and_health(silent=False)
+            label = target_id or "all"
+            refs.push_cli(f"  ✓ [Config Sync] Copied to ~/.anchor/mcp.json -> {label}")
+            ui.notify(f"📥 Copied to fiber mcp.json: {label}", type="positive")
+            return
 
         mounted: list[str] = []
         for w in s.discovered_workers:
@@ -170,59 +167,3 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
             **{UIKey.SAVED_TOKENS.value: 180, UIKey.SAVED_USD.value: 0.003},
         )
         ui.notify("Compat Rule Verified via Offline VCR!", type="positive")
-
-
-# ==========================================
-# 100ms RingBuffer Flush & OS Window Helpers
-# ==========================================
-def flush_100ms_ringbuffer() -> None:
-    f, s, p = state.finops, state.security, state.pipeline
-
-    if refs.cli_buffer and refs.cli_log:
-        refs.cli_log.push("\n".join(refs.cli_buffer))
-        refs.cli_buffer.clear()
-
-    if refs.pubsub_buffer and refs.pubsub_log:
-        refs.pubsub_log.push("\n".join(refs.pubsub_buffer))
-        refs.pubsub_buffer.clear()
-
-    if f.chart_dirty and refs.finops_chart:
-        if not f.x_ticks:
-            f.x_ticks.append(time.strftime("%H:%M:%S"))
-            f.y_fuel.append(f.current_fuel)
-            f.y_core.append(f.ledger_balance)
-        refs.finops_chart.options["xAxis"]["data"] = list(f.x_ticks)
-        refs.finops_chart.options["series"][0]["data"] = list(f.y_fuel)
-        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.budget_limit
-        refs.finops_chart.options["series"][1]["data"] = list(f.y_core)
-        refs.finops_chart.update()
-        f.chart_dirty = False
-
-    if s.xray_chart_dirty and refs.xray_chart:
-        refs.xray_chart.options["series"][0]["data"] = list(s.xray_latencies)
-        refs.xray_chart.update()
-        s.xray_chart_dirty = False
-
-    if p.vcr_chart_dirty and refs.vcr_chart:
-        refs.vcr_chart.options["series"][0]["data"][0]["value"] = p.vcr_bench_replay_ms
-        refs.vcr_chart.options["series"][0]["data"][1]["value"] = p.vcr_bench_live_ms
-        refs.vcr_chart.update()
-        p.vcr_chart_dirty = False
-
-
-def open_app_window(url: str) -> None:
-    for path in (
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-    ):
-        try:
-            subprocess.Popen([path, f"--app={url}", "--window-size=1400,900"])
-            return
-        except FileNotFoundError:
-            continue
-    webbrowser.open(url)
-
-
-def is_port_active(port: int) -> bool:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0

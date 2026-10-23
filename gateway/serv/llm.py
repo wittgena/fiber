@@ -10,7 +10,7 @@ from fiber.llm.response import ModelResponse, EmbeddingResponse
 from fiber.llm.pipeline.bootstrap import PipelineBootstrap 
 from fiber.llm.pipeline.interceptor.registry import InterceptorConfigLoader
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
-from fiber.gateway.security import KernelAuthenticator, NodeAuthPayload
+from fiber.gateway.security import NodeAuthenticator, NodeAuthPayload
 from fiber.gateway.contract.router import ContractRouter
 from fiber.infra.vcr.manager import VCRIdentityRule
 
@@ -112,7 +112,7 @@ async def chat_completions(
     req_id = f"llm_chat_{int(time.time() * 1000)}"
     with flow_scope(phase="LLM_ORCHESTRATION", bound="edge.llm", req_id=req_id):
         try:
-            # node_auth = await KernelAuthenticator.authorize_intent(
+            # node_auth = await NodeAuthenticator.authorize_intent(
             #     request=request,
             #     action=BrokerAction.LLM_COMPUTE.value,
             #     model=payload.model,
@@ -212,7 +212,7 @@ async def embeddings(
     )
 
     try:
-        node_auth = await KernelAuthenticator.authorize_intent(
+        node_auth = await NodeAuthenticator.authorize_intent(
             request=request,
             action=BrokerAction.LLM_EMBEDDING.value,
             model=model

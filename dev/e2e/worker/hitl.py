@@ -18,7 +18,7 @@ import redis.exceptions
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
 from fiber.infra.bound.e2e.pipeline import MockPipeline, log
 from fiber.infra.bound.e2e.mcp.server import MockMcpServer
-from fiber.phase.action.connect import resolve_connector_spec
+from fiber.phase.bridge.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder
 

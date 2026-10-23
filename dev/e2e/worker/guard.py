@@ -18,7 +18,7 @@ import redis.exceptions
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
 from fiber.infra.bound.e2e.pipeline import BasePipeline, log
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.action.connect import (
+from fiber.phase.bridge.action.connect import (
     ACTIVE_TARGETS_TUNNEL_KEY,
     ResolvedTarget,
     _specs_from_mapped_entries,
