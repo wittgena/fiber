@@ -18,12 +18,7 @@ import xphi.node.rpc.registry as rpc_registry
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.node.space.bind.resolver import resolve_path
 
-
-class AuditCryptoContext:
-    """
-    - ValidatorService가 NodeSigner 및 local_cipher.key로부터 결정론적으로 유도한 컨텍스트를 그대로 공유
-    - 백그라운드 데몬(fiber daemon) 기동 여부와 무관하게 동일한 표준 SQLite DB를 바라보며, 실행마다 고유한 Scoped SPIFFE ID 레코드만 주입 후 Teardown 시 핀포인트 삭제(Zero Side-Effect)
-    """
+class AuditContext:
     def __init__(
         self,
         spiffe_id: str = "spiffe://self/fiber",

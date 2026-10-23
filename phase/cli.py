@@ -34,6 +34,13 @@ compat_app = typer.Typer(
 app.add_typer(compat_app, name="compat")
 app.add_typer(sign_app, name="sign")
 
+connect_app = typer.Typer(
+    help="Sublimate MCP servers or copy/sync configurations into ~/.anchor/mcp.json",
+    invoke_without_command=True,
+    no_args_is_help=False,
+)
+app.add_typer(connect_app, name="connect")
+
 def _load_env(env_file: Optional[str]):
     if env_file:
         if dotenv:
@@ -136,21 +143,79 @@ def run_e2e(
             log.error(f"[Fiber] E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
 
-
-@app.command("connect")
+@connect_app.callback()
 def run_connector(
-    exec_cmd: Annotated[Optional[str], typer.Option("--exec", "-e", help="Worker preset, shell cmd, bin_root dir, or HTTP(S) URL")] = None,
-    config: Annotated[Optional[Path], typer.Option("--config", "-c", exists=True, help="Path to standard mcp.json file")] = None,
-    target: Annotated[Optional[str], typer.Option("--target", "-t", help="Optional Target ID override (auto-inferred if omitted)")] = None,
-    mode: Annotated[Optional[str], typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex")] = None,
-    preflight: Annotated[Optional[str], typer.Option("--preflight", "-p", help="Regex pattern to trigger Zero-Code HITL YIELD before worker execution")] = None,
+    ctx: typer.Context,
+    exec_cmd: Annotated[
+        Optional[str],
+        typer.Option("--exec", "-e", help="Worker preset ('builtin' or alias), shell cmd, bin_root dir, or HTTP(S) URL"),
+    ] = None,
+    config: Annotated[
+        Optional[Path],
+        typer.Option("--config", "-c", exists=True, help="Path to standard mcp.json file to mount"),
+    ] = None,
+    target: Annotated[
+        Optional[str],
+        typer.Option("--target", "-t", help="Optional Target ID override (auto-inferred if omitted)"),
+    ] = None,
+    mode: Annotated[
+        Optional[str],
+        typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex"),
+    ] = None,
+    preflight: Annotated[
+        Optional[str],
+        typer.Option("--preflight", "-p", help="Regex pattern to trigger Zero-Code HITL YIELD before worker execution"),
+    ] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers"""
+    """[Runtime Launcher] Sublimates local stdio commands, builtin workers, or remote HTTP(S) MCP servers."""
+    if ctx.invoked_subcommand is not None:
+        return
     _load_env(env_file)
     from fiber.phase.action.connect import run_connect
-    run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode, preflight=preflight)
+    run_connect(
+        exec_cmd=exec_cmd,
+        config=config,
+        target=target,
+        mode=mode,
+        preflight=preflight,
+    )
 
+
+@connect_app.command("copy")
+def copy_connector_config(
+    exec_cmd: Annotated[
+        Optional[str],
+        typer.Option("--exec", "-e", help="Worker preset ('builtin' or alias), shell cmd, or HTTP(S) URL to lock into ~/.anchor/mcp.json"),
+    ] = None,
+    config: Annotated[
+        Optional[Path],
+        typer.Option("--config", "-c", exists=True, help="External mcp.json file to copy/merge into ~/.anchor/mcp.json"),
+    ] = None,
+    target: Annotated[
+        Optional[str],
+        typer.Option("--target", "-t", help="Optional Target ID override"),
+    ] = None,
+    mode: Annotated[
+        Optional[str],
+        typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex"),
+    ] = None,
+    preflight: Annotated[
+        Optional[str],
+        typer.Option("--preflight", "-p", help="Regex pattern to lock as FIBER_PREFLIGHT_PATTERN in ~/.anchor/mcp.json"),
+    ] = None,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+):
+    """[Config Provisioner] Copies & locks builtin workers and external MCP configs into ~/.anchor/mcp.json without spawning processes."""
+    _load_env(env_file)
+    from fiber.phase.action.connect import run_connect_copy
+    run_connect_copy(
+        exec_cmd=exec_cmd,
+        config=config,
+        target=target,
+        mode=mode,
+        preflight=preflight,
+    )
 
 @compat_app.command("fixture")
 def manage_compat_fixtures(

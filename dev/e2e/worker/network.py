@@ -1,4 +1,6 @@
 # fiber.dev.e2e.worker.network
+"""standalone E2E test suite for Network Transport (Local HTTP/SSE & Remote Context7 MCP)"""
+
 import os
 import time
 import uuid
@@ -8,7 +10,7 @@ from typing import List, Dict, Any, Optional
 import httpx
 
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.pipeline import MockPipeline, log
 from fiber.infra.bound.e2e.mcp.server import MockMcpServer
 from fiber.phase.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
@@ -18,7 +20,7 @@ from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 
-class MCPNetworkPipeline(BaseBridgePipeline):
+class MCPNetworkPipeline(MockPipeline):
     def __init__(self, config: E2EConfig):
         super().__init__(
             config=config,

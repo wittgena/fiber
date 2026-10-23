@@ -17,7 +17,7 @@ from typing import Optional
 import httpx
 
 from fiber.infra.bound.e2e.config import Phase, E2EConfig
-from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
@@ -61,7 +61,7 @@ LONG_FINOPS_PROMPT = (
     "walkthroughs for every single section without summarizing or skipping any details."
 )
 
-class HybridFinOpsFuelPipeline(BaseBridgePipeline):
+class HybridFinOpsFuelPipeline(MockPipeline):
     def __init__(self, config: E2EConfig, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
         super().__init__(
             config=config, 

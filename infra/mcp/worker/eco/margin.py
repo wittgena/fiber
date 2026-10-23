@@ -1,5 +1,4 @@
 # fiber.infra.mcp.worker.eco.margin
-## @lineage: fiber.dev.worker.eco.margin
 import sys
 import json
 import logging

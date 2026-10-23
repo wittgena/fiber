@@ -8,9 +8,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Tuple
 
 import orjson
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("mcp.mapper.config")
+ANCHOR_ROOT = Path(resolve_path("anchor")).resolve()
 
 
 @dataclass(frozen=True)
@@ -36,8 +38,8 @@ DEFAULT_MCP_MAPPER_RULES: Dict[str, Any] = {
     },
     "agent_profiles": {
         "fiber": {
-            "markers": ["fiber-mcp.json", ".anchor"],
-            "paths": {"*": ["{cwd}/fiber-mcp.json", "{home}/.anchor/mcp.json"]},
+            "markers": ["fiber-mcp.json", "anchor", ".anchor"],
+            "paths": {"*": ["{anchor}/mcp.json", "{cwd}/mcp.json"]},
         },
         "claude-code": {
             "markers": [".mcp.json", ".claude.json"],
@@ -83,6 +85,10 @@ DEFAULT_MCP_MAPPER_RULES: Dict[str, Any] = {
 
 class McpConfigMapper:
     _rules: Optional[Dict[str, Any]] = None
+
+    @classmethod
+    def get_anchor_config_path(cls) -> Path:
+        return ANCHOR_ROOT / "mcp.json"
 
     @classmethod
     def get_rules(cls) -> Dict[str, Any]:
@@ -139,6 +145,7 @@ class McpConfigMapper:
         plat = "darwin" if sys.platform == "darwin" else ("win32" if sys.platform == "win32" else "linux")
         home = Path.home()
         tokens = {
+            "anchor": str(ANCHOR_ROOT),
             "home": str(home),
             "cwd": str(Path.cwd()),
             "appdata": os.environ.get("APPDATA", str(home / "AppData" / "Roaming")),
@@ -188,14 +195,82 @@ class McpConfigMapper:
         ]
 
     @classmethod
-    def scan_and_parse(cls, agent: Optional[str] = None) -> List[MappedMcpEntry]:
+    def scan_and_parse(
+        cls,
+        agent: Optional[str] = None,
+        sync_to_anchor: bool = False,
+    ) -> List[MappedMcpEntry]:
         merged: Dict[str, MappedMcpEntry] = {}
         for ag_name, path in cls.discover_config_files(agent):
             for entry in cls.parse_file(path, agent_hint=ag_name):
                 if entry.target_id not in merged:
                     merged[entry.target_id] = entry
                     log.info(f"[ConfigMapper] Discovered [{entry.target_id}] from {ag_name} ({path})")
-        return list(merged.values())
+
+        results = list(merged.values())
+        if sync_to_anchor and results and agent != "fiber":
+            cls.sync_entries_to_anchor(results)
+        return results
+
+    @classmethod
+    def sync_entries_to_anchor(cls, entries: List[MappedMcpEntry]) -> Optional[Path]:
+        """
+        파싱된 MappedMcpEntry 리스트를 내부 단일 고정 설정(ANCHOR_ROOT/mcp.json)의
+        표준 mcpServers 포맷으로 병합(Upsert)하여 고정합니다.
+        """
+        if not entries:
+            return None
+
+        anchor_path = cls.get_anchor_config_path()
+        anchor_path.parent.mkdir(parents=True, exist_ok=True)
+
+        data: Dict[str, Any] = {"mcpServers": {}}
+        if anchor_path.is_file():
+            try:
+                loaded = orjson.loads(anchor_path.read_bytes())
+                if isinstance(loaded, dict):
+                    data = loaded
+                    if not isinstance(data.get("mcpServers"), dict):
+                        data["mcpServers"] = {}
+            except Exception as e:
+                log.warning(f"[ConfigMapper] Failed to read {anchor_path}, resetting structure: {e}")
+
+        servers = data["mcpServers"]
+        synced_count = 0
+
+        for entry in entries:
+            if cls._is_ignored(entry.target_id, entry.exec_cmd):
+                continue
+
+            existing_spec = servers.get(entry.target_id, {})
+            merged_env: Dict[str, str] = {}
+            if isinstance(existing_spec, dict) and isinstance(existing_spec.get("env"), dict):
+                merged_env.update({str(k): str(v) for k, v in existing_spec["env"].items()})
+            if entry.env:
+                merged_env.update({str(k): str(v) for k, v in entry.env.items()})
+
+            if entry.exec_cmd.startswith(("http://", "https://")):
+                spec_dict: Dict[str, Any] = {"url": entry.exec_cmd}
+            else:
+                try:
+                    parts = shlex.split(entry.exec_cmd)
+                except ValueError:
+                    parts = entry.exec_cmd.split()
+                spec_dict = {
+                    "command": parts[0] if parts else entry.exec_cmd,
+                    "args": parts[1:] if len(parts) > 1 else [],
+                }
+
+            if merged_env:
+                spec_dict["env"] = merged_env
+
+            servers[entry.target_id] = spec_dict
+            synced_count += 1
+
+        if synced_count > 0:
+            anchor_path.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
+            log.info(f"[ConfigMapper] Synced {synced_count} target(s) -> {anchor_path}")
+        return anchor_path
 
     @classmethod
     def _detect_agent_format(cls, path: Path, data: Dict[str, Any]) -> str:

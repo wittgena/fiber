@@ -5,15 +5,15 @@ import asyncio
 from typing import List, Optional
 
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult
-from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.pipeline import MockPipeline, log
 import fiber.infra.mcp.worker.deployer as worker_deployer
 import fiber.infra.mcp.worker.sentinel as worker_sentinel
 
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.dev.e2e.worker.fixture import AuditCryptoContext, MCPGatewayTestClient
+from fiber.infra.bound.e2e.audit.context import AuditContext, MCPGatewayTestClient
 from xphi.state.phase.reactor import PhaseReactor
 
-class AuditSecurityPipeline(BaseBridgePipeline):
+class AuditSecurityPipeline(MockPipeline):
     def __init__(self, config: E2EConfig):
         super().__init__(
             config=config,
@@ -22,7 +22,7 @@ class AuditSecurityPipeline(BaseBridgePipeline):
         )
 
         self.deploy_id = "legacy-01"
-        self.crypto_ctx = AuditCryptoContext(spiffe_id="spiffe://self/fiber")
+        self.crypto_ctx = AuditContext(spiffe_id="spiffe://self/fiber")
         self.gw_client: Optional[MCPGatewayTestClient] = None
 
         # Phase 간 공유 상태

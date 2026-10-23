@@ -1,5 +1,6 @@
 # fiber.gateway.bridge.mcp.slack
 import os
+import uuid
 import json
 import time
 import hmac
@@ -7,7 +8,7 @@ import hashlib
 import asyncio
 import urllib.parse
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Set
 
 import httpx
 
@@ -35,6 +36,8 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         self.app_token = (app_token or os.environ.get("FIBER_SLACK_APP_TOKEN", "")).strip()
         self.default_channel = (default_channel or os.environ.get("FIBER_SLACK_CHANNEL_ID", "")).strip()
         self.node_fp = self.signer.pubkey_hex[:16]
+        self.bridge_id = uuid.uuid4().hex[:8]
+        self._owned_handles: Set[str] = set()
         self.running = False
         self._bg_tasks: List[asyncio.Task] = []
 
@@ -42,7 +45,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
     def is_live_configured(self) -> bool:
         return bool(self.bot_token and self.default_channel)
 
-    # Node Fingerprint 및 인증 모드(require_totp)가 각인된 State Token 발급
+    # Node Fingerprint, Bridge ID 및 인증 모드(require_totp)가 각인된 State Token 발급
     def mint_approval_state_token(
         self,
         handle_id: str,
@@ -51,12 +54,14 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         ttl_sec: int = 300,
         require_totp: bool = True,
     ) -> Dict[str, Any]:
+        self._owned_handles.add(handle_id)
         exp = int(time.time()) + ttl_sec
         envelope = {
             "handle_id": handle_id,
             "target_id": target_id,
             "prompt_id": prompt_id,
             "node_fp": self.node_fp,
+            "bridge_id": self.bridge_id,
             "require_totp": bool(require_totp),
             "exp": exp,
         }
@@ -67,7 +72,25 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
     def is_owned_by_this_node(self, interaction_payload: Dict[str, Any]) -> bool:
         envelope = interaction_payload.get("state_token", {}).get("envelope", {})
         token_fp = envelope.get("node_fp")
-        return (not token_fp) or (token_fp == self.node_fp)
+        if token_fp and token_fp != self.node_fp:
+            return False
+
+        token_bridge_id = envelope.get("bridge_id")
+        if token_bridge_id and token_bridge_id != self.bridge_id:
+            return False
+
+        handle_id = envelope.get("handle_id")
+        if self._owned_handles and handle_id not in self._owned_handles:
+            return False
+
+        return True
+
+    def _is_managed_agent(self, agent_uri: Optional[str]) -> bool:
+        """이 브릿지 인스턴스에 등록된 SPIFFE ID가 요청한 이벤트인지 판별합니다."""
+        managed_spiffes = set(self.identity_map.values())
+        if not managed_spiffes:
+            return True
+        return str(agent_uri or "") in managed_spiffes
 
     def _resolve_wildcard_identity(self, normalized: Dict[str, Any]) -> None:
         """Socket Mode와 HTTP Webhook 모두에서 동일하게 '*' 와일드카드 ID 매핑을 바인딩합니다."""
@@ -353,7 +376,10 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         tunnel = await TunnelFactory.get_default()
         pubsub = tunnel.pubsub()
         await pubsub.subscribe("eco.telemetry.events")
-        log.info(f"[SlackBridge] Listening for MCP_PHASE_YIELD on eco.telemetry.events (Node FP: {self.node_fp})")
+        log.info(
+            f"[SlackBridge] Listening for MCP_PHASE_YIELD on eco.telemetry.events "
+            f"(Node FP: {self.node_fp}, Bridge ID: {self.bridge_id})"
+        )
 
         try:
             async for msg in pubsub.listen():
@@ -363,7 +389,8 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                     try:
                         event_data = json.loads(msg["data"])
                         if event_data.get("event") == "MCP_PHASE_YIELD":
-                            await self.post_yield_notification(event_data)
+                            if self._is_managed_agent(event_data.get("agent")):
+                                await self.post_yield_notification(event_data)
                     except Exception as e:
                         log.error(f"[SlackBridge] Failed to process yield telemetry: {e}")
         except asyncio.CancelledError:

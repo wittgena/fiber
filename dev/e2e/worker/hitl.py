@@ -16,13 +16,13 @@ import httpx
 import redis.exceptions
 
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.pipeline import MockPipeline, log
 from fiber.infra.bound.e2e.mcp.server import MockMcpServer
 from fiber.phase.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder
 
-from fiber.dev.e2e.worker.fixture import AuditCryptoContext
+from fiber.infra.bound.e2e.audit.context import AuditContext
 from fiber.gateway.bridge.mcp.slack import SlackHitlBridge
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
@@ -31,7 +31,7 @@ from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.node.space.tunnel.factory import TunnelFactory
 
 
-class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
+class ThirdPartyPreflightHitlPipeline(MockPipeline):
     def __init__(self, config: E2EConfig):
         super().__init__(
             config=config,
@@ -61,7 +61,7 @@ class ThirdPartyPreflightHitlPipeline(BaseBridgePipeline):
         (self.sandbox_path / "prod_secrets.env").write_text("SUPER_SECRET_KEY=12345", encoding="utf-8")
 
         # 3. HITL 서명 및 TOTP 검증 컨텍스트
-        self.crypto_ctx = AuditCryptoContext(spiffe_id="spiffe://self/fiber")
+        self.crypto_ctx = AuditContext(spiffe_id="spiffe://self/fiber")
         self.slack_bridge: Optional[SlackHitlBridge] = None
         self.slack_admin_id = os.environ.get("FIBER_SLACK_USER_ID", "U_SLACK_ADMIN_99")
         self.dpop_client = DPoPClientGenerator(key_size=2048)

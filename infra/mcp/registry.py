@@ -1,5 +1,4 @@
 # fiber.infra.mcp.registry
-## @lineage: fiber.gateway.mcp.registry
 import os
 import re
 import orjson
