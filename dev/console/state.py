@@ -43,6 +43,7 @@ _PERSIST_SCHEMA: Dict[str, Tuple[str, ...]] = {
         "vcr_mode",
         "vcr_scenario",
         "vcr_speed",
+        "compat_model",
         "compat_json",
         "vcr_bench_live_ms",
         "vcr_bench_replay_ms",
@@ -172,6 +173,7 @@ class PipelineState:
     vcr_mode: str = "record"
     vcr_scenario: str = "console_suite"
     vcr_speed: str = "max"
+    compat_model: str = "gemini/gemini-3.1-flash-lite"
     compat_json: str = (
         '{\n  "extraction_rules": {\n    "llama_server": {\n'
         '      "text": ["choices.0.delta.content", "choices.0.message.content"]\n'

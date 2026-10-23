@@ -1,16 +1,17 @@
-# fiber.dev.console.ui.tab.core
+# fiber.dev.console.tab.core
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from nicegui import ui
 
 from fiber.dev.console.state import state, refs
 from fiber.phase.bridge.cli import run_fiber_cli
-from fiber.dev.console.action import oob, gov, pipeline
+from fiber.dev.console.action import gov, pipeline
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
-from fiber.dev.console.ui.tab.mcp import HitlModal, QrModal, McpGatewayTab
+from fiber.dev.console.tab.demo import DemoTab
+from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
+from fiber.dev.console.tab.vcr import VcrTab
 from xphi.node.space.bind.resolver import resolve_path
 
 
@@ -21,10 +22,6 @@ def _resolve_accounts_registry_path() -> Path:
     except Exception:
         return resolve_path("anchor") / "sign" / "local_accounts.json"
 
-
-def _resolve_compat_rules_path() -> Path:
-    env_path = os.environ.get("FIBER_COMPAT_RULES_PATH", "").strip()
-    return Path(env_path) if env_path else (resolve_path("anchor") / "compat_rules.json")
 
 # Tab 2: Live LLM Pipeline X-Ray (`state.security`)
 class LLMLiveTab(StudioTab):
@@ -243,60 +240,6 @@ class FinOpsTab(StudioTab):
         refs.live_stream_log = kit.log(max_lines=60, color="text-emerald-300")
 
 
-# ==========================================
-# Tab 4: Deterministic VCR & HTTP Gateway Suite (`state.pipeline`)
-# ==========================================
-class VcrTab(StudioTab):
-    title = "VCR & Compat"
-    left_header = "🧬 Config VCR & Compat Ruleset"
-    right_header = "⏱️ Live Speed Benchmark"
-    ratio = 46
-
-    def compose_left(self) -> None:
-        p = state.pipeline
-        with kit.row():
-            kit.select(["live", "record", "replay", "auto"], "Per-Request VCR Mode", p, "vcr_mode")
-            kit.select(["max", "real"], "Replay Speed", p, "vcr_speed", width="w-28")
-            kit.text("Scenario Name", p, "vcr_scenario")
-
-        with kit.row(align="items-center justify-between"):
-            ui.label("Declarative Provider Ruleset (FIBER_COMPAT_RULES_PATH):").classes(
-                "text-xs text-slate-400 shrink-0"
-            )
-            kit.file_link(
-                _resolve_compat_rules_path,
-                label="compat_rules.json",
-                tooltip="Open FIBER_COMPAT_RULES_PATH in external editor",
-                default_content=p.compat_json,
-                create_if_missing=True,
-            )
-
-        kit.editor(p, "compat_json")
-
-    def compose_right(self) -> None:
-        p = state.pipeline
-        with kit.row():
-            kit.button("▶ Run 3-Step Gateway VCR Suite", pipeline.run_gateway_vcr_suite, color="emerald", flex=True)
-            kit.button(
-                "🧬 Verify Compat Fixture",
-                lambda: run_fiber_cli("compat", "fixture", "--vcr", "replay"),
-                color="cyan",
-                outline=True,
-            )
-
-        ui.label("Live LLM Network I/O vs. Deterministic VCR Replay Latency (ms):").classes(
-            "text-xs text-slate-400 mt-1 shrink-0"
-        )
-        refs.vcr_chart = kit.bar_chart(
-            categories=["VCR Replay", "Live LLM"],
-            data=[
-                {"value": p.vcr_bench_replay_ms, "itemStyle": {"color": "#10b981"}},
-                {"value": p.vcr_bench_live_ms, "itemStyle": {"color": "#f59e0b"}},
-            ],
-            formatter="{c} ms",
-        )
-
-
 # Tab 5: Model Pricing & Fuel Exchange Matrix
 class ModelRatesTab(StudioTab):
     title = "Model Pricing"
@@ -410,7 +353,7 @@ class ModelRatesTab(StudioTab):
 
 
 def build_tabs() -> list[StudioTab]:
-    return [LLMLiveTab(), McpGatewayTab(), FinOpsTab(), VcrTab(), ModelRatesTab()]
+    return [LLMLiveTab(), McpGatewayTab(), FinOpsTab(), VcrTab(), ModelRatesTab(), DemoTab()]
 
 
 def build_modals() -> list[ModalTemplate]:

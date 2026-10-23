@@ -23,7 +23,7 @@ import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ConsoleTemplate, StudioTab
-import fiber.dev.console.ui.tab.core as tab
+import fiber.dev.console.tab.core as tab
 
 _tick_counter: int = 0
 _bg_tasks: list[asyncio.Task] = []

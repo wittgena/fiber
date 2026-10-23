@@ -1,4 +1,4 @@
-# fiber.dev.console.ui.tab.mcp
+# fiber.dev.console.tab.mcp
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,8 +1,20 @@
 # README
 
-Fiber is an asynchronous execution control plane and runtime harness designed to secure, govern, and scale autonomous AI agents. It protects host systems from severe vulnerabilities (such as OOM and API billing runaways) while providing a deterministic runtime environment that unifies heterogeneous LLM integrations and enables zero-cost offline replay.
+The zero-point that aligns Fiber’s core with its surface rests on four self-imposed questions:
 
-This document provides a practical guide on how to integrate and deploy Fiber:
+* *Can you onboard a new LLM's async streams and tool calls onto your existing codebase using only external JSON rules—without touching a line of Python or redeploying packages?*  
+  It eliminates brittle `if/elif` parsers and repeated production redeployments every time a provider shifts its parameters or streaming chunk schema.
+
+* *While hundreds of LLM streams are pouring in, can you physically sever a single stream mid-flight (`HTTP 402`) within 1ms at the exact token chunk its budget runs out?*  
+  Post-request billing is too late to stop runaway agent loops or streaming bursts from draining API budgets and triggering OOM crashes in real time.
+
+* *Can you coalesce thousands of raw SSE micro-chunks into 10ms or 100ms time-windows on record, and replay them chunk-for-chunk at either 0ms (`max`) or exact historical pacing (`real`)?*  
+  It replaces bloated packet dumps and flaky live API calls with a single deterministic fixture—covering instant CI assertions, real-time latency tests, and mid-stream kill-switch cutoffs.
+
+* *Without touching third-party MCP server code, can you freeze high-risk tool calls for Slack approval before the OS process even spawns (`Zero-Spawn`)—and guarantee single execution across ten agent retries?*  
+  It stops untrusted tools from blindly spawning local processes and prevents timeout-induced agent retries from corrupting or wiping out production state.
+
+---
 
 Operating as a drop-in asynchronous pipeline with real-time FinOps circuit breakers and mid-stream kill-switches (**1.1**), Fiber captures network traffic into content-addressed fixtures for zero-cost deterministic I/O replay and latency emulation (**1.2**), while autonomously normalizing heterogeneous LLM schemas on the fly (**1.3**)—achieving execution determinism and strict cost governance without altering your business logic.
 
