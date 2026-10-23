@@ -1,4 +1,4 @@
-# fiber.phase.abc.spec.mcp.hitl
+# fiber.phase.abc.spec.mcp.guard
 @desc: MCP Pre-Flight HITL & Out-of-Band (Slack/TOTP) Configuration Guide
 
 This guide details how to lock native and 3rd-party MCP servers behind Fiber's cryptographic Human-in-the-Loop (HITL) gate, provision administrator TOTP credentials, and configure real-time Out-of-Band (OOB) approvals via Slack Socket Mode or HTTP Webhooks.
@@ -219,14 +219,10 @@ Once the operator approves the prompt in Slack, the connector executes the stash
 Fiber includes two comprehensive E2E suites to validate OOB security defenses and 3rd-party Pre-Flight HITL lifecycles. Both suites automatically detect whether `FIBER_SLACK_BOT_TOKEN` and `FIBER_SLACK_APP_TOKEN` are present in the environment—running interactively against **Live Slack Socket Mode** when configured, or falling back to **Local Webhook Emulation** in offline CI/CD environments.
 
 ```bash
-# 1. Verify Webhook HMAC Spoofing Defense, Stale Replay Blocking, Handle Hijacking Defense,
-#    and Native Worker (worker.deployer) OOB Resumption
-$ python -m fiber.dev.e2e.worker.oob
-
-# 2. Verify 3rd-Party Pre-Flight HITL across both architectures & attestation modes:
+# Verify 3rd-Party Pre-Flight HITL across both architectures & attestation modes:
 #    - Phase 1: Spec Resolver & Dual Guard Arming (TOTP + 1-Click Button)
 #    - Phase 2: Safe Call Passthrough (Zero-Overhead 200 OK)
 #    - Phase 3: [Network/Multiplex + 6-Digit TOTP] Remote Context7 Trap & Shared Stream Resume
 #    - Phase 4: [Stdio/Ephemeral + 1-Click Button] npx Filesystem Zero-Spawn Trap & Lazy Spawn Resume
-$ python -m fiber.dev.e2e.worker.hitl
+$ python -m fiber.dev.e2e.worker.guard
 ```

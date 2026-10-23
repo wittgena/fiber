@@ -1,5 +1,4 @@
 # fiber.phase.action.console
-## @lineage: fiber.phase.action.conosle
 from __future__ import annotations
 
 import asyncio

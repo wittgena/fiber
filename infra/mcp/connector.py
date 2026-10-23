@@ -35,7 +35,7 @@ class MCPServerConnector:
         execution_target: str,
         mode: str = "ephemeral",
         transport_type: str = "stdio",
-        preflight_pattern: Optional[str] = None
+        preflight_pattern: Optional[str] = None,
     ):
         self.target_id = target_id
         self.execution_target = execution_target.strip()
@@ -55,8 +55,6 @@ class MCPServerConnector:
 
         self.tunnel = None
         self.rpc = InternalRpcClient()
-        
-        # [확장] IntentLifecycleFSM에 preflight_pattern을 주입하여 서드파티 워커 대리 검증 기능 활성화
         self.fsm = IntentLifecycleFSM(self.target_id, self.rpc, preflight_pattern=preflight_pattern)
         self.listen_channel = f"mcp.intent.queue.{self.target_id}"
         self.running = False
@@ -89,7 +87,7 @@ class MCPServerConnector:
                 rpc_payload = {
                     "id": handle_id,
                     "action": "RESUME",
-                    "payload": dict(payload),  # 내부의 {"id": "prompt_txn_...", "result": ...} 보존
+                    "payload": dict(payload),
                 }
             else:
                 rpc_payload = dict(payload)
@@ -198,7 +196,6 @@ class MCPServerConnector:
                     continue
 
                 if self._is_elicitation(response):
-                    # [정렬] multiplex/linear 큐 모드에서 prompt_ 접두사를 제거하여 원본 트랜잭션 handle_id를 복원합니다.
                     canonical_id = str(req_id).removeprefix("prompt_")
                     log.warning(f"[Connector] TRAP: Elicitation (YIELD) detected for {canonical_id}")
                     if self.mode == "linear":
@@ -227,77 +224,106 @@ class MCPServerConnector:
         feedback_payload = await self._delegate_to_core(rpc_req)
         await self.shared_transport.send_payload(feedback_payload)
 
+    # =========================================================================
+    # Intent Routing & Mode-Unified Execution / Resume Handlers
+    # =========================================================================
     async def process_intent(self, intent_data: Dict[str, Any]):
         handle_id = intent_data.get("handle_id")
-        action = intent_data.get("action", "EXECUTE")
-        payload = intent_data.get("payload", {})
-
         if not handle_id:
             return
 
+        action = intent_data.get("action", "EXECUTE")
+        payload = intent_data.get("payload", {})
+
         try:
             if action == "EXECUTE":
-                is_preflight_trapped = await self.fsm.check_preflight_trap(handle_id, payload)
-                if is_preflight_trapped:
-                    return
-
-                if await self.fsm.transition(handle_id, IntentState.EXECUTING):
-                    if self.mode == "ephemeral":
-                        await self._execute_ephemeral(handle_id, payload)
-                    elif self.mode == "linear":
-                        await self._execute_shared(handle_id, payload, use_lock=True)
-                    elif self.mode == "multiplex":
-                        await self._execute_shared(handle_id, payload, use_lock=False)
-
+                await self._handle_execute(handle_id, payload)
             elif action == "RESUME":
-                if self.mode == "linear":
-                    log.warning(f"RESUME not supported in Linear Mode. Ignoring {handle_id}.")
-                    return
-
-                verified_payload = await self.fsm.verify_preflight_resume(handle_id, payload)
-                target_payload = verified_payload if verified_payload else payload
-                if await self.fsm.transition(handle_id, IntentState.RESUMING):
-                    is_resume_flag = False if verified_payload else True
-
-                    if self.mode == "multiplex":
-                        log.info(f"[Connector] Multiplexing RESUME to Shared Transport: {handle_id}")
-                        await self._execute_shared(handle_id, target_payload, use_lock=False, is_resume=is_resume_flag)
-                    elif self.mode == "ephemeral":
-                        transport = self.active_sandboxes.get(handle_id)
-                        if not transport:
-                            if verified_payload:
-                                await self._execute_ephemeral(handle_id, target_payload)
-                                return
-                            log.error(f"Cannot RESUME {handle_id}: Sandbox not found.")
-                            await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail="Sandbox not found for RESUME")
-                            return
-                        log.info(f"[Connector] Resuming Parked Intent: {handle_id}")
-                        await self._cycle_io(handle_id, target_payload, transport, is_resume=is_resume_flag)
-
+                await self._handle_resume(handle_id, payload)
             elif action in ("RESUME_OR_KILL", "FORCE_ROLLBACK"):
-                if await self.fsm.transition(handle_id, IntentState.ROLLED_BACK, error_detail="SYSTEM_SENTINEL_TIMEOUT: Request aborted."):
-                    self._clear_pending_future(handle_id)
-                    if self.mode == "ephemeral":
-                        log.warning(f"[Connector] Sentinel enforced ROLLBACK on {handle_id}. Terminating parked sandbox.")
-                        await self._destroy_sandbox(handle_id)
-                    self.fsm.cleanup(handle_id)
+                await self._handle_rollback(handle_id)
 
         except Exception as e:
-            if not self.running:
-                log.debug(f"[Connector] Intent {handle_id} aborted cleanly due to graceful shutdown (Expected EOF).")
-                return
+            await self._handle_intent_crash(handle_id, e)
 
-            if self.fsm.get_state(handle_id) == IntentState.ROLLED_BACK:
-                log.debug(f"[Connector] Suppressed expected EOF for rolled-back intent: {handle_id}")
-                return
+    async def _dispatch_fresh_execution(self, handle_id: str, payload: Dict[str, Any]):
+        """최초 EXECUTE 및 Pre-Flight 승인 후 방출된 원본 페이로드를 현재 모드에 맞춰 실행합니다."""
+        if self.mode == "ephemeral":
+            await self._execute_ephemeral(handle_id, payload)
+        elif self.mode == "linear":
+            await self._execute_shared(handle_id, payload, use_lock=True, is_resume=False)
+        elif self.mode == "multiplex":
+            await self._execute_shared(handle_id, payload, use_lock=False, is_resume=False)
 
-            log.error(f"[Connector] Lifecycle Crash for {handle_id}: {e}", exc_info=True)
-            await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail=str(e))
+    async def _handle_execute(self, handle_id: str, payload: Dict[str, Any]):
+        if await self.fsm.check_preflight_trap(handle_id, payload):
+            return
+        if await self.fsm.transition(handle_id, IntentState.EXECUTING):
+            await self._dispatch_fresh_execution(handle_id, payload)
+
+    async def _handle_resume(self, handle_id: str, payload: Dict[str, Any]):
+        # 1. Pre-Flight Guard에 의해 파킹된 요청인지 먼저 검증 및 원본 추출
+        verified_preflight_payload = await self.fsm.verify_preflight_resume(handle_id, payload)
+
+        # Case A: Pre-Flight Release (워커는 아직 실행된 적 없으므로 모든 모드에서 신규 실행과 동일하게 디스패치)
+        if verified_preflight_payload is not None:
+            if await self.fsm.transition(handle_id, IntentState.RESUMING):
+                log.info(f"[Connector] Releasing Pre-Flight approved intent ({self.mode.upper()}): {handle_id}")
+                await self._dispatch_fresh_execution(handle_id, verified_preflight_payload)
+            return
+
+        # Case B: Native Worker Resume (워커 내부에서 직접 elicitation YIELD를 발생시킨 경우)
+        await self._resume_parked_worker(handle_id, payload)
+
+    async def _resume_parked_worker(self, handle_id: str, resume_payload: Dict[str, Any]):
+        if self.mode == "linear":
+            log.warning(f"Native worker RESUME not supported in Linear Mode. Ignoring {handle_id}.")
+            return
+
+        if not await self.fsm.transition(handle_id, IntentState.RESUMING):
+            return
+
+        if self.mode == "multiplex":
+            log.info(f"[Connector] Multiplexing native RESUME to Shared Transport: {handle_id}")
+            await self._execute_shared(handle_id, resume_payload, use_lock=False, is_resume=True)
+        elif self.mode == "ephemeral":
+            transport = self.active_sandboxes.get(handle_id)
+            if not transport:
+                log.error(f"Cannot RESUME {handle_id}: Parked sandbox not found.")
+                await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail="Sandbox not found for RESUME")
+                return
+            log.info(f"[Connector] Resuming Parked Ephemeral Intent: {handle_id}")
+            await self._cycle_io(handle_id, resume_payload, transport, is_resume=True)
+
+    async def _handle_rollback(self, handle_id: str):
+        if await self.fsm.transition(
+            handle_id, IntentState.ROLLED_BACK, error_detail="SYSTEM_SENTINEL_TIMEOUT: Request aborted."
+        ):
             self._clear_pending_future(handle_id)
             if self.mode == "ephemeral":
+                log.warning(f"[Connector] Sentinel enforced ROLLBACK on {handle_id}. Terminating parked sandbox.")
                 await self._destroy_sandbox(handle_id)
             self.fsm.cleanup(handle_id)
 
+    async def _handle_intent_crash(self, handle_id: str, exc: Exception):
+        if not self.running:
+            log.debug(f"[Connector] Intent {handle_id} aborted cleanly due to graceful shutdown (Expected EOF).")
+            return
+
+        if self.fsm.get_state(handle_id) == IntentState.ROLLED_BACK:
+            log.debug(f"[Connector] Suppressed expected EOF for rolled-back intent: {handle_id}")
+            return
+
+        log.error(f"[Connector] Lifecycle Crash for {handle_id}: {exc}", exc_info=True)
+        await self.fsm.transition(handle_id, IntentState.FAULTED, error_detail=str(exc))
+        self._clear_pending_future(handle_id)
+        if self.mode == "ephemeral":
+            await self._destroy_sandbox(handle_id)
+        self.fsm.cleanup(handle_id)
+
+    # =========================================================================
+    # Low-Level Transport Execution Primitives
+    # =========================================================================
     async def _execute_shared(
         self, handle_id: str, payload: Dict[str, Any], use_lock: bool, is_resume: bool = False
     ):
@@ -390,7 +416,7 @@ def main():
     parser.add_argument("--mode", default=None, choices=["ephemeral", "linear", "multiplex"])
     parser.add_argument("--transport", default=None, choices=["stdio", "network"])
     parser.add_argument("--preflight", default=None, help="Regex pattern to trigger YIELD before worker execution")
-    
+
     args = parser.parse_args()
 
     exec_target = args.exec.strip()
@@ -406,7 +432,7 @@ def main():
         execution_target=exec_target,
         mode=resolved_mode,
         transport_type=resolved_transport,
-        preflight_pattern=args.preflight
+        preflight_pattern=args.preflight,
     )
 
     try:
@@ -414,6 +440,7 @@ def main():
     except KeyboardInterrupt:
         log.info("[Connector] Exiting gracefully...")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

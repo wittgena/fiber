@@ -1,5 +1,4 @@
 # fiber.phase.abc.spec.lifecycle
-@lineage: phase.abc.spec.lifecycle
 @desc: Fiber Execution Lifecycle Specification
 
 This specification defines the end-to-end execution lifecycle, state transitions, and cryptographic invariants across the Fiber LLM Pipeline and MCP Gateway control plane.
@@ -150,12 +149,9 @@ Before a `RESUME` intent is published to `mcp.intent.queue.{target_id}`, `OutOfB
 ## 5. Verification Suites
 
 ```bash
-# 1. 200-VU Concurrency & VCR Replay Pipeline Verification
+# 200-VU Concurrency & VCR Replay Pipeline Verification
 $ fiber e2e inter.concurrency --vcr replay --concurrency 200
 
-# 2. Native Worker Out-of-Band Security & Slack TOTP Suite
-$ python -m fiber.dev.e2e.worker.oob
-
-# 3. 3rd-Party Pre-Flight HITL Suite (Network/Multiplex TOTP + Stdio/Ephemeral 1-Click Button)
-$ python -m fiber.dev.e2e.worker.hitl
+# 3rd-Party Pre-Flight HITL Suite (Network/Multiplex TOTP + Stdio/Ephemeral 1-Click Button)
+$ python -m fiber.dev.e2e.worker.guard
 ```

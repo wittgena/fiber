@@ -14,8 +14,10 @@ import fiber.phase.action.console as console_act
 from fiber.dev.console.state import state, refs
 import fiber.dev.console.ui.diag as diag
 
+
 class OobActionBridge:
     """Binds Node Identity (`fiber sign`), TOTP Vault, Slack HITL 202, and MCP Topology to `state.security`."""
+
     @staticmethod
     def normalize_spiffe(raw_spiffe: str) -> str:
         raw = raw_spiffe.strip()
@@ -159,13 +161,15 @@ class OobActionBridge:
             ui.notify(f"Slack OOB Error: {e}", type="warning")
 
     async def open_hitl_modal(self, tool: str, args: dict) -> None:
+        """
+        콘솔 UI의 HITL 모달 및 상태 로그만 갱신합니다.
+        (실제 Slack OOB 메시지 발송은 serv.gateway 및 소유권을 가진 SlackHitlBridge에 위임하여 이중 발송 차단)
+        """
         if refs.hitl_code:
             refs.hitl_code.set_content(json.dumps({"tool": tool, "args": args, "state": "HTTP 202 Parked"}, indent=2))
         if refs.hitl_dialog:
             refs.hitl_dialog.open()
         refs.push_pubsub("mcp:hitl", f"⏸ [HTTP 202] Sandbox suspended for '{tool}'")
-        target, _, t_name = tool.partition(".")
-        await self.dispatch_slack_oob(target or "mcp", t_name or tool, args)
 
     async def approve_hitl(self) -> None:
         s = state.security
@@ -220,6 +224,7 @@ class OobActionBridge:
         while True:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
+
 
 class GovActionBridge:
     """Binds LocalAccountManager & EdDSA Mandate JWT operations to `state.finops`."""
@@ -295,6 +300,7 @@ class GovActionBridge:
             if f.sync_ledger:
                 args.append("--sync")
             await run_fiber_cli(*args)
+
 
 class PipelineActionBridge:
     """Binds FuelBreaker stream simulation, Guardrail X-Ray, and VCR benchmarks to Console UI."""

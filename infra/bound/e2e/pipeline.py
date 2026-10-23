@@ -9,16 +9,15 @@ from typing import Any, List, Dict, Optional, Callable
 import uvicorn
 
 from fiber.gateway.payload import create_app, Config
-
-from xphi.arch.bound.client.rpc import InternalRpcClient
 from fiber.infra.bound.e2e.config import (
-    PipelineRunner, 
-    ManagedTestServer, 
-    TestResult, 
-    E2EConfig
+    PipelineRunner,
+    ManagedTestServer,
+    TestResult,
+    E2EConfig,
 )
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
+from xphi.state.anchor.store import PhaseStore, AnchorRole
 import xphi.node.rpc.registry as rpc_registry
 import xphi.node.ops.daemon.rpc as daemon_module
 from xphi.node.ops.daemon.rpc import RpcWorkerDaemon
@@ -95,44 +94,38 @@ class MockPhaseStore:
         self.yield_timestamps.pop(handle_id, None)
 
 
-class BaseBridgePipeline(PipelineRunner):
+# =========================================================================
+# 1. MockPipeline: 인메모리 MockPhaseStore 및 RPC 몽키패치 기반 격리 파이프라인
+# =========================================================================
+class MockPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig, name: str, scope_name: str):
         super().__init__(name=name, scope_name=scope_name)
         self.config = config
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
-        
+
         self.mock_store = MockPhaseStore()
         self.rpc: Optional[InternalRpcClient] = None
-        
-        # 라이프사이클 컨테이너
+
         self.connectors = []
         self._connector_tasks = []
         self.server = None
         self._server_task = None
         self.worker_daemon = None
         self._worker_task = None
-        
-        # 몽키패치 복원용 레퍼런스 (Zero Side-Effect 보장)
+
         self._original_rpc_call: Optional[Callable] = None
         self._original_registry_builder: Optional[Callable] = None
-
-        # 상태 추적
         self.captured_handle_ids: Dict[str, str] = {}
 
-    # Template Methods
     async def setup_custom_context(self):
-        """보안 컨텍스트 설정 등 자식 클래스에서 필요한 초기화 로직"""
-        pass
-        
-    async def setup_workers(self):
-        """자식 클래스에서 필요한 WorkerConnector 인스턴스를 초기화하고 self.connectors에 등록"""
-        pass
-        
-    async def teardown_custom(self):
-        """자식 클래스 전용 티어다운 로직 (예: Sentinel 종료)"""
         pass
 
-    # Infra Setup
+    async def setup_workers(self):
+        pass
+
+    async def teardown_custom(self):
+        pass
+
     async def _setup_rpc_bus(self):
         self.rpc = InternalRpcClient()
         tunnel = await TunnelFactory.get_default()
@@ -140,16 +133,16 @@ class BaseBridgePipeline(PipelineRunner):
         async def mock_mcp_state_query(params: dict, ctx: Any = None):
             handle_id = params.get("handle_id")
             state = await self.mock_store.query_state(handle_id)
-            if not state: 
+            if not state:
                 return {"exists": False}
-            
+
             meta = getattr(state, "metadata", {})
             return {
-                "exists": True, 
+                "exists": True,
                 "status": meta.get("status"),
                 "error_detail": meta.get("error_detail", ""),
                 "executable_payload": getattr(state, "payload", {}),
-                "action": getattr(state, "action", meta.get("action", ""))
+                "action": getattr(state, "action", meta.get("action", "")),
             }
 
         async def mock_mcp_state_pending_seal(params: dict, ctx: Any = None):
@@ -176,22 +169,16 @@ class BaseBridgePipeline(PipelineRunner):
             else:
                 self.mock_store.set_faulted(handle_id, error_detail)
 
-            # 브릿지로 결과 브로드캐스트
-            await tunnel.publish(f"mcp.intent.reply.{handle_id}", json.dumps({
-                "status": status,
-                "executable_payload": payload,
-                "error_detail": error_detail
-            }))
-            
+            await tunnel.publish(
+                f"mcp.intent.reply.{handle_id}",
+                json.dumps({
+                    "status": status,
+                    "executable_payload": payload,
+                    "error_detail": error_detail,
+                }),
+            )
             return {"success": True, "status": status}
 
-        # [핵심 아키텍처 정렬: Hybrid Split-Routing]
-        # 1. E2E 테스트 전용 임시 트랜잭션 상태(mcp.state.*, mcp.bridge.resolve_state)는
-        #    백그라운드에 부트된 실제 노드의 영구 원장(Anchor Ledger)을 오염시키거나
-        #    외부 노드에 가로채여 Split-Brain(Current status: None)을 유발하지 않도록 MockPhaseStore로 직결합니다.
-        # 2. 반면 validate.attest, fuel.receipt.validate, compute.margin.calculate 등
-        #    실제 보안/과금/비즈니스 RPC는 100% Redis Bus(internal.rpc.queue)를 그대로 통과하여
-        #    실제 부트된 노드(또는 로컬 워커)의 실전 파이프라인을 검증합니다.
         ephemeral_state_handlers = {
             "mcp.state.query": mock_mcp_state_query,
             "mcp.state.pending.seal": mock_mcp_state_pending_seal,
@@ -211,12 +198,12 @@ class BaseBridgePipeline(PipelineRunner):
 
         self._original_registry_builder = rpc_registry.build_internal_rpc_registry
         orig_builder_ref = self._original_registry_builder
-        
+
         def bridge_mock_registry_builder(*args, **kwargs):
             registry = orig_builder_ref(*args, **kwargs)
             registry.update(ephemeral_state_handlers)
             return registry
-            
+
         rpc_registry.build_internal_rpc_registry = bridge_mock_registry_builder
         daemon_module.build_internal_rpc_registry = bridge_mock_registry_builder
 
@@ -225,44 +212,43 @@ class BaseBridgePipeline(PipelineRunner):
             store = None
 
         self.worker_daemon = RpcWorkerDaemon(ctx=MockDaemonCtx())
-        self.worker_daemon.running = True  
+        self.worker_daemon.running = True
         self._worker_task = asyncio.create_task(self.worker_daemon.run())
-        
-        log.info("[BasePipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).")
+
+        log.info("[MockPipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).")
 
     async def _setup_rest_edge(self):
         tunnel = await TunnelFactory.get_default()
         rest_app = create_app(
             config=Config(wasm_timeout=5.0),
-            tunnel=tunnel,            
-            phase_store=self.mock_store   
+            tunnel=tunnel,
+            phase_store=self.mock_store,
         )
         u_config = uvicorn.Config(
-            app=rest_app, host="127.0.0.1", port=self.config.port, 
-            log_level="error", access_log=False
+            app=rest_app,
+            host="127.0.0.1",
+            port=self.config.port,
+            log_level="error",
+            access_log=False,
         )
         self.server = ManagedTestServer(u_config)
         self._server_task = asyncio.create_task(self.server.serve())
-        log.info("[BasePipeline] REST Edge Bootstrapped.")
+        log.info("[MockPipeline] REST Edge Bootstrapped.")
 
-    # Standard Execution Flow
     async def run_pipeline(self) -> List[TestResult]:
         log.info(f"\n=== Starting Suite: {self.name} ===")
-        
-        # 인프라 부트스트랩
+
         await self.setup_custom_context()
         await self._setup_rpc_bus()
         await self._setup_rest_edge()
         await self.setup_workers()
         await asyncio.sleep(1.0)
 
-        # 커넥터(워커) 기동
         log.info(f"[BasePipeline] Igniting {len(self.connectors)} Connectors...")
         for conn in self.connectors:
             self._connector_tasks.append(asyncio.create_task(conn.run()))
         await asyncio.sleep(2.0)
 
-        # 페이즈 실행
         results = []
         try:
             for idx, phase in enumerate(self.phases, 1):
@@ -280,8 +266,8 @@ class BaseBridgePipeline(PipelineRunner):
         return results
 
     async def _teardown_all(self):
-        log.info(f"\n[BasePipeline] Teardown sequence initiated...")
-        
+        log.info("\n[BasePipeline] Teardown sequence initiated...")
+
         await self.teardown_custom()
         for conn in self.connectors:
             conn.running = False
@@ -291,14 +277,12 @@ class BaseBridgePipeline(PipelineRunner):
         if self._connector_tasks:
             await asyncio.gather(*self._connector_tasks, return_exceptions=True)
 
-        # background daemon stop
         if self.worker_daemon:
             self.worker_daemon.running = False
         if self._worker_task and not self._worker_task.done():
             self._worker_task.cancel()
             await asyncio.gather(self._worker_task, return_exceptions=True)
 
-        # server down
         if self.server:
             self.server.should_exit = True
         if self._server_task:
@@ -312,5 +296,157 @@ class BaseBridgePipeline(PipelineRunner):
             rpc_registry.build_internal_rpc_registry = self._original_registry_builder
             daemon_module.build_internal_rpc_registry = self._original_registry_builder
             self._original_registry_builder = None
-            
-        log.info(f"[BasePipeline] Teardown complete.")
+
+        log.info("[BasePipeline] Teardown complete.")
+
+
+# =========================================================================
+# 2. BasePipeline (BaseBridgePipeline): 실제 PhaseStore 및 Live Node 연동 파이프라인
+# =========================================================================
+class BasePipeline(PipelineRunner):
+    """
+    몽키패치 없이 실제 PhaseStore와 Redis RPC Bus(internal.rpc.queue)를 사용하는 실전 파이프라인.
+    - 외부 노드(node.ops.boot)가 이미 떠서 원장 Lock(PROPOSER 모드)과 RPC 큐를 처리 중이면
+      자체 RpcWorkerDaemon을 중복 기동하지 않아 Split-Brain 및 큐 가로채기를 원천 방지합니다.
+    - 외부 노드가 없는 단독 실행 환경에서는 자체 PhaseStore(SEALER)와 RpcWorkerDaemon을 기동합니다.
+    """
+
+    def __init__(self, config: E2EConfig, name: str, scope_name: str):
+        super().__init__(name=name, scope_name=scope_name)
+        self.config = config
+        self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
+
+        self.phase_store: Optional[PhaseStore] = None
+        self.rpc: Optional[InternalRpcClient] = None
+        self.external_node_active: bool = False
+
+        self.connectors = []
+        self._connector_tasks = []
+        self.server = None
+        self._server_task = None
+        self.worker_daemon: Optional[RpcWorkerDaemon] = None
+        self._worker_task: Optional[asyncio.Task] = None
+
+        self.captured_handle_ids: Dict[str, str] = {}
+
+    async def setup_custom_context(self):
+        pass
+
+    async def setup_workers(self):
+        pass
+
+    async def teardown_custom(self):
+        pass
+
+    async def _is_live_node_running(self) -> bool:
+        """원장 Role(PROPOSER 여부) 또는 Tunnel의 활성 데몬 키로 외부 마스터 노드 생존 여부 판별"""
+        if self.phase_store and getattr(self.phase_store, "role", None) == AnchorRole.PROPOSER:
+            return True
+        try:
+            tunnel = await TunnelFactory.get_default()
+            raw = await tunnel.get("mcp:registry:active_targets")
+            if raw:
+                return True
+        except Exception:
+            pass
+        return False
+
+    async def _setup_rpc_bus(self):
+        self.rpc = InternalRpcClient()
+        self.phase_store = PhaseStore()
+        self.external_node_active = await self._is_live_node_running()
+
+        if self.external_node_active:
+            log.info(
+                "[BasePipeline] 🔗 Live Master Node detected (Operating as PROPOSER). "
+                "Delegating RPC & Real PhaseStore transitions directly to live node."
+            )
+        else:
+            class RealDaemonCtx:
+                broker = None
+                store = self.phase_store
+
+            self.worker_daemon = RpcWorkerDaemon(ctx=RealDaemonCtx())
+            self.worker_daemon.running = True
+            self._worker_task = asyncio.create_task(self.worker_daemon.run())
+            log.info("[BasePipeline] Standalone Mode: Real PhaseStore (SEALER) & local RpcWorkerDaemon ignited.")
+
+    async def _setup_rest_edge(self):
+        tunnel = await TunnelFactory.get_default()
+        rest_app = create_app(
+            config=Config(wasm_timeout=5.0),
+            tunnel=tunnel,
+            phase_store=self.phase_store,
+        )
+        u_config = uvicorn.Config(
+            app=rest_app,
+            host="127.0.0.1",
+            port=self.config.port,
+            log_level="error",
+            access_log=False,
+        )
+        self.server = ManagedTestServer(u_config)
+        self._server_task = asyncio.create_task(self.server.serve())
+        log.info("[BasePipeline] REST Edge Bootstrapped with Real PhaseStore.")
+
+    async def run_pipeline(self) -> List[TestResult]:
+        log.info(f"\n=== Starting Suite: {self.name} ===")
+
+        await self.setup_custom_context()
+        await self._setup_rpc_bus()
+        await self._setup_rest_edge()
+        await self.setup_workers()
+        await asyncio.sleep(1.0)
+
+        log.info(f"[BasePipeline] Igniting {len(self.connectors)} Connectors...")
+        for conn in self.connectors:
+            self._connector_tasks.append(asyncio.create_task(conn.run()))
+        if self.connectors:
+            await asyncio.sleep(2.0)
+
+        results = []
+        try:
+            for idx, phase in enumerate(self.phases, 1):
+                log.info(f"\n[PHASE {idx}/{len(self.phases)}] {phase.name}")
+                try:
+                    await phase.action()
+                    results.append(TestResult(self.scope_name, phase.name, True, True))
+                    log.info("  └─ Status: PASSED")
+                except Exception as e:
+                    log.error(f"  └─ Halted: {str(e)} X", exc_info=True)
+                    results.append(TestResult(self.scope_name, phase.name, False, True))
+        finally:
+            await self._teardown_all()
+
+        return results
+
+    async def _teardown_all(self):
+        log.info("\n[BasePipeline] Teardown sequence initiated...")
+
+        await self.teardown_custom()
+        for conn in self.connectors:
+            conn.running = False
+        for task in self._connector_tasks:
+            if not task.done():
+                task.cancel()
+        if self._connector_tasks:
+            await asyncio.gather(*self._connector_tasks, return_exceptions=True)
+
+        if self.worker_daemon:
+            self.worker_daemon.running = False
+        if self._worker_task and not self._worker_task.done():
+            self._worker_task.cancel()
+            await asyncio.gather(self._worker_task, return_exceptions=True)
+
+        if self.server:
+            self.server.should_exit = True
+        if self._server_task:
+            await asyncio.gather(self._server_task, return_exceptions=True)
+
+        if self.phase_store and not self.external_node_active:
+            try:
+                self.phase_store.close()
+            except Exception:
+                pass
+
+        log.info("[BasePipeline] Teardown complete.")

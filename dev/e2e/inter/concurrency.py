@@ -16,7 +16,7 @@ os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 from fiber.infra.bound.e2e.config import Phase, E2EConfig, get_free_port
-from fiber.infra.bound.e2e.pipeline import BaseBridgePipeline, log
+from fiber.infra.bound.e2e.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
@@ -49,7 +49,7 @@ STREAM_PROMPT = (
     "under high concurrency."
 )
 
-class PipelineConcurrencySuite(BaseBridgePipeline):
+class PipelineConcurrencySuite(MockPipeline):
     def __init__(
         self,
         config: E2EConfig,

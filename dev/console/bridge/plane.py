@@ -272,8 +272,15 @@ class StudioPlaneObserver(EventObserver):
         ingest(event)
 
 
-default_plane.attach(StudioPlaneObserver())
+_studio_observer: StudioPlaneObserver | None = None
 
+
+def mount_studio_plane() -> None:
+    """콘솔(Studio UI) 시작 시에만 명시적으로 호출하여 default_plane에 옵저버를 연결합니다."""
+    global _studio_observer
+    if _studio_observer is None:
+        _studio_observer = StudioPlaneObserver()
+        default_plane.attach(_studio_observer)
 
 async def check_redis_health() -> bool:
     p = state.pipeline
@@ -295,8 +302,8 @@ async def check_redis_health() -> bool:
                 pass
     return p.redis_online
 
-
 async def redis_pubsub_worker() -> None:
+    mount_studio_plane()
     p = state.pipeline
     while True:
         if not await check_redis_health():
@@ -307,7 +314,7 @@ async def redis_pubsub_worker() -> None:
         try:
             client = redis.from_url(p.redis_url, decode_responses=True)
             pubsub = client.pubsub()
-            await pubsub.psubscribe("log:*", "finops:*", "mcp:*", "sign:*", "vcr:*", "kernel:*")
+            await pubsub.psubscribe("log:*", "finops:*", "mcp:*", "sign:*", "vcr:*", "node:*")
             refs.push_pubsub("plane:bus", "Subscribed to TunnelSurface ('log:*') & Control Channels")
             async for msg in pubsub.listen():
                 if msg.get("type") != "pmessage":

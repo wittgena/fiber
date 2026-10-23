@@ -1,18 +1,20 @@
 # fiber.infra.daemon.mcp
-## @lineage: fiber.gateway.daemon.mcp
 import os
 import asyncio
 from contextlib import suppress
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import orjson
 
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
 from fiber.phase.action.connect import (
+    DEFAULT_WORKER_PACKAGE,
     ResolvedTarget,
     discover_builtin_workers,
     resolve_connector_spec,
+    _specs_from_mapped_entries,
+    _sync_to_anchor_config,
 )
 from xphi.arch.contract.registry.unified import contract
 from xphi.node.ops.daemon.base import AbstractDaemon
@@ -29,19 +31,32 @@ class McpWorkerDaemon(AbstractDaemon):
     def __init__(self, ctx):
         super().__init__("McpWorkerDaemon")
         self.ctx = ctx
-        self.base_package = os.getenv("MCP_WORKER_PACKAGE", "fiber.dev.worker")
+        self.base_package = os.getenv("MCP_WORKER_PACKAGE", DEFAULT_WORKER_PACKAGE)
         self.connectors: Dict[str, MCPServerConnector] = {}
         self._connector_tasks: Dict[str, asyncio.Task] = {}
         self._target_specs: Dict[str, ResolvedTarget] = {}
+        self._last_anchor_mtime: float = 0.0
 
-    def _collect_target_specs(self) -> List[ResolvedTarget]:
-        self._target_specs.clear()
+    def _get_anchor_mtime(self) -> float:
+        anchor_path = McpConfigMapper.get_anchor_config_path()
+        if anchor_path.is_file():
+            with suppress(OSError):
+                return anchor_path.stat().st_mtime
+        return 0.0
+
+    def _build_desired_specs(self) -> Dict[str, ResolvedTarget]:
+        """
+        내장 워커(builtin)와 내부 고정 설정(agent='fiber' -> anchor/mcp.json)을 결합하여
+        단일 진실 공급원(SSOT) 타겟 스펙 딕셔너리를 구성합니다.
+        """
+        desired: Dict[str, ResolvedTarget] = {}
+        log.info(f"[{self.name}] 🔍 Scanning builtin workers in package: '{self.base_package}'...")
         builtin_map = discover_builtin_workers(self.base_package)
 
-        # 1. 내장 워커 수집: 중복 실행 방지를 위해 대표 별칭(Canonical ID) 기준 1차 추출
+        # 1. 내장 워커 기본 스펙 수집
         seen_cmds = set()
+        builtin_ids = []
         for key, val in builtin_map.items():
-            # 3-튜플(canonical_id, cmd, default_mode) 및 레거시 2-튜플(cmd, default_mode) 모두 호환
             if len(val) == 3:
                 tid, cmd, default_mode = val
             else:
@@ -50,32 +65,126 @@ class McpWorkerDaemon(AbstractDaemon):
 
             if cmd not in seen_cmds:
                 seen_cmds.add(cmd)
-                self._target_specs[tid] = ResolvedTarget(
-                    target_id=tid,
-                    exec_cmd=cmd,
-                    mode=default_mode,
-                    transport="stdio",
-                )
+                try:
+                    spec = resolve_connector_spec(
+                        target=tid,
+                        exec_cmd=cmd,
+                        mode=default_mode,
+                        transport="stdio",
+                    )
+                    desired[spec.target_id] = spec
+                    builtin_ids.append(spec.target_id)
+                except BaseException as e:
+                    log.error(f"[{self.name}] Failed to resolve builtin worker '{tid}': {e}")
 
-        # 2. 외부 에이전트 MCP 설정 자동 스캔 및 통합
-        for entry in McpConfigMapper.scan_and_parse():
-            if entry.target_id in self._target_specs:
-                continue
-            if entry.env:
-                os.environ.update(entry.env)
-            try:
-                spec = resolve_connector_spec(
-                    target=entry.target_id,
-                    exec_cmd=entry.exec_cmd,
-                )
-                self._target_specs[spec.target_id] = spec
-            except BaseException as e:
-                log.error(f"[{self.name}] Failed to resolve mapped target '{entry.target_id}': {e}")
+        log.info(
+            f"[{self.name}] 📦 Discovered {len(builtin_ids)} builtin worker(s): {builtin_ids}"
+        )
 
+        # 2. 고정 설정(anchor/mcp.json) 확인 및 최초 부트스트랩 처리
+        anchor_path = McpConfigMapper.get_anchor_config_path()
+        needs_initial_bootstrap = not anchor_path.is_file()
+
+        if needs_initial_bootstrap:
+            log.info(
+                f"[{self.name}] Anchor config not found at {anchor_path}. Running initial external scan..."
+            )
+            anchor_entries = McpConfigMapper.scan_and_parse(sync_to_anchor=False)
+        else:
+            log.info(f"[{self.name}] 📖 Loading canonical MCP config from: {anchor_path}")
+            anchor_entries = McpConfigMapper.scan_and_parse(agent="fiber")
+
+        env_lookup: Dict[str, Dict[str, str]] = {
+            e.target_id: dict(e.env) for e in anchor_entries if e.env
+        }
+
+        # 3. anchor/mcp.json 스펙 반영 (Override 및 외부 워커 추가)
+        try:
+            mapped_specs = _specs_from_mapped_entries(anchor_entries)
+            overridden_ids = []
+            added_ids = []
+            for spec in mapped_specs:
+                if spec.target_id in desired:
+                    overridden_ids.append(spec.target_id)
+                else:
+                    added_ids.append(spec.target_id)
+                desired[spec.target_id] = spec
+
+            if overridden_ids or added_ids:
+                log.info(
+                    f"[{self.name}] 🔗 Applied anchor config -> "
+                    f"Overridden builtins: {overridden_ids}, External added: {added_ids}"
+                )
+        except BaseException as e:
+            log.error(f"[{self.name}] Failed to resolve anchor config entries: {e}")
+
+        # 4. 최초 부팅 시 anchor/mcp.json 파일 생성 보장
+        if needs_initial_bootstrap and desired:
+            with suppress(Exception):
+                _sync_to_anchor_config(list(desired.values()), env_lookup=env_lookup)
+
+        self._last_anchor_mtime = self._get_anchor_mtime()
+        return desired
+
+    def _collect_target_specs(self) -> List[ResolvedTarget]:
+        self._target_specs = self._build_desired_specs()
         return list(self._target_specs.values())
 
+    def _log_boot_roster(self, specs: List[ResolvedTarget]):
+        """부팅될 전체 MCP 워커 목록과 설정 상태를 한눈에 볼 수 있도록 테이블 형태로 출력"""
+        lines = [
+            f"\n{'=' * 95}",
+            f"🚀 [{self.name}] MCP WORKER BOOT ROSTER (Total: {len(specs)} Target(s))",
+            f"{'-' * 95}",
+            f"{'No.':<4} | {'Target ID':<24} | {'Mode':<10} | {'Transport':<9} | {'Pre-Flight Guard':<20} | {'Command / URL'}",
+            f"{'-' * 95}",
+        ]
+        for idx, s in enumerate(specs, 1):
+            guard_str = f"/{s.preflight}/i" if s.preflight else "None"
+            lines.append(
+                f"{idx:02d}.  | {s.target_id:<24} | {s.mode.upper():<10} | "
+                f"{s.transport.upper():<9} | {guard_str:<20} | {s.exec_cmd}"
+            )
+        lines.append(f"{'=' * 95}")
+        log.info("\n".join(lines))
+
+    @staticmethod
+    def _extract_connector_pid(connector: MCPServerConnector) -> Optional[int]:
+        """커넥터 내부의 shared_transport 또는 active_sandboxes에서 실제 OS PID 추출"""
+        for attr in ("shared_transport", "transport", "_transport"):
+            tr = getattr(connector, attr, None)
+            if tr is not None:
+                proc = getattr(tr, "process", None) or getattr(tr, "_process", None)
+                if proc is not None and getattr(proc, "pid", None):
+                    return proc.pid
+                if getattr(tr, "pid", None):
+                    return tr.pid
+        return None
+
+    async def _verify_booted_processes(self):
+        """커넥터 태스크 기동 직후 실제 서브프로세스(PID) 부팅 여부를 점검하여 로그 출력"""
+        await asyncio.sleep(0.8)
+        status_lines = []
+        for tid, conn in self.connectors.items():
+            task = self._connector_tasks.get(tid)
+            is_alive = task is not None and not task.done()
+            pid = self._extract_connector_pid(conn)
+
+            if pid:
+                status_lines.append(f"{tid} (PID: {pid}, Status: RUNNING)")
+            elif conn.mode == "ephemeral":
+                status_lines.append(f"{tid} (Lazy/Zero-Spawn Standby, Status: READY)")
+            elif conn.transport_type == "network":
+                status_lines.append(f"{tid} (Network Multiplex, Status: {'READY' if is_alive else 'DEAD'})")
+            else:
+                status_lines.append(f"{tid} (Task Alive: {is_alive})")
+
+        log.info(
+            f"[{self.name}] ✅ Worker Process Verification ({len(status_lines)} active): "
+            + " | ".join(status_lines)
+        )
+
     async def _sync_active_targets(self, active_ids: List[str]):
-        # 초기/폴백 참조를 위한 컨텍스트 상태 바인딩
         if self.ctx is not None:
             with suppress(Exception):
                 if isinstance(self.ctx, dict):
@@ -83,19 +192,25 @@ class McpWorkerDaemon(AbstractDaemon):
                 else:
                     setattr(self.ctx, "mcp_active_targets", active_ids)
 
-        # 게이트웨이 간접 조회를 위한 Tunnel 레지스트리 동기화
         try:
             tunnel = await TunnelFactory.get_default()
-            await tunnel.set(ACTIVE_TARGETS_TUNNEL_KEY, orjson.dumps(active_ids).decode("utf-8"))
+            payload = orjson.dumps(active_ids).decode("utf-8")
+            await tunnel.set(ACTIVE_TARGETS_TUNNEL_KEY, payload)
+            log.info(
+                f"[{self.name}] 📡 Synced {len(active_ids)} active target(s) to Tunnel "
+                f"[{ACTIVE_TARGETS_TUNNEL_KEY}]: {active_ids}"
+            )
         except Exception as e:
             log.warning(f"[{self.name}] Failed to sync active targets to tunnel: {e}")
 
     def _spawn_connector_task(self, spec: ResolvedTarget):
+        guard_badge = f", Pre-Flight: /{spec.preflight}/i" if spec.preflight else ""
         connector = MCPServerConnector(
             target_id=spec.target_id,
             execution_target=spec.exec_cmd,
             mode=spec.mode,
             transport_type=spec.transport,
+            preflight_pattern=spec.preflight,
         )
         self.connectors[spec.target_id] = connector
         task = asyncio.create_task(
@@ -105,42 +220,89 @@ class McpWorkerDaemon(AbstractDaemon):
         self._connector_tasks[spec.target_id] = task
         log.info(
             f"[{self.name}] 🔌 Mounted [{spec.target_id}] -> {spec.exec_cmd} "
-            f"(Mode: {spec.mode.upper()}, Transport: {spec.transport.upper()})"
+            f"(Mode: {spec.mode.upper()}, Transport: {spec.transport.upper()}{guard_badge})"
         )
+
+    async def _stop_single_connector(self, target_id: str):
+        connector = self.connectors.pop(target_id, None)
+        if connector:
+            connector.running = False
+
+        task = self._connector_tasks.pop(target_id, None)
+        if task and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                await asyncio.wait_for(task, timeout=3.0)
+
+    async def _reconcile_anchor_config(self):
+        current_mtime = self._get_anchor_mtime()
+        if current_mtime <= self._last_anchor_mtime:
+            return
+
+        log.info(f"[{self.name}] 🔄 Detected update in anchor mcp.json. Reconciling MCP workers...")
+        desired_specs = self._build_desired_specs()
+        changed = False
+
+        for tid in list(self._target_specs.keys()):
+            if tid not in desired_specs:
+                log.info(f"[{self.name}] ⏏️ Unmounting removed target [{tid}]...")
+                await self._stop_single_connector(tid)
+                self._target_specs.pop(tid, None)
+                changed = True
+
+        for tid, spec in desired_specs.items():
+            existing = self._target_specs.get(tid)
+            if existing != spec:
+                if existing is not None:
+                    log.info(f"[{self.name}] ♻️ Hot-reloading updated target [{tid}]...")
+                    await self._stop_single_connector(tid)
+                self._target_specs[tid] = spec
+                self._spawn_connector_task(spec)
+                changed = True
+
+        if changed:
+            await self._sync_active_targets(list(self._target_specs.keys()))
+            await self._verify_booted_processes()
 
     async def run(self):
         log.info(f"[{self.name}] Starting Autonomous MCP Worker Supervisor Daemon...")
         try:
             specs = self._collect_target_specs()
             if not specs:
-                log.warning(f"[{self.name}] No MCP workers discovered or configured.")
+                log.warning(f"[{self.name}] ⚠️ No MCP workers discovered or configured.")
                 await self._sync_active_targets([])
             else:
+                self._log_boot_roster(specs)
                 log.info(f"[{self.name}] Igniting {len(specs)} resolved MCP worker connector(s)...")
                 for spec in specs:
                     self._spawn_connector_task(spec)
                 await self._sync_active_targets(list(self._target_specs.keys()))
+                await self._verify_booted_processes()
 
-            # 데몬 메인 감시 루프: 비정상 종료된 커넥터 감지 및 자동 재기동(Self-Healing)
             while self.running:
+                await self._reconcile_anchor_config()
+
                 for target_id, task in list(self._connector_tasks.items()):
                     if task.done():
                         with suppress(asyncio.CancelledError):
                             exc = task.exception()
                             if exc:
                                 log.error(
-                                    f"[{self.name}] Connector [{target_id}] fractured with error: {exc}. "
+                                    f"[{self.name}] 💥 Connector [{target_id}] fractured with error: {exc}. "
                                     f"Respawning in 2s...",
                                     exc_info=exc,
                                 )
                             else:
-                                log.warning(f"[{self.name}] Connector [{target_id}] exited unexpectedly. Respawning...")
+                                log.warning(
+                                    f"[{self.name}] ⚠️ Connector [{target_id}] exited unexpectedly. Respawning..."
+                                )
 
                         if self.running:
                             await asyncio.sleep(2.0)
                             spec = self._target_specs.get(target_id)
                             if spec:
                                 self._spawn_connector_task(spec)
+                                await self._verify_booted_processes()
 
                 await asyncio.sleep(1.0)
 
@@ -152,7 +314,10 @@ class McpWorkerDaemon(AbstractDaemon):
             await self._teardown()
 
     async def _teardown(self):
-        log.info(f"[{self.name}] Releasing {len(self._connector_tasks)} MCP Worker Connector(s)...")
+        log.info(
+            f"[{self.name}] 🛑 Releasing {len(self._connector_tasks)} MCP Worker Connector(s): "
+            f"{list(self._connector_tasks.keys())}"
+        )
         shutdown_timeout = float(os.getenv("SHUTDOWN_TIMEOUT", 10.0))
 
         await self._sync_active_targets([])

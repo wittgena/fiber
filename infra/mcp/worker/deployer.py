@@ -1,5 +1,4 @@
 # fiber.infra.mcp.worker.deployer
-## @lineage: fiber.dev.worker.deployer
 import os
 import sys
 import json

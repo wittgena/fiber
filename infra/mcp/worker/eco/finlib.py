@@ -1,5 +1,4 @@
 # fiber.infra.mcp.worker.eco.finlib
-## @lineage: fiber.dev.worker.eco.finlib
 import sys
 import json
 import logging

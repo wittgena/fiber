@@ -1,5 +1,4 @@
 # fiber.infra.mcp.worker.search.archive
-## @lineage: fiber.dev.worker.search.archive
 import os
 import sys
 import json
