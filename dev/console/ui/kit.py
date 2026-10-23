@@ -217,13 +217,11 @@ def editor(target: Any, attr: str, *, lang: str = "json") -> ui.codemirror:
         .classes("w-full flex-1 min-h-0 text-xs border border-slate-800")
     )
 
-
 def log(max_lines: int = 100, *, color: str = "text-slate-200", height: str = "flex-1 min-h-0") -> ui.log:
     """Log viewer with isolated scroll containment inside flex containers."""
     return ui.log(max_lines=max_lines).classes(
         f"w-full {height} bg-black border border-slate-800 p-2 font-mono text-xs {color}"
     )
-
 
 def bar_chart(
     categories: list[str],
@@ -276,7 +274,7 @@ def line_chart(
     return ui.echart({
         "tooltip": {"trigger": "axis"},
         "legend": {
-            "data": ["Active Quota (FinOps)", "Core Balance (PTA)"],
+            "data": ["Active Quota (FinOps)", "Ledger Balance (PTA)"],
             "textStyle": {"color": "#94a3b8", "fontSize": 10},
             "top": 0,
         },
@@ -304,7 +302,7 @@ def line_chart(
                 },
             },
             {
-                "name": "Core Balance (PTA)",
+                "name": "Ledger Balance (PTA)",
                 "type": "line",
                 "data": y_secondary,
                 "step": "end",
@@ -377,7 +375,6 @@ def split_studio(
                 right_builder()
     return sp
 
-
 @contextmanager
 def dual_drawer() -> Iterator[tuple[ui.column, ui.column]]:
     """Bottom dual-terminal drawer layout for CLI and Event Bus logs."""
@@ -385,7 +382,6 @@ def dual_drawer() -> Iterator[tuple[ui.column, ui.column]]:
         left_col = ui.column().classes("w-1/2 bg-black border border-slate-800 rounded p-2.5 gap-1")
         right_col = ui.column().classes("w-1/2 bg-black border border-slate-800 rounded p-2.5 gap-1")
         yield left_col, right_col
-
 
 # ==========================================
 # 5. Lifecycle & Structural Templates
@@ -457,6 +453,37 @@ class ConsoleTemplate:
         self.on_tick = on_tick
         self.tick_interval = tick_interval
 
+    # def build_view(self) -> None:
+    #     """Construct the DOM tree and start the 100ms UI flush timer."""
+    #     ui.dark_mode().enable()
+    #     ui.query("body").classes("bg-slate-950 text-slate-100 select-none overflow-hidden")
+    #     ui.query(".nicegui-content").classes("p-0 gap-0 h-screen w-screen overflow-hidden flex flex-col no-wrap")
+
+    #     for modal in self.modals:
+    #         modal.mount()
+
+    #     if self.header_builder:
+    #         self.header_builder()
+
+    #     if self.tabs:
+    #         with ui.tabs().classes("w-full bg-slate-900 border-b border-slate-800 shrink-0") as tab_bar:
+    #             tab_handles = [ui.tab(t.title) for t in self.tabs]
+
+    #         with (
+    #             ui.tab_panels(tab_bar, value=tab_handles[0], on_change=lambda _: trigger_viewport_resize())
+    #             .props("keep-alive animated=false")
+    #             .classes("w-full bg-slate-950 p-3 shrink-0")
+    #         ):
+    #             for tab_obj, handle in zip(self.tabs, tab_handles):
+    #                 with ui.tab_panel(handle).classes("p-0"):
+    #                     tab_obj.render()
+
+    #     if self.drawer_builder:
+    #         self.drawer_builder()
+
+    #     if self.on_tick:
+    #         ui.timer(self.tick_interval, lambda: self.on_tick(self.tabs))
+    # 2) kit.py 내 ConsoleTemplate.build_view() 원복
     def build_view(self) -> None:
         """Construct the DOM tree and start the 100ms UI flush timer."""
         ui.dark_mode().enable()

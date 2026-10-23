@@ -51,11 +51,9 @@ def _estimate_saved_metrics(usage_data: Optional[Dict[str, Any]], chunk_count: i
     saved_usd = round(tokens * 0.000015, 5)
     return tokens, saved_usd
 
-
 class VCRRawPayloadState(DynamicSurgeModel):
     sync_response: Optional[Any] = None
     stream_chunks: List[Any] = []
-
 
 def _reconstruct_vcr_exception(exc_data: dict, provider: str, model: str) -> Exception:
     error_type = exc_data.get("error_type", "Exception")

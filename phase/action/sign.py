@@ -1,4 +1,4 @@
-# fiber.phase.cli.sign
+# fiber.phase.action.sign
 """
 @desc: Local Node Keychain & Admin TOTP Attestation CLI
 - Provisions Zero-Env foundational keys (~/.ssh/fiber_ed25519 & local_cipher.key) as the node's Root of Trust.

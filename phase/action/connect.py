@@ -1,4 +1,4 @@
-# fiber.phase.cli.connect
+# fiber.phase.action.connect
 import os
 import sys
 import ast

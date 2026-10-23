@@ -1,4 +1,4 @@
-# fiber.phase.cli.account
+# fiber.phase.action.account
 """
 @desc: LocalAccount CLI Utility
 - Provides terminal interface for FinOps & Quota management.
@@ -47,14 +47,14 @@ async def run_lifecycle_demo(tenant_id: str, spiffe_id: Optional[str] = None):
         res_prov = await manager.sync_quota(cmd_prov)
         print(f"\n2. After PROVISION ($50.0, v1):")
         print(f"   JWT (prefix): {res_prov['jwt'][:40]}...")
-        print(f"   Core Balance: {res_prov['status']['core_state']['balance']} Fuel")
+        print(f"   Core Balance: {res_prov['status']['core_state']['ledger_balance']} Fuel")
         print(f"   Active Quota: {res_prov['status']['finops_watcher']['active_quota']} Fuel")
 
         # 3. Top-up quota via JWT (TOP_UP: +$20 -> 70,000 Fuel, v2)
         cmd_topup = SyncQuotaCommand(budget_usd=20.0, op="TOP_UP", policy_ver=2, sync_ledger=True)
         res_topup = await manager.sync_quota(cmd_topup)
         print(f"\n3. After TOP_UP (+$20.0, v2):")
-        print(f"   Core Balance: {res_topup['status']['core_state']['balance']} Fuel")
+        print(f"   Core Balance: {res_topup['status']['core_state']['ledger_balance']} Fuel")
         print(f"   Active Quota: {res_topup['status']['finops_watcher']['active_quota']} Fuel")
         print(f"   Policy Ver  : {res_topup['status']['finops_watcher']['policy_version']}")
 
@@ -71,7 +71,7 @@ async def run_lifecycle_demo(tenant_id: str, spiffe_id: Optional[str] = None):
         print(f"\n5. After REVOKE (v3):")
         # REVOKE는 PubSub 이벤트이므로 Compute Ticket 발급과 무관함을 표현
         print(f"   Auth Ticket Issued? : False (Expected: False)") 
-        print(f"   Core Balance        : {res_rev_status['core_state']['balance']} Fuel (Expected: 0)")
+        print(f"   Core Balance        : {res_rev_status['core_state']['ledger_balance']} Fuel (Expected: 0)")
         print(f"   Active Quota        : {res_rev_status['finops_watcher']['active_quota']} Fuel (Expected: 0.0)\n")
 
 

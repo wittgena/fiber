@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from pathlib import Path
+import shutil
 import socket
 import subprocess
 import sys
@@ -20,16 +22,11 @@ ingest_surface_event = plane.ingest
 redis_pubsub_worker = plane.redis_pubsub_worker
 mcp_gateway_health_worker = oob.mcp_gateway_health_worker
 
-
 async def sync_initial_node_and_account_state() -> None:
     await oob.refresh_sign_status(silent=True)
     await gov.refresh_account_status(silent=True)
     await oob.scan_mcp_topology_and_health(silent=True)
 
-
-# ==========================================
-# CLI Subprocess Runner & State Sync
-# ==========================================
 async def run_fiber_cli(*args: str) -> None:
     refs.push_cli(f"$ fiber {' '.join(args)}")
     output_lines: list[str] = []
@@ -39,7 +36,7 @@ async def run_fiber_cli(*args: str) -> None:
         proc = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "fiber.cli",
+            "fiber.phase.cli",
             *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
@@ -58,7 +55,6 @@ async def run_fiber_cli(*args: str) -> None:
             await _sync_after_cli_success("\n".join(output_lines), args)
     except Exception:
         await _simulate_cli_fallback(args)
-
 
 async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
     """CLI 성공 후 명령어 도메인에 대응하는 컨트롤러(oob, gov)의 상태 동기화 메서드 호출"""
@@ -124,14 +120,14 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
             else (f.current_fuel + added if f.jwt_op == "TOP_UP" else 0)
         )
         core = (
-            (added if f.jwt_op in ("PROVISION", "SYNC_QUOTA") else f.core_balance + added)
+            (added if f.jwt_op in ("PROVISION", "SYNC_QUOTA") else f.ledger_balance + added)
             if f.sync_ledger
-            else f.core_balance
+            else f.ledger_balance
         )
         if f.jwt_op == "REVOKE":
             fuel = core = 0
         f.last_op = f.jwt_op
-        refs.push_cli(f"  ✓ [EdDSA JWT] op={f.jwt_op} ver={f.policy_ver} -> Quota={fuel:,} Fuel")
+        refs.push_cli(f"  ✓ [EdDSA JWT] op={f.jwt_op} ver={f.policy_ver} -> Remaining={fuel:,} Fuel")
         plane.emit_ledger(
             "bound.account.manager", f"EVENT={f.jwt_op} fuel={fuel} v={f.policy_ver}", fuel, core, f.policy_ver
         )
@@ -142,7 +138,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
             (50000, 50000, 1, "PROVISION", "2. PROVISION ($50.0, v1) -> 50,000 Fuel"),
             (70000, 70000, 2, "TOP_UP", "3. TOP_UP (+$20.0, v2) -> 70,000 Fuel"),
             (70000, 70000, 2, "REJECT_STALE", "4. Stale v1 Token Replay -> REJECTED (False)"),
-            (0, 0, 3, "REVOKE", "5. REVOKE (v3) -> Balance & Quota zeroed"),
+            (0, 0, 3, "REVOKE", "5. REVOKE (v3) -> Balance & Remaining Fuel zeroed"),
         ]:
             await asyncio.sleep(0.35)
             f.last_op = op
@@ -153,7 +149,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
         ui.notify("5-Step Account Lifecycle Demo Complete", type="info")
 
     elif "kill" in cmd:
-        f.core_balance, f.policy_ver, f.last_op = 0, 99, "KILL_SWITCH"
+        f.ledger_balance, f.policy_ver, f.last_op = 0, 99, "KILL_SWITCH"
         refs.push_cli("  🚨 [Kill-Switch] Broadcasted REVOKE (policy_ver=99)")
         plane.emit(
             "channel.fuel",
@@ -194,7 +190,7 @@ def flush_100ms_ringbuffer() -> None:
         if not f.x_ticks:
             f.x_ticks.append(time.strftime("%H:%M:%S"))
             f.y_fuel.append(f.current_fuel)
-            f.y_core.append(f.core_balance)
+            f.y_core.append(f.ledger_balance)
         refs.finops_chart.options["xAxis"]["data"] = list(f.x_ticks)
         refs.finops_chart.options["series"][0]["data"] = list(f.y_fuel)
         refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.budget_limit

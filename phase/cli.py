@@ -1,4 +1,4 @@
-# fiber.phase.cli.main
+# fiber.phase.cli
 import os
 import sys
 import asyncio
@@ -17,9 +17,9 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
-from fiber.phase.cli.sign import app as sign_app
+from fiber.phase.action.sign import app as sign_app
 
-log = get_emitter("phase.cli.main")
+log = get_emitter("phase.cli")
 
 app = typer.Typer(
     help="Fiber: The Universal Integration Boundary & OS Kernel",
@@ -92,7 +92,7 @@ def run_account(
 ):
     """Manages local/tenant FinOps accounts, EdDSA JWT quotas, fuel allocate, and live Kill-Switches."""
     _load_env(env_file)
-    from fiber.phase.cli.account import main as account_main
+    from fiber.phase.action.account import main as account_main
     try:
         account_main(ctx.args)
     except KeyboardInterrupt:
@@ -148,7 +148,7 @@ def run_connector(
 ):
     """Sublimates local stdio commands, managed JVM binaries, or local/remote HTTP(S) MCP servers"""
     _load_env(env_file)
-    from fiber.phase.cli.connect import run_connect
+    from fiber.phase.action.connect import run_connect
     run_connect(exec_cmd=exec_cmd, config=config, target=target, mode=mode, preflight=preflight)
 
 
@@ -167,7 +167,7 @@ def manage_compat_fixtures(
     _load_env(env_file)
     mode = vcr.lower()
     if mode in ("record", "gen", "generate"):
-        from fiber.phase.cli.compat import run_gen_fixture
+        from fiber.phase.action.compat import run_gen_fixture
         try:
             asyncio.run(run_gen_fixture(model=model, api_key=api_key, target_dir=target_dir))
         except KeyboardInterrupt:
@@ -176,7 +176,7 @@ def manage_compat_fixtures(
             log.error(f"[Fiber] Fixture generation failed: {e}", exc_info=True)
             sys.exit(1)
     elif mode in ("replay", "test", "verify"):
-        from fiber.phase.cli.compat import run_test_fixture
+        from fiber.phase.action.compat import run_test_fixture
         try:
             asyncio.run(run_test_fixture(model=model, target_dir=target_dir))
         except KeyboardInterrupt:

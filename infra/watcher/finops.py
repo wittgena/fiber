@@ -1,4 +1,6 @@
 # fiber.infra.watcher.finops
+from __future__ import annotations
+
 import asyncio
 from collections import defaultdict
 from contextlib import contextmanager
@@ -10,6 +12,7 @@ from pydantic import BaseModel
 
 from fiber.dev.console.bridge.signal import UIKey, UIMetric, UISlot, UISlotStatus
 from fiber.llm.model.usage import Usage
+from fiber.llm.provider.cost.exchange import FuelExchange, default_exchange
 from fiber.llm.provider.cost.policy import CostPolicy
 from fiber.llm.provider.cost.registry import ModelCostRegistry
 from fiber.llm.provider.cost.unit import UnitCostCalculator
@@ -67,8 +70,13 @@ class UsageTracker:
 
 
 class TenantEco:
-    def __init__(self, cost_policy: Optional[CostPolicy] = None):
+    def __init__(
+        self,
+        cost_policy: Optional[CostPolicy] = None,
+        exchange: Optional[FuelExchange] = None,
+    ):
         self.policy = cost_policy or CostPolicy()
+        self.exchange = exchange or default_exchange
         self.usage_tracker = UsageTracker()
 
     def _fetch_model_info(self, model_name: str, provider: Optional[str] = None) -> ModelInfo:
@@ -78,8 +86,9 @@ class TenantEco:
                 custom_llm_provider=provider,
             )
         except Exception as e:
-            finops_emitter.warning(
-                f"[EcoService] Failed to fetch model info for '{model_name}'. Using free fallback. Error: {e}",
+            finops_emitter.debug(
+                f"[EcoService] Model cost entry not found for '{model_name}' ({e}). "
+                f"Falling back to 1:1 token-to-fuel par.",
                 model=model_name,
                 provider=provider or "unknown",
             )
@@ -120,7 +129,14 @@ class TenantEco:
                 custom_llm_provider=provider,
             )
             final_cost = cost_breakdown.final_cost
-            amount_to_consume = int(final_cost)
+
+            # FuelExchange를 통해 정산:
+            # 1) 상용 단가(final_cost > 0)가 존재하면 USD 환율(기본 1000)을 곱해 Fuel 산출
+            # 2) 로컬 모델 등 단가가 0.0이면 기본 1 Token = 1 Fuel 비율로 산출
+            amount_to_consume = self.exchange.settle_consumption(
+                total_tokens=normalized_usage.total_tokens,
+                billed_cost_usd=final_cost,
+            )
             saved_discount_usd = max(0.0, float(base_total_cost - final_cost))
 
             # 로컬 워처 캐시가 보유한 현재 잔여 쿼터와 동기화하여 차감 반영
@@ -132,6 +148,7 @@ class TenantEco:
                 remaining_quota = cached_quota
 
             ui_context: Dict[str, Any] = {
+                "mode": "RAW",
                 "gen_ai.system": provider or "unknown",
                 "gen_ai.request.model": model_name,
                 "gen_ai.usage.input_tokens": normalized_usage.prompt_tokens,
@@ -144,6 +161,7 @@ class TenantEco:
                 UIKey.SLOT.value: UISlot.FUEL.value,
                 UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
                 UIKey.TENANT_ID.value: tenant_id,
+                UIKey.CHUNKS.value: normalized_usage.total_tokens,
             }
             if remaining_quota is not None:
                 ui_context[UIKey.METRIC.value] = UIMetric.FUEL_TICK.value
@@ -154,7 +172,7 @@ class TenantEco:
             finops_emitter.info(
                 f"[EcoServ] Tenant: {tenant_id} | Model: {model_name} ({provider or 'auto'}) | "
                 f"Tokens: {normalized_usage.total_tokens} | "
-                f"Cost: {base_total_cost:.6f} -> Consume: {amount_to_consume} Fuel",
+                f"Cost: ${final_cost:.6f} -> Consume: {amount_to_consume} Fuel",
                 **ui_context,
             )
 
@@ -162,6 +180,8 @@ class TenantEco:
                 "action": "llm_inference_consume",
                 "model": model_name,
                 "usage": normalized_usage.model_dump(),
+                "billed_cost_usd": final_cost,
+                "exchange_rate": self.exchange.usd_rate,
                 "applied_modifiers": [m.model_dump() for m in cost_breakdown.modifiers],
                 "timestamp_ms": int(time.time() * 1000),
             }
@@ -187,8 +207,10 @@ class TenantEco:
                 "message": str(e),
             }
 
+
 class FinOpsWatcher:
-    def __init__(self):
+    def __init__(self, exchange: Optional[FuelExchange] = None):
+        self.exchange = exchange or default_exchange
         self.local_budget_cache: Dict[str, float] = {}
         self.processed_jtis: Set[str] = set()
         self.policy_versions: Dict[str, int] = {}
@@ -228,7 +250,7 @@ class FinOpsWatcher:
         op: str = "SYNC_QUOTA",
         budget_usd: Optional[float] = None,
         fuel_budget: Optional[float] = None,
-        exchange_rate: int = 1000,
+        exchange_rate: Optional[int] = None,
         policy_ver: Optional[int] = None,
         jti: Optional[str] = None,
     ) -> bool:
@@ -238,6 +260,7 @@ class FinOpsWatcher:
             finops_emitter.warning(
                 f"[FinOpsWatcher] Stale policy replay rejected for '{tenant_id}' (ver {policy_ver} < {current_ver}).",
                 **{
+                    "mode": "RAW",
                     UIKey.SLOT.value: UISlot.GUARDRAIL.value,
                     UIKey.SLOT_STATUS.value: UISlotStatus.BLOCK.value,
                     UIKey.TENANT_ID.value: tenant_id,
@@ -254,11 +277,11 @@ class FinOpsWatcher:
             )
             return False
 
-        # 3. 목표 Fuel 계산 (fuel_budget 직접 지정 또는 budget_usd * exchange_rate 환산)
+        # 3. 목표 Fuel 계산 (fuel_budget 직접 지정 또는 FuelExchange를 통한 budget_usd 환산)
         if fuel_budget is not None:
             target_fuel = float(fuel_budget)
         elif budget_usd is not None:
-            target_fuel = float(budget_usd) * exchange_rate
+            target_fuel = self.exchange.usd_to_fuel(budget_usd, rate_override=exchange_rate)
         else:
             target_fuel = 0.0
 
@@ -273,7 +296,6 @@ class FinOpsWatcher:
         op_upper = op.upper()
         if op_upper == "REVOKE":
             self.local_budget_cache[tenant_id] = 0.0
-            # 배압 폴딩을 무조건 통과하는 .signal()로 즉시 서킷 브레이커 트리거
             finops_emitter.signal(
                 f"[FinOpsWatcher] 🚨 REVOKE executed: Tenant '{tenant_id}' budget frozen to 0.0 Fuel (v{effective_ver}).",
                 **{
@@ -282,7 +304,7 @@ class FinOpsWatcher:
                     UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
                     UIKey.TENANT_ID.value: tenant_id,
                     UIKey.ACTIVE_QUOTA.value: 0,
-                    UIKey.CORE_BALANCE.value: 0,
+                    UIKey.LEDGER_BALANCE.value: 0,
                     UIKey.POLICY_VER.value: effective_ver,
                 },
             )
@@ -313,6 +335,7 @@ class FinOpsWatcher:
         finops_emitter.info(
             msg,
             **{
+                "mode": "RAW",
                 UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,
                 UIKey.SLOT.value: UISlot.FUEL.value,
                 UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
@@ -407,8 +430,10 @@ class FinOpsWatcher:
                 finops_block = payload.get("finops", {})
                 op = finops_block.get("op") or payload.get("op", "SYNC_QUOTA")
                 fuel_budget = payload.get("fuel_budget")
-                budget_usd = finops_block.get("budget_usd") if "budget_usd" in finops_block else payload.get("budget_usd")
-                exchange_rate = finops_block.get("exchange_rate") or payload.get("exchange_rate", 1000)
+                budget_usd = (
+                    finops_block.get("budget_usd") if "budget_usd" in finops_block else payload.get("budget_usd")
+                )
+                exchange_rate = finops_block.get("exchange_rate") or payload.get("exchange_rate")
                 policy_ver = finops_block.get("policy_ver") or payload.get("policy_ver")
                 jti = payload.get("jti")
 
@@ -429,9 +454,7 @@ class FinOpsWatcher:
             finops_emitter.error(f"[FinOpsWatcher] Failed to process event: {e}", exc_info=True)
 
 
-# ==========================================
 # Interceptors & Exportable Singleton Instances
-# ==========================================
 def _usage_tracking_interceptor(event: LogEvent):
     ctx = event.context or {}
     tracker = ctx.get("usage_tracker")

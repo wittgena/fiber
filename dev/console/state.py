@@ -18,7 +18,7 @@ _PERSIST_SCHEMA: Dict[str, Tuple[str, ...]] = {
         "tenant_id",
         "spiffe_id",
         "current_fuel",
-        "core_balance",
+        "ledger_balance",
         "budget_limit",
         "policy_ver",
         "last_op",
@@ -57,7 +57,7 @@ class FinOpsState:
     totp_enrolled: bool = False
 
     current_fuel: int = 50000
-    core_balance: int = 50000
+    ledger_balance: int = 50000
     budget_limit: int = 15000
     policy_ver: int = 1
     last_op: str = "INIT"
@@ -82,8 +82,8 @@ class FinOpsState:
         totp_tag = "🟢 TOTP" if self.totp_enrolled else "⚠️ No-TOTP"
         spiffe_short = self.spiffe_id.replace("spiffe://self/", "") if self.spiffe_id else "unassigned"
         return (
-            f"Tenant: {self.tenant_id} ({spiffe_short} | {totp_tag}) | "
-            f"v{self.policy_ver} | Quota: {self.current_fuel:,} / Core: {self.core_balance:,}"
+            f"Account(Tenant): {self.tenant_id} ({spiffe_short} | {totp_tag}) | "
+            f"v{self.policy_ver} | Remaining Fuel: {self.current_fuel:,} / {self.ledger_balance:,}"
         )
 
 
@@ -135,10 +135,10 @@ class SecurityState:
     def gateway_health_badge_text(self) -> str:
         if self.gateway_online:
             return (
-                f"🟢 Edge :8356 ONLINE ({self.gateway_latency_ms:.1f}ms) | "
+                f"🟢 Gateway(:8356) ONLINE ({self.gateway_latency_ms:.1f}ms) | "
                 f"Active: {len(self.active_target_ids)} | Checked: {self.gateway_last_check}"
             )
-        return f"⚪ Edge :8356 STANDBY (Run 'fiber daemon') | Checked: {self.gateway_last_check}"
+        return f"⚪ Gateway(:8356) STANDBY (Run 'fiber daemon') | Checked: {self.gateway_last_check}"
 
     @property
     def ssh_badge_text(self) -> str:
@@ -196,7 +196,7 @@ class StudioState:
     @property
     def fuel_kpi_text(self) -> str:
         f = self.finops
-        return f"[{f.tenant_id}] Quota: {f.current_fuel:,} | Core: {f.core_balance:,} Fuel (v{f.policy_ver})"
+        return f"[{f.tenant_id}] Remaining Fuel: {f.current_fuel:,} / {f.ledger_balance:,} (v{f.policy_ver})"
 
     @property
     def saved_kpi_text(self) -> str:
@@ -226,7 +226,7 @@ class StudioState:
         self.finops.y_fuel.clear()
         self.finops.y_fuel.append(self.finops.current_fuel)
         self.finops.y_core.clear()
-        self.finops.y_core.append(self.finops.core_balance)
+        self.finops.y_core.append(self.finops.ledger_balance)
 
 
 @dataclass

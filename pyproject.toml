@@ -23,7 +23,7 @@ Homepage = "https://github.com/wittgena/fiber"
 Repository = "https://github.com/wittgena/fiber.git"
 
 [project.scripts]
-fiber = "fiber.phase.cli.main:app"
+fiber = "fiber.phase.cli:app"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio"]
