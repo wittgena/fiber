@@ -6,7 +6,7 @@ import re
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from fiber.dev.console.bridge.signal import UIKey, UIMetric
+from fiber.dev.console.observer.signal import UIKey, UIMetric
 from fiber.infra.vcr.manager import VCRManager, VCRPlaybackConfig
 import fiber.llm.exception.eco as eco_exceptions
 from fiber.llm.exception.mapping import SEMANTIC_ERROR_REGEX, STATUS_CODE_MAPPING

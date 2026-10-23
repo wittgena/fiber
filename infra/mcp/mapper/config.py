@@ -38,8 +38,8 @@ DEFAULT_MCP_MAPPER_RULES: Dict[str, Any] = {
     },
     "agent_profiles": {
         "fiber": {
-            "markers": ["fiber-mcp.json", "anchor", ".anchor"],
-            "paths": {"*": ["{anchor}/mcp.json", "{cwd}/mcp.json"]},
+            "markers": ["mcp.json", "anchor", ".anchor"],
+            "paths": {"*": ["{anchor}/mcp.json"]},
         },
         "claude-code": {
             "markers": [".mcp.json", ".claude.json"],

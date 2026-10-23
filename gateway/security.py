@@ -193,7 +193,7 @@ class TokenTranslator:
             return None
 
 
-class KernelAuthenticator:
+class NodeAuthenticator:
     """Extracts the injected hidden receipt and transparently delegates kernel Wasm broker authorization without business logic intervention"""
     @classmethod
     async def authorize_intent(

@@ -3,7 +3,11 @@ from __future__ import annotations
 
 import asyncio
 import os
+import socket
+import subprocess
+import time
 from typing import Sequence
+import webbrowser
 from nicegui import app, ui
 
 from fiber.dev.console.state import (
@@ -13,16 +17,71 @@ from fiber.dev.console.state import (
     save_state_to_disk,
     state,
 )
-import fiber.dev.console.runtime as rt
+from fiber.dev.console.action import oob, gov
+import fiber.dev.console.observer.plane as plane
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ConsoleTemplate, StudioTab
-import fiber.dev.console.ui.tab as tab
+import fiber.dev.console.ui.tab.core as tab
 
 _tick_counter: int = 0
 _bg_tasks: list[asyncio.Task] = []
 
+async def _sync_initial_node_and_account_state() -> None:
+    await oob.refresh_sign_status(silent=True)
+    await gov.refresh_account_status(silent=True)
+    await oob.scan_mcp_topology_and_health(silent=True)
+
+def _flush_100ms_ringbuffer() -> None:
+    f, s, p = state.finops, state.security, state.pipeline
+
+    if refs.cli_buffer and refs.cli_log:
+        refs.cli_log.push("\n".join(refs.cli_buffer))
+        refs.cli_buffer.clear()
+
+    if refs.pubsub_buffer and refs.pubsub_log:
+        refs.pubsub_log.push("\n".join(refs.pubsub_buffer))
+        refs.pubsub_buffer.clear()
+
+    if f.chart_dirty and refs.finops_chart:
+        if not f.x_ticks:
+            f.x_ticks.append(time.strftime("%H:%M:%S"))
+            f.y_fuel.append(f.current_fuel)
+            f.y_core.append(f.ledger_balance)
+        refs.finops_chart.options["xAxis"]["data"] = list(f.x_ticks)
+        refs.finops_chart.options["series"][0]["data"] = list(f.y_fuel)
+        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.budget_limit
+        refs.finops_chart.options["series"][1]["data"] = list(f.y_core)
+        refs.finops_chart.update()
+        f.chart_dirty = False
+
+    if s.xray_chart_dirty and refs.xray_chart:
+        refs.xray_chart.options["series"][0]["data"] = list(s.xray_latencies)
+        refs.xray_chart.update()
+        s.xray_chart_dirty = False
+
+    if p.vcr_chart_dirty and refs.vcr_chart:
+        refs.vcr_chart.options["series"][0]["data"][0]["value"] = p.vcr_bench_replay_ms
+        refs.vcr_chart.options["series"][0]["data"][1]["value"] = p.vcr_bench_live_ms
+        refs.vcr_chart.update()
+        p.vcr_chart_dirty = False
+
+def _open_app_window(url: str) -> None:
+    for path in (
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    ):
+        try:
+            subprocess.Popen([path, f"--app={url}", "--window-size=1400,900"])
+            return
+        except FileNotFoundError:
+            continue
+    webbrowser.open(url)
+
+def _is_port_active(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("127.0.0.1", port)) == 0
 
 def _build_drawer() -> None:
     with kit.dual_drawer() as (left_col, right_col):
@@ -52,11 +111,12 @@ def _build_drawer() -> None:
         f"Fiber-Console initialized (State file: {STATE_FILE_PATH}). Syncing local keys, accounts, and MCP topology..."
     )
 
+
 def _on_tick(tabs: Sequence[StudioTab]) -> None:
     """Flush 100ms ringbuffers, trigger dirty tab re-renders, and auto-sync state.json every 5s (50 ticks)."""
     global _tick_counter
     try:
-        rt.flush_100ms_ringbuffer()
+        _flush_100ms_ringbuffer()
         for t in tabs:
             try:
                 t.flush()
@@ -83,20 +143,17 @@ def build_console_shell() -> ConsoleTemplate:
     diag.info("Console UI shell mounted", tabs=len(shell.tabs), modals=len(shell.modals))
     return shell
 
-
 async def _delayed_open_window(url: str) -> None:
     """Wait briefly for Uvicorn socket binding before opening the app window."""
     await asyncio.sleep(0.4)
-    rt.open_app_window(url)
-
+    _open_app_window(url)
 
 async def _on_startup(url: str) -> None:
     """Initialize node/account/MCP state and spawn non-blocking background workers."""
-    await rt.sync_initial_node_and_account_state()
-    _bg_tasks.append(asyncio.create_task(rt.redis_pubsub_worker(), name="fiber-redis-pubsub"))
-    _bg_tasks.append(asyncio.create_task(rt.mcp_gateway_health_worker(), name="fiber-mcp-health"))
+    await _sync_initial_node_and_account_state()
+    _bg_tasks.append(asyncio.create_task(plane.redis_pubsub_worker(), name="fiber-redis-pubsub"))
+    _bg_tasks.append(asyncio.create_task(oob.mcp_gateway_health_worker(), name="fiber-mcp-health"))
     _bg_tasks.append(asyncio.create_task(_delayed_open_window(url), name="fiber-open-window"))
-
 
 async def _on_shutdown() -> None:
     """Cancel background polling tasks cleanly and persist final state to disk."""
@@ -114,10 +171,10 @@ def launch_console(port: int = 8357) -> None:
         return
 
     url = f"http://127.0.0.1:{port}"
-    if rt.is_port_active(port):
+    if _is_port_active(port):
         print(f"Attached to running Fiber instance at {url}")
         diag.info("Attached to existing Fiber Console instance", url=url)
-        rt.open_app_window(url)
+        _open_app_window(url)
         return
 
     os.environ["FIBER_CONSOLE_ACTIVE"] = "1"
@@ -131,7 +188,6 @@ def launch_console(port: int = 8357) -> None:
     app.on_shutdown(_on_shutdown)
     diag.info("Launching Fiber Control Studio server", host="127.0.0.1", port=port)
     ui.run(host="127.0.0.1", port=port, title="Fiber Control Studio", show=False, reload=False)
-
 
 if __name__ == "__main__":
     launch_console(port=8357)

@@ -1,4 +1,4 @@
-# fiber.phase.action.compat
+# fiber.phase.bridge.action.compat
 import os
 import sys
 import asyncio

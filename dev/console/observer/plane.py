@@ -1,4 +1,4 @@
-# fiber.dev.console.bridge.plane
+# fiber.dev.console.observer.plane
 from __future__ import annotations
 
 import asyncio
@@ -7,8 +7,9 @@ from contextvars import ContextVar
 import json
 import time
 from typing import Any, Dict, Union
+from nicegui import ui
 
-from fiber.dev.console.bridge.signal import (
+from fiber.dev.console.observer.signal import (
     RoutedSurfaceMeta,
     SurfaceFilter,
     UIKey,
@@ -17,7 +18,6 @@ from fiber.dev.console.bridge.signal import (
     UISlotStatus,
 )
 from fiber.dev.console.state import state, refs
-from fiber.dev.console.bridge.action import oob, pipeline
 import fiber.dev.console.ui.diag as diag
 from xphi.arch.contract.event.next import EventObserver, LogEvent
 from xphi.watcher.plane.regulator import default_plane
@@ -72,15 +72,6 @@ def _format_line(payload: Dict[str, Any], meta: RoutedSurfaceMeta) -> str:
     tags = f"{p_mark}{g_str}{a_str}"
     msg = str(payload.get("message") or "").strip()
     return f"[{meta.level}] {tags + ' ' if tags else ''}{msg}{f_str}"
-
-
-def _schedule_coro_safely(coro: Any) -> None:
-    """동기 함수(_apply_meta) 내부에서 비동기 액션을 안전하게 스케줄링"""
-    try:
-        loop = asyncio.get_running_loop()
-        loop.create_task(coro)
-    except RuntimeError:
-        coro.close()
 
 
 def _sync_finops_balance(f: Any, new_balance: int) -> None:
@@ -185,7 +176,12 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
         f.y_fuel.append(0)
         f.y_core.append(cur_bal)
         f.chart_dirty = True
-        pipeline.trigger_kill_switch()
+        f.stream_active = False
+        f.stream_status_text = "🛑 SEVERED MID-FLIGHT (HTTP 402)"
+        if refs.live_stream_log:
+            refs.live_stream_log.push("\n🛑 [FUEL BREAKER] Stream physically severed via aclose()!")
+            refs.live_stream_log.push("↩ Agent Response: 'HTTP 402: Remaining fuel exhausted. Halted safely.'")
+        ui.notify("🚨 Kill-Switch Activated! Active stream severed.", type="negative", position="top")
 
     # 6. HTTP 202 HITL Cryptographic Gate 모달 자동 팝업
     if meta.is_hitl_yield and not raw_msg.startswith(("⏸", "📤", "🧬", "✓", "❌", "🛑")):
@@ -194,7 +190,13 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
         if idem := d.get(UIKey.IDEM_KEY.value):
             args_dict = {UIKey.IDEM_KEY.value: idem, **args_dict}
         tool_fqn = f"{d.get(UIKey.TARGET_ID.value, 'mcp')}.{d.get(UIKey.TOOL_NAME.value, 'tool')}"
-        _schedule_coro_safely(oob.open_hitl_modal(tool_fqn, args_dict))
+        if refs.hitl_code:
+            refs.hitl_code.set_content(
+                json.dumps({"tool": tool_fqn, "args": args_dict, "state": "HTTP 202 Parked"}, indent=2)
+            )
+        if refs.hitl_dialog:
+            refs.hitl_dialog.open()
+        refs.push_pubsub("mcp:hitl", f"⏸ [HTTP 202] Sandbox suspended for '{tool_fqn}'")
 
 
 # ==========================================
@@ -282,6 +284,7 @@ def mount_studio_plane() -> None:
         _studio_observer = StudioPlaneObserver()
         default_plane.attach(_studio_observer)
 
+
 async def check_redis_health() -> bool:
     p = state.pipeline
     if redis is None:
@@ -301,6 +304,7 @@ async def check_redis_health() -> bool:
             except Exception:
                 pass
     return p.redis_online
+
 
 async def redis_pubsub_worker() -> None:
     mount_studio_plane()

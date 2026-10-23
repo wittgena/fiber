@@ -1,4 +1,4 @@
-# fiber.phase.action.connect
+# fiber.phase.bridge.action.connect
 import os
 import sys
 import ast
@@ -20,7 +20,7 @@ from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("fiber.cli.connect")
+log = get_emitter("action.connect")
 
 ACTIVE_TARGETS_TUNNEL_KEY = "mcp:registry:active_targets"
 
@@ -47,7 +47,6 @@ BUILTIN_ALIASES: Dict[str, str] = {
     "model.oracle": "worker.model.oracle",
 }
 
-
 def _extract_base_name(b: ast.expr) -> str:
     """AST 부모 클래스 노드에서 이름 추출 (제네릭 Subscript 및 Attribute 모두 대응)"""
     if isinstance(b, ast.Name):
@@ -58,14 +57,9 @@ def _extract_base_name(b: ast.expr) -> str:
         return _extract_base_name(b.value)
     return ""
 
-
 def discover_builtin_workers(
     base_package: str = DEFAULT_WORKER_PACKAGE,
 ) -> Dict[str, Tuple[str, str, str]]:
-    """
-    내장 워커 패키지(fiber.infra.mcp.worker) 스캔 -> {매칭키: (canonical_id, cmd, default_mode)} 반환.
-    eco/oracle.py와 model/oracle.py처럼 파일명(leaf)이 겹쳐도 상대 경로(rel_key)로 구분하여 유실 방지.
-    """
     discovered: Dict[str, Tuple[str, str, str]] = {}
     try:
         spec = importlib.util.find_spec(base_package)
@@ -136,12 +130,9 @@ def _resolve_all_builtin_specs(
     preflight_override: Optional[str] = None,
     base_package: str = DEFAULT_WORKER_PACKAGE,
 ) -> List[ResolvedTarget]:
-    """모든 내장 워커(8종)를 중복 없이 ResolvedTarget 리스트로 반환"""
     builtin_map = discover_builtin_workers(base_package)
     seen_ids: set[str] = set()
     specs: List[ResolvedTarget] = []
-
-    # target_filter가 별칭('archive', 'model.oracle' 등)으로 들어왔을 때도 정규화 ID와 매칭되도록 변환
     normalized_filter = BUILTIN_ALIASES.get(target_filter, target_filter) if target_filter else None
 
     for tid, cmd, default_mode in builtin_map.values():
@@ -232,7 +223,6 @@ def resolve_connector_spec(
         transport=resolved_transport,
         preflight=resolved_preflight,
     )
-
 
 def _specs_from_mapped_entries(
     entries: List[MappedMcpEntry],
@@ -325,7 +315,6 @@ def _sync_to_anchor_config(
     )
     return ANCHOR_MCP_PATH
 
-
 def _collect_specs_and_envs(
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
@@ -376,7 +365,6 @@ def _collect_specs_and_envs(
 
     return specs, env_lookup
 
-
 async def _filter_unmounted_specs(specs: List[ResolvedTarget]) -> List[ResolvedTarget]:
     """데몬에 이미 떠 있는 타겟을 제외하여 중복 실행 방지"""
     try:
@@ -394,7 +382,6 @@ async def _filter_unmounted_specs(specs: List[ResolvedTarget]) -> List[ResolvedT
     except Exception:
         pass
     return specs
-
 
 async def launch_connector_async(spec: ResolvedTarget):
     guard_badge = f", Pre-Flight: /{spec.preflight}/i" if spec.preflight else ""
@@ -421,10 +408,7 @@ async def _launch_all_async(specs: List[ResolvedTarget]):
     else:
         await asyncio.gather(*(launch_connector_async(spec) for spec in specs))
 
-
-# =========================================================================
 # 1. 역할 A: `fiber connect copy` (설정 복제 및 ~/.anchor/mcp.json 생성/갱신 전용)
-# =========================================================================
 def run_connect_copy(
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
@@ -450,10 +434,7 @@ def run_connect_copy(
         log.info(f"  ├─ [{s.target_id}] -> {s.exec_cmd} [{s.mode.upper()}]{guard_info}")
     return out_path or ANCHOR_MCP_PATH
 
-
-# =========================================================================
-# 2. 역할 B: `fiber connect` (워커 프로세스 런타임 실행 전용)
-# =========================================================================
+# `fiber connect` (워커 프로세스 런타임 실행 전용)
 def run_connect(
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,

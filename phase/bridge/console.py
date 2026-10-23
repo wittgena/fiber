@@ -1,4 +1,5 @@
-# fiber.phase.action.console
+# fiber.phase.bridge.console
+## @lineage: fiber.phase.action.console
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +11,7 @@ import re
 import time
 from typing import Any
 
-from fiber.phase.action.schema import (
+from fiber.phase.bridge.schema import (
     AccountMandateResult,
     AccountStatusResult,
     EnrolledAdminInfo,
@@ -40,7 +41,6 @@ def safe_int(val: Any, default: int = 0) -> int:
     except (ValueError, TypeError):
         return default
 
-
 # 1. FinOps / Account Actions (Headless)
 async def fetch_account_status(tenant_id: str) -> AccountStatusResult:
     from fiber.infra.bound.account.manager import LocalAccountManager
@@ -58,7 +58,6 @@ async def fetch_account_status(tenant_id: str) -> AccountStatusResult:
         active_quota=safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
         policy_ver=safe_int(st.get("finops_watcher", {}).get("policy_version"), 1),
     )
-
 
 async def issue_account_mandate(
     tenant_id: str,
@@ -92,10 +91,9 @@ async def issue_account_mandate(
         policy_ver=safe_int(st.get("finops_watcher", {}).get("policy_version"), policy_ver),
     )
 
-
 # 2. Sign / TOTP / Slack OOB Actions (Headless)
 async def inspect_sign_status() -> SignStatusResult:
-    from fiber.phase.action.sign import (
+    from fiber.phase.bridge.action.sign import (
         SSH_PRIV_KEY_PATH,
         LOCAL_CIPHER_KEY_PATH,
         DEFAULT_DB_PATH,
@@ -120,9 +118,8 @@ async def inspect_sign_status() -> SignStatusResult:
 
     return await asyncio.to_thread(_inspect)
 
-
 async def init_node_keys() -> NodeKeysInitResult:
-    from fiber.phase.action.sign import ensure_node_keys
+    from fiber.phase.bridge.action.sign import ensure_node_keys
 
     raw = await asyncio.to_thread(ensure_node_keys)
     return NodeKeysInitResult(
@@ -135,7 +132,7 @@ async def init_node_keys() -> NodeKeysInitResult:
 async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
     import pyotp
     import qrcode
-    from fiber.phase.action.sign import (
+    from fiber.phase.bridge.action.sign import (
         AdminSecretVault,
         _normalize_spiffe_id,
         _build_totp_provisioning_uri,
@@ -183,7 +180,7 @@ async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
 
 async def verify_admin_totp(admin_user: str, code_override: str | None = None) -> TotpVerificationResult:
     import pyotp
-    from fiber.phase.action.sign import (
+    from fiber.phase.bridge.action.sign import (
         AdminSecretVault,
         _normalize_spiffe_id,
         _resolve_vault_context,
@@ -226,7 +223,7 @@ async def verify_admin_totp(admin_user: str, code_override: str | None = None) -
 
 
 async def revoke_admin_totp(admin_user: str) -> str:
-    from fiber.phase.action.sign import _normalize_spiffe_id, _open_audit_db, DEFAULT_DB_PATH
+    from fiber.phase.bridge.action.sign import _normalize_spiffe_id, _open_audit_db, DEFAULT_DB_PATH
 
     canonical_id = _normalize_spiffe_id(admin_user)
 
@@ -340,12 +337,11 @@ def _inspect_and_sanitize_config_candidates(
 
     return config_list, tuple(stat_sig)
 
-
 async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = False) -> McpTopologyScanResult:
     global _last_config_stat_sig, _cached_mapped_entries
     import httpx
     from fiber.infra.mcp.mapper.config import McpConfigMapper
-    from fiber.phase.action.connect import discover_builtin_workers, resolve_connector_spec
+    from fiber.phase.bridge.action.connect import discover_builtin_workers, resolve_connector_spec
     from xphi.node.space.tunnel.factory import TunnelFactory
 
     candidate_map = McpConfigMapper._resolve_candidate_paths()
@@ -369,39 +365,53 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
         _cached_mapped_entries = await asyncio.to_thread(McpConfigMapper.scan_and_parse)
         _last_config_stat_sig = current_stat_sig
 
-    workers: list[McpWorkerInfo] = []
-    seen_ids: set[str] = set()
-    for entry in _cached_mapped_entries:
-        spec = resolve_connector_spec(target=entry.target_id, exec_cmd=entry.exec_cmd)
-        workers.append(
-            McpWorkerInfo(
-                target_id=spec.target_id,
-                source=entry.source_agent,
-                transport=spec.transport,
-                mode=spec.mode,
-                preflight=entry.env.get("FIBER_PREFLIGHT_PATTERN") or spec.preflight or "",
-                is_live=spec.target_id in live_targets,
-                exec_cmd=spec.exec_cmd,
-            )
-        )
-        seen_ids.add(spec.target_id)
+    # 1. 내장 워커(8종)의 기본 모드(multiplex / linear) 맵을 먼저 확보
+    builtins = await asyncio.to_thread(discover_builtin_workers)
+    builtin_default_modes: dict[str, tuple[str, str]] = {}
+    for _, (canon_id, cmd, def_mode) in builtins.items():
+        if canon_id not in builtin_default_modes:
+            builtin_default_modes[canon_id] = (cmd, def_mode)
 
-    if not workers:
-        builtins = await asyncio.to_thread(discover_builtin_workers)
-        for _, (canon_id, cmd, def_mode) in builtins.items():
-            if canon_id not in seen_ids:
-                seen_ids.add(canon_id)
-                workers.append(
-                    McpWorkerInfo(
-                        target_id=canon_id,
-                        source="builtin",
-                        transport="stdio",
-                        mode=def_mode,
-                        preflight="",
-                        is_live=canon_id in live_targets,
-                        exec_cmd=cmd,
-                    )
-                )
+    workers_by_id: dict[str, McpWorkerInfo] = {}
+
+    # 2. 설정 파일(.anchor/mcp.json 및 외부 IDE 설정)에서 읽어들인 엔트리 해석
+    #    - entry.env의 FIBER_MODE 또는 내장 워커 기본 모드를 명시적으로 전달하여 'ephemeral' 오인 방지
+    for entry in _cached_mapped_entries:
+        env_mode = entry.env.get("FIBER_MODE") if entry.env else None
+        fallback_mode = builtin_default_modes.get(entry.target_id, ("", None))[1]
+        effective_mode = env_mode or fallback_mode
+
+        env_preflight = entry.env.get("FIBER_PREFLIGHT_PATTERN") if entry.env else None
+        spec = resolve_connector_spec(
+            target=entry.target_id,
+            exec_cmd=entry.exec_cmd,
+            mode=effective_mode,
+            preflight=env_preflight,
+        )
+        workers_by_id[spec.target_id] = McpWorkerInfo(
+            target_id=spec.target_id,
+            source=entry.source_agent,
+            transport=spec.transport,
+            mode=spec.mode,
+            preflight=env_preflight or spec.preflight or "",
+            is_live=spec.target_id in live_targets,
+            exec_cmd=spec.exec_cmd,
+        )
+
+    # 3. 아직 설정 파일에 없더라도 내장 워커(builtin)가 누락되지 않도록 병합
+    for canon_id, (cmd, def_mode) in builtin_default_modes.items():
+        if canon_id not in workers_by_id:
+            workers_by_id[canon_id] = McpWorkerInfo(
+                target_id=canon_id,
+                source="builtin",
+                transport="stdio",
+                mode=def_mode,
+                preflight="",
+                is_live=canon_id in live_targets,
+                exec_cmd=cmd,
+            )
+
+    workers = list(workers_by_id.values())
 
     t0 = time.perf_counter()
     gw_online = False
@@ -424,8 +434,6 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
         checked_at=time.strftime("%H:%M:%S"),
     )
 
-
-# 4. Pipeline Guardrail & VCR Runner (Headless)
 def matches_secret_pattern(prompt: str, custom_regex: str) -> bool:
     if "sk-" in prompt or "Bearer " in prompt:
         return True

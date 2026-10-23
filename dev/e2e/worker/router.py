@@ -21,7 +21,7 @@ from fiber.infra.daemon.economy.pricing import DynamicPricingDaemon
 
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.action.connect import (
+from fiber.phase.bridge.action.connect import (
     ACTIVE_TARGETS_TUNNEL_KEY,
     ResolvedTarget,
     _specs_from_mapped_entries,

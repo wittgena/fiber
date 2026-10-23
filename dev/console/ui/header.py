@@ -10,7 +10,7 @@ from fiber.dev.console.state import (
     save_state_to_disk,
     state,
 )
-import fiber.dev.console.runtime as rt
+from fiber.phase.bridge.cli import run_fiber_cli
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.kit as kit
 from xphi.node.space.bind.resolver import resolve_path
@@ -63,7 +63,7 @@ def build_header() -> None:
                 with ui.row().classes("items-center gap-2.5"):
                     kit.button(
                         "🚨 LLM STREAM BREAK",
-                        lambda: rt.run_fiber_cli("account", "--tenant", state.finops.tenant_id, "kill", "--ver", "99"),
+                        lambda: run_fiber_cli("account", "--tenant", state.finops.tenant_id, "kill", "--ver", "99"),
                         color="red",
                     ).classes("font-bold px-3")
 

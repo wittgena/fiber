@@ -1,4 +1,5 @@
-# fiber.phase.action.schema
+# fiber.phase.bridge.schema
+## @lineage: fiber.phase.action.schema
 from __future__ import annotations
 from typing import Any
 from pydantic import Field

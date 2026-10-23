@@ -1,9 +1,5 @@
-# fiber.phase.action.sign
-"""
-@desc: Local Node Keychain & Admin TOTP Attestation CLI
-- Provisions Zero-Env foundational keys (~/.ssh/fiber_ed25519 & local_cipher.key) as the node's Root of Trust.
-- Manages AES-GCM encrypted Admin TOTP secrets in SQLite via deterministic HMAC key derivation (distinct from tenant FinOps quotas in `fiber account`).
-"""
+# fiber.phase.bridge.action.sign
+"""Node Keychain & Admin TOTP Attestation CLI"""
 import os
 import sys
 import socket
@@ -36,7 +32,7 @@ DEFAULT_DB_PATH = str(SIGN_ROOT / "deploy_audit.sqlite")
 BASE_SPIFFE_DOMAIN = "spiffe://self/"
 TOTP_ISSUER_NAME = "Fiber"
 
-log_sign = get_emitter("fiber.cli.sign")
+log_sign = get_emitter("action.sign")
 
 app = typer.Typer(
     name="sign",
@@ -45,15 +41,11 @@ app = typer.Typer(
     add_completion=False,
 )
 
-
-# ==========================================
-# 1. Core Key Provisioning (~/.ssh/fiber_ed25519 & local_cipher.key)
-# ==========================================
+# Core Key Provisioning (~/.ssh/fiber_ed25519 & local_cipher.key)
 def _normalize_spiffe_id(user_id: str) -> str:
     if user_id.startswith("spiffe://"):
         return user_id
     return f"{BASE_SPIFFE_DOMAIN}{user_id}"
-
 
 def _resolve_target_user(conn: sqlite3.Connection, user_id: Optional[str] = None) -> str:
     """Uses explicit user_id if given; otherwise picks the latest enrolled admin from SQLite."""
@@ -63,7 +55,6 @@ def _resolve_target_user(conn: sqlite3.Connection, user_id: Optional[str] = None
         "SELECT user_id FROM admin_users WHERE user_id NOT LIKE '%_e2e_%' ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     return row[0] if row else _normalize_spiffe_id("fiber")
-
 
 def _build_totp_provisioning_uri(secret: str, canonical_id: str, pubkey_hex: str = "") -> Tuple[str, str]:
     """
@@ -190,10 +181,7 @@ def _resolve_vault_context() -> Tuple[str, str]:
     derived_passphrase = hmac.new(ikm, domain_context, hashlib.sha256).hexdigest()
     return derived_passphrase, pubkey_hex
 
-
-# ==========================================
-# 3. CLI Commands (init, status, enroll, verify, revoke)
-# ==========================================
+# CLI Commands (init, status, enroll, verify, revoke)
 @app.command("init")
 def cmd_init(
     rotate_cipher: Annotated[bool, typer.Option("--rotate-cipher", help="Regenerate local_cipher.key (invalidates existing TOTP DB)")] = False,
@@ -230,7 +218,6 @@ def cmd_status(
         "enrolled_admins": [{"user_id": r[0], "cipher_prefix": f"{r[1]}..."} for r in rows],
     }
     print(json.dumps(status_payload, indent=2, ensure_ascii=False))
-
 
 @app.command("enroll")
 def cmd_enroll(
@@ -317,8 +304,6 @@ def cmd_revoke(
     conn.close()
     log_sign.info(f"✅ Revoked TOTP access for '{canonical_id}'.")
 
-
-# Maintain `fiber sign admin ...` sub-group alias for backward compatibility with existing scripts
 admin_app = typer.Typer(help="Alias group for admin TOTP commands")
 admin_app.command("totp-enroll")(cmd_enroll)
 admin_app.command("totp-verify")(cmd_verify)

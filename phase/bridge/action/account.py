@@ -1,4 +1,4 @@
-# fiber.phase.action.account
+# fiber.phase.bridge.action.account
 """
 @desc: LocalAccount CLI Utility
 - Provides terminal interface for FinOps & Quota management.

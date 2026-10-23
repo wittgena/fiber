@@ -1,4 +1,4 @@
-# fiber.dev.console.bridge.signal
+# fiber.dev.console.observer.signal
 from __future__ import annotations
 
 from dataclasses import dataclass, field
