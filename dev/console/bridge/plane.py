@@ -83,10 +83,30 @@ def _schedule_coro_safely(coro: Any) -> None:
         coro.close()
 
 
-def _apply_meta(meta: RoutedSurfaceMeta, raw_msg: str = "") -> None:
+def _sync_finops_balance(f: Any, new_balance: int) -> None:
+    """`balance`와 `ledger_balance` 속성 간 정합성 보장"""
+    f.balance = new_balance
+    if hasattr(f, "ledger_balance"):
+        f.ledger_balance = new_balance
+
+
+def _get_finops_balance(f: Any) -> int:
+    """현재 원장 잔액을 안전하게 조회"""
+    return int(getattr(f, "balance", None) or getattr(f, "ledger_balance", 0) or 0)
+
+
+def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str = "") -> None:
     """`signal.SurfaceClassifier`가 분류한 `RoutedSurfaceMeta`를 소비하여 State 및 UI 반영"""
     f, s, p, d = state.finops, state.security, state.pipeline, meta.ui_payload
 
+    # 0. PlaneRegulator 압력(Density) 및 가속도(Acceleration) 실시간 반영
+    if (density := payload.get("density")) is not None:
+        s.plane_density = float(density)
+    if (accel := d.get("acceleration")) is not None:
+        s.plane_acceleration = float(accel)
+    s.plane_bursting = bool(meta.is_bursting)
+
+    # 1. Pipeline X-Ray 4-Slot 상태 점등 및 서브밀리초 레이턴시 갱신
     if meta.ui_slot is not None:
         if card := refs.slot_cards.get(meta.ui_slot.value):
             cls_str = SLOT_STYLES.get(meta.ui_slot_status, "bg-slate-800 border border-slate-700")
@@ -95,6 +115,7 @@ def _apply_meta(meta: RoutedSurfaceMeta, raw_msg: str = "") -> None:
             s.xray_latencies[idx] = float(lat)
             s.xray_chart_dirty = True
 
+    # 2. EdgeCache & VCR 토큰/비용 절감액 누적
     if (tok := d.get(UIKey.SAVED_TOKENS.value)) is not None:
         f.saved_tokens += int(tok)
         f.saved_usd += float(d.get(UIKey.SAVED_USD.value, 0.0))
@@ -102,16 +123,50 @@ def _apply_meta(meta: RoutedSurfaceMeta, raw_msg: str = "") -> None:
         f.saved_tokens += 250
         f.saved_usd += 0.004
 
+    # 3. FinOps 원장 동기화 & LLM Live 실시간 스트림 펄스(FUEL_TICK) 처리
     if meta.ui_metric in (UIMetric.LEDGER_SYNC, UIMetric.FUEL_TICK):
-        f.current_fuel = int(float(d.get(UIKey.ACTIVE_QUOTA.value, f.current_fuel)))
-        f.core_balance = int(float(d.get(UIKey.CORE_BALANCE.value, f.core_balance)))
-        f.policy_ver = int(d.get(UIKey.POLICY_VER.value, f.policy_ver))
+        if UIKey.ACTIVE_QUOTA.value in d and d[UIKey.ACTIVE_QUOTA.value] is not None:
+            f.current_fuel = int(float(d[UIKey.ACTIVE_QUOTA.value]))
+        if UIKey.LEDGER_BALANCE.value in d and d[UIKey.LEDGER_BALANCE.value] is not None:
+            _sync_finops_balance(f, int(float(d[UIKey.LEDGER_BALANCE.value])))
+        if UIKey.POLICY_VER.value in d and d[UIKey.POLICY_VER.value] is not None:
+            f.policy_ver = int(d[UIKey.POLICY_VER.value])
+
         if meta.ui_metric is UIMetric.FUEL_TICK:
-            f.stream_status_text = "🟢 LIVE STREAMING"
+            active_cnt = int(d.get("active_streams", getattr(s, "active_streams", 0)))
+            s.active_streams = active_cnt
+
+            if (cps := d.get("throughput_cps")) is not None:
+                s.throughput_cps = float(cps)
+            elif active_cnt == 0:
+                s.throughput_cps = 0.0
+
+            if (chunks := d.get(UIKey.CHUNKS.value)) is not None:
+                chunk_val = int(chunks)
+                s.live_stream_tokens = chunk_val
+                # 이전 청크 대비 증분(Delta) 계산하여 누적 처리 토큰에 합산
+                prev_chunks = getattr(s, "_last_stream_chunks", 0)
+                delta = chunk_val if chunk_val < prev_chunks else (chunk_val - prev_chunks)
+                s.total_processed_tokens = getattr(s, "total_processed_tokens", 0) + max(0, delta)
+                s._last_stream_chunks = 0 if active_cnt == 0 else chunk_val
+
+            if active_cnt > 0:
+                f.stream_active = True
+                f.stream_status_text = f"🟢 LIVE STREAMING ({active_cnt} active | {s.throughput_cps:,.1f} c/s)"
+            else:
+                f.stream_active = False
+                f.stream_status_text = "✓ STREAM COMPLETE"
+
+            s.xray_chart_dirty = True
+
+        # 무제한 예산(inf) 스트림이 아닐 때나 원장 동기화 시 FinOps 차트 갱신
+        cur_bal = _get_finops_balance(f)
         f.x_ticks.append(time.strftime("%H:%M:%S"))
         f.y_fuel.append(f.current_fuel)
-        f.y_core.append(f.core_balance)
+        f.y_core.append(cur_bal)
         f.chart_dirty = True
+
+    # 4. VCR 벤치마크 차트 갱신
     elif meta.ui_metric is UIMetric.VCR_REPLAY and UIKey.ELAPSED_MS.value in d:
         p.vcr_bench_replay_ms = float(d[UIKey.ELAPSED_MS.value])
         p.vcr_chart_dirty = True
@@ -119,18 +174,27 @@ def _apply_meta(meta: RoutedSurfaceMeta, raw_msg: str = "") -> None:
         p.vcr_bench_live_ms = float(d[UIKey.ELAPSED_MS.value])
         p.vcr_chart_dirty = True
 
+    # 5. 실시간 Kill-Switch (HTTP 402 절단) 인터럽트 처리
     if meta.is_kill_signal:
         f.current_fuel = 0
+        s.active_streams = int(d.get("active_streams", 0))
+        s.throughput_cps = 0.0
+        s._last_stream_chunks = 0
+        cur_bal = _get_finops_balance(f)
+        f.x_ticks.append(time.strftime("%H:%M:%S"))
+        f.y_fuel.append(0)
+        f.y_core.append(cur_bal)
         f.chart_dirty = True
         pipeline.trigger_kill_switch()
 
+    # 6. HTTP 202 HITL Cryptographic Gate 모달 자동 팝업
     if meta.is_hitl_yield and not raw_msg.startswith(("⏸", "📤", "🧬", "✓", "❌", "🛑")):
         raw_args = d.get(UIKey.TOOL_ARGS.value)
         args_dict = dict(raw_args) if isinstance(raw_args, dict) else {"raw_args": str(raw_args or {})}
         if idem := d.get(UIKey.IDEM_KEY.value):
             args_dict = {UIKey.IDEM_KEY.value: idem, **args_dict}
         tool_fqn = f"{d.get(UIKey.TARGET_ID.value, 'mcp')}.{d.get(UIKey.TOOL_NAME.value, 'tool')}"
-        _schedule_coro_safely(oob.act_open_hitl_modal(tool_fqn, args_dict))
+        _schedule_coro_safely(oob.open_hitl_modal(tool_fqn, args_dict))
 
 
 # ==========================================
@@ -149,7 +213,10 @@ def ingest(event_or_dict: Union[LogEvent, Dict[str, Any]]) -> bool:
             return False
 
         raw_msg = str(payload.get("message") or "").strip()
-        if meta.ui_metric is None and not meta.is_kill_signal:
+        is_raw_tick = meta.ui_payload.get("mode") == "RAW"
+
+        # UI 메트릭, 킬 시그널, RAW 스트림 틱이 아닌 일반 로그에 대해서만 2초 윈도우 중복 제거 수행
+        if meta.ui_metric is None and not meta.is_kill_signal and not is_raw_tick:
             ev_id = payload.get("id") or payload.get("event_id")
             fp = f"id:{ev_id}" if ev_id else f"t:{int(time.time() // 2)}:{payload.get('source_id')}:{raw_msg}"
             if fp in _seen_fp:
@@ -157,10 +224,13 @@ def ingest(event_or_dict: Union[LogEvent, Dict[str, Any]]) -> bool:
             _seen_fp.append(fp)
 
         refs.push_pubsub(meta.channel, _format_line(payload, meta))
-        _apply_meta(meta, raw_msg=raw_msg)
+        _apply_meta(meta, payload=payload, raw_msg=raw_msg)
         return True
     except Exception as exc:
-        diag.log_ui_exception("plane.ingest", exc)
+        if hasattr(diag, "exception"):
+            diag.exception("plane.ingest error", exc=exc, silent=True)
+        elif hasattr(diag, "log_ui_exception"):
+            diag.log_ui_exception("plane.ingest", exc)
         return False
     finally:
         _IN_INGEST.reset(token)
@@ -176,9 +246,10 @@ def emit_ledger(source_id: str, message: str, fuel: int, core: int, ver: int, le
         message,
         level,
         **{
+            "mode": "RAW",
             UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,
             UIKey.ACTIVE_QUOTA.value: fuel,
-            UIKey.CORE_BALANCE.value: core,
+            UIKey.LEDGER_BALANCE.value: core,
             UIKey.POLICY_VER.value: ver,
         },
     )

@@ -1,4 +1,4 @@
-# fiber.phase.cli.compat
+# fiber.phase.action.compat
 import os
 import sys
 import asyncio
@@ -15,7 +15,7 @@ from fiber.infra.vcr.injector import VCRInjector
 
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("cli.compat")
+log = get_emitter("action.compat")
 
 STANDARD_PROMPTS = [
     {
@@ -92,7 +92,7 @@ async def _execute_suite(model: str, final_api_key: str, invoker_mode: str, prov
                 stream=is_stream,
                 metadata={
                     "vcr_scenario": scenario_id,
-                    "vcr_invoker": f"cli.compat.{invoker_mode}",
+                    "vcr_invoker": f"action.compat.{invoker_mode}",
                     "vcr_filename": f"{scenario_id}.json"
                 },
                 **kwargs

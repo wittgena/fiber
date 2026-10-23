@@ -9,7 +9,7 @@ import orjson
 
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.cli.connect import (
+from fiber.phase.action.connect import (
     ResolvedTarget,
     discover_builtin_workers,
     resolve_connector_spec,

@@ -10,7 +10,6 @@ from nicegui import ui
 from fiber.dev.console.state import state, refs
 from xphi.watcher.plane.emitter import get_emitter
 
-# xphi 정규 파이프라인 Emitter (phase="UI_DIAG" -> log/ui_diag.log 분리, mode="RAW" -> 폴딩 생략 방지)
 _emitter = get_emitter(name="console.ui.diag", phase="UI_DIAG", mode="RAW")
 
 _JS_ERROR_HOOK = """

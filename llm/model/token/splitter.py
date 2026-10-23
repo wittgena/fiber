@@ -1,5 +1,4 @@
 # fiber.llm.model.token.splitter
-## @lineage: llm.model.token.splitter
 from functools import lru_cache
 from typing import Callable, List, Optional, Dict
 from tokenizers import Tokenizer

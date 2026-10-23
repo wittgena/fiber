@@ -1,22 +1,37 @@
-# fiber.phase.action.core
+# fiber.phase.action.console
+## @lineage: fiber.phase.action.conosle
 from __future__ import annotations
 
 import asyncio
 import io
 import json
 import logging
-import os
 from pathlib import Path
 import re
-import sys
 import time
 from typing import Any
+
+from fiber.phase.action.schema import (
+    AccountMandateResult,
+    AccountStatusResult,
+    EnrolledAdminInfo,
+    KeyFileInfo,
+    McpConfigCandidate,
+    McpTopologyScanResult,
+    McpWorkerInfo,
+    NodeKeysInitResult,
+    SignStatusResult,
+    SlackOobDispatchResult,
+    TotpEnrollmentResult,
+    TotpVerificationResult,
+)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 _last_config_stat_sig: tuple[tuple[str, int, int], ...] = ()
 _cached_mapped_entries: list[Any] = []
+
 
 def safe_int(val: Any, default: int = 0) -> int:
     if val is None:
@@ -26,8 +41,9 @@ def safe_int(val: Any, default: int = 0) -> int:
     except (ValueError, TypeError):
         return default
 
-# FinOps / Account Actions (Headless)
-async def fetch_account_status(tenant_id: str) -> dict[str, Any]:
+
+# 1. FinOps / Account Actions (Headless)
+async def fetch_account_status(tenant_id: str) -> AccountStatusResult:
     from fiber.infra.bound.account.manager import LocalAccountManager
     from fiber.infra.bound.account.registry import LocalAccountRegistry
 
@@ -35,14 +51,15 @@ async def fetch_account_status(tenant_id: str) -> dict[str, Any]:
         st = await mgr.get_status()
     accounts = LocalAccountRegistry.list_accounts()
     acc_info = accounts.get(tenant_id, {})
-    return {
-        "raw_status": st,
-        "last_op": acc_info.get("last_op"),
-        "spiffe_id": acc_info.get("spiffe_id"),
-        "core_balance": safe_int(st.get("core_state", {}).get("balance"), 0),
-        "active_quota": safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
-        "policy_ver": safe_int(st.get("finops_watcher", {}).get("policy_version"), 1),
-    }
+    return AccountStatusResult(
+        raw_status=st,
+        last_op=acc_info.get("last_op"),
+        spiffe_id=acc_info.get("spiffe_id"),
+        ledger_balance=safe_int(st.get("core_state", {}).get("ledger_balance"), 0),
+        active_quota=safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
+        policy_ver=safe_int(st.get("finops_watcher", {}).get("policy_version"), 1),
+    )
+
 
 async def issue_account_mandate(
     tenant_id: str,
@@ -52,7 +69,7 @@ async def issue_account_mandate(
     policy_ver: int,
     sync_ledger: bool,
     spiffe_id: str | None = None,
-) -> dict[str, Any]:
+) -> AccountMandateResult:
     from fiber.infra.bound.account.manager import LocalAccountManager, SyncQuotaCommand
     from fiber.infra.bound.account.registry import LocalAccountRegistry
 
@@ -69,16 +86,17 @@ async def issue_account_mandate(
         res = await mgr.sync_quota(cmd)
 
     st = res.get("status", {})
-    return {
-        "jwt": res.get("jwt", ""),
-        "core_balance": safe_int(st.get("core_state", {}).get("balance"), 0),
-        "active_quota": safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
-        "policy_ver": safe_int(st.get("finops_watcher", {}).get("policy_version"), policy_ver),
-    }
+    return AccountMandateResult(
+        jwt=res.get("jwt", ""),
+        balance=safe_int(st.get("core_state", {}).get("ledger_balance"), 0),
+        active_quota=safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
+        policy_ver=safe_int(st.get("finops_watcher", {}).get("policy_version"), policy_ver),
+    )
+
 
 # 2. Sign / TOTP / Slack OOB Actions (Headless)
-async def inspect_sign_status() -> dict[str, Any]:
-    from fiber.phase.cli.sign import (
+async def inspect_sign_status() -> SignStatusResult:
+    from fiber.phase.action.sign import (
         SSH_PRIV_KEY_PATH,
         LOCAL_CIPHER_KEY_PATH,
         DEFAULT_DB_PATH,
@@ -86,31 +104,39 @@ async def inspect_sign_status() -> dict[str, Any]:
     )
     from xphi.arch.bound.adapter.pta import NodeSigner
 
-    def _inspect() -> dict[str, Any]:
+    def _inspect() -> SignStatusResult:
         signer = NodeSigner.get_instance()
         conn = _open_audit_db(DEFAULT_DB_PATH)
         rows = conn.execute(
             "SELECT user_id, substr(ciphertext, 1, 16) FROM admin_users ORDER BY rowid DESC"
         ).fetchall()
         conn.close()
-        return {
-            "ssh_fiber_ed25519": {"path": str(SSH_PRIV_KEY_PATH), "exists": SSH_PRIV_KEY_PATH.exists()},
-            "local_cipher_key": {"path": str(LOCAL_CIPHER_KEY_PATH), "exists": LOCAL_CIPHER_KEY_PATH.exists()},
-            "node_pubkey": signer.pubkey_hex,
-            "audit_db": DEFAULT_DB_PATH,
-            "enrolled_admins": [{"user_id": r[0], "cipher_prefix": f"{r[1]}..."} for r in rows],
-        }
+        return SignStatusResult(
+            ssh_fiber_ed25519=KeyFileInfo(path=str(SSH_PRIV_KEY_PATH), exists=SSH_PRIV_KEY_PATH.exists()),
+            local_cipher_key=KeyFileInfo(path=str(LOCAL_CIPHER_KEY_PATH), exists=LOCAL_CIPHER_KEY_PATH.exists()),
+            node_pubkey=signer.pubkey_hex,
+            audit_db=str(DEFAULT_DB_PATH),
+            enrolled_admins=[EnrolledAdminInfo(user_id=r[0], cipher_prefix=f"{r[1]}...") for r in rows],
+        )
 
     return await asyncio.to_thread(_inspect)
 
-async def init_node_keys() -> dict[str, Any]:
-    from fiber.phase.cli.sign import ensure_node_keys
-    return await asyncio.to_thread(ensure_node_keys)
 
-async def enroll_admin_totp(admin_user: str) -> dict[str, Any]:
+async def init_node_keys() -> NodeKeysInitResult:
+    from fiber.phase.action.sign import ensure_node_keys
+
+    raw = await asyncio.to_thread(ensure_node_keys)
+    return NodeKeysInitResult(
+        ssh_key_status=str(raw.get("ssh_key_status", "unknown")),
+        local_cipher_status=str(raw.get("local_cipher_status", "unknown")),
+        raw_info=raw,
+    )
+
+
+async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
     import pyotp
     import qrcode
-    from fiber.phase.cli.sign import (
+    from fiber.phase.action.sign import (
         AdminSecretVault,
         _normalize_spiffe_id,
         _build_totp_provisioning_uri,
@@ -146,18 +172,19 @@ async def enroll_admin_totp(admin_user: str) -> dict[str, Any]:
     buf = io.StringIO()
     qr.print_ascii(out=buf, invert=True)
 
-    return {
-        "canonical_id": canonical_id,
-        "secret": secret,
-        "totp_uri": totp_uri,
-        "display_label": display_label,
-        "issuer": TOTP_ISSUER_NAME,
-        "qr_ascii": buf.getvalue(),
-    }
+    return TotpEnrollmentResult(
+        canonical_id=canonical_id,
+        secret=secret,
+        totp_uri=totp_uri,
+        display_label=display_label,
+        issuer=TOTP_ISSUER_NAME,
+        qr_ascii=buf.getvalue(),
+    )
 
-async def verify_admin_totp(admin_user: str, code_override: str | None = None) -> dict[str, Any]:
+
+async def verify_admin_totp(admin_user: str, code_override: str | None = None) -> TotpVerificationResult:
     import pyotp
-    from fiber.phase.cli.sign import (
+    from fiber.phase.action.sign import (
         AdminSecretVault,
         _normalize_spiffe_id,
         _resolve_vault_context,
@@ -167,7 +194,7 @@ async def verify_admin_totp(admin_user: str, code_override: str | None = None) -
 
     canonical_id = _normalize_spiffe_id(admin_user)
 
-    def _check() -> dict[str, Any]:
+    def _check() -> TotpVerificationResult:
         active_passphrase, pubkey_hex = _resolve_vault_context()
         conn = _open_audit_db(DEFAULT_DB_PATH)
         row = conn.execute(
@@ -176,18 +203,31 @@ async def verify_admin_totp(admin_user: str, code_override: str | None = None) -
         ).fetchone()
         conn.close()
         if not row:
-            return {"registered": False, "valid": False, "code": "UNREGISTERED", "pubkey": pubkey_hex, "user_id": canonical_id}
+            return TotpVerificationResult(
+                registered=False,
+                valid=False,
+                code="UNREGISTERED",
+                pubkey=pubkey_hex,
+                user_id=canonical_id,
+            )
         vault = AdminSecretVault(active_passphrase)
         secret = vault.decrypt(*row)
         totp = pyotp.TOTP(secret)
         target_code = code_override.strip() if code_override else totp.now()
         is_ok = totp.verify(str(target_code).zfill(6), valid_window=1)
-        return {"registered": True, "valid": is_ok, "code": target_code, "pubkey": pubkey_hex, "user_id": canonical_id}
+        return TotpVerificationResult(
+            registered=True,
+            valid=is_ok,
+            code=target_code,
+            pubkey=pubkey_hex,
+            user_id=canonical_id,
+        )
 
     return await asyncio.to_thread(_check)
 
+
 async def revoke_admin_totp(admin_user: str) -> str:
-    from fiber.phase.cli.sign import _normalize_spiffe_id, _open_audit_db, DEFAULT_DB_PATH
+    from fiber.phase.action.sign import _normalize_spiffe_id, _open_audit_db, DEFAULT_DB_PATH
 
     canonical_id = _normalize_spiffe_id(admin_user)
 
@@ -200,6 +240,7 @@ async def revoke_admin_totp(admin_user: str) -> str:
     await asyncio.to_thread(_delete)
     return canonical_id
 
+
 async def dispatch_slack_oob_payload(
     *,
     slack_channel: str,
@@ -209,7 +250,7 @@ async def dispatch_slack_oob_payload(
     target_id: str = "postgres-prod-db",
     tool_name: str = "drop_table",
     tool_args: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+) -> SlackOobDispatchResult:
     from fiber.gateway.bridge.mcp.slack import SlackHitlBridge
 
     args_payload = tool_args or {"table": "customer_ledgers", "cascade": True}
@@ -233,13 +274,13 @@ async def dispatch_slack_oob_payload(
     }
     blocks = bridge.build_yield_message_blocks(yield_event, channel=slack_channel)
     ts = await bridge.post_yield_notification(yield_event) if bridge.is_live_configured else None
-    return {
-        "handle_id": handle_id,
-        "is_live": bridge.is_live_configured,
-        "node_fp": bridge.node_fp,
-        "ts": ts,
-        "blocks": blocks,
-    }
+    return SlackOobDispatchResult(
+        handle_id=handle_id,
+        is_live=bridge.is_live_configured,
+        node_fp=bridge.node_fp,
+        ts=ts,
+        blocks=blocks,
+    )
 
 
 def build_hitl_resolution_receipt(
@@ -254,11 +295,12 @@ def build_hitl_resolution_receipt(
         {"status": "RESUMED", "handle_id": "h_active", "attested_by": admin_user},
     )
 
-# MCP Topology & Gateway Health (Headless)
+
+# 3. MCP Topology & Gateway Health (Headless)
 def _inspect_and_sanitize_config_candidates(
     candidate_map: dict[str, list[Path]],
-) -> tuple[list[dict[str, Any]], tuple[tuple[str, int, int], ...]]:
-    config_list: list[dict[str, Any]] = []
+) -> tuple[list[McpConfigCandidate], tuple[tuple[str, int, int], ...]]:
+    config_list: list[McpConfigCandidate] = []
     stat_sig: list[tuple[str, int, int]] = []
 
     for agent_name, paths in candidate_map.items():
@@ -287,21 +329,24 @@ def _inspect_and_sanitize_config_candidates(
             continue
 
         stat_sig.append((str(primary_path), mtime_ns, size))
-        config_list.append({
-            "agent": agent_name,
-            "path": str(primary_path),
-            "name": primary_path.name,
-            "exists": existing is not None and has_valid_content,
-            "file_present": existing is not None,
-        })
+        config_list.append(
+            McpConfigCandidate(
+                agent=agent_name,
+                path=str(primary_path),
+                name=primary_path.name,
+                exists=existing is not None and has_valid_content,
+                file_present=existing is not None,
+            )
+        )
 
     return config_list, tuple(stat_sig)
 
-async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = False) -> dict[str, Any]:
+
+async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = False) -> McpTopologyScanResult:
     global _last_config_stat_sig, _cached_mapped_entries
     import httpx
     from fiber.infra.mcp.mapper.config import McpConfigMapper
-    from fiber.phase.cli.connect import discover_builtin_workers, resolve_connector_spec
+    from fiber.phase.action.connect import discover_builtin_workers, resolve_connector_spec
     from xphi.node.space.tunnel.factory import TunnelFactory
 
     candidate_map = McpConfigMapper._resolve_candidate_paths()
@@ -325,19 +370,21 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
         _cached_mapped_entries = await asyncio.to_thread(McpConfigMapper.scan_and_parse)
         _last_config_stat_sig = current_stat_sig
 
-    workers: list[dict[str, Any]] = []
+    workers: list[McpWorkerInfo] = []
     seen_ids: set[str] = set()
     for entry in _cached_mapped_entries:
         spec = resolve_connector_spec(target=entry.target_id, exec_cmd=entry.exec_cmd)
-        workers.append({
-            "target_id": spec.target_id,
-            "source": entry.source_agent,
-            "transport": spec.transport,
-            "mode": spec.mode,
-            "preflight": entry.env.get("FIBER_PREFLIGHT_PATTERN") or spec.preflight or "",
-            "is_live": spec.target_id in live_targets,
-            "exec_cmd": spec.exec_cmd,
-        })
+        workers.append(
+            McpWorkerInfo(
+                target_id=spec.target_id,
+                source=entry.source_agent,
+                transport=spec.transport,
+                mode=spec.mode,
+                preflight=entry.env.get("FIBER_PREFLIGHT_PATTERN") or spec.preflight or "",
+                is_live=spec.target_id in live_targets,
+                exec_cmd=spec.exec_cmd,
+            )
+        )
         seen_ids.add(spec.target_id)
 
     if not workers:
@@ -345,15 +392,17 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
         for _, (canon_id, cmd, def_mode) in builtins.items():
             if canon_id not in seen_ids:
                 seen_ids.add(canon_id)
-                workers.append({
-                    "target_id": canon_id,
-                    "source": "builtin",
-                    "transport": "stdio",
-                    "mode": def_mode,
-                    "preflight": "",
-                    "is_live": canon_id in live_targets,
-                    "exec_cmd": cmd,
-                })
+                workers.append(
+                    McpWorkerInfo(
+                        target_id=canon_id,
+                        source="builtin",
+                        transport="stdio",
+                        mode=def_mode,
+                        preflight="",
+                        is_live=canon_id in live_targets,
+                        exec_cmd=cmd,
+                    )
+                )
 
     t0 = time.perf_counter()
     gw_online = False
@@ -367,16 +416,17 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
     except Exception:
         pass
 
-    return {
-        "configs": config_list,
-        "workers": workers,
-        "active_target_ids": sorted(live_targets),
-        "gateway_online": gw_online,
-        "gateway_latency_ms": gw_lat,
-        "checked_at": time.strftime("%H:%M:%S"),
-    }
+    return McpTopologyScanResult(
+        configs=config_list,
+        workers=workers,
+        active_target_ids=sorted(live_targets),
+        gateway_online=gw_online,
+        gateway_latency_ms=gw_lat,
+        checked_at=time.strftime("%H:%M:%S"),
+    )
 
-# Pipeline Guardrail & VCR Runner (Headless)
+
+# 4. Pipeline Guardrail & VCR Runner (Headless)
 def matches_secret_pattern(prompt: str, custom_regex: str) -> bool:
     if "sk-" in prompt or "Bearer " in prompt:
         return True

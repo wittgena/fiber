@@ -32,7 +32,7 @@ def _build_drawer() -> None:
                 ui.button("Clear", on_click=lambda: refs.cli_log.clear() if refs.cli_log else None).props(
                     "flat dense size=xs color=slate-4"
                 )
-            refs.cli_log = kit.log(max_lines=250, color="text-slate-200", height="h-32")
+            refs.cli_log = kit.log(max_lines=250, color="text-slate-200", height="h-64")
 
         with right_col:
             with ui.row().classes("w-full justify-between items-center mb-1"):
@@ -46,12 +46,11 @@ def _build_drawer() -> None:
                     ui.button("Clear", on_click=lambda: refs.pubsub_log.clear() if refs.pubsub_log else None).props(
                         "flat dense size=xs color=slate-4"
                     )
-            refs.pubsub_log = kit.log(max_lines=250, color="text-amber-200", height="h-32")
+            refs.pubsub_log = kit.log(max_lines=250, color="text-amber-200", height="h-64")
 
     refs.push_cli(
         f"Fiber-Console initialized (State file: {STATE_FILE_PATH}). Syncing local keys, accounts, and MCP topology..."
     )
-
 
 def _on_tick(tabs: Sequence[StudioTab]) -> None:
     """Flush 100ms ringbuffers, trigger dirty tab re-renders, and auto-sync state.json every 5s (50 ticks)."""
@@ -70,7 +69,6 @@ def _on_tick(tabs: Sequence[StudioTab]) -> None:
                 diag.debug("Auto-synced modified console state to disk", path=str(STATE_FILE_PATH))
     except Exception as exc:
         diag.exception("100ms tick flush error", exc=exc)
-
 
 def build_console_shell() -> ConsoleTemplate:
     shell = ConsoleTemplate(

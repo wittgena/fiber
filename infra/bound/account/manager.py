@@ -23,7 +23,7 @@ from xphi.arch.bound.adapter.pta import (
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
-from xphi.state.anchor.key import KeyGen  # [추가] KeyGen 임포트
+from xphi.state.anchor.key import KeyGen
 
 log = get_emitter("bound.account.manager")
 DEFAULT_INITIAL_FUEL = 1000
@@ -69,18 +69,18 @@ class LocalAccountManager(AccountManagerProtocol):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    async def _get_core_balance(self, asset_type: str = "fuel") -> int:
+    async def _get_ledger_balance(self, asset_type: str = "fuel") -> int:
         return await self.pta_adapter.get_balance(self.tenant_id, asset_type=asset_type)
 
     async def get_status(self) -> Dict[str, Any]:
-        core_balance = await self._get_core_balance("fuel")
+        ledger_balance = await self._get_ledger_balance("fuel")
         inputs = await self.pta_adapter.get_available_inputs(self.tenant_id, "fuel")
         watcher_quota = default_finops_watcher.local_budget_cache.get(self.tenant_id)
         policy_ver = default_finops_watcher.policy_versions.get(self.tenant_id, 0)
 
         registry_entry = LocalAccountRegistry.record(
             tenant_id=self.tenant_id,
-            ledger_balance=core_balance,
+            ledger_balance=ledger_balance,
             active_quota=watcher_quota,
             policy_ver=policy_ver
         )
@@ -89,7 +89,7 @@ class LocalAccountManager(AccountManagerProtocol):
             "tenant_id": self.tenant_id,
             "registry_file": str(LocalAccountRegistry.get_registry_path()),
             "core_state": {
-                "balance": core_balance, 
+                "ledger_balance": ledger_balance, 
                 "active_allocations": len(inputs)
             },
             "finops_watcher": {
@@ -103,7 +103,7 @@ class LocalAccountManager(AccountManagerProtocol):
         }
 
     async def allocate(self, cmd: AllocateCommand) -> Dict[str, Any]:
-        initial_balance = await self._get_core_balance()
+        initial_balance = await self._get_ledger_balance()
         target_balance = initial_balance + cmd.amount
 
         produce_tx = PtaTransaction(
@@ -112,13 +112,12 @@ class LocalAccountManager(AccountManagerProtocol):
             metadata={"action": "allocate", "tenant_id": self.tenant_id}
         )
         
-        # [개선] 테넌트 단위 독립 브랜치로 명시적 스트림 연결
         stream_id = KeyGen.stream_fuel(self.tenant_id)
         tx_hash = await self.pta_adapter.execute_transaction(produce_tx, stream_id=stream_id)
 
         start_ts = time.time()
         while time.time() - start_ts < 5.0:
-            if await self._get_core_balance() >= target_balance:
+            if await self._get_ledger_balance() >= target_balance:
                 break
             await asyncio.sleep(0.2)
 
@@ -146,7 +145,7 @@ class LocalAccountManager(AccountManagerProtocol):
         
         if cmd.sync_ledger and ap2_mandate:
             target_fuel = int(default_finops_watcher.local_budget_cache.get(self.tenant_id, 0.0))
-            diff = target_fuel - await self._get_core_balance()
+            diff = target_fuel - await self._get_ledger_balance()
             if diff > 0:
                 await self.allocate(AllocateCommand(amount=diff))
 
@@ -193,7 +192,7 @@ class LocalAccountManager(AccountManagerProtocol):
             
             start_ts = time.time()
             while time.time() - start_ts < 5.0:
-                if await self._get_core_balance("fuel") <= 0:
+                if await self._get_ledger_balance("fuel") <= 0:
                     break
                 await asyncio.sleep(0.2)
 
@@ -210,9 +209,7 @@ class LocalAccountManager(AccountManagerProtocol):
             }
         }
         await tunnel.publish("finops:control_plane", json.dumps(payload))
-        
         default_finops_watcher.local_budget_cache[self.tenant_id] = 0.0
-        
         LocalAccountRegistry.record(
             self.tenant_id, 
             active_quota=0.0, 

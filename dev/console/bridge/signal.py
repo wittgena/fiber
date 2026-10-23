@@ -29,7 +29,7 @@ class UIKey(str, Enum):
     METRIC = "ui_metric"
     TENANT_ID = "tenant_id"
     ACTIVE_QUOTA = "active_quota"
-    CORE_BALANCE = "core_balance"
+    LEDGER_BALANCE = "ledger_balance"
     POLICY_VER = "policy_ver"
     ELAPSED_MS = "elapsed_ms"
     CHUNKS = "chunks"
@@ -39,7 +39,6 @@ class UIKey(str, Enum):
     TOOL_NAME = "tool_name"
     TOOL_ARGS = "tool_args"
     IDEM_KEY = "idem_key"
-
 
 class UISlot(str, Enum):
     """Tab 2: Pipeline X-Ray 슬롯 식별자"""
@@ -171,7 +170,7 @@ class SurfaceClassifier:
 
         noise = {"xphi", "fiber", "infra", "dev", "bound", "gateway", "phase", "cli", "watcher", "arch", "state", "node", domain.value}
         parts = [p for p in src.split(".") if p and p not in noise]
-        sub_topic = parts[-1] if len(parts) <= 1 else ".".join(parts[-2:])
+        sub_topic = (parts[0] if parts else "core") if len(parts) <= 1 else ".".join(parts[-2:])
 
         # 4. 핵심 시그널 판정
         is_hitl = (
