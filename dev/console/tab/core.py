@@ -24,7 +24,7 @@ def _resolve_accounts_registry_path() -> Path:
 
 
 # Tab 2: Live LLM Pipeline X-Ray (`state.security`)
-class LLMLiveTab(StudioTab):
+class LiveLLMTab(StudioTab):
     title = "LLM Live"
     left_header = "🛡️ Active Guardrail & Stream Probe"
     right_header = "🔬 Live Pipeline & Interceptor"
@@ -241,7 +241,7 @@ class FinOpsTab(StudioTab):
 
 
 # Tab 5: Model Pricing & Fuel Exchange Matrix
-class ModelRatesTab(StudioTab):
+class ModelPriceTab(StudioTab):
     title = "Model Pricing"
     left_header = "💱 Model Pricing & Fuel Rate Board(Top 20)"
     right_header = "📐 Unit Parity & Settlement Reference"
@@ -353,7 +353,7 @@ class ModelRatesTab(StudioTab):
 
 
 def build_tabs() -> list[StudioTab]:
-    return [LLMLiveTab(), McpGatewayTab(), FinOpsTab(), VcrTab(), ModelRatesTab(), DemoTab()]
+    return [McpGatewayTab(), LiveLLMTab(), FinOpsTab(), VcrTab(), ModelPriceTab()]
 
 
 def build_modals() -> list[ModalTemplate]:

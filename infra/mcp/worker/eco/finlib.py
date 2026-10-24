@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 
 from xphi.arch.contract.protocol.worker import WorkerProtocol
 
-log = logging.getLogger("agent.finlib")
+log = logging.getLogger("eco.finlib")
 
 try:
     import numpy as np
@@ -29,7 +29,7 @@ except ImportError:
 
 class FinLib(WorkerProtocol):
     def __init__(self):
-        super().__init__(agent_name="agent.finlib")
+        super().__init__(agent_name="eco.finlib")
         
         self.tick_sizes = {"BTCUSD": 0.5, "ETHUSD": 0.01, "SOLUSD": 0.001}
         self.lot_sizes = {"BTCUSD": 0.001, "ETHUSD": 0.01, "SOLUSD": 0.1}
@@ -133,7 +133,6 @@ class FinLib(WorkerProtocol):
             self.send_error(req_id, -32602, f"Invalid params: {str(e)}")
 
     def _tool_resolve_dates(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """QuantLib C++ 엔진을 활용한 초고속 휴일/영업일 계산 (또는 Mock)"""
         if not HAS_QL:
             return {"resolved_date": "2026-09-10", "mode": "mocked"}
 

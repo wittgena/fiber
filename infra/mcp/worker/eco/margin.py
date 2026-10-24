@@ -14,7 +14,6 @@ from xphi.watcher.receptor.trajectory import (
 )
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
-"""Pydantic Schemas (Financial vs Compute)"""
 class ExecutionPricingModel(BaseModel):
     base_fuel_fee_usd: float = Field(0.002, description="Base invocation fee")
     profit_share_ratio: float = Field(0.05, ge=0.0, le=1.0, description="Take-rate on net arbitrage profit")
@@ -32,20 +31,15 @@ class RealtimeMarginRequest(BaseModel):
     infra: ExecutionInfraModel = Field(default_factory=ExecutionInfraModel)
     tps_range: List[float] = Field(default=[1.0, 10.0, 50.0, 100.0])
 
-# 클라이언트용 껍데기 스키마 (실제 연산은 rpc.margin의 ComputeMarginRequest가 담당)
 class ComputeMarginRequestParams(BaseModel):
     target_worker: str = Field(..., description="The ID of the worker that executed the task")
     compute_time_sec: float = Field(0.0, description="Total CPU compute execution time in seconds")
     io_consumed_mb: float = Field(0.0, description="Total memory/disk I/O throughput in MB")
     value_units_extracted: int = Field(0, description="Business value units extracted (events, rows, etc.)")
 
-
-# =====================================================================
-# 2. Asynchronous Margin Calculation Agent (MCP Proxy)
-# =====================================================================
-class MarginCalcAgent(AsyncWorkerProtocol):
+class MarginCalcWorker(AsyncWorkerProtocol):
     def __init__(self):
-        super().__init__(agent_name="agent.margin")
+        super().__init__(agent_name="eco.margin")
         
         self.MONTHLY_SECONDS = 30 * 24 * 60 * 60
         self.risk_policy = RiskPolicy()
@@ -164,7 +158,7 @@ class MarginCalcAgent(AsyncWorkerProtocol):
         }
 
 def main():
-    server = MarginCalcAgent()
+    server = MarginCalcWorker()
     try:
         import asyncio
         asyncio.run(server.serve_forever_async())

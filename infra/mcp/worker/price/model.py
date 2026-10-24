@@ -1,4 +1,4 @@
-# fiber.infra.mcp.worker.model.oracle
+# fiber.infra.mcp.worker.price.model
 import sys
 import json
 import time
@@ -9,16 +9,15 @@ from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 from fiber.llm.provider.cost.registry import RegistryIO
 from fiber.llm.provider.cost.filter import extract_aligned_registry, CORE_KEYWORDS
 
-class ModelOracleServer(AsyncWorkerProtocol):
+class PriceModelServer(AsyncWorkerProtocol):
     """
     - Provides LLM pricing and context specifications to MCP clients.
     - Automatically bootstraps the filter pipeline if the registry file is missing.
     - Periodically synchronizes the latest API costs in the background.
     """
     def __init__(self):
-        super().__init__(agent_name="model.oracle")
-        
-        self.log.info("Initializing Autonomous Model Oracle Receptor...")
+        super().__init__(agent_name="price.model")
+        self.log.info("Initializing Autonomous Model Price Receptor...")
         
         # Cache and state management
         self._registry_cache: Dict[str, Any] = {}
@@ -163,7 +162,7 @@ class ModelOracleServer(AsyncWorkerProtocol):
         })
 
 def main():
-    server = ModelOracleServer()
+    server = PriceModelServer()
     try:
         asyncio.run(server.serve_forever_async())
     except KeyboardInterrupt:

@@ -15,6 +15,7 @@ from xphi.node.space.bind.resolver import resolve_path
 def _get_anchor_mcp_path() -> Path:
     return resolve_path("anchor") / "mcp.json"
 
+
 def _load_anchor_specs_map() -> dict[str, dict]:
     """~/.anchor/mcp.json의 mcpServers 맵을 직접 읽어 {target_id: spec_dict} 반환"""
     p = _get_anchor_mcp_path()
@@ -90,9 +91,9 @@ class QrModal(ModalTemplate):
 # Tab 1: MCP Gateway
 class McpGatewayTab(StudioTab):
     title = "MCP Gateway"
-    left_header = "🔌 MCP Config Switchboard"
-    right_header = "📡 Gateway Health (:8356) & Slack OOB Inspector"
-    ratio = 46
+    left_header = "🔌 MCP Config & Worker Switchboard"
+    right_header = "🛡️ Gateway Status & HITL Auth Gate"
+    ratio = 52
 
     def __init__(self) -> None:
         self._configs_box: ui.row | None = None
@@ -100,8 +101,7 @@ class McpGatewayTab(StudioTab):
         self._roster_summary_label: ui.label | None = None
 
     def compose_left(self) -> None:
-        s = state.security
-
+        """좌측: MCP 설정 파일 탐색 및 워커 프로세스 토폴로지 전담"""
         # 1. Fiber MCP Config (.anchor/mcp.json) & External Agent Configs
         with kit.row(align="items-center justify-between"):
             ui.label("🗂️ MCP Configs").classes(kit.CLS_SECTION_HEADER)
@@ -119,34 +119,20 @@ class McpGatewayTab(StudioTab):
                 ).props("flat dense size=xs color=cyan").tooltip("Rescan MCP configs & daemon status")
 
         # 2. MCP Workers List (Running vs Standby vs Config-Only)
+        # 하단 요소들이 우측으로 이동했으므로 워커 리스트가 남은 세로 공간을 넉넉히 활용하도록 확장
         with kit.row(align="items-center justify-between"):
             ui.label("🔌 MCP Workers").classes(kit.CLS_SECTION_HEADER)
             self._roster_summary_label = ui.label("").classes("text-[10px] font-mono text-slate-400")
 
-        self._workers_box = ui.column().classes("w-full gap-1 max-h-36 overflow-y-auto pr-1 shrink-0")
-
-        # 3. Slack OOB Bridge & Identity Mapping
-        ui.label("💬 Slack OOB Bridge & Identity Mapping").classes("text-xs font-bold text-amber-400 mt-1 shrink-0")
-        with kit.row():
-            kit.text("Slack Channel", s, "slack_channel", width="w-32")
-            kit.text("Slack UID ('*')", s, "slack_user_map", width="w-28")
-            kit.text("Mapped SPIFFE ID", s, "admin_user")
-
-        with kit.bar():
-            ui.label("OOB Auth Policy (TOTP vs 1-Click Sudo)").classes("text-xs font-mono text-slate-300")
-            kit.switch("Require 6-Digit TOTP", s, "oob_require_totp", color="cyan")
-
-        with kit.footer():
-            kit.button("🔑 Init Keys", oob.init_node_keys, color="slate-4", outline=True)
-            kit.button("📱 Enroll TOTP QR", oob.enroll_admin_totp, color="cyan", flex=True)
-            kit.button("✓ Verify TOTP", oob.verify_admin_totp, color="emerald", outline=True, flex=True)
-            kit.button("🗑️", oob.revoke_admin_totp, color="red", outline=True)
+        self._workers_box = ui.column().classes("w-full gap-1.5 flex-grow max-h-72 overflow-y-auto pr-1")
 
         self._render_dynamic_sections()
 
     def compose_right(self) -> None:
-        """우측 실시간 게이트웨이 헬스 배지 및 Slack BlockKit / HTTP 202 인스펙터"""
+        """우측: 게이트웨이 헬스, Slack HITL 브릿지 설정, HTTP 202 시뮬레이션 및 TOTP 제어"""
         s = state.security
+
+        # 1. 상단 실시간 게이트웨이 & Slack OOB 상태 배지
         with kit.bar():
             ui.label().bind_text_from(s, "gateway_health_badge_text").classes(
                 "text-xs font-mono font-bold text-emerald-400"
@@ -155,6 +141,21 @@ class McpGatewayTab(StudioTab):
                 "text-[11px] font-mono font-bold text-cyan-300"
             )
 
+        # 2. Slack Bridge & Auth Policy 설정 (기존 좌측에서 이동)
+        ui.label("💬 Slack HITL Bridge & Auth Policy").classes("text-xs font-bold text-amber-400 mt-1 shrink-0")
+        with kit.row():
+            kit.text("Slack Channel", s, "slack_channel", width="w-32")
+            kit.text("Slack UID ('*')", s, "slack_user_map", width="w-28")
+            kit.text("Mapped SPIFFE ID", s, "admin_user")
+
+        with kit.bar():
+            ui.label("Auth Policy (TOTP vs Approve Button)").classes("text-xs font-mono text-slate-300")
+            kit.switch("TOTP(6-Digit)", s, "oob_require_totp", color="cyan")
+
+        # 3. HTTP 202 HITL Gate & Slack Dispatch 트리거
+        ui.label("🚨 High-Risk Tool Call Simulation (HTTP 202)").classes(
+            "text-xs font-bold text-slate-400 mt-1 shrink-0"
+        )
         with kit.row():
             kit.button(
                 "🚨 Simulate 'drop_table' (HTTP 202)",
@@ -166,18 +167,27 @@ class McpGatewayTab(StudioTab):
                 flex=True,
             )
             kit.button(
-                "Dispatch Slack HITL",
+                "📤 Dispatch Slack HITL",
                 lambda: oob.dispatch_slack_oob(
                     "postgres-prod-db", "drop_table", {"table": "customer_ledgers", "cascade": True}
                 ),
                 color="indigo",
                 outline=True,
+                flex=True,
             )
 
-        ui.label("Live Signed OOB StateToken & Slack BlockKit Payload (`mcp.bridge.slack`):").classes(
-            "text-xs text-slate-400 shrink-0"
-        )
-        kit.editor(s, "oob_inspector_json")
+        # [임시 비활성화] 공간 점유가 큰 Slack BlockKit / StateToken JSON 에디터 주석 처리
+        # ui.label("Live Signed OOB StateToken & Slack BlockKit Payload (`mcp.bridge.slack`):").classes(
+        #     "text-xs text-slate-400 shrink-0"
+        # )
+        # kit.editor(s, "oob_inspector_json")
+
+        # 4. 하단 노드 키 및 TOTP 인증 제어 푸터 (기존 좌측에서 이동)
+        with kit.footer():
+            kit.button("KeyGen", oob.init_node_keys, color="slate-4", outline=True)
+            kit.button("Enroll TOTP(QR)", oob.enroll_admin_totp, color="cyan", flex=True)
+            kit.button("Verify TOTP", oob.verify_admin_totp, color="emerald", outline=True, flex=True)
+            kit.button("Revoke", oob.revoke_admin_totp, color="red", outline=True)
 
     def _render_dynamic_sections(self) -> None:
         s = state.security
@@ -293,7 +303,7 @@ class McpGatewayTab(StudioTab):
                     elif raw_mode in ("multiplex", "linear"):
                         mode = raw_mode
                     elif tid.startswith("worker."):
-                        mode = "linear" if tid in ("worker.eco.finlib", "worker.sentinel") else "multiplex"
+                        mode = "linear" if tid in ("worker.eco.finlib", "worker.reaper") else "multiplex"
                     else:
                         mode = raw_mode or "ephemeral"
 

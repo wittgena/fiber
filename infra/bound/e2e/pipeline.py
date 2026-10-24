@@ -44,14 +44,14 @@ class MockPhaseStore:
 
     def set_pending(self, handle_id: str, payload: dict, target_server_id: str = "legacy-01"):
         class DummyState:
-            action = "dphi.transition.pending"
+            action = "transition.pending"
             metadata = {"status": "PENDING", "target": target_server_id}
             def __init__(self, p): self.payload = p
         self.states[handle_id] = DummyState(payload)
 
     def set_resolved(self, handle_id: str, payload: dict):
         class DummyState:
-            action = "dphi.transition.resolve"
+            action = "transition.resolve"
             metadata = {"status": "RESOLVED"}
             def __init__(self, p): self.payload = p
         self.states[handle_id] = DummyState(payload)
@@ -59,7 +59,7 @@ class MockPhaseStore:
 
     def set_faulted(self, handle_id: str, error_detail: str):
         class DummyState:
-            action = "dphi.transition.resolve"
+            action = "transition.resolve"
             metadata = {"status": "FAULTED", "error_detail": error_detail}
             def __init__(self): self.payload = None
         self.states[handle_id] = DummyState()
@@ -67,7 +67,7 @@ class MockPhaseStore:
 
     def set_yielded(self, handle_id: str, payload: dict):
         class DummyState:
-            action = "dphi.transition.yield"
+            action = "transition.yield"
             metadata = {"status": "YIELD"}
             def __init__(self, p): self.payload = p
         self.states[handle_id] = DummyState(payload)
@@ -77,7 +77,7 @@ class MockPhaseStore:
         stale = []
         effective_ttl = min(
             self.stale_timeout,
-            thresholds.get("dphi.transition.pending", self.stale_timeout)
+            thresholds.get("transition.pending", self.stale_timeout)
         )
         for hid, ts in list(self.yield_timestamps.items()):
             if current_time - ts > effective_ttl:

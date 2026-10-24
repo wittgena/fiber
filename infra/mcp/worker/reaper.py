@@ -1,4 +1,4 @@
-# fiber.infra.mcp.worker.sentinel
+# fiber.infra.mcp.worker.reaper
 import asyncio
 import time
 import json
@@ -8,17 +8,17 @@ from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.protocol.worker import WorkerProtocol
 from xphi.state.anchor.store import PhaseStore
 
-class AgentSentinel(WorkerProtocol):
+class WorkerReaper(WorkerProtocol):
     def __init__(self, ledger: PhaseStore, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):
-        super().__init__(agent_name="agent.sentinel")
+        super().__init__(agent_name="worker.reaper")
         
         self.ledger = ledger
         self.rpc = rpc_client
         self.sweep_interval = sweep_interval
         self.running = False
         self.ttl_thresholds = {
-            "dphi.transition.pending": 30.0,  # OTP/인간 개입 대기: 30초 초과 시 롤백
-            "dphi.transition.invoke": 120.0   # 일반 블로킹 I/O 대기: 120초 초과 시 롤백
+            "transition.pending": 30.0,  # OTP/인간 개입 대기: 30초 초과 시 롤백
+            "transition.invoke": 120.0   # 일반 블로킹 I/O 대기: 120초 초과 시 롤백
         }
 
     def handle_tools_list(self, req_id: Any):
@@ -43,14 +43,14 @@ class AgentSentinel(WorkerProtocol):
 
     async def _manual_sweep_task(self, req_id: Any, override_ttl: float = None):
         try:
-            original_pending = self.ttl_thresholds["dphi.transition.pending"]
+            original_pending = self.ttl_thresholds["transition.pending"]
             if override_ttl:
-                self.ttl_thresholds["dphi.transition.pending"] = override_ttl
+                self.ttl_thresholds["transition.pending"] = override_ttl
                 
             swept_count = await self._sweep_and_reconcile()
             
             if override_ttl:
-                self.ttl_thresholds["dphi.transition.pending"] = original_pending
+                self.ttl_thresholds["transition.pending"] = original_pending
                 
             self.send_response(req_id, {
                 "content": [{"type": "text", "text": f"Manual reconciliation complete. Swept {swept_count} orphaned streams."}],
@@ -118,10 +118,10 @@ class AgentSentinel(WorkerProtocol):
         # Phase 2: 원장 씰링 및 증거 기록 (Sealing the Truth)
         await self.ledger.force_transition(
             handle_id=handle_id,
-            new_action="dphi.transition.resolve",
+            new_action="transition.resolve",
             metadata={
                 "status": "FAULTED", 
-                "reason": "SENTINEL_TIMEOUT",
+                "reason": "REAPER_TIMEOUT",
                 "locked_fuel": locked_fuel,
                 "risk_score": risk_score
             }
@@ -135,7 +135,7 @@ async def main():
         async def force_transition(self, *args, **kwargs):
             pass
 
-    sentinel = AgentSentinel(ledger=MockStore(), rpc_client=InternalRpcClient())
+    sentinel = WorkerReaper(ledger=MockStore(), rpc_client=InternalRpcClient())
     await sentinel.ignite()
 
 if __name__ == "__main__":

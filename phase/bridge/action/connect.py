@@ -39,12 +39,12 @@ class ResolvedTarget:
 BUILTIN_ALIASES: Dict[str, str] = {
     "deployer": "worker.deployer",
     "finops": "worker.finops",
-    "sentinel": "worker.sentinel",
+    "reaper": "worker.reaper",
     "eco.margin": "worker.eco.margin",
-    "eco.oracle": "worker.eco.oracle",
     "eco.finlib": "worker.eco.finlib",
+    "price.token": "worker.price.token",
+    "price.model": "worker.price.model",
     "search.archive": "worker.search.archive",
-    "model.oracle": "worker.model.oracle",
 }
 
 def _extract_base_name(b: ast.expr) -> str:
@@ -111,12 +111,9 @@ def discover_builtin_workers(
             discovered[canonical_id] = entry
             discovered[rel_key] = entry
             discovered[f"worker.{rel_key}"] = entry
-
-            # 단축 leaf 키('oracle' 등)는 아직 선점되지 않았거나 BUILTIN_ALIASES가 가리키는 기본 타겟일 때만 등록
             if leaf not in discovered or BUILTIN_ALIASES.get(leaf) == canonical_id:
                 discovered[leaf] = entry
 
-            # BUILTIN_ALIASES에 정의된 추가 별칭들('model_oracle', 'worker.eco.archive' 등) 연결
             for alias_key, target_cid in BUILTIN_ALIASES.items():
                 if target_cid == canonical_id:
                     discovered[alias_key] = entry

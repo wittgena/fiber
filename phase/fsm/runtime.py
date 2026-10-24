@@ -1,5 +1,4 @@
 # fiber.phase.fsm.runtime
-## @lineage: fiber.dev.ex.fsm.runtime
 import json
 from dataclasses import dataclass, field, replace
 from typing import Dict, Set, List, Optional, Tuple, Any

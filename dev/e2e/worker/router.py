@@ -27,7 +27,7 @@ from fiber.phase.bridge.action.connect import (
     _specs_from_mapped_entries,
     run_connect_copy,
 )
-import fiber.infra.mcp.worker.eco.oracle as worker_oracle
+import fiber.infra.mcp.worker.price.token as worker_price_token
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 import fiber.infra.mcp.worker.eco.margin as worker_margin
 import fiber.infra.mcp.worker.search.archive as worker_search
@@ -49,9 +49,7 @@ class MCPRouterPipeline(MockPipeline):
             name="Core Routing & Performance Suite",
             scope_name="MCP_ROUTER_SUITE",
         )
-
-        # ANCHOR_ROOT/mcp.json 및 McpWorkerDaemon에 등록된 정규화 Target ID 사용
-        self.oracle_id = "worker.eco.oracle"
+        self.oracle_id = "worker.price.token"
         self.finlib_id = "worker.eco.finlib"
         self.margin_id = "worker.eco.margin"
         self.search_id = "worker.search.archive"
@@ -118,7 +116,7 @@ class MCPRouterPipeline(MockPipeline):
         anchor_specs = self._load_specs_from_anchor_root()
 
         fallback_defaults = {
-            self.oracle_id: (f"{sys.executable} -m {worker_oracle.__name__}", "multiplex"),
+            self.oracle_id: (f"{sys.executable} -m {worker_price_token.__name__}", "multiplex"),
             self.finlib_id: (f"{sys.executable} -m {worker_finlib.__name__}", "linear"),
             self.margin_id: (f"{sys.executable} -m {worker_margin.__name__}", "multiplex"),
             self.search_id: (f"{sys.executable} -m {worker_search.__name__}", "multiplex"),
