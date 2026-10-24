@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.scene.sandbox
+# fiber.dev.base.scene.sandbox
+## @lineage: fiber.dev.e2e.base.scene.sandbox
 ## @lineage: fiber.infra.bound.e2e.scene.sandbox
 ## @lineage: fiber.infra.e2e.scene.sandbox
 ## @lineage: fiber.infra.scene.sandbox
@@ -10,8 +11,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
-from fiber.dev.e2e.base.sandbox import SandboxRunner, ScriptDef, TestScripts
-from fiber.dev.e2e.base.epoch import ActorIdentity
+from fiber.dev.base.sandbox import SandboxRunner, ScriptDef, TestScripts
+from fiber.dev.base.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.runtime.wasm.method import DphiMethod

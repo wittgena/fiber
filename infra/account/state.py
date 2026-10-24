@@ -1,5 +1,4 @@
 # fiber.infra.account.state
-## @lineage: fiber.dev.console.state
 from __future__ import annotations
 
 from collections import deque
@@ -12,14 +11,14 @@ from typing import Any, Dict, List, Tuple
 from xphi.node.space.bind.resolver import resolve_path
 
 STATE_FILE_PATH = resolve_path("anchor") / "state.json"
+USD_TO_FUEL_RATE = 1_000_000
 
 _PERSIST_SCHEMA: Dict[str, Tuple[str, ...]] = {
     "finops": (
         "tenant_id",
         "spiffe_id",
-        "current_fuel",
         "ledger_balance",
-        "budget_limit",
+        "fuel_quota",
         "policy_ver",
         "last_op",
         "jwt_op",
@@ -49,22 +48,23 @@ _PERSIST_SCHEMA: Dict[str, Tuple[str, ...]] = {
     ),
 }
 
+
 @dataclass
 class FinOpsState:
     tenant_id: str = "accounting_dept"
     spiffe_id: str = "spiffe://self/fiber"
     totp_enrolled: bool = False
 
-    current_fuel: int = 50000
-    ledger_balance: int = 50000
-    budget_limit: int = 15000
+    # $10.00 = 10,000,000 Fuel 기본 스케일 ($1 = 1M Fuel)
+    ledger_balance: int = 10_000_000  # 현재 남은 실제 연료 (스트림 소모 시 차감됨)
+    fuel_quota: int = 10_000_000      # 할당된 예산 기준값 사본 (비교 및 Re-sync 기준)
     policy_ver: int = 1
     last_op: str = "INIT"
 
-    jwt_op: str = "PROVISION"
-    jwt_usd: float = 50.0
-    sync_ledger: bool = True  # 상시 True 고정 (하위 호환성 유지)
-    last_jwt_preview: str = "Click 'Apply Fuel Mandate' to mint a NodeSigner-signed mandate token."
+    jwt_op: str = "SYNC_QUOTA"
+    jwt_usd: float = 10.0
+    sync_ledger: bool = True
+    last_jwt_preview: str = "Click 'Apply' to set or top-up fuel balance."
 
     saved_usd: float = 12.40
     saved_tokens: int = 384000
@@ -73,24 +73,35 @@ class FinOpsState:
 
     chart_dirty: bool = False
     x_ticks: deque = field(default_factory=lambda: deque(["Init"], maxlen=30))
-    y_fuel: deque = field(default_factory=lambda: deque([50000], maxlen=30))
-    y_core: deque = field(default_factory=lambda: deque([50000], maxlen=30))
+    y_fuel: deque = field(default_factory=lambda: deque([10_000_000], maxlen=30))
+    y_core: deque = field(default_factory=lambda: deque([10_000_000], maxlen=30))
+
+    def set_balance(self, fuel_amount: int) -> None:
+        val = max(0, int(fuel_amount))
+        self.ledger_balance = val
 
     def push_chart_point(self, label: str | None = None) -> None:
-        """현재 current_fuel과 ledger_balance를 차트 시계열에 즉시 반영한다."""
+        """현재 잔액(ledger_balance)을 차트 시계열에 즉시 반영한다."""
         tick_label = label or time.strftime("%H:%M:%S")
         self.x_ticks.append(tick_label)
-        self.y_fuel.append(self.current_fuel)
-        self.y_core.append(self.ledger_balance)
+        self.y_fuel.append(self.ledger_balance)
+        self.y_core.append(self.fuel_quota)
         self.chart_dirty = True
+    
+    @property
+    def balance_usd(self) -> float:
+        return self.ledger_balance / USD_TO_FUEL_RATE
+
+    @property
+    def quota_usd(self) -> float:
+        return self.fuel_quota / USD_TO_FUEL_RATE
 
     @property
     def account_summary_badge(self) -> str:
-        totp_tag = "🟢 TOTP" if self.totp_enrolled else "⚠️ No-TOTP"
-        spiffe_short = self.spiffe_id.replace("spiffe://self/", "") if self.spiffe_id else "unassigned"
         return (
-            f"Account(Tenant): {self.tenant_id} ({spiffe_short} | {totp_tag}) | "
-            f"v{self.policy_ver} | Balance(Fuel): {self.current_fuel:,} / {self.ledger_balance:,}"
+            f"Tenant: {self.tenant_id} (v{self.policy_ver}) | "
+            f"Balance: {self.ledger_balance:,} / Quota: {self.fuel_quota:,} Fuel "
+            f"(${self.balance_usd:,.2f} / ${self.quota_usd:,.2f})"
         )
 
 @dataclass
@@ -202,7 +213,7 @@ class StudioState:
     @property
     def fuel_kpi_text(self) -> str:
         f = self.finops
-        return f"[{f.tenant_id}] Remaining Fuel: {f.current_fuel:,} / {f.ledger_balance:,} (v{f.policy_ver})"
+        return f"[{f.tenant_id}] Balance: {f.ledger_balance:,} / {f.fuel_quota:,} Fuel (v{f.policy_ver})"
 
     @property
     def saved_kpi_text(self) -> str:
@@ -210,7 +221,6 @@ class StudioState:
         return f"Saved: ${f.saved_usd:.2f} ({f.saved_tokens:,} tok)"
 
     def to_persist_dict(self) -> Dict[str, Any]:
-        """Extract only persistent configuration and KPI fields into a JSON-serializable dict."""
         data: Dict[str, Any] = {}
         for section_name, keys in _PERSIST_SCHEMA.items():
             sub_obj = getattr(self, section_name)
@@ -218,7 +228,6 @@ class StudioState:
         return data
 
     def apply_persist_dict(self, payload: Dict[str, Any]) -> None:
-        """Restore persisted fields safely while keeping initial chart deques aligned."""
         for section_name, keys in _PERSIST_SCHEMA.items():
             sec_data = payload.get(section_name)
             if not isinstance(sec_data, dict):
@@ -228,12 +237,14 @@ class StudioState:
                 if k in sec_data and sec_data[k] is not None:
                     setattr(sub_obj, k, sec_data[k])
 
-        # Align initial chart points with restored fuel/core balance
-        self.finops.y_fuel.clear()
-        self.finops.y_fuel.append(self.finops.current_fuel)
-        self.finops.y_core.clear()
-        self.finops.y_core.append(self.finops.ledger_balance)
+        self.finops.set_balance(self.finops.ledger_balance)
+        if self.finops.fuel_quota <= 0 and self.finops.ledger_balance > 0:
+            self.finops.fuel_quota = self.finops.ledger_balance
 
+        self.finops.y_fuel.clear()
+        self.finops.y_fuel.append(self.finops.ledger_balance)
+        self.finops.y_core.clear()
+        self.finops.y_core.append(self.finops.fuel_quota)
 
 @dataclass
 class UIRefs:
@@ -266,7 +277,6 @@ _last_serialized_snapshot: str = ""
 
 
 def save_state_to_disk(path: Path = STATE_FILE_PATH, *, force: bool = True) -> bool:
-    """Serialize persistent state to disk atomically when changed or forced."""
     global _last_serialized_snapshot
     try:
         payload = state.to_persist_dict()
@@ -285,8 +295,8 @@ def save_state_to_disk(path: Path = STATE_FILE_PATH, *, force: bool = True) -> b
     except Exception:
         return False
 
+
 def load_or_init_state(path: Path = STATE_FILE_PATH) -> bool:
-    """Load state from disk if available; otherwise create a new state.json file."""
     global _last_serialized_snapshot
     if path.exists():
         try:

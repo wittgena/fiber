@@ -8,7 +8,7 @@ import orjson
 
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.bridge.action.connect import (
+from fiber.gateway.bridge.action.connect import (
     DEFAULT_WORKER_PACKAGE,
     ResolvedTarget,
     discover_builtin_workers,
@@ -134,7 +134,7 @@ class McpWorkerDaemon(AbstractDaemon):
         """부팅될 전체 MCP 워커 목록과 설정 상태를 한눈에 볼 수 있도록 테이블 형태로 출력"""
         lines = [
             f"\n{'=' * 95}",
-            f"🚀 [{self.name}] MCP WORKER BOOT ROSTER (Total: {len(specs)} Target(s))",
+            f"[{self.name}] MCP WORKER BOOT ROSTER (Total: {len(specs)} Target(s))",
             f"{'-' * 95}",
             f"{'No.':<4} | {'Target ID':<24} | {'Mode':<10} | {'Transport':<9} | {'Pre-Flight Guard':<20} | {'Command / URL'}",
             f"{'-' * 95}",
@@ -218,8 +218,8 @@ class McpWorkerDaemon(AbstractDaemon):
             name=f"mcp-connector-{spec.target_id}",
         )
         self._connector_tasks[spec.target_id] = task
-        log.info(
-            f"[{self.name}] 🔌 Mounted [{spec.target_id}] -> {spec.exec_cmd} "
+        log.debug(
+            f"[{self.name}] Mounted [{spec.target_id}] -> {spec.exec_cmd} "
             f"(Mode: {spec.mode.upper()}, Transport: {spec.transport.upper()}{guard_badge})"
         )
 
@@ -239,13 +239,13 @@ class McpWorkerDaemon(AbstractDaemon):
         if current_mtime <= self._last_anchor_mtime:
             return
 
-        log.info(f"[{self.name}] 🔄 Detected update in anchor mcp.json. Reconciling MCP workers...")
+        log.info(f"[{self.name}] Detected update in anchor mcp.json. Reconciling MCP workers...")
         desired_specs = self._build_desired_specs()
         changed = False
 
         for tid in list(self._target_specs.keys()):
             if tid not in desired_specs:
-                log.info(f"[{self.name}] ⏏️ Unmounting removed target [{tid}]...")
+                log.info(f"[{self.name}] Unmounting removed target [{tid}]...")
                 await self._stop_single_connector(tid)
                 self._target_specs.pop(tid, None)
                 changed = True
@@ -288,14 +288,12 @@ class McpWorkerDaemon(AbstractDaemon):
                             exc = task.exception()
                             if exc:
                                 log.error(
-                                    f"[{self.name}] 💥 Connector [{target_id}] fractured with error: {exc}. "
+                                    f"[{self.name}] Connector [{target_id}] fractured with error: {exc}. "
                                     f"Respawning in 2s...",
                                     exc_info=exc,
                                 )
                             else:
-                                log.warning(
-                                    f"[{self.name}] ⚠️ Connector [{target_id}] exited unexpectedly. Respawning..."
-                                )
+                                log.warning(f"[{self.name}] Connector [{target_id}] exited unexpectedly. Respawning...")
 
                         if self.running:
                             await asyncio.sleep(2.0)
@@ -315,13 +313,12 @@ class McpWorkerDaemon(AbstractDaemon):
 
     async def _teardown(self):
         log.info(
-            f"[{self.name}] 🛑 Releasing {len(self._connector_tasks)} MCP Worker Connector(s): "
+            f"[{self.name}] Releasing {len(self._connector_tasks)} MCP Worker Connector(s): "
             f"{list(self._connector_tasks.keys())}"
         )
         shutdown_timeout = float(os.getenv("SHUTDOWN_TIMEOUT", 10.0))
 
         await self._sync_active_targets([])
-
         for connector in self.connectors.values():
             connector.running = False
 

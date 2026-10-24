@@ -13,11 +13,11 @@ from typing import List, Dict
 
 import httpx
 
-from fiber.dev.e2e.base.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.dev.e2e.base.pipeline import MockPipeline, log
+from fiber.dev.base.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.base.pipeline import MockPipeline, log
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.bridge.action.connect import (
+from fiber.gateway.bridge.action.connect import (
     ACTIVE_TARGETS_TUNNEL_KEY,
     ResolvedTarget,
     _specs_from_mapped_entries,

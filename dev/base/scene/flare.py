@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.scene.flare
+# fiber.dev.base.scene.flare
+## @lineage: fiber.dev.e2e.base.scene.flare
 ## @lineage: fiber.infra.bound.e2e.scene.flare
 ## @lineage: fiber.infra.e2e.scene.flare
 ## @lineage: fiber.infra.scene.flare
@@ -9,8 +10,8 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from fiber.dev.e2e.base.sandbox import SandboxRunner, TestScripts
-from fiber.dev.e2e.base.epoch import ActorIdentity
+from fiber.dev.base.sandbox import SandboxRunner, TestScripts
+from fiber.dev.base.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.pta import compute_merkle_root

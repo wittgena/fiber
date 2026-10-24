@@ -256,41 +256,87 @@ class UnitCostCalculator:
         
         p_details = UsageDetailParser.parse_prompt(usage)
         
-        total_details = p_details["text_tokens"] + p_details["cache_hit_tokens"] + p_details["audio_tokens"] + p_details["cache_creation_tokens"] + p_details["image_tokens"]
+        total_details = (
+            p_details["text_tokens"]
+            + p_details["cache_hit_tokens"]
+            + p_details["audio_tokens"]
+            + p_details["cache_creation_tokens"]
+            + p_details["image_tokens"]
+        )
         has_double_counting = p_details["cache_hit_tokens"] > 0 and total_details > usage.prompt_tokens
 
         if (p_details["text_tokens"] == 0 and p_details["image_count"] == 0) or has_double_counting:
-            calculated_text = usage.prompt_tokens - p_details["cache_hit_tokens"] - p_details["audio_tokens"] - p_details["cache_creation_tokens"] - p_details["image_tokens"]
+            calculated_text = (
+                usage.prompt_tokens
+                - p_details["cache_hit_tokens"]
+                - p_details["audio_tokens"]
+                - p_details["cache_creation_tokens"]
+                - p_details["image_tokens"]
+            )
             p_details["text_tokens"] = max(0, calculated_text)
 
-        base_costs = ModelCostRetriever.get_token_base_costs(model_info, usage, service_tier)
-        prompt_cost = UnitCostCalculator.calculate_input_cost(p_details, model_info, *base_costs, service_tier)
+        # [수정] 5개의 반환값을 명시적으로 분리하여 정확한 인자 순서로 전달
+        (
+            prompt_base_cost,
+            completion_base_cost,
+            cache_creation_cost,
+            cache_creation_1hr,
+            cache_read_cost,
+        ) = ModelCostRetriever.get_token_base_costs(model_info, usage, service_tier)
+
+        prompt_cost = UnitCostCalculator.calculate_input_cost(
+            prompt_tokens_details=p_details,
+            model_info=model_info,
+            prompt_base_cost=prompt_base_cost,
+            cache_read_cost=cache_read_cost,
+            cache_creation_cost=cache_creation_cost,
+            cache_creation_cost_above_1hr=cache_creation_1hr,
+            service_tier=service_tier,
+        )
 
         c_details = UsageDetailParser.parse_completion(usage)
         text_tokens = c_details["text_tokens"]
         
-        has_breakdown = c_details["image_tokens"] > 0 or c_details["audio_tokens"] > 0 or c_details["reasoning_tokens"] > 0
+        has_breakdown = (
+            c_details["image_tokens"] > 0
+            or c_details["audio_tokens"] > 0
+            or c_details["reasoning_tokens"] > 0
+        )
         is_total = False
         
         if text_tokens == 0:
             if has_breakdown:
-                text_tokens = max(0, usage.completion_tokens - c_details["reasoning_tokens"] - c_details["audio_tokens"] - c_details["image_tokens"])
+                text_tokens = max(
+                    0,
+                    usage.completion_tokens
+                    - c_details["reasoning_tokens"]
+                    - c_details["audio_tokens"]
+                    - c_details["image_tokens"],
+                )
             else:
                 text_tokens = usage.completion_tokens
                 is_total = True
 
-        completion_cost = float(text_tokens) * base_costs[1]
+        completion_cost = float(text_tokens) * completion_base_cost
 
         if not is_total:
             if c_details["audio_tokens"] > 0:
-                completion_cost += float(c_details["audio_tokens"]) * ModelCostRetriever.get_cost(model_info, CostMetricKeys.AUDIO_OUTPUT, base_costs[1])
+                completion_cost += float(c_details["audio_tokens"]) * (
+                    ModelCostRetriever.get_cost(model_info, CostMetricKeys.AUDIO_OUTPUT, completion_base_cost) or 0.0
+                )
             if c_details["reasoning_tokens"] > 0:
-                completion_cost += float(c_details["reasoning_tokens"]) * ModelCostRetriever.get_cost(model_info, CostMetricKeys.REASONING_OUTPUT, base_costs[1])
+                completion_cost += float(c_details["reasoning_tokens"]) * (
+                    ModelCostRetriever.get_cost(model_info, CostMetricKeys.REASONING_OUTPUT, completion_base_cost) or 0.0
+                )
             if c_details["image_tokens"] > 0:
-                completion_cost += float(c_details["image_tokens"]) * ModelCostRetriever.get_cost(model_info, CostMetricKeys.IMAGE_OUTPUT, base_costs[1])
+                completion_cost += float(c_details["image_tokens"]) * (
+                    ModelCostRetriever.get_cost(model_info, CostMetricKeys.IMAGE_OUTPUT, completion_base_cost) or 0.0
+                )
 
         if data_residency and data_residency.lower() in _VALID_DATA_RESIDENCIES:
-            uplift = ModelCostRetriever.get_cost(model_info, f"regional_processing_uplift_multiplier_{data_residency.lower()}", 1.0)
+            uplift = ModelCostRetriever.get_cost(
+                model_info, f"regional_processing_uplift_multiplier_{data_residency.lower()}", 1.0
+            )
             if uplift and uplift != 1.0:
                 prompt_cost *= uplift
                 completion_cost *= uplift

@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.llm.trace
+# fiber.dev.base.llm.trace
+## @lineage: fiber.dev.e2e.base.llm.trace
 ## @lineage: fiber.infra.bound.e2e.llm.trace
 from __future__ import annotations
 

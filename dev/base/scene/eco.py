@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.scene.eco
+# fiber.dev.base.scene.eco
+## @lineage: fiber.dev.e2e.base.scene.eco
 ## @lineage: fiber.infra.bound.e2e.scene.eco
 ## @lineage: fiber.infra.e2e.scene.eco
 ## @lineage: fiber.infra.scene.eco
@@ -9,9 +10,9 @@ import hashlib
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
-from fiber.dev.e2e.base.epoch import EpochBase
+from fiber.dev.base.epoch import EpochBase
 from xphi.arch.bound.adapter.settlement import ClearingAdapter
-from fiber.dev.e2e.base.epoch import ActorIdentity
+from fiber.dev.base.epoch import ActorIdentity
 
 from xphi.node.space.sandbox.runner import SchemeRunner
 from xphi.arch.bound.adapter.state import StateAdapter

@@ -5,7 +5,7 @@ import time
 from typing import Dict, Any, Optional, List
 
 from fiber.llm.entry import acompletion
-from fiber.dev.e2e.base.llm.trace import (
+from fiber.dev.base.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 

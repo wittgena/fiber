@@ -7,7 +7,7 @@ from nicegui import ui
 
 from fiber.infra.account.state import state, refs
 from fiber.dev.console.action import pipeline
-from fiber.phase.bridge.cli import run_fiber_cli
+from fiber.gateway.bridge.cli import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
 from xphi.node.space.bind.resolver import find_current_self

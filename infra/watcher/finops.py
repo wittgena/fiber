@@ -1,5 +1,4 @@
 # fiber.infra.watcher.finops
-## @lineage: fiber.infra.bound.watcher.finops
 from __future__ import annotations
 
 import asyncio

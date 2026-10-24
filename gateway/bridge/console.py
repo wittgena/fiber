@@ -10,7 +10,7 @@ import re
 import time
 from typing import Any
 
-from fiber.phase.bridge.schema import (
+from fiber.gateway.bridge.schema import (
     AccountMandateResult,
     AccountStatusResult,
     EnrolledAdminInfo,
@@ -24,7 +24,7 @@ from fiber.phase.bridge.schema import (
     TotpEnrollmentResult,
     TotpVerificationResult,
 )
-from fiber.phase.bridge.action.account import (
+from fiber.gateway.bridge.action.account import (
     allocate_account_fuel,
     fetch_account_status,
     issue_account_mandate,
@@ -49,7 +49,7 @@ def safe_int(val: Any, default: int = 0) -> int:
 
 # 2. Sign / TOTP / Slack OOB Actions (Headless)
 async def inspect_sign_status() -> SignStatusResult:
-    from fiber.phase.bridge.action.sign import (
+    from fiber.gateway.bridge.action.sign import (
         SSH_PRIV_KEY_PATH,
         LOCAL_CIPHER_KEY_PATH,
         DEFAULT_DB_PATH,
@@ -75,7 +75,7 @@ async def inspect_sign_status() -> SignStatusResult:
     return await asyncio.to_thread(_inspect)
 
 async def init_node_keys() -> NodeKeysInitResult:
-    from fiber.phase.bridge.action.sign import ensure_node_keys
+    from fiber.gateway.bridge.action.sign import ensure_node_keys
 
     raw = await asyncio.to_thread(ensure_node_keys)
     return NodeKeysInitResult(
@@ -88,7 +88,7 @@ async def init_node_keys() -> NodeKeysInitResult:
 async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
     import pyotp
     import qrcode
-    from fiber.phase.bridge.action.sign import (
+    from fiber.gateway.bridge.action.sign import (
         AdminSecretVault,
         _normalize_spiffe_id,
         _build_totp_provisioning_uri,
@@ -136,7 +136,7 @@ async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
 
 async def verify_admin_totp(admin_user: str, code_override: str | None = None) -> TotpVerificationResult:
     import pyotp
-    from fiber.phase.bridge.action.sign import (
+    from fiber.gateway.bridge.action.sign import (
         AdminSecretVault,
         _normalize_spiffe_id,
         _resolve_vault_context,
@@ -179,7 +179,7 @@ async def verify_admin_totp(admin_user: str, code_override: str | None = None) -
 
 
 async def revoke_admin_totp(admin_user: str) -> str:
-    from fiber.phase.bridge.action.sign import _normalize_spiffe_id, _open_audit_db, DEFAULT_DB_PATH
+    from fiber.gateway.bridge.action.sign import _normalize_spiffe_id, _open_audit_db, DEFAULT_DB_PATH
 
     canonical_id = _normalize_spiffe_id(admin_user)
 
@@ -297,7 +297,7 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
     global _last_config_stat_sig, _cached_mapped_entries
     import httpx
     from fiber.infra.mcp.mapper.config import McpConfigMapper
-    from fiber.phase.bridge.action.connect import discover_builtin_workers, resolve_connector_spec
+    from fiber.gateway.bridge.action.connect import discover_builtin_workers, resolve_connector_spec
     from xphi.node.space.tunnel.factory import TunnelFactory
 
     candidate_map = McpConfigMapper._resolve_candidate_paths()

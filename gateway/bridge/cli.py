@@ -114,7 +114,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
         fuel = (
             added
             if f.jwt_op in ("PROVISION", "SYNC_QUOTA")
-            else (f.current_fuel + added if f.jwt_op == "TOP_UP" else 0)
+            else (f.ledger_balance + added if f.jwt_op == "TOP_UP" else 0)
         )
         core = (
             (added if f.jwt_op in ("PROVISION", "SYNC_QUOTA") else f.ledger_balance + added)

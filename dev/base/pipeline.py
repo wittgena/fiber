@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.pipeline
+# fiber.dev.base.pipeline
+## @lineage: fiber.dev.e2e.base.pipeline
 ## @lineage: fiber.infra.bound.e2e.pipeline
 import os
 import sys
@@ -10,7 +11,7 @@ from typing import Any, List, Dict, Optional, Callable
 import uvicorn
 
 from fiber.gateway.payload import create_app, Config
-from fiber.dev.e2e.base.config import (
+from fiber.dev.base.config import (
     PipelineRunner,
     ManagedTestServer,
     TestResult,

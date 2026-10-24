@@ -15,8 +15,8 @@ from typing import Any, Dict, List
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from fiber.dev.e2e.base.config import Phase, E2EConfig, get_free_port
-from fiber.dev.e2e.base.pipeline import MockPipeline, log
+from fiber.dev.base.config import Phase, E2EConfig, get_free_port
+from fiber.dev.base.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
@@ -27,7 +27,7 @@ from fiber.infra.vcr.manager import (
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from fiber.dev.e2e.base.llm.trace import create_e2e_parser, build_e2e_context
+from fiber.dev.base.llm.trace import create_e2e_parser, build_e2e_context
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import get_invoker
@@ -203,8 +203,6 @@ class PipelineConcurrencySuite(MockPipeline):
 
         vu_count = 1 if self.is_record else self.concurrency
         total_iters = 1 if self.is_record else self.iterations
-
-        # 💡 [개선 포인트] 로깅 메시지에 실행 모드의 목적 명시
         mode_info = "Record (Actual LLM Network)" if self.is_record else "Replay (Zero-Network Engine Benchmark)"
         log.info(f"  └─ Launching {total_iters} interleaved streams across {vu_count} VUs (Mode: {mode_info})...")
 
@@ -296,7 +294,6 @@ class PipelineConcurrencySuite(MockPipeline):
         vu_count = self.concurrency
         total_iters = self.iterations
         
-        # 💡 [개선 포인트] 로깅 메시지에 실행 모드의 목적 명시
         mode_info = "Record (Actual LLM Network)" if self.is_record else "Replay (Zero-Network Engine Benchmark)"
         log.info(f"  └─ Running {total_iters} heterogeneous tasks across {vu_count} VUs (Mode: {mode_info})...")
 

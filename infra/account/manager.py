@@ -1,5 +1,4 @@
 # fiber.infra.account.manager
-## @lineage: fiber.infra.bound.account.manager
 from __future__ import annotations
 
 import asyncio
@@ -8,11 +7,15 @@ import json
 import time
 from typing import Any, Dict, Optional, Protocol
 
-from fiber.gateway.contract.token.gen import FinOpsOpType, FinOpsTokenGenerator
+from fiber.gateway.contract.token.gen import (
+    DEFAULT_EXCHANGE_RATE,
+    FinOpsOpType,
+    FinOpsTokenGenerator,
+)
 from fiber.gateway.security import TokenTranslator
 from fiber.infra.account.registry import DEFAULT_TENANT_ID, LocalAccountRegistry
 from fiber.infra.watcher.finops import default_finops_watcher
-from fiber.phase.bridge.schema import (
+from fiber.gateway.bridge.schema import (
     AccountAllocateResult,
     AccountMandateResult,
     AccountRevokeResult,
@@ -32,8 +35,8 @@ from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.key import KeyGen
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("bound.account.manager")
-DEFAULT_INITIAL_FUEL = 1000
+log = get_emitter("infra.account.manager")
+DEFAULT_INITIAL_FUEL = 1_000_000  # $1.00 = 1,000,000 Fuel
 
 
 def _safe_int(val: Any, default: int = 0) -> int:
@@ -78,8 +81,6 @@ class LocalAccountManager(AccountManagerProtocol):
         self.token_gen = FinOpsTokenGenerator()
         self.signer = NodeSigner.get_instance()
 
-        LocalAccountRegistry.record(self.tenant_id)
-
     async def close(self) -> None:
         self.pta_adapter.shutdown()
         await self.broker.close()
@@ -93,10 +94,31 @@ class LocalAccountManager(AccountManagerProtocol):
     async def _get_ledger_balance(self, asset_type: str = "fuel") -> int:
         return await self.pta_adapter.get_balance(self.tenant_id, asset_type=asset_type)
 
+    async def _hydrate_watcher_if_empty(self, current_ledger_balance: int) -> None:
+        """
+        콘솔/프로세스 재시작 시 인메모리 FinOpsWatcher가 비어있다면
+        영속화된 LocalAccountRegistry 및 코어 UTXO 원장 잔액으로 복원한다.
+        """
+        saved_accounts = LocalAccountRegistry.list_accounts()
+        saved_info = saved_accounts.get(self.tenant_id, {})
+
+        if self.tenant_id not in default_finops_watcher.policy_versions:
+            saved_ver = _safe_int(saved_info.get("policy_ver"), 0)
+            if saved_ver > 0:
+                default_finops_watcher.policy_versions[self.tenant_id] = saved_ver
+
+        if self.tenant_id not in default_finops_watcher.local_budget_cache:
+            # 원장 실제 잔액을 최우선 진실 공급원(SSOT)으로 복원
+            default_finops_watcher.local_budget_cache[self.tenant_id] = float(current_ledger_balance)
+
     def _resolve_next_version(self, requested_ver: Optional[int], min_floor: int = 1) -> int:
-        if requested_ver is not None:
+        saved_accounts = LocalAccountRegistry.list_accounts()
+        saved_ver = _safe_int(saved_accounts.get(self.tenant_id, {}).get("policy_ver"), 0)
+        watcher_ver = default_finops_watcher.policy_versions.get(self.tenant_id, 0)
+        current_ver = max(saved_ver, watcher_ver)
+
+        if requested_ver is not None and int(requested_ver) > current_ver:
             return int(requested_ver)
-        current_ver = default_finops_watcher.policy_versions.get(self.tenant_id, 0)
         return max(current_ver + 1, min_floor)
 
     async def _reconcile_ledger(
@@ -164,11 +186,11 @@ class LocalAccountManager(AccountManagerProtocol):
         ledger_balance = await self._get_ledger_balance("fuel")
         inputs = await self.pta_adapter.get_available_inputs(self.tenant_id, "fuel")
 
-        watcher_quota = default_finops_watcher.local_budget_cache.get(self.tenant_id)
-        if watcher_quota is None and ledger_balance > 0:
-            watcher_quota = float(ledger_balance)
-            default_finops_watcher.local_budget_cache[self.tenant_id] = watcher_quota
+        await self._hydrate_watcher_if_empty(ledger_balance)
 
+        # 항상 원장 잔액과 워처 잔액을 동기화 상태로 유지
+        default_finops_watcher.local_budget_cache[self.tenant_id] = float(ledger_balance)
+        watcher_quota = float(ledger_balance)
         policy_ver = default_finops_watcher.policy_versions.get(self.tenant_id, 0)
 
         registry_entry = LocalAccountRegistry.record(
@@ -204,7 +226,7 @@ class LocalAccountManager(AccountManagerProtocol):
             spiffe_id=getattr(registry_entry, "spiffe_id", None),
             ledger_balance=_safe_int(ledger_balance, 0),
             active_allocations=len(inputs),
-            active_quota=_safe_int(watcher_quota, 0),
+            active_quota=_safe_int(ledger_balance, 0),
             policy_ver=_safe_int(policy_ver, 0),
         )
 
@@ -226,6 +248,9 @@ class LocalAccountManager(AccountManagerProtocol):
         )
 
     async def sync_quota(self, cmd: SyncQuotaCommand) -> AccountMandateResult:
+        current_balance = await self._get_ledger_balance("fuel")
+        await self._hydrate_watcher_if_empty(current_balance)
+
         effective_ver = self._resolve_next_version(cmd.policy_ver, min_floor=1)
 
         jwt_token = self.token_gen.generate_token(
@@ -233,12 +258,13 @@ class LocalAccountManager(AccountManagerProtocol):
             budget_usd=cmd.budget_usd,
             op=cmd.op,
             policy_ver=effective_ver,
+            exchange_rate=DEFAULT_EXCHANGE_RATE,
         )
 
         LocalAccountRegistry.record(
             self.tenant_id,
             policy_ver=effective_ver,
-            last_op=f"ISSUE_JWT({cmd.op})",
+            last_op=f"MANDATE({cmd.op})",
             last_jwt=jwt_token,
         )
 
@@ -265,13 +291,16 @@ class LocalAccountManager(AccountManagerProtocol):
             compute_ticket_issued=ap2_mandate is not None,
             compute_ticket=parsed_ticket,
             balance=status.ledger_balance,
-            active_quota=status.active_quota,
+            active_quota=status.ledger_balance,
             policy_ver=status.policy_ver,
             status=status,
         )
 
     async def revoke(self, cmd: RevokeCommand) -> AccountRevokeResult:
-        effective_ver = self._resolve_next_version(cmd.policy_ver, min_floor=99)
+        current_balance = await self._get_ledger_balance("fuel")
+        await self._hydrate_watcher_if_empty(current_balance)
+
+        effective_ver = self._resolve_next_version(cmd.policy_ver, min_floor=1)
 
         burn_tx_hash = await self._reconcile_ledger(
             target_fuel=0,
@@ -287,7 +316,7 @@ class LocalAccountManager(AccountManagerProtocol):
             "finops": {
                 "op": "REVOKE",
                 "budget_usd": 0.0,
-                "exchange_rate": 1000,
+                "exchange_rate": DEFAULT_EXCHANGE_RATE,
                 "policy_ver": effective_ver,
             },
         }
@@ -297,9 +326,10 @@ class LocalAccountManager(AccountManagerProtocol):
 
         LocalAccountRegistry.record(
             self.tenant_id,
+            ledger_balance=0,
             active_quota=0.0,
             policy_ver=effective_ver,
-            last_op="LEDGER_BURN_AND_REVOKE",
+            last_op="REVOKE_ZERO",
         )
 
         log.info(f"[LocalAccountManager] Ledger Burned & 'REVOKE' event published for '{self.tenant_id}' (v{effective_ver}).")

@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.sandbox
+# fiber.dev.base.sandbox
+## @lineage: fiber.dev.e2e.base.sandbox
 ## @lineage: fiber.infra.bound.e2e.sandbox
 ## @lineage: fiber.infra.e2e.sandbox
 import os

@@ -17,7 +17,7 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
-from fiber.phase.bridge.action.sign import app as sign_app
+from fiber.gateway.bridge.action.sign import app as sign_app
 
 log = get_emitter("phase.cli")
 
@@ -100,7 +100,7 @@ def run_account(
 ):
     """Manages local/tenant FinOps accounts, EdDSA JWT quotas, fuel allocate, and live Kill-Switches."""
     _load_env(env_file)
-    from fiber.phase.bridge.action.account import main as account_main
+    from fiber.gateway.bridge.action.account import main as account_main
     try:
         account_main(ctx.args)
     except KeyboardInterrupt:
@@ -174,7 +174,7 @@ def run_connector(
     if ctx.invoked_subcommand is not None:
         return
     _load_env(env_file)
-    from fiber.phase.bridge.action.connect import run_connect
+    from fiber.gateway.bridge.action.connect import run_connect
     run_connect(
         exec_cmd=exec_cmd,
         config=config,
@@ -210,7 +210,7 @@ def copy_connector_config(
 ):
     """[Config Provisioner] Copies & locks builtin workers and external MCP configs into ~/.anchor/mcp.json without spawning processes."""
     _load_env(env_file)
-    from fiber.phase.bridge.action.connect import run_connect_copy
+    from fiber.gateway.bridge.action.connect import run_connect_copy
     run_connect_copy(
         exec_cmd=exec_cmd,
         config=config,
@@ -244,7 +244,7 @@ def manage_compat_fixtures(
         raise typer.Exit(1)
 
     if mode in ("record", "gen", "generate"):
-        from fiber.phase.bridge.action.compat import run_gen_fixture
+        from fiber.gateway.bridge.action.compat import run_gen_fixture
         try:
             asyncio.run(
                 run_gen_fixture(
@@ -260,7 +260,7 @@ def manage_compat_fixtures(
             log.error(f"[Fiber] Fixture generation failed: {e}", exc_info=True)
             sys.exit(1)
     elif mode in ("replay", "test", "verify"):
-        from fiber.phase.bridge.action.compat import run_test_fixture
+        from fiber.gateway.bridge.action.compat import run_test_fixture
         try:
             asyncio.run(
                 run_test_fixture(

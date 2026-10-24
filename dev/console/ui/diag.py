@@ -149,7 +149,7 @@ async def snapshot(reason: str = "manual") -> Dict[str, Any]:
 
     state_dump = {
         "redis_online": state.pipeline.redis_online,
-        "finops_fuel": state.finops.current_fuel,
+        "finops_fuel": state.finops.ledger_balance,
         "xray_latencies": list(state.security.xray_latencies),
         "cli_buffered": len(refs.cli_buffer),
         "pubsub_buffered": len(refs.pubsub_buffer),

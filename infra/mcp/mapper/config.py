@@ -205,7 +205,7 @@ class McpConfigMapper:
             for entry in cls.parse_file(path, agent_hint=ag_name):
                 if entry.target_id not in merged:
                     merged[entry.target_id] = entry
-                    log.info(f"[ConfigMapper] Discovered [{entry.target_id}] from {ag_name} ({path})")
+                    log.debug(f"[ConfigMapper] Discovered [{entry.target_id}] from {ag_name} ({path})")
 
         results = list(merged.values())
         if sync_to_anchor and results and agent != "fiber":
@@ -214,10 +214,6 @@ class McpConfigMapper:
 
     @classmethod
     def sync_entries_to_anchor(cls, entries: List[MappedMcpEntry]) -> Optional[Path]:
-        """
-        파싱된 MappedMcpEntry 리스트를 내부 단일 고정 설정(ANCHOR_ROOT/mcp.json)의
-        표준 mcpServers 포맷으로 병합(Upsert)하여 고정합니다.
-        """
         if not entries:
             return None
 

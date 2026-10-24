@@ -1,4 +1,5 @@
-# fiber.dev.e2e.base.config
+# fiber.dev.base.config
+## @lineage: fiber.dev.e2e.base.config
 ## @lineage: fiber.infra.bound.e2e.config
 import socket
 import uvicorn

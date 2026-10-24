@@ -1,4 +1,5 @@
-# README
+# fiber.README
+@lineage: README
 
 The zero-point that aligns Fiber’s core with its surface rests on four self-imposed questions:
 

@@ -12,7 +12,7 @@ from fiber.gateway.llm.state.traverser import StateTraverser
 from fiber.llm.pipeline.tracer import DebugTracer
 from fiber.infra.vcr.manager import VCRPlaybackConfig, VCRIdentityRule
 from fiber.infra.vcr.injector import VCRInjector
-from fiber.dev.e2e.base.llm.trace import (
+from fiber.dev.base.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 

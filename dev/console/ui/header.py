@@ -10,7 +10,7 @@ from fiber.infra.account.state import (
     save_state_to_disk,
     state,
 )
-from fiber.phase.bridge.cli import run_fiber_cli
+from fiber.dev.console.action import gov
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.kit as kit
 from xphi.node.space.bind.resolver import resolve_path
@@ -45,7 +45,6 @@ def build_header() -> None:
     """Render the 2-deck cockpit header (Row 1: Identity & Emergency / Row 2: Live KPIs & State/Diag Clusters)."""
     diag.install_browser_hooks()
     with ui.header().classes("bg-slate-900 border-b border-slate-800 px-5 py-2"):
-        # Explicit full-width column to override Quasar q-header's default row layout
         with ui.column().classes("w-full gap-1.5"):
             # [Deck 1: Brand Title, Node/Redis Badges & Emergency Stream Breaker]
             with ui.row().classes("w-full items-center justify-between no-wrap"):
@@ -62,16 +61,18 @@ def build_header() -> None:
 
                 with ui.row().classes("items-center gap-2.5"):
                     kit.button(
-                        "🚨 LLM STREAM BREAK",
-                        lambda: run_fiber_cli("account", "--tenant", state.finops.tenant_id, "kill", "--ver", "99"),
+                        "🚨 LLM STREAM BREAK (10s)",
+                        gov.temporary_stream_kill,
                         color="red",
-                    ).classes("font-bold px-3")
+                    ).classes("font-bold px-3").tooltip(
+                        "Sever active streams immediately (0 Fuel) and auto-restore previous balance after 10s"
+                    )
 
-            # [Deck 2: Live KPI Bar & Grouped State / Diag File Controls]
+            # Live KPI Bar & Grouped State / Diag File Controls
             with ui.row().classes(
                 "w-full items-center justify-between bg-slate-950 px-3 py-1 rounded border border-slate-800 no-wrap"
             ):
-                # Left: Real-time FinOps Quota & Token Savings KPIs
+                # Left: Real-time FinOps Balance/Quota & Token Savings KPIs
                 with ui.row().classes("items-center gap-4"):
                     ui.label().bind_text_from(state, "fuel_kpi_text").classes(
                         "text-xs font-mono font-bold text-emerald-400"
