@@ -4,13 +4,13 @@ import uuid
 import asyncio
 from typing import List, Optional
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult
-from fiber.infra.bound.e2e.pipeline import MockPipeline, log
+from fiber.dev.e2e.base.config import Phase, E2EConfig, TestResult
+from fiber.dev.e2e.base.pipeline import MockPipeline, log
 import fiber.infra.mcp.worker.deployer as worker_deployer
 import fiber.infra.mcp.worker.reaper as worker_reaper
 
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.infra.bound.e2e.audit.context import AuditContext, MCPGatewayTestClient
+from fiber.dev.e2e.base.audit.context import AuditContext, MCPGatewayTestClient
 from xphi.state.phase.reactor import PhaseReactor
 
 class AuditSecurityPipeline(MockPipeline):

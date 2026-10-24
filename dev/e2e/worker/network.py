@@ -9,9 +9,9 @@ from typing import List, Dict, Any, Optional
 
 import httpx
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.infra.bound.e2e.pipeline import MockPipeline, log
-from fiber.infra.bound.e2e.mcp.server import MockMcpServer
+from fiber.dev.e2e.base.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.e2e.base.pipeline import MockPipeline, log
+from fiber.dev.e2e.base.mcp.server import MockMcpServer
 from fiber.phase.bridge.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder

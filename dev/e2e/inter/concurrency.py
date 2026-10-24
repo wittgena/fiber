@@ -15,8 +15,8 @@ from typing import Any, Dict, List
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, get_free_port
-from fiber.infra.bound.e2e.pipeline import MockPipeline, log
+from fiber.dev.e2e.base.config import Phase, E2EConfig, get_free_port
+from fiber.dev.e2e.base.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
@@ -27,7 +27,7 @@ from fiber.infra.vcr.manager import (
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from fiber.infra.bound.e2e.llm.trace import create_e2e_parser, build_e2e_context
+from fiber.dev.e2e.base.llm.trace import create_e2e_parser, build_e2e_context
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import get_invoker

@@ -1,5 +1,4 @@
 # fiber.gateway.contract.token.gen
-## @lineage: fiber.gateway.token.gen
 import time
 import jwt
 from typing import Literal, Optional

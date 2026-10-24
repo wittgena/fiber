@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from fiber.dev.console.state import (
+from fiber.infra.account.state import (
     STATE_FILE_PATH,
     load_or_init_state,
     refs,
@@ -22,20 +22,20 @@ def act_manual_save_state() -> None:
     """Persist current console state to disk immediately."""
     ok = save_state_to_disk(force=True)
     if ok:
-        refs.push_cli(f"💾 Saved console state to {STATE_FILE_PATH} (at {state.last_saved_at})")
-        diag.info("Console state manually saved", path=str(STATE_FILE_PATH))
+        refs.push_cli(f"💾 Saved state to {STATE_FILE_PATH} (at {state.last_saved_at})")
+        diag.info("state manually saved", path=str(STATE_FILE_PATH))
         ui.notify(f"💾 Saved to {STATE_FILE_PATH.name}", type="positive")
     else:
-        diag.error("Failed to save console state", path=str(STATE_FILE_PATH))
-        ui.notify("Failed to save console.json", type="negative")
+        diag.error("Failed to save state", path=str(STATE_FILE_PATH))
+        ui.notify("Failed to save state.json", type="negative")
 
 
 def act_reload_state_from_disk() -> None:
-    """Reload console.json after external editor modifications."""
+    """Reload state.json after external editor modifications."""
     if load_or_init_state(STATE_FILE_PATH):
         state.finops.chart_dirty = True
-        refs.push_cli(f"🔄 Reloaded console state from {STATE_FILE_PATH}")
-        diag.info("Console state reloaded from disk", path=str(STATE_FILE_PATH))
+        refs.push_cli(f"🔄 Reloaded state from {STATE_FILE_PATH}")
+        diag.info("State reloaded from disk", path=str(STATE_FILE_PATH))
         ui.notify(f"🔄 Reloaded {STATE_FILE_PATH.name} from disk", type="info")
     else:
         ui.notify("Failed to reload state file", type="warning")
@@ -83,7 +83,6 @@ def build_header() -> None:
 
                 # Right: [Cluster 1: State Persistence] | [Cluster 2: UI Diagnostics]
                 with ui.row().classes("items-center gap-2"):
-                    # Cluster 1: State (console.json)
                     ui.label().bind_text_from(
                         state,
                         "last_saved_at",

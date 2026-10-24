@@ -5,7 +5,7 @@ import time
 import asyncio
 from typing import Dict, Any
 
-from fiber.infra.bound.oracle.receptor import OracleReceptor
+from xphi.arch.bound.client.oracle.receptor import OracleReceptor
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 
 class PriceTokenServer(AsyncWorkerProtocol):

@@ -10,7 +10,7 @@ from typing import Sequence
 import webbrowser
 from nicegui import app, ui
 
-from fiber.dev.console.state import (
+from fiber.infra.account.state import (
     STATE_FILE_PATH,
     load_or_init_state,
     refs,

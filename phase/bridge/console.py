@@ -1,5 +1,4 @@
 # fiber.phase.bridge.console
-## @lineage: fiber.phase.action.console
 from __future__ import annotations
 
 import asyncio
@@ -25,6 +24,13 @@ from fiber.phase.bridge.schema import (
     TotpEnrollmentResult,
     TotpVerificationResult,
 )
+from fiber.phase.bridge.action.account import (
+    allocate_account_fuel,
+    fetch_account_status,
+    issue_account_mandate,
+    list_registered_accounts,
+    revoke_account_mandate,
+)
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -40,56 +46,6 @@ def safe_int(val: Any, default: int = 0) -> int:
         return int(float(val))
     except (ValueError, TypeError):
         return default
-
-# 1. FinOps / Account Actions (Headless)
-async def fetch_account_status(tenant_id: str) -> AccountStatusResult:
-    from fiber.infra.bound.account.manager import LocalAccountManager
-    from fiber.infra.bound.account.registry import LocalAccountRegistry
-
-    async with LocalAccountManager(tenant_id=tenant_id) as mgr:
-        st = await mgr.get_status()
-    accounts = LocalAccountRegistry.list_accounts()
-    acc_info = accounts.get(tenant_id, {})
-    return AccountStatusResult(
-        raw_status=st,
-        last_op=acc_info.get("last_op"),
-        spiffe_id=acc_info.get("spiffe_id"),
-        ledger_balance=safe_int(st.get("core_state", {}).get("ledger_balance"), 0),
-        active_quota=safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
-        policy_ver=safe_int(st.get("finops_watcher", {}).get("policy_version"), 1),
-    )
-
-async def issue_account_mandate(
-    tenant_id: str,
-    *,
-    budget_usd: float,
-    op: str,
-    policy_ver: int,
-    sync_ledger: bool,
-    spiffe_id: str | None = None,
-) -> AccountMandateResult:
-    from fiber.infra.bound.account.manager import LocalAccountManager, SyncQuotaCommand
-    from fiber.infra.bound.account.registry import LocalAccountRegistry
-
-    if spiffe_id:
-        LocalAccountRegistry.record(tenant_id, spiffe_id=spiffe_id)
-
-    async with LocalAccountManager(tenant_id=tenant_id) as mgr:
-        cmd = SyncQuotaCommand(
-            budget_usd=budget_usd,
-            op=op,
-            policy_ver=policy_ver,
-            sync_ledger=sync_ledger,
-        )
-        res = await mgr.sync_quota(cmd)
-
-    st = res.get("status", {})
-    return AccountMandateResult(
-        jwt=res.get("jwt", ""),
-        balance=safe_int(st.get("core_state", {}).get("ledger_balance"), 0),
-        active_quota=safe_int(st.get("finops_watcher", {}).get("active_quota"), 0),
-        policy_ver=safe_int(st.get("finops_watcher", {}).get("policy_version"), policy_ver),
-    )
 
 # 2. Sign / TOTP / Slack OOB Actions (Headless)
 async def inspect_sign_status() -> SignStatusResult:
@@ -247,7 +203,7 @@ async def dispatch_slack_oob_payload(
     tool_name: str = "drop_table",
     tool_args: dict[str, Any] | None = None,
 ) -> SlackOobDispatchResult:
-    from fiber.gateway.bridge.mcp.slack import SlackHitlBridge
+    from fiber.gateway.bridge.slack import SlackHitlBridge
 
     args_payload = tool_args or {"table": "customer_ledgers", "cascade": True}
     handle_id = f"h_{int(time.time() * 1000) % 1000000:06d}"
@@ -282,7 +238,7 @@ async def dispatch_slack_oob_payload(
 def build_hitl_resolution_receipt(
     *, slack_channel: str, slack_user_map: str, admin_user: str, require_totp: bool
 ) -> dict[str, Any]:
-    from fiber.gateway.bridge.mcp.slack import SlackHitlBridge
+    from fiber.gateway.bridge.slack import SlackHitlBridge
 
     bridge = SlackHitlBridge(default_channel=slack_channel)
     token = bridge.mint_approval_state_token("h_active", "postgres-prod-db", "req_1", require_totp=require_totp)

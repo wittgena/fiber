@@ -20,7 +20,7 @@ from mcp.server.mcpserver.server import MCPServer
 
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.watcher.observer.span import start_active_span, end_active_span
-from fiber.infra.bound.e2e.chaos.payload import SpecValidator
+from fiber.dev.e2e.base.chaos.payload import SpecValidator
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.adapter.state import StateAdapter
 

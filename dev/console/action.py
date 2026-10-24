@@ -1,5 +1,4 @@
 # fiber.dev.console.action
-## @lineage: fiber.dev.console.bridge.action
 from __future__ import annotations
 
 import asyncio
@@ -12,8 +11,9 @@ from nicegui import ui
 import orjson
 
 import fiber.phase.bridge.console as console_act
-from fiber.dev.console.state import state, refs
+from fiber.infra.account.state import state, refs
 import fiber.dev.console.ui.diag as diag
+
 
 class OobActionBridge:
     """Binds Node Identity (`fiber sign`), TOTP Vault, Slack HITL 202, and MCP Topology to `state.security`."""
@@ -254,6 +254,7 @@ class OobActionBridge:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
 
+
 class GovActionBridge:
     """Binds LocalAccountManager & EdDSA Mandate JWT operations to `state.finops`."""
     def __init__(self, oob: OobActionBridge) -> None:
@@ -269,17 +270,18 @@ class GovActionBridge:
                 f.spiffe_id = res.spiffe_id
             self._oob.sync_spiffe_and_check_totp(emit_warning=not silent)
 
-            f.ledger_balance = res.ledger_balance or f.ledger_balance
+            # [정정] Falsy(0) 값 덮어쓰기 방지 버그 수정 ('or f.ledger_balance' 제거)
+            f.ledger_balance = res.ledger_balance
             f.current_fuel = res.active_quota
-            f.policy_ver = res.policy_ver
-            f.chart_dirty = True
+            f.policy_ver = max(1, res.policy_ver)
+            f.push_chart_point()
 
             if not silent:
                 refs.push_cli(
                     f"$ fiber account --tenant {f.tenant_id} status\n  {json.dumps(res.raw_status, ensure_ascii=False)}"
                 )
                 ui.notify(
-                    f"Synced '{f.tenant_id}': Remaining={f.current_fuel:,} / Balance={f.ledger_balance:,} Fuel",
+                    f"Synced '{f.tenant_id}': Active={f.current_fuel:,} / Ledger={f.ledger_balance:,} Fuel (v{res.policy_ver})",
                     type="info",
                 )
         except Exception:
@@ -294,39 +296,76 @@ class GovActionBridge:
         try:
             if spiffe_arg:
                 self._oob.sync_spiffe_and_check_totp(emit_warning=True)
+
+            # 버전 자동 단조 증가 처리: 현재 워처 버전보다 낮거나 같으면 None 전달
+            from fiber.infra.watcher.finops import default_finops_watcher
+            curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
+            req_ver = f.policy_ver if (f.policy_ver and f.policy_ver > curr_watcher_ver) else None
+
             res = await console_act.issue_account_mandate(
                 f.tenant_id,
                 budget_usd=f.jwt_usd,
                 op=f.jwt_op,
-                policy_ver=f.policy_ver,
-                sync_ledger=f.sync_ledger,
+                policy_ver=req_ver,
+                sync_ledger=True,
                 spiffe_id=spiffe_arg,
             )
-            f.last_jwt_preview = f"{res.jwt[:42]}... (v{f.policy_ver}, {f.jwt_op})"
-            f.ledger_balance = res.balance or f.ledger_balance
+            f.ledger_balance = res.balance
             f.current_fuel = res.active_quota
             f.policy_ver = res.policy_ver
             f.last_op = f.jwt_op
-            f.chart_dirty = True
+            f.last_jwt_preview = f"{res.jwt[:42]}... (v{res.policy_ver}, {f.jwt_op})"
+            f.push_chart_point()
 
             refs.push_cli(
-                f"  ✓ [EdDSA JWT] {f.last_jwt_preview} -> Remaining={f.current_fuel:,} | Balance={f.ledger_balance:,}"
+                f"  ✓ [EdDSA JWT] {f.last_jwt_preview} -> Active={f.current_fuel:,} | Ledger={f.ledger_balance:,}"
             )
             refs.push_pubsub(
                 "finops:control_plane",
-                f"EVENT={f.jwt_op} tenant={f.tenant_id} fuel={f.current_fuel} v={f.policy_ver}",
+                f"EVENT={f.jwt_op} tenant={f.tenant_id} fuel={f.current_fuel} v={res.policy_ver}",
             )
-            ui.notify(f"Mandate Applied: {f.jwt_op} (${f.jwt_usd:.1f}, v{f.policy_ver})", type="positive")
+            ui.notify(f"Mandate Applied: {f.jwt_op} (${f.jwt_usd:.1f}, v{res.policy_ver})", type="positive")
         except Exception:
             from fiber.phase.bridge.cli import run_fiber_cli
 
             args = ["account", "--tenant", f.tenant_id]
             if spiffe_arg:
                 args.extend(["--spiffe", spiffe_arg])
-            args.extend(["jwt", "--usd", str(f.jwt_usd), "--op", f.jwt_op, "--ver", str(f.policy_ver)])
-            if f.sync_ledger:
-                args.append("--sync")
+            # [정정] 폐기된 --sync 플래그 제거 후 CLI 호출
+            args.extend(["jwt", "--usd", str(f.jwt_usd), "--op", f.jwt_op])
             await run_fiber_cli(*args)
+
+    async def revoke_account_kill(self) -> None:
+        """코어 UTXO 원장 전량 소각 및 실시간 Pub/Sub REVOKE 브로드캐스트"""
+        f = state.finops
+        spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
+        try:
+            res = await console_act.revoke_account_mandate(
+                f.tenant_id,
+                policy_ver=None,
+                spiffe_id=spiffe_arg,
+            )
+            f.ledger_balance = res.status.ledger_balance
+            f.current_fuel = res.status.active_quota
+            f.policy_ver = res.status.policy_ver
+            f.last_op = "REVOKE"
+            f.stream_active = False
+            f.stream_status_text = "🛑 REVOKED & BURNED (0 Fuel)"
+            f.push_chart_point()
+
+            refs.push_cli(
+                f"$ fiber account --tenant {f.tenant_id} kill -> BurnTx={res.burn_tx_hash} | Balance=0 (v{f.policy_ver})"
+            )
+            refs.push_pubsub(
+                "finops:control_plane",
+                f"EVENT=REVOKE tenant={f.tenant_id} fuel=0 v={f.policy_ver}",
+            )
+            ui.notify(f"🚨 Revoked & Burned '{f.tenant_id}' (v{f.policy_ver})", type="negative")
+        except Exception:
+            from fiber.phase.bridge.cli import run_fiber_cli
+
+            await run_fiber_cli("account", "--tenant", f.tenant_id, "kill")
+
 
 class PipelineActionBridge:
     """Binds FuelBreaker stream simulation, Guardrail X-Ray, and VCR benchmarks to Console UI."""
@@ -356,10 +395,7 @@ class PipelineActionBridge:
                     break
                 await asyncio.sleep(0.35)
                 f.current_fuel = max(0, f.current_fuel - 5500)
-                f.x_ticks.append(time.strftime("%H:%M:%S"))
-                f.y_fuel.append(f.current_fuel)
-                f.y_core.append(f.ledger_balance)
-                f.chart_dirty = True
+                f.push_chart_point(time.strftime("%H:%M:%S"))
                 if refs.live_stream_log:
                     refs.live_stream_log.push(
                         f"chunk[{i}]: Coalesced window (100ms)... Remaining Fuel: {f.current_fuel:,}"

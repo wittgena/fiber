@@ -10,7 +10,7 @@ from nicegui import ui
 
 from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
 import fiber.dev.console.observer.plane as plane
-from fiber.dev.console.state import state, refs
+from fiber.infra.account.state import state, refs
 
 async def run_fiber_cli(*args: str) -> None:
     refs.push_cli(f"$ fiber {' '.join(args)}")

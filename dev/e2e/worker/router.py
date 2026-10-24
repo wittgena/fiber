@@ -1,8 +1,6 @@
 # fiber.dev.e2e.worker.router
 """
 @requirements: fiber daemon 
-$ fiber daemon -s edge
-or
 $ XPHI_WORKERS=1 python -m xphi.node.ops.boot
 """
 import sys
@@ -15,10 +13,8 @@ from typing import List, Dict
 
 import httpx
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.infra.bound.e2e.pipeline import MockPipeline, log
-from fiber.infra.daemon.economy.pricing import DynamicPricingDaemon
-
+from fiber.dev.e2e.base.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.e2e.base.pipeline import MockPipeline, log
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
 from fiber.phase.bridge.action.connect import (
@@ -32,6 +28,7 @@ import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 import fiber.infra.mcp.worker.eco.margin as worker_margin
 import fiber.infra.mcp.worker.search.archive as worker_search
 
+from xphi.node.ops.daemon.eco.pricing import DynamicPricingDaemon
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
