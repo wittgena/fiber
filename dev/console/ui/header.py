@@ -10,8 +10,9 @@ from fiber.infra.ops.account.state import (
     save_state_to_disk,
     state,
 )
-from fiber.dev.console.action import gov
+from fiber.infra.ops.finops.console import finops_manager
 import fiber.dev.console.ui.diag as diag
+from fiber.dev.console.ui.guide import open_guide_modal
 import fiber.dev.console.ui.kit as kit
 from xphi.node.space.bind.resolver import resolve_path
 
@@ -44,35 +45,34 @@ def act_reload_state_from_disk() -> None:
 def build_header() -> None:
     """Render the 2-deck cockpit header (Row 1: Identity & Emergency / Row 2: Live KPIs & State/Diag Clusters)."""
     diag.install_browser_hooks()
+
     with ui.header().classes("bg-slate-900 border-b border-slate-800 px-5 py-2"):
         with ui.column().classes("w-full gap-1.5"):
-            # [Deck 1: Brand Title, Node/Redis Badges & Emergency Stream Breaker]
             with ui.row().classes("w-full items-center justify-between no-wrap"):
                 with ui.row().classes("items-center gap-3"):
-                    ui.label("⚡ Fiber Runtime Harness").classes(
-                        "text-base font-extrabold tracking-wider text-white"
-                    )
-                    ui.badge().bind_text_from(state, "redis_badge_text").props(
-                        "color=slate-8 text-color=emerald-3"
-                    ).classes("text-xs px-2 py-0.5")
-                    ui.badge().bind_text_from(state.security, "ssh_badge_text").props(
-                        "color=slate-8 text-color=cyan-3"
-                    ).classes("text-xs px-2 py-0.5")
+                    ui.label("Runtime Harness").classes("text-base font-extrabold tracking-wider text-white")
+                    ui.badge().bind_text_from(state, "redis_badge_text").props("color=slate-8 text-color=emerald-3").classes("text-xs px-2 py-0.5")
+                    ui.badge().bind_text_from(state.security, "ssh_badge_text").props("color=slate-8 text-color=cyan-3").classes("text-xs px-2 py-0.5")
 
                 with ui.row().classes("items-center gap-2.5"):
                     kit.button(
-                        "🚨 LLM STREAM BREAK (10s)",
-                        gov.temporary_stream_kill,
+                        "Setup Guide",
+                        open_guide_modal,
+                        color="cyan",
+                        outline=True,
+                    ).classes("px-2.5").tooltip("IDE LLM Gateway & MCP Gateway configuration guide")
+
+                    kit.button(
+                        "LLM STREAM BREAK (10s)",
+                        finops_manager.temporary_stream_kill,
                         color="red",
                     ).classes("font-bold px-3").tooltip(
                         "Sever active streams immediately (0 Fuel) and auto-restore previous balance after 10s"
                     )
 
-            # Live KPI Bar & Grouped State / Diag File Controls
             with ui.row().classes(
                 "w-full items-center justify-between bg-slate-950 px-3 py-1 rounded border border-slate-800 no-wrap"
             ):
-                # Left: Real-time FinOps Balance/Quota & Token Savings KPIs
                 with ui.row().classes("items-center gap-4"):
                     ui.label().bind_text_from(state, "fuel_kpi_text").classes(
                         "text-xs font-mono font-bold text-emerald-400"
@@ -82,7 +82,6 @@ def build_header() -> None:
                         "text-xs font-mono font-bold text-cyan-400"
                     )
 
-                # Right: [Cluster 1: State Persistence] | [Cluster 2: UI Diagnostics]
                 with ui.row().classes("items-center gap-2"):
                     ui.label().bind_text_from(
                         state,
@@ -100,8 +99,6 @@ def build_header() -> None:
                     kit.button("💾 Save", act_manual_save_state, color="emerald", outline=True).classes("px-2")
 
                     ui.label("|").classes("text-xs text-slate-700 mx-0.5")
-
-                    # Cluster 2: UI Diagnostics (ui_diag.log + Snapshot Trigger)
                     ui.label(f"Diag ({DIAG_LOG_PATH.name}):").classes("text-[11px] font-mono text-slate-400")
                     kit.file_link(
                         DIAG_LOG_PATH,
@@ -110,7 +107,7 @@ def build_header() -> None:
                         default_content="",
                     )
                     kit.button(
-                        "🩺 Snapshot",
+                        "Snapshot",
                         lambda: diag.snapshot("header_btn"),
                         color="cyan",
                         outline=True,

@@ -13,9 +13,6 @@ from nicegui import Client, ui
 
 import fiber.dev.console.ui.diag as diag
 
-# ==========================================
-# 1. Design Tokens & Internal Helpers
-# ==========================================
 CLS_MONO_LABEL = (
     "text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800 w-full truncate"
 )
@@ -24,7 +21,6 @@ CLS_SECTION_HEADER = "text-xs font-bold text-cyan-400 shrink-0"
 _orig_notify = ui.notify
 
 def _context_safe_notify(message: Any, **kwargs: Any) -> None:
-    """Fallback to an active client context if ui.notify is called from a background task."""
     try:
         _orig_notify(message, **kwargs)
     except RuntimeError:
@@ -34,12 +30,9 @@ def _context_safe_notify(message: Any, **kwargs: Any) -> None:
                     _orig_notify(message, **kwargs)
                 return
 
-
 ui.notify = _context_safe_notify
 
-
 def _wrap_async(handler: Callable[[], Any]) -> Callable[[], Any]:
-    """Await coroutines directly inside an async handler to preserve NiceGUI's slot stack."""
     async def _runner() -> None:
         try:
             res = handler()
@@ -60,11 +53,6 @@ def open_local_file(
     default_content: str = "{}\n",
     create_if_missing: bool = False,
 ) -> None:
-    """
-    Open a local file or directory in the user's preferred external editor.
-    - Does NOT create missing files unless `create_if_missing=True` is explicitly passed.
-    - If the file exists but is 0-byte empty, seeds it with `default_content` to prevent JSON parse errors.
-    """
     target = Path(path).expanduser().resolve()
     try:
         if not target.exists():
@@ -78,7 +66,6 @@ def open_local_file(
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(default_content, encoding="utf-8")
         elif target.is_file() and target.stat().st_size == 0 and default_content:
-            # 0바이트 빈 파일이 이미 생성되어 파서 오류를 일으키는 경우 기본 JSON 시드 주입
             target.write_text(default_content, encoding="utf-8")
 
         editor_cmd = os.environ.get("FIBER_EDITOR") or os.environ.get("EDITOR")
@@ -128,13 +115,8 @@ def file_link(
     return container
 
 def trigger_viewport_resize() -> None:
-    """Recalculate ECharts and CodeMirror dimensions after tab visibility changes."""
     ui.run_javascript("setTimeout(() => window.dispatchEvent(new Event('resize')), 30)")
 
-
-# ==========================================
-# 2. Form & Input Primitives
-# ==========================================
 def text(
     label: str, target: Any, attr: str, *, flex: bool = True, mono: bool = True, width: str = ""
 ) -> ui.input:
@@ -146,7 +128,6 @@ def text(
         .props("dark outlined dense")
         .classes(f"{w_cls} {m_cls} text-xs".strip())
     )
-
 
 def number(
     label: str,
@@ -167,7 +148,6 @@ def number(
         .classes(f"{width} font-mono text-xs")
     )
 
-
 def select(
     options: Sequence[str], label: str, target: Any, attr: str, *, width: str = "flex-1"
 ) -> ui.select:
@@ -187,7 +167,6 @@ def switch(
         sw.bind_value(target, attr)
     return sw
 
-
 def button(
     label: str,
     action: Callable[[], Any],
@@ -205,12 +184,7 @@ def button(
     cls = f"{'flex-1 font-bold' if flex else 'px-2.5'} text-xs"
     return ui.button(label, on_click=_wrap_async(action)).props(props).classes(cls)
 
-
-# ==========================================
-# 3. Viewport & Data Widgets (min-h-0 guarded)
-# ==========================================
 def editor(target: Any, attr: str, *, lang: str = "json") -> ui.codemirror:
-    """CodeMirror editor guarded with min-h-0 to prevent flexbox height overflow."""
     return (
         ui.codemirror(language=lang, theme="oneDark")
         .bind_value(target, attr)
@@ -218,10 +192,7 @@ def editor(target: Any, attr: str, *, lang: str = "json") -> ui.codemirror:
     )
 
 def log(max_lines: int = 100, *, color: str = "text-slate-200", height: str = "flex-1 min-h-0") -> ui.log:
-    """Log viewer with isolated scroll containment inside flex containers."""
-    return ui.log(max_lines=max_lines).classes(
-        f"w-full {height} bg-black border border-slate-800 p-2 font-mono text-xs {color}"
-    )
+    return ui.log(max_lines=max_lines).classes(f"w-full {height} bg-black border border-slate-800 p-2 font-mono text-xs {color}")
 
 def bar_chart(
     categories: list[str],
@@ -260,7 +231,6 @@ def bar_chart(
             },
         }],
     }).classes("w-full flex-1 min-h-0")
-
 
 def line_chart(
     x_ticks: list[str],
@@ -312,16 +282,11 @@ def line_chart(
         ],
     }).classes("w-full h-40 shrink-0")
 
-
-# ==========================================
-# 4. Spatial Layout Containers
-# ==========================================
 @contextmanager
 def row(*, gap: str = "gap-2", align: str = "items-center") -> Iterator[ui.row]:
     """Full-width horizontal flex row."""
     with ui.row().classes(f"w-full {gap} {align} shrink-0") as r:
         yield r
-
 
 @contextmanager
 def bar() -> Iterator[ui.row]:
@@ -355,11 +320,6 @@ def split_studio(
     *,
     ratio: int = 42,
 ) -> ui.splitter:
-    """
-    Two-pane studio splitter [Left: Declarative Config <-> Right: Live Proof & Telemetry].
-    - Left pane scrolls vertically when form controls overflow.
-    - Right pane enforces `min-h-0 overflow-hidden` so flex-1 charts/editors fit strictly.
-    """
     with ui.splitter(value=ratio).classes("w-full h-[450px] bg-slate-900 rounded border border-slate-800") as sp:
         with sp.before:
             with ui.column().classes("p-4 gap-2.5 w-full h-full min-h-0 overflow-y-auto"):
@@ -383,14 +343,11 @@ def dual_drawer() -> Iterator[tuple[ui.column, ui.column]]:
         right_col = ui.column().classes("w-1/2 bg-black border border-slate-800 rounded p-2.5 gap-1")
         yield left_col, right_col
 
-# ==========================================
-# 5. Lifecycle & Structural Templates
-# ==========================================
 class StudioTab(ABC):
     """Base template for domain studio tabs (MCP, LLM Live, FinOps, VCR)."""
     title: str = "Tab"
-    left_header: str = "🎛️ Configuration"
-    right_header: str = "📈 Telemetry & Proof"
+    left_header: str = "Configuration"
+    right_header: str = "Telemetry & Proof"
     ratio: int = 42
 
     @abstractmethod
@@ -414,7 +371,6 @@ class StudioTab(ABC):
             ratio=self.ratio,
         )
 
-
 class ModalTemplate(ABC):
     """Base template for modal dialogs (HITL 202 gate, TOTP QR)."""
     width_cls: str = "w-[480px]"
@@ -433,9 +389,7 @@ class ModalTemplate(ABC):
             self.compose(dialog)
         return dialog
 
-
 class ConsoleTemplate:
-    """Top-level shell assembling header, keep-alive studio tabs, modals, and bottom drawers."""
     def __init__(
         self,
         tabs: Sequence[StudioTab],
@@ -454,7 +408,6 @@ class ConsoleTemplate:
         self.tick_interval = tick_interval
 
     def build_view(self) -> None:
-        """Construct the DOM tree and start the 100ms UI flush timer."""
         ui.dark_mode().enable()
         ui.query("body").classes("bg-slate-950 text-slate-100 select-none")
         ui.query(".nicegui-content").classes("p-0 gap-0")
@@ -485,7 +438,6 @@ class ConsoleTemplate:
             ui.timer(self.tick_interval, lambda: self.on_tick(self.tabs))
 
     def mount_page(self, path: str = "/", *, shared: bool = True) -> None:
-        """Mount view on shared auto-index root (`shared=True`) or isolated `@ui.page` (`shared=False`)."""
         if shared:
             self.build_view()
         else:

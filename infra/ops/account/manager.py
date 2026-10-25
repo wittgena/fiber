@@ -255,22 +255,55 @@ class LocalAccountManager(AccountManagerProtocol):
             exchange_rate=DEFAULT_EXCHANGE_RATE,
         )
 
-        LocalAccountRegistry.record(
-            self.tenant_id,
-            policy_ver=effective_ver,
-            last_op=f"MANDATE({cmd.op})",
-            last_jwt=jwt_token,
-        )
-
+        # 1. TokenTranslator.exchange를 먼저 호출하여 saved_ver와의 Replay 충돌 방지
         ap2_mandate = await TokenTranslator.exchange(jwt_token)
 
-        if cmd.sync_ledger and ap2_mandate:
-            target_fuel = int(default_finops_watcher.local_budget_cache.get(self.tenant_id, 0.0))
+        # 2. 비동기 PubSub 캐시 타이밍에 의존하지 않고 cmd.budget_usd와 cmd.op로부터 목표 Fuel 직접 계산
+        delta_fuel = max(0, int(round(cmd.budget_usd * DEFAULT_EXCHANGE_RATE)))
+        if cmd.op == "TOP_UP":
+            target_fuel = current_balance + delta_fuel
+        elif cmd.op == "REVOKE":
+            target_fuel = 0
+        else:  # PROVISION, SYNC_QUOTA
+            target_fuel = delta_fuel
+
+        if cmd.sync_ledger:
             await self._reconcile_ledger(
                 target_fuel=target_fuel,
                 action_tag=f"jwt_{cmd.op.lower()}",
                 policy_ver=effective_ver,
             )
+
+        # 3. 인메모리 워처 캐시 및 버전 즉시 갱신
+        final_balance = await self._get_ledger_balance("fuel") if cmd.sync_ledger else target_fuel
+        default_finops_watcher.local_budget_cache[self.tenant_id] = float(final_balance)
+        default_finops_watcher.policy_versions[self.tenant_id] = effective_ver
+        try:
+            tunnel = await TunnelFactory.get_default()
+            if tunnel:
+                payload = {
+                    "type": "update_budget",
+                    "tenant_id": self.tenant_id,
+                    "fuel_budget": float(final_balance),
+                    "finops": {
+                        "op": cmd.op,
+                        "budget_usd": round(final_balance / DEFAULT_EXCHANGE_RATE, 6),
+                        "exchange_rate": DEFAULT_EXCHANGE_RATE,
+                        "policy_ver": effective_ver,
+                    },
+                }
+                await tunnel.publish("finops:control_plane", json.dumps(payload))
+        except Exception:
+            pass
+
+        LocalAccountRegistry.record(
+            self.tenant_id,
+            ledger_balance=final_balance,
+            active_quota=float(final_balance),
+            policy_ver=effective_ver,
+            last_op=f"MANDATE({cmd.op})",
+            last_jwt=jwt_token,
+        )
 
         parsed_ticket = None
         if ap2_mandate:

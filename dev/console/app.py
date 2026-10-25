@@ -17,7 +17,10 @@ from fiber.infra.ops.account.state import (
     save_state_to_disk,
     state,
 )
-from fiber.dev.console.action import oob, gov
+from fiber.infra.ops.finops.console import finops_manager
+from fiber.dev.console.sign import oob
+from fiber.dev.console.mcp import mcp
+
 import fiber.dev.console.observer.plane as plane
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
@@ -30,10 +33,8 @@ _bg_tasks: list[asyncio.Task] = []
 
 async def _sync_initial_node_and_account_state() -> None:
     await oob.refresh_sign_status(silent=True)
-    await gov.refresh_account_status(silent=True)
-    await oob.scan_mcp_topology_and_health(silent=True)
-
-# fiber.dev.console.app 내 _flush_100ms_ringbuffer 수정 영역
+    await finops_manager.refresh_account_status(silent=True)
+    await mcp.scan_mcp_topology_and_health(silent=True)
 
 def _flush_100ms_ringbuffer() -> None:
     f, s, p = state.finops, state.security, state.pipeline
@@ -89,7 +90,7 @@ def _build_drawer() -> None:
     with kit.dual_drawer() as (left_col, right_col):
         with left_col:
             with ui.row().classes("w-full justify-between items-center mb-1"):
-                ui.label("💻 CLI Output").classes("text-xs text-cyan-400 font-mono font-bold")
+                ui.label("CLI Output").classes("text-xs text-cyan-400 font-mono font-bold")
                 ui.button("Clear", on_click=lambda: refs.cli_log.clear() if refs.cli_log else None).props(
                     "flat dense size=xs color=slate-4"
                 )
@@ -97,7 +98,7 @@ def _build_drawer() -> None:
 
         with right_col:
             with ui.row().classes("w-full justify-between items-center mb-1"):
-                ui.label("📡 Control Plane Event (finops:* / mcp:* / sign:*)").classes(
+                ui.label("Control Plane Event (finops:* / mcp:* / sign:*)").classes(
                     "text-xs text-amber-400 font-mono font-bold"
                 )
                 with ui.row().classes("items-center gap-2"):
@@ -154,7 +155,7 @@ async def _on_startup(url: str) -> None:
     """Initialize node/account/MCP state and spawn non-blocking background workers."""
     await _sync_initial_node_and_account_state()
     _bg_tasks.append(asyncio.create_task(plane.redis_pubsub_worker(), name="fiber-redis-pubsub"))
-    _bg_tasks.append(asyncio.create_task(oob.mcp_gateway_health_worker(), name="fiber-mcp-health"))
+    _bg_tasks.append(asyncio.create_task(mcp.mcp_gateway_health_worker(), name="fiber-mcp-health"))
     _bg_tasks.append(asyncio.create_task(_delayed_open_window(url), name="fiber-open-window"))
 
 async def _on_shutdown() -> None:
