@@ -19,8 +19,8 @@ from typing import Dict, Any
 
 from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 from xphi.arch.contract.protocol.binder import ToolError
-from fiber.llm.provider.cost.registry import RegistryIO
-from fiber.llm.provider.cost.filter import extract_aligned_registry, CORE_KEYWORDS
+from fiber.infra.ops.finops.cost.registry import RegistryIO
+from fiber.infra.ops.finops.model.filter import extract_aligned_registry, CORE_KEYWORDS
 
 
 class PriceModelServer(AsyncWorkerProtocol):

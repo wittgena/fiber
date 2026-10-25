@@ -2,7 +2,7 @@
 ## @lineage: fiber.gateway.llm.handler.anthropic
 ## @lineage: fiber.llm.router.handle.anthropic
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union, cast
-from fiber.llm.types.inter.block import (
+from fiber.llm.model.types.inter.block import (
     CachePoint,
     CitableBlock,
     CitationBlock,
@@ -15,7 +15,7 @@ from fiber.llm.types.inter.block import (
     ToolCallBlock,
 )
 
-from fiber.llm.types.inter.response import ChatMessage, ChatResponse
+from fiber.llm.model.types.inter.response import ChatMessage, ChatResponse
 
 from anthropic.types import (
     Base64PDFSourceParam,

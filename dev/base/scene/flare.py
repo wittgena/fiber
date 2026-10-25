@@ -10,8 +10,8 @@ import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict
 
-from fiber.dev.base.sandbox import SandboxRunner, TestScripts
-from fiber.dev.base.epoch import ActorIdentity
+from fiber.dev.base.scene.runner import SandboxRunner, TestScripts
+from fiber.dev.base.scene.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.pta import compute_merkle_root

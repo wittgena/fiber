@@ -1,4 +1,5 @@
-# fiber.phase.bridge.action.account
+# fiber.gateway.bridge.action.account
+## @lineage: fiber.phase.bridge.action.account
 """
 @desc: LocalAccount CLI & Headless Bridge Action Utility
 - Provides typed headless functions for Console UI & programmatic callers.
@@ -13,14 +14,14 @@ from typing import Optional
 
 from fiber.gateway.contract.token.gen import FinOpsOpType
 from fiber.gateway.security import TokenTranslator
-from fiber.infra.account.manager import (
+from fiber.infra.ops.account.manager import (
     DEFAULT_INITIAL_FUEL,
     AllocateCommand,
     LocalAccountManager,
     RevokeCommand,
     SyncQuotaCommand,
 )
-from fiber.infra.account.registry import DEFAULT_TENANT_ID, LocalAccountRegistry
+from fiber.infra.ops.account.registry import DEFAULT_TENANT_ID, LocalAccountRegistry
 from fiber.gateway.bridge.schema import (
     AccountAllocateResult,
     AccountListResult,

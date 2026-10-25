@@ -24,10 +24,10 @@ from fiber.gateway.llm.state.pydantic import (
     SerializeAsAny,
 )
 
-from fiber.llm.types.inter.block import MessageRole
-from fiber.llm.types.inter.response import ChatMessage
-from fiber.llm.types.inter.llm import LLMBase
-from fiber.llm.types.inter.base import BaseOutputParser
+from fiber.llm.model.types.inter.block import MessageRole
+from fiber.llm.model.types.inter.response import ChatMessage
+from fiber.llm.model.types.inter.llm import LLMBase
+from fiber.llm.model.types.inter.base import BaseOutputParser
 from fiber.gateway.llm.inter.handler.util import get_template_vars, format_string
 from fiber.gateway.llm.state.pydantic import BaseModel, ConfigDict
 

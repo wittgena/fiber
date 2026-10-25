@@ -9,10 +9,10 @@ import httpx
 from pydantic import BaseModel
 from openai.lib import _parsing, _pydantic
 
-from fiber.llm.provider.resolver import _resolver_instance
-from fiber.llm.types.provider.core import Usage
+from fiber.llm.model.resolver import _resolver_instance
+from fiber.llm.model.types.provider.core import Usage
 from fiber.llm.exception.eco import UnsupportedParamsError
-from fiber.llm.types.provider.openai import ValidUserMessageContentTypes
+from fiber.llm.model.types.provider.openai import ValidUserMessageContentTypes
 from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import ExecutionMetadata, CompletionContext, EmbeddingContext
 from fiber.llm.compat.param import FRAMEWORK_KWARGS, AUTH_PREFIXES, FLAG_KEYS, PROVIDER_ALIAS, OPENAI_REGIONAL_HOSTS, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES

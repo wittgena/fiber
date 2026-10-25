@@ -15,14 +15,14 @@ from typing import List, Dict, Any, Optional
 import httpx
 import redis.exceptions
 
-from fiber.dev.base.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.dev.base.pipeline import MockPipeline, log
-from fiber.dev.base.mcp.server import MockMcpServer
+from fiber.dev.base.workflow.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.base.workflow.pipeline import MockPipeline, log
+from fiber.dev.base.workflow.mcp import MockMcpServer
 from fiber.gateway.bridge.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder
 
-from fiber.dev.base.audit.context import AuditContext
+from fiber.dev.base.workflow.audit.context import AuditContext
 from fiber.gateway.bridge.slack import SlackHitlBridge
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT

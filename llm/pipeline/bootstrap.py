@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, Dict, List, Union
 
 from fiber.llm.response import ModelResponse
-from fiber.llm.types.provider.general import EmbeddingResponse
+from fiber.llm.model.types.provider.general import EmbeddingResponse
 
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.llm.pipeline.channel.core import CompletionTransport, EmbeddingTransport, StreamAggregator, PayloadTranslator, FallbackHandler, MockBypass, ContextBinder

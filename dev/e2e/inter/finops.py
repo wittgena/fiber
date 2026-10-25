@@ -16,8 +16,8 @@ from pathlib import Path
 from typing import Optional
 import httpx
 
-from fiber.dev.base.config import Phase, E2EConfig
-from fiber.dev.base.pipeline import MockPipeline, log
+from fiber.dev.base.workflow.config import Phase, E2EConfig
+from fiber.dev.base.workflow.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
@@ -31,9 +31,9 @@ from fiber.infra.vcr.manager import (
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from fiber.dev.base.llm.trace import create_e2e_parser, build_e2e_context
+from fiber.dev.base.workflow.builder import create_e2e_parser, build_e2e_context
 import fiber.infra.mcp.worker.finops as worker_finops
-from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
+from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator

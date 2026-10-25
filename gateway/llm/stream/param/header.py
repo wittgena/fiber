@@ -3,7 +3,7 @@
 ## @lineage: fiber.llm.router.param.header
 import httpx
 from typing import Optional, Union
-from fiber.llm.types.provider.general import OPENAI_RESPONSE_HEADERS
+from fiber.llm.model.types.provider.general import OPENAI_RESPONSE_HEADERS
 
 def process_response_headers(response_headers: Union[httpx.Headers, dict]) -> dict:
     openai_headers = {}

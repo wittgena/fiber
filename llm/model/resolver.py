@@ -1,0 +1,378 @@
+# fiber.llm.model.resolver
+## @lineage: fiber.llm.provider.resolver
+from __future__ import annotations
+
+import re
+from urllib.parse import urlparse
+from typing import Tuple, Optional, Union, Dict, List
+
+from fiber.infra.ops.finops.cost.registry import ModelCostRegistry
+from xphi.arch.contract.config.constants import REPLICATE_MODEL_NAME_WITH_ID_LENGTH
+from fiber.llm.model.types.param.legacy import LegacyParams
+from fiber.llm.model.secret import get_secret_str, get_secret
+from xphi.arch.contract.config.resolver import config
+from xphi.watcher.plane.emitter import get_emitter 
+
+log_route = get_emitter("provider.resolver")
+
+PROVIDER_REGISTRY = {
+    "openai": ("https://api.openai.com/v1", ["OPENAI_API_KEY"]),
+    "anthropic": ("https://api.anthropic.com/v1/messages", ["ANTHROPIC_API_KEY"]),
+    "cohere": ("https://api.cohere.ai/v1", ["COHERE_API_KEY"]),
+    "ollama": ("http://localhost:11434", ["OLLAMA_API_KEY"]),
+    "llama_server": ("http://localhost:8080/v1", ["OPENAI_API_KEY"]),
+    "vllm": ("http://localhost:8000/v1", ["VLLM_API_KEY"]),
+    "lm_studio": ("http://localhost:1234/v1", ["LM_STUDIO_API_KEY"]),
+    "llamafile": ("http://localhost:8080/v1", ["LLAMAFILE_API_KEY"]),
+    "github_copilot": ("https://api.githubcopilot.com", ["GITHUB_COPILOT_API_KEY"]),
+    "groq": ("https://api.groq.com/openai/v1", ["GROQ_API_KEY"]),
+    "cerebras": ("https://api.cerebras.ai/v1", ["CEREBRAS_API_KEY"]),
+    "mistral": ("https://api.mistral.ai/v1", ["MISTRAL_API_KEY"]),
+    "codestral": ("https://codestral.mistral.ai/v1", ["CODESTRAL_API_KEY"]),
+    "deepseek": ("https://api.deepseek.com/beta", ["DEEPSEEK_API_KEY"]),
+    "perplexity": ("https://api.perplexity.ai", ["PERPLEXITYAI_API_KEY"]),
+    "together_ai": ("https://api.together.xyz/v1", ["TOGETHER_API_KEY", "TOGETHER_AI_API_KEY", "TOGETHERAI_API_KEY", "TOGETHER_AI_TOKEN"]),
+    "deepinfra": ("https://api.deepinfra.com/v1/openai", ["DEEPINFRA_API_KEY"]),
+    "baseten": ("https://inference.baseten.co/v1", ["BASETEN_API_KEY"]),
+    "fireworks_ai": ("https://api.fireworks.ai/inference/v1", ["FIREWORKS_AI_API_KEY"]),
+    "ai21": ("https://api.ai21.com/studio/v1", ["AI21_API_KEY"]),
+    "nvidia": ("https://integrate.api.nvidia.com/v1", ["NVIDIA_API_KEY", "NVIDIA_NIM_API_KEY"]),
+    "sambanova": ("https://api.sambanova.ai/v1", ["SAMBANOVA_API_KEY"]),
+    "empower": ("https://app.empower.dev/api/v1", ["EMPOWER_API_KEY"]),
+    "nebius": ("https://api.studio.nebius.ai/v1", ["NEBIUS_API_KEY"]),
+    "volcengine": ("https://ark.cn-beijing.volces.com/api/v3", ["VOLCENGINE_API_KEY"]),
+    "dashscope": ("https://dashscope-intl.aliyuncs.com/compatible-mode/v1", ["DASHSCOPE_API_KEY"]),
+    "moonshot": ("https://api.moonshot.ai/v1", ["MOONSHOT_API_KEY"]),
+    "minimax": ("https://api.minimax.io/v1", ["MINIMAX_API_KEY"]),
+    "friendliai": ("https://api.friendli.ai/serverless/v1", ["FRIENDLIAI_API_KEY", "FRIENDLI_TOKEN"]),
+    "novita": ("https://api.novita.ai/v3/openai", ["NOVITA_API_KEY"]),
+    "hyperbolic": ("https://api.hyperbolic.xyz/v1", ["HYPERBOLIC_API_KEY"]),
+    "vercel_ai_gateway": ("https://ai-gateway.vercel.sh/v1", ["VERCEL_AI_GATEWAY_API_KEY"]),
+    "nscale": ("https://api.nscale.com/v1", ["NSCALE_API_KEY"]),
+    "replicate": ("https://api.replicate.com/v1", ["REPLICATE_API_KEY", "REPLICATE_API_TOKEN"]),
+    "vertex_ai": (None, ["VERTEX_AI_API_KEY", "GEMINI_API_KEY"]),
+    
+    "gemini": ("https://generativelanguage.googleapis.com/v1beta", ["GEMINI_API_KEY", "GOOGLE_API_KEY"]),
+    "google": ("https://generativelanguage.googleapis.com/v1beta", ["GEMINI_API_KEY", "GOOGLE_API_KEY"]),
+    
+    "huggingface": ("https://router.huggingface.co/v1", ["HF_TOKEN"]),
+    
+    "bedrock": (None, ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"])
+}
+
+_CLAUDE_PATTERN = re.compile(r"^claude-[a-z]+-\d+-\d+(?:-\d{8})?$", re.IGNORECASE)
+
+
+class GateBadRequestError(Exception):
+    def __init__(self, message: str, model: str):
+        super().__init__(message)
+        self.model = model
+
+def _matches_claude_model_pattern(model: str) -> bool:
+    return _CLAUDE_PATTERN.match(model) is not None
+
+def _is_non_openai_azure_model(model: str) -> bool:
+    try:
+        model_name = model.split("/", 1)[1]
+        cohere_models = config.get("cohere_chat_models", [])
+        mistral_models = config.get("mistral_chat_models", [])
+        if model_name in cohere_models or f"mistral/{model_name}" in mistral_models:
+            return True
+    except Exception:
+        return False
+    return False
+
+def handle_cohere_chat_model_custom_llm_provider(model: str, custom_llm_provider: Optional[str] = None) -> Tuple[str, Optional[str]]:
+    cohere_models = config.get("cohere_chat_models", [])
+    if custom_llm_provider:
+        if custom_llm_provider == "cohere" and model in cohere_models:
+            return model, "cohere_chat"
+
+    if model and "/" in model:
+        _custom_llm_provider, _model = model.split("/", 1)
+        if _custom_llm_provider == "cohere" and _model in cohere_models:
+            return _model, "cohere_chat"
+
+    return model, custom_llm_provider
+
+def handle_anthropic_text_model_custom_llm_provider(
+    model: str, custom_llm_provider: Optional[str] = None
+) -> Tuple[str, Optional[str]]:
+    is_text_model = "claude-2" in model or "claude-instant" in model
+    if custom_llm_provider:
+        if custom_llm_provider == "anthropic" and is_text_model:
+            return model, "anthropic_text"
+
+    if model and "/" in model:
+        _custom_llm_provider, _model = model.split("/", 1)
+        if (_custom_llm_provider == "anthropic" and ("claude-2" in _model or "claude-instant" in _model)):
+            return _model, "anthropic_text"
+
+    return model, custom_llm_provider
+
+def _endpoint_matches_api_base(endpoint: str, api_base: str) -> bool:
+    def _parse(value: str):
+        normalized = value if "://" in value else f"https://{value}"
+        return urlparse(normalized)
+    parsed_endpoint = _parse(endpoint)
+    parsed_url = _parse(api_base)
+    endpoint_host = (parsed_endpoint.hostname or "").lower()
+    url_host = (parsed_url.hostname or "").lower()
+    if not endpoint_host or endpoint_host != url_host:
+        return False
+    endpoint_path = parsed_endpoint.path.rstrip("/")
+    if not endpoint_path:
+        return True
+    url_path = parsed_url.path.rstrip("/")
+    return url_path == endpoint_path or url_path.rstrip("/").startswith(endpoint_path + "/")
+
+class LLMProviderResolver:
+    def __init__(self):
+        self._provider_configs = PROVIDER_REGISTRY
+
+    def resolve(
+        self,
+        model: str,
+        custom_llm_provider: Optional[str] = None,
+        api_base: Optional[str] = None,
+        api_key: Optional[str] = None,
+    ) -> Tuple[str, str, Optional[str], Optional[str]]:
+        
+        if not model:
+            raise ValueError("model parameter is required.")
+
+        dynamic_api_key = None
+        model, custom_llm_provider, is_resolved = self._resolve_special_cases(model, custom_llm_provider)
+        if is_resolved:
+            return model, custom_llm_provider, dynamic_api_key, api_base
+
+        if "/" in model:
+            resolved = self._resolve_by_prefix(model, api_base, api_key)
+            if resolved:
+                return resolved
+
+        if api_base:
+            resolved = self._resolve_by_api_base(model, api_base, api_key)
+            if resolved:
+                return resolved
+
+        model, custom_llm_provider = self._resolve_by_model_name(model, custom_llm_provider)
+        if not custom_llm_provider:
+            raise GateBadRequestError(
+                message=f"LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model={model}",
+                model=model
+            )
+        return model, custom_llm_provider, api_key, api_base
+
+    def get_api_base(self, model: str, optional_params: Union[dict, LegacyParams]) -> Optional[str]:
+        params = optional_params if isinstance(optional_params, LegacyParams) else LegacyParams(**optional_params)
+        
+        if params.api_base is not None:
+            return params.api_base
+
+        resolved_model = config.model_alias_map.get(model, model) if config.model_alias_map else model
+
+        if params.vertex_location and params.vertex_project:
+            is_stream = getattr(params, "stream", False)
+            content_endpoint = "streamGenerateContent" if is_stream else "generateContent"
+            return (
+                f"https://{params.vertex_location}-aiplatform.googleapis.com/v1/"
+                f"projects/{params.vertex_project}/locations/{params.vertex_location}/"
+                f"publishers/google/models/{resolved_model}:{content_endpoint}"
+            )
+
+        try:
+            _, provider, _, dynamic_api_base = self.resolve(
+                model=resolved_model,
+                custom_llm_provider=params.custom_llm_provider,
+                api_base=None,
+                api_key=params.api_key
+            )
+        except Exception:
+            provider = None
+            dynamic_api_base = None
+
+        if dynamic_api_base:
+            return dynamic_api_base
+            
+        if provider and provider in self._provider_configs:
+            static_base, _ = self._provider_configs[provider]
+            return static_base
+
+        return None
+
+    def _get_cost_key(self, potential_key: str) -> Optional[str]:
+        return ModelCostRegistry.get_model_key_case_insensitive(potential_key)
+
+    def check_capability(self, model: str, custom_llm_provider: Optional[str], key: str, default_if_none: bool = False) -> bool:
+        try:
+            resolved_model, resolved_provider, _, _ = self.resolve(model=model, custom_llm_provider=custom_llm_provider)
+            model_info = ModelCostRegistry.lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
+            
+            if model_info.get(key) is not None:
+                return bool(model_info.get(key))
+
+            bare_model_key = self._get_cost_key(resolved_model)
+            if bare_model_key:
+                bare_entry = ModelCostRegistry.get_cost(bare_model_key)
+                if bare_entry.get(key) is not None:
+                    return bool(bare_entry.get(key))
+
+            return default_if_none
+        except Exception as e:
+            log_route.debug(f"Capability check failed for {key}. model={model}, provider={custom_llm_provider}. Error: {e}")
+            return default_if_none
+
+    def supports_function_calling(self, model: str, custom_llm_provider: Optional[str] = None) -> bool:
+        return self.check_capability(model, custom_llm_provider, "supports_function_calling", default_if_none=False)
+
+    def supports_httpx_timeout(self, custom_llm_provider: str) -> bool:
+        return custom_llm_provider in ["openai"]
+
+    def get_supported_openai_params(
+        self,
+        model: str,
+        custom_llm_provider: Optional[str] = None,
+        request_type: str = "chat_completion",
+        base_model: Optional[str] = None,
+    ) -> Optional[list]:
+        if not custom_llm_provider:
+            try:
+                _, custom_llm_provider, _, _ = self.resolve(model=model)
+            except GateBadRequestError:
+                return None
+
+        if custom_llm_provider == "openai" and request_type == "transcription":
+            if "gpt-4o" in model:
+                return config.OpenAIGPTAudioTranscriptionConfig().get_supported_openai_params(model=model)
+            return config.OpenAIWhisperAudioTranscriptionConfig().get_supported_openai_params(model=model)
+
+        config_mapping = {
+            "anthropic": "AnthropicConfig",
+            "huggingface": "HuggingFaceChatConfig",
+            "gemini": "GoogleAIStudioGeminiConfig",
+            "ollama": "OllamaConfig",
+            "openai": "OpenAIConfig",
+            "vertex_ai": "VertexAIConfig",
+            "bedrock": "AmazonBedrockGlobalConfig",
+            "azure": "AzureOpenAIConfig",
+        }
+        
+        provider_key = custom_llm_provider.split("/")[0] if "/" in custom_llm_provider else custom_llm_provider
+        config_class_name = config_mapping.get(provider_key, "OpenAILikeChatConfig")
+        
+        if hasattr(config, config_class_name):
+            config_instance = getattr(config, config_class_name)()
+            if hasattr(config_instance, "get_supported_openai_params"):
+                supported_params = config_instance.get_supported_openai_params(model=model)
+                if base_model and base_model != model:
+                    base_params = config_instance.get_supported_openai_params(model=base_model)
+                    supported_params = list(dict.fromkeys([*(supported_params or []), *(base_params or [])]))
+                return supported_params
+                
+        return None
+
+    def _resolve_special_cases(self, model: str, custom_llm_provider: Optional[str]) -> Tuple[str, Optional[str], bool]:
+        if model.startswith("azure/"):
+            model_name = model.split("/", 1)[1]
+            registry_provider = ModelCostRegistry.get_provider(model_name)
+            if registry_provider in ["cohere_chat", "mistral"]:
+                return model, "openai", True
+                
+        model, custom_llm_provider = handle_cohere_chat_model_custom_llm_provider(model, custom_llm_provider)
+        model, custom_llm_provider = handle_anthropic_text_model_custom_llm_provider(model, custom_llm_provider)
+        return model, custom_llm_provider, False
+
+    def _resolve_by_prefix(self, model: str, api_base: Optional[str], api_key: Optional[str]):
+        provider_prefix, actual_model = model.split("/", 1)
+        if provider_prefix in self._provider_configs:
+            default_base, key_envs = self._provider_configs[provider_prefix]
+            api_base = api_base or default_base
+            dynamic_api_key = api_key or self._get_secret_from_list(key_envs)
+            return actual_model, provider_prefix, dynamic_api_key, api_base
+            
+        provider_list = config.get("provider_list", [])
+        if provider_prefix in provider_list:
+            return actual_model, provider_prefix, api_key, api_base
+            
+        return None
+
+    def _resolve_by_api_base(self, model: str, api_base: str, api_key: Optional[str]):
+        endpoints = config.get("openai_compatible_endpoints", [])
+        for endpoint in endpoints:
+            if _endpoint_matches_api_base(endpoint, api_base):
+                provider_name = self._find_provider_by_endpoint(endpoint)
+                if provider_name and provider_name in self._provider_configs:
+                    _, key_envs = self._provider_configs[provider_name]
+                    dynamic_api_key = api_key or self._get_secret_from_list(key_envs)
+                    return model, provider_name, dynamic_api_key, api_base
+        return None
+    
+    def _resolve_by_model_name(self, model: str, custom_llm_provider: Optional[str]) -> Tuple[str, Optional[str]]:
+        registry_provider = ModelCostRegistry.get_provider(model)
+        if registry_provider:
+            return model, registry_provider
+
+        if ":" in model and len(model.split(":")[1]) == REPLICATE_MODEL_NAME_WITH_ID_LENGTH:
+            return model, "replicate"
+
+        if "ft:gpt" in model or model.startswith("gpt-"):
+            return model, "openai"
+        if _matches_claude_model_pattern(model):
+            return model, "anthropic"
+        return model, custom_llm_provider
+
+    def _get_secret_from_list(self, env_keys: list) -> Optional[str]:
+        for key in env_keys:
+            val = get_secret_str(key) or get_secret(key)
+            if val:
+                return val
+        return None
+
+    def _find_provider_by_endpoint(self, endpoint: str) -> Optional[str]:
+        for provider, config_tuple in self._provider_configs.items():
+            if config_tuple is None:
+                continue
+            base_url, _ = config_tuple
+            if base_url and endpoint in base_url:
+                return provider
+        return None
+
+
+"""Global Export Wrappers"""
+_resolver_instance = LLMProviderResolver()
+
+def get_llm_provider(
+    model: str,
+    custom_llm_provider: Optional[str] = None,
+    api_base: Optional[str] = None,
+    api_key: Optional[str] = None,
+) -> Tuple[str, str, Optional[str], Optional[str]]:
+    try:
+        return _resolver_instance.resolve(
+            model=model,
+            custom_llm_provider=custom_llm_provider,
+            api_base=api_base,
+            api_key=api_key,
+        )
+    except Exception as e:
+        if isinstance(e, GateBadRequestError):
+            raise e
+        raise GateBadRequestError(
+            message=f"GetLLMProvider Exception - {str(e)}\n\noriginal model: {model}",
+            model=model
+        )
+
+def supports_function_calling(model: str, custom_llm_provider: Optional[str] = None) -> bool:
+    return _resolver_instance.supports_function_calling(model, custom_llm_provider)
+
+def supports_httpx_timeout(custom_llm_provider: str) -> bool:
+    return _resolver_instance.supports_httpx_timeout(custom_llm_provider)
+
+def get_supported_openai_params(
+    model: str,
+    custom_llm_provider: Optional[str] = None,
+    request_type: str = "chat_completion",
+    base_model: Optional[str] = None,
+) -> Optional[list]:
+    return _resolver_instance.get_supported_openai_params(model, custom_llm_provider, request_type, base_model)

@@ -1,11 +1,12 @@
-# fiber.phase.bridge.action.compat
+# fiber.gateway.bridge.action.compat
+## @lineage: fiber.phase.bridge.action.compat
 import os
 import sys
 import asyncio
 import time
 from typing import Optional
 
-from fiber.llm.provider.resolver import get_llm_provider
+from fiber.llm.model.resolver import get_llm_provider
 import fiber.llm.entry as llm_entry
 
 from fiber.gateway.llm.state.traverser import StateMapper

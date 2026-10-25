@@ -7,7 +7,7 @@ import json
 from typing import Any, Callable, Dict
 from nicegui import ui
 
-from fiber.infra.account.state import state, refs
+from fiber.infra.ops.account.state import state, refs
 from xphi.watcher.plane.emitter import get_emitter
 
 _emitter = get_emitter(name="console.ui.diag", phase="UI_DIAG", mode="RAW")

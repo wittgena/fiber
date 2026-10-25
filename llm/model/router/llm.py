@@ -5,7 +5,7 @@ import pkgutil
 from typing import Dict, Any, Optional, Set, List
 from dataclasses import dataclass, field, asdict
 
-from fiber.llm.types.inter.llm import LLMBase
+from fiber.llm.model.types.inter.llm import LLMBase
 import fiber.gateway.llm.inter as llm_pkg 
 from xphi.watcher.plane.emitter import get_emitter
 

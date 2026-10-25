@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from fiber.gateway.llm.state.pydantic import BaseModel, SerializeAsAny, ConfigDict
-from fiber.llm.types.inter.response import (
+from fiber.llm.model.types.inter.response import (
     ChatMessage,
     ChatResponse,
     CompletionResponse,

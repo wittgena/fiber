@@ -8,7 +8,7 @@ from fiber.gateway.bridge.cli import run_fiber_cli
 from fiber.dev.console.action import gov, pipeline
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
-from fiber.infra.account.state import state, refs, USD_TO_FUEL_RATE
+from fiber.infra.ops.account.state import state, refs, USD_TO_FUEL_RATE
 from xphi.node.space.bind.resolver import resolve_path
 
 FINOPS_ACTION_LABELS = {
@@ -20,7 +20,7 @@ FINOPS_ACTION_LABELS = {
 
 def _resolve_accounts_registry_path() -> Path:
     try:
-        from fiber.infra.account.registry import LocalAccountRegistry
+        from fiber.infra.ops.account.registry import LocalAccountRegistry
         return Path(LocalAccountRegistry.get_registry_path())
     except Exception:
         return resolve_path("anchor") / "sign" / "local_accounts.json"

@@ -15,19 +15,19 @@ from typing import Any, Dict, List
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from fiber.dev.base.config import Phase, E2EConfig, get_free_port
-from fiber.dev.base.pipeline import MockPipeline, log
+from fiber.dev.base.workflow.config import Phase, E2EConfig, get_free_port
+from fiber.dev.base.workflow.pipeline import MockPipeline, log
+from fiber.dev.base.workflow.profile.metrics import PipelineLoadProfiler, LoadSLO
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
-from fiber.infra.watcher.profile.metrics import PipelineLoadProfiler, LoadSLO
 from fiber.infra.vcr.manager import (
     VCRPlaybackConfig,
     VCRIdentityRule,
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from fiber.dev.base.llm.trace import create_e2e_parser, build_e2e_context
+from fiber.dev.base.workflow.builder import create_e2e_parser, build_e2e_context
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.node.space.bind.resolver import get_invoker

@@ -123,7 +123,7 @@ def exception_type(
         ## @phase: context_building, @desc: Assemble extra debug information
         extra_information = f"\nModel: {model}"
         try:
-            from fiber.llm.provider.resolver import _resolver_instance
+            from fiber.llm.model.resolver import _resolver_instance
             _api_base = _resolver_instance.get_api_base(model=model or "", optional_params=extra_kwargs)
             if _api_base: 
                 extra_information += f"\nAPI Base: `{_api_base}`"

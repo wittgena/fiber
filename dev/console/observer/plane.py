@@ -17,7 +17,7 @@ from fiber.dev.console.observer.signal import (
     UISlot,
     UISlotStatus,
 )
-from fiber.infra.account.state import state, refs
+from fiber.infra.ops.account.state import state, refs
 import fiber.dev.console.ui.diag as diag
 from xphi.arch.contract.event.next import EventObserver, LogEvent
 from xphi.watcher.plane.regulator import default_plane

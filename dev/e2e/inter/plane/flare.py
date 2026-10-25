@@ -37,7 +37,7 @@ class FlareFlow:
             self.suites = suites
         
         self.log = get_emitter("flare.entry")
-        self.log.debug(f"[FlareFlow:__init__] Initialized with mode={self.mode}, command={self.command}, suites={self.suites}, keep_workspace={self.keep_workspace}") # [LOG ADDED]
+        self.log.debug(f"[FlareFlow:__init__] Initialized with mode={self.mode}, command={self.command}, suites={self.suites}, keep_workspace={self.keep_workspace}")
 
     def _resolve_suite_class(self, suite_name_or_path: str):
         module_path_str = self.config.suites_registry.get(suite_name_or_path, suite_name_or_path)

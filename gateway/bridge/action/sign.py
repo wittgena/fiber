@@ -1,4 +1,5 @@
-# fiber.phase.bridge.action.sign
+# fiber.gateway.bridge.action.sign
+## @lineage: fiber.phase.bridge.action.sign
 """Node Keychain & Admin TOTP Attestation CLI"""
 import os
 import sys

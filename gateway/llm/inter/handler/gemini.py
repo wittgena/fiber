@@ -27,7 +27,7 @@ from google.genai import _transformers, Client
 from google.genai import errors
 
 from fiber.gateway.llm.state.pydantic import BaseModel, ValidationError
-from fiber.llm.types.inter.block import (
+from fiber.llm.model.types.inter.block import (
     ImageBlock,
     MessageRole,
     TextBlock,
@@ -37,7 +37,7 @@ from fiber.llm.types.inter.block import (
     ToolCallBlock,
     ContentBlock,
 )
-from fiber.llm.types.inter.response import ChatMessage, ChatResponse
+from fiber.llm.model.types.inter.response import ChatMessage, ChatResponse
 from tenacity import (
     before_sleep_log,
     retry,
@@ -51,7 +51,7 @@ from tenacity import (
 from tenacity.stop import stop_base
 
 if TYPE_CHECKING:
-    from fiber.llm.types.inter.tool import BaseTool
+    from fiber.llm.model.types.inter.tool import BaseTool
 
 logger = logging.getLogger(__name__)
 

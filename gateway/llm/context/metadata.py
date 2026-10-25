@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 
-from fiber.llm.types.provider.general import EmbeddingResponse
+from fiber.llm.model.types.provider.general import EmbeddingResponse
 from fiber.llm.response import ModelResponse
 
 @dataclass

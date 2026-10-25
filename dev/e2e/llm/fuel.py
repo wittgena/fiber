@@ -17,7 +17,7 @@ from fiber.infra.vcr.manager import (
     add_vcr_arguments
 )
 from fiber.infra.vcr.injector import VCRInjector
-from fiber.dev.base.llm.trace import (
+from fiber.dev.base.workflow.builder import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 
@@ -25,7 +25,7 @@ from fiber.dev.base.llm.trace import (
     ReportMsg
 )
 
-from fiber.infra.watcher.finops import default_finops_watcher
+from fiber.infra.ops.finops.watcher import default_finops_watcher
 
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.state.topos.workflow import StopMessage, WorkflowMessage, step

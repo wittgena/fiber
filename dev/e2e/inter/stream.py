@@ -20,17 +20,17 @@ from typing import Any, Dict
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-from fiber.dev.base.llm.trace import build_e2e_context, create_e2e_parser
-from fiber.dev.base.pipeline import log
+from fiber.dev.base.workflow.builder import build_e2e_context, create_e2e_parser
+from fiber.dev.base.workflow.pipeline import log
 from fiber.gateway.llm.state.traverser import StateTraverser
-from fiber.infra.account.registry import DEFAULT_TENANT_ID
+from fiber.infra.ops.account.registry import DEFAULT_TENANT_ID
 from fiber.infra.vcr.injector import VCRInjector
 from fiber.infra.vcr.manager import (
     VCRIdentityRule,
     VCRPlaybackConfig,
     add_vcr_arguments,
 )
-from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
+from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.fuel import BillingObserver, FuelBreaker
 

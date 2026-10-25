@@ -7,8 +7,8 @@ import time
 import random
 from functools import lru_cache, partial
 
-from fiber.llm.types.provider.openai import AllMessageValues
-from fiber.llm.types.provider.general import SelectTokenizerResponse
+from fiber.llm.model.types.provider.openai import AllMessageValues
+from fiber.llm.model.types.provider.general import SelectTokenizerResponse
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("token.encoder")

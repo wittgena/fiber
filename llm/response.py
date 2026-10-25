@@ -1,6 +1,6 @@
 # fiber.llm.response
 from openai.types.responses.response_function_tool_call import ResponseFunctionToolCall
-from fiber.llm.types.provider.core import (
+from fiber.llm.model.types.provider.core import (
     ChatCompletionToolParam,
     ChatCompletionToolParamFunctionChunk,
     ChatCompletionUserMessageParam,
@@ -16,5 +16,5 @@ from fiber.llm.types.provider.core import (
     ChatCompletionMessageToolCall,
     OutputFunctionToolCall
 )
-from fiber.llm.types.param.response import GenericResponseOutputItem, DeleteResponseResult, DecodedResponseId
-from fiber.llm.types.provider.stream import ModelResponseStream
+from fiber.llm.model.types.param.response import GenericResponseOutputItem, DeleteResponseResult, DecodedResponseId
+from fiber.llm.model.types.provider.stream import ModelResponseStream

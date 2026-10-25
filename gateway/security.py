@@ -27,7 +27,7 @@ from xphi.arch.bound.adapter.settlement import (
     Ap2Authorization,
     Ap2MandateResult
 )
-from fiber.infra.watcher.finops import default_finops_watcher
+from fiber.infra.ops.finops.watcher import default_finops_watcher
 
 log = get_emitter(__name__)
 
