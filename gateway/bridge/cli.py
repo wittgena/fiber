@@ -45,12 +45,13 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
     if not args:
         return
 
-    from fiber.dev.console.action import oob
-    from fiber.dev.console.manager.finops import finops_manager
+    from fiber.dev.console.sign import oob
+    from fiber.dev.console.mcp import mcp
+    from fiber.infra.ops.finops.console import finops_manager
 
     domain_cmd = args[0]
     if domain_cmd == "connect":
-        await oob.scan_mcp_topology_and_health(silent=True)
+        await mcp.scan_mcp_topology_and_health(silent=True)
         return
     if domain_cmd == "sign":
         await oob.refresh_sign_status(silent=True)
@@ -70,7 +71,8 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
 
 
 async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
-    from fiber.dev.console.action import oob
+    from fiber.dev.console.sign import oob
+    from fiber.dev.console.mcp import mcp
 
     f, s = state.finops, state.security
     await asyncio.sleep(0.15)
@@ -88,7 +90,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
                 target_id = args[idx + 1]
 
         if is_copy:
-            await oob.scan_mcp_topology_and_health(silent=False)
+            await mcp.scan_mcp_topology_and_health(silent=False)
             label = target_id or "all"
             refs.push_cli(f"  ✓ [Config Sync] Copied to ~/.anchor/mcp.json -> {label}")
             ui.notify(f"📥 Copied to fiber mcp.json: {label}", type="positive")

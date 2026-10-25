@@ -126,7 +126,6 @@ class FuelBreaker(DuplexChannel):
             else raw_auth
         )
 
-        # 1. 강제 쿼터 모드이거나 is_enforced=True일 때 익명(anonymous) 테넌트 차단
         is_explicitly_enforced = bool(node_auth and getattr(node_auth, "is_enforced", False))
         if (is_explicitly_enforced or enforce_quota) and (
             tenant_id == "anonymous" or (node_auth is not None and node_auth.is_anonymous())
@@ -150,7 +149,6 @@ class FuelBreaker(DuplexChannel):
         if fuel_budget is None:
             fuel_budget = float("inf")
 
-        # 2. FinOps Watcher 원장 캐시 조회
         in_ledger = False
         if self.finops_watcher and hasattr(self.finops_watcher, "local_budget_cache"):
             if tenant_id in self.finops_watcher.local_budget_cache:
@@ -161,7 +159,7 @@ class FuelBreaker(DuplexChannel):
                     **{UIKey.TENANT_ID.value: tenant_id, UIKey.ACTIVE_QUOTA.value: int(fuel_budget)},
                 )
 
-        # 3. [Quota Shield] FIBER_ENFORCE_QUOTA=true 환경에서 미인가 예산 주입 차단
+        # [Quota Shield] FIBER_ENFORCE_QUOTA=true 환경에서 미인가 예산 주입 차단
         if enforce_quota and not in_ledger and not audit_hash and not is_explicitly_enforced:
             elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
             log_pipeline.signal(
@@ -180,7 +178,7 @@ class FuelBreaker(DuplexChannel):
 
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
 
-        # 4. 예산이 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단
+        # 예산이 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단
         if enforce_quota and fuel_budget <= 0:
             log_pipeline.signal(
                 f"[FuelBreaker] Pre-flight blocked: Budget exhausted ({fuel_budget}) for tenant '{tenant_id}'.",
@@ -195,7 +193,7 @@ class FuelBreaker(DuplexChannel):
             )
             raise PermissionError(f"Fuel budget exhausted for tenant: {tenant_id}")
 
-        # 5. 정상 통과 시 X-Ray 4번 슬롯(FuelBreaker) 점등 및 서브밀리초 오버헤드 기록
+        # 정상 통과 시 X-Ray 4번 슬롯(FuelBreaker) 점등 및 서브밀리초 오버헤드 기록
         pass_payload: Dict[str, Any] = {
             "mode": "RAW",
             UIKey.SLOT.value: UISlot.FUEL.value,
@@ -223,7 +221,7 @@ class FuelBreaker(DuplexChannel):
         audit_hash = ctx.get_attr(BrokerKey.AUDIT_HASH.value)
         tenant_id = ctx.get_attr("tenant_id", "anonymous")
 
-        # 1. 단일 응답(Non-stream) 처리 및 토큰 카운트 방출 (기본 1 Token = 1 Fuel)
+        # 단일 응답(Non-stream) 처리 및 토큰 카운트 방출 (기본 1 Token = 1 Fuel)
         if not is_stream and not hasattr(msg, "__aiter__"):
             total_tokens, _ = _extract_usage_info(msg)
             if total_tokens > 0:
@@ -250,7 +248,7 @@ class FuelBreaker(DuplexChannel):
                 except (AttributeError, TypeError, ValueError):
                     pass
 
-        # 2. 스트림(Stream) 킬 스위치 및 실시간 토큰 텔레메트리 트랩 장착
+        # 스트림(Stream) 킬 스위치 및 실시간 토큰 텔레메트리 트랩 장착
         elif hasattr(msg, "__aiter__"):
             msg = self._fuel_trap_generator(msg, fuel_budget, tenant_id, ctx)
 
@@ -370,7 +368,6 @@ class FuelBreaker(DuplexChannel):
                     f"[FuelTrap] Stream completed for '{tenant_id}' (total={consumed} tokens, chunks={chunks}, active={_ACTIVE_STREAMS}).",
                     **close_payload,
                 )
-
 
 class BillingObserver(DuplexChannel):
     def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):

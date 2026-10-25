@@ -80,12 +80,11 @@ class InteractiveStreamKillHarness:
         )
         return next_trace_id(seed)
 
-    async def _ensure_initial_budget(self, min_fuel: int = 10_000_000) -> int:
+    async def _ensure_initial_budget(self) -> int:
         balance = await self.pta_adapter.get_balance(self.tenant_id, "fuel")
-        if balance <= 0:
-            balance = min_fuel
-        default_finops_watcher.local_budget_cache[self.tenant_id] = float(balance)
-        return balance
+        actual_balance = max(0, int(balance))
+        default_finops_watcher.local_budget_cache[self.tenant_id] = float(actual_balance)
+        return actual_balance
 
     async def _run_single_stream_vu(
         self,
@@ -96,7 +95,7 @@ class InteractiveStreamKillHarness:
         first_chunk_event: asyncio.Event,
     ) -> Dict[str, Any]:
         session_id = f"vu{worker_idx:02d}_req{loop_idx:03d}"
-        active_budget = float(default_finops_watcher.local_budget_cache.get(self.tenant_id, 10_000_000.0))
+        active_budget = max(0.0, float(default_finops_watcher.local_budget_cache.get(self.tenant_id, 0.0)))
 
         if worker_idx == 0 or loop_idx == 1:
             log.info(
@@ -217,11 +216,21 @@ class InteractiveStreamKillHarness:
                         await asyncio.sleep(0.08)
 
             vu_tasks = [asyncio.create_task(_sustained_vu_loop(i)) for i in range(self.concurrency)]
-            await asyncio.wait_for(first_chunk_event.wait(), timeout=10.0)
-            log.info(
-                f"⚡ {self.concurrency} concurrent LLM streams flowing! "
-                f"Click '🚨 LLM STREAM BREAK' or 'Zero (Kill)' in Console to observe live severing & errors."
-            )
+
+            if init_bal > 0:
+                try:
+                    await asyncio.wait_for(first_chunk_event.wait(), timeout=10.0)
+                    log.info(
+                        f"⚡ {self.concurrency} concurrent LLM streams flowing! "
+                        f"Click '🚨 LLM STREAM BREAK' or 'Zero (Kill)' in Console to observe live severing & errors."
+                    )
+                except asyncio.TimeoutError:
+                    log.warning("⚠️ [Stream Harness] Timed out waiting for first chunk; continuing VU loops...")
+            else:
+                log.warning(
+                    f"🛑 [Initial Balance = 0 Fuel] Starting in blocked state ({self.concurrency} VUs). "
+                    f"Streams will continuously fail with HTTP 402 until budget is provisioned."
+                )
 
             if self.auto_kill_sec > 0:
                 await asyncio.sleep(self.auto_kill_sec)
@@ -265,10 +274,9 @@ def main(args_list: list[str] | None = None) -> None:
     parser.add_argument("--auto-kill-sec", type=float, default=0.0, help="Auto-fire REVOKE after N seconds")
     parser.add_argument("--once", action="store_true", help="Exit after first Kill-Switch severing")
     add_vcr_arguments(parser)
+    parser.set_defaults(vcr="replay")
 
     parsed_args, _ = parser.parse_known_args(args_list)
-    if not getattr(parsed_args, "vcr", None):
-        parsed_args.vcr_mode = "replay"
 
     _, run_context = build_e2e_context(parsed_args)
     resolved_model = run_context["target_model"]
@@ -291,6 +299,7 @@ def main(args_list: list[str] | None = None) -> None:
         pass
     finally:
         VCRInjector.remove()
+
 
 if __name__ == "__main__":
     main()

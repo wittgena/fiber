@@ -87,8 +87,8 @@ def discover_compat_models() -> list[str]:
 
 class VcrTab(StudioTab):
     title = "VCR"
-    left_header = "🧬 Adapter Fixture & Replay Controls"
-    right_header = "⏱️ Live Replay Telemetry & Speedup Benchmark"
+    left_header = "Replay Fixture"
+    right_header = "Live LLM Telemetry"
     ratio = 46
 
     def __init__(self) -> None:

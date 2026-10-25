@@ -6,11 +6,13 @@ from nicegui import ui
 
 from fiber.infra.ops.account.state import state, refs
 from fiber.gateway.bridge.cli import run_fiber_cli
-from fiber.dev.console.manager.finops import finops_manager
-from fiber.dev.console.action import pipeline, oob
+from fiber.infra.ops.finops.console import finops_manager
+from fiber.dev.console.action import pipeline
+from fiber.dev.console.sign import oob
 
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
+from fiber.dev.console.ui.guide import GuideModal
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
 from fiber.dev.console.tab.vcr import VcrTab
 from fiber.dev.console.tab.finops import FinOpsTab
@@ -27,7 +29,7 @@ def _resolve_accounts_registry_path() -> Path:
 class LLMGuardrailTab(StudioTab):
     title = "Guardrail"
     left_header = "Guardrail"
-    right_header = "Pipeline & Interceptor"
+    right_header = "Pipeline"
 
     @staticmethod
     def _ensure_telemetry_attrs(s: object) -> None:
@@ -48,9 +50,9 @@ class LLMGuardrailTab(StudioTab):
         s = state.security
         self._ensure_telemetry_attrs(s)
 
-        ui.label("Secret Guardrail").classes("text-[11px] font-bold text-slate-400 shrink-0")
-        kit.switch("Active Secret Blocking", s, "block_api_keys", color="red")
-        kit.text("Guard Regex Pattern", s, "custom_regex", flex=False, width="w-full")
+        ui.label("Secret Guard").classes("text-[11px] font-bold text-slate-400 shrink-0")
+        kit.switch("Active Blocking", s, "block_api_keys", color="red")
+        kit.text("Guard Pattern (regex)", s, "custom_regex", flex=False, width="w-full")
         kit.select(
             ["Strict Block (PermissionError)", "Redact (Mask with ***)"],
             "Guardrail Mode",
@@ -59,20 +61,11 @@ class LLMGuardrailTab(StudioTab):
             width="w-full",
         )
 
-        ui.label("Test Pipeline").classes("text-[11px] font-bold text-cyan-400 mt-1 shrink-0")
+        ui.label("Test Prompt").classes("text-[11px] font-bold text-cyan-400 mt-1 shrink-0")
         kit.text("Input Prompt", s, "test_prompt", flex=False, width="w-full")
 
         with kit.row(gap="gap-1.5"):
-            kit.button("⚡ CALL LLM", lambda: pipeline.run_pipeline_xray(s.test_prompt), color="red", flex=True)
-
-        with kit.footer():
-            kit.button(
-                "Test Live Stream",
-                pipeline.simulate_stream,
-                color="indigo",
-                outline=True,
-                flex=True,
-            ).tooltip("Drive live stream chunks through FuelBreaker to test velocity gauge & token counters")
+            kit.button("CALL LLM", lambda: pipeline.run_pipeline_xray(s.test_prompt), color="red", flex=True)
 
     def compose_right(self) -> None:
         s = state.security
@@ -245,6 +238,5 @@ class ModelNSettingTab(StudioTab):
 def build_tabs() -> list[StudioTab]:
     return [McpGatewayTab(), LLMGuardrailTab(), FinOpsTab(), VcrTab(), ModelNSettingTab()]
 
-
 def build_modals() -> list[ModalTemplate]:
-    return [HitlModal(), QrModal()]
+    return [HitlModal(), QrModal(), GuideModal()]

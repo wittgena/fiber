@@ -1,28 +1,39 @@
 # fiber.gateway.bridge.action.sign
-## @lineage: fiber.phase.bridge.action.sign
 """Node Keychain & Admin TOTP Attestation CLI"""
-import os
-import sys
-import socket
-import secrets
-import sqlite3
-import qrcode
+from __future__ import annotations
+
+import asyncio
 import hashlib
 import hmac
+import io
 import json
+import os
 from pathlib import Path
+import secrets
+import socket
+import sqlite3
+import sys
 from typing import Annotated, Optional, Tuple
 
-import typer
-import pyotp
-from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import pyotp
+import qrcode
+import typer
 
+from fiber.gateway.bridge.schema import (
+    EnrolledAdminInfo,
+    KeyFileInfo,
+    NodeKeysInitResult,
+    SignStatusResult,
+    TotpEnrollmentResult,
+    TotpVerificationResult,
+)
 from xphi.arch.bound.adapter.pta import NodeSigner
-from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.bind.resolver import resolve_path
+from xphi.watcher.plane.emitter import get_emitter
 
 SIGN_ROOT = Path(str(resolve_path("sign")))
 SSH_DIR = Path.home() / ".ssh"
@@ -42,11 +53,13 @@ app = typer.Typer(
     add_completion=False,
 )
 
+
 # Core Key Provisioning (~/.ssh/fiber_ed25519 & local_cipher.key)
 def _normalize_spiffe_id(user_id: str) -> str:
     if user_id.startswith("spiffe://"):
         return user_id
     return f"{BASE_SPIFFE_DOMAIN}{user_id}"
+
 
 def _resolve_target_user(conn: sqlite3.Connection, user_id: Optional[str] = None) -> str:
     """Uses explicit user_id if given; otherwise picks the latest enrolled admin from SQLite."""
@@ -56,6 +69,7 @@ def _resolve_target_user(conn: sqlite3.Connection, user_id: Optional[str] = None
         "SELECT user_id FROM admin_users WHERE user_id NOT LIKE '%_e2e_%' ORDER BY rowid DESC LIMIT 1"
     ).fetchone()
     return row[0] if row else _normalize_spiffe_id("fiber")
+
 
 def _build_totp_provisioning_uri(secret: str, canonical_id: str, pubkey_hex: str = "") -> Tuple[str, str]:
     """
@@ -182,7 +196,126 @@ def _resolve_vault_context() -> Tuple[str, str]:
     derived_passphrase = hmac.new(ikm, domain_context, hashlib.sha256).hexdigest()
     return derived_passphrase, pubkey_hex
 
-# CLI Commands (init, status, enroll, verify, revoke)
+
+# ==========================================
+# 3. Headless Async Actions (for Console / Bridge)
+# ==========================================
+async def inspect_sign_status() -> SignStatusResult:
+    def _inspect() -> SignStatusResult:
+        signer = NodeSigner.get_instance()
+        conn = _open_audit_db(DEFAULT_DB_PATH)
+        rows = conn.execute(
+            "SELECT user_id, substr(ciphertext, 1, 16) FROM admin_users ORDER BY rowid DESC"
+        ).fetchall()
+        conn.close()
+        return SignStatusResult(
+            ssh_fiber_ed25519=KeyFileInfo(path=str(SSH_PRIV_KEY_PATH), exists=SSH_PRIV_KEY_PATH.exists()),
+            local_cipher_key=KeyFileInfo(path=str(LOCAL_CIPHER_KEY_PATH), exists=LOCAL_CIPHER_KEY_PATH.exists()),
+            node_pubkey=signer.pubkey_hex,
+            audit_db=str(DEFAULT_DB_PATH),
+            enrolled_admins=[EnrolledAdminInfo(user_id=r[0], cipher_prefix=f"{r[1]}...") for r in rows],
+        )
+
+    return await asyncio.to_thread(_inspect)
+
+
+async def init_node_keys() -> NodeKeysInitResult:
+    raw = await asyncio.to_thread(ensure_node_keys)
+    return NodeKeysInitResult(
+        ssh_key_status=str(raw.get("ssh_key_status", "unknown")),
+        local_cipher_status=str(raw.get("local_cipher_status", "unknown")),
+        raw_info=raw,
+    )
+
+
+async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
+    canonical_id = _normalize_spiffe_id(admin_user)
+    secret = pyotp.random_base32()
+
+    def _provision() -> str:
+        active_passphrase, pubkey_hex = _resolve_vault_context()
+        vault = AdminSecretVault(active_passphrase)
+        salt_hex, nonce_hex, cipher_hex = vault.encrypt(secret)
+        conn = _open_audit_db(DEFAULT_DB_PATH)
+        conn.execute("DELETE FROM admin_users WHERE user_id = ?", (canonical_id,))
+        conn.execute(
+            "INSERT INTO admin_users (user_id, salt, nonce, ciphertext) VALUES (?, ?, ?, ?)",
+            (canonical_id, salt_hex, nonce_hex, cipher_hex),
+        )
+        conn.commit()
+        conn.close()
+        return pubkey_hex
+
+    pubkey_hex = await asyncio.to_thread(_provision)
+    totp_uri, display_label = _build_totp_provisioning_uri(secret, canonical_id, pubkey_hex)
+
+    qr = qrcode.QRCode(version=1, box_size=1, border=1)
+    qr.add_data(totp_uri)
+    qr.make(fit=True)
+    buf = io.StringIO()
+    qr.print_ascii(out=buf, invert=True)
+
+    return TotpEnrollmentResult(
+        canonical_id=canonical_id,
+        secret=secret,
+        totp_uri=totp_uri,
+        display_label=display_label,
+        issuer=TOTP_ISSUER_NAME,
+        qr_ascii=buf.getvalue(),
+    )
+
+
+async def verify_admin_totp(admin_user: str, code_override: str | None = None) -> TotpVerificationResult:
+    canonical_id = _normalize_spiffe_id(admin_user)
+
+    def _check() -> TotpVerificationResult:
+        active_passphrase, pubkey_hex = _resolve_vault_context()
+        conn = _open_audit_db(DEFAULT_DB_PATH)
+        row = conn.execute(
+            "SELECT salt, nonce, ciphertext FROM admin_users WHERE user_id = ?",
+            (canonical_id,),
+        ).fetchone()
+        conn.close()
+        if not row:
+            return TotpVerificationResult(
+                registered=False,
+                valid=False,
+                code="UNREGISTERED",
+                pubkey=pubkey_hex,
+                user_id=canonical_id,
+            )
+        vault = AdminSecretVault(active_passphrase)
+        secret = vault.decrypt(*row)
+        totp = pyotp.TOTP(secret)
+        target_code = code_override.strip() if code_override else totp.now()
+        is_ok = totp.verify(str(target_code).zfill(6), valid_window=1)
+        return TotpVerificationResult(
+            registered=True,
+            valid=is_ok,
+            code=target_code,
+            pubkey=pubkey_hex,
+            user_id=canonical_id,
+        )
+
+    return await asyncio.to_thread(_check)
+
+
+async def revoke_admin_totp(admin_user: str) -> str:
+    canonical_id = _normalize_spiffe_id(admin_user)
+
+    def _delete() -> None:
+        conn = _open_audit_db(DEFAULT_DB_PATH)
+        conn.execute("DELETE FROM admin_users WHERE user_id = ?", (canonical_id,))
+        conn.commit()
+        conn.close()
+
+    await asyncio.to_thread(_delete)
+    return canonical_id
+
+
+# ==========================================
+# 4. CLI Commands (init, status, enroll, verify, revoke)
+# ==========================================
 @app.command("init")
 def cmd_init(
     rotate_cipher: Annotated[bool, typer.Option("--rotate-cipher", help="Regenerate local_cipher.key (invalidates existing TOTP DB)")] = False,
@@ -219,6 +352,7 @@ def cmd_status(
         "enrolled_admins": [{"user_id": r[0], "cipher_prefix": f"{r[1]}..."} for r in rows],
     }
     print(json.dumps(status_payload, indent=2, ensure_ascii=False))
+
 
 @app.command("enroll")
 def cmd_enroll(
@@ -305,6 +439,7 @@ def cmd_revoke(
     conn.close()
     log_sign.info(f"✅ Revoked TOTP access for '{canonical_id}'.")
 
+
 admin_app = typer.Typer(help="Alias group for admin TOTP commands")
 admin_app.command("totp-enroll")(cmd_enroll)
 admin_app.command("totp-verify")(cmd_verify)
@@ -312,8 +447,10 @@ admin_app.command("totp-revoke")(cmd_revoke)
 admin_app.command("totp-list")(cmd_status)
 app.add_typer(admin_app, name="admin")
 
+
 def main():
     app()
+
 
 if __name__ == "__main__":
     main()

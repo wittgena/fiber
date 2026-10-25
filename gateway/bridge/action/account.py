@@ -1,5 +1,4 @@
 # fiber.gateway.bridge.action.account
-## @lineage: fiber.phase.bridge.action.account
 """
 @desc: LocalAccount CLI & Headless Bridge Action Utility
 - Provides typed headless functions for Console UI & programmatic callers.

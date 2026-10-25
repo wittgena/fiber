@@ -6,7 +6,10 @@ from nicegui import ui
 import orjson
 
 from fiber.infra.ops.account.state import state, refs
-from fiber.dev.console.action import oob, pipeline
+from fiber.dev.console.action import pipeline
+from fiber.dev.console.sign import oob
+from fiber.dev.console.mcp import mcp
+
 from fiber.gateway.bridge.cli import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
@@ -103,7 +106,7 @@ class QrModal(ModalTemplate):
 # Tab 1: MCP Gateway
 class McpGatewayTab(StudioTab):
     title = "MCP Gateway"
-    left_header = "Worker Switchboard"
+    left_header = "MCP Server Switchboard"
     right_header = "MCP Config"
     ratio = 52
 
@@ -125,7 +128,7 @@ class McpGatewayTab(StudioTab):
                 ui.button(
                     "🔄",
                     on_click=lambda: (
-                        oob.scan_mcp_topology_and_health(silent=False),
+                        mcp.scan_mcp_topology_and_health(silent=False),
                         self._reload_editor_from_disk(notify=False),
                     ),
                 ).props("flat dense size=xs color=cyan").tooltip("Rescan MCP configs & daemon status")
@@ -237,7 +240,7 @@ class McpGatewayTab(StudioTab):
                 self._editor_status.set_text("Saved ✓")
                 self._editor_status.classes(replace="text-[10px] font-mono text-emerald-400")
             ui.notify(f"Saved {anchor_path.name} & rescanning topology...", type="positive")
-            oob.scan_mcp_topology_and_health(silent=True)
+            mcp.scan_mcp_topology_and_health(silent=True)
             self._render_dynamic_sections()
         except Exception as exc:
             ui.notify(f"Failed to save mcp.json: {exc}", type="negative")

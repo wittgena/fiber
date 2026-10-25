@@ -208,12 +208,12 @@ class StudioState:
 
     @property
     def redis_badge_text(self) -> str:
-        return "🟢 Redis: Live Pub/Sub" if self.pipeline.redis_online else "🟡 Mode: Standalone (In-Memory)"
+        return "🟢 Redis: Pub/Sub" if self.pipeline.redis_online else "🟡 Mode: Standalone (In-Memory)"
 
     @property
     def fuel_kpi_text(self) -> str:
         f = self.finops
-        return f"[{f.tenant_id}] Balance: {f.ledger_balance:,} / {f.fuel_quota:,} Fuel (v{f.policy_ver})"
+        return f"[{f.tenant_id}] Fuel: {f.ledger_balance:,} / {f.fuel_quota:,} (v{f.policy_ver})"
 
     @property
     def saved_kpi_text(self) -> str:

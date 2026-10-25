@@ -1,4 +1,4 @@
-# fiber.dev.console.manager.finops
+# fiber.infra.ops.finops.console
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +7,12 @@ import time
 from typing import Any
 from nicegui import ui
 
-import fiber.gateway.bridge.console as console_act
+from fiber.gateway.bridge.action.account import (
+    allocate_account_fuel,
+    fetch_account_status,
+    issue_account_mandate,
+    revoke_account_mandate
+)
 from fiber.infra.ops.account.state import state, refs, save_state_to_disk
 import fiber.dev.console.ui.diag as diag
 
@@ -63,9 +68,6 @@ class FinOpsConsoleManager:
             self._restore_task.cancel()
         self._restore_task = None
 
-    # -------------------------------------------------------------------------
-    # 2. SPIFFE ID 정규화 및 TOTP 등록 상태 동기화
-    # -------------------------------------------------------------------------
     @staticmethod
     def normalize_spiffe(raw_spiffe: str) -> str:
         raw = raw_spiffe.strip()
@@ -91,13 +93,10 @@ class FinOpsConsoleManager:
             refs.push_pubsub("finops:warning", f"UNENROLLED_SPIFFE tenant={f.tenant_id} spiffe={norm_id}")
             ui.notify(warn_msg, type="warning")
 
-    # -------------------------------------------------------------------------
-    # 3. Account Mandate (Status / Issue JWT / Revoke / Cooldown Restore)
-    # -------------------------------------------------------------------------
     async def refresh_account_status(self, silent: bool = False) -> None:
         f = self.f
         try:
-            res = await console_act.fetch_account_status(f.tenant_id)
+            res = await fetch_account_status(f.tenant_id)
             if (
                 silent
                 and res.ledger_balance == 0
@@ -105,19 +104,8 @@ class FinOpsConsoleManager:
                 and (res.last_op not in REVOKE_OPS)
                 and (f.last_op not in REVOKE_OPS)
             ):
-                if hasattr(console_act, "allocate_account_fuel"):
-                    alloc_res = await console_act.allocate_account_fuel(f.tenant_id, amount=f.ledger_balance)
-                    res = alloc_res.status
-                else:
-                    target_usd = round(f.ledger_balance / USD_TO_FUEL_RATE, 6)
-                    await console_act.issue_account_mandate(
-                        f.tenant_id,
-                        budget_usd=target_usd,
-                        op="SYNC_QUOTA",
-                        policy_ver=max(1, f.policy_ver),
-                        sync_ledger=True,
-                    )
-                    res = await console_act.fetch_account_status(f.tenant_id)
+                alloc_res = await allocate_account_fuel(f.tenant_id, amount=f.ledger_balance)
+                res = alloc_res.status
 
             if res.last_op:
                 f.last_op = res.last_op
@@ -144,7 +132,6 @@ class FinOpsConsoleManager:
         except Exception:
             if not silent:
                 from fiber.gateway.bridge.cli import run_fiber_cli
-
                 await run_fiber_cli("account", "--tenant", f.tenant_id, "status")
 
     async def issue_account_jwt(self) -> None:
@@ -162,7 +149,7 @@ class FinOpsConsoleManager:
             effective_op = "SYNC_QUOTA" if f.jwt_op in ("PROVISION", "SET_BUDGET") else f.jwt_op
             next_ver = self._next_policy_ver()
 
-            res = await console_act.issue_account_mandate(
+            res = await issue_account_mandate(
                 f.tenant_id,
                 budget_usd=f.jwt_usd,
                 op=effective_op,
@@ -208,7 +195,7 @@ class FinOpsConsoleManager:
 
         try:
             next_ver = self._next_policy_ver()
-            res = await console_act.revoke_account_mandate(
+            res = await revoke_account_mandate(
                 f.tenant_id,
                 policy_ver=next_ver,
                 spiffe_id=spiffe_arg,
@@ -220,7 +207,7 @@ class FinOpsConsoleManager:
             f.fuel_quota = preserved_quota
             f.policy_ver = applied_ver
             f.last_op = "REVOKE"
-            f.stream_active = False
+            # f.stream_active = False
             f.stream_status_text = "🛑 ZERO BALANCE (REVOKED)"
             f.push_chart_point()
             save_state_to_disk(force=True)
@@ -266,19 +253,10 @@ class FinOpsConsoleManager:
                 next_ver = self._next_policy_ver()
                 spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
 
-                if hasattr(console_act, "allocate_account_fuel"):
-                    alloc_res = await console_act.allocate_account_fuel(
-                        f.tenant_id, amount=restore_fuel, spiffe_id=spiffe_arg
-                    )
-                    restored_balance = alloc_res.status.ledger_balance
-                else:
-                    from fiber.infra.ops.account.manager import AllocateCommand, LocalAccountManager
-
-                    async with LocalAccountManager(tenant_id=f.tenant_id) as mgr:
-                        alloc_raw = await mgr.allocate(AllocateCommand(amount=restore_fuel))
-                    restored_balance = (
-                        alloc_raw.status.ledger_balance if hasattr(alloc_raw, "status") else restore_fuel
-                    )
+                alloc_res = await allocate_account_fuel(
+                    f.tenant_id, amount=restore_fuel, spiffe_id=spiffe_arg
+                )
+                restored_balance = alloc_res.status.ledger_balance
 
                 self._update_watcher_cache(restored_balance, policy_ver=next_ver)
                 try:
@@ -328,9 +306,6 @@ class FinOpsConsoleManager:
 
         self._restore_task = asyncio.create_task(_cooldown_and_restore())
 
-    # -------------------------------------------------------------------------
-    # 4. FuelBreaker Live Stream Simulation & Kill-Switch
-    # -------------------------------------------------------------------------
     def trigger_kill_switch(self) -> None:
         f = self.f
         f.stream_active = False
@@ -339,57 +314,5 @@ class FinOpsConsoleManager:
             refs.live_stream_log.push("\n🛑 [FUEL BREAKER] Stream physically severed via aclose()!")
             refs.live_stream_log.push("↩ Agent Response: 'HTTP 402: Remaining fuel balance exhausted. Halted safely.'")
         ui.notify("🚨 Kill-Switch Activated! Active stream severed.", type="negative", position="top")
-
-    async def simulate_stream(self) -> None:
-        f = self.f
-        if f.stream_active:
-            return
-
-        if f.ledger_balance <= 0:
-            self.trigger_kill_switch()
-            return
-
-        f.stream_active = True
-        f.stream_status_text = "⚡ STREAMING (2,200 chunks/s)"
-        if refs.live_stream_log:
-            refs.live_stream_log.clear()
-            refs.live_stream_log.push("▶ [acompletion] model='llama_server/gemma-3-1b-it-Q4_K_M.gguf' stream=True")
-
-        try:
-            baseline = max(f.fuel_quota, f.ledger_balance, USD_TO_FUEL_RATE)
-            burn_step = max(100_000, int(baseline * 0.15))
-
-            for i in range(1, 10):
-                if not f.stream_active:
-                    break
-                await asyncio.sleep(0.35)
-                new_balance = max(0, f.ledger_balance - burn_step)
-
-                self.sync_fuel_state(new_balance, update_quota=False)
-                self._update_watcher_cache(f.ledger_balance)
-                f.push_chart_point(time.strftime("%H:%M:%S"))
-
-                if refs.live_stream_log:
-                    refs.live_stream_log.push(
-                        f"chunk[{i}]: Coalesced window (100ms)... "
-                        f"Balance: {f.ledger_balance:,} / {f.fuel_quota:,} Fuel"
-                    )
-
-                if f.ledger_balance <= 0:
-                    refs.push_pubsub(
-                        "finops:control_plane",
-                        f"FUEL_EXHAUSTED (balance=0 / quota={f.fuel_quota:,})",
-                    )
-                    self.trigger_kill_switch()
-                    break
-            else:
-                f.stream_active = False
-                f.stream_status_text = "✓ STREAM COMPLETE"
-            save_state_to_disk(force=False)
-        except Exception as e:
-            f.stream_active = False
-            f.stream_status_text = "⚠️ STREAM ERROR"
-            diag.exception("Stream simulation crashed", exc=e)
-
 
 finops_manager = FinOpsConsoleManager()

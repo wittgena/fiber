@@ -5,8 +5,8 @@ from pathlib import Path
 from nicegui import ui
 
 from fiber.gateway.bridge.cli import run_fiber_cli
-from fiber.dev.console.manager.finops import finops_manager
-from fiber.dev.console.action import pipeline
+from fiber.infra.ops.finops.console import finops_manager
+from fiber.dev.console.action import stream
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
 from fiber.infra.ops.account.state import state, refs, USD_TO_FUEL_RATE
@@ -18,6 +18,7 @@ FINOPS_ACTION_LABELS = {
     "REVOKE": "0 Balance",
 }
 
+
 def _resolve_accounts_registry_path() -> Path:
     try:
         from fiber.infra.ops.account.registry import LocalAccountRegistry
@@ -28,8 +29,8 @@ def _resolve_accounts_registry_path() -> Path:
 
 class FinOpsTab(StudioTab):
     title = "FinOps"
-    left_header = "🎛️ Fuel Balance & Budget Control"
-    right_header = "📈 Real-Time Fuel Balance & Circuit Breaker"
+    left_header = "Budget Control"
+    right_header = "Fuel Circuit Breaker"
 
     @staticmethod
     async def _run_demo_and_sync() -> None:
@@ -51,6 +52,8 @@ class FinOpsTab(StudioTab):
         f = state.finops
         if f.jwt_op not in FINOPS_ACTION_LABELS:
             f.jwt_op = "SYNC_QUOTA"
+        if not hasattr(f, "stream_concurrency"):
+            f.stream_concurrency = 4
 
         # [Step 1] 대상 계정(Tenant) 식별
         ui.label("Target Account Identity").classes("text-[11px] font-bold text-slate-400 shrink-0")
@@ -87,9 +90,20 @@ class FinOpsTab(StudioTab):
             ).tooltip("Update Ledger Fuel Balance via signed EdDSA mandate")
 
         with kit.row(gap="gap-1.5"):
-            kit.button("🚨 Set Zero (Kill)",finops_manager.revoke_account_kill, color="red", outline=True).tooltip(
-                "Immediately burn all remaining fuel to 0 and sever active streams"
-            )
+            kit.button(
+                "Stream Break (10s)",
+                finops_manager.temporary_stream_kill,
+                color="amber",
+                text_color="black",
+                flex=True,
+            ).tooltip("Temporarily break active streams for 10s and auto-restore balance")
+            kit.button(
+                "Stream Kill (Set Zero)",
+                finops_manager.revoke_account_kill,
+                color="red",
+                outline=True,
+                flex=True,
+            ).tooltip("Immediately burn all remaining fuel to 0 and sever active streams")
 
         ui.label().bind_text_from(
             f, "last_jwt_preview", lambda j: f"Signed Mandate Token (EdDSA): {j}"
@@ -117,12 +131,23 @@ class FinOpsTab(StudioTab):
             ).classes("w-full rounded bg-slate-900")
 
         with kit.footer():
-            kit.button(
-                "Test Live Stream",
-                pipeline.simulate_stream,
+            kit.number("Concurrency", f, "stream_concurrency", min_val=1, max_val=32, step=1, width="w-28")
+
+            start_btn = kit.button(
+                "▶ Start Live Stream",
+                stream.start,
                 color="indigo",
                 flex=True,
             )
+            start_btn.bind_visibility_from(f, "stream_active", backward=lambda active: not bool(active))
+
+            stop_btn = kit.button(
+                "⏹ Stop Live Stream",
+                stream.stop,
+                color="red",
+                flex=True,
+            )
+            stop_btn.bind_visibility_from(f, "stream_active", backward=bool)
 
     def compose_right(self) -> None:
         f = state.finops
