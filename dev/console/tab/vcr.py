@@ -166,7 +166,7 @@ class VcrTab(StudioTab):
                         "target_model": model_id,
                         "--vcr": p.vcr_mode,
                         "--vcr-speed": p.vcr_speed,
-                        "status": "Click 'Verify Compat Fixture' to run extraction test.",
+                        "status": "Click 'Replay Fixture Compat' to run extraction test.",
                     },
                     indent=2,
                 )
@@ -182,33 +182,24 @@ class VcrTab(StudioTab):
         if not hasattr(p, "vcr_chaos"):
             setattr(p, "vcr_chaos", 0.0)
 
-        # 1. Standardized VCR CLI Controls (--model, --vcr, --vcr-speed, --vcr-chaos)
-        ui.label("1. Target Adapter & Standardized VCR Options").classes("text-[11px] font-bold text-cyan-400 shrink-0")
+        ui.label("Target Model & VCR Options").classes("text-[11px] font-bold text-cyan-400 shrink-0")
         with kit.row():
             kit.select(compat_models, "Model (-m)", p, "compat_model", width="flex-grow")
             kit.select(["replay", "record"], "Mode (--vcr)", p, "vcr_mode", width="w-28")
             kit.select(["max", "real"], "Speed (--vcr-speed)", p, "vcr_speed", width="w-32")
             kit.number("Chaos (--vcr-chaos)", p, "vcr_chaos", min_val=0.0, max_val=2000.0, step=100.0, width="w-28")
 
-        # 2. Execution Triggers
         with kit.row(gap="gap-1.5"):
             kit.button(
-                "🧬 Verify Compat Fixture",
+                "Replay Fixture",
                 self._run_compat_verify,
                 color="cyan",
                 outline=True,
                 flex=True,
             ).tooltip("Run 'fiber compat fixture -m <model> --vcr <mode> --vcr-speed <speed>'")
-            kit.button(
-                "▶ Run 3-Step Gateway VCR Suite",
-                pipeline.run_gateway_vcr_suite,
-                color="emerald",
-                flex=True,
-            ).tooltip("Execute Unary, SSE Stream, and Dynamic Record -> Replay roundtrip")
 
-        # 3. Live Adapter Cassette Inspector
         with kit.row(align="items-center justify-between"):
-            ui.label("2. Recorded Adapter Fixture Inspector (`fiber-compats/adapters`):").classes(
+            ui.label("Fixture Inspector (`fiber-compats/adapters`):").classes(
                 "text-[11px] font-bold text-slate-400 shrink-0"
             )
             kit.select(

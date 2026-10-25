@@ -22,16 +22,13 @@ def _resolve_accounts_registry_path() -> Path:
     except Exception:
         return resolve_path("anchor") / "sign" / "local_accounts.json"
 
-
-# Tab 2: Live LLM Pipeline X-Ray (`state.security`)
-class LiveLLMTab(StudioTab):
-    title = "LLM Live"
-    left_header = "🛡️ Active Guardrail & Stream Probe"
-    right_header = "🔬 Live Pipeline & Interceptor"
+class LLMGuardrailTab(StudioTab):
+    title = "LLM Guardrail"
+    left_header = "Guardrail"
+    right_header = "Pipeline & Interceptor"
 
     @staticmethod
     def _ensure_telemetry_attrs(s: object) -> None:
-        """`state.security`에 실시간 텔레메트리 필드가 없을 경우 안전하게 기본값 초기화"""
         defaults = {
             "active_streams": 0,
             "throughput_cps": 0.0,
@@ -68,7 +65,7 @@ class LiveLLMTab(StudioTab):
 
         with kit.footer():
             kit.button(
-                "🌊 Trigger Live Stream Pulse (2,200 c/s)",
+                "Test Live Stream",
                 pipeline.simulate_stream,
                 color="indigo",
                 outline=True,
@@ -78,8 +75,6 @@ class LiveLLMTab(StudioTab):
     def compose_right(self) -> None:
         s = state.security
         self._ensure_telemetry_attrs(s)
-
-        # 1. 실시간 파이프라인 활성도 KPI 바 (Active Connections, Tokens, Plane Pressure)
         with kit.bar():
             with ui.row().classes("items-center gap-2 no-wrap"):
                 ui.badge().bind_text_from(
@@ -105,22 +100,19 @@ class LiveLLMTab(StudioTab):
                 ),
             ).props("color=slate-9 text-color=cyan-3").classes("text-[10px] font-mono border border-slate-700 px-1.5")
 
-        # 2. 실시간 스트림 처리 속도 게이지 (Throughput Velocity Gauge Bar)
         with ui.column().classes("w-full gap-0.5 bg-slate-950/90 px-3 py-1.5 rounded border border-slate-800 shrink-0"):
             with ui.row().classes("w-full items-center justify-between no-wrap"):
-                ui.label("⚡ Stream Interleaving Velocity (Target Max: 2,200 chunks/s)").classes(
+                ui.label("⚡ Stream Velocity").classes(
                     "text-[11px] font-mono text-slate-400"
                 )
                 ui.label().bind_text_from(
                     s, "throughput_cps", lambda v: f"{float(v or 0.0):,.1f} chunks/s"
                 ).classes("text-xs font-mono font-extrabold text-cyan-400")
 
-            # 0.0 ~ 1.0 정규화 게이지 바 (2,200 chunks/s 기준 풀스케일)
             ui.linear_progress(value=0.0, show_value=False, size="6px", color="cyan").bind_value_from(
                 s, "throughput_cps", lambda v: min(1.0, round(float(v or 0.0) / 2200.0, 3))
             ).classes("w-full rounded bg-slate-900")
 
-        # 3. 4-Slot Pipeline X-Ray 상태 점등 카드
         with kit.bar():
             for key, title, slot in [
                 ("cache", "1. EdgeCache", "PRE_TRANSLATE"),
@@ -133,20 +125,19 @@ class LiveLLMTab(StudioTab):
                     ui.label(title).classes("text-xs font-bold text-white")
                     ui.label(slot).classes("text-[10px] font-mono text-slate-400")
 
-        # 4. 서브밀리초 슬롯별 오버헤드 바 차트
-        ui.label("Per-Slot Execution Overhead (ms) - Sub-Millisecond Pipeline Telemetry").classes(
+        ui.label("Slot Overhead (ms)").classes(
             "text-xs text-slate-400 mt-0.5 shrink-0"
         )
         refs.xray_chart = kit.bar_chart(
-            categories=["4. FuelBreaker", "3. SecretGuard", "2. ONNX Router", "1. EdgeCache"],
+            categories=["FuelBreaker", "SecretGuard", "ONNX Router", "EdgeCache"],
             data=list(s.xray_latencies),
             x_max=1.0,
         )
 
 class ModelPriceTab(StudioTab):
-    title = "Model Pricing"
-    left_header = "💱 Model Pricing & Fuel Rate Board(Top 20)"
-    right_header = "📐 Unit Parity & Settlement Reference"
+    title = "Model & Setting"
+    left_header = "Model Pricing"
+    right_header = "Unit Parity & Settlement Reference"
     ratio = 58
 
     def compose_left(self) -> None:
@@ -255,7 +246,7 @@ class ModelPriceTab(StudioTab):
 
 
 def build_tabs() -> list[StudioTab]:
-    return [McpGatewayTab(), LiveLLMTab(), FinOpsTab(), VcrTab(), ModelPriceTab()]
+    return [McpGatewayTab(), LLMGuardrailTab(), FinOpsTab(), VcrTab(), ModelPriceTab()]
 
 
 def build_modals() -> list[ModalTemplate]:

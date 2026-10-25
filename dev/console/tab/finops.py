@@ -12,11 +12,10 @@ from fiber.infra.ops.account.state import state, refs, USD_TO_FUEL_RATE
 from xphi.node.space.bind.resolver import resolve_path
 
 FINOPS_ACTION_LABELS = {
-    "SYNC_QUOTA": "Set Balance to Budget (예산과 일치시키기)",
-    "TOP_UP": "Top-Up Balance (+추가 충전)",
-    "REVOKE": "Zero Balance / Revoke (잔액 모두 0으로)",
+    "SYNC_QUOTA": "Set to Budget",
+    "TOP_UP": "+Balance",
+    "REVOKE": "0 Balance",
 }
-
 
 def _resolve_accounts_registry_path() -> Path:
     try:
@@ -87,24 +86,9 @@ class FinOpsTab(StudioTab):
             ).tooltip("Update Ledger Fuel Balance via signed EdDSA mandate")
 
         with kit.row(gap="gap-1.5"):
-            kit.button(
-                "🔄 Re-Sync to Quota",
-                self._resync_balance_to_saved_quota,
-                color="emerald",
-                outline=True,
-                flex=True,
-            ).tooltip("Restore current Ledger Balance back to the saved Fuel Quota baseline")
-            kit.button(
-                "Lifecycle Demo",
-                self._run_demo_and_sync,
-                color="cyan",
-                outline=True,
-            ).tooltip("Run Provision -> Top-Up -> Downsize -> Replay Check -> Revoke")
-            kit.button("🚨 Zero (Kill)", gov.revoke_account_kill, color="red", outline=True).tooltip(
+            kit.button("🚨 Set Zero (Kill)", gov.revoke_account_kill, color="red", outline=True).tooltip(
                 "Immediately burn all remaining fuel to 0 and sever active streams"
             )
-            kit.button("Status", lambda: gov.refresh_account_status(silent=False), color="slate-4", outline=True)
-            kit.button("List", lambda: run_fiber_cli("account", "list"), color="slate-4", outline=True)
 
         ui.label().bind_text_from(
             f, "last_jwt_preview", lambda j: f"Signed Mandate Token (EdDSA): {j}"
@@ -133,7 +117,7 @@ class FinOpsTab(StudioTab):
 
         with kit.footer():
             kit.button(
-                "▶ Burn Fuel via High-Speed Stream (Test 0-Balance Breaker)",
+                "Test Live Stream",
                 pipeline.simulate_stream,
                 color="indigo",
                 flex=True,
