@@ -15,11 +15,11 @@ from fiber.llm.exception.mapping import exception_type
 from fiber.llm.exception.eco import OpenAIError, APIResponseValidationError, MidStreamFallbackError
 from fiber.llm.response import ModelResponseStream
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser, ParsedChunk
-from fiber.llm.types.provider.core import (
+from fiber.llm.model.types.provider.core import (
     Choices, Delta, Message, ModelResponse, Usage, Function,
     ChatCompletionMessageToolCall
 )
-from fiber.llm.types.provider.stream import StreamingChoices
+from fiber.llm.model.types.provider.stream import StreamingChoices
 
 log = get_emitter("stream.wrapper")
 
@@ -252,7 +252,7 @@ class StreamWrapper:
         if is_stream_end and total_tokens == 0:
             try:
                 from fiber.llm.model.token.counter import calculate_fallback_usage
-                from fiber.llm.types.provider.core import Usage
+                from fiber.llm.model.types.provider.core import Usage
                 
                 log.debug(f"Provider did not yield usage. Calculating fallback tokens for {self.model}...")
                 fallback_usage = calculate_fallback_usage(

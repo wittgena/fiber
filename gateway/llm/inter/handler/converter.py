@@ -7,8 +7,8 @@ from binascii import Error as BinasciiError
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Union
 
-from fiber.llm.types.inter.block import MessageRole, ImageBlock
-from fiber.llm.types.inter.response import (
+from fiber.llm.model.types.inter.block import MessageRole, ImageBlock
+from fiber.llm.model.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -17,7 +17,7 @@ from fiber.llm.types.inter.response import (
     CompletionResponseAsyncGen,
     CompletionResponseGen
 )
-from fiber.llm.types.inter.component import ImageNode
+from fiber.llm.model.types.inter.component import ImageNode
 from fiber.gateway.llm.inter.callback.manager import CallbackManager
 
 def parse_partial_json(s: str) -> Dict:

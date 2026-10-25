@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from nicegui import ui
 
-from fiber.infra.account.state import state, refs
+from fiber.infra.ops.account.state import state, refs
 from fiber.gateway.bridge.cli import run_fiber_cli
 from fiber.dev.console.action import gov, pipeline
 import fiber.dev.console.ui.kit as kit
@@ -17,7 +17,7 @@ from xphi.node.space.bind.resolver import resolve_path
 
 def _resolve_accounts_registry_path() -> Path:
     try:
-        from fiber.infra.account.registry import LocalAccountRegistry
+        from fiber.infra.ops.account.registry import LocalAccountRegistry
         return Path(LocalAccountRegistry.get_registry_path())
     except Exception:
         return resolve_path("anchor") / "sign" / "local_accounts.json"
@@ -150,8 +150,8 @@ class ModelPriceTab(StudioTab):
     ratio = 58
 
     def compose_left(self) -> None:
-        from fiber.llm.provider.cost.exchange import default_exchange
-        from fiber.llm.provider.cost.registry import REGISTRY_ROOT, DEFAULT_REGISTRY_FILENAME
+        from fiber.infra.ops.finops.exchange import default_exchange
+        from fiber.infra.ops.finops.cost.registry import REGISTRY_ROOT, DEFAULT_REGISTRY_FILENAME
 
         with kit.row(align="items-center justify-between"):
             ui.label(
@@ -179,9 +179,9 @@ class ModelPriceTab(StudioTab):
         ).classes("w-full flex-grow text-xs font-mono bg-slate-950")
 
     def compose_right(self) -> None:
-        from fiber.llm.provider.cost.exchange import default_exchange
-        from fiber.llm.provider.cost.filter import CORE_KEYWORDS
-        from fiber.llm.provider.cost.registry import ModelCostRegistry
+        from fiber.infra.ops.finops.exchange import default_exchange
+        from fiber.infra.ops.finops.model.filter import CORE_KEYWORDS
+        from fiber.infra.ops.finops.cost.registry import ModelCostRegistry
 
         total_mapped = len(getattr(ModelCostRegistry, "_model_cost", {}) or {})
         usd_rate = getattr(default_exchange, "usd_rate", 1_000_000)

@@ -11,7 +11,7 @@ from fiber.infra.vcr.manager import VCRManager, VCRPlaybackConfig
 import fiber.llm.exception.eco as eco_exceptions
 from fiber.llm.exception.mapping import SEMANTIC_ERROR_REGEX, STATUS_CODE_MAPPING
 from fiber.llm.response import ModelResponse
-from fiber.llm.types.provider.core import Usage
+from fiber.llm.model.types.provider.core import Usage
 from fiber.gateway.llm.state.traverser import StateMapper
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 

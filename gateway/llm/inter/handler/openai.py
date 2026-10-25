@@ -22,7 +22,7 @@ from tenacity.wait import wait_base
 
 import openai
 from fiber.gateway.llm.inter.handler.converter import get_from_param_or_env
-from fiber.llm.types.inter.block import (
+from fiber.llm.model.types.inter.block import (
     AudioBlock,
     ContentBlock,
     DocumentBlock,
@@ -32,7 +32,7 @@ from fiber.llm.types.inter.block import (
     ThinkingBlock,
     ToolCallBlock,
 )
-from fiber.llm.types.inter.response import ChatMessage, LogProb
+from fiber.llm.model.types.inter.response import ChatMessage, LogProb
 
 from fiber.gateway.llm.state.pydantic import BaseModel
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionMessageToolCall

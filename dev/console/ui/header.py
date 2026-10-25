@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from fiber.infra.account.state import (
+from fiber.infra.ops.account.state import (
     STATE_FILE_PATH,
     load_or_init_state,
     refs,

@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from fiber.llm.pipeline.bootstrap import PipelineSlot
 from fiber.llm.response import ModelResponse
-from fiber.llm.types.provider.core import Usage
+from fiber.llm.model.types.provider.core import Usage
 
 from xphi.state.phase.channel import DuplexChannel, ChannelContext
 from xphi.watcher.plane.emitter import get_emitter

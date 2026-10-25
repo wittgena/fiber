@@ -8,8 +8,8 @@ from typing import AsyncGenerator, Generator, Any, List, Tuple, Optional, Union,
 
 from fiber.llm.compat.registry import EXTRACTION_RULES
 from fiber.llm.compat.extraction import ENDPOINT_ROUTING_RULES
-from fiber.llm.types.inter.block import MessageRole
-from fiber.llm.types.inter.response import ChatMessage
+from fiber.llm.model.types.inter.block import MessageRole
+from fiber.llm.model.types.inter.response import ChatMessage
 
 from xphi.arch.contract.event.next import uuid4 
 from xphi.node.space.bind.resolver import get_invoker

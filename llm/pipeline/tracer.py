@@ -13,7 +13,7 @@ from fiber.gateway.llm.context.metadata import ExecutionMetadata
 from fiber.llm.pipeline.bootstrap import PipelineSlot
 from fiber.gateway.llm.state.traverser import StateTraverser
 from fiber.llm.response import ModelResponse
-from fiber.llm.types.provider.core import Usage
+from fiber.llm.model.types.provider.core import Usage
 from xphi.state.phase.channel import ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
 

@@ -5,7 +5,7 @@ import httpx
 
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
-from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
+from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
 

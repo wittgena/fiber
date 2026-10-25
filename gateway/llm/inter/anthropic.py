@@ -5,12 +5,12 @@ from importlib.metadata import version as get_version
 from typing import TYPE_CHECKING, Any, Type, AsyncGenerator, Callable, Dict, Generator, List, Optional, Sequence, Set, Tuple, Union, cast
 
 from fiber.gateway.llm.inter.handler.util import parse_partial_json
-from fiber.llm.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, CompletionResponse, LLMMetadata
-from fiber.llm.types.inter.block import MessageRole, ContentBlock, ToolCallBlock
-from fiber.llm.types.inter.block import TextBlock as LITextBlock
-from fiber.llm.types.inter.block import CitationBlock as LICitationBlock
-from fiber.llm.types.inter.block import ThinkingBlock as LIThinkingBlock
-from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
+from fiber.llm.model.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, CompletionResponse, LLMMetadata
+from fiber.llm.model.types.inter.block import MessageRole, ContentBlock, ToolCallBlock
+from fiber.llm.model.types.inter.block import TextBlock as LITextBlock
+from fiber.llm.model.types.inter.block import CitationBlock as LICitationBlock
+from fiber.llm.model.types.inter.block import ThinkingBlock as LIThinkingBlock
+from fiber.llm.model.types.inter.base import BaseOutputParser, PydanticProgramMode, Model
 from fiber.gateway.llm.inter.callback.manager import CallbackManager, llm_chat_callback, llm_completion_callback
 from fiber.gateway.llm.inter.handler.util import ToolSelection
 from fiber.llm.model.token.encoder import Tokenizer
@@ -53,7 +53,7 @@ from anthropic.types import (
     SignatureDelta,
 )
 if TYPE_CHECKING:
-    from fiber.llm.types.inter.tool import BaseTool
+    from fiber.llm.model.types.inter.tool import BaseTool
 
 from xphi.arch.contract.config import env
 from xphi.arch.contract.config.constants import DEFAULT_TEMPERATURE

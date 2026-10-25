@@ -9,10 +9,10 @@ from fiber.gateway.llm.inter.handler.util import asyncio_run
 from xphi.watcher.observer.span import observe
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.llm.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, ChatResponseGen
-from fiber.llm.types.inter.block import MessageRole
-from fiber.llm.types.inter.llm import LLMBase
-from fiber.llm.types.inter.base import (
+from fiber.llm.model.types.inter.response import ChatMessage, ChatResponse, ChatResponseAsyncGen, ChatResponseGen
+from fiber.llm.model.types.inter.block import MessageRole
+from fiber.llm.model.types.inter.llm import LLMBase
+from fiber.llm.model.types.inter.base import (
     BaseOutputParser,
     PydanticProgramMode,
     TokenAsyncGen,
@@ -42,10 +42,10 @@ from fiber.gateway.llm.inter.handler.util import (
     default_completion_to_prompt,
     _supports_tool_required,
 )
-from fiber.llm.types.inter.response import AgentChatResponse
+from fiber.llm.model.types.inter.response import AgentChatResponse
 
 if TYPE_CHECKING:
-    from fiber.llm.types.inter.tool import BaseTool
+    from fiber.llm.model.types.inter.tool import BaseTool
 
 logger = logging.getLogger(__name__)
 

@@ -34,8 +34,8 @@ from fiber.gateway.llm.inter.handler.converter import (
     stream_chat_to_completion_decorator,
     stream_completion_to_chat_decorator,
 )
-from fiber.llm.types.inter.block import MessageRole, ThinkingBlock, ToolCallBlock, TextBlock
-from fiber.llm.types.inter.response import (
+from fiber.llm.model.types.inter.block import MessageRole, ThinkingBlock, ToolCallBlock, TextBlock
+from fiber.llm.model.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
@@ -51,10 +51,10 @@ from fiber.gateway.llm.inter.callback.manager import CallbackManager, llm_chat_c
 from xphi.arch.contract.config.constants import DEFAULT_TEMPERATURE
 from fiber.gateway.llm.inter.base import InterLLM
 from fiber.gateway.llm.inter.handler.util import ToolSelection
-from fiber.llm.types.inter.base import Model
+from fiber.llm.model.types.inter.base import Model
 from fiber.gateway.llm.inter.handler.util import parse_partial_json
 from fiber.gateway.llm.inter.handler.template import PromptTemplate
-from fiber.llm.types.inter.base import BaseOutputParser, PydanticProgramMode
+from fiber.llm.model.types.inter.base import BaseOutputParser, PydanticProgramMode
 from fiber.gateway.llm.inter.handler.openai import (
     O1_MODELS,
     create_retry_decorator,
@@ -81,7 +81,7 @@ from openai.types.chat.chat_completion_chunk import (
 )
 
 if TYPE_CHECKING:
-    from fiber.llm.types.inter.tool import BaseTool
+    from fiber.llm.model.types.inter.tool import BaseTool
 
 DEFAULT_OPENAI_MODEL = "gpt-3.5-turbo"
 

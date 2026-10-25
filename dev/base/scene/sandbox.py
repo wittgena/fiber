@@ -11,8 +11,8 @@ import math
 from dataclasses import dataclass, field
 from typing import Any, List, Dict, Optional
 
-from fiber.dev.base.sandbox import SandboxRunner, ScriptDef, TestScripts
-from fiber.dev.base.epoch import ActorIdentity
+from fiber.dev.base.scene.runner import SandboxRunner, ScriptDef, TestScripts
+from fiber.dev.base.scene.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.node.runtime.wasm.method import DphiMethod

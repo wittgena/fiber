@@ -9,7 +9,7 @@ import httpx
 from fiber.llm.pipeline.tracer import BaseLLMTracer, TracerInterceptorChannel
 from fiber.llm.pipeline.bootstrap import PipelineBootstrap, PipelineSlot
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
-from fiber.llm.types.provider.general import EmbeddingResponse
+from fiber.llm.model.types.provider.general import EmbeddingResponse
 from fiber.llm.exception.eco import UnsupportedParamsError
 from fiber.llm.response import ModelResponse
 

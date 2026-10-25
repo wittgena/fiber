@@ -28,7 +28,7 @@ from fiber.gateway.llm.context.cbevent import (
     EventPayload,
 )
 
-from fiber.llm.types.inter.component import BaseComponent, BaseNode, MetadataMode
+from fiber.llm.model.types.inter.component import BaseComponent, BaseNode, MetadataMode
 from fiber.gateway.llm.inter.handler.util import get_tqdm_iterable
 from fiber.gateway.llm.inter.embedding.jobs import run_jobs
 

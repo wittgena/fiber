@@ -1,4 +1,5 @@
-# fiber.phase.bridge.cli
+# fiber.gateway.bridge.cli
+## @lineage: fiber.phase.bridge.cli
 ## @lineage: fiber.dev.console.bridge.cli
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ from nicegui import ui
 
 from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
 import fiber.dev.console.observer.plane as plane
-from fiber.infra.account.state import state, refs
+from fiber.infra.ops.account.state import state, refs
 
 async def run_fiber_cli(*args: str) -> None:
     refs.push_cli(f"$ fiber {' '.join(args)}")

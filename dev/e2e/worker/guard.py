@@ -15,8 +15,8 @@ from typing import List, Dict, Any, Optional, Tuple
 import httpx
 import redis.exceptions
 
-from fiber.dev.base.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.dev.base.pipeline import BasePipeline, log
+from fiber.dev.base.workflow.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.base.workflow.pipeline import BasePipeline, log
 from fiber.infra.mcp.mapper.config import McpConfigMapper
 from fiber.gateway.bridge.action.connect import (
     ACTIVE_TARGETS_TUNNEL_KEY,
@@ -29,7 +29,7 @@ from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 
-from fiber.dev.base.audit.context import AuditContext
+from fiber.dev.base.workflow.audit.context import AuditContext
 from fiber.gateway.bridge.slack import SlackHitlBridge
 
 from xphi.node.space.bind.resolver import resolve_path

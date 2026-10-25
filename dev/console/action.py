@@ -11,7 +11,7 @@ from nicegui import ui
 import orjson
 
 import fiber.gateway.bridge.console as console_act
-from fiber.infra.account.state import state, refs, save_state_to_disk
+from fiber.infra.ops.account.state import state, refs, save_state_to_disk
 import fiber.dev.console.ui.diag as diag
 
 USD_TO_FUEL_RATE = 1_000_000
@@ -362,7 +362,7 @@ class GovActionBridge:
             effective_op = "SYNC_QUOTA" if f.jwt_op in ("PROVISION", "SET_BUDGET") else f.jwt_op
 
             # 3. 버전 자동 단조 증가: 현재 워처/상태 버전 중 높은 값에서 +1 증가
-            from fiber.infra.watcher.finops import default_finops_watcher
+            from fiber.infra.ops.finops.watcher import default_finops_watcher
             curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
             next_ver = max(curr_watcher_ver, f.policy_ver) + 1
 
@@ -413,7 +413,7 @@ class GovActionBridge:
         preserved_quota = f.fuel_quota
 
         try:
-            from fiber.infra.watcher.finops import default_finops_watcher
+            from fiber.infra.ops.finops.watcher import default_finops_watcher
             curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
             next_ver = max(curr_watcher_ver, f.policy_ver) + 1
 
@@ -426,7 +426,7 @@ class GovActionBridge:
                 burn_tx = res.burn_tx_hash
                 applied_ver = res.status.policy_ver
             else:
-                from fiber.infra.account.manager import LocalAccountManager, RevokeCommand
+                from fiber.infra.ops.account.manager import LocalAccountManager, RevokeCommand
                 async with LocalAccountManager(tenant_id=f.tenant_id) as mgr:
                     raw_res = await mgr.revoke(RevokeCommand(policy_ver=next_ver))
                 burn_tx = raw_res.burn_tx_hash if hasattr(raw_res, "burn_tx_hash") else raw_res.get("burn_tx_hash")
@@ -488,7 +488,7 @@ class GovActionBridge:
 
                 # 3. 10초 경과 후: LEDGER_SYNC(쿼터 변경)를 유발하는 JWT 발행 대신
                 #    소각되었던 직전 잔액(restore_fuel)만큼만 코어 UTXO 원장에 직접 재할당(Allocate)
-                from fiber.infra.watcher.finops import default_finops_watcher
+                from fiber.infra.ops.finops.watcher import default_finops_watcher
                 from xphi.node.space.tunnel.factory import TunnelFactory
 
                 curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
@@ -501,7 +501,7 @@ class GovActionBridge:
                     )
                     restored_balance = alloc_res.status.ledger_balance
                 else:
-                    from fiber.infra.account.manager import AllocateCommand, LocalAccountManager
+                    from fiber.infra.ops.account.manager import AllocateCommand, LocalAccountManager
                     async with LocalAccountManager(tenant_id=f.tenant_id) as mgr:
                         alloc_raw = await mgr.allocate(AllocateCommand(amount=restore_fuel))
                     restored_balance = (
@@ -587,7 +587,7 @@ class PipelineActionBridge:
             refs.live_stream_log.push("▶ [acompletion] model='llama_server/gemma-3-1b-it-Q4_K_M.gguf' stream=True")
 
         try:
-            from fiber.infra.watcher.finops import default_finops_watcher
+            from fiber.infra.ops.finops.watcher import default_finops_watcher
 
             # 기준 예산(fuel_quota 또는 현재 잔액)의 약 15%씩 청크당 소모하여 시각적 차감 곡선 형성
             baseline = max(f.fuel_quota, f.ledger_balance, 1_000_000)

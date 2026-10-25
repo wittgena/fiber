@@ -13,8 +13,8 @@ from typing import List, Dict
 
 import httpx
 
-from fiber.dev.base.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.dev.base.pipeline import MockPipeline, log
+from fiber.dev.base.workflow.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.base.workflow.pipeline import MockPipeline, log
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
 from fiber.gateway.bridge.action.connect import (

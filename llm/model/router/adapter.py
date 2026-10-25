@@ -10,7 +10,7 @@ from fiber.llm.response import ModelResponse
 from fiber.gateway.llm.context.metadata import CompletionContext, EmbeddingContext
 from fiber.llm.model.router.llm import LLMRouter
 from fiber.llm.model.router.embedding import EmbeddingRouter
-from fiber.llm.provider.resolver import get_llm_provider
+from fiber.llm.model.resolver import get_llm_provider
 
 from fiber.llm.exception.mapping import exception_type
 from fiber.gateway.llm.state.traverser import StateMapper

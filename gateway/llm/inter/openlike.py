@@ -1,6 +1,6 @@
 # fiber.gateway.llm.inter.openlike
 from typing import Any, Optional, Sequence, Union
-from fiber.llm.types.inter.response import (
+from fiber.llm.model.types.inter.response import (
     ChatMessage,
     ChatResponse,
     ChatResponseAsyncGen,
