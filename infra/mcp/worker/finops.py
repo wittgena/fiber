@@ -1,5 +1,4 @@
 # fiber.infra.mcp.worker.finops
-## @lineage: fiber.dev.worker.finops
 import json
 import asyncio
 from typing import Dict, Any, Optional
@@ -9,7 +8,7 @@ from xphi.arch.contract.protocol.worker import AsyncWorkerProtocol
 from xphi.node.space.tunnel.factory import TunnelFactory
 
 DEFAULT_TENANT_ID = "accounting_dept"
-SYSTEM_ISSUER = "finops_local_system"
+SYSTEM_ISSUER = "finops_worker"
 
 class FinopsSystemWorker(AsyncWorkerProtocol):
     """
@@ -18,7 +17,7 @@ class FinopsSystemWorker(AsyncWorkerProtocol):
     and real-time Pub/Sub budget control-plane signaling via Tunnel Bus.
     """
     def __init__(self):
-        super().__init__(agent_name="finops.local.system")
+        super().__init__(agent_name="worker.finops")
         self.token_gen = FinOpsTokenGenerator(issuer=SYSTEM_ISSUER)
 
     async def handle_tools_list(self, req_id: Any):

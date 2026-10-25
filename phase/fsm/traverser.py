@@ -1,10 +1,6 @@
 # fiber.phase.fsm.traverser
-## @lineage: fiber.dev.ex.fsm.traverser
 from dataclasses import dataclass, field, replace
 from typing import Dict, Any, List, Optional, Callable, Awaitable, Tuple, Sequence, Union
-
-from xphi.node.runtime.wasm.broker import DphiBroker
-from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.phase.fsm.compiler import (
     ExFSMCompiler,
@@ -18,6 +14,9 @@ from fiber.phase.fsm.runtime import (
 )
 from fiber.phase.fsm.bridge import FiberExecutionBridge
 
+from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.watcher.plane.emitter import get_emitter
+
 log = get_emitter("fsm.traverser", phase="MULTIVERSE_TRAVERSER")
 
 # Callback signature: (cursor, node_spec, task_io_spec) -> (meta_updates, heavy_offload_data, step_cost)
@@ -30,9 +29,7 @@ NodeExecutorFn = Callable[
 ArbiterFn = Callable[[List[BranchCursor]], int]
 
 
-# ============================================================================
-# 1. TRAVERSAL RESULT
-# ============================================================================
+# TRAVERSAL RESULT
 @dataclass
 class TraversalResult:
     final_cursor: BranchCursor
@@ -43,10 +40,6 @@ class TraversalResult:
     parked_cursors: List[BranchCursor] = field(default_factory=list)  # HITL-parked & barrier-waiting sibling cursors
     join_collapses: int = 0
 
-
-# ============================================================================
-# 2. MULTIVERSE GRAPH TRAVERSER
-# ============================================================================
 class ExGraphTraverser:
     """
     Orchestrates end-to-end multiverse traversal on top of ExFSMCompiler, ExBranchController, and FiberExecutionBridge.
@@ -105,9 +98,7 @@ class ExGraphTraverser:
             except Exception as e:
                 log.error(f"[Traverser] Failed to reclaim dangling branches: {e}")
 
-    # ------------------------------------------------------------------------
     # [Public Entrypoints] Run, Traverse Bundle & Resume from Checkpoints
-    # ------------------------------------------------------------------------
     async def run(
         self,
         asl_schema: Dict[str, Any],
@@ -171,9 +162,7 @@ class ExGraphTraverser:
             is_resumed=True,
         )
 
-    # ------------------------------------------------------------------------
     # [Core Engine] Unified Multiverse Scheduling & Barrier Loop
-    # ------------------------------------------------------------------------
     async def _drive_queue(
         self,
         initial_cursors: List[BranchCursor],
@@ -316,9 +305,7 @@ class ExGraphTraverser:
             join_collapses=join_collapses,
         )
 
-    # ------------------------------------------------------------------------
     # [Internal Helpers] Barrier Synchronization, Fan-Out Detection & Arbiter
-    # ------------------------------------------------------------------------
     async def _route_or_collapse_at_barrier(
         self,
         cursor: BranchCursor,

@@ -1,8 +1,6 @@
 # fiber.dev.e2e.worker.router
 """
 @requirements: fiber daemon 
-$ fiber daemon -s edge
-or
 $ XPHI_WORKERS=1 python -m xphi.node.ops.boot
 """
 import sys
@@ -15,23 +13,22 @@ from typing import List, Dict
 
 import httpx
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.infra.bound.e2e.pipeline import MockPipeline, log
-from fiber.infra.daemon.economy.pricing import DynamicPricingDaemon
-
+from fiber.dev.base.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.base.pipeline import MockPipeline, log
 from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.bridge.action.connect import (
+from fiber.gateway.bridge.action.connect import (
     ACTIVE_TARGETS_TUNNEL_KEY,
     ResolvedTarget,
     _specs_from_mapped_entries,
     run_connect_copy,
 )
-import fiber.infra.mcp.worker.eco.oracle as worker_oracle
+import fiber.infra.mcp.worker.price.token as worker_price_token
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 import fiber.infra.mcp.worker.eco.margin as worker_margin
 import fiber.infra.mcp.worker.search.archive as worker_search
 
+from xphi.node.ops.daemon.eco.pricing import DynamicPricingDaemon
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
@@ -49,9 +46,7 @@ class MCPRouterPipeline(MockPipeline):
             name="Core Routing & Performance Suite",
             scope_name="MCP_ROUTER_SUITE",
         )
-
-        # ANCHOR_ROOT/mcp.json 및 McpWorkerDaemon에 등록된 정규화 Target ID 사용
-        self.oracle_id = "worker.eco.oracle"
+        self.oracle_id = "worker.price.token"
         self.finlib_id = "worker.eco.finlib"
         self.margin_id = "worker.eco.margin"
         self.search_id = "worker.search.archive"
@@ -118,7 +113,7 @@ class MCPRouterPipeline(MockPipeline):
         anchor_specs = self._load_specs_from_anchor_root()
 
         fallback_defaults = {
-            self.oracle_id: (f"{sys.executable} -m {worker_oracle.__name__}", "multiplex"),
+            self.oracle_id: (f"{sys.executable} -m {worker_price_token.__name__}", "multiplex"),
             self.finlib_id: (f"{sys.executable} -m {worker_finlib.__name__}", "linear"),
             self.margin_id: (f"{sys.executable} -m {worker_margin.__name__}", "multiplex"),
             self.search_id: (f"{sys.executable} -m {worker_search.__name__}", "multiplex"),

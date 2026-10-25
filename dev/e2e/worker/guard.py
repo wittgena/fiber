@@ -15,10 +15,10 @@ from typing import List, Dict, Any, Optional, Tuple
 import httpx
 import redis.exceptions
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult, get_free_port
-from fiber.infra.bound.e2e.pipeline import BasePipeline, log
+from fiber.dev.base.config import Phase, E2EConfig, TestResult, get_free_port
+from fiber.dev.base.pipeline import BasePipeline, log
 from fiber.infra.mcp.mapper.config import McpConfigMapper
-from fiber.phase.bridge.action.connect import (
+from fiber.gateway.bridge.action.connect import (
     ACTIVE_TARGETS_TUNNEL_KEY,
     ResolvedTarget,
     _specs_from_mapped_entries,
@@ -29,8 +29,8 @@ from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 
-from fiber.infra.bound.e2e.audit.context import AuditContext
-from fiber.gateway.bridge.mcp.slack import SlackHitlBridge
+from fiber.dev.base.audit.context import AuditContext
+from fiber.gateway.bridge.slack import SlackHitlBridge
 
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT

@@ -17,7 +17,7 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.tunnel.factory import TunnelFactory
-from fiber.phase.bridge.action.sign import app as sign_app
+from fiber.gateway.bridge.action.sign import app as sign_app
 
 log = get_emitter("phase.cli")
 
@@ -40,6 +40,7 @@ connect_app = typer.Typer(
     no_args_is_help=False,
 )
 app.add_typer(connect_app, name="connect")
+
 
 def _load_env(env_file: Optional[str]):
     if env_file:
@@ -74,12 +75,12 @@ def run_daemon(
     _load_env(env_file)
     PRESETS = {
         "edge": "rest_edge,rpc_worker,mcp_worker",
-        "ALL": "rest_edge,rpc_worker,mcp_worker,dynamic_pricing,risk_vault",
+        "all": "rest_edge,rpc_worker,mcp_worker,dynamic_pricing,risk_vault",
     }
-    
+
     resolved_daemons = PRESETS.get(start.lower(), start)
     daemons_list = [d.strip() for d in resolved_daemons.split(",")]
-    
+
     os.environ["NODE_DAEMONS"] = resolved_daemons
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
 
@@ -88,7 +89,7 @@ def run_daemon(
         os.environ["NODE_PROFILE"] = "EDGE"
     else:
         os.environ["NODE_PROFILE"] = "ALL"
-        
+
     boot_kernel("Gateway Daemon")
 
 
@@ -99,7 +100,7 @@ def run_account(
 ):
     """Manages local/tenant FinOps accounts, EdDSA JWT quotas, fuel allocate, and live Kill-Switches."""
     _load_env(env_file)
-    from fiber.phase.bridge.action.account import main as account_main
+    from fiber.gateway.bridge.action.account import main as account_main
     try:
         account_main(ctx.args)
     except KeyboardInterrupt:
@@ -116,10 +117,10 @@ def run_e2e(
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     _load_env(env_file)
-    extra_args = ctx.args 
+    extra_args = ctx.args
     KNOWN_SUITES = ["llm.trace", "gateway.compliance", "inter.wasm.phase", "inter.plane.flare", "inter.finops"]
     targets = KNOWN_SUITES if target == "all" else [target]
-    
+
     log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")
     for t in targets:
         module_path = f"fiber.dev.e2e.{t}"
@@ -142,6 +143,7 @@ def run_e2e(
         except Exception as e:
             log.error(f"[Fiber] E2E Test {module_path} failed: {e}", exc_info=True)
             sys.exit(1)
+
 
 @connect_app.callback()
 def run_connector(
@@ -172,7 +174,7 @@ def run_connector(
     if ctx.invoked_subcommand is not None:
         return
     _load_env(env_file)
-    from fiber.phase.bridge.action.connect import run_connect
+    from fiber.gateway.bridge.action.connect import run_connect
     run_connect(
         exec_cmd=exec_cmd,
         config=config,
@@ -208,7 +210,7 @@ def copy_connector_config(
 ):
     """[Config Provisioner] Copies & locks builtin workers and external MCP configs into ~/.anchor/mcp.json without spawning processes."""
     _load_env(env_file)
-    from fiber.phase.bridge.action.connect import run_connect_copy
+    from fiber.gateway.bridge.action.connect import run_connect_copy
     run_connect_copy(
         exec_cmd=exec_cmd,
         config=config,
@@ -217,46 +219,69 @@ def copy_connector_config(
         preflight=preflight,
     )
 
+# fiber.phase.cli 내 @compat_app.command("fixture") 부분 (전체 교체 가능)
 @compat_app.command("fixture")
 def manage_compat_fixtures(
     model: Annotated[str, typer.Option("--model", "-m", help="Model name (e.g., ollama/gemma:2b)")],
-    vcr: Annotated[str, typer.Option("--vcr", "-v", help="Mode: 'record' (gen) or 'replay' (test)")] = "record",
+    vcr: Annotated[str, typer.Option("--vcr", help="VCR mode: 'record' (gen) or 'replay' (test)")] = "record",
+    vcr_speed: Annotated[str, typer.Option("--vcr-speed", help="Replay speed control: 'max' or 'real'")] = "max",
+    vcr_chaos: Annotated[float, typer.Option("--vcr-chaos", help="Latency jitter (ms) for real-world simulation")] = 0.0,
+    vcr_tick: Annotated[float, typer.Option("--vcr-tick", help="Time-window (ms) for coalescing chunks during record")] = 100.0,
+    vcr_targets: Annotated[str, typer.Option("--vcr-targets", help="Specific trace IDs to target (e.g., 'scenario:trace_id')")] = "",
     api_key: Annotated[Optional[str], typer.Option("--api-key", "-k", envvar="COMPAT_API_KEY", help="API Key (Optional if set in Env)")] = None,
     target_dir: Annotated[Optional[str], typer.Option("--target-dir", "-o", help="Custom target directory for fixtures")] = None,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
     """
     @desc: Manages VCR fixtures for compatibility testing
-    - Use '--vcr record' to generate raw payloads, or '--vcr replay' to verify extraction rules offline.
+    - Use '--vcr record' to generate raw payloads, or '--vcr replay' (with '--vcr-speed' / '--vcr-chaos') to verify extraction rules offline.
     """
     _load_env(env_file)
-    mode = vcr.lower()
+    mode = vcr.lower().strip()
+    speed = vcr_speed.lower().strip()
+    if speed not in ("max", "real"):
+        log.error(f"[Fiber] Invalid --vcr-speed: '{vcr_speed}'. Supported values are 'max' or 'real'.")
+        raise typer.Exit(1)
+
     if mode in ("record", "gen", "generate"):
-        from fiber.phase.bridge.action.compat import run_gen_fixture
+        from fiber.gateway.bridge.action.compat import run_gen_fixture
         try:
-            asyncio.run(run_gen_fixture(model=model, api_key=api_key, target_dir=target_dir))
+            asyncio.run(
+                run_gen_fixture(
+                    model=model,
+                    api_key=api_key,
+                    target_dir=target_dir,
+                    vcr_tick=vcr_tick,
+                )
+            )
         except KeyboardInterrupt:
             log.info("\n[Fiber] Compat fixture generation manually terminated by user.")
         except Exception as e:
             log.error(f"[Fiber] Fixture generation failed: {e}", exc_info=True)
             sys.exit(1)
     elif mode in ("replay", "test", "verify"):
-        from fiber.phase.bridge.action.compat import run_test_fixture
+        from fiber.gateway.bridge.action.compat import run_test_fixture
         try:
-            asyncio.run(run_test_fixture(model=model, target_dir=target_dir))
+            asyncio.run(
+                run_test_fixture(
+                    model=model,
+                    target_dir=target_dir,
+                    vcr_speed=speed,
+                    vcr_chaos=vcr_chaos,
+                    vcr_targets=vcr_targets,
+                )
+            )
         except KeyboardInterrupt:
             log.info("\n[Fiber] Compat fixture testing manually terminated by user.")
         except Exception as e:
             log.error(f"[Fiber] Fixture testing failed: {e}", exc_info=True)
             sys.exit(1)
     else:
-        log.error(f"[Fiber] Invalid VCR mode: '{vcr}'. Supported modes are 'record' (gen) or 'replay' (test).")
+        log.error(f"[Fiber] Invalid --vcr mode: '{vcr}'. Supported modes are 'record' (gen) or 'replay' (test).")
         raise typer.Exit(1)
-
 
 def main():
     app()
-
 
 if __name__ == "__main__":
     main()

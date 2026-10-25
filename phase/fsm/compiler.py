@@ -1,5 +1,4 @@
 # fiber.phase.fsm.compiler
-## @lineage: fiber.dev.ex.fsm.compiler
 import hashlib
 from enum import Enum
 from typing import List, Dict, Any, Optional, Union
@@ -17,9 +16,7 @@ END_TOKEN = "END"
 RETURN_TOKEN = "RETURN"
 
 
-# ============================================================================
-# 1. VOCAB & COMPACT KEYS (Unified NodeType & Terminal Tokens)
-# ============================================================================
+# VOCAB & COMPACT KEYS (Unified NodeType & Terminal Tokens)
 class NodeType(str, Enum):
     PROJECTOR = "projector"
     OPERSIG = "opersig"

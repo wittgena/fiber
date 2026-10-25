@@ -6,8 +6,7 @@ import sys
 import json
 import argparse
 
-# vcr injection
-from fiber.gateway.bridge.vcr import vcr_setup_sequence, inspect_fixture
+from fiber.infra.vcr.bridge.setup import vcr_setup_sequence, inspect_fixture
 VCR_MODE, RESOLVED_FIXTURE_DIR = vcr_setup_sequence()
 
 """[Legacy Business Logic] modification boundary"""

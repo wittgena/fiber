@@ -7,7 +7,7 @@ import time
 
 from fiber.llm.entry import acompletion
 from fiber.gateway.llm.state.traverser import StateTraverser
-from fiber.infra.bound.e2e.llm.trace import (
+from fiber.dev.base.llm.trace import (
     E2EBaseWorkflow, 
     E2EBaseApplication, 
     create_e2e_parser, 

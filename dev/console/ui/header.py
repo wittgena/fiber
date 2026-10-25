@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from fiber.dev.console.state import (
+from fiber.infra.account.state import (
     STATE_FILE_PATH,
     load_or_init_state,
     refs,
     save_state_to_disk,
     state,
 )
-from fiber.phase.bridge.cli import run_fiber_cli
+from fiber.dev.console.action import gov
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.kit as kit
 from xphi.node.space.bind.resolver import resolve_path
@@ -22,20 +22,20 @@ def act_manual_save_state() -> None:
     """Persist current console state to disk immediately."""
     ok = save_state_to_disk(force=True)
     if ok:
-        refs.push_cli(f"💾 Saved console state to {STATE_FILE_PATH} (at {state.last_saved_at})")
-        diag.info("Console state manually saved", path=str(STATE_FILE_PATH))
+        refs.push_cli(f"💾 Saved state to {STATE_FILE_PATH} (at {state.last_saved_at})")
+        diag.info("state manually saved", path=str(STATE_FILE_PATH))
         ui.notify(f"💾 Saved to {STATE_FILE_PATH.name}", type="positive")
     else:
-        diag.error("Failed to save console state", path=str(STATE_FILE_PATH))
-        ui.notify("Failed to save console.json", type="negative")
+        diag.error("Failed to save state", path=str(STATE_FILE_PATH))
+        ui.notify("Failed to save state.json", type="negative")
 
 
 def act_reload_state_from_disk() -> None:
-    """Reload console.json after external editor modifications."""
+    """Reload state.json after external editor modifications."""
     if load_or_init_state(STATE_FILE_PATH):
         state.finops.chart_dirty = True
-        refs.push_cli(f"🔄 Reloaded console state from {STATE_FILE_PATH}")
-        diag.info("Console state reloaded from disk", path=str(STATE_FILE_PATH))
+        refs.push_cli(f"🔄 Reloaded state from {STATE_FILE_PATH}")
+        diag.info("State reloaded from disk", path=str(STATE_FILE_PATH))
         ui.notify(f"🔄 Reloaded {STATE_FILE_PATH.name} from disk", type="info")
     else:
         ui.notify("Failed to reload state file", type="warning")
@@ -45,7 +45,6 @@ def build_header() -> None:
     """Render the 2-deck cockpit header (Row 1: Identity & Emergency / Row 2: Live KPIs & State/Diag Clusters)."""
     diag.install_browser_hooks()
     with ui.header().classes("bg-slate-900 border-b border-slate-800 px-5 py-2"):
-        # Explicit full-width column to override Quasar q-header's default row layout
         with ui.column().classes("w-full gap-1.5"):
             # [Deck 1: Brand Title, Node/Redis Badges & Emergency Stream Breaker]
             with ui.row().classes("w-full items-center justify-between no-wrap"):
@@ -62,16 +61,18 @@ def build_header() -> None:
 
                 with ui.row().classes("items-center gap-2.5"):
                     kit.button(
-                        "🚨 LLM STREAM BREAK",
-                        lambda: run_fiber_cli("account", "--tenant", state.finops.tenant_id, "kill", "--ver", "99"),
+                        "🚨 LLM STREAM BREAK (10s)",
+                        gov.temporary_stream_kill,
                         color="red",
-                    ).classes("font-bold px-3")
+                    ).classes("font-bold px-3").tooltip(
+                        "Sever active streams immediately (0 Fuel) and auto-restore previous balance after 10s"
+                    )
 
-            # [Deck 2: Live KPI Bar & Grouped State / Diag File Controls]
+            # Live KPI Bar & Grouped State / Diag File Controls
             with ui.row().classes(
                 "w-full items-center justify-between bg-slate-950 px-3 py-1 rounded border border-slate-800 no-wrap"
             ):
-                # Left: Real-time FinOps Quota & Token Savings KPIs
+                # Left: Real-time FinOps Balance/Quota & Token Savings KPIs
                 with ui.row().classes("items-center gap-4"):
                     ui.label().bind_text_from(state, "fuel_kpi_text").classes(
                         "text-xs font-mono font-bold text-emerald-400"
@@ -83,7 +84,6 @@ def build_header() -> None:
 
                 # Right: [Cluster 1: State Persistence] | [Cluster 2: UI Diagnostics]
                 with ui.row().classes("items-center gap-2"):
-                    # Cluster 1: State (console.json)
                     ui.label().bind_text_from(
                         state,
                         "last_saved_at",

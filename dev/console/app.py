@@ -10,7 +10,7 @@ from typing import Sequence
 import webbrowser
 from nicegui import app, ui
 
-from fiber.dev.console.state import (
+from fiber.infra.account.state import (
     STATE_FILE_PATH,
     load_or_init_state,
     refs,
@@ -23,7 +23,7 @@ import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ConsoleTemplate, StudioTab
-import fiber.dev.console.ui.tab.core as tab
+import fiber.dev.console.tab.core as tab
 
 _tick_counter: int = 0
 _bg_tasks: list[asyncio.Task] = []
@@ -32,6 +32,8 @@ async def _sync_initial_node_and_account_state() -> None:
     await oob.refresh_sign_status(silent=True)
     await gov.refresh_account_status(silent=True)
     await oob.scan_mcp_topology_and_health(silent=True)
+
+# fiber.dev.console.app 내 _flush_100ms_ringbuffer 수정 영역
 
 def _flush_100ms_ringbuffer() -> None:
     f, s, p = state.finops, state.security, state.pipeline
@@ -47,11 +49,11 @@ def _flush_100ms_ringbuffer() -> None:
     if f.chart_dirty and refs.finops_chart:
         if not f.x_ticks:
             f.x_ticks.append(time.strftime("%H:%M:%S"))
-            f.y_fuel.append(f.current_fuel)
-            f.y_core.append(f.ledger_balance)
+            f.y_fuel.append(f.ledger_balance)
+            f.y_core.append(f.fuel_quota)
         refs.finops_chart.options["xAxis"]["data"] = list(f.x_ticks)
         refs.finops_chart.options["series"][0]["data"] = list(f.y_fuel)
-        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.budget_limit
+        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.fuel_quota
         refs.finops_chart.options["series"][1]["data"] = list(f.y_core)
         refs.finops_chart.update()
         f.chart_dirty = False

@@ -4,13 +4,13 @@ import uuid
 import asyncio
 from typing import List, Optional
 
-from fiber.infra.bound.e2e.config import Phase, E2EConfig, TestResult
-from fiber.infra.bound.e2e.pipeline import MockPipeline, log
+from fiber.dev.base.config import Phase, E2EConfig, TestResult
+from fiber.dev.base.pipeline import MockPipeline, log
 import fiber.infra.mcp.worker.deployer as worker_deployer
-import fiber.infra.mcp.worker.sentinel as worker_sentinel
+import fiber.infra.mcp.worker.reaper as worker_reaper
 
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.infra.bound.e2e.audit.context import AuditContext, MCPGatewayTestClient
+from fiber.dev.base.audit.context import AuditContext, MCPGatewayTestClient
 from xphi.state.phase.reactor import PhaseReactor
 
 class AuditSecurityPipeline(MockPipeline):
@@ -30,7 +30,7 @@ class AuditSecurityPipeline(MockPipeline):
         self.idem_key_otp: Optional[str] = None
         self.deploy_payload: Optional[dict] = None
 
-        self.sentinel: Optional[worker_sentinel.AgentSentinel] = None
+        self.sentinel: Optional[worker_reaper.WorkerReaper] = None
         self._sentinel_task: Optional[asyncio.Task] = None
 
         self.set_phases([
@@ -60,7 +60,7 @@ class AuditSecurityPipeline(MockPipeline):
             MCPServerConnector(target_id=self.deploy_id, execution_target=deploy_cmd, mode="ephemeral")
         )
 
-        self.sentinel = worker_sentinel.AgentSentinel(
+        self.sentinel = worker_reaper.WorkerReaper(
             ledger=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0
         )
         self._sentinel_task = asyncio.create_task(self.sentinel.ignite())
@@ -127,7 +127,7 @@ class AuditSecurityPipeline(MockPipeline):
         # 고아 트랜잭션(Orphaned Stream) 빠른 감지를 위해 TTL 임계치를 1.0초로 단축
         self.mock_store.stale_timeout = 1.0
         if self.sentinel:
-            self.sentinel.ttl_thresholds["dphi.transition.pending"] = 1.0
+            self.sentinel.ttl_thresholds["transition.pending"] = 1.0
 
         idem_key_sentinel = uuid.uuid4().hex
         payload = self.gw_client.build_migration_payload(

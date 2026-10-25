@@ -7,7 +7,7 @@ import json
 from typing import Any, Callable, Dict
 from nicegui import ui
 
-from fiber.dev.console.state import state, refs
+from fiber.infra.account.state import state, refs
 from xphi.watcher.plane.emitter import get_emitter
 
 _emitter = get_emitter(name="console.ui.diag", phase="UI_DIAG", mode="RAW")
@@ -149,7 +149,7 @@ async def snapshot(reason: str = "manual") -> Dict[str, Any]:
 
     state_dump = {
         "redis_online": state.pipeline.redis_online,
-        "finops_fuel": state.finops.current_fuel,
+        "finops_fuel": state.finops.ledger_balance,
         "xray_latencies": list(state.security.xray_latencies),
         "cli_buffered": len(refs.cli_buffer),
         "pubsub_buffered": len(refs.pubsub_buffer),
