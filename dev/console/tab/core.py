@@ -6,7 +6,7 @@ from nicegui import ui
 
 from fiber.infra.ops.account.state import state, refs
 from fiber.gateway.bridge.cli import run_fiber_cli
-from fiber.dev.console.action import gov, pipeline
+from fiber.dev.console.action import gov, pipeline, oob
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
@@ -23,7 +23,7 @@ def _resolve_accounts_registry_path() -> Path:
         return resolve_path("anchor") / "sign" / "local_accounts.json"
 
 class LLMGuardrailTab(StudioTab):
-    title = "LLM Guardrail"
+    title = "Guardrail"
     left_header = "Guardrail"
     right_header = "Pipeline & Interceptor"
 
@@ -89,7 +89,6 @@ class LLMGuardrailTab(StudioTab):
                     lambda tot: f"🪙 Tokens: {int(getattr(s, 'live_stream_tokens', 0)):,} live / {int(tot or 0):,} total",
                 ).classes("text-xs font-mono font-bold text-amber-300")
 
-            # 우측: PlaneRegulator 실시간 이벤트 밀도(Density) 및 폭주(Burst) 인디케이터
             ui.badge().bind_text_from(
                 s,
                 "plane_density",
@@ -115,10 +114,10 @@ class LLMGuardrailTab(StudioTab):
 
         with kit.bar():
             for key, title, slot in [
-                ("cache", "1. EdgeCache", "PRE_TRANSLATE"),
-                ("router", "2. ONNX Router", "PRE_TRANSLATE"),
-                ("guardrail", "3. Secret Guard", "POST_TRANSLATE"),
-                ("fuel", "4. FuelBreaker", "STREAM_IO"),
+                ("cache", "EdgeCache", "PRE_TRANSLATE"),
+                ("router", "ONNX Router", "PRE_TRANSLATE"),
+                ("guardrail", "Secret Guard", "POST_TRANSLATE"),
+                ("fuel", "FuelBreaker", "STREAM_IO"),
             ]:
                 with ui.card().classes("bg-slate-800 border border-slate-700 p-2 w-36 text-center") as c:
                     refs.slot_cards[key] = c
@@ -134,20 +133,36 @@ class LLMGuardrailTab(StudioTab):
             x_max=1.0,
         )
 
-class ModelPriceTab(StudioTab):
+class ModelNSettingTab(StudioTab):
     title = "Model & Setting"
     left_header = "Model Pricing"
-    right_header = "Unit Parity & Settlement Reference"
-    ratio = 58
+    right_header = "Settings"
+    ratio = 56
 
     def compose_left(self) -> None:
         from fiber.infra.ops.finops.exchange import default_exchange
-        from fiber.infra.ops.finops.cost.registry import REGISTRY_ROOT, DEFAULT_REGISTRY_FILENAME
+        from fiber.infra.ops.finops.model.filter import CORE_KEYWORDS
+        from fiber.infra.ops.finops.cost.registry import (
+            ModelCostRegistry,
+            REGISTRY_ROOT,
+            DEFAULT_REGISTRY_FILENAME,
+        )
 
-        with kit.row(align="items-center justify-between"):
-            ui.label(
-                "Supply Par: $1.00 = 1,000,000 Fuel (1M)  |  Local/Fallback Par: 1 Token = 1.0 Fuel"
-            ).classes("text-[11px] font-mono font-bold text-emerald-400")
+        total_mapped = len(getattr(ModelCostRegistry, "_model_cost", {}) or {})
+        usd_rate = getattr(default_exchange, "usd_rate", 1_000_000)
+
+        with kit.bar():
+            with ui.row().classes("items-center gap-1.5 no-wrap"):
+                ui.badge(f"Models: {total_mapped:,}").props("color=slate-8 text-color=cyan-3").classes(
+                    "text-[10px] font-mono font-bold px-1.5 py-0.5"
+                )
+                ui.badge(f"roviders: {len(CORE_KEYWORDS)}").props("color=slate-8 text-color=emerald-3").classes(
+                    "text-[10px] font-mono font-bold px-1.5 py-0.5"
+                )
+                ui.badge(f"$1 = {usd_rate:,} Fuel (1:1 Local Par)").props(
+                    "color=slate-9 text-color=amber-3"
+                ).classes("text-[10px] font-mono border border-amber-500/40 px-1.5 py-0.5")
+
             kit.file_link(
                 REGISTRY_ROOT / DEFAULT_REGISTRY_FILENAME,
                 label=DEFAULT_REGISTRY_FILENAME,
@@ -170,83 +185,63 @@ class ModelPriceTab(StudioTab):
         ).classes("w-full flex-grow text-xs font-mono bg-slate-950")
 
     def compose_right(self) -> None:
-        from fiber.infra.ops.finops.exchange import default_exchange
-        from fiber.infra.ops.finops.model.filter import CORE_KEYWORDS
-        from fiber.infra.ops.finops.cost.registry import ModelCostRegistry
-
-        total_mapped = len(getattr(ModelCostRegistry, "_model_cost", {}) or {})
-        usd_rate = getattr(default_exchange, "usd_rate", 1_000_000)
-        token_par = getattr(default_exchange, "token_par", 1.0)
-
-        # 상단 레지스트리 및 기준 환율 요약 바
+        s = state.security
         with kit.bar():
-            ui.badge(f"📚 Listed Models: {total_mapped:,}").props(
-                "color=slate-8 text-color=cyan-3"
-            ).classes("text-[11px] font-mono font-bold px-2 py-0.5")
-            ui.badge(f"🔌 Active Providers: {len(CORE_KEYWORDS)}").props(
-                "color=slate-8 text-color=emerald-3"
-            ).classes("text-[11px] font-mono font-bold px-2 py-0.5")
-            ui.badge(f"1 USD = {usd_rate:,} Fuel").props(
-                "color=slate-9 text-color=amber-3"
-            ).classes("text-[11px] font-mono border border-amber-500/40 px-2 py-0.5")
-
-        # 기본 단위 환산표 (Micro-Dollar & Token Par Reference Cards)
-        ui.label("Unit Parity & Exchange Reference").classes(
-            "text-[11px] font-bold text-slate-400 shrink-0"
-        )
-        unit_specs = [
-            ("💵 $1.00 USD", f"{usd_rate:,} Fuel", "Mandate Minting Supply (1M Fuel)"),
-            ("🪙 $0.001 (1 m$)", f"{usd_rate // 1000:,} Fuel", "1K Baseline Token Equivalent"),
-            ("🔬 $0.000001 (1 μ$)", "1.0 Fuel", "Atomic Ledger Unit ($1 / 1M Tokens)"),
-            ("🏠 1 Local Token", f"{token_par:.1f} Fuel", "Unmapped / Local Model Fallback (1:1)"),
-        ]
-        with ui.element("div").classes("grid grid-cols-2 gap-1.5 w-full shrink-0"):
-            for src_unit, dst_fuel, desc in unit_specs:
-                with ui.column().classes("bg-slate-900/90 border border-slate-800 rounded px-2.5 py-1.5 gap-0"):
-                    with ui.row().classes("w-full items-center justify-between no-wrap"):
-                        ui.label(src_unit).classes("text-xs font-mono font-bold text-slate-200")
-                        ui.label(f"➔ {dst_fuel}").classes("text-xs font-mono font-extrabold text-emerald-400")
-                    ui.label(desc).classes("text-[10px] font-mono text-slate-400 truncate")
-
-        # 파이프라인 2단계(Dual-Mode) 차감 수식 레퍼런스
-        ui.label("Dual-Mode Settlement & Equivalence Rules (`FuelExchange`)").classes(
-            "text-[11px] font-bold text-cyan-400 mt-1 shrink-0"
-        )
-        with ui.column().classes(
-            "w-full bg-slate-950 border border-slate-800 rounded p-2 gap-1 text-[11px] font-mono shrink-0"
-        ):
-            ui.label("• Rate Par    : Price ($ / 1M Tokens) == Burn Rate (Fuel / Token)").classes("text-amber-300")
-            ui.label("• Hot-Path Stream: FuelBreaker meters live tokens 1:1 via in-memory tiktoken").classes(
-                "text-slate-300"
+            ui.label().bind_text_from(s, "gateway_health_badge_text").classes(
+                "text-xs font-mono font-bold text-emerald-400"
             )
-            ui.label("• Priced Models  : Consumed Fuel = ceil(Billed_USD × 1,000,000)").classes("text-emerald-300")
-            ui.label("• Local Fallback : Consumed Fuel = ceil(Total_Tokens × 1.0)  [when cost == $0.0]").classes(
-                "text-cyan-300"
+            ui.label().bind_text_from(s, "slack_oob_badge_text").classes(
+                "text-[11px] font-mono font-bold text-cyan-300"
             )
 
-        # 모델 티어별 1,000 토큰 호출 시 Fuel 소모량 비교 바 차트
-        ui.label("Fuel Burn per 1,000 Output Tokens by Model Tier:").classes(
-            "text-xs text-slate-400 mt-0.5 shrink-0"
-        )
-        kit.bar_chart(
-            categories=[
-                "Frontier ($15/1M)",
-                "Flagship ($10/1M)",
-                "Local 1:1 Par ($0)",
-                "Flash Tier ($0.6/1M)",
-            ],
-            data=[
-                {"value": 15000, "itemStyle": {"color": "#f43f5e"}},
-                {"value": 10000, "itemStyle": {"color": "#f59e0b"}},
-                {"value": 1000, "itemStyle": {"color": "#06b6d4"}},
-                {"value": 600, "itemStyle": {"color": "#10b981"}},
-            ],
-            formatter="{c} Fuel",
-        )
+        ui.label("Slack HITL Setting").classes("text-xs font-bold text-amber-400 mt-0.5 shrink-0")
+        with kit.row():
+            kit.text("Slack Channel", s, "slack_channel", width="w-32")
+            kit.text("Slack UID ('*')", s, "slack_user_map", width="w-28")
+            kit.text("Mapped SPIFFE ID", s, "admin_user")
 
+        with kit.bar():
+            ui.label("TOTP").classes("text-xs font-mono text-slate-300")
+            kit.switch("Require TOTP", s, "oob_require_totp", color="cyan")
+
+        ui.label("Test HITL").classes("text-xs font-bold text-slate-400 mt-0.5 shrink-0")
+        with kit.row():
+            kit.button(
+                "Test 'drop_table' Message",
+                lambda: oob.open_hitl_modal(
+                    "postgres-prod-db.drop_table", {"table": "customer_ledgers", "cascade": True}
+                ),
+                color="amber",
+                text_color="black",
+                flex=True,
+            )
+            kit.button(
+                "Dispatch Slack",
+                lambda: oob.dispatch_slack_oob(
+                    "postgres-prod-db", "drop_table", {"table": "customer_ledgers", "cascade": True}
+                ),
+                color="indigo",
+                outline=True,
+                flex=True,
+            )
+
+        with ui.expansion("Unit Parity (FuelExchange)", icon="info").props(
+            "dense dark header-class='text-xs font-mono text-cyan-400 bg-slate-900/80 rounded px-2'"
+        ).classes("w-full border border-slate-800 rounded bg-slate-950/80 mt-1"):
+            with ui.column().classes("w-full p-2 gap-1 text-[11px] font-mono"):
+                ui.label("• $1.00 USD = 1,000,000 Fuel  |  $0.000001 (1 μ$) = 1.0 Fuel").classes("text-emerald-300")
+                ui.label("• Rate Par     : Price ($ / 1M Tokens) == Burn Rate (Fuel / Token)").classes("text-amber-300")
+                ui.label("• Priced Models: Consumed Fuel = ceil(Billed_USD × 1,000,000)").classes("text-slate-300")
+                ui.label("• Local Models : Consumed Fuel = ceil(Total_Tokens × 1.0) [when $0.0]").classes("text-cyan-300")
+
+        with kit.footer():
+            kit.button("KeyGen", oob.init_node_keys, color="slate-4", outline=True)
+            kit.button("Enroll TOTP(QR)", oob.enroll_admin_totp, color="cyan", flex=True)
+            kit.button("Verify", oob.verify_admin_totp, color="emerald", outline=True, flex=True)
+            kit.button("Revoke", oob.revoke_admin_totp, color="red", outline=True)
 
 def build_tabs() -> list[StudioTab]:
-    return [McpGatewayTab(), LLMGuardrailTab(), FinOpsTab(), VcrTab(), ModelPriceTab()]
+    return [McpGatewayTab(), LLMGuardrailTab(), FinOpsTab(), VcrTab(), ModelNSettingTab()]
 
 
 def build_modals() -> list[ModalTemplate]:

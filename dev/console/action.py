@@ -18,11 +18,6 @@ USD_TO_FUEL_RATE = 1_000_000
 
 
 def _sync_fuel_state(fuel_amount: int, *, update_quota: bool = False) -> float:
-    """
-    현재 남은 연료(ledger_balance)를 갱신하고 USD 환산액($1 = 1,000,000 Fuel)을 반환한다.
-    - update_quota=True (예산 설정 / Top-Up 시): 할당 예산 사본(fuel_quota) 및 기준 달러(jwt_usd)도 함께 갱신한다.
-    - update_quota=False (스트림 차감 / Revoke 0 초기화 시): fuel_quota 사본은 보존하여 비교 및 이후 Re-Sync 기준값으로 유지한다.
-    """
     f = state.finops
     val = max(0, int(fuel_amount))
     f.ledger_balance = val
@@ -34,13 +29,9 @@ def _sync_fuel_state(fuel_amount: int, *, update_quota: bool = False) -> float:
     elif getattr(f, "fuel_quota", 0) <= 0 and val > 0:
         # 초기 구동 시 fuel_quota가 0으로 비어있는데 잔액이 존재하면 잔액으로 기준선 초기화
         f.fuel_quota = val
-
     return val / USD_TO_FUEL_RATE
 
-
 class OobActionBridge:
-    """Binds Node Identity (`fiber sign`), TOTP Vault, Slack HITL 202, and MCP Topology to `state.security`."""
-
     @staticmethod
     def normalize_spiffe(raw_spiffe: str) -> str:
         raw = raw_spiffe.strip()
@@ -184,10 +175,6 @@ class OobActionBridge:
             ui.notify(f"Slack OOB Error: {e}", type="warning")
 
     async def open_hitl_modal(self, tool: str, args: dict) -> None:
-        """
-        콘솔 UI의 HITL 모달 및 상태 로그만 갱신
-        (실제 Slack OOB 메시지 발송은 serv.gateway 및 소유권을 가진 SlackHitlBridge에 위임하여 이중 발송 차단)
-        """
         if refs.hitl_code:
             refs.hitl_code.set_content(json.dumps({"tool": tool, "args": args, "state": "HTTP 202 Parked"}, indent=2))
         if refs.hitl_dialog:
@@ -277,9 +264,7 @@ class OobActionBridge:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
 
-
 class GovActionBridge:
-    """Binds LocalAccountManager & EdDSA Mandate JWT operations to `state.finops`."""
     def __init__(self, oob: OobActionBridge) -> None:
         self._oob = oob
         self._restore_task: asyncio.Task | None = None
@@ -345,7 +330,6 @@ class GovActionBridge:
                 await run_fiber_cli("account", "--tenant", f.tenant_id, "status")
 
     async def issue_account_jwt(self) -> None:
-        # 사용자가 수동으로 예산을 변경하면 기존의 10초 복구 타이머 취소
         self._cancel_restore_task()
         f = state.finops
         spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
@@ -353,15 +337,11 @@ class GovActionBridge:
             if spiffe_arg:
                 self._oob.sync_spiffe_and_check_totp(emit_warning=True)
 
-            # 1. REVOKE 선택 시: 잔액 모두 0으로 소각(revoke_account_kill)과 동일하게 직결 처리
             if f.jwt_op == "REVOKE":
                 await self.revoke_account_kill()
                 return
 
-            # 2. PROVISION 또는 SET_BUDGET은 예산 일치(SYNC_QUOTA)로 내부 정규화
             effective_op = "SYNC_QUOTA" if f.jwt_op in ("PROVISION", "SET_BUDGET") else f.jwt_op
-
-            # 3. 버전 자동 단조 증가: 현재 워처/상태 버전 중 높은 값에서 +1 증가
             from fiber.infra.ops.finops.watcher import default_finops_watcher
             curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
             next_ver = max(curr_watcher_ver, f.policy_ver) + 1
@@ -405,11 +385,9 @@ class GovActionBridge:
             await run_fiber_cli(*args)
 
     async def revoke_account_kill(self) -> None:
-        """코어 UTXO 원장 잔액(ledger_balance)을 모두 0으로 소각(Burn)하되, 본래 할당 예산(fuel_quota)은 유지한다."""
         self._cancel_restore_task()
         f = state.finops
         spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
-        # REVOKE 시그널이 비동기로 날아가더라도 본래 할당 예산(fuel_quota)이 0으로 초기화되지 않도록 보존
         preserved_quota = f.fuel_quota
 
         try:
@@ -417,23 +395,16 @@ class GovActionBridge:
             curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
             next_ver = max(curr_watcher_ver, f.policy_ver) + 1
 
-            if hasattr(console_act, "revoke_account_mandate"):
-                res = await console_act.revoke_account_mandate(
-                    f.tenant_id,
-                    policy_ver=next_ver,
-                    spiffe_id=spiffe_arg,
-                )
-                burn_tx = res.burn_tx_hash
-                applied_ver = res.status.policy_ver
-            else:
-                from fiber.infra.ops.account.manager import LocalAccountManager, RevokeCommand
-                async with LocalAccountManager(tenant_id=f.tenant_id) as mgr:
-                    raw_res = await mgr.revoke(RevokeCommand(policy_ver=next_ver))
-                burn_tx = raw_res.burn_tx_hash if hasattr(raw_res, "burn_tx_hash") else raw_res.get("burn_tx_hash")
-                applied_ver = next_ver
+            res = await console_act.revoke_account_mandate(
+                f.tenant_id,
+                policy_ver=next_ver,
+                spiffe_id=spiffe_arg,
+            )
+            burn_tx = res.burn_tx_hash
+            applied_ver = res.status.policy_ver
 
             _sync_fuel_state(0, update_quota=False)
-            f.fuel_quota = preserved_quota  # 본래 할당 예산 고정
+            f.fuel_quota = preserved_quota
             f.policy_ver = applied_ver
             f.last_op = "REVOKE"
             f.stream_active = False
@@ -455,24 +426,14 @@ class GovActionBridge:
             await run_fiber_cli("account", "--tenant", f.tenant_id, "kill")
 
     async def temporary_stream_kill(self, cooldown_sec: float = 10.0) -> None:
-        """
-        LLM STREAM BREAK (10s)
-        - 브레이크 직전의 남은 잔액(restore_fuel)과 본래 할당 예산(saved_quota)을 각각 독립 백업
-        - 즉시 REVOKE(0 Fuel)로 스트림을 절단한 뒤, 10초 후 본래 할당 예산(saved_quota)은 건드리지 않고
-          직전 잔액(restore_fuel)만 원장 및 워처에 원복한다.
-        """
         self._cancel_restore_task()
         f = state.finops
 
-        # 1. 브레이크 직전의 '남은 연료(restore_fuel)'와 '본래 할당 예산(saved_quota)'을 분리 백업
         saved_quota = f.fuel_quota if f.fuel_quota > 0 else f.ledger_balance
         restore_fuel = f.ledger_balance if f.ledger_balance > 0 else saved_quota
 
-        # 2. 즉시 원장 소각 및 Pub/Sub REVOKE 발동하여 스트림 절단
         await self.revoke_account_kill()
-        # revoke_account_kill 직후에도 본래 할당 예산은 saved_quota로 엄격히 유지
         f.fuel_quota = saved_quota
-
         if restore_fuel <= 0:
             return
 
@@ -486,11 +447,8 @@ class GovActionBridge:
                     )
                     await asyncio.sleep(1.0)
 
-                # 3. 10초 경과 후: LEDGER_SYNC(쿼터 변경)를 유발하는 JWT 발행 대신
-                #    소각되었던 직전 잔액(restore_fuel)만큼만 코어 UTXO 원장에 직접 재할당(Allocate)
                 from fiber.infra.ops.finops.watcher import default_finops_watcher
                 from xphi.node.space.tunnel.factory import TunnelFactory
-
                 curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
                 next_ver = max(curr_watcher_ver, f.policy_ver) + 1
                 spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
@@ -510,7 +468,6 @@ class GovActionBridge:
                         else restore_fuel
                     )
 
-                # 워처 캐시 및 다른 프로세스(스트림 하네스 등)에도 복원된 잔액 브로드캐스트
                 default_finops_watcher.local_budget_cache[f.tenant_id] = float(restored_balance)
                 default_finops_watcher.policy_versions[f.tenant_id] = next_ver
                 try:
@@ -560,8 +517,6 @@ class GovActionBridge:
         self._restore_task = asyncio.create_task(_cooldown_and_restore())
 
 class PipelineActionBridge:
-    """Binds FuelBreaker stream simulation, Guardrail X-Ray, and VCR benchmarks to Console UI."""
-
     def trigger_kill_switch(self) -> None:
         f = state.finops
         f.stream_active = False
@@ -588,8 +543,6 @@ class PipelineActionBridge:
 
         try:
             from fiber.infra.ops.finops.watcher import default_finops_watcher
-
-            # 기준 예산(fuel_quota 또는 현재 잔액)의 약 15%씩 청크당 소모하여 시각적 차감 곡선 형성
             baseline = max(f.fuel_quota, f.ledger_balance, 1_000_000)
             burn_step = max(100_000, int(baseline * 0.15))
 
@@ -599,7 +552,6 @@ class PipelineActionBridge:
                 await asyncio.sleep(0.35)
                 new_balance = max(0, f.ledger_balance - burn_step)
 
-                # update_quota=False로 호출하여 ledger_balance만 줄이고 fuel_quota(기준선)는 유지
                 _sync_fuel_state(new_balance, update_quota=False)
                 default_finops_watcher.local_budget_cache[f.tenant_id] = float(f.ledger_balance)
                 f.push_chart_point(time.strftime("%H:%M:%S"))
@@ -610,7 +562,6 @@ class PipelineActionBridge:
                         f"Balance: {f.ledger_balance:,} / {f.fuel_quota:,} Fuel"
                     )
 
-                # [정정] 잔액(ledger_balance)이 0 이하로 완전 소진되었을 때만 FuelBreaker 차단 발동
                 if f.ledger_balance <= 0:
                     refs.push_pubsub(
                         "finops:control_plane",
