@@ -10,7 +10,7 @@ from fiber.infra.ops.account.state import (
     save_state_to_disk,
     state,
 )
-from fiber.dev.console.action import gov
+from fiber.dev.console.manager.finops import finops_manager
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.kit as kit
 from xphi.node.space.bind.resolver import resolve_path
@@ -62,7 +62,7 @@ def build_header() -> None:
                 with ui.row().classes("items-center gap-2.5"):
                     kit.button(
                         "🚨 LLM STREAM BREAK (10s)",
-                        gov.temporary_stream_kill,
+                        finops_manager.temporary_stream_kill,
                         color="red",
                     ).classes("font-bold px-3").tooltip(
                         "Sever active streams immediately (0 Fuel) and auto-restore previous balance after 10s"

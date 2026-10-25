@@ -5,7 +5,8 @@ from pathlib import Path
 from nicegui import ui
 
 from fiber.gateway.bridge.cli import run_fiber_cli
-from fiber.dev.console.action import gov, pipeline
+from fiber.dev.console.manager.finops import finops_manager
+from fiber.dev.console.action import pipeline
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
 from fiber.infra.ops.account.state import state, refs, USD_TO_FUEL_RATE
@@ -35,7 +36,7 @@ class FinOpsTab(StudioTab):
         f = state.finops
         spiffe_args = ["--spiffe", f.spiffe_id.strip()] if f.spiffe_id and f.spiffe_id.strip() else []
         await run_fiber_cli("account", "--tenant", f.tenant_id, *spiffe_args, "demo")
-        await gov.refresh_account_status(silent=True)
+        await finops_manager.refresh_account_status(silent=True)
 
     @staticmethod
     async def _resync_balance_to_saved_quota() -> None:
@@ -44,7 +45,7 @@ class FinOpsTab(StudioTab):
         if f.fuel_quota > 0:
             f.jwt_usd = round(f.fuel_quota / USD_TO_FUEL_RATE, 2)
         f.jwt_op = "SYNC_QUOTA"
-        await gov.issue_account_jwt()
+        await finops_manager.issue_account_jwt()
 
     def compose_left(self) -> None:
         f = state.finops
@@ -80,13 +81,13 @@ class FinOpsTab(StudioTab):
             kit.number("Budget ($)", f, "jwt_usd", min_val=1.0, max_val=500.0, step=5.0, width="w-24")
             kit.button(
                 "Apply",
-                gov.issue_account_jwt,
+                finops_manager.issue_account_jwt,
                 color="emerald",
                 flex=True,
             ).tooltip("Update Ledger Fuel Balance via signed EdDSA mandate")
 
         with kit.row(gap="gap-1.5"):
-            kit.button("🚨 Set Zero (Kill)", gov.revoke_account_kill, color="red", outline=True).tooltip(
+            kit.button("🚨 Set Zero (Kill)",finops_manager.revoke_account_kill, color="red", outline=True).tooltip(
                 "Immediately burn all remaining fuel to 0 and sever active streams"
             )
 

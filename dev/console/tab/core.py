@@ -6,7 +6,9 @@ from nicegui import ui
 
 from fiber.infra.ops.account.state import state, refs
 from fiber.gateway.bridge.cli import run_fiber_cli
-from fiber.dev.console.action import gov, pipeline, oob
+from fiber.dev.console.manager.finops import finops_manager
+from fiber.dev.console.action import pipeline, oob
+
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab

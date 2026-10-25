@@ -1,6 +1,4 @@
 # fiber.gateway.bridge.cli
-## @lineage: fiber.phase.bridge.cli
-## @lineage: fiber.dev.console.bridge.cli
 from __future__ import annotations
 
 import asyncio
@@ -47,7 +45,8 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
     if not args:
         return
 
-    from fiber.dev.console.action import oob, gov
+    from fiber.dev.console.action import oob
+    from fiber.dev.console.manager.finops import finops_manager
 
     domain_cmd = args[0]
     if domain_cmd == "connect":
@@ -57,7 +56,7 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
         await oob.refresh_sign_status(silent=True)
         return
     if domain_cmd == "account":
-        await gov.refresh_account_status(silent=True)
+        await finops_manager.refresh_account_status(silent=True)
 
     f = state.finops
     try:

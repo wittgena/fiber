@@ -11,51 +11,24 @@ from nicegui import ui
 import orjson
 
 import fiber.gateway.bridge.console as console_act
-from fiber.infra.ops.account.state import state, refs, save_state_to_disk
+from fiber.infra.ops.account.state import state, refs
 import fiber.dev.console.ui.diag as diag
-
-USD_TO_FUEL_RATE = 1_000_000
-
-
-def _sync_fuel_state(fuel_amount: int, *, update_quota: bool = False) -> float:
-    f = state.finops
-    val = max(0, int(fuel_amount))
-    f.ledger_balance = val
-
-    if update_quota:
-        f.fuel_quota = val
-        if val > 0:
-            f.jwt_usd = round(val / USD_TO_FUEL_RATE, 2)
-    elif getattr(f, "fuel_quota", 0) <= 0 and val > 0:
-        # 초기 구동 시 fuel_quota가 0으로 비어있는데 잔액이 존재하면 잔액으로 기준선 초기화
-        f.fuel_quota = val
-    return val / USD_TO_FUEL_RATE
+from fiber.dev.console.manager.finops import (
+    FinOpsConsoleManager,
+    finops_manager,
+    USD_TO_FUEL_RATE,
+)
 
 class OobActionBridge:
+    def __init__(self, finops: FinOpsConsoleManager) -> None:
+        self._finops = finops
+
     @staticmethod
     def normalize_spiffe(raw_spiffe: str) -> str:
-        raw = raw_spiffe.strip()
-        return "" if not raw else (raw if raw.startswith("spiffe://") else f"spiffe://self/{raw}")
+        return FinOpsConsoleManager.normalize_spiffe(raw_spiffe)
 
     def sync_spiffe_and_check_totp(self, emit_warning: bool = True) -> None:
-        f, s = state.finops, state.security
-        if not f.spiffe_id or not f.spiffe_id.strip():
-            f.totp_enrolled = False
-            return
-
-        norm_id = self.normalize_spiffe(f.spiffe_id)
-        f.spiffe_id = norm_id
-        s.admin_user = norm_id
-        f.totp_enrolled = norm_id in s.enrolled_admins
-
-        if not f.totp_enrolled and emit_warning:
-            warn_msg = (
-                f"⚠️ [AccountRegistry] SPIFFE '{norm_id}' bound to '{f.tenant_id}', "
-                f"but TOTP is not enrolled (Enroll in MCP Gateway tab)."
-            )
-            refs.push_cli(f"  {warn_msg}")
-            refs.push_pubsub("finops:warning", f"UNENROLLED_SPIFFE tenant={f.tenant_id} spiffe={norm_id}")
-            ui.notify(warn_msg, type="warning")
+        self._finops.sync_spiffe_and_check_totp(emit_warning=emit_warning)
 
     async def refresh_sign_status(self, silent: bool = False) -> None:
         s = state.security
@@ -69,10 +42,12 @@ class OobActionBridge:
             s.enrolled_admins = [r.user_id for r in data.enrolled_admins]
             s.enrolled_admins_count = len(s.enrolled_admins)
             s.sign_status_json = data.model_dump_orjson(option=orjson.OPT_INDENT_2)
-            self.sync_spiffe_and_check_totp(emit_warning=False)
+            self._finops.sync_spiffe_and_check_totp(emit_warning=False)
 
             if not silent:
-                refs.push_cli(f"$ fiber sign status\n  PubKey={s.node_pubkey[:16]}... | Admins={s.enrolled_admins_count}")
+                refs.push_cli(
+                    f"$ fiber sign status\n  PubKey={s.node_pubkey[:16]}... | Admins={s.enrolled_admins_count}"
+                )
                 ui.notify("Keychain & Audit DB Status Refreshed", type="info")
         except Exception as e:
             diag.exception("Failed to refresh sign status", exc=e, silent=silent)
@@ -264,319 +239,18 @@ class OobActionBridge:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
 
-class GovActionBridge:
-    def __init__(self, oob: OobActionBridge) -> None:
-        self._oob = oob
-        self._restore_task: asyncio.Task | None = None
-    
-    def _cancel_restore_task(self) -> None:
-        """진행 중인 10초 자동 복구 타이머가 있다면 안전하게 취소한다."""
-        if self._restore_task and not self._restore_task.done():
-            self._restore_task.cancel()
-        self._restore_task = None
-
-    async def refresh_account_status(self, silent: bool = False) -> None:
-        f = state.finops
-        try:
-            res = await console_act.fetch_account_status(f.tenant_id)
-            revoke_ops = {"REVOKE", "REVOKE_ZERO", "LEDGER_BURN_AND_REVOKE", "ISSUE_JWT(REVOKE)", "MANDATE(REVOKE)"}
-            if (
-                silent
-                and res.ledger_balance == 0
-                and f.ledger_balance > 0
-                and (res.last_op not in revoke_ops)
-                and (f.last_op not in revoke_ops)
-            ):
-                if hasattr(console_act, "allocate_account_fuel"):
-                    alloc_res = await console_act.allocate_account_fuel(f.tenant_id, amount=f.ledger_balance)
-                    res = alloc_res.status
-                else:
-                    target_usd = round(f.ledger_balance / USD_TO_FUEL_RATE, 6)
-                    await console_act.issue_account_mandate(
-                        f.tenant_id,
-                        budget_usd=target_usd,
-                        op="SYNC_QUOTA",
-                        policy_ver=max(1, f.policy_ver),
-                        sync_ledger=True,
-                    )
-                    res = await console_act.fetch_account_status(f.tenant_id)
-
-            if res.last_op:
-                f.last_op = res.last_op
-            if res.spiffe_id:
-                f.spiffe_id = res.spiffe_id
-            self._oob.sync_spiffe_and_check_totp(emit_warning=not silent)
-
-            should_raise_quota = res.ledger_balance > getattr(f, "fuel_quota", 0)
-            bal_usd = _sync_fuel_state(res.ledger_balance, update_quota=should_raise_quota)
-            f.policy_ver = max(1, res.policy_ver)
-            f.push_chart_point()
-            save_state_to_disk(force=False)
-
-            if not silent:
-                quota_usd = f.fuel_quota / USD_TO_FUEL_RATE
-                refs.push_cli(
-                    f"$ fiber account --tenant {f.tenant_id} status\n  {json.dumps(res.raw_status, ensure_ascii=False)}"
-                )
-                ui.notify(
-                    f"Synced '{f.tenant_id}': Balance={f.ledger_balance:,} / Quota={f.fuel_quota:,} Fuel "
-                    f"(${bal_usd:,.2f} / ${quota_usd:,.2f}, v{f.policy_ver})",
-                    type="info",
-                )
-        except Exception:
-            if not silent:
-                from fiber.gateway.bridge.cli import run_fiber_cli
-
-                await run_fiber_cli("account", "--tenant", f.tenant_id, "status")
-
-    async def issue_account_jwt(self) -> None:
-        self._cancel_restore_task()
-        f = state.finops
-        spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
-        try:
-            if spiffe_arg:
-                self._oob.sync_spiffe_and_check_totp(emit_warning=True)
-
-            if f.jwt_op == "REVOKE":
-                await self.revoke_account_kill()
-                return
-
-            effective_op = "SYNC_QUOTA" if f.jwt_op in ("PROVISION", "SET_BUDGET") else f.jwt_op
-            from fiber.infra.ops.finops.watcher import default_finops_watcher
-            curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
-            next_ver = max(curr_watcher_ver, f.policy_ver) + 1
-
-            res = await console_act.issue_account_mandate(
-                f.tenant_id,
-                budget_usd=f.jwt_usd,
-                op=effective_op,
-                policy_ver=next_ver,
-                sync_ledger=True,
-                spiffe_id=spiffe_arg,
-            )
-
-            bal_usd = _sync_fuel_state(res.balance, update_quota=True)
-            f.policy_ver = res.policy_ver
-            f.last_op = effective_op
-            f.last_jwt_preview = f"{res.jwt[:42]}... (v{res.policy_ver}, {effective_op})"
-            f.push_chart_point()
-            save_state_to_disk(force=True)
-
-            action_desc = "Top-Up (+Added)" if effective_op == "TOP_UP" else "Synced to Quota"
-            refs.push_cli(
-                f"  ✓ [EdDSA JWT | {action_desc}] {f.last_jwt_preview} -> "
-                f"Balance={f.ledger_balance:,} / Quota={f.fuel_quota:,} Fuel (${bal_usd:,.2f})"
-            )
-            refs.push_pubsub(
-                "finops:control_plane",
-                f"EVENT={effective_op} tenant={f.tenant_id} balance={f.ledger_balance} quota={f.fuel_quota} v={res.policy_ver}",
-            )
-            ui.notify(
-                f"{action_desc}: {f.ledger_balance:,} Fuel (${bal_usd:,.2f}, v{res.policy_ver})",
-                type="positive",
-            )
-        except Exception:
-            from fiber.gateway.bridge.cli import run_fiber_cli
-
-            args = ["account", "--tenant", f.tenant_id]
-            if spiffe_arg:
-                args.extend(["--spiffe", spiffe_arg])
-            args.extend(["jwt", "--usd", str(f.jwt_usd), "--op", f.jwt_op])
-            await run_fiber_cli(*args)
-
-    async def revoke_account_kill(self) -> None:
-        self._cancel_restore_task()
-        f = state.finops
-        spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
-        preserved_quota = f.fuel_quota
-
-        try:
-            from fiber.infra.ops.finops.watcher import default_finops_watcher
-            curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
-            next_ver = max(curr_watcher_ver, f.policy_ver) + 1
-
-            res = await console_act.revoke_account_mandate(
-                f.tenant_id,
-                policy_ver=next_ver,
-                spiffe_id=spiffe_arg,
-            )
-            burn_tx = res.burn_tx_hash
-            applied_ver = res.status.policy_ver
-
-            _sync_fuel_state(0, update_quota=False)
-            f.fuel_quota = preserved_quota
-            f.policy_ver = applied_ver
-            f.last_op = "REVOKE"
-            f.stream_active = False
-            f.stream_status_text = "🛑 ZERO BALANCE (REVOKED)"
-            f.push_chart_point()
-            save_state_to_disk(force=True)
-
-            refs.push_cli(
-                f"$ fiber account --tenant {f.tenant_id} kill -> BurnTx={burn_tx} | "
-                f"Balance=0 / Quota={f.fuel_quota:,} (v{f.policy_ver})"
-            )
-            refs.push_pubsub(
-                "finops:control_plane",
-                f"EVENT=REVOKE tenant={f.tenant_id} balance=0 quota={f.fuel_quota} v={f.policy_ver}",
-            )
-            ui.notify(f"🚨 Balance Zeroed & Revoked '{f.tenant_id}' (v{f.policy_ver})", type="negative")
-        except Exception:
-            from fiber.gateway.bridge.cli import run_fiber_cli
-            await run_fiber_cli("account", "--tenant", f.tenant_id, "kill")
-
-    async def temporary_stream_kill(self, cooldown_sec: float = 10.0) -> None:
-        self._cancel_restore_task()
-        f = state.finops
-
-        saved_quota = f.fuel_quota if f.fuel_quota > 0 else f.ledger_balance
-        restore_fuel = f.ledger_balance if f.ledger_balance > 0 else saved_quota
-
-        await self.revoke_account_kill()
-        f.fuel_quota = saved_quota
-        if restore_fuel <= 0:
-            return
-
-        async def _cooldown_and_restore() -> None:
-            try:
-                total_sec = max(1, int(cooldown_sec))
-                for remaining in range(total_sec, 0, -1):
-                    f.fuel_quota = saved_quota
-                    f.stream_status_text = (
-                        f"🛑 BREAK ({remaining}s) ➔ Restoring {restore_fuel:,} / {saved_quota:,} Fuel"
-                    )
-                    await asyncio.sleep(1.0)
-
-                from fiber.infra.ops.finops.watcher import default_finops_watcher
-                from xphi.node.space.tunnel.factory import TunnelFactory
-                curr_watcher_ver = default_finops_watcher.policy_versions.get(f.tenant_id, 0)
-                next_ver = max(curr_watcher_ver, f.policy_ver) + 1
-                spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
-
-                if hasattr(console_act, "allocate_account_fuel"):
-                    alloc_res = await console_act.allocate_account_fuel(
-                        f.tenant_id, amount=restore_fuel, spiffe_id=spiffe_arg
-                    )
-                    restored_balance = alloc_res.status.ledger_balance
-                else:
-                    from fiber.infra.ops.account.manager import AllocateCommand, LocalAccountManager
-                    async with LocalAccountManager(tenant_id=f.tenant_id) as mgr:
-                        alloc_raw = await mgr.allocate(AllocateCommand(amount=restore_fuel))
-                    restored_balance = (
-                        alloc_raw.status.ledger_balance
-                        if hasattr(alloc_raw, "status")
-                        else restore_fuel
-                    )
-
-                default_finops_watcher.local_budget_cache[f.tenant_id] = float(restored_balance)
-                default_finops_watcher.policy_versions[f.tenant_id] = next_ver
-                try:
-                    tunnel = await TunnelFactory.get_default()
-                    if tunnel:
-                        await tunnel.publish(
-                            "finops:control_plane",
-                            json.dumps({
-                                "type": "update_budget",
-                                "tenant_id": f.tenant_id,
-                                "fuel_budget": float(restored_balance),
-                                "finops": {
-                                    "op": "SYNC_QUOTA",
-                                    "budget_usd": round(restored_balance / USD_TO_FUEL_RATE, 6),
-                                    "exchange_rate": USD_TO_FUEL_RATE,
-                                    "policy_ver": next_ver,
-                                },
-                            }),
-                        )
-                except Exception:
-                    pass
-
-                f.ledger_balance = int(restored_balance)
-                f.fuel_quota = int(saved_quota)
-                f.policy_ver = next_ver
-                f.last_op = "AUTO_RESTORE"
-                f.stream_status_text = "♻️ RESTORED TO PRE-BREAK BALANCE"
-                f.push_chart_point()
-                save_state_to_disk(force=True)
-
-                refs.push_cli(
-                    f"  ♻️ [Auto-Restore after {total_sec}s] Balance={f.ledger_balance:,} / "
-                    f"Quota={f.fuel_quota:,} Fuel (v{f.policy_ver})"
-                )
-                refs.push_pubsub(
-                    "finops:control_plane",
-                    f"EVENT=AUTO_RESTORE tenant={f.tenant_id} balance={f.ledger_balance} quota={f.fuel_quota} v={f.policy_ver}",
-                )
-                ui.notify(
-                    f"♻️ Restored Balance: {f.ledger_balance:,} / Quota: {f.fuel_quota:,} Fuel",
-                    type="positive",
-                )
-            except asyncio.CancelledError:
-                pass
-            except Exception as e:
-                diag.exception("Auto-restore after temporary stream kill failed", exc=e)
-        self._restore_task = asyncio.create_task(_cooldown_and_restore())
 
 class PipelineActionBridge:
+    """LLM Guardrail X-Ray 및 VCR 테스트 스위트 실행 전담 브릿지 (FuelBreaker 스트림은 FinOps로 위임)"""
+
+    def __init__(self, finops: FinOpsConsoleManager) -> None:
+        self._finops = finops
+
     def trigger_kill_switch(self) -> None:
-        f = state.finops
-        f.stream_active = False
-        f.stream_status_text = "🛑 SEVERED MID-FLIGHT (HTTP 402)"
-        if refs.live_stream_log:
-            refs.live_stream_log.push("\n🛑 [FUEL BREAKER] Stream physically severed via aclose()!")
-            refs.live_stream_log.push("↩ Agent Response: 'HTTP 402: Remaining fuel balance exhausted. Halted safely.'")
-        ui.notify("🚨 Kill-Switch Activated! Active stream severed.", type="negative", position="top")
+        self._finops.trigger_kill_switch()
 
     async def simulate_stream(self) -> None:
-        f = state.finops
-        if f.stream_active:
-            return
-
-        if f.ledger_balance <= 0:
-            self.trigger_kill_switch()
-            return
-
-        f.stream_active = True
-        f.stream_status_text = "⚡ STREAMING (2,200 chunks/s)"
-        if refs.live_stream_log:
-            refs.live_stream_log.clear()
-            refs.live_stream_log.push("▶ [acompletion] model='llama_server/gemma-3-1b-it-Q4_K_M.gguf' stream=True")
-
-        try:
-            from fiber.infra.ops.finops.watcher import default_finops_watcher
-            baseline = max(f.fuel_quota, f.ledger_balance, 1_000_000)
-            burn_step = max(100_000, int(baseline * 0.15))
-
-            for i in range(1, 10):
-                if not f.stream_active:
-                    break
-                await asyncio.sleep(0.35)
-                new_balance = max(0, f.ledger_balance - burn_step)
-
-                _sync_fuel_state(new_balance, update_quota=False)
-                default_finops_watcher.local_budget_cache[f.tenant_id] = float(f.ledger_balance)
-                f.push_chart_point(time.strftime("%H:%M:%S"))
-
-                if refs.live_stream_log:
-                    refs.live_stream_log.push(
-                        f"chunk[{i}]: Coalesced window (100ms)... "
-                        f"Balance: {f.ledger_balance:,} / {f.fuel_quota:,} Fuel"
-                    )
-
-                if f.ledger_balance <= 0:
-                    refs.push_pubsub(
-                        "finops:control_plane",
-                        f"FUEL_EXHAUSTED (balance=0 / quota={f.fuel_quota:,})",
-                    )
-                    self.trigger_kill_switch()
-                    break
-            else:
-                f.stream_active = False
-                f.stream_status_text = "✓ STREAM COMPLETE"
-            save_state_to_disk(force=False)
-        except Exception as e:
-            f.stream_active = False
-            f.stream_status_text = "⚠️ STREAM ERROR"
-            diag.exception("Stream simulation crashed", exc=e)
+        await self._finops.simulate_stream()
 
     async def run_pipeline_xray(self, prompt: str) -> None:
         s = state.security
@@ -620,7 +294,7 @@ class PipelineActionBridge:
             proc = await asyncio.create_subprocess_exec(
                 sys.executable,
                 "-m",
-                "fiber.dev.gateway.tester",
+                "fiber.dev.ex.tester.gateway",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 env={**os.environ, "FIBER_CONSOLE_ACTIVE": "1"},
@@ -646,6 +320,5 @@ class PipelineActionBridge:
         )
         ui.notify(f"VCR Roundtrip Verified ({speedup}x speedup)!", type="positive")
 
-oob = OobActionBridge()
-gov = GovActionBridge(oob)
-pipeline = PipelineActionBridge()
+oob = OobActionBridge(finops_manager)
+pipeline = PipelineActionBridge(finops_manager)

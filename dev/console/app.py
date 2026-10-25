@@ -17,7 +17,9 @@ from fiber.infra.ops.account.state import (
     save_state_to_disk,
     state,
 )
-from fiber.dev.console.action import oob, gov
+from fiber.dev.console.manager.finops import finops_manager
+from fiber.dev.console.action import oob
+
 import fiber.dev.console.observer.plane as plane
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
@@ -30,7 +32,7 @@ _bg_tasks: list[asyncio.Task] = []
 
 async def _sync_initial_node_and_account_state() -> None:
     await oob.refresh_sign_status(silent=True)
-    await gov.refresh_account_status(silent=True)
+    await finops_manager.refresh_account_status(silent=True)
     await oob.scan_mcp_topology_and_health(silent=True)
 
 # fiber.dev.console.app 내 _flush_100ms_ringbuffer 수정 영역
