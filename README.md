@@ -2,7 +2,7 @@
 
 **AI Runtime Harness**
 
-Fiber is a local runtime harness that sits between your AI agents and everything they call—tools and models alike. A single loopback daemon (`127.0.0.1:8356`) fronts your MCP servers as a **Local MCP Gateway** with idempotent execution, pre-flight human approval, and FinOps quotas (**1.1**), and governs model calls through the same control plane via an OpenAI-compatible endpoint and a drop-in Python SDK with mid-stream kill-switches (**3.1**). Network traffic is captured into content-addressed fixtures for zero-cost deterministic replay and latency emulation (**3.2**), while heterogeneous LLM schemas are normalized declaratively (**3.3**)—achieving execution determinism and strict cost governance without changing your agent configs or business logic.
+Fiber is a local runtime harness that sits between your AI agents and everything they call—tools and models alike. A single loopback daemon (`127.0.0.1:8356`) fronts your MCP servers as a **Local MCP Gateway** with idempotent execution, pre-flight human approval, and governs model calls through the same control plane via an OpenAI-compatible endpoint and a drop-in Python SDK with mid-stream kill-switches (**3.1**). Network traffic is captured into content-addressed fixtures for zero-cost deterministic replay and latency emulation (**3.2**), while heterogeneous LLM schemas are normalized declaratively (**3.3**)—achieving execution determinism and strict cost governance without changing your agent configs or business logic.
 
 | Section | Target Focus & Key Capabilities | Quick Jump |
 | :--- | :--- | :--- |
@@ -15,11 +15,11 @@ Fiber is a local runtime harness that sits between your AI agents and everything
 
 ## 1. Local MCP Gateway & Fiber Connect
 
-The **Fiber Connect CLI** (`fiber`) is the single entrypoint for the local control plane. It registers your MCP servers and IDE configs, mounts them as workers on the Tunnel Bus under one host-local daemon, and—when needed—extends the same governance across remote nodes with zero boilerplate.
+The **Fiber Connect CLI** (`fiber`) is the single entrypoint for the local control plane. It registers your MCP servers and IDE configs, mounts them as workers on the Redis Tunnel under one host-local daemon, and—when needed—extends the same governance across remote nodes with zero boilerplate.
 
 ### 1.1. Local MCP Gateway
 
-Most AI agents (Claude Code, Cursor, VSCode, Zed) launch MCP servers directly on your machine through point-to-point pipes—with your filesystem, databases, and credentials in reach, and nothing in between to absorb retries or demand approval. Fiber's **Local MCP Gateway** runs as a loopback daemon on the same host, absorbs your existing agent configurations onto the Tunnel Bus, and exposes them through a single stateless endpoint (`/v1/mcp-gateway/invoke`, `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`). Local stdio servers are spawned and supervised by the daemon itself, and remote HTTP/SSE servers can be registered behind the same gate—so every tool call passes through one control point on your machine.
+Most AI agents (Claude Code, Cursor, VSCode, Zed) launch MCP servers directly on your machine through point-to-point pipes—with your filesystem, databases, and credentials in reach, and nothing in between to absorb retries or demand approval. Fiber's **Local MCP Gateway** runs as a loopback daemon on the same host, absorbs your existing agent configurations onto the Redis Tunnel, and exposes them through a single stateless endpoint (`/v1/mcp-gateway/invoke`, `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`). Local stdio servers are spawned and supervised by the daemon itself, and remote HTTP/SSE servers can be registered behind the same gate—so every tool call passes through one control point on your machine.
 
 **Why a Local Gateway?**
 Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeouts, agents blindly retry or hallucinate parameters, causing duplicate database writes or runaway API charges. Fiber’s MCP Gateway interposes a deterministic control plane between the agent and the tool:
@@ -30,7 +30,7 @@ Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeo
 
   - **Host-Local Trust Boundary**: Upstream API keys are resolved from the daemon's host environment (`.env` or OS variables) and never appear in client configs; node identity (`~/.ssh/fiber_ed25519`) and server registry (`~/.anchor/mcp.json`) stay on the machine.
 
-  - **Hold/Fuel Reservation**: Translates external, EdDSA-signed billing mandates into linear PTA state transitions: each mandate is consumed exactly once to produce the next quota state. Version fencing rejects stale or replayed policies, and the same mandate can never be consumed twice or drive a balance below zero.
+  - **Hold/Fuel Reservation**: Translates external, EdDSA-signed billing mandates into linear state transitions: each mandate is consumed exactly once to produce the next quota state. Version fencing rejects stale or replayed policies, and the same mandate can never be consumed twice or drive a balance below zero.
 
 **LLM & MCP Routing for IDEs**
 Alongside the MCP endpoint, the same local daemon serves the LLM Gateway (`/v1/chat/completions`)—the HTTP face of the pipeline described in [3.1](#31-the-drop-in-llm-pipeline). By configuring your IDE's (e.g., Continue.dev, Cursor) API base URL to `http://127.0.0.1:8356/v1`, you can route all model requests through Fiber's guardrails. This eliminates the need to expose upstream provider API keys in client configs, as authentication is securely resolved by the daemon's host environment (.env files or local OS variables).
@@ -148,19 +148,19 @@ $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROV
 $ fiber account --tenant accounting_dept kill --ver 99
 ```
 
-**finops stream break demo**
-<p align="center">
-  <img src="./phase/abc/asset/finops-kill-inter-stream.gif" alt="FinOps llm stream 200vu Stream Break Demo" width="100%" />
-</p>
-
-Demonstrating a 200-VU concurrent `fiber e2e inter.stream --vcr replay --concurrency 200` execution alongside the experimental Control Studio UI (`python -m fiber.dev.console.app`), this recording captures a 10-second Stream Break cycle. The FinOps circuit breaker instantly halts consumption and severs active streams with fuel exhaustion errors, then automatically restores fuel balances upon cooldown.
-
 **Control Studio (Experimental)**
 <p align="center">
   <img src="./phase/abc/asset/console-mcp-gateway.png" alt="Control Studio - MCP Gateway tab" width="100%" />
 </p>
 
 Control Studio is a unified console with MCP Gateway and VCR tabs. The MCP Gateway tab shows worker status, tenant fuel balances, and transactions parked for Pre-Flight HITL approval; the VCR tab (shown in [3.2](#32-fixture-testing-llm-recordreplay)) lets you inspect recorded fixtures. Launch with `python -m fiber.dev.console.app`.
+
+**finops stream break demo**
+<p align="center">
+  <img src="./phase/abc/asset/finops-kill-inter-stream.gif" alt="FinOps llm stream 200vu Stream Break Demo" width="100%" />
+</p>
+
+Demonstrating a 200-VU concurrent `fiber e2e inter.stream --vcr replay --concurrency 200` execution alongside the experimental Control Studio UI (`python -m fiber.dev.console.app`), this recording captures a 10-second Stream Break cycle. The FinOps circuit breaker instantly halts consumption and severs active streams with fuel exhaustion errors, then automatically restores fuel balances upon cooldown.
 
 ---
 
@@ -325,8 +325,8 @@ response = await acompletion(
 
 > **Note on Drop-in Replacement:** Fiber operates as a drop-in replacement by maintaining compatibility with OpenAI/LiteLLM entrypoints, Pydantic return objects, and local token utilities. The following specifications detail how to preserve your existing application logic while integrating asynchronous telemetry and cost tracking.
 > 🔗 **[Entrypoint Spec](./phase/abc/dev/llm/entry.md)** 
-> 🔗 **[Token Utilities Spec](./phase/abc/dev/llm/token.md)** 
-> 🔗 **[Cost Tracker Spec](./phase/abc/dev/llm/cost.tracker.md)**
+> 🔗 **[Token Counter Spec](./phase/abc/dev/llm/token.counter.md)** 
+> 🔗 **[interceptor Spec](./phase/abc/dev/llm/interceptor.md)**
 
 ---
 
@@ -426,7 +426,7 @@ if __name__ == "__main__":
 ```
 </details><br>
 
-**Per-Request HTTP Gateway VCR (Language-Agnostic)**
+**Per-Request HTTP Gateway VCR**
 
 When running `fiber daemon`, the REST Gateway (`/v1/chat/completions`) keeps the VCR proxy mounted in zero-overhead `live` passthrough mode. Any HTTP client (Node.js, Go, Rust, or `curl`) can dynamically trigger fixture recording or offline playback per request—without restarting the daemon—by passing `vcr` parameters in the JSON payload:
 
@@ -482,10 +482,10 @@ $ pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 $ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 
 # HTTP Gateway Suite: Verify Unary, SSE Stream, and Dynamic Record ➔ Replay roundtrip against the daemon
-$ python -m fiber.dev.gateway.tester
+$ python -m fiber.dev.ex.tester.gateway
 ```
 
-> **Experimental:** Fixtures and replay sessions can also be inspected in the Control Studio's VCR tab (see [1.2](#12-fiber-connect-cli)).
+> **Experimental:** Fixtures and replay sessions can also be inspected in the Control Studio's VCR tab
 <p align="center">
   <img src="./phase/abc/asset/console-vcr.png" alt="Control Studio - VCR tab" width="100%" />
 </p>
@@ -576,8 +576,8 @@ $ fiber e2e inter.concurrency --vcr record --model llama_server/gemma-3-1b-it-Q4
 
 The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
 
+* **[mcp.guard.log](./phase/abc/log/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
+* **[inter.finops.log](./phase/abc/log/inter/finops.20261019.log):** Validates the FinOps control plane, confirming DPoP-authenticated MCP multiplexing, cryptographic mandate translation (with strict idempotency and replay protection), automated balance reconciliation, and sub-second kill-switch intervention that cleanly severs active streams mid-flight.
 * **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Fuel Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
 * **[gateway.wasm.log](./phase/abc/log/inter/wasm/gateway.wasm.20261002.log):** Validates Firewall and FSM stability, confirming that the Pest AST parser strictly enforces URN grammar while rejecting payload injections, and that all branching and linear state transitions execute deterministically with millisecond latency.
-* **[inter.finops.log](./phase/abc/log/inter/finops.20261019.log):** Validates the FinOps control plane, confirming DPoP-authenticated MCP multiplexing, cryptographic mandate translation (with strict idempotency and replay protection), automated balance reconciliation, and sub-second kill-switch intervention that cleanly severs active streams mid-flight.
-* **[mcp.guard.log](./phase/abc/log/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
