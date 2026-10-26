@@ -33,6 +33,7 @@ _seen_fp: deque[str] = deque(maxlen=256)
 # 동기적 재진입(Re-entrancy) 차단 락: ingest() 도중 발생한 파생 로그가 다시 ingest()를 부르는 것 방지
 _IN_INGEST: ContextVar[bool] = ContextVar("_in_ingest", default=False)
 _SELF_SOURCE_PREFIXES = ("console.ui", "console.diag", "nicegui", "uvicorn")
+_last_kill_notify_ts: float = 0.0
 
 SLOT_INDEX: Dict[UISlot, int] = {
     UISlot.FUEL: 0,
@@ -73,9 +74,9 @@ def _format_line(payload: Dict[str, Any], meta: RoutedSurfaceMeta) -> str:
     msg = str(payload.get("message") or "").strip()
     return f"[{meta.level}] {tags + ' ' if tags else ''}{msg}{f_str}"
 
-
 def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str = "") -> None:
     """`signal.SurfaceClassifier`가 분류한 `RoutedSurfaceMeta`를 소비하여 State 및 UI 반영"""
+    global _last_kill_notify_ts
     f, s, p, d = state.finops, state.security, state.pipeline, meta.ui_payload
 
     # 0. PlaneRegulator 압력(Density) 및 가속도(Acceleration) 실시간 반영
@@ -94,28 +95,42 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
             s.xray_latencies[idx] = float(lat)
             s.xray_chart_dirty = True
 
-    # 2. EdgeCache & VCR 토큰/비용 절감액 누적
-    if (tok := d.get(UIKey.SAVED_TOKENS.value)) is not None:
-        f.saved_tokens += int(tok)
-        f.saved_usd += float(d.get(UIKey.SAVED_USD.value, 0.0))
+    # 2. EdgeCache & FinOps 할인 토큰/비용 절감액 누적 (독립 반영)
+    tok = d.get(UIKey.SAVED_TOKENS.value)
+    usd = d.get(UIKey.SAVED_USD.value)
+    if tok is not None or usd is not None:
+        if tok is not None:
+            f.saved_tokens += int(tok)
+        if usd is not None:
+            f.saved_usd += float(usd)
     elif meta.ui_slot is UISlot.CACHE and meta.ui_slot_status is UISlotStatus.HIT:
         f.saved_tokens += 250
         f.saved_usd += 0.004
 
-    # 3. FinOps 원장 동기화 & LLM Live 실시간 스트림 펄스(FUEL_TICK) 처리
-    #    - 주의: 실시간 이벤트는 현재 남은 연료(f.ledger_balance)만 갱신하며,
-    #      본래 할당 예산 기준선(f.fuel_quota)은 건드리지 않는다. (단, 잔액이 기준선보다 높게 들어온 경우만 상향)
-    if meta.ui_metric in (UIMetric.LEDGER_SYNC, UIMetric.FUEL_TICK):
-        if UIKey.LEDGER_BALANCE.value in d and d[UIKey.LEDGER_BALANCE.value] is not None:
-            f.set_balance(int(float(d[UIKey.LEDGER_BALANCE.value])))
-        elif UIKey.ACTIVE_QUOTA.value in d and d[UIKey.ACTIVE_QUOTA.value] is not None:
-            f.set_balance(int(float(d[UIKey.ACTIVE_QUOTA.value])))
+    # 다른 테넌트의 FinOps/Kill 시그널이 현재 선택된 테넌트 UI 상태를 오염시키지 않도록 방어
+    ev_tenant = d.get(UIKey.TENANT_ID.value)
+    is_target_tenant = (not ev_tenant) or (ev_tenant == f.tenant_id)
 
-        if f.ledger_balance > getattr(f, "fuel_quota", 0):
-            f.fuel_quota = f.ledger_balance
+    if is_target_tenant and meta.ui_metric in (UIMetric.LEDGER_SYNC, UIMetric.FUEL_TICK):
+        ev_ver = d.get(UIKey.POLICY_VER.value)
+        has_newer_ver = ev_ver is not None and int(ev_ver) >= f.policy_ver
+        if has_newer_ver:
+            f.policy_ver = int(ev_ver)
 
-        if UIKey.POLICY_VER.value in d and d[UIKey.POLICY_VER.value] is not None:
-            f.policy_ver = max(f.policy_ver, int(d[UIKey.POLICY_VER.value]))
+        # REVOKE 또는 Stream Break 카운트다운 도중에는 구세대 워커의 지연 정산/틱이 잔액을 덮어쓰지 못하도록 방어
+        is_frozen_state = (
+            f.last_op == "REVOKE" or str(getattr(f, "stream_status_text", "")).startswith("🛑")
+        ) and not (has_newer_ver and int(d.get(UIKey.FUEL_BUDGET.value) or d.get(UIKey.LEDGER_BALANCE.value) or 0) > 0)
+
+        if not is_frozen_state:
+            if (budget_val := d.get(UIKey.FUEL_BUDGET.value)) is not None and int(float(budget_val)) > 0:
+                f.fuel_budget = int(float(budget_val))
+
+            if (bal_val := d.get(UIKey.LEDGER_BALANCE.value)) is not None:
+                f.set_balance(int(float(bal_val)))
+
+            if f.ledger_balance > getattr(f, "fuel_budget", 0):
+                f.fuel_budget = f.ledger_balance
 
         if meta.ui_metric is UIMetric.FUEL_TICK:
             active_cnt = int(d.get("active_streams", getattr(s, "active_streams", 0)))
@@ -129,25 +144,30 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
             if (chunks := d.get(UIKey.CHUNKS.value)) is not None:
                 chunk_val = int(chunks)
                 s.live_stream_tokens = chunk_val
-                # 이전 청크 대비 증분(Delta) 계산하여 누적 처리 토큰에 합산
+                # 이전 청크 대비 증분(Delta) 계산하여 누적 처리 토큰에 합산 및 실시간 잔액 증분 차감
                 prev_chunks = getattr(s, "_last_stream_chunks", 0)
                 delta = chunk_val if chunk_val < prev_chunks else (chunk_val - prev_chunks)
-                s.total_processed_tokens = getattr(s, "total_processed_tokens", 0) + max(0, delta)
+                pos_delta = max(0, delta)
+                s.total_processed_tokens = getattr(s, "total_processed_tokens", 0) + pos_delta
                 s._last_stream_chunks = 0 if active_cnt == 0 else chunk_val
 
-            if active_cnt > 0:
-                f.stream_active = True
-                f.stream_status_text = f"🟢 LIVE STREAMING ({active_cnt} active | {s.throughput_cps:,.1f} c/s)"
-            else:
-                f.stream_active = False
-                f.stream_status_text = "✓ STREAM COMPLETE"
+                if not is_frozen_state and pos_delta > 0 and UIKey.LEDGER_BALANCE.value not in d:
+                    f.set_balance(max(0, f.ledger_balance - pos_delta))
+
+            # Break/Sever 상태가 아닐 때만 스트림 상태 텍스트 갱신
+            if not is_frozen_state:
+                if active_cnt > 0:
+                    f.stream_active = True
+                    f.stream_status_text = f"🟢 LIVE STREAMING ({active_cnt} active | {s.throughput_cps:,.1f} c/s)"
+                else:
+                    f.stream_active = False
+                    f.stream_status_text = "✓ STREAM COMPLETE"
 
             s.xray_chart_dirty = True
 
-        # y_fuel에는 f.ledger_balance, y_core에는 f.fuel_quota가 정확히 기록되도록 push_chart_point() 호출
-        f.push_chart_point()
+        if not is_frozen_state:
+            f.push_chart_point()
 
-    # 4. VCR 벤치마크 차트 갱신
     elif meta.ui_metric is UIMetric.VCR_REPLAY and UIKey.ELAPSED_MS.value in d:
         p.vcr_bench_replay_ms = float(d[UIKey.ELAPSED_MS.value])
         p.vcr_chart_dirty = True
@@ -156,18 +176,15 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
         p.vcr_chart_dirty = True
 
     # 5. 실시간 Kill-Switch (HTTP 402 절단) 인터럽트 처리
-    if meta.is_kill_signal:
-        # [역할 분리]
-        # - 워커(channel.fuel)가 보내는 단순 스트림 차단 에러 로그는 policy_ver가 없으므로 원장 잔액(ledger_balance)을 건드리지 않는다.
-        # - 오직 FinOpsWatcher가 발행한 공식 REVOKE 시그널이면서 버전(policy_ver)이 최신일 때만 잔액을 0으로 반영한다.
+    if is_target_tenant and meta.is_kill_signal:
         ev_ver = d.get(UIKey.POLICY_VER.value)
         if ev_ver is not None and int(ev_ver) >= f.policy_ver:
             f.set_balance(0)
             f.policy_ver = int(ev_ver)
+            f.last_op = "REVOKE"
             f.push_chart_point()
 
-        # 이미 10초 자동 복구(AUTO_RESTORE)나 수동 충전으로 잔액이 양수(> 0)로 복원된 상태라면,
-        # 과거(0원 시절)에 출발해 뒤늦게 도착한 워커의 차단 에러 로그는 UI 상태를 덮어쓰지 않고 무시한다.
+        # 이미 복구(AUTO_RESTORE)나 수동 충전으로 잔액이 양수(> 0)로 복원된 상태라면 지연 도착한 차단 로그는 무시
         if f.ledger_balance > 0:
             return
 
@@ -175,27 +192,19 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
         s.throughput_cps = 0.0
         s._last_stream_chunks = 0
         f.stream_active = False
-        f.stream_status_text = "🛑 SEVERED MID-FLIGHT (HTTP 402)"
-        if refs.live_stream_log:
-            refs.live_stream_log.push("\n🛑 [FUEL BREAKER] Stream physically severed via aclose()!")
-            refs.live_stream_log.push("↩ Agent Response: 'HTTP 402: Remaining fuel exhausted. Halted safely.'")
-        ui.notify("🚨 Kill-Switch Activated! Active stream severed.", type="negative", position="top")
 
-    # 6. HTTP 202 HITL Cryptographic Gate 모달 자동 팝업
-    if meta.is_hitl_yield and not raw_msg.startswith(("⏸", "📤", "🧬", "✓", "❌", "🛑")):
-        raw_args = d.get(UIKey.TOOL_ARGS.value)
-        args_dict = dict(raw_args) if isinstance(raw_args, dict) else {"raw_args": str(raw_args or {})}
-        if idem := d.get(UIKey.IDEM_KEY.value):
-            args_dict = {UIKey.IDEM_KEY.value: idem, **args_dict}
-        tool_fqn = f"{d.get(UIKey.TARGET_ID.value, 'mcp')}.{d.get(UIKey.TOOL_NAME.value, 'tool')}"
-        if refs.hitl_code:
-            refs.hitl_code.set_content(
-                json.dumps({"tool": tool_fqn, "args": args_dict, "state": "HTTP 202 Parked"}, indent=2)
-            )
-        if refs.hitl_dialog:
-            refs.hitl_dialog.open()
-        refs.push_pubsub("mcp:hitl", f"⏸ [HTTP 202] Sandbox suspended for '{tool_fqn}'")
+        # Temporary Stream Break 카운트다운("🛑 BREAK (Ns)...") 중이면 카운트다운 텍스트를 덮어쓰지 않고 유지
+        if not str(getattr(f, "stream_status_text", "")).startswith("🛑 BREAK"):
+            f.stream_status_text = "🛑 SEVERED MID-FLIGHT (HTTP 402)"
 
+        # 다중 VU 동시 절단 시 동일한 토스트 알림 및 스트림 로그가 수백 번 중복 실행되는 것을 방지 (2초 쿨다운)
+        now_ts = time.monotonic()
+        if (now_ts - _last_kill_notify_ts) >= 2.0:
+            _last_kill_notify_ts = now_ts
+            if refs.live_stream_log:
+                refs.live_stream_log.push("\n🛑 [FUEL BREAKER] Stream physically severed via aclose()!")
+                refs.live_stream_log.push("↩ Agent Response: 'HTTP 402: Remaining fuel exhausted. Halted safely.'")
+            ui.notify("🚨 Kill-Switch Activated! Active stream severed.", type="negative", position="top")
 
 # ==========================================
 # Public Ingestion API (In-Memory / CLI / Redis)
@@ -248,7 +257,6 @@ def emit_ledger(source_id: str, message: str, fuel: int, core: int, ver: int, le
         **{
             "mode": "RAW",
             UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,
-            UIKey.ACTIVE_QUOTA.value: fuel,
             UIKey.LEDGER_BALANCE.value: fuel,
             UIKey.POLICY_VER.value: ver,
         },

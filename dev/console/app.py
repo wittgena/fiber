@@ -51,10 +51,10 @@ def _flush_100ms_ringbuffer() -> None:
         if not f.x_ticks:
             f.x_ticks.append(time.strftime("%H:%M:%S"))
             f.y_fuel.append(f.ledger_balance)
-            f.y_core.append(f.fuel_quota)
+            f.y_core.append(f.fuel_budget)
         refs.finops_chart.options["xAxis"]["data"] = list(f.x_ticks)
         refs.finops_chart.options["series"][0]["data"] = list(f.y_fuel)
-        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.fuel_quota
+        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.fuel_budget
         refs.finops_chart.options["series"][1]["data"] = list(f.y_core)
         refs.finops_chart.update()
         f.chart_dirty = False
@@ -113,7 +113,6 @@ def _build_drawer() -> None:
     refs.push_cli(
         f"Fiber-Console initialized (State file: {STATE_FILE_PATH}). Syncing local keys, accounts, and MCP topology..."
     )
-
 
 def _on_tick(tabs: Sequence[StudioTab]) -> None:
     """Flush 100ms ringbuffers, trigger dirty tab re-renders, and auto-sync state.json every 5s (50 ticks)."""

@@ -1,11 +1,7 @@
 # fiber.phase.abc.spec.mcp.guard
 @desc: MCP Pre-Flight HITL & Out-of-Band (Slack/TOTP) Configuration Guide
 
-This guide details how to lock native and 3rd-party MCP servers behind Fiber's cryptographic Human-in-the-Loop (HITL) gate, provision administrator TOTP credentials, and configure real-time Out-of-Band (OOB) approvals via Slack Socket Mode or HTTP Webhooks.
-
----
-
-## 1. Architecture & Execution Flow
+## Execution Flow
 
 Fiber supports two complementary interception mechanisms that converge into a unified `HTTP 202 (YIELD)` parking and OOB attestation lifecycle:
 
@@ -38,7 +34,7 @@ Fiber supports two complementary interception mechanisms that converge into a un
 
 ---
 
-## 2. Step 1: Provision Node Identity & Admin TOTP (`fiber sign`)
+## Provision Node Identity & Admin TOTP (`fiber sign`)
 
 Before enabling HITL gates, initialize the local node keychain (`~/.ssh/fiber_ed25519` and `local_cipher.key`) and enroll an administrator identity into the encrypted SQLite vault (`deploy_audit.sqlite`).
 
@@ -59,7 +55,7 @@ $ fiber sign verify -u spiffe://self/fiber
 
 ---
 
-## 3. Step 2: Configure Pre-Flight HITL Locks (`TOTP` vs. `1-Click Button`)
+## Configure Pre-Flight HITL Locks (`TOTP` vs. `1-Click Button`)
 
 Fiber provides two attestation tiers depending on operational risk. By default, all pre-flight traps enforce **6-Digit RFC-6238 TOTP**. Prefixing any regex pattern with `button:` (or `simple:`, `nototp:`, `1click:`) switches that guard to **1-Click Button Mode**.
 
@@ -76,7 +72,7 @@ Fiber provides two attestation tiers depending on operational risk. By default, 
 
 <br>*or* `FIBER_PREFLIGHT_MODE=button` | Omits the TOTP input box; displays only **Approve & Resume** / **Deny & Rollback** buttons. | Slack HMAC + State Token (`Ed25519`) + Admin Vault AES-GCM Decrypt + **Authorized SPIFFE Binding** + Payload Hash `Ed25519` Attestation. |
 
-### 3.1. Option A: CLI Sidecar Mounting (`fiber connect`)
+### Option A: CLI Sidecar Mounting (`fiber connect`)
 
 Use `-p` / `--preflight` when mounting individual workers or remote MCP endpoints:
 
@@ -98,7 +94,7 @@ $ fiber connect -t ctx7-remote \
   -f .env
 ```
 
-### 3.2. Option B: Declarative Agent Config (`.mcp.json` / `.cursor/mcp.json`)
+### Option B: Declarative Agent Config (`.mcp.json` / `.cursor/mcp.json`)
 
 Inject `FIBER_PREFLIGHT_PATTERN` (and optionally `FIBER_PREFLIGHT_MODE`) directly into the `env` block of any server in your existing agent configuration file. `McpConfigMapper` extracts and strips these keys before spawning the worker so internal flags never leak into the 3rd-party environment:
 
@@ -132,7 +128,7 @@ Inject `FIBER_PREFLIGHT_PATTERN` (and optionally `FIBER_PREFLIGHT_MODE`) directl
 $ fiber connect -c .mcp.json
 ```
 
-### 3.3. Option C: Host Environment Variables (Precedence Rules)
+### Option C: Host Environment Variables (Precedence Rules)
 
 `PreflightGuard.resolve_pattern()` resolves rules in the following priority order:
 
@@ -144,7 +140,7 @@ Mode overrides follow the same hierarchy: `prefix (button:)` ➔ `FIBER_PREFLIGH
 
 ---
 
-## 4. Step 3: Slack App & Socket Mode Setup
+## Slack App & Socket Mode Setup
 
 `SlackHitlBridge` supports both **Outbound Socket Mode** (recommended for local daemons and firewalled environments—no public webhook URL required) and **Inbound HTTP Webhooks**.
 
@@ -164,7 +160,7 @@ Mode overrides follow the same hierarchy: `prefix (button:)` ➔ `FIBER_PREFLIGH
 
 4. **Invite the Bot** to your target approval channel and copy the **Channel ID** (e.g., `C0A9L79HY57`).
 
-### 4.2. Environment Variables (`.env`)
+### Environment Variables (`.env`)
 
 Configure the following variables in the `.env` file passed to `fiber daemon -s all -f .env`:
 
@@ -178,11 +174,11 @@ Configure the following variables in the `.env` file passed to `fiber daemon -s 
 
 ---
 
-## 5. Client Invocation & Resumption Protocol (`HTTP 202` ➔ `200`)
+## Client Invocation & Resumption Protocol (`HTTP 202` ➔ `200`)
 
 When an AI agent or HTTP client calls `/v1/mcp-gateway/{target_id}/invoke` with a payload that triggers a pre-flight or native HITL trap:
 
-### 5.1. Initial Request & `HTTP 202` Parking
+### Initial Request & `HTTP 202` Parking
 
 * **Client Request:** Sends a standard MCP `tools/call` JSON-RPC payload with an `x-idempotency-key` header.
 * **Gateway Response (`HTTP 202 Accepted`):**
@@ -201,20 +197,20 @@ When an AI agent or HTTP client calls `/v1/mcp-gateway/{target_id}/invoke` with 
 }
 ```
 
-### 5.2. Operator Approval & Audit Receipt Replacement
+### Operator Approval
 
 1. `SlackHitlBridge` listens on `eco.telemetry.events` for `MCP_PHASE_YIELD` and posts an interactive Block-Kit card containing the **Target MCP**, **Node Fingerprint** (`node_fp`), **Handle ID**, and **Intercepted Prompt**.
 2. When the operator clicks **🛡️ Approve & Resume** (with or without TOTP, depending on `require_totp`) or **🛑 Deny & Rollback**:
 * **Multi-Node Filtering:** `is_owned_by_this_node()` verifies that `envelope.node_fp` matches the local node's public key fingerprint, ignoring events meant for other nodes sharing the same Slack channel.
 * **Real-Time Card Replacement:** Upon verification, `SlackHitlBridge` posts to Slack's `response_url` (`replace_original: True`), replacing the interactive buttons with an immutable **Zero-Trust Attestation Receipt** (`🟢 RESUMED -> EXECUTING` or `🔴 ROLLED_BACK (FAULTED)`).
 
-### 5.3. Deterministic Polling & Resolution (`HTTP 200 OK`)
+### Polling & Resolution
 
 Once the operator approves the prompt in Slack, the connector executes the stashed request against the MCP worker and transitions the handle state to `RESOLVED`. When the client retries or polls `/v1/mcp-gateway/{target_id}/invoke` using the **same `x-idempotency-key**`, the gateway immediately returns the cached `HTTP 200 OK` tool output without re-executing the worker.
 
 ---
 
-## 6. Verification & E2E Testing
+## Verification & E2E Testing
 
 Fiber includes two comprehensive E2E suites to validate OOB security defenses and 3rd-party Pre-Flight HITL lifecycles. Both suites automatically detect whether `FIBER_SLACK_BOT_TOKEN` and `FIBER_SLACK_APP_TOKEN` are present in the environment—running interactively against **Live Slack Socket Mode** when configured, or falling back to **Local Webhook Emulation** in offline CI/CD environments.
 

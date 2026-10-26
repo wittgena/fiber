@@ -91,8 +91,15 @@ class LocalAccountManager(AccountManagerProtocol):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
+    async def _get_oracle_balance(self, asset_type: str = "fuel") -> int:
+        """디스크 PhaseStore에 확정(Sealed)된 SSOT 잔액을 AnchorOracle을 통해 직접 조회합니다."""
+        return await self.pta_adapter.oracle.get_balance(self.tenant_id, asset_type=asset_type)
+
     async def _get_ledger_balance(self, asset_type: str = "fuel") -> int:
-        return await self.pta_adapter.get_balance(self.tenant_id, asset_type=asset_type)
+        """SSOT(Oracle)를 우선 조회하되, 동일 프로세스 내 전이 직후에는 PTA 어댑터 뷰와 정렬합니다."""
+        oracle_bal = await self._get_oracle_balance(asset_type=asset_type)
+        pta_bal = await self.pta_adapter.get_balance(self.tenant_id, asset_type=asset_type)
+        return oracle_bal if oracle_bal == pta_bal else pta_bal
 
     async def _hydrate_watcher_if_empty(self, current_ledger_balance: int) -> None:
         saved_accounts = LocalAccountRegistry.list_accounts()
@@ -166,12 +173,22 @@ class LocalAccountManager(AccountManagerProtocol):
                 )
                 tx_hash = await self.pta_adapter.execute_transaction(reconcile_tx, stream_id=stream_id)
 
+        # 인메모리 풀(_unfold_pool)이 아닌 SSOT(AnchorOracle)에 실제 디스크 커밋이 반영될 때까지 대기
         start_ts = time.time()
+        oracle_confirmed = False
         while time.time() - start_ts < 5.0:
-            curr = await self._get_ledger_balance("fuel")
-            if (diff > 0 and curr >= target_fuel) or (diff < 0 and curr <= target_fuel):
+            curr_ssot = await self._get_oracle_balance("fuel")
+            if (diff > 0 and curr_ssot >= target_fuel) or (diff < 0 and curr_ssot <= target_fuel):
+                oracle_confirmed = True
                 break
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.15)
+
+        if not oracle_confirmed:
+            curr_ssot = await self._get_oracle_balance("fuel")
+            log.warning(
+                f"[LocalAccountManager] SSOT Oracle sync lag or unsealed tx for '{self.tenant_id}': "
+                f"target={target_fuel}, oracle_ssot={curr_ssot} (action={action_tag})"
+            )
 
         final_balance = await self._get_ledger_balance("fuel")
         default_finops_watcher.local_budget_cache[self.tenant_id] = float(final_balance)

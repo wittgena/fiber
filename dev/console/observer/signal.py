@@ -28,7 +28,7 @@ class UIKey(str, Enum):
 
     METRIC = "ui_metric"
     TENANT_ID = "tenant_id"
-    ACTIVE_QUOTA = "active_quota"
+    FUEL_BUDGET = "fuel_budget"
     LEDGER_BALANCE = "ledger_balance"
     POLICY_VER = "policy_ver"
     ELAPSED_MS = "elapsed_ms"

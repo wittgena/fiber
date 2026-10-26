@@ -220,7 +220,7 @@ class ExBranchController:
 
         tx = PtaTransaction(inputs=inputs, outputs=outputs, metadata=meta)
         tx_hash = await self.pta.execute_transaction(tx, stream_id=primary_stream_id)
-        commit_hash = self.pta._resolve_commit_hash(tx_hash)
+        commit_hash = self.pta._resolve_commit_hash(tx_hash, primary_stream_id)
 
         committed: List[BranchCursor] = []
         for idx, cursor in enumerate(next_cursors):

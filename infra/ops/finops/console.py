@@ -1,4 +1,10 @@
 # fiber.infra.ops.finops.console
+"""
+Glossary:
+- fuel_budget: Fixed spending quota limit assigned via policy/Mandate (immutable until upgraded).
+- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA Ledger SSOT.
+- Ensure UI signals and state tracking keep these two concepts strictly decoupled.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -43,11 +49,11 @@ class FinOpsConsoleManager:
         f.ledger_balance = val
 
         if update_quota:
-            f.fuel_quota = val
+            f.fuel_budget = val
             if val > 0:
                 f.jwt_usd = round(val / USD_TO_FUEL_RATE, 2)
-        elif getattr(f, "fuel_quota", 0) <= 0 and val > 0:
-            f.fuel_quota = val
+        elif getattr(f, "fuel_budget", 0) <= 0 and val > 0:
+            f.fuel_budget = val
         return val / USD_TO_FUEL_RATE
 
     def _next_policy_ver(self) -> int:
@@ -113,19 +119,19 @@ class FinOpsConsoleManager:
                 f.spiffe_id = res.spiffe_id
             self.sync_spiffe_and_check_totp(emit_warning=not silent)
 
-            should_raise_quota = res.ledger_balance > getattr(f, "fuel_quota", 0)
+            should_raise_quota = res.ledger_balance > getattr(f, "fuel_budget", 0)
             bal_usd = self.sync_fuel_state(res.ledger_balance, update_quota=should_raise_quota)
             f.policy_ver = max(1, res.policy_ver)
             f.push_chart_point()
             save_state_to_disk(force=False)
 
             if not silent:
-                quota_usd = f.fuel_quota / USD_TO_FUEL_RATE
+                quota_usd = f.fuel_budget / USD_TO_FUEL_RATE
                 refs.push_cli(
                     f"$ fiber account --tenant {f.tenant_id} status\n  {json.dumps(res.raw_status, ensure_ascii=False)}"
                 )
                 ui.notify(
-                    f"Synced '{f.tenant_id}': Balance={f.ledger_balance:,} / Quota={f.fuel_quota:,} Fuel "
+                    f"Synced '{f.tenant_id}': Balance={f.ledger_balance:,} / Quota={f.fuel_budget:,} Fuel "
                     f"(${bal_usd:,.2f} / ${quota_usd:,.2f}, v{f.policy_ver})",
                     type="info",
                 )
@@ -168,11 +174,11 @@ class FinOpsConsoleManager:
             action_desc = "Top-Up (+Added)" if effective_op == "TOP_UP" else "Synced to Quota"
             refs.push_cli(
                 f"  ✓ [EdDSA JWT | {action_desc}] {f.last_jwt_preview} -> "
-                f"Balance={f.ledger_balance:,} / Quota={f.fuel_quota:,} Fuel (${bal_usd:,.2f})"
+                f"Balance={f.ledger_balance:,} / Quota={f.fuel_budget:,} Fuel (${bal_usd:,.2f})"
             )
             refs.push_pubsub(
                 "finops:control_plane",
-                f"EVENT={effective_op} tenant={f.tenant_id} balance={f.ledger_balance} quota={f.fuel_quota} v={res.policy_ver}",
+                f"EVENT={effective_op} tenant={f.tenant_id} balance={f.ledger_balance} quota={f.fuel_budget} v={res.policy_ver}",
             )
             ui.notify(
                 f"{action_desc}: {f.ledger_balance:,} Fuel (${bal_usd:,.2f}, v{res.policy_ver})",
@@ -191,7 +197,7 @@ class FinOpsConsoleManager:
         self._cancel_restore_task()
         f = self.f
         spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
-        preserved_quota = f.fuel_quota
+        preserved_quota = f.fuel_budget
 
         try:
             next_ver = self._next_policy_ver()
@@ -204,7 +210,7 @@ class FinOpsConsoleManager:
             applied_ver = res.status.policy_ver
 
             self.sync_fuel_state(0, update_quota=False)
-            f.fuel_quota = preserved_quota
+            f.fuel_budget = preserved_quota
             f.policy_ver = applied_ver
             f.last_op = "REVOKE"
             # f.stream_active = False
@@ -214,11 +220,11 @@ class FinOpsConsoleManager:
 
             refs.push_cli(
                 f"$ fiber account --tenant {f.tenant_id} kill -> BurnTx={burn_tx} | "
-                f"Balance=0 / Quota={f.fuel_quota:,} (v{f.policy_ver})"
+                f"Balance=0 / Quota={f.fuel_budget:,} (v{f.policy_ver})"
             )
             refs.push_pubsub(
                 "finops:control_plane",
-                f"EVENT=REVOKE tenant={f.tenant_id} balance=0 quota={f.fuel_quota} v={f.policy_ver}",
+                f"EVENT=REVOKE tenant={f.tenant_id} balance=0 quota={f.fuel_budget} v={f.policy_ver}",
             )
             ui.notify(f"🚨 Balance Zeroed & Revoked '{f.tenant_id}' (v{f.policy_ver})", type="negative")
         except Exception:
@@ -230,11 +236,11 @@ class FinOpsConsoleManager:
         self._cancel_restore_task()
         f = self.f
 
-        saved_quota = f.fuel_quota if f.fuel_quota > 0 else f.ledger_balance
+        saved_quota = f.fuel_budget if f.fuel_budget > 0 else f.ledger_balance
         restore_fuel = f.ledger_balance if f.ledger_balance > 0 else saved_quota
 
         await self.revoke_account_kill()
-        f.fuel_quota = saved_quota
+        f.fuel_budget = saved_quota
         if restore_fuel <= 0:
             return
 
@@ -242,7 +248,7 @@ class FinOpsConsoleManager:
             try:
                 total_sec = max(1, int(cooldown_sec))
                 for remaining in range(total_sec, 0, -1):
-                    f.fuel_quota = saved_quota
+                    f.fuel_budget = saved_quota
                     f.stream_status_text = (
                         f"🛑 BREAK ({remaining}s) ➔ Restoring {restore_fuel:,} / {saved_quota:,} Fuel"
                     )
@@ -253,12 +259,20 @@ class FinOpsConsoleManager:
                 next_ver = self._next_policy_ver()
                 spiffe_arg = f.spiffe_id.strip() if f.spiffe_id else None
 
-                alloc_res = await allocate_account_fuel(
-                    f.tenant_id, amount=restore_fuel, spiffe_id=spiffe_arg
+                # 단순 합산(+)인 allocate_account_fuel 대신 SYNC_QUOTA로 원장을 정확히 restore_fuel에 맞춤
+                mandate_res = await issue_account_mandate(
+                    f.tenant_id,
+                    budget_usd=round(restore_fuel / USD_TO_FUEL_RATE, 6),
+                    op="SYNC_QUOTA",
+                    policy_ver=next_ver,
+                    sync_ledger=True,
+                    spiffe_id=spiffe_arg,
                 )
-                restored_balance = alloc_res.status.ledger_balance
+                restored_balance = mandate_res.balance
+                applied_ver = mandate_res.policy_ver
 
-                self._update_watcher_cache(restored_balance, policy_ver=next_ver)
+                # 워처의 고정 예산 한도(fuel_budget)는 saved_quota로 복원
+                self._update_watcher_cache(saved_quota, policy_ver=applied_ver)
                 try:
                     tunnel = await TunnelFactory.get_default()
                     if tunnel:
@@ -267,12 +281,13 @@ class FinOpsConsoleManager:
                             json.dumps({
                                 "type": "update_budget",
                                 "tenant_id": f.tenant_id,
-                                "fuel_budget": float(restored_balance),
+                                "fuel_budget": float(saved_quota),
                                 "finops": {
                                     "op": "SYNC_QUOTA",
-                                    "budget_usd": round(restored_balance / USD_TO_FUEL_RATE, 6),
+                                    "fuel_budget": float(saved_quota),
+                                    "budget_usd": round(saved_quota / USD_TO_FUEL_RATE, 6),
                                     "exchange_rate": USD_TO_FUEL_RATE,
-                                    "policy_ver": next_ver,
+                                    "policy_ver": applied_ver,
                                 },
                             }),
                         )
@@ -280,8 +295,8 @@ class FinOpsConsoleManager:
                     pass
 
                 f.ledger_balance = int(restored_balance)
-                f.fuel_quota = int(saved_quota)
-                f.policy_ver = next_ver
+                f.fuel_budget = int(saved_quota)
+                f.policy_ver = applied_ver
                 f.last_op = "AUTO_RESTORE"
                 f.stream_status_text = "♻️ RESTORED TO PRE-BREAK BALANCE"
                 f.push_chart_point()
@@ -289,14 +304,14 @@ class FinOpsConsoleManager:
 
                 refs.push_cli(
                     f"  ♻️ [Auto-Restore after {total_sec}s] Balance={f.ledger_balance:,} / "
-                    f"Quota={f.fuel_quota:,} Fuel (v{f.policy_ver})"
+                    f"Quota={f.fuel_budget:,} Fuel (v{f.policy_ver})"
                 )
                 refs.push_pubsub(
                     "finops:control_plane",
-                    f"EVENT=AUTO_RESTORE tenant={f.tenant_id} balance={f.ledger_balance} quota={f.fuel_quota} v={f.policy_ver}",
+                    f"EVENT=AUTO_RESTORE tenant={f.tenant_id} balance={f.ledger_balance} quota={f.fuel_budget} v={f.policy_ver}",
                 )
                 ui.notify(
-                    f"♻️ Restored Balance: {f.ledger_balance:,} / Quota: {f.fuel_quota:,} Fuel",
+                    f"♻️ Restored Balance: {f.ledger_balance:,} / Quota: {f.fuel_budget:,} Fuel",
                     type="positive",
                 )
             except asyncio.CancelledError:

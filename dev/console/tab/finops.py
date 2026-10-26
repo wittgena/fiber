@@ -6,7 +6,6 @@ from nicegui import ui
 
 from fiber.gateway.bridge.cli import run_fiber_cli
 from fiber.infra.ops.finops.console import finops_manager
-from fiber.dev.console.action import stream
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
 from fiber.infra.ops.account.state import state, refs, USD_TO_FUEL_RATE
@@ -41,10 +40,10 @@ class FinOpsTab(StudioTab):
 
     @staticmethod
     async def _resync_balance_to_saved_quota() -> None:
-        """현재 줄어든 ledger_balance를 사본으로 저장된 fuel_quota 기준값으로 즉시 복원(Sync)한다."""
+        """현재 줄어든 ledger_balance를 사본으로 저장된 fuel_budget 기준값으로 즉시 복원(Sync)한다."""
         f = state.finops
-        if f.fuel_quota > 0:
-            f.jwt_usd = round(f.fuel_quota / USD_TO_FUEL_RATE, 2)
+        if f.fuel_budget > 0:
+            f.jwt_usd = round(f.fuel_budget / USD_TO_FUEL_RATE, 2)
         f.jwt_op = "SYNC_QUOTA"
         await finops_manager.issue_account_jwt()
 
@@ -52,8 +51,6 @@ class FinOpsTab(StudioTab):
         f = state.finops
         if f.jwt_op not in FINOPS_ACTION_LABELS:
             f.jwt_op = "SYNC_QUOTA"
-        if not hasattr(f, "stream_concurrency"):
-            f.stream_concurrency = 4
 
         # [Step 1] 대상 계정(Tenant) 식별
         ui.label("Target Account Identity").classes("text-[11px] font-bold text-slate-400 shrink-0")
@@ -109,7 +106,7 @@ class FinOpsTab(StudioTab):
             f, "last_jwt_preview", lambda j: f"Signed Mandate Token (EdDSA): {j}"
         ).classes(kit.CLS_MONO_LABEL)
 
-        # [Step 3] 할당 예산 사본(fuel_quota) 대비 현재 남은 연료(ledger_balance) 비교 게이지
+        # [Step 3] 할당 예산 사본(fuel_budget) 대비 현재 남은 연료(ledger_balance) 비교 게이지
         with ui.column().classes("w-full gap-1 bg-slate-950/90 px-3 py-2 rounded border border-slate-800 mt-1 shrink-0"):
             with ui.row().classes("w-full items-center justify-between no-wrap"):
                 ui.label("Remaining Balance vs Allocated Quota Baseline:").classes(
@@ -119,35 +116,16 @@ class FinOpsTab(StudioTab):
                     f,
                     "ledger_balance",
                     lambda bal: (
-                        f"{int(bal):,} / {int(f.fuel_quota):,} Fuel "
-                        f"({round((bal / f.fuel_quota) * 100, 1) if f.fuel_quota > 0 else 0.0}%)"
+                        f"{int(bal):,} / {int(f.fuel_budget):,} Fuel "
+                        f"({round((bal / f.fuel_budget) * 100, 1) if f.fuel_budget > 0 else 0.0}%)"
                     ),
                 ).classes("text-xs font-mono font-bold text-cyan-300")
 
             ui.linear_progress(value=1.0, show_value=False, size="8px", color="emerald").bind_value_from(
                 f,
                 "ledger_balance",
-                lambda bal: min(1.0, max(0.0, round(float(bal) / max(float(f.fuel_quota), 1.0), 3))),
+                lambda bal: min(1.0, max(0.0, round(float(bal) / max(float(f.fuel_budget), 1.0), 3))),
             ).classes("w-full rounded bg-slate-900")
-
-        with kit.footer():
-            kit.number("Concurrency", f, "stream_concurrency", min_val=1, max_val=32, step=1, width="w-28")
-
-            start_btn = kit.button(
-                "▶ Start Live Stream",
-                stream.start,
-                color="indigo",
-                flex=True,
-            )
-            start_btn.bind_visibility_from(f, "stream_active", backward=lambda active: not bool(active))
-
-            stop_btn = kit.button(
-                "⏹ Stop Live Stream",
-                stream.stop,
-                color="red",
-                flex=True,
-            )
-            stop_btn.bind_visibility_from(f, "stream_active", backward=bool)
 
     def compose_right(self) -> None:
         f = state.finops
@@ -166,6 +144,6 @@ class FinOpsTab(StudioTab):
             list(f.x_ticks),
             list(f.y_fuel),
             list(f.y_core),
-            redline=f.fuel_quota,
+            redline=f.fuel_budget,
         )
         refs.live_stream_log = kit.log(max_lines=60, color="text-emerald-300")

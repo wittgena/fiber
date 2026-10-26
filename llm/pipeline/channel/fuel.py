@@ -1,4 +1,10 @@
 # fiber.llm.pipeline.channel.fuel
+"""
+Glossary:
+- fuel_budget: Fixed spending quota limit assigned via policy/Mandate (immutable until upgraded).
+- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA Ledger SSOT.
+- Ensure UI signals and state tracking keep these two concepts strictly decoupled.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -16,10 +22,7 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log_pipeline = get_emitter("channel.fuel", phase="BILLING")
 
-# 실시간 스트림 활성 연결 수 (단일 이벤트 루프 내 원자적 카운터)
 _ACTIVE_STREAMS: int = 0
-
-# 스트림 텔레메트리(FUEL_TICK) 최소 방출 간격 (초)
 _STREAM_TICK_INTERVAL_SEC: float = 0.25
 
 
@@ -156,10 +159,10 @@ class FuelBreaker(DuplexChannel):
                 fuel_budget = float(self.finops_watcher.local_budget_cache[tenant_id])
                 log_pipeline.debug(
                     f"[FuelBreaker] Applied dynamic FinOps budget for '{tenant_id}': {fuel_budget}",
-                    **{UIKey.TENANT_ID.value: tenant_id, UIKey.ACTIVE_QUOTA.value: int(fuel_budget)},
+                    **{UIKey.TENANT_ID.value: tenant_id, UIKey.FUEL_BUDGET.value: int(fuel_budget)},
                 )
 
-        # [Quota Shield] FIBER_ENFORCE_QUOTA=true 환경에서 미인가 예산 주입 차단
+        # [Quota Shield] FIBER_ENFORCE_QUOTA=true 환경에서 미인가 예산 한도 주입 차단
         if enforce_quota and not in_ledger and not audit_hash and not is_explicitly_enforced:
             elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
             log_pipeline.signal(
@@ -171,14 +174,13 @@ class FuelBreaker(DuplexChannel):
                     UIKey.SLOT_STATUS.value: UISlotStatus.BLOCK.value,
                     UIKey.LATENCY_MS.value: elapsed_ms,
                     UIKey.TENANT_ID.value: tenant_id,
-                    UIKey.ACTIVE_QUOTA.value: 0,
                 },
             )
             raise PermissionError(f"Unauthorized fuel budget injection blocked for tenant: {tenant_id}")
 
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
 
-        # 예산이 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단
+        # 가용 연료/예산 한도가 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단
         if enforce_quota and fuel_budget <= 0:
             log_pipeline.signal(
                 f"[FuelBreaker] Pre-flight blocked: Budget exhausted ({fuel_budget}) for tenant '{tenant_id}'.",
@@ -188,7 +190,6 @@ class FuelBreaker(DuplexChannel):
                     UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
                     UIKey.LATENCY_MS.value: elapsed_ms,
                     UIKey.TENANT_ID.value: tenant_id,
-                    UIKey.ACTIVE_QUOTA.value: 0,
                 },
             )
             raise PermissionError(f"Fuel budget exhausted for tenant: {tenant_id}")
@@ -202,7 +203,7 @@ class FuelBreaker(DuplexChannel):
             UIKey.TENANT_ID.value: tenant_id,
         }
         if math.isfinite(fuel_budget):
-            pass_payload[UIKey.ACTIVE_QUOTA.value] = int(fuel_budget)
+            pass_payload[UIKey.FUEL_BUDGET.value] = int(fuel_budget)
 
         log_pipeline.info(
             f"[FuelBreaker] Pre-flight passed for '{tenant_id}' ({elapsed_ms:.3f}ms).",
@@ -221,7 +222,7 @@ class FuelBreaker(DuplexChannel):
         audit_hash = ctx.get_attr(BrokerKey.AUDIT_HASH.value)
         tenant_id = ctx.get_attr("tenant_id", "anonymous")
 
-        # 단일 응답(Non-stream) 처리 및 토큰 카운트 방출 (기본 1 Token = 1 Fuel)
+        # 단일 응답(Non-stream) 처리 및 토큰 카운트 방출
         if not is_stream and not hasattr(msg, "__aiter__"):
             total_tokens, _ = _extract_usage_info(msg)
             if total_tokens > 0:
@@ -235,8 +236,6 @@ class FuelBreaker(DuplexChannel):
                     UIKey.CHUNKS.value: total_tokens,
                     "active_streams": _ACTIVE_STREAMS,
                 }
-                if math.isfinite(fuel_budget):
-                    unary_payload[UIKey.ACTIVE_QUOTA.value] = max(0, int(fuel_budget - total_tokens))
                 log_pipeline.info(
                     f"[FuelBreaker] Unary completion '{tenant_id}': tokens={total_tokens}",
                     **unary_payload,
@@ -281,7 +280,7 @@ class FuelBreaker(DuplexChannel):
 
                 context.set_attr(BrokerKey.FUEL_CONSUMED.value, consumed)
 
-                # 스트리밍 도중 Pub/Sub으로 갱신된 실시간 예산(예: Kill-Switch 0.0)을 매 청크마다 즉시 반영
+                # 스트리밍 도중 Pub/Sub으로 갱신된 동적 한도(예: Kill-Switch 0.0)를 매 청크마다 즉시 반영
                 if self.finops_watcher and hasattr(self.finops_watcher, "local_budget_cache"):
                     if tenant_id in self.finops_watcher.local_budget_cache:
                         current_budget = float(self.finops_watcher.local_budget_cache[tenant_id])
@@ -298,7 +297,6 @@ class FuelBreaker(DuplexChannel):
                             UIKey.SLOT.value: UISlot.FUEL.value,
                             UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
                             UIKey.TENANT_ID.value: tenant_id,
-                            UIKey.ACTIVE_QUOTA.value: 0,
                             UIKey.CHUNKS.value: consumed,
                             "active_streams": max(0, _ACTIVE_STREAMS - 1),
                             "throughput_cps": 0.0,
@@ -306,7 +304,7 @@ class FuelBreaker(DuplexChannel):
                     )
                     break
 
-                # 첫 청크이거나 20청크 단위이면서 최소 0.25초 이상 경과 시 방출 (consumed는 토큰 단위, cps는 청크 속도)
+                # 첫 청크이거나 20청크 단위이면서 최소 0.25초 이상 경과 시 스트림 텔레메트리(FUEL_TICK) 방출
                 now = time.perf_counter()
                 if chunks == 1 or (chunks % 20 == 0 and (now - last_emit_ts) >= _STREAM_TICK_INTERVAL_SEC):
                     last_emit_ts = now
@@ -322,17 +320,10 @@ class FuelBreaker(DuplexChannel):
                         "active_streams": _ACTIVE_STREAMS,
                         "throughput_cps": cps,
                     }
-                    if math.isfinite(current_budget):
-                        remaining = max(0, int(current_budget - consumed))
-                        tick_payload[UIKey.ACTIVE_QUOTA.value] = remaining
-                        msg_str = (
-                            f"[FuelTrap] Stream metering '{tenant_id}': "
-                            f"consumed={consumed} tokens, remaining={remaining} Fuel ({cps} chunks/s)"
-                        )
-                    else:
-                        msg_str = f"[FuelTrap] Stream metering '{tenant_id}': consumed={consumed} tokens ({cps} chunks/s)"
-
-                    log_pipeline.info(msg_str, **tick_payload)
+                    log_pipeline.info(
+                        f"[FuelTrap] Stream metering '{tenant_id}': consumed={consumed} tokens ({cps} chunks/s)",
+                        **tick_payload,
+                    )
 
                 yield raw_chunk
         except Exception as e:
@@ -362,12 +353,11 @@ class FuelBreaker(DuplexChannel):
                     "active_streams": _ACTIVE_STREAMS,
                     "throughput_cps": 0.0 if _ACTIVE_STREAMS == 0 else None,
                 }
-                if math.isfinite(current_budget):
-                    close_payload[UIKey.ACTIVE_QUOTA.value] = max(0, int(current_budget - consumed))
                 log_pipeline.info(
                     f"[FuelTrap] Stream completed for '{tenant_id}' (total={consumed} tokens, chunks={chunks}, active={_ACTIVE_STREAMS}).",
                     **close_payload,
                 )
+
 
 class BillingObserver(DuplexChannel):
     def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):
@@ -394,10 +384,7 @@ class BillingObserver(DuplexChannel):
             if effective_fuel > 0 and tenant_id not in ("anonymous", "internal_system", "unknown"):
                 async def _process_billing_task():
                     try:
-                        # 기본값: 1 Token = 1 Fuel
                         final_consume_amount = effective_fuel
-
-                        # tenant_eco가 주입된 경우 프로바이더/모델별 단가 계산 결과로 오버라이드
                         if self.tenant_eco:
                             model_name = (
                                 getattr(processed_ctx, "model", None)
@@ -428,6 +415,19 @@ class BillingObserver(DuplexChannel):
                             trace_id=meta.trace_id if meta else None,
                             pta_adapter=self.pta_adapter,
                         )
+                        if self.pta_adapter is not None:
+                            actual_balance = await self.pta_adapter.get_balance(tenant_id, "fuel")
+                            log_pipeline.info(
+                                f"[BillingObserver] Ledger balance synced for '{tenant_id}': {actual_balance} Fuel",
+                                **{
+                                    "mode": "RAW",
+                                    UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,
+                                    UIKey.SLOT.value: UISlot.FUEL.value,
+                                    UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
+                                    UIKey.TENANT_ID.value: tenant_id,
+                                    UIKey.LEDGER_BALANCE.value: actual_balance,
+                                },
+                            )
                     except Exception as e:
                         log_pipeline.error(
                             f"[BillingObserver] Failed to process billing pipeline for '{tenant_id}': {e}",

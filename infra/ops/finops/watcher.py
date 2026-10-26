@@ -1,5 +1,10 @@
 # fiber.infra.ops.finops.watcher
-## @lineage: fiber.infra.watcher.finops
+"""
+Glossary:
+- fuel_budget: Fixed spending quota limit assigned via policy/Mandate (immutable until upgraded).
+- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA Ledger SSOT.
+- Ensure UI signals and state tracking keep these two concepts strictly decoupled.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -25,6 +30,7 @@ from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import flow_scope, get_emitter, register_interceptor
 
 finops_emitter = get_emitter("watcher.finops", phase="BILLING")
+
 
 class UsageTracker:
     def __init__(self):
@@ -131,22 +137,11 @@ class TenantEco:
             )
             final_cost = cost_breakdown.final_cost
 
-            # FuelExchange를 통해 정산:
-            # 1) 상용 단가(final_cost > 0)가 존재하면 USD 환율(기본 1000)을 곱해 Fuel 산출
-            # 2) 로컬 모델 등 단가가 0.0이면 기본 1 Token = 1 Fuel 비율로 산출
             amount_to_consume = self.exchange.settle_consumption(
                 total_tokens=normalized_usage.total_tokens,
                 billed_cost_usd=final_cost,
             )
             saved_discount_usd = max(0.0, float(base_total_cost - final_cost))
-
-            # 로컬 워처 캐시가 보유한 현재 잔여 쿼터와 동기화하여 차감 반영
-            cached_quota = default_finops_watcher.local_budget_cache.get(tenant_id)
-            if cached_quota is not None and amount_to_consume > 0:
-                remaining_quota = max(0.0, cached_quota - amount_to_consume)
-                default_finops_watcher.local_budget_cache[tenant_id] = remaining_quota
-            else:
-                remaining_quota = cached_quota
 
             ui_context: Dict[str, Any] = {
                 "mode": "RAW",
@@ -162,11 +157,7 @@ class TenantEco:
                 UIKey.SLOT.value: UISlot.FUEL.value,
                 UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
                 UIKey.TENANT_ID.value: tenant_id,
-                UIKey.CHUNKS.value: normalized_usage.total_tokens,
             }
-            if remaining_quota is not None:
-                ui_context[UIKey.METRIC.value] = UIMetric.FUEL_TICK.value
-                ui_context[UIKey.ACTIVE_QUOTA.value] = int(remaining_quota)
             if saved_discount_usd > 0.0:
                 ui_context[UIKey.SAVED_USD.value] = round(saved_discount_usd, 6)
 
@@ -255,7 +246,7 @@ class FinOpsWatcher:
         policy_ver: Optional[int] = None,
         jti: Optional[str] = None,
     ) -> bool:
-        # 1. 버전 검증: 이미 더 높은 버전의 정책이 적용되었으면 무시/거부
+        # 버전 검증: 이미 더 높은 버전의 정책이 적용되었으면 무시/거부
         current_ver = self.policy_versions.get(tenant_id, 0)
         if policy_ver is not None and policy_ver < current_ver:
             finops_emitter.warning(
@@ -270,7 +261,7 @@ class FinOpsWatcher:
             )
             return False
 
-        # 2. 멱등성(Idempotency) 검증: 이미 처리된 JTI라면 중복 생성/충전 스킵
+        # 멱등성(Idempotency) 검증: 이미 처리된 JTI라면 중복 생성/충전 스킵
         if jti and jti in self.processed_jtis:
             finops_emitter.debug(
                 f"[FinOpsWatcher] Duplicate JTI '{jti}' ignored for tenant '{tenant_id}'.",
@@ -278,7 +269,7 @@ class FinOpsWatcher:
             )
             return False
 
-        # 3. 목표 Fuel 계산 (fuel_budget 직접 지정 또는 FuelExchange를 통한 budget_usd 환산)
+        # 목표 Fuel Budget 계산 (fuel_budget 직접 지정 또는 FuelExchange를 통한 budget_usd 환산)
         if fuel_budget is not None:
             target_fuel = float(fuel_budget)
         elif budget_usd is not None:
@@ -286,14 +277,14 @@ class FinOpsWatcher:
         else:
             target_fuel = 0.0
 
-        # 4. 처리 완료된 JTI 및 최신 버전 기록
+        # 처리 완료된 JTI 및 최신 버전 기록
         if jti:
             self.processed_jtis.add(jti)
         if policy_ver is not None:
             self.policy_versions[tenant_id] = int(policy_ver)
         effective_ver = self.policy_versions.get(tenant_id, 1)
 
-        # 5. 오퍼레이션(op) 별 상태 변이 및 구조화 UI 시그널 발행
+        # 오퍼레이션(op) 별 예산 한도(FUEL_BUDGET) 상태 변이 및 구조화 UI 시그널 발행
         op_upper = op.upper()
         if op_upper == "REVOKE":
             self.local_budget_cache[tenant_id] = 0.0
@@ -304,7 +295,6 @@ class FinOpsWatcher:
                     UIKey.SLOT.value: UISlot.FUEL.value,
                     UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
                     UIKey.TENANT_ID.value: tenant_id,
-                    UIKey.ACTIVE_QUOTA.value: 0,
                     UIKey.LEDGER_BALANCE.value: 0,
                     UIKey.POLICY_VER.value: effective_ver,
                 },
@@ -313,25 +303,25 @@ class FinOpsWatcher:
 
         if op_upper == "TOP_UP":
             current_fuel = self.local_budget_cache.get(tenant_id, 0.0)
-            new_quota = current_fuel + target_fuel
-            self.local_budget_cache[tenant_id] = new_quota
-            msg = f"[FinOpsWatcher] TOP_UP executed: Tenant '{tenant_id}' +{int(target_fuel):,} -> {int(new_quota):,} Fuel (v{effective_ver})."
+            new_budget = current_fuel + target_fuel
+            self.local_budget_cache[tenant_id] = new_budget
+            msg = f"[FinOpsWatcher] TOP_UP executed: Tenant '{tenant_id}' +{int(target_fuel):,} -> {int(new_budget):,} Fuel (v{effective_ver})."
         elif op_upper == "PROVISION":
             if tenant_id not in self.local_budget_cache:
                 self.local_budget_cache[tenant_id] = target_fuel
-                new_quota = target_fuel
-                msg = f"[FinOpsWatcher] PROVISION executed: Tenant '{tenant_id}' initialized with {int(new_quota):,} Fuel (v{effective_ver})."
+                new_budget = target_fuel
+                msg = f"[FinOpsWatcher] PROVISION executed: Tenant '{tenant_id}' initialized with {int(new_budget):,} Fuel (v{effective_ver})."
             else:
-                new_quota = self.local_budget_cache[tenant_id]
+                new_budget = self.local_budget_cache[tenant_id]
                 finops_emitter.debug(
-                    f"[FinOpsWatcher] PROVISION skipped: Tenant '{tenant_id}' already exists ({int(new_quota):,} Fuel).",
-                    **{UIKey.TENANT_ID.value: tenant_id, UIKey.ACTIVE_QUOTA.value: int(new_quota)},
+                    f"[FinOpsWatcher] PROVISION skipped: Tenant '{tenant_id}' already exists ({int(new_budget):,} Fuel).",
+                    **{UIKey.TENANT_ID.value: tenant_id, UIKey.FUEL_BUDGET.value: int(new_budget)},
                 )
                 return True
         else:
             self.local_budget_cache[tenant_id] = target_fuel
-            new_quota = target_fuel
-            msg = f"[FinOpsWatcher] SYNC_QUOTA executed: Tenant '{tenant_id}' -> {int(new_quota):,} Fuel (v{effective_ver})."
+            new_budget = target_fuel
+            msg = f"[FinOpsWatcher] SYNC_QUOTA executed: Tenant '{tenant_id}' -> {int(new_budget):,} Fuel (v{effective_ver})."
 
         finops_emitter.info(
             msg,
@@ -341,7 +331,7 @@ class FinOpsWatcher:
                 UIKey.SLOT.value: UISlot.FUEL.value,
                 UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
                 UIKey.TENANT_ID.value: tenant_id,
-                UIKey.ACTIVE_QUOTA.value: int(new_quota),
+                UIKey.FUEL_BUDGET.value: int(new_budget),
                 UIKey.POLICY_VER.value: effective_ver,
             },
         )
@@ -430,7 +420,9 @@ class FinOpsWatcher:
 
                 finops_block = payload.get("finops", {})
                 op = finops_block.get("op") or payload.get("op", "SYNC_QUOTA")
-                fuel_budget = payload.get("fuel_budget")
+                fuel_budget = (
+                    finops_block.get("fuel_budget") if "fuel_budget" in finops_block else payload.get("fuel_budget")
+                )
                 budget_usd = (
                     finops_block.get("budget_usd") if "budget_usd" in finops_block else payload.get("budget_usd")
                 )
@@ -465,13 +457,16 @@ def _usage_tracking_interceptor(event: LogEvent):
         model_name = ctx.get("model_name", "default-model")
         tracker.add_usage(model_name, usage_data)
 
+
 register_interceptor(_usage_tracking_interceptor)
+
 
 @contextmanager
 def track_usage() -> Generator[UsageTracker, None, None]:
     tracker = UsageTracker()
     with flow_scope(usage_tracker=tracker):
         yield tracker
+
 
 default_finops_watcher = FinOpsWatcher()
 default_tenant_eco = TenantEco()
