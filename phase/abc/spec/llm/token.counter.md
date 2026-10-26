@@ -1,4 +1,4 @@
-# fiber.phase.abc.spec.llm.token
+# fiber.phase.abc.spec.llm.token.counter
 
 ## 1. Overview
 

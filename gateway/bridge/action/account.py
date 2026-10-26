@@ -3,6 +3,20 @@
 @desc: LocalAccount CLI & Headless Bridge Action Utility
 - Provides typed headless functions for Console UI & programmatic callers.
 - Provides terminal interface for FinOps & Quota management.
+
+@cli_usage:
+  # 1. Inspect & Registry
+  $ fiber account list
+  $ fiber account --tenant accounting_dept status
+  $ fiber account --tenant accounting_dept demo
+
+  # 2. Direct Fuel Allocation & JWT Mandate ($1.00 = 1,000,000 Fuel)
+  $ fiber account --tenant accounting_dept allocate --amount 1000000
+  $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op SYNC_QUOTA
+  $ fiber account --tenant accounting_dept jwt --usd 10.0 --op TOP_UP --ver 2
+
+  # 3. Emergency Kill-Switch (Burn ledger to 0 & broadcast REVOKE)
+  $ fiber account --tenant accounting_dept kill
 """
 from __future__ import annotations
 

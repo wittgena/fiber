@@ -77,7 +77,6 @@ def build_hitl_resolution_receipt(
         {"status": "RESUMED", "handle_id": "h_active", "attested_by": admin_user},
     )
 
-
 class OobActionBridge:
     def __init__(self, finops: FinOpsConsoleManager) -> None:
         self._finops = finops

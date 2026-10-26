@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 import httpx
 
+from fiber.dev.base.workflow.audit.context import AuditContext
 from fiber.dev.base.workflow.config import Phase, E2EConfig
 from fiber.dev.base.workflow.pipeline import MockPipeline, log
 
@@ -26,9 +27,9 @@ from fiber.gateway.contract.token.gen import FinOpsTokenGenerator
 from fiber.infra.mcp.connector import MCPServerConnector
 
 from fiber.infra.vcr.manager import (
-    VCRPlaybackConfig, 
-    VCRIdentityRule, 
-    add_vcr_arguments
+    VCRPlaybackConfig,
+    VCRIdentityRule,
+    add_vcr_arguments,
 )
 from fiber.infra.vcr.injector import VCRInjector
 from fiber.dev.base.workflow.builder import create_e2e_parser, build_e2e_context
@@ -61,28 +62,31 @@ LONG_FINOPS_PROMPT = (
     "walkthroughs for every single section without summarizing or skipping any details."
 )
 
+
 class HybridFinOpsFuelPipeline(MockPipeline):
     def __init__(self, config: E2EConfig, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
         super().__init__(
-            config=config, 
-            name="FinOps Hybrid VCR Integration Suite", 
-            scope_name="HYBRID_FINOPS_SUITE"
+            config=config,
+            name="FinOps Hybrid VCR Integration Suite",
+            scope_name="HYBRID_FINOPS_SUITE",
         )
         self.vcr_config = vcr_config
         self.vcr_manager = vcr_manager
         self.target_model = target_model
-        
+
         self.finops_tenant_id = "finops-local-01"
         self.dpop_client = DPoPClientGenerator(key_size=2048)
         self.token_gen = FinOpsTokenGenerator()
-        
-        self.test_tenant = "accounting_dept"
+
+        # AuditContext를 통해 콘솔의 기본 테넌트('accounting_dept')와 충돌하지 않는 격리된 테스트 테넌트 생성
+        self.audit_ctx = AuditContext(tenant_id="accounting_dept")
+        self.test_tenant = self.audit_ctx.tenant_id
         self.initial_fuel = 1000
         self.issued_jwt: Optional[str] = None
-        
+
         self.broker = DphiBroker(timeout=5.0)
         self.pta_adapter = PtaAdapter(broker=self.broker)
-        
+
         self.set_phases([
             Phase("Phase 1: PTA Infrastructure Setup", self.phase_pta_setup),
             Phase("Phase 2: Track B - FinOps JWT Issuance, Idempotency & Lifecycle Translation", self.phase_track_b_jwt),
@@ -90,6 +94,9 @@ class HybridFinOpsFuelPipeline(MockPipeline):
         ])
 
     async def teardown_custom(self):
+        self.audit_ctx.teardown()
+        default_finops_watcher.local_budget_cache.pop(self.test_tenant, None)
+        default_finops_watcher.policy_versions.pop(self.test_tenant, None)
         await self.broker.close()
 
     async def setup_workers(self):
@@ -104,7 +111,7 @@ class HybridFinOpsFuelPipeline(MockPipeline):
         trace_id = next_trace_id(seed) if self.vcr_config.mode in ("record", "replay") else next_trace_id()
         return {
             "trace_id": trace_id,
-            "metadata": {"vcr_scenario": scenario_name, "vcr_invoker": CURRENT_INVOKER}
+            "metadata": {"vcr_scenario": scenario_name, "vcr_invoker": CURRENT_INVOKER},
         }
 
     async def _wait_for_balance(self, target_balance: int, timeout: float = 10.0) -> int:
@@ -121,12 +128,12 @@ class HybridFinOpsFuelPipeline(MockPipeline):
     async def phase_pta_setup(self):
         log.info(f"  └─ Bootstrapping PTA Ledger for '{self.test_tenant}' with {self.initial_fuel} Fuel.")
         produce_tx = PtaTransaction(
-            inputs=[], 
+            inputs=[],
             outputs=[PtaOutput(amount=self.initial_fuel, owner=self.test_tenant, asset_type="fuel")],
-            metadata={"action": "test_produce"}
+            metadata={"action": "test_produce"},
         )
         await self.pta_adapter.execute_transaction(produce_tx)
-        
+
         balance = await self._wait_for_balance(target_balance=self.initial_fuel)
         if balance < self.initial_fuel:
             raise RuntimeError(f"Failed to produce initial fuel. Expected {self.initial_fuel}, got {balance}.")
@@ -134,24 +141,26 @@ class HybridFinOpsFuelPipeline(MockPipeline):
 
     async def phase_track_b_jwt(self):
         payload = {
-            "jsonrpc": "2.0", "id": 100, "method": "tools/call", 
-            "params": {"name": "issue_jwt", "arguments": {"tenant_id": self.test_tenant, "budget_usd": 50.0}}
+            "jsonrpc": "2.0",
+            "id": 100,
+            "method": "tools/call",
+            "params": {"name": "issue_jwt", "arguments": {"tenant_id": self.test_tenant, "budget_usd": 50.0}},
         }
-        
+
         nonce = uuid.uuid4().hex
         url = f"{self.local_url}/v1/mcp-gateway/{self.finops_tenant_id}/invoke"
         dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
         headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "DPoP": dpop_proof}
-        
+
         async with httpx.AsyncClient(base_url=self.local_url) as client:
             res = await client.post(url, json=payload, headers=headers)
-            
+
         if res.status_code != 200:
             raise RuntimeError(f"Expected 200, got {res.status_code}")
-            
+
         result_text = res.json().get("result", {}).get("content", [])[0].get("text", "{}")
         jwt_token = json.loads(result_text).get("jwt")
-        
+
         if not jwt_token:
             raise RuntimeError("Missing JWT in response")
         self.issued_jwt = jwt_token
@@ -161,15 +170,15 @@ class HybridFinOpsFuelPipeline(MockPipeline):
         translated_receipt = await TokenTranslator.exchange(jwt_token)
         if not translated_receipt or "AP2-v1.0" not in translated_receipt:
             raise RuntimeError("JWT to AP2 Translation failed.")
-            
+
         synced_fuel = default_finops_watcher.local_budget_cache.get(self.test_tenant, 0.0)
-        if synced_fuel != 50000.0:
-            raise RuntimeError(f"Watcher budget sync mismatch: expected 50000.0 Fuel, got {synced_fuel}")
+        if synced_fuel != 50_000_000.0:
+            raise RuntimeError(f"Watcher budget sync mismatch: expected 50000000.0 Fuel, got {synced_fuel}")
         log.info(f"  └─ 2. FinOps JWT translated to AP2 Mandate & synced budget ({synced_fuel} Fuel).")
 
         # 3. [중복 생성 방지 검증] 동일 JWT(동일 JTI)로 TOP_UP이나 재호출 시 예산이 중복 합산되지 않는지 확인
         await TokenTranslator.exchange(jwt_token)
-        if default_finops_watcher.local_budget_cache.get(self.test_tenant) != 50000.0:
+        if default_finops_watcher.local_budget_cache.get(self.test_tenant) != 50_000_000.0:
             raise RuntimeError("JTI Idempotency failed: duplicate token exchange mutated budget.")
         log.info("  └─ 3. JTI Idempotency verified (duplicate token exchange safely ignored).")
 
@@ -179,8 +188,8 @@ class HybridFinOpsFuelPipeline(MockPipeline):
         )
         await TokenTranslator.exchange(topup_jwt)
         updated_fuel = default_finops_watcher.local_budget_cache.get(self.test_tenant, 0.0)
-        if updated_fuel != 60000.0:
-            raise RuntimeError(f"TOP_UP transition failed: expected 60000.0 Fuel, got {updated_fuel}")
+        if updated_fuel != 60_000_000.0:
+            raise RuntimeError(f"TOP_UP transition failed: expected 60000000.0 Fuel, got {updated_fuel}")
         log.info(f"  └─ 4. Policy version upgrade (v2 TOP_UP) verified: Budget -> {updated_fuel} Fuel.")
 
         # 5. [구버전 차단 검증] v2가 적용된 상태에서 구버전(v1) 토큰 재사용 시 거부(None)되는지 확인
@@ -192,19 +201,19 @@ class HybridFinOpsFuelPipeline(MockPipeline):
     async def phase_track_a_hybrid_kill(self):
         original_quota_flag = os.environ.get("FIBER_ENFORCE_QUOTA")
         os.environ["FIBER_ENFORCE_QUOTA"] = "true"
-        
+
         scenario = "fuel_phase_4_finops"
         messages = [{"role": "user", "content": LONG_FINOPS_PROMPT}]
         trace_ctx = self._build_trace_context(scenario, messages)
-        
+
         # Phase 2에서 동기화된 예산(없을 경우 initial_fuel)을 동적으로 연결
         active_budget = int(default_finops_watcher.local_budget_cache.get(self.test_tenant, self.initial_fuel))
         trace_ctx["metadata"]["node_auth"] = NodeAuthPayload(
             fuel_budget=active_budget,
             tenant_id=self.test_tenant,
-            is_enforced=True
+            is_enforced=True,
         )
-        
+
         first_chunk_arrived = asyncio.Event()
 
         # FinOps 백그라운드 캐시 데몬 가동
@@ -221,7 +230,7 @@ class HybridFinOpsFuelPipeline(MockPipeline):
                     stream=True,
                     fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
                     billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
-                    **trace_ctx
+                    **trace_ctx,
                 )
                 chunks = 0
                 char_len = 0
@@ -242,28 +251,30 @@ class HybridFinOpsFuelPipeline(MockPipeline):
 
             # Task-1: 메인 프로세스에서 장문 LLM 스트림 병렬 실행 시작
             stream_task = asyncio.create_task(run_llm_stream())
-            
+
             # 첫 번째 스트림 청크가 실제로 파이프라인을 통과할 때까지 대기 (최대 15초)
             await asyncio.wait_for(first_chunk_arrived.wait(), timeout=15.0)
 
             # Task-2: 스트림이 한창 흐르는 도중 FinOps Worker를 통해 외부 킬 스위치 발동
             log.info("  └─ Stream active (chunk #1 verified). Triggering asynchronous Kill-Switch via FinOps Worker...")
             payload = {
-                "jsonrpc": "2.0", "id": 200, "method": "tools/call", 
-                "params": {"name": "trigger_kill", "arguments": {"tenant_id": self.test_tenant}}
+                "jsonrpc": "2.0",
+                "id": 200,
+                "method": "tools/call",
+                "params": {"name": "trigger_kill", "arguments": {"tenant_id": self.test_tenant}},
             }
             nonce = uuid.uuid4().hex
             url = f"{self.local_url}/v1/mcp-gateway/{self.finops_tenant_id}/invoke"
             dpop_proof = self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce)
             headers = {"x-idempotency-key": uuid.uuid4().hex, "x-nonce": nonce, "DPoP": dpop_proof}
-            
+
             async with httpx.AsyncClient(base_url=self.local_url) as client:
                 res = await client.post(url, json=payload, headers=headers)
                 if res.status_code != 200:
                     raise RuntimeError("Kill switch trigger failed.")
-                
+
             received_chunks, received_chars = await stream_task
-            
+
             MAX_TOLERABLE_CHUNKS = 8
             if 1 <= received_chunks <= MAX_TOLERABLE_CHUNKS:
                 log.info(
@@ -284,6 +295,7 @@ class HybridFinOpsFuelPipeline(MockPipeline):
             else:
                 os.environ.pop("FIBER_ENFORCE_QUOTA", None)
 
+
 class HybridSuiteRunner:
     def __init__(self, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
         self.vcr_config = vcr_config
@@ -293,16 +305,17 @@ class HybridSuiteRunner:
     async def execute(self):
         net_config = E2EConfig(host="127.0.0.1", port=8355, protocol="http")
         results = await HybridFinOpsFuelPipeline(
-            config=net_config, 
-            vcr_config=self.vcr_config, 
+            config=net_config,
+            vcr_config=self.vcr_config,
             vcr_manager=self.vcr_manager,
-            target_model=self.target_model
+            target_model=self.target_model,
         ).run_pipeline()
-        
+
         if all(r.passed for r in results):
             log.info("FINOPS SYSTEM VALIDATED SUCCESSFULLY.")
         else:
             log.critical("FINOPS FAILURE DETECTED.")
+
 
 def main(args_list: list[str] = None):
     parser = create_e2e_parser("FinOps Integration Test Runner")
@@ -310,19 +323,20 @@ def main(args_list: list[str] = None):
     parsed_args, _ = parser.parse_known_args(args_list)
     _, run_context = build_e2e_context(parsed_args)
     resolved_model = run_context["target_model"]
-    
+
     vcr_config = VCRPlaybackConfig.from_args(parsed_args)
     manager = VCRInjector.apply(config=vcr_config, fixture_dir=FIXTURE_ROOT)
     app = HybridSuiteRunner(
-        vcr_config=vcr_config, 
-        vcr_manager=manager, 
-        target_model=resolved_model
+        vcr_config=vcr_config,
+        vcr_manager=manager,
+        target_model=resolved_model,
     )
-    
+
     try:
         PhaseReactor.ignite(main_coro_func=app.execute)
     finally:
         VCRInjector.remove()
+
 
 if __name__ == "__main__":
     main()

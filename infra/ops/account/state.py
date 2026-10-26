@@ -18,7 +18,7 @@ _PERSIST_SCHEMA: Dict[str, Tuple[str, ...]] = {
         "tenant_id",
         "spiffe_id",
         "ledger_balance",
-        "fuel_quota",
+        "fuel_budget",
         "policy_ver",
         "last_op",
         "jwt_op",
@@ -57,7 +57,7 @@ class FinOpsState:
 
     # $10.00 = 10,000,000 Fuel 기본 스케일 ($1 = 1M Fuel)
     ledger_balance: int = 10_000_000  # 현재 남은 실제 연료 (스트림 소모 시 차감됨)
-    fuel_quota: int = 10_000_000      # 할당된 예산 기준값 사본 (비교 및 Re-sync 기준)
+    fuel_budget: int = 10_000_000      # 할당된 예산 기준값 사본 (비교 및 Re-sync 기준)
     policy_ver: int = 1
     last_op: str = "INIT"
 
@@ -85,7 +85,7 @@ class FinOpsState:
         tick_label = label or time.strftime("%H:%M:%S")
         self.x_ticks.append(tick_label)
         self.y_fuel.append(self.ledger_balance)
-        self.y_core.append(self.fuel_quota)
+        self.y_core.append(self.fuel_budget)
         self.chart_dirty = True
     
     @property
@@ -94,13 +94,13 @@ class FinOpsState:
 
     @property
     def quota_usd(self) -> float:
-        return self.fuel_quota / USD_TO_FUEL_RATE
+        return self.fuel_budget / USD_TO_FUEL_RATE
 
     @property
     def account_summary_badge(self) -> str:
         return (
             f"Tenant: {self.tenant_id} (v{self.policy_ver}) | "
-            f"Balance: {self.ledger_balance:,} / Quota: {self.fuel_quota:,} Fuel "
+            f"Balance: {self.ledger_balance:,} / Quota: {self.fuel_budget:,} Fuel "
             f"(${self.balance_usd:,.2f} / ${self.quota_usd:,.2f})"
         )
 
@@ -213,7 +213,7 @@ class StudioState:
     @property
     def fuel_kpi_text(self) -> str:
         f = self.finops
-        return f"[{f.tenant_id}] Fuel: {f.ledger_balance:,} / {f.fuel_quota:,} (v{f.policy_ver})"
+        return f"[{f.tenant_id}] Fuel: {f.ledger_balance:,} / {f.fuel_budget:,} (v{f.policy_ver})"
 
     @property
     def saved_kpi_text(self) -> str:
@@ -238,13 +238,13 @@ class StudioState:
                     setattr(sub_obj, k, sec_data[k])
 
         self.finops.set_balance(self.finops.ledger_balance)
-        if self.finops.fuel_quota <= 0 and self.finops.ledger_balance > 0:
-            self.finops.fuel_quota = self.finops.ledger_balance
+        if self.finops.fuel_budget <= 0 and self.finops.ledger_balance > 0:
+            self.finops.fuel_budget = self.finops.ledger_balance
 
         self.finops.y_fuel.clear()
         self.finops.y_fuel.append(self.finops.ledger_balance)
         self.finops.y_core.clear()
-        self.finops.y_core.append(self.finops.fuel_quota)
+        self.finops.y_core.append(self.finops.fuel_budget)
 
 @dataclass
 class UIRefs:

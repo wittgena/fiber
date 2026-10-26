@@ -1,8 +1,4 @@
 # fiber.dev.base.workflow.audit.context
-## @lineage: fiber.dev.base.audit.context
-## @lineage: fiber.dev.e2e.base.audit.context
-## @lineage: fiber.infra.bound.e2e.audit.context
-## @lineage: fiber.dev.e2e.worker.fixture
 import os
 import time
 import uuid
@@ -22,16 +18,20 @@ import xphi.node.rpc.registry as rpc_registry
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.node.space.bind.resolver import resolve_path
 
+
 class AuditContext:
     def __init__(
         self,
         spiffe_id: str = "spiffe://self/fiber",
+        tenant_id: str = "accounting_dept",
         totp_secret: str = "JBSWY3DPEHPK3PXP",
         passphrase: Optional[str] = None,
     ):
         self.run_id = uuid.uuid4().hex[:8]
         base_id = spiffe_id.rstrip("/")
+        base_tenant = tenant_id.strip()
         self.spiffe_id = f"{base_id}_e2e_{self.run_id}"
+        self.tenant_id = f"{base_tenant}_e2e_{self.run_id}"
         self.totp_secret = totp_secret
         self._explicit_passphrase = passphrase
 
@@ -45,7 +45,7 @@ class AuditContext:
     @property
     def temp_db_path(self) -> str:
         """audit.py 로깅 호환성을 위한 프로퍼티 (표준 DB 경로 및 격리된 테스트 계정 표시)"""
-        return f"{self.db_path} (Scoped ID: {self.spiffe_id})"
+        return f"{self.db_path} (Scoped ID: {self.spiffe_id}, Tenant: {self.tenant_id})"
 
     def provision(self) -> ValidatorService:
         """NodeSigner 및 local_cipher.key 기반으로 ValidatorService를 초기화, 표준 DB에 격리된 일회용 테스트 계정을 안전하게 주입"""

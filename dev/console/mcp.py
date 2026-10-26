@@ -199,5 +199,4 @@ class McpActionBridge:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
 
-
 mcp = McpActionBridge()

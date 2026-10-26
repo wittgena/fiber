@@ -1,5 +1,5 @@
 # fiber.phase.abc.spec.llm.entry
-@desc: Drop-in LLM Entrypoint & REST Gateway Usage Guide
+@desc: LLM Pipeline Entrypoint & REST Gateway Guide
 
 ## 1. Overview
 

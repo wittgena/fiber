@@ -1,4 +1,4 @@
-# fiber.phase.abc.spec.dev.guide
+# fiber.phase.abc.spec.guide.dev.setup
 @desc: fiber install & dev guide
 
 ## 1. Directory Structure & Execution Modes
