@@ -292,6 +292,10 @@ $ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/llm/pipeline/interceptor/tes
 $ python -m fiber.dev.gateway.tester
 ```
 
+> **Experimental:** Fixtures and replay sessions can also be inspected in the Control Studio's VCR tab (see [3.2](#32-fiber-connect-cli)).
+<p align="center">
+  <img src="./phase/abc/asset/console-vcr.png" alt="Control Studio - VCR tab" width="100%" />
+</p>
 
 ---
 
@@ -521,6 +525,20 @@ $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROV
 # Trigger a real-time Pub/Sub REVOKE kill-switch to sever active streams mid-flight
 $ fiber account --tenant accounting_dept kill --ver 99
 ```
+
+**finops stream break demo**
+<p align="center">
+  <img src="./phase/abc/asset/finops-kill-inter-stream.gif" alt="FinOps llm stream 200vu Stream Break Demo" width="100%" />
+</p>
+
+Demonstrating a 200-VU concurrent `fiber e2e inter.stream --vcr replay --concurrency 200` execution alongside the experimental Control Studio UI (`python -m fiber.dev.console.app`), this recording captures a 10-second Stream Break cycle. The FinOps circuit breaker instantly halts consumption and severs active streams with fuel exhaustion errors, then automatically restores ledger balances upon cooldown.
+
+**Control Studio (Experimental)**
+<p align="center">
+  <img src="./phase/abc/asset/console-mcp-gateway.png" alt="Control Studio - MCP Gateway tab" width="100%" />
+</p>
+
+Control Studio is a unified console with MCP Gateway and VCR tabs. The MCP Gateway tab shows worker status, tenant fuel balances, and transactions parked for Pre-Flight HITL approval; the VCR tab (shown in [1.2](#12-fixture-testing-llm-recordreplay)) lets you inspect recorded fixtures. Launch with `python -m fiber.dev.console.app`.
 
 ---
 
