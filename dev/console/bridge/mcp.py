@@ -1,4 +1,4 @@
-# fiber.dev.console.mcp
+# fiber.dev.console.bridge.mcp
 from __future__ import annotations
 
 import asyncio

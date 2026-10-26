@@ -31,22 +31,6 @@ class FinOpsTab(StudioTab):
     left_header = "Budget Control"
     right_header = "Fuel Circuit Breaker"
 
-    @staticmethod
-    async def _run_demo_and_sync() -> None:
-        f = state.finops
-        spiffe_args = ["--spiffe", f.spiffe_id.strip()] if f.spiffe_id and f.spiffe_id.strip() else []
-        await run_fiber_cli("account", "--tenant", f.tenant_id, *spiffe_args, "demo")
-        await finops_manager.refresh_account_status(silent=True)
-
-    @staticmethod
-    async def _resync_balance_to_saved_quota() -> None:
-        """현재 줄어든 ledger_balance를 사본으로 저장된 fuel_budget 기준값으로 즉시 복원(Sync)한다."""
-        f = state.finops
-        if f.fuel_budget > 0:
-            f.jwt_usd = round(f.fuel_budget / USD_TO_FUEL_RATE, 2)
-        f.jwt_op = "SYNC_QUOTA"
-        await finops_manager.issue_account_jwt()
-
     def compose_left(self) -> None:
         f = state.finops
         if f.jwt_op not in FINOPS_ACTION_LABELS:

@@ -1,4 +1,4 @@
-# fiber.dev.console.sign
+# fiber.dev.console.bridge.sign
 from __future__ import annotations
 
 import json

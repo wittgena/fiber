@@ -1,4 +1,4 @@
-# fiber.dev.console.action
+# fiber.dev.console.bridge.pipeline
 from __future__ import annotations
 
 import asyncio
