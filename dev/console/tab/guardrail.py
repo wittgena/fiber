@@ -1,14 +1,11 @@
-# fiber.dev.console.tab.core
+# fiber.dev.console.tab.guardrail
 from __future__ import annotations
 
-from pathlib import Path
 from nicegui import ui
 
 from fiber.infra.ops.account.state import state, refs
-from fiber.gateway.bridge.cli import run_fiber_cli
-from fiber.infra.ops.finops.console import finops_manager
-from fiber.dev.console.action import pipeline
-from fiber.dev.console.sign import oob
+from fiber.dev.console.bridge.pipeline import pipeline
+from fiber.dev.console.bridge.sign import oob
 
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
@@ -16,15 +13,6 @@ from fiber.dev.console.ui.guide import GuideModal
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
 from fiber.dev.console.tab.vcr import VcrTab
 from fiber.dev.console.tab.finops import FinOpsTab
-from xphi.node.space.bind.resolver import resolve_path
-
-
-def _resolve_accounts_registry_path() -> Path:
-    try:
-        from fiber.infra.ops.account.registry import LocalAccountRegistry
-        return Path(LocalAccountRegistry.get_registry_path())
-    except Exception:
-        return resolve_path("anchor") / "sign" / "local_accounts.json"
 
 class LLMGuardrailTab(StudioTab):
     title = "Guardrail"
@@ -151,7 +139,7 @@ class ModelNSettingTab(StudioTab):
                 ui.badge(f"Models: {total_mapped:,}").props("color=slate-8 text-color=cyan-3").classes(
                     "text-[10px] font-mono font-bold px-1.5 py-0.5"
                 )
-                ui.badge(f"roviders: {len(CORE_KEYWORDS)}").props("color=slate-8 text-color=emerald-3").classes(
+                ui.badge(f"providers: {len(CORE_KEYWORDS)}").props("color=slate-8 text-color=emerald-3").classes(
                     "text-[10px] font-mono font-bold px-1.5 py-0.5"
                 )
                 ui.badge(f"$1 = {usd_rate:,} Fuel (1:1 Local Par)").props(

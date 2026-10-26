@@ -45,8 +45,8 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
     if not args:
         return
 
-    from fiber.dev.console.sign import oob
-    from fiber.dev.console.mcp import mcp
+    from fiber.dev.console.bridge.sign import oob
+    from fiber.dev.console.bridge.mcp import mcp
     from fiber.infra.ops.finops.console import finops_manager
 
     domain_cmd = args[0]
@@ -71,8 +71,8 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
 
 
 async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
-    from fiber.dev.console.sign import oob
-    from fiber.dev.console.mcp import mcp
+    from fiber.dev.console.bridge.sign import oob
+    from fiber.dev.console.bridge.mcp import mcp
 
     f, s = state.finops, state.security
     await asyncio.sleep(0.15)

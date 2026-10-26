@@ -18,15 +18,20 @@ from fiber.infra.ops.account.state import (
     state,
 )
 from fiber.infra.ops.finops.console import finops_manager
-from fiber.dev.console.sign import oob
-from fiber.dev.console.mcp import mcp
+from fiber.dev.console.bridge.sign import oob
+from fiber.dev.console.bridge.mcp import mcp
 
+from fiber.dev.console.tab.mcp import McpGatewayTab, HitlModal, QrModal
+from fiber.dev.console.tab.guardrail import LLMGuardrailTab, ModelNSettingTab
+from fiber.dev.console.tab.finops import FinOpsTab
+from fiber.dev.console.tab.vcr import VcrTab
+from fiber.dev.console.ui.guide import GuideModal
 import fiber.dev.console.observer.plane as plane
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
 import fiber.dev.console.ui.kit as kit
-from fiber.dev.console.ui.kit import ConsoleTemplate, StudioTab
-import fiber.dev.console.tab.core as tab
+from fiber.dev.console.ui.kit import ConsoleTemplate, StudioTab, ModalTemplate
+import fiber.dev.console.tab.guardrail as tab
 
 _tick_counter: int = 0
 _bg_tasks: list[asyncio.Task] = []
@@ -132,10 +137,16 @@ def _on_tick(tabs: Sequence[StudioTab]) -> None:
     except Exception as exc:
         diag.exception("100ms tick flush error", exc=exc)
 
+def build_tabs() -> list[StudioTab]:
+    return [McpGatewayTab(), LLMGuardrailTab(), FinOpsTab(), VcrTab(), ModelNSettingTab()]
+
+def build_modals() -> list[ModalTemplate]:
+    return [HitlModal(), QrModal(), GuideModal()]
+
 def build_console_shell() -> ConsoleTemplate:
     shell = ConsoleTemplate(
-        tabs=tab.build_tabs(),
-        modals=tab.build_modals(),
+        tabs=build_tabs(),
+        modals=build_modals(),
         header_builder=header.build_header,
         drawer_builder=_build_drawer,
         on_tick=_on_tick,

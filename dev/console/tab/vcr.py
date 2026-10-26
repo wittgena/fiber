@@ -6,7 +6,6 @@ from pathlib import Path
 from nicegui import ui
 
 from fiber.infra.ops.account.state import state, refs
-from fiber.dev.console.action import pipeline
 from fiber.gateway.bridge.cli import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
@@ -99,7 +98,7 @@ class VcrTab(StudioTab):
     async def _run_compat_verify(self) -> None:
         p = state.pipeline
         mode_arg = p.vcr_mode if p.vcr_mode in ("record", "replay") else "replay"
-        chaos_val = float(getattr(p, "vcr_chaos", 0.0) or 0.0)
+        chaos_val = float(p.vcr_chaos or 0.0)
 
         cli_args = [
             "compat",
@@ -175,7 +174,8 @@ class VcrTab(StudioTab):
     def compose_left(self) -> None:
         p = state.pipeline
         compat_models = discover_compat_models()
-        if not getattr(p, "compat_model", None) or p.compat_model not in compat_models:
+        # if not getattr(p, "compat_model", None) or p.compat_model not in compat_models:
+        if p.compat_model not in compat_models:
             setattr(p, "compat_model", compat_models[0])
         if not hasattr(p, "compat_fixture_kind"):
             setattr(p, "compat_fixture_kind", "stream_compat_traverser.json")

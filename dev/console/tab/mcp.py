@@ -6,9 +6,8 @@ from nicegui import ui
 import orjson
 
 from fiber.infra.ops.account.state import state, refs
-from fiber.dev.console.action import pipeline
-from fiber.dev.console.sign import oob
-from fiber.dev.console.mcp import mcp
+from fiber.dev.console.bridge.sign import oob
+from fiber.dev.console.bridge.mcp import mcp
 
 from fiber.gateway.bridge.cli import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
