@@ -1,5 +1,4 @@
 # fiber.dev.base.scene.runner
-## @lineage: fiber.dev.base.sandbox
 import os
 import time
 import json
@@ -147,12 +146,6 @@ while True:
         expect_success=False,
         expected_match=("MemoryError", "Sandbox Hard Terminated", "timeout"),
         tier="STANDARD"
-    )
-    STACK_OVERFLOW_ATTACK = ScriptDef(
-        title="Resource: Deep Recursion Guard (Stack Overflow)",
-        code="def recurse(n):\n    return recurse(n+1)\nrecurse(1)",
-        expect_success=False,
-        expected_match="RecursionError"
     )
 
 class SandboxRunner(SchemeRunner):

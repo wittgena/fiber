@@ -1,5 +1,4 @@
 # fiber.phase.fsm.bridge
-## @lineage: fiber.dev.ex.fsm.bridge
 from typing import Dict, Any, Optional, Tuple, List
 import httpx
 
@@ -16,12 +15,6 @@ log = get_emitter("fsm.bridge", phase="ACTUATOR_BRIDGE")
 
 
 class FiberExecutionBridge:
-    """
-    Connects ExGraphTraverser's `node_executor` hook to Fiber's core execution planes:
-    1) Drop-in LLM Pipeline (`acompletion` + `FuelBreaker` + `BillingObserver` + `VCR`)
-    2) Stateless MCP Gateway (`/v1/mcp-gateway/{target}/invoke` + Pre-Flight HITL `HTTP 202`)
-    """
-
     def __init__(
         self,
         runtime: ExBranchController,
@@ -66,7 +59,7 @@ class FiberExecutionBridge:
         return {}, None, 1
 
     # ------------------------------------------------------------------------
-    # [Actuator 1] Fiber LLM Pipeline + FinOps FuelBreaker + VCR + PTA_Mint
+    # [Actuator 1] Fiber LLM Pipeline + FinOps FuelBreaker + VCR + Projection
     # ------------------------------------------------------------------------
     async def _execute_llm_node(
         self,
@@ -75,7 +68,7 @@ class FiberExecutionBridge:
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
         call_params = self._resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
         vcr_cfg = task_io.get("vcr") or {}
-        pta_mint = task_io.get("pta_mint") or {}
+        projection = task_io.get("projection") or {}
 
         model = call_params.pop("model", "auto")
         messages = call_params.pop("messages", [{"role": "user", "content": str(cursor.meta_ctx)}])
@@ -96,7 +89,7 @@ class FiberExecutionBridge:
             billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.runtime.pta),
             metadata={
                 "node_auth": auth_payload,
-                "pta_pointer": cursor.pointer.to_key(),
+                "checkpoint_handle": cursor.pointer.to_key(),
                 "vcr_scenario": f"{cursor.stream_id}_{cursor.curr_node}_{cursor.tick}",
                 **vcr_cfg,
             },
@@ -106,24 +99,24 @@ class FiberExecutionBridge:
         raw_dump = await self._normalize_llm_response(response, stream=stream)
         tokens_used = self._extract_path(raw_dump, "usage.total_tokens") or 10
 
-        # Extract 2KB-safe routing variables via PTA_Mint.meta_projection
+        # Extract lightweight routing variables via Projection.extract_keys
         meta_updates: Dict[str, Any] = {}
-        for proj_path in pta_mint.get("meta_projection", []):
-            val = self._extract_path(raw_dump, proj_path)
+        for key_path in projection.get("extract_keys", []):
+            val = self._extract_path(raw_dump, key_path)
             if val is not None:
-                meta_updates[proj_path] = val
-                meta_updates[proj_path.split(".")[-1]] = val
+                meta_updates[key_path] = val
+                meta_updates[key_path.split(".")[-1]] = val
 
-        # Extract heavy payload target if specified, otherwise offload full response dump
-        ptr_target = pta_mint.get("pointer_target")
-        offload_payload = self._extract_path(raw_dump, ptr_target) if ptr_target else raw_dump
+        # Extract heavy payload target via Projection.offload_path, otherwise offload full response dump
+        offload_path = projection.get("offload_path")
+        offload_payload = self._extract_path(raw_dump, offload_path) if offload_path else raw_dump
         if not isinstance(offload_payload, dict):
             offload_payload = {"data": offload_payload}
 
         return meta_updates, offload_payload, max(1, int(tokens_used))
 
     # ------------------------------------------------------------------------
-    # [Actuator 2] Fiber MCP Gateway + Idempotent PTA Handle + Pre-Flight HITL
+    # [Actuator 2] Fiber MCP Gateway + Idempotent Checkpoint Handle + HITL
     # ------------------------------------------------------------------------
     async def _execute_mcp_node(
         self,
@@ -131,11 +124,13 @@ class FiberExecutionBridge:
         task_io: Dict[str, Any],
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
         resource_uri = task_io.get("resource_uri", "")
-        target_id = resource_uri.split("/")[-1] if "/" in resource_uri else "default"
+        target_id = resource_uri.split("/")[-1] if "/" in resource_uri else resource_uri.split("://")[-1]
         resolved_args = self._resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
+        projection = task_io.get("projection") or {}
+        extras = task_io.get("extras") or {}
 
         payload = {
-            "pta_handle": cursor.pointer.to_key(),
+            "checkpoint_handle": cursor.pointer.to_key(),
             "arguments": resolved_args,
             "meta": cursor.meta_ctx,
         }
@@ -157,11 +152,28 @@ class FiberExecutionBridge:
 
         resp.raise_for_status()
         tool_result = resp.json()
-        return {"intent_type": "tool_completed", "_hitl_yield": False}, tool_result, 5
+        if not isinstance(tool_result, dict):
+            tool_result = {"data": tool_result}
+
+        # Extract lightweight routing variables via Projection.extract_keys
+        meta_updates: Dict[str, Any] = {"intent_type": "tool_completed", "_hitl_yield": False}
+        for key_path in projection.get("extract_keys", []):
+            val = self._extract_path(tool_result, key_path)
+            if val is not None:
+                meta_updates[key_path] = val
+                meta_updates[key_path.split(".")[-1]] = val
+
+        default_cost = int(extras.get("step_cost", tool_result.get("step_cost", 5)))
+        return meta_updates, tool_result, max(1, default_cost)
 
     # ------------------------------------------------------------------------
     # [Internal Helpers] Stream Coalescing & Dot-Path Parameter Resolution
     # ------------------------------------------------------------------------
+    @staticmethod
+    def _normalize_llm_response(response: Any, stream: bool) -> Any:
+        # Retained as coroutine below
+        pass
+
     @staticmethod
     async def _normalize_llm_response(response: Any, stream: bool) -> Dict[str, Any]:
         if stream and hasattr(response, "__aiter__"):

@@ -1,0 +1,178 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.inter.wasm.fsm           
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-37486
+ LOG | SYSTEM | INFO  |  wasm.fsm.entry: 
+[CLI] Starting Isolated FSM WasmTester for suites: ['compile', 'multiverse', 'incident']...
+ LOG | SYSTEM | INFO  |  wasm.tester: 
+--- [START] Orchestrating Distributed WASM Environment (Target: fsm.wasm) ---
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  wasm.tester: [SYSTEM] Initializing TaskSupervisor and WasmTaskerDaemon...
+ LOG | SYSTEM | INFO  |  xphi.node.ops.task.supervisor: [Supervisor] Mounted Daemon: TaskWasm
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [tasker-58f616-37486] Pre-warming 5 WASM instances...
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [tasker-58f616-37486] WASM Instance Pool initialized successfully.
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: TaskWasm listening: Stream[wasm:execute:stream:tester_isolated] | PubSub[wasm:control:req:tester_isolated] (Max Concurrency: 5, PID: 37486)
+ LOG | SYSTEM | INFO  |  wasm.tester: [SYSTEM] Initializing WasmBroker & Scenarios...
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: COMPILE <<<
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+=======================================================
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 🛠️ [START] Suite 1: FSM Compiler, Auto-Linker & Static Sandbox
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: =======================================================
+
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [c8bee74e] Global Cgroup default tier updated -> SYSTEM
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   └─ Policy successfully enforced to SYSTEM.
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Compile 1] Canonical Hashing & Determinism ---
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [1a09bda7] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_COMPILE)
+ LOG | SYSTEM | INFO  |  inter.fsm: ⚙️ [AOT Compile] Compiling fsm.wasm (Only once per process)...
+ LOG | SYSTEM | INFO  |  inter.fsm: ✅ [AOT Compile] fsm.wasm cached successfully.
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494268736] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'compile_det_01' (Fuel Limit: 1000)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: compile_det_01)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [1a09bda7] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494268736', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 468804, 'fuel_remaining': 1999531196, 'gas_used': 20}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [11cc7643] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_COMPILE)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4492883152] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'compile_det_01' (Fuel Limit: 1000)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: compile_det_01)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [11cc7643] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4492883152', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 468804, 'fuel_remaining': 1999531196, 'gas_used': 20}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [cf2d762b] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_COMPILE)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494319824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'compile_det_01' (Fuel Limit: 1000)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: compile_det_01)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [cf2d762b] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494319824', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 468804, 'fuel_remaining': 1999531196, 'gas_used': 20}
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: 100% Deterministic Root Hash: branch:c8325fbfec1c9431
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Compile 2] Static Sandbox: DagJoinBarrier Deadlock Detection ---
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [19ad72bd] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_COMPILE)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4493456224] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'compile_deadlock_02' (Fuel Limit: 1000)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [19ad72bd] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4493456224', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 151722, 'fuel_remaining': 1999848278}
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Deadlock risk caught before mount: E_BARRIER_DEADLOCK_RISK: Parallel branch node 'Unsafe_Branch' must define fallback ('fb') to prevent barrier deadlo
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Compile 3] Auto-Linker: >2KB Graph SESE Partition & SYMLINK ---
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [30fb7dc2] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_COMPILE)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494351568] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'compile_oversized_03' (Fuel Limit: 2000)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [Host Commit] Committed 5 state diff(s) to master ledger (target: compile_oversized_03)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [30fb7dc2] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494351568', 'tier': 'SYSTEM', 'mem_usage_bytes': 1245184, 'mem_limit_bytes': 268435456, 'fuel_consumed': 11323252, 'fuel_remaining': 1988676748, 'gas_used': 100}
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Oversized graph auto-partitioned into 5 bundles (Root=791B <= 2048B)
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Compile 4] Missing Entry Point Guard ---
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [38aedbcf] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_COMPILE)
+ LOG | TEST_EXECUTION | INFO  |  wasm.quota: [fsm-vm-worker-4494368144] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'bad_ep' (Fuel Limit: 30000000)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [38aedbcf] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494368144', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 94971, 'fuel_remaining': 1999905029}
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Invalid entry point rejected cleanly: E_MISSING_ENTRY: Entry point 'NonExistent_Node' not found in graph 'g'
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+=== [DONE] Scenarios Completed: 4 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: MULTIVERSE <<<
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+=======================================================
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 🌌 [START] Suite 2: Multiverse Transitions & Fuel Conservation
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: =======================================================
+
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+SUMMARY🔥| SYSTEM | INFO  |  [G:1.0] [Acc:1.8] daemon.taskwasm: [d4e3eb05] Global Cgroup default tier updated -> SYSTEM
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   └─ Policy successfully enforced to SYSTEM.
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Multiverse 1] 1:3 Asymmetric Fuel Slicing ([0.4, 0.4, 0.2]) ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.9] daemon.taskwasm: [37b6dd5b] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_STEP)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494301920] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:root_test' (Fuel Limit: 3000)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:2.0] daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: branch:root_test)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:2.2] daemon.taskwasm: [37b6dd5b] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494301920', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 337195, 'fuel_remaining': 1999662805, 'gas_used': 30}
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Exact Fuel Conservation Verified: 3000 -> -30 -> [1188, 1188, 594]
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Multiverse 2] SYMLINK Subgraph Jump & Call-Stack RETURN ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:2.3] daemon.taskwasm: [f0bf691c] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_STEP)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494304912] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:main_graph' (Fuel Limit: 500)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:2.4] daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: branch:main_graph)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:2.5] daemon.taskwasm: [f0bf691c] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494304912', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 209517, 'fuel_remaining': 1999790483, 'gas_used': 10}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:2.6] daemon.taskwasm: [008707af] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_STEP)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494285392] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:db_diag' (Fuel Limit: 490)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:2.7] daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: branch:db_diag)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.7] [Acc:2.8] daemon.taskwasm: [008707af] VM Sandbox Metrics: {'policy_name': 'fsm-vm-worker-4494285392', 'tier': 'SYSTEM', 'mem_usage_bytes': 1179648, 'mem_limit_bytes': 268435456, 'fuel_consumed': 205560, 'fuel_remaining': 1999794440, 'gas_used': 15}
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: SYMLINK Call -> RETURN restored parent frame 'branch:main_graph#Resume_After_Subgraph'
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Multiverse 3] HTTP 202 Pre-Flight Zero-Spend Parking ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:3.0] daemon.taskwasm: [9d638b94] Entering Stateless Multi-VM Jail: fsm.wasm (Tier: SYSTEM, Target: FSM_STEP)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494287440] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:root_test' (Fuel Limit: 1118)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 3.07) Den: 16.00)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:3.1] daemon.taskwasm: [Host Commit] Committed 1 state diff(s) to master ledger (target: branch:root_test)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Zero-Spend HITL Parking verified (gas_used=0, Preserved Fuel=1118)
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+--- [Multiverse 4] FuelBreaker Exhaustion Guard (wasm.reject) ---
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 3.30) Den: 17.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494384960] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:root_test' (Fuel Limit: 10)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 3.41) Den: 17.50)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Runaway branch cleanly cut off by FuelBreaker: FuelExhausted
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+=== [DONE] Scenarios Completed: 4 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: INCIDENT <<<
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 
+=======================================================
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: 🚨 [START] Suite 3: 03:00 AM Payment Outage E2E Killer Showcase
+ LOG | TEST_EXECUTION | INFO  |  inter.wasm.fsm: =======================================================
+
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 3.52) Den: 18.00)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   └─ Policy successfully enforced to SYSTEM.
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 3.64) Den: 18.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494383280] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'incident_03am' (Fuel Limit: 3000)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 3.75) Den: 19.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494722672] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:c8325fbfec1c9431' (Fuel Limit: 3000)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 4.09) Den: 20.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494722224] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:c8325fbfec1c9431' (Fuel Limit: 0)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 4.43) Den: 22.00)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Barrier Collapsed: Winner='deploy_regression' (_score=0.95), Reclaimed Fuel=2211
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 4.66) Den: 23.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4494016224] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:c8325fbfec1c9431' (Fuel Limit: 2211)
+[Telemetry] 🚨 Burst Alert Triggered on 'SYSTEM:daemon.taskwasm' (Acc: 4.83) Den: 23.50)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:space.runner'
+ LOG | TEST_EXECUTION | INFO  |  space.runner:   [PASS] Time: 0.00ms | Output: Router evaluated '$._score>=0.9' -> Routed to 'Postmortem_Act' (Fuel=2201)
+ LOG | TEST_EXECUTION | INFO  |  space.runner: 
+=== [DONE] Scenarios Completed: 2 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+[SYSTEM] Generating Canonical Proof via Phase Kernel (phase.wasm)...
+ LOG | SYSTEM | INFO  |  inter.wasm: [AOT Compile] Compiling phase.wasm (Only once per process)...
+ LOG | SYSTEM | INFO  |  inter.wasm: [AOT Compile] phase.wasm cached successfully.
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4493578256] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: [Ledger] Test Execution Proof successfully sealed! Hash: ae562af00f6967dd2eee3da04bce3a7caeec4907eeb2962051185b287529be71
+ LOG | SYSTEM | INFO  |  wasm.tester: [SYSTEM] Tearing down Sandbox (Shutting down Supervisor)...
+ LOG | SYSTEM | INFO  |  xphi.node.ops.task.supervisor: [Supervisor] Gracefully stopping 1 daemons concurrently...
+ LOG | SYSTEM | INFO  |  inter.wasm.fsm: 
+===========================================================================
+ LOG | SYSTEM | INFO  |  inter.wasm.fsm:                     🚀 FSM WASM PIPELINE EXECUTION REPORT                   
+ LOG | SYSTEM | INFO  |  inter.wasm.fsm: ===========================================================================
+ LOG | SYSTEM | INFO  |  wasm.fsm.entry: 🟢 [SUCCESS] All FSM Test Suites (compile, multiverse, incident) PASSED.
+ LOG | SYSTEM | INFO  |  wasm.fsm.entry: 🔗 Execution Canonical Hash: ae562af00f6967dd2eee3da04bce3a7caeec4907eeb2962051185b287529be71
+ LOG | SYSTEM | INFO  |  inter.wasm.fsm: ===========================================================================
+
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.1] [Acc:4.9] daemon.taskwasm: [daemon.taskwasm] Bursting logs suppressed... (x17)

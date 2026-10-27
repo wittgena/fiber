@@ -114,7 +114,7 @@ class SurfaceClassifier:
         (SurfaceDomain.FINOPS, {"finops", "account", "fuel", "pricing", "cost", "quota", "settlement", "eco", "exchange"}),
         (SurfaceDomain.SIGN, {"sign", "vault", "secret", "cipher", "sentinel", "guardrail", "compliance", "auditor", "security", "risk"}),
         (SurfaceDomain.VCR, {"vcr", "compat", "llm", "token", "provider", "chunk", "param", "embedding", "llama", "gemini", "traverser"}),
-        (SurfaceDomain.KERNEL, {"anchor", "pta", "commit", "wasm", "receptor", "warden", "dvm", "oracle", "topos", "fsm"}),
+        (SurfaceDomain.KERNEL, {"anchor", "pta", "commit", "wasm", "receptor", "warden", "oracle", "topos", "fsm"}),
     )
 
     SLOT_RULES: Tuple[Tuple[UISlot, Set[str]], ...] = (
