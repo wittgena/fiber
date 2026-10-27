@@ -1,5 +1,4 @@
 # fiber.phase.fsm.bridge
-## @lineage: fiber.dev.ex.fsm.bridge
 from typing import Dict, Any, Optional, Tuple, List
 import httpx
 
@@ -14,14 +13,7 @@ from fiber.phase.fsm.runtime import BranchCursor, ExBranchController
 
 log = get_emitter("fsm.bridge", phase="ACTUATOR_BRIDGE")
 
-
 class FiberExecutionBridge:
-    """
-    Connects ExGraphTraverser's `node_executor` hook to Fiber's core execution planes:
-    1) Drop-in LLM Pipeline (`acompletion` + `FuelBreaker` + `BillingObserver` + `VCR`)
-    2) Stateless MCP Gateway (`/v1/mcp-gateway/{target}/invoke` + Pre-Flight HITL `HTTP 202`)
-    """
-
     def __init__(
         self,
         runtime: ExBranchController,

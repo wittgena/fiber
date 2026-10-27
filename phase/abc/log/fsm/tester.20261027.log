@@ -1,0 +1,89 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.fsm.tester
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+======================================================================================
+ [FIBER FSM/DAG MULTIVERSE TESTER] Starting E2E Lifecycle Verification
+======================================================================================
+ LOG | KERNEL | INFO  |  anchor.mempool: [Mempool:SEALER] Background Consumer [sealer_80786_d767d9] attached.
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger] Acquired physical lock. Operating as SEALER. WASM Kernel mounted.
+ LOG | ANCHOR | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB via PhaseStore. Canonical WASM Broker attached.
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: b77bda9b...
+
+--------------------------------------------------------------------------------------
+ [Phase 1: Compile] Stripping heavy Task I/O into CAS & projecting <=2KB Topology Blob
+--------------------------------------------------------------------------------------
+  • Root Graph Hash : branch:552a3360678c2c34 (On-Ledger Compact IR)
+  • Root Graph Size : 678B / 2048B Limit (33.1% used)
+  • Offloaded Blobs : 5 CAS objects (4 TaskIOSpecs + 1 Root Blob)
+
+--------------------------------------------------------------------------------------
+ [Phase 2: Initial Run & HITL Park] Genesis(1000 Fuel) -> Plan(-20) -> 1:2 Fork[490, 490]
+--------------------------------------------------------------------------------------
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 2c5c0fcc
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 2c5c0fcc... | Hash: 47fc2298
+  [Actuator] LLM Node 'Plan_Intent_LLM' on 'run_101' | Tick=1 | Spending 20 Fuel (1000 -> 980) | Offloading response to CAS
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 4bd863af
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 4bd863af... | Hash: 2f05f4f7
+  [Actuator] 🛠️  Safe MCP Node 'Fast_Readonly_MCP' on 'run_101/b0' | Tick=2 | Spending 5 Fuel (490 -> 485) | Score=0.70
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101/b0 | Commit: 786a5e39
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 786a5e39... | Hash: 620b2857
+  [Actuator] MCP Pre-Flight HITL Trap (HTTP 202) at 'Admin_Mutation_MCP' on 'run_101/b1'! Regex matched 'DELETE'. Parking cursor WITHOUT spending PTA (2f05f4f7..:1) or Fuel (490).
+
+  [Phase 2 Summary: Multiverse Paused Safely]
+  • Detected Join Nodes : ['Evaluate_And_Join', 'Final_Act']
+  • Visited Trace       : run_101:Plan_Intent_LLM -> run_101/b0:Fast_Readonly_MCP(FORK) -> run_101/b1:Admin_Mutation_MCP(FORK) -> run_101/b0:Evaluate_And_Join -> run_101/b1:Admin_Mutation_MCP(HITL_PARKED)
+  • Parked Cursors      : ['run_101/b1', 'run_101/b0']
+  • Branch b0 (Sibling) : Node='Evaluate_And_Join' (Waiting at Join Barrier) | PTA=620b2857..:0 | Fuel=485 (490 - 5) | Tick=3
+  • Branch b1 (Locked)  : Node='Admin_Mutation_MCP' (Zero-Spend HITL Parked)  | PTA=2f05f4f7..:1 | Fuel=490 (490 - 0) | Tick=2
+
+--------------------------------------------------------------------------------------
+ [Phase 3: HITL Approval & Mid-Flow Resume] O(1) Restore from PTA Pointers (Skipping Prior Nodes)
+--------------------------------------------------------------------------------------
+  • O(1) Rehydrated b1  : stream='run_101/b1' at node='Admin_Mutation_MCP' | PTA=2f05f4f7..:1 | Preserved Tick=2 | Preserved Fuel=490
+  • Admin Action        : Approved TOTP/Slack Ticket 'hitl_ticket_drop_99'. Resuming branches...
+
+  [Actuator] MCP HITL Approved ('hitl_ticket_drop_99')! Executing 'Admin_Mutation_MCP' on 'run_101/b1' | Tick=2 | Spending 15 Fuel (490 -> 475) | Score=0.95
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101/b1 | Commit: dccdf65e
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: dccdf65e... | Hash: 5a4da66b
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 24b82d3b
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 24b82d3b... | Hash: 76d4e469
+  [Actuator] Control Node 'Evaluate_And_Join' (router) on 'run_101' | Tick=4 | Cost=0 Fuel (Remaining=960)
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 550f8aa6
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 550f8aa6... | Hash: e2f2bd89
+  [Actuator] Control Node 'Final_Act' (act) on 'run_101' | Tick=5 | Cost=0 Fuel (Remaining=960)
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 401ef659
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 401ef659... | Hash: dd4a88db
+
+  [Phase 3 Summary: Diamond Barrier Merged & Fuel Reclaimed]
+  • Resumed Trace       : run_101/b0:Evaluate_And_Join(RESUMED) -> run_101/b1:Admin_Mutation_MCP(RESUMED) -> run_101/b1:Evaluate_And_Join -> run_101:Evaluate_And_Join(MERGED) -> run_101:Final_Act -> run_101:END
+  • Arbiter Winner      : Selected b1 (_score=0.95 > b0 _score=0.70) at 'Evaluate_And_Join'
+  • Final Node          : END | Join Collapses: 1 | Final PTA=dd4a88db..:0
+  • Reclaimed Fuel      : 960 (485 from b0 + 475 from b1 = 960 Total Conserved)
+
+--------------------------------------------------------------------------------------
+ [Phase 4: Time-Travel Re-Branching] Forking 2 New Hypotheses from Completed Checkpoint (960 Fuel)
+--------------------------------------------------------------------------------------
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: caf417df
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: caf417df... | Hash: 96b7ee82
+  • Forked 2 Experimental Branches from Sealed PTA dd4a88db..:0 (960 Fuel -> [480, 480]):
+    - run_101/b0: Target='Reflect_Fallback_LLM' | PTA=96b7ee82..:0 | Fuel=480 | Override='fallback_reflect' (_score=0.99)
+    - run_101/b1: Target='Final_Act' | PTA=96b7ee82..:1 | Fuel=480 | Override='direct_exit' (_score=0.5)
+
+  [Actuator] LLM Node 'Reflect_Fallback_LLM' on 'run_101/b0' | Tick=7 | Spending 20 Fuel (480 -> 460) | Offloading response to CAS
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101/b0 | Commit: 7d237b25
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 7d237b25... | Hash: c1e93840
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101_exp | Commit: 29f8a9d2
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 29f8a9d2... | Hash: 289a23b4
+  [Actuator] Control Node 'Final_Act' (act) on 'run_101_exp' | Tick=9 | Cost=0 Fuel (Remaining=940)
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101_exp | Commit: 6f6fa2dc
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 6f6fa2dc... | Hash: 6bcf9b67
+
+  [Phase 4 Summary: Time-Travel Hypotheses Converged]
+  • Time-Travel Trace   : run_101/b0:Reflect_Fallback_LLM(RESUMED) -> run_101/b1:Final_Act(RESUMED) -> run_101/b0:Final_Act -> run_101_exp:Final_Act(MERGED) -> run_101_exp:END
+  • Final Exp State     : Stream='run_101_exp' | Node='END' | Reclaimed Fuel=940 (460 from b0 + 480 from b1 = 940)
+  • Winning Strategy    : 'fallback_reflect' (_score=0.99)
+
+======================================================================================
+ ✅ ALL MULTIVERSE FSM/DAG & PTA LEDGER ASSERTIONS PASSED
+======================================================================================

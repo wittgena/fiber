@@ -150,6 +150,7 @@ class BranchCursor:
             "blob_ref": self.active_blob_hash,
             "node": self.curr_node,
             "meta": self.meta_ctx,
+            "tick": self.tick,
         }
         if self.call_stack:
             payload["stack"] = self.call_stack
@@ -183,7 +184,7 @@ class BranchCursor:
             owner_pubkey=output.owner,
             meta_ctx=dict(payload.get("meta", {})),
             call_stack=list(payload.get("stack", [])),
-            tick=tick,
+            tick=int(payload.get("tick", tick)),
         )
 
 
@@ -316,13 +317,23 @@ class ExBranchController:
         parent: BranchCursor,
         branch_targets: List[Tuple[str, Dict[str, Any]]],
         fuel_ratios: Optional[List[float]] = None,
+        step_cost: int = 0,
+        offload_data: Optional[Dict[str, Any]] = None,
     ) -> List[BranchCursor]:
         if len(branch_targets) < 2:
             raise ValueError("fork() requires at least 2 branch targets.")
+        if parent.fuel < step_cost:
+            raise RuntimeError(f"[Runtime:{parent.stream_id}] Exhausted fuel ({parent.fuel} < {step_cost})")
+
+        base_meta = dict(parent.meta_ctx)
+        if offload_data:
+            offload_hash = self.store._put_object("blob", offload_data)
+            base_meta["_last_ptr"] = f"{CAS_PREFIX}{offload_hash[:16]}"
 
         # Safely allow Time-Travel Forking even if parent cursor is currently at END_TOKEN
         node_spec = {} if parent.is_terminated else self.get_node_spec(parent)
-        allocations = self._slice_fuel(parent.fuel, len(branch_targets), fuel_ratios)
+        remaining_fuel = parent.fuel - step_cost
+        allocations = self._slice_fuel(remaining_fuel, len(branch_targets), fuel_ratios)
         drafts: List[BranchCursor] = []
 
         for idx, ((raw_target, b_meta), alloc_fuel) in enumerate(zip(branch_targets, allocations)):
@@ -334,7 +345,7 @@ class ExBranchController:
                     active_blob_hash=next_blob,
                     curr_node=next_node,
                     fuel=alloc_fuel,
-                    meta_ctx={**parent.meta_ctx, **b_meta},
+                    meta_ctx={**base_meta, **b_meta},
                     call_stack=next_stack,
                     tick=parent.tick + 1,
                 )

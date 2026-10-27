@@ -29,7 +29,9 @@ NodeExecutorFn = Callable[
 ArbiterFn = Callable[[List[BranchCursor]], int]
 
 
-# TRAVERSAL RESULT
+# ============================================================================
+# 1. TRAVERSAL RESULT
+# ============================================================================
 @dataclass
 class TraversalResult:
     final_cursor: BranchCursor
@@ -40,6 +42,10 @@ class TraversalResult:
     parked_cursors: List[BranchCursor] = field(default_factory=list)  # HITL-parked & barrier-waiting sibling cursors
     join_collapses: int = 0
 
+
+# ============================================================================
+# 2. MULTIVERSE GRAPH TRAVERSER
+# ============================================================================
 class ExGraphTraverser:
     """
     Orchestrates end-to-end multiverse traversal on top of ExFSMCompiler, ExBranchController, and FiberExecutionBridge.
@@ -98,7 +104,9 @@ class ExGraphTraverser:
             except Exception as e:
                 log.error(f"[Traverser] Failed to reclaim dangling branches: {e}")
 
+    # ------------------------------------------------------------------------
     # [Public Entrypoints] Run, Traverse Bundle & Resume from Checkpoints
+    # ------------------------------------------------------------------------
     async def run(
         self,
         asl_schema: Dict[str, Any],
@@ -138,6 +146,7 @@ class ExGraphTraverser:
         self,
         targets: Sequence[Union[BranchCursor, str]],
         base_stream_id: str,
+        resume_meta: Optional[Dict[str, Any]] = None,
     ) -> TraversalResult:
         """
         Resumes multiverse execution directly from one or more BranchCursors, PTA pointers ('tx:idx'),
@@ -153,6 +162,8 @@ class ExGraphTraverser:
         for item in targets:
             cursor = self.runtime.restore_cursor(item) if isinstance(item, str) else item
             cleaned_meta = {k: v for k, v in cursor.meta_ctx.items() if k != "_hitl_yield"}
+            if resume_meta:
+                cleaned_meta.update(resume_meta)
             restored.append(replace(cursor, meta_ctx=cleaned_meta))
 
         return await self._drive_queue(
@@ -162,7 +173,9 @@ class ExGraphTraverser:
             is_resumed=True,
         )
 
+    # ------------------------------------------------------------------------
     # [Core Engine] Unified Multiverse Scheduling & Barrier Loop
+    # ------------------------------------------------------------------------
     async def _drive_queue(
         self,
         initial_cursors: List[BranchCursor],
@@ -224,11 +237,16 @@ class ExGraphTraverser:
 
             cursor = replace(cursor, meta_ctx=merged_meta)
 
-            # 2. 1:N Fan-Out Fork
+            # 2. 1:N Fan-Out Fork (deducts parent step_cost and inscribes offload_data prior to slicing fuel)
             fanout_targets = self._detect_fanout_targets(node_spec, cursor.meta_ctx)
             if len(fanout_targets) >= 2:
                 self._active_cursors.pop(cursor.stream_id, None)
-                forked = await self.runtime.fork(parent=cursor, branch_targets=fanout_targets)
+                forked = await self.runtime.fork(
+                    parent=cursor,
+                    branch_targets=fanout_targets,
+                    step_cost=step_cost,
+                    offload_data=offload_data,
+                )
                 expected_parallel = len(forked)
 
                 for child in forked:
@@ -259,7 +277,7 @@ class ExGraphTraverser:
 
             if next_cursor.is_terminated:
                 last_completed = next_cursor
-                completed_terminals.append(next_cursor)
+                completed_terminals.append(cursor if next_cursor is None else next_cursor)
                 self._active_cursors.pop(next_cursor.stream_id, None)
                 continue
 
@@ -305,7 +323,9 @@ class ExGraphTraverser:
             join_collapses=join_collapses,
         )
 
+    # ------------------------------------------------------------------------
     # [Internal Helpers] Barrier Synchronization, Fan-Out Detection & Arbiter
+    # ------------------------------------------------------------------------
     async def _route_or_collapse_at_barrier(
         self,
         cursor: BranchCursor,
