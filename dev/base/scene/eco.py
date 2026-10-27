@@ -1,8 +1,4 @@
 # fiber.dev.base.scene.eco
-## @lineage: fiber.dev.e2e.base.scene.eco
-## @lineage: fiber.infra.bound.e2e.scene.eco
-## @lineage: fiber.infra.e2e.scene.eco
-## @lineage: fiber.infra.scene.eco
 import time
 import json
 from typing import Any, List, Dict

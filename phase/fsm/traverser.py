@@ -28,10 +28,6 @@ NodeExecutorFn = Callable[
 # Callback signature: (arrived_cursors) -> winner_idx
 ArbiterFn = Callable[[List[BranchCursor]], int]
 
-
-# ============================================================================
-# 1. TRAVERSAL RESULT
-# ============================================================================
 @dataclass
 class TraversalResult:
     final_cursor: BranchCursor
@@ -42,16 +38,7 @@ class TraversalResult:
     parked_cursors: List[BranchCursor] = field(default_factory=list)  # HITL-parked & barrier-waiting sibling cursors
     join_collapses: int = 0
 
-
-# ============================================================================
-# 2. MULTIVERSE GRAPH TRAVERSER
-# ============================================================================
 class ExGraphTraverser:
-    """
-    Orchestrates end-to-end multiverse traversal on top of ExFSMCompiler, ExBranchController, and FiberExecutionBridge.
-    Unifies initial execution (`run` / `traverse_bundle`) and checkpoint continuation (`resume`) via `_drive_queue`.
-    """
-
     def __init__(
         self,
         broker: Optional[DphiBroker] = None,
@@ -104,9 +91,7 @@ class ExGraphTraverser:
             except Exception as e:
                 log.error(f"[Traverser] Failed to reclaim dangling branches: {e}")
 
-    # ------------------------------------------------------------------------
     # [Public Entrypoints] Run, Traverse Bundle & Resume from Checkpoints
-    # ------------------------------------------------------------------------
     async def run(
         self,
         asl_schema: Dict[str, Any],
@@ -166,16 +151,19 @@ class ExGraphTraverser:
                 cleaned_meta.update(resume_meta)
             restored.append(replace(cursor, meta_ctx=cleaned_meta))
 
+        # Resolve true root blob hash even if a cursor was parked inside a SYMLINK subgraph
+        first_c = restored[0]
+        root_hash = first_c.call_stack[0].split("#", 1)[0] if first_c.call_stack else first_c.active_blob_hash
+        if self.runtime.barrier is None:
+            self.runtime.barrier = DagJoinBarrier(self.runtime._load_blob(root_hash))
+
         return await self._drive_queue(
             initial_cursors=restored,
             base_stream_id=base_stream_id,
-            root_hash=restored[0].active_blob_hash,
+            root_hash=root_hash,
             is_resumed=True,
         )
 
-    # ------------------------------------------------------------------------
-    # [Core Engine] Unified Multiverse Scheduling & Barrier Loop
-    # ------------------------------------------------------------------------
     async def _drive_queue(
         self,
         initial_cursors: List[BranchCursor],
@@ -223,65 +211,81 @@ class ExGraphTraverser:
             node_spec = self.runtime.get_node_spec(cursor)
             task_io = self.runtime.resolve_task_io(node_spec)
 
-            meta_updates, offload_data, step_cost = await self.node_executor(cursor, node_spec, task_io)
-            merged_meta = {**cursor.meta_ctx, **(meta_updates or {})}
+            try:
+                meta_updates, offload_data, step_cost = await self.node_executor(cursor, node_spec, task_io)
+                merged_meta = {**cursor.meta_ctx, **(meta_updates or {})}
 
-            # 1. Pre-Flight HITL Yield (HTTP 202): Park branch in-place without spending PTA
-            if merged_meta.get("_hitl_yield"):
-                parked = replace(cursor, meta_ctx=merged_meta)
-                self._parked_cursors[parked.stream_id] = parked
-                self._active_cursors.pop(parked.stream_id, None)
-                visited_history.append(f"{parked.stream_id}:{parked.curr_node}(HITL_PARKED)")
-                last_completed = parked
-                continue
+                # Pre-Flight HITL Yield (HTTP 202)
+                if merged_meta.get("_hitl_yield"):
+                    parked = replace(cursor, meta_ctx=merged_meta)
+                    self._parked_cursors[parked.stream_id] = parked
+                    self._active_cursors.pop(parked.stream_id, None)
+                    visited_history.append(f"{parked.stream_id}:{parked.curr_node}(HITL_PARKED)")
+                    last_completed = parked
+                    continue
 
-            cursor = replace(cursor, meta_ctx=merged_meta)
+                cursor = replace(cursor, meta_ctx=merged_meta)
 
-            # 2. 1:N Fan-Out Fork (deducts parent step_cost and inscribes offload_data prior to slicing fuel)
-            fanout_targets = self._detect_fanout_targets(node_spec, cursor.meta_ctx)
-            if len(fanout_targets) >= 2:
-                self._active_cursors.pop(cursor.stream_id, None)
-                forked = await self.runtime.fork(
-                    parent=cursor,
-                    branch_targets=fanout_targets,
+                # 1:N Fan-Out Fork
+                fanout_targets, fuel_ratios = self._detect_fanout_and_ratios(node_spec, cursor.meta_ctx)
+                if len(fanout_targets) >= 2:
+                    self._active_cursors.pop(cursor.stream_id, None)
+                    forked = await self.runtime.fork(
+                        parent=cursor,
+                        branch_targets=fanout_targets,
+                        fuel_ratios=fuel_ratios,
+                        step_cost=step_cost,
+                        offload_data=offload_data,
+                    )
+                    expected_parallel = len(forked)
+
+                    for child in forked:
+                        self._active_cursors[child.stream_id] = child
+                        visited_history.append(f"{child.stream_id}:{child.curr_node}(FORK)")
+                        collapsed = await self._route_or_collapse_at_barrier(
+                            cursor=child,
+                            barrier=barrier,
+                            expected_count=expected_parallel,
+                            base_stream_id=base_stream_id,
+                            run_queue=run_queue,
+                            visited_history=visited_history,
+                        )
+                        if collapsed:
+                            join_collapses += 1
+                            expected_parallel = 1
+                    continue
+
+                # Standard 1:1 Step (with automatic SYMLINK mount / stack RETURN)
+                next_cursor = await self.runtime.step(
+                    cursor=cursor,
                     step_cost=step_cost,
+                    meta_updates=meta_updates,
                     offload_data=offload_data,
                 )
-                expected_parallel = len(forked)
 
-                for child in forked:
-                    self._active_cursors[child.stream_id] = child
-                    visited_history.append(f"{child.stream_id}:{child.curr_node}(FORK)")
-                    collapsed = await self._route_or_collapse_at_barrier(
-                        cursor=child,
-                        barrier=barrier,
-                        expected_count=expected_parallel,
-                        base_stream_id=base_stream_id,
-                        run_queue=run_queue,
-                        visited_history=visited_history,
-                    )
-                    if collapsed:
-                        join_collapses += 1
-                        expected_parallel = 1
-                continue
+            except Exception as exc:
+                # 3-Fallback: Route failed or fuel-exhausted branch via `Catch` (`fb`) edge if defined
+                fb_target = node_spec.get(CompactKey.FALLBACK)
+                if not fb_target or isinstance(exc, PermissionError):
+                    raise
+                log.warning(
+                    f"[Traverser:{cursor.stream_id}] Node '{cursor.curr_node}' faulted ({exc}); "
+                    f"routing via Catch fallback -> '{fb_target}'"
+                )
+                next_cursor = await self._transition_via_fallback(cursor, node_spec, fb_target, str(exc))
+                visited_history.append(f"{next_cursor.stream_id}:{next_cursor.curr_node}(FALLBACK)")
+            else:
+                visited_history.append(f"{next_cursor.stream_id}:{next_cursor.curr_node}")
 
-            # 3. Standard 1:1 Step (with automatic SYMLINK mount / stack RETURN)
-            next_cursor = await self.runtime.step(
-                cursor=cursor,
-                step_cost=step_cost,
-                meta_updates=meta_updates,
-                offload_data=offload_data,
-            )
             self._active_cursors[next_cursor.stream_id] = next_cursor
-            visited_history.append(f"{next_cursor.stream_id}:{next_cursor.curr_node}")
 
             if next_cursor.is_terminated:
                 last_completed = next_cursor
-                completed_terminals.append(cursor if next_cursor is None else next_cursor)
+                completed_terminals.append(next_cursor)
                 self._active_cursors.pop(next_cursor.stream_id, None)
                 continue
 
-            # 4. N:1 Join Barrier Arrival & Collapse
+            # N:1 Join Barrier Arrival & Collapse
             collapsed = await self._route_or_collapse_at_barrier(
                 cursor=next_cursor,
                 barrier=barrier,
@@ -294,13 +298,13 @@ class ExGraphTraverser:
                 join_collapses += 1
                 expected_parallel = 1
 
-        # 5. If any branch was parked by HITL, drain barrier-waiting siblings into `parked_cursors` so they can resume together
+        # If any branch was parked by HITL, drain barrier-waiting siblings into `parked_cursors` so they can resume together
         if self._parked_cursors and barrier:
             for waiting_sibling in barrier.drain_waiting():
                 self._parked_cursors.setdefault(waiting_sibling.stream_id, waiting_sibling)
                 self._active_cursors.pop(waiting_sibling.stream_id, None)
 
-        # 6. Final Sweep: If no branches are parked, collapse multiple completed/active parallel branches to reclaim all fuel
+        # Final Sweep: If no branches are parked, collapse multiple completed/active parallel branches to reclaim all fuel
         if not self._parked_cursors:
             unmerged_pool = list(self._active_cursors.values()) or completed_terminals
             if len(unmerged_pool) >= 2:
@@ -323,9 +327,38 @@ class ExGraphTraverser:
             join_collapses=join_collapses,
         )
 
-    # ------------------------------------------------------------------------
-    # [Internal Helpers] Barrier Synchronization, Fan-Out Detection & Arbiter
-    # ------------------------------------------------------------------------
+    async def _transition_via_fallback(
+        self,
+        cursor: BranchCursor,
+        node_spec: Dict[str, Any],
+        fb_target: str,
+        error_reason: str,
+    ) -> BranchCursor:
+        """Transitions a faulted or fuel-exhausted cursor onto its `Catch` (`fb`) target to prevent barrier deadlock."""
+        next_blob, next_node, rule_kind, next_stack = self.runtime._resolve_target(cursor, fb_target, node_spec)
+        # If the failure was due to fuel exhaustion, drain remaining branch fuel to 0; otherwise preserve remaining fuel
+        remaining_fuel = 0 if "Exhausted fuel" in error_reason or "FuelExhausted" in error_reason else cursor.fuel
+        fb_meta = {**cursor.meta_ctx, "_fallback_error": error_reason, "_score": cursor.meta_ctx.get("_score", 0.0)}
+
+        draft = replace(
+            cursor,
+            active_blob_hash=next_blob,
+            curr_node=next_node,
+            fuel=remaining_fuel,
+            meta_ctx=fb_meta,
+            call_stack=next_stack,
+            tick=cursor.tick + 1,
+        )
+        status = "SEALED" if draft.is_terminated else "ACTIVE"
+        res = await self.runtime._commit_pta_transition(
+            spent_cursors=[cursor],
+            next_cursors=[draft],
+            phase_status=status,
+            primary_stream_id=cursor.stream_id,
+            meta={"stream_id": cursor.stream_id, "from": cursor.curr_node, "to": next_node, "kind": f"FALLBACK_{rule_kind}"},
+        )
+        return res[0]
+
     async def _route_or_collapse_at_barrier(
         self,
         cursor: BranchCursor,
@@ -356,19 +389,25 @@ class ExGraphTraverser:
         return False
 
     @staticmethod
-    def _detect_fanout_targets(
+    def _detect_fanout_and_ratios(
         node_spec: Dict[str, Any], meta_ctx: Dict[str, Any]
-    ) -> List[Tuple[str, Dict[str, Any]]]:
+    ) -> Tuple[List[Tuple[str, Dict[str, Any]]], Optional[List[float]]]:
+        ratios = meta_ctx.pop("_fork_ratios", meta_ctx.pop("fuel_ratios", None))
+        if isinstance(ratios, list):
+            ratios = [float(r) for r in ratios]
+        else:
+            ratios = None
+
         if "_fork_branches" in meta_ctx:
             branches = meta_ctx.pop("_fork_branches")
             if isinstance(branches, list) and len(branches) >= 2:
-                return branches
+                return branches, ratios
 
         nx = node_spec.get(CompactKey.NEXT)
         if isinstance(nx, list) and len(nx) >= 2:
-            return [(target, {"_branch_idx": idx}) for idx, target in enumerate(nx)]
+            return [(target, {"_branch_idx": idx}) for idx, target in enumerate(nx)], ratios
 
-        return []
+        return [], None
 
     @staticmethod
     def _default_arbiter(cursors: List[BranchCursor]) -> int:

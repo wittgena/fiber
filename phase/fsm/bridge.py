@@ -57,9 +57,7 @@ class FiberExecutionBridge:
 
         return {}, None, 1
 
-    # ------------------------------------------------------------------------
     # [Actuator 1] Fiber LLM Pipeline + FinOps FuelBreaker + VCR + PTA_Mint
-    # ------------------------------------------------------------------------
     async def _execute_llm_node(
         self,
         cursor: BranchCursor,
@@ -114,9 +112,7 @@ class FiberExecutionBridge:
 
         return meta_updates, offload_payload, max(1, int(tokens_used))
 
-    # ------------------------------------------------------------------------
-    # [Actuator 2] Fiber MCP Gateway + Idempotent PTA Handle + Pre-Flight HITL
-    # ------------------------------------------------------------------------
+    # fiber.phase.fsm.bridge (_execute_mcp_node 구간 정렬본)
     async def _execute_mcp_node(
         self,
         cursor: BranchCursor,
@@ -125,6 +121,8 @@ class FiberExecutionBridge:
         resource_uri = task_io.get("resource_uri", "")
         target_id = resource_uri.split("/")[-1] if "/" in resource_uri else "default"
         resolved_args = self._resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
+        pta_mint = task_io.get("pta_mint") or {}
+        extras = task_io.get("extras") or {}
 
         payload = {
             "pta_handle": cursor.pointer.to_key(),
@@ -149,11 +147,21 @@ class FiberExecutionBridge:
 
         resp.raise_for_status()
         tool_result = resp.json()
-        return {"intent_type": "tool_completed", "_hitl_yield": False}, tool_result, 5
+        if not isinstance(tool_result, dict):
+            tool_result = {"data": tool_result}
 
-    # ------------------------------------------------------------------------
+        # Extract 2KB-safe routing variables (e.g., _score, _risk) via PTA_Mint.meta_projection
+        meta_updates: Dict[str, Any] = {"intent_type": "tool_completed", "_hitl_yield": False}
+        for proj_path in pta_mint.get("meta_projection", []):
+            val = self._extract_path(tool_result, proj_path)
+            if val is not None:
+                meta_updates[proj_path] = val
+                meta_updates[proj_path.split(".")[-1]] = val
+
+        default_cost = int(extras.get("step_cost", tool_result.get("step_cost", 5)))
+        return meta_updates, tool_result, max(1, default_cost)
+
     # [Internal Helpers] Stream Coalescing & Dot-Path Parameter Resolution
-    # ------------------------------------------------------------------------
     @staticmethod
     async def _normalize_llm_response(response: Any, stream: bool) -> Dict[str, Any]:
         if stream and hasattr(response, "__aiter__"):

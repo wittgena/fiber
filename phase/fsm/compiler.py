@@ -5,6 +5,10 @@ from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 
 from xphi.arch.bound.adapter.state import StateAdapter
+from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
+from xphi.node.runtime.wasm.quota import QuotaPolicy
+from xphi.state.inter.fsm import FSMInterpreter
+from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fsm.compiler", phase="COMPILER")
@@ -15,8 +19,23 @@ BRANCH_PREFIX = "branch:"
 END_TOKEN = "END"
 RETURN_TOKEN = "RETURN"
 
+# ASL Choice 연산자 -> fsm.wasm 및 runtime 조건식 연산자 매핑 테이블
+ASL_CHOICE_OP_MAP: Dict[str, str] = {
+    "StringEquals": "==",
+    "NumericEquals": "==",
+    "BooleanEquals": "==",
+    "NumericGreaterThanEquals": ">=",
+    "NumericLessThanEquals": "<=",
+    "NumericGreaterThan": ">",
+    "NumericLessThan": "<",
+    "StringNotEquals": "!=",
+    "NumericNotEquals": "!=",
+}
 
-# VOCAB & COMPACT KEYS (Unified NodeType & Terminal Tokens)
+
+# ============================================================================
+# 1. VOCAB & COMPACT KEYS (Unified NodeType & Terminal Tokens)
+# ============================================================================
 class NodeType(str, Enum):
     PROJECTOR = "projector"
     OPERSIG = "opersig"
@@ -114,7 +133,7 @@ class ExCompiledBundle(BaseModel):
 
 
 # ============================================================================
-# 3. COMPILER & PROJECTOR (ASL -> CAS Stripping -> 2KB Compact Blob)
+# 3. COMPILER & PROJECTOR (ASL -> CAS Stripping -> WASM Auto-Linker & Sandbox)
 # ============================================================================
 class ExStateProjector:
     @staticmethod
@@ -159,8 +178,9 @@ class ExStateProjector:
 
 
 class ExFSMCompiler:
-    def __init__(self, byte_limit: int = MAX_BLOB_BYTES):
+    def __init__(self, byte_limit: int = MAX_BLOB_BYTES, use_wasm_linker: bool = True):
         self.byte_limit = byte_limit
+        self.use_wasm_linker = use_wasm_linker
         self.projector = ExStateProjector()
         self._cas_pool: Dict[str, Dict[str, Any]] = {}
 
@@ -171,7 +191,8 @@ class ExFSMCompiler:
         self._cas_pool[ptr] = data
         return ptr
 
-    def compile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> ExCompiledBundle:
+    def _build_fragment_sig(self, asl_schema: Dict[str, Any], trace_id: str) -> FragmentSig:
+        """Parses ASL JSON, strips heavy Task I/O into CAS (`blob:<hash>`), and builds topology signature."""
         self._cas_pool.clear()
         start_at = asl_schema.get("StartAt", "unknown_entry")
         states = asl_schema.get("States", {})
@@ -237,12 +258,12 @@ class ExFSMCompiler:
                 frag = Fragment(id=state_name, type=NodeType.ROUTER)
                 for choice in state_def.get("Choices", []):
                     var = choice.get("Variable", "")
-                    val = choice.get("StringEquals", choice.get("NumericEquals", ""))
+                    cond_str = self._parse_choice_condition(var, choice)
                     frag.relations.append(
                         EdgeRelation(
                             target=choice["Next"],
                             edge_type=EdgeMode.CONDITIONAL,
-                            condition=f"{var}=={val}",
+                            condition=cond_str,
                         )
                     )
                 if "Default" in state_def:
@@ -255,22 +276,105 @@ class ExFSMCompiler:
                 sig.nodes[state_name] = frag
 
         self._validate_phase(sig)
+        return sig
 
-        root_blob = self.projector.project_compact_blob(sig)
+    @staticmethod
+    def _parse_choice_condition(var: str, choice: Dict[str, Any]) -> str:
+        for asl_op, sym_op in ASL_CHOICE_OP_MAP.items():
+            if asl_op in choice:
+                val = choice[asl_op]
+                if isinstance(val, bool):
+                    val_str = "true" if val else "false"
+                else:
+                    val_str = str(val)
+                return f"{var}{sym_op}{val_str}"
+        return f"{var}=="
+
+    def _finalize_bundle_from_wasm(self, wasm_output_str: str) -> ExCompiledBundle:
+        """Unpacks `fsm.wasm` compile output and merges partitioned sub-branches into `cas_store`."""
+        parsed = FsmAdapter.parse_broker_output(wasm_output_str)
+        if not parsed.get("success", False):
+            reason = parsed.get("revert_reason") or "Unknown WASM Compile Error"
+            if "E_BLOB_OVERFLOW" in reason:
+                raise OverflowError(reason)
+            raise ValueError(f"[FSM Static Sandbox Rejected] {reason}")
+
+        root_hash = parsed["state_root"]
+        state_diff = parsed.get("state_diff", {})
+        inner_out = parsed.get("parsed_output", {})
+
+        # Merge all auto-partitioned `branch:<hash>` blobs into _cas_pool
+        for branch_key, branch_blob in state_diff.items():
+            self._cas_pool[branch_key] = branch_blob
+
+        root_blob = state_diff.get(root_hash, {})
         raw_bytes = StateAdapter.to_canonical_bytes(root_blob)
+        total_root_bytes = int(inner_out.get("total_root_bytes", len(raw_bytes)))
+
+        if total_root_bytes > self.byte_limit:
+            raise OverflowError(
+                f"Compiled FSM graph ({total_root_bytes}B) exceeds {self.byte_limit}B limit."
+            )
+
+        return ExCompiledBundle(
+            root_hash=root_hash,
+            root_blob=root_blob,
+            cas_store=dict(self._cas_pool),
+            total_root_bytes=total_root_bytes,
+        )
+
+    def _fallback_python_compile(self, raw_ir: Dict[str, Any]) -> ExCompiledBundle:
+        """Fallback compiler when `fsm.wasm` binary is not yet built or disabled."""
+        raw_bytes = StateAdapter.to_canonical_bytes(raw_ir)
         if len(raw_bytes) > self.byte_limit:
             raise OverflowError(
                 f"Compiled FSM graph ({len(raw_bytes)}B) exceeds {self.byte_limit}B limit. "
                 f"Modularize sub-branches via '{BRANCH_PREFIX}<hash>' targets."
             )
-
-        root_hash = self._inscribe_blob(root_blob, prefix=BRANCH_PREFIX)
+        root_hash = self._inscribe_blob(raw_ir, prefix=BRANCH_PREFIX)
         return ExCompiledBundle(
             root_hash=root_hash,
-            root_blob=root_blob,
+            root_blob=raw_ir,
             cas_store=dict(self._cas_pool),
             total_root_bytes=len(raw_bytes),
         )
+
+    def compile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> ExCompiledBundle:
+        """
+        [Sync] Compiles ASL definition into `<= 2KB` canonical topology blobs.
+        Delegates auto-partitioning (>2KB SESE folding) and static deadlock linting to cached `fsm.wasm`.
+        """
+        sig = self._build_fragment_sig(asl_schema, trace_id)
+        raw_ir = self.projector.project_compact_blob(sig)
+
+        if self.use_wasm_linker and self.byte_limit == MAX_BLOB_BYTES:
+            try:
+                with FSMInterpreter(wasm_module_name="fsm.wasm", policy=QuotaPolicy.system()) as fsm_vm:
+                    res = fsm_vm.execute(
+                        vm_target=FsmTarget.COMPILE,
+                        target_address=trace_id,
+                        calldata=raw_ir,
+                        state_snapshot={},
+                        context={"fuel": 2000},
+                    )
+                    if res.output:
+                        return self._finalize_bundle_from_wasm(res.output)
+                    raise ValueError(f"FSM WASM Compile Failed: {res.error}")
+            except (FileNotFoundError, ImportError) as e:
+                log.warning(f"fsm.wasm unavailable ({e}), falling back to Python projector.")
+
+        return self._fallback_python_compile(raw_ir)
+
+    async def acompile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> ExCompiledBundle:
+        """[Async] Distributed compilation and static verification via DphiBroker & TaskWasm daemon."""
+        sig = self._build_fragment_sig(asl_schema, trace_id)
+        raw_ir = self.projector.project_compact_blob(sig)
+
+        payload = FsmAdapter.build_compile_payload(trace_id=trace_id, compact_ir=raw_ir)
+        res = await DphiBroker.get_shared().execute(code=payload, context={"fuel": 2000})
+        if res.output:
+            return self._finalize_bundle_from_wasm(res.output)
+        raise ValueError(f"FSM Broker Compile Failed: {res.error}")
 
     @staticmethod
     def _infer_type_from_resource(resource_uri: str) -> NodeType:

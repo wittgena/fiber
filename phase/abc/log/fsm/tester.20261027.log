@@ -1,89 +1,124 @@
 (self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.fsm.tester
-[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
  LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
 ======================================================================================
  [FIBER FSM/DAG MULTIVERSE TESTER] Starting E2E Lifecycle Verification
 ======================================================================================
- LOG | KERNEL | INFO  |  anchor.mempool: [Mempool:SEALER] Background Consumer [sealer_80786_d767d9] attached.
- LOG | KERNEL | INFO  |  anchor.store: [Ledger] Acquired physical lock. Operating as SEALER. WASM Kernel mounted.
+ LOG | KERNEL | INFO  |  anchor.store: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
  LOG | ANCHOR | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB via PhaseStore. Canonical WASM Broker attached.
  LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: b77bda9b...
 
 --------------------------------------------------------------------------------------
  [Phase 1: Compile] Stripping heavy Task I/O into CAS & projecting <=2KB Topology Blob
 --------------------------------------------------------------------------------------
-  • Root Graph Hash : branch:552a3360678c2c34 (On-Ledger Compact IR)
-  • Root Graph Size : 678B / 2048B Limit (33.1% used)
-  • Offloaded Blobs : 5 CAS objects (4 TaskIOSpecs + 1 Root Blob)
+ LOG | SYSTEM | INFO  |  inter.fsm: ⚙️ [AOT Compile] Compiling fsm.wasm (Only once per process)...
+ LOG | SYSTEM | INFO  |  inter.fsm: ✅ [AOT Compile] fsm.wasm cached successfully.
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4538964288] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'test_suite_01' (Fuel Limit: 2000)
+  • Root Graph Hash : branch:31bfa29a1afc49e2 (On-Ledger Compact IR)
+  • Root Graph Size : 780B / 2048B Limit (38.1% used)
+  • Offloaded Blobs : 5 CAS objects (4 TaskIOSpecs + 1 Branch Blob)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4533196816] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'bad_deadlock_check' (Fuel Limit: 2000)
+  • Static Linter   : Verified pre-mount deadlock rejection ([FSM Static Sandbox Rejected] E_BARRIER_DEADLOCK_RISK: Parallel bran...)
 
 --------------------------------------------------------------------------------------
  [Phase 2: Initial Run & HITL Park] Genesis(1000 Fuel) -> Plan(-20) -> 1:2 Fork[490, 490]
 --------------------------------------------------------------------------------------
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 2c5c0fcc
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 2c5c0fcc... | Hash: 47fc2298
-  [Actuator] LLM Node 'Plan_Intent_LLM' on 'run_101' | Tick=1 | Spending 20 Fuel (1000 -> 980) | Offloading response to CAS
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 4bd863af
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 4bd863af... | Hash: 2f05f4f7
-  [Actuator] 🛠️  Safe MCP Node 'Fast_Readonly_MCP' on 'run_101/b0' | Tick=2 | Spending 5 Fuel (490 -> 485) | Score=0.70
 [TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101/b0 | Commit: 786a5e39
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 786a5e39... | Hash: 620b2857
-  [Actuator] MCP Pre-Flight HITL Trap (HTTP 202) at 'Admin_Mutation_MCP' on 'run_101/b1'! Regex matched 'DELETE'. Parking cursor WITHOUT spending PTA (2f05f4f7..:1) or Fuel (490).
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: fffc7592... | Hash: 22854c03
+  [Actuator] LLM Node 'Plan_Intent_LLM' (target='interllm_proxy') on 'run_101' | Tick=1 | Spending 20 Fuel (1000 -> 980) | Offloading response to CAS
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: c5efd97c... | Hash: 3dbca5b3
+  [Actuator] 🛠️  Safe MCP Node 'Fast_Readonly_MCP' (target='readonly_db_search') on 'run_101/b0' | Tick=2 | Spending 5 Fuel (490 -> 485) | Score=0.70
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4533199696] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 490)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: c811cef9... | Hash: 00a17d60
+  [Actuator] MCP Pre-Flight HITL Trap (HTTP 202) at 'Admin_Mutation_MCP' (target='prod_db_admin') on 'run_101/b1'! Regex matched 'DELETE'. Parking cursor WITHOUT spending PTA (3dbca5b3..:1) or Fuel (490).
 
   [Phase 2 Summary: Multiverse Paused Safely]
   • Detected Join Nodes : ['Evaluate_And_Join', 'Final_Act']
   • Visited Trace       : run_101:Plan_Intent_LLM -> run_101/b0:Fast_Readonly_MCP(FORK) -> run_101/b1:Admin_Mutation_MCP(FORK) -> run_101/b0:Evaluate_And_Join -> run_101/b1:Admin_Mutation_MCP(HITL_PARKED)
   • Parked Cursors      : ['run_101/b1', 'run_101/b0']
-  • Branch b0 (Sibling) : Node='Evaluate_And_Join' (Waiting at Join Barrier) | PTA=620b2857..:0 | Fuel=485 (490 - 5) | Tick=3
-  • Branch b1 (Locked)  : Node='Admin_Mutation_MCP' (Zero-Spend HITL Parked)  | PTA=2f05f4f7..:1 | Fuel=490 (490 - 0) | Tick=2
+  • Branch b0 (Sibling) : Node='Evaluate_And_Join' (Waiting at Join Barrier) | PTA=00a17d60..:0 | Fuel=485 (490 - 5) | Tick=3
+  • Branch b1 (Locked)  : Node='Admin_Mutation_MCP' (Zero-Spend HITL Parked)  | PTA=3dbca5b3..:1 | Fuel=490 (490 - 0) | Tick=2
 
 --------------------------------------------------------------------------------------
  [Phase 3: HITL Approval & Mid-Flow Resume] O(1) Restore from PTA Pointers (Skipping Prior Nodes)
 --------------------------------------------------------------------------------------
-  • O(1) Rehydrated b1  : stream='run_101/b1' at node='Admin_Mutation_MCP' | PTA=2f05f4f7..:1 | Preserved Tick=2 | Preserved Fuel=490
+  • O(1) Rehydrated b1  : stream='run_101/b1' at node='Admin_Mutation_MCP' | PTA=3dbca5b3..:1 | Preserved Tick=2 | Preserved Fuel=490
   • Admin Action        : Approved TOTP/Slack Ticket 'hitl_ticket_drop_99'. Resuming branches...
 
   [Actuator] MCP HITL Approved ('hitl_ticket_drop_99')! Executing 'Admin_Mutation_MCP' on 'run_101/b1' | Tick=2 | Spending 15 Fuel (490 -> 475) | Score=0.95
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101/b1 | Commit: dccdf65e
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: dccdf65e... | Hash: 5a4da66b
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 24b82d3b
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 24b82d3b... | Hash: 76d4e469
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4533137664] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 490)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: a0b6b291... | Hash: 70dfdbfb
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 0bdeede6... | Hash: 7089e30b
   [Actuator] Control Node 'Evaluate_And_Join' (router) on 'run_101' | Tick=4 | Cost=0 Fuel (Remaining=960)
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 550f8aa6
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 550f8aa6... | Hash: e2f2bd89
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4533138272] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 960)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 0fda845f... | Hash: eb21054e
   [Actuator] Control Node 'Final_Act' (act) on 'run_101' | Tick=5 | Cost=0 Fuel (Remaining=960)
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: 401ef659
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 401ef659... | Hash: dd4a88db
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4538557520] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 960)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 3a76a6ac... | Hash: b135f88b
 
   [Phase 3 Summary: Diamond Barrier Merged & Fuel Reclaimed]
   • Resumed Trace       : run_101/b0:Evaluate_And_Join(RESUMED) -> run_101/b1:Admin_Mutation_MCP(RESUMED) -> run_101/b1:Evaluate_And_Join -> run_101:Evaluate_And_Join(MERGED) -> run_101:Final_Act -> run_101:END
   • Arbiter Winner      : Selected b1 (_score=0.95 > b0 _score=0.70) at 'Evaluate_And_Join'
-  • Final Node          : END | Join Collapses: 1 | Final PTA=dd4a88db..:0
+  • Final Node          : END | Join Collapses: 1 | Final PTA=b135f88b..:0
   • Reclaimed Fuel      : 960 (485 from b0 + 475 from b1 = 960 Total Conserved)
 
 --------------------------------------------------------------------------------------
  [Phase 4: Time-Travel Re-Branching] Forking 2 New Hypotheses from Completed Checkpoint (960 Fuel)
 --------------------------------------------------------------------------------------
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101 | Commit: caf417df
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: caf417df... | Hash: 96b7ee82
-  • Forked 2 Experimental Branches from Sealed PTA dd4a88db..:0 (960 Fuel -> [480, 480]):
-    - run_101/b0: Target='Reflect_Fallback_LLM' | PTA=96b7ee82..:0 | Fuel=480 | Override='fallback_reflect' (_score=0.99)
-    - run_101/b1: Target='Final_Act' | PTA=96b7ee82..:1 | Fuel=480 | Override='direct_exit' (_score=0.5)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 7b504ad6... | Hash: 2bc75b68
+  • Forked 2 Experimental Branches from Sealed PTA b135f88b..:0 (960 Fuel -> [480, 480]):
+    - run_101/b0: Target='Reflect_Fallback_LLM' | PTA=2bc75b68..:0 | Fuel=480 | Override='fallback_reflect' (_score=0.99)
+    - run_101/b1: Target='Final_Act' | PTA=2bc75b68..:1 | Fuel=480 | Override='direct_exit' (_score=0.5)
 
-  [Actuator] LLM Node 'Reflect_Fallback_LLM' on 'run_101/b0' | Tick=7 | Spending 20 Fuel (480 -> 460) | Offloading response to CAS
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101/b0 | Commit: 7d237b25
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 7d237b25... | Hash: c1e93840
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101_exp | Commit: 29f8a9d2
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 29f8a9d2... | Hash: 289a23b4
+  [Actuator] LLM Node 'Reflect_Fallback_LLM' (target='reflect_llm') on 'run_101/b0' | Tick=7 | Spending 20 Fuel (480 -> 460) | Offloading response to CAS
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4454298720] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 480)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: bd318dc5... | Hash: 4c7285ef
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: a91d86eb... | Hash: 01a9d4a7
   [Actuator] Control Node 'Final_Act' (act) on 'run_101_exp' | Tick=9 | Cost=0 Fuel (Remaining=940)
- LOG | KERNEL | INFO  |  anchor.store: [Ledger:LEADER] Epoch Sealed. Stream: run_101_exp | Commit: 6f6fa2dc
- LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:778AD0] Tx Sealed. Receipt: 6f6fa2dc... | Hash: 6bcf9b67
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4454298720] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 940)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: e867245f... | Hash: f0c3737d
 
   [Phase 4 Summary: Time-Travel Hypotheses Converged]
   • Time-Travel Trace   : run_101/b0:Reflect_Fallback_LLM(RESUMED) -> run_101/b1:Final_Act(RESUMED) -> run_101/b0:Final_Act -> run_101_exp:Final_Act(MERGED) -> run_101_exp:END
   • Final Exp State     : Stream='run_101_exp' | Node='END' | Reclaimed Fuel=940 (460 from b0 + 480 from b1 = 940)
   • Winning Strategy    : 'fallback_reflect' (_score=0.99)
 
+--------------------------------------------------------------------------------------
+ [Phase 5: WASM Auto-Linker & Runaway Catch Recovery] >2KB Partitioning & Fault Isolation
+--------------------------------------------------------------------------------------
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4543679056] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_COMPILE on 'oversized_45' (Fuel Limit: 2000)
+  • >2KB Auto-Linker    : 45-Node ASL partitioned into 5 sub-branches (Root=952B <= 2048B)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 0ecf1f38... | Hash: 2c7441ca
+  [Actuator] LLM Node 'Plan_Intent_LLM' (target='interllm_proxy') on 'run_102_fault' | Tick=1 | Spending 20 Fuel (1000 -> 980) | Offloading response to CAS
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: b7206926... | Hash: e2dda4ff
+  [Actuator] 💥 Runaway Fault Injected at 'Fast_Readonly_MCP' (target='readonly_db_search') on 'run_102_fault/b0'! Attempting to spend 990 Fuel (Available=490) -> Triggering Catch Fallback
+ LOG | MULTIVERSE_TRAVERSER | WARN  |  fsm.traverser: [Traverser:run_102_fault/b0] Node 'Fast_Readonly_MCP' faulted ([Runtime:run_102_fault/b0] Exhausted fuel (490 < 990)); routing via Catch fallback -> 'Evaluate_And_Join'
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 8b10e3ed... | Hash: f2bd0589
+  [Actuator] MCP HITL Approved ('hitl_ticket_drop_99')! Executing 'Admin_Mutation_MCP' on 'run_102_fault/b1' | Tick=2 | Spending 15 Fuel (490 -> 475) | Score=0.95
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4532911184] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 490)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: d95dca26... | Hash: 74357d71
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: 243fa4a4... | Hash: 9cff193a
+  [Actuator] Control Node 'Evaluate_And_Join' (router) on 'run_102_fault' | Tick=4 | Cost=0 Fuel (Remaining=475)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4533039616] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 475)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: b35c731b... | Hash: 66c97378
+  [Actuator] Control Node 'Final_Act' (act) on 'run_102_fault' | Tick=5 | Cost=0 Fuel (Remaining=475)
+ LOG | SYSTEM | INFO  |  wasm.quota: [fsm-vm-worker-4533039616] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  inter.fsm: [fsm.wasm] Routing FSM_STEP on 'branch:31bfa29a1afc49e2' (Fuel Limit: 475)
+ LOG | KERNEL | INFO  |  adapter.pta: [PtaAdapter:8B0D70] Tx Sealed. Receipt: b67c1ea2... | Hash: 100e2fb8
+  • Fault Recovery Trace: run_102_fault:Plan_Intent_LLM -> run_102_fault/b0:Fast_Readonly_MCP(FORK) -> run_102_fault/b1:Admin_Mutation_MCP(FORK) -> run_102_fault/b0:Evaluate_And_Join(FALLBACK) -> run_102_fault/b1:Evaluate_And_Join -> run_102_fault:Evaluate_And_Join(MERGED) -> run_102_fault:Final_Act -> run_102_fault:END
+  • Fault Isolation     : Runaway b0 drained to 0 Fuel via Catch; Surviving b1 (475 Fuel) won merge -> Reclaimed=475 Fuel
+
 ======================================================================================
- ✅ ALL MULTIVERSE FSM/DAG & PTA LEDGER ASSERTIONS PASSED
+ ✅ ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED
 ======================================================================================

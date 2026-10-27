@@ -1,5 +1,85 @@
 # fiber.dev.e2e.fsm.tester
+"""
+FIBER FSM/DAG SPEC
+======================================================================================
+This module serves both as the end-to-end verification suite and the canonical
+reference specification for authoring Fiber ASL (Agent State Language) workflows.
+
+--------------------------------------------------------------------------------------
+STRUCTURAL & TOPOLOGY KEYWORDS ([FIXED] System-Bound vs [FREE] User-Defined)
+--------------------------------------------------------------------------------------
+• Top-Level Keys   : [FIXED] `"Version"`, `"StartAt"`, `"States"` (Required by compiler)
+• State (Node) IDs : [FREE]  Any string (e.g., `"Plan_Intent_LLM"`, `"My_Custom_Step"`).
+                             Must NOT use reserved terminal tokens: `"END"`, `"RETURN"`,
+                             or prefixes `"blob:"`, `"branch:"`.
+• `"Type"`         : [FIXED] Allowed values:
+                             - `"Task"`    : Executes LLM or MCP tool via `"Resource"`
+                             - `"Choice"`  : Compiles to `NodeType.ROUTER` (`"t": "router"`)
+                             - `"Succeed"` : Compiles to terminal `NodeType.ACT` -> `"END"`
+                             - `"Fail"`    : Compiles to terminal `NodeType.ACT` -> `"END"`
+• `"Next"`         : [MIXED] Single node ID (`str`) for 1:1 step, or `List[str]` (len >= 2)
+                             for 1:N parallel multiverse fork.
+                             Can also point to `"branch:<hash>#<entry_node>"` for SYMLINK jump.
+• `"Catch"`        : [FIXED] Mandatory on parallel branch `"Task"` nodes converging at a
+                             `DagJoinBarrier` (in-degree >= 2). Omitting `"Catch"` triggers
+                             `E_BARRIER_DEADLOCK_RISK` in the `fsm.wasm` static linter.
+
+--------------------------------------------------------------------------------------
+`"Resource"` URI ROUTING RULES (`compiler.py` & `bridge.py`)
+--------------------------------------------------------------------------------------
+Format: `"fiber://<category_keyword>/<target_id>"`
+
+  [Compiler Keyword Scan]                [Bridge Execution Behaviour]
+  • Contains `"llm"` or `"interllm"` ──► `NodeType.PROJECTOR` -> Calls `acompletion()`
+  • Contains `"reflect"`             ──► `NodeType.REFLECT`   -> Calls `acompletion()`
+  • Contains `"tension"`             ──► `NodeType.TENSION`   -> Calls `acompletion()` +
+                                                                 `fsm.wasm` -> `phase.wasm` bridge
+  • Contains `"mcp"`, `"tool"`,      ──► `NodeType.OPERSIG`   -> Extracts `<target_id>` after the
+    or `"sidecar"` (default)                                     last `'/'` and calls:
+                                                                 `POST {mcp_gateway}/<target_id>/invoke`
+  • Contains `"pending"`             ──► `NodeType.PENDING`   -> Same MCP gateway invocation
+  • Contains `"act"` or `"io"`       ──► `NodeType.ACT`       -> No-op control step (0 Fuel cost)
+
+--------------------------------------------------------------------------------------
+`"Parameters"` & `"__fiber_extensions"` CONTRACT
+--------------------------------------------------------------------------------------
+All `"Parameters"` are stripped from the on-ledger topology graph (`branch:<hash> <= 2KB`)
+and stored off-ledger in CAS (`blob:<hash>`).
+
+• Dynamic Binding (`".$"` suffix) : [FIXED SYNTAX] Any parameter key ending with `".$"`
+                                    (e.g., `"sql_filter.$": "$.user_tier"`) is resolved at
+                                    runtime from `cursor.meta_ctx["user_tier"]`.
+• LLM Call Parameters             : [MIXED] `"model"`, `"messages"`, `"stream"` are extracted
+                                    by `FiberExecutionBridge._execute_llm_node()`. All other
+                                    keys are passed as `**kwargs` to `acompletion()`.
+• MCP Call Parameters             : [FREE] Passed verbatim as `"arguments"` JSON to MCP Gateway.
+• `"__fiber_extensions"`          : [FIXED KEY] Stripped before calling LLM/MCP. Supports:
+    - `"VCR"`            : `{"capture_mode": str, "coalescing_window_ms": int}`
+    - `"PTA_Mint"`       : `{"pointer_target": str, "meta_projection": List[str]}`
+                           `meta_projection` lifts specific fields from heavy LLM/MCP output
+                           into the lightweight on-ledger `cursor.meta_ctx` so downstream
+                           `"Choice"` (`ROUTER`) nodes and Arbiters can evaluate them.
+    - `"pressure"`       : `float` (0.0 ~ 1.0)
+    - `"max_failures"`   : `int` (default: 3)
+    - `"allow_parallel"` : `bool` (default: False)
+    - `"step_cost"`      : `int` (default MCP step cost override)
+
+--------------------------------------------------------------------------------------
+RUNTIME `cursor.meta_ctx` RESERVED SYSTEM KEYS
+--------------------------------------------------------------------------------------
+• `"_score"`          : (`float`) Used by `ExGraphTraverser._default_arbiter` and `fsm.wasm`
+                        to select the winning branch during N:1 `DagJoinBarrier` collapse.
+• `"_hitl_yield"`     : (`bool`) When `True` (e.g., HTTP 202 from MCP Gateway), parks the
+                        cursor in-place with ZERO fuel/PTA spend. Auto-cleared on `resume()`.
+• `"_hitl_ticket"`    : (`str`) Ticket identifier attached during HTTP 202 Pre-Flight lock.
+• `"_fork_ratios"`    : (`List[float]`) Optional weight list (e.g., `[0.4, 0.4, 0.2]`) to
+                        slice remaining parent fuel asymmetrically across 1:N forked branches.
+• `"_fork_branches"`  : (`List[Tuple[str, dict]]`) Optional dynamic 1:N fork targets.
+• `"_last_ptr"`       : (`str`) Auto-populated CAS pointer (`"blob:<hash>"`) to offloaded I/O.
+• `"_fallback_error"` : (`str`) Auto-populated error message when routed via `"Catch"` (`fb`).
+"""
 import asyncio
+import copy
 from typing import Dict, Any, Optional, Tuple
 
 from xphi.watcher.plane.emitter import get_emitter
@@ -8,71 +88,107 @@ from fiber.phase.fsm.compiler import (
     CompactKey,
     NodeType,
     END_TOKEN,
+    CAS_PREFIX,
+    BRANCH_PREFIX,
 )
 from fiber.phase.fsm.runtime import BranchCursor
 from fiber.phase.fsm.traverser import ExGraphTraverser
 
 log = get_emitter("fsm.tester", phase="E2E_VERIFICATION")
 
-# SAMPLE ASL WORKFLOW (Fan-Out + HITL Trap + Diamond Join)
+
+# REFERENCE ASL WORKFLOW (Annotated with [FIXED] vs [FREE] Binding Rules)
 SAMPLE_MULTIVERSE_ASL: Dict[str, Any] = {
-    "Version": "1.0",
-    "Comment": "E2E Multiverse Agent Flow: Planner -> Parallel Branches (Safe vs HITL) -> Join -> Final",
-    "StartAt": "Plan_Intent_LLM",
+    "Version": "1.0",  # [FIXED] ASL schema version stored in `_m.v`
+    "Comment": "Reference Multiverse Flow: Planner -> Parallel Branches (Safe vs HITL) -> Join -> Final",
+    "StartAt": "Plan_Intent_LLM",  # [FIXED KEY / FREE VALUE] Must match an entry key in "States"
     "States": {
-        "Plan_Intent_LLM": {
-            "Type": "Task",
+        # [Node 1] 1:N Multiverse Planner (Compiles to `NodeType.PROJECTOR`)
+        "Plan_Intent_LLM": {  # [FREE] User-defined Node ID
+            "Type": "Task",  # [FIXED] Task node
+            # [MIXED] Contains keyword "interllm" -> `NodeType.PROJECTOR`
             "Resource": "fiber://wasm_sandbox/interllm_proxy",
             "Parameters": {
-                "model": "gpt-4o",
-                "prompt": "Analyze user request and dispatch parallel verification strategies.",
-                "__fiber_extensions": {
+                "model": "gpt-4o",  # [FIXED] Extracted by bridge for `acompletion(model=...)`
+                "prompt": "Analyze user request and dispatch parallel verification strategies.",  # [FREE]
+                "__fiber_extensions": {  # [FIXED] Stripped into `TaskIOSpec` (`blob:<hash>`)
                     "VCR": {"capture_mode": "socket_stream", "coalescing_window_ms": 100},
                     "PTA_Mint": {
+                        # [FIXED] Offloads heavy path to CAS `blob:<hash>`
                         "pointer_target": "$.raw_stream_payload",
+                        # [FIXED] Projects `intent_type` into on-ledger `cursor.meta_ctx`
                         "meta_projection": ["$.intent_type"],
                     },
                     "allow_parallel": True,
                 },
             },
-            # 1:N Fan-out directly into two parallel hypotheses
+            # [MIXED] List of >=2 Node IDs triggers 1:N Multiverse Fork (`runtime.fork`)
             "Next": ["Fast_Readonly_MCP", "Admin_Mutation_MCP"],
         },
-        "Fast_Readonly_MCP": {
+        # [Node 2 - Branch b0] Safe Read-Only MCP Tool (`NodeType.OPERSIG`)
+        "Fast_Readonly_MCP": {  # [FREE] User-defined Node ID
             "Type": "Task",
+            # [MIXED] Keyword "mcp_sidecar" -> `OPERSIG` | Suffix "readonly_db_search" -> MCP target_id
             "Resource": "fiber://mcp_sidecar/readonly_db_search",
-            "Parameters": {"query": "SELECT count(*) FROM audit_logs"},
-            "Next": "Evaluate_And_Join",
+            "Parameters": {
+                "query": "SELECT count(*) FROM audit_logs",  # [FREE] Sent to MCP tool
+                "intent_filter.$": "$.intent_type",  # [FIXED SYNTAX `.$`] Resolved from `meta_ctx`
+                "__fiber_extensions": {
+                    "PTA_Mint": {"meta_projection": ["$._score", "$.db_status"]},
+                },
+            },
+            "Next": "Evaluate_And_Join",  # Converges at shared Join Barrier
+            # [FIXED RULE] Mandatory on parallel branches to prevent barrier deadlock (`fb` edge)
+            "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "Evaluate_And_Join"}],
         },
-        "Admin_Mutation_MCP": {
+        # [Node 3 - Branch b1] High-Risk Admin MCP Tool (`NodeType.OPERSIG` + HTTP 202 HITL)
+        "Admin_Mutation_MCP": {  # [FREE] User-defined Node ID
             "Type": "Task",
+            # [MIXED] Keyword "mcp_sidecar" -> `OPERSIG` | Suffix "prod_db_admin" -> MCP target_id
             "Resource": "fiber://mcp_sidecar/prod_db_admin",
-            "Parameters": {"sql": "DELETE FROM stale_sessions WHERE expired = true"},
+            "Parameters": {
+                "sql": "DELETE FROM stale_sessions WHERE expired = true",  # [FREE] Triggers HITL regex
+                "__fiber_extensions": {
+                    "PTA_Mint": {"meta_projection": ["$._score", "$.db_status"]},
+                },
+            },
             "Next": "Evaluate_And_Join",
+            # [FIXED RULE] Mandatory fallback edge (`fb`) to Join Barrier
+            "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "Evaluate_And_Join"}],
         },
-        "Evaluate_And_Join": {
-            "Type": "Choice",
+        # [Node 4 - Join Barrier] Diamond Convergence & Conditional Router (`NodeType.ROUTER`)
+        # Automatically detected as `DagJoinBarrier` because forward in-degree == 2
+        "Evaluate_And_Join": {  # [FREE] User-defined Node ID
+            "Type": "Choice",  # [FIXED] Compiles to `NodeType.ROUTER` (`"t": "router"`)
             "Choices": [
                 {
+                    # [FREE Variable] Evaluates `cursor.meta_ctx["strategy_override"] == "fallback_reflect"`
                     "Variable": "$.strategy_override",
-                    "StringEquals": "fallback_reflect",
+                    "StringEquals": "fallback_reflect",  # [FIXED] Mapped to `==`
                     "Next": "Reflect_Fallback_LLM",
-                }
+                },
+                {
+                    # [RESERVED Variable] Evaluates winning branch's `cursor.meta_ctx["_score"] >= 0.99`
+                    "Variable": "$._score",
+                    "NumericGreaterThanEquals": 0.99,  # [FIXED] Mapped to `>=`
+                    "Next": "Reflect_Fallback_LLM",
+                },
             ],
-            "Default": "Final_Act",
+            "Default": "Final_Act",  # [FIXED] Compiles to `"dn"` (Default Next)
         },
-        "Reflect_Fallback_LLM": {
+        # [Node 5] Secondary Reflection LLM (`NodeType.REFLECT`)
+        "Reflect_Fallback_LLM": {  # [FREE] User-defined Node ID
             "Type": "Task",
-            "Resource": "fiber://wasm_sandbox/reflect_llm",
+            "Resource": "fiber://wasm_sandbox/reflect_llm",  # Keyword "reflect" -> `NodeType.REFLECT`
             "Parameters": {"model": "gpt-4o-mini", "prompt": "Verify fallback safety."},
             "Next": "Final_Act",
         },
-        "Final_Act": {
-            "Type": "Succeed",
+        # [Node 6] Terminal Node (`NodeType.ACT` -> `"nx": "END"`)
+        "Final_Act": {  # [FREE] User-defined Node ID
+            "Type": "Succeed",  # [FIXED] Terminal state
         },
     },
 }
-
 
 def _short_pta(cursor: BranchCursor) -> str:
     """Formats PTA pointer ('tx_hash:idx') into a readable short handle."""
@@ -82,13 +198,38 @@ def _short_pta(cursor: BranchCursor) -> str:
         return f"{tx_h[:8]}..:{idx}"
     return key[:10]
 
+def _build_oversized_asl(node_count: int = 45) -> Dict[str, Any]:
+    """Generates a >2KB ASL definition to verify WASM Auto-Linker SESE subgraph partitioning."""
+    states: Dict[str, Any] = {}
+    for i in range(node_count):
+        curr_id = f"Chain_Step_Node_Identifier_{i:03d}"
+        next_id = f"Chain_Step_Node_Identifier_{i+1:03d}" if i < node_count - 1 else "Final_Done"
+        states[curr_id] = {
+            "Type": "Task",
+            "Resource": f"fiber://mcp_sidecar/step_worker_{i:03d}",
+            "Parameters": {
+                "step_index": i,
+                "__fiber_extensions": {"pressure": 0.5},
+            },
+            "Next": next_id,
+        }
+    states["Final_Done"] = {"Type": "Succeed"}
+    return {
+        "Version": "1.0",
+        "StartAt": "Chain_Step_Node_Identifier_000",
+        "States": states,
+    }
 
-# DETERMINISTIC MOCK ACTUATOR (Simulates LLM, MCP Gateway & HTTP 202 HITL)
+# DETERMINISTIC MOCK ACTUATOR (Routes by Resource Target ID & NodeType, NOT Node Name)
 class MockFiberActuator:
-    """Simulates Fiber LLM Pipeline & MCP Gateway with Pre-Flight HITL locking and step-by-step logging."""
+    """
+    Simulates `FiberExecutionBridge` without hardcoding user-defined node names.
+    Dispatches strictly by `NodeType` and the MCP `<target_id>` suffix in `task_io["resource_uri"]`.
+    """
 
     def __init__(self) -> None:
         self.hitl_approved_tickets: set[str] = set()
+        self.simulate_runaway_on_readonly: bool = False
 
     async def __call__(
         self,
@@ -97,6 +238,11 @@ class MockFiberActuator:
         task_io: Dict[str, Any],
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
         node_type = node_spec.get(CompactKey.TYPE)
+        resource_uri = task_io.get("resource_uri", "")
+        target_id = resource_uri.split("/")[-1] if "/" in resource_uri else ""
+        call_params = task_io.get("call_params", {})
+
+        # Control / Terminal Nodes (`NodeType.ROUTER`, `NodeType.ACT`)
         if node_type in (NodeType.ROUTER.value, NodeType.ACT.value):
             print(
                 f"  [Actuator] Control Node '{cursor.curr_node}' ({node_type}) "
@@ -104,33 +250,33 @@ class MockFiberActuator:
             )
             return {}, None, 0
 
-        # Simulate `Plan_Intent_LLM` or `Reflect_Fallback_LLM`
-        if node_type in (NodeType.PROJECTOR.value, NodeType.REFLECT.value):
+        # LLM Cognitive Nodes (`NodeType.PROJECTOR`, `NodeType.REFLECT`, `NodeType.TENSION`)
+        if node_type in (NodeType.PROJECTOR.value, NodeType.REFLECT.value, NodeType.TENSION.value):
             cost = 20
             print(
-                f"  [Actuator] LLM Node '{cursor.curr_node}' on '{cursor.stream_id}' "
+                f"  [Actuator] LLM Node '{cursor.curr_node}' (target='{target_id}') on '{cursor.stream_id}' "
                 f"| Tick={cursor.tick} | Spending {cost} Fuel ({cursor.fuel} -> {cursor.fuel - cost}) "
                 f"| Offloading response to CAS"
             )
             return (
                 {"intent_type": "parallel_audit"},
                 {"llm_output": f"Executed {cursor.curr_node} at tick {cursor.tick}"},
-                cost,  # 20 Fuel consumed
+                cost,
             )
 
-        # Simulate `Admin_Mutation_MCP` triggering HTTP 202 Pre-Flight HITL trap until approved
-        if cursor.curr_node == "Admin_Mutation_MCP":
+        # MCP Tool Target: `prod_db_admin` (Simulates HTTP 202 Pre-Flight HITL Lock on DELETE SQL)
+        if target_id == "prod_db_admin" or "DELETE" in str(call_params.get("sql", "")):
             ticket_id = "hitl_ticket_drop_99"
             if ticket_id not in self.hitl_approved_tickets:
                 print(
-                    f"  [Actuator] MCP Pre-Flight HITL Trap (HTTP 202) at '{cursor.curr_node}' "
+                    f"  [Actuator] MCP Pre-Flight HITL Trap (HTTP 202) at '{cursor.curr_node}' (target='{target_id}') "
                     f"on '{cursor.stream_id}'! Regex matched 'DELETE'. "
                     f"Parking cursor WITHOUT spending PTA ({_short_pta(cursor)}) or Fuel ({cursor.fuel})."
                 )
                 return (
                     {"_hitl_yield": True, "_hitl_ticket": ticket_id},
                     {"status": 202, "reason": "Pre-Flight regex matched DELETE"},
-                    0,  # Zero fuel spent while parked
+                    0,
                 )
             cost = 15
             print(
@@ -140,22 +286,30 @@ class MockFiberActuator:
             return (
                 {"_hitl_yield": False, "_score": 0.95, "db_status": "cleaned"},
                 {"deleted_rows": 42},
-                cost,  # 15 Fuel consumed after approval
+                cost,
             )
 
-        # Simulate `Fast_Readonly_MCP`
+        # MCP Tool Target: `readonly_db_search` (Normal or Runaway Fault Injection)
+        if self.simulate_runaway_on_readonly and target_id == "readonly_db_search":
+            runaway_cost = cursor.fuel + 500
+            print(
+                f"  [Actuator] 💥 Runaway Fault Injected at '{cursor.curr_node}' (target='{target_id}') on '{cursor.stream_id}'! "
+                f"Attempting to spend {runaway_cost} Fuel (Available={cursor.fuel}) -> Triggering Catch Fallback"
+            )
+            return {"_score": 0.0}, None, runaway_cost
+
         cost = 5
         print(
-            f"  [Actuator] 🛠️  Safe MCP Node '{cursor.curr_node}' on '{cursor.stream_id}' "
+            f"  [Actuator] 🛠️  Safe MCP Node '{cursor.curr_node}' (target='{target_id}') on '{cursor.stream_id}' "
             f"| Tick={cursor.tick} | Spending {cost} Fuel ({cursor.fuel} -> {cursor.fuel - cost}) | Score=0.70"
         )
         return (
             {"_score": 0.70, "db_status": "readonly_ok"},
             {"count": 1024},
-            cost,  # 5 Fuel consumed
+            cost,
         )
 
-# E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel Fork)
+# E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel -> Auto-Linker)
 async def run_e2e_verification_suite() -> None:
     print("=" * 86)
     print(" [FIBER FSM/DAG MULTIVERSE TESTER] Starting E2E Lifecycle Verification")
@@ -164,16 +318,28 @@ async def run_e2e_verification_suite() -> None:
     actuator = MockFiberActuator()
 
     async with ExGraphTraverser(node_executor=actuator) as traverser:
-        # PHASE 1: ASL Compilation & 2KB Claim-Check Separation
+        # PHASE 1: ASL Compilation, Static Deadlock Guard & 2KB Separation
         print("\n" + "-" * 86)
         print(" [Phase 1: Compile] Stripping heavy Task I/O into CAS & projecting <=2KB Topology Blob")
         print("-" * 86)
         bundle = traverser.compiler.compile_from_asl(SAMPLE_MULTIVERSE_ASL, trace_id="test_suite_01")
-        join_nodes = traverser.runtime.barrier.topology.join_nodes if traverser.runtime.barrier else "N/A (Mounted at Spawn)"
+        cas_io_count = sum(1 for k in bundle.cas_store if k.startswith(CAS_PREFIX))
+        branch_count = sum(1 for k in bundle.cas_store if k.startswith(BRANCH_PREFIX))
+
         print(f"  • Root Graph Hash : {bundle.root_hash} (On-Ledger Compact IR)")
         print(f"  • Root Graph Size : {bundle.total_root_bytes}B / 2048B Limit ({round(bundle.total_root_bytes / 2048 * 100, 1)}% used)")
-        print(f"  • Offloaded Blobs : {len(bundle.cas_store)} CAS objects (4 TaskIOSpecs + 1 Root Blob)")
+        print(f"  • Offloaded Blobs : {len(bundle.cas_store)} CAS objects ({cas_io_count} TaskIOSpecs + {branch_count} Branch Blob)")
         assert bundle.total_root_bytes <= 2048, "Root blob exceeded 2KB limit!"
+
+        # Verify WASM Static Deadlock Linter catches missing `Catch` on parallel branch
+        bad_asl = copy.deepcopy(SAMPLE_MULTIVERSE_ASL)
+        bad_asl["States"]["Fast_Readonly_MCP"].pop("Catch", None)
+        try:
+            traverser.compiler.compile_from_asl(bad_asl, trace_id="bad_deadlock_check")
+            raise AssertionError("Static sandbox should have rejected parallel branch without Catch!")
+        except ValueError as e:
+            assert "E_BARRIER_DEADLOCK_RISK" in str(e)
+            print(f"  • Static Linter   : Verified pre-mount deadlock rejection ({str(e).splitlines()[0][:68]}...)")
 
         # PHASE 2: Genesis Spawn -> 1:N Fan-Out -> Safe Branch Join vs HITL Park
         print("\n" + "-" * 86)
@@ -271,8 +437,35 @@ async def run_e2e_verification_suite() -> None:
         assert res3.final_cursor.curr_node == END_TOKEN
         assert res3.reclaimed_fuel == 940, f"Expected 940 reclaimed fuel, got {res3.reclaimed_fuel}"
 
+        # PHASE 5: >2KB Auto-Linker Partitioning & Runaway Catch Recovery
+        print("\n" + "-" * 86)
+        print(" [Phase 5: WASM Auto-Linker & Runaway Catch Recovery] >2KB Partitioning & Fault Isolation")
+        print("-" * 86)
+        oversized_bundle = traverser.compiler.compile_from_asl(_build_oversized_asl(45), trace_id="oversized_45")
+        sub_branches = [k for k in oversized_bundle.cas_store if k.startswith(BRANCH_PREFIX)]
+        print(
+            f"  • >2KB Auto-Linker    : 45-Node ASL partitioned into {len(sub_branches)} sub-branches "
+            f"(Root={oversized_bundle.total_root_bytes}B <= 2048B)"
+        )
+        assert oversized_bundle.total_root_bytes <= 2048 and len(sub_branches) >= 2
+
+        # Inject runaway fault on b0 ('readonly_db_search') -> Verify it drains to 0 Fuel via Catch and merges with b1 (475 Fuel)
+        actuator.simulate_runaway_on_readonly = True
+        res4 = await traverser.traverse_bundle(
+            bundle=bundle,
+            base_stream_id="run_102_fault",
+            initial_fuel=1000,
+        )
+        print(f"  • Fault Recovery Trace: {' -> '.join(res4.visited_history)}")
+        print(
+            f"  • Fault Isolation     : Runaway b0 drained to 0 Fuel via Catch; "
+            f"Surviving b1 (475 Fuel) won merge -> Reclaimed={res4.reclaimed_fuel} Fuel"
+        )
+        assert res4.final_cursor.curr_node == END_TOKEN
+        assert res4.reclaimed_fuel == 475, f"Expected 475 reclaimed fuel from surviving branch, got {res4.reclaimed_fuel}"
+
     print("\n" + "=" * 86)
-    print(" ✅ ALL MULTIVERSE FSM/DAG & PTA LEDGER ASSERTIONS PASSED")
+    print(" ✅ ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED")
     print("=" * 86)
 
 

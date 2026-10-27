@@ -1,9 +1,4 @@
 # fiber.dev.base.scene.sandbox
-## @lineage: fiber.dev.e2e.base.scene.sandbox
-## @lineage: fiber.infra.bound.e2e.scene.sandbox
-## @lineage: fiber.infra.e2e.scene.sandbox
-## @lineage: fiber.infra.scene.sandbox
-## @lineage: fiber.dev.e2e.dphi.scene.sandbox
 import time
 import asyncio
 import json
