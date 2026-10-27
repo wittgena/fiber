@@ -1,82 +1,70 @@
 # fiber.dev.e2e.fsm.tester
 """
-FIBER FSM/DAG SPEC
 ======================================================================================
+FIBER FSM/DAG MULTIVERSE SPECIFICATION & E2E VERIFICATION SUITE
+======================================================================================
+
 This module serves both as the end-to-end verification suite and the canonical
 reference specification for authoring Fiber ASL (Agent State Language) workflows.
 
 --------------------------------------------------------------------------------------
-STRUCTURAL & TOPOLOGY KEYWORDS ([FIXED] System-Bound vs [FREE] User-Defined)
+1. STRUCTURAL & TOPOLOGY KEYWORDS ([FIXED] System-Bound vs [FREE] User-Defined)
 --------------------------------------------------------------------------------------
 • Top-Level Keys   : [FIXED] `"Version"`, `"StartAt"`, `"States"` (Required by compiler)
 • State (Node) IDs : [FREE]  Any string (e.g., `"Plan_Intent_LLM"`, `"My_Custom_Step"`).
                              Must NOT use reserved terminal tokens: `"END"`, `"RETURN"`,
                              or prefixes `"blob:"`, `"branch:"`.
-• `"Type"`         : [FIXED] Allowed values:
-                             - `"Task"`    : Executes LLM or MCP tool via `"Resource"`
-                             - `"Choice"`  : Compiles to `NodeType.ROUTER` (`"t": "router"`)
-                             - `"Succeed"` : Compiles to terminal `NodeType.ACT` -> `"END"`
-                             - `"Fail"`    : Compiles to terminal `NodeType.ACT` -> `"END"`
+• `"Type"`         : [FIXED] Allowed values: `"Task"`, `"Choice"`, `"Succeed"`, `"Fail"`.
 • `"Next"`         : [MIXED] Single node ID (`str`) for 1:1 step, or `List[str]` (len >= 2)
                              for 1:N parallel multiverse fork.
                              Can also point to `"branch:<hash>#<entry_node>"` for SYMLINK jump.
 • `"Catch"`        : [FIXED] Mandatory on parallel branch `"Task"` nodes converging at a
-                             `DagJoinBarrier` (in-degree >= 2). Omitting `"Catch"` triggers
-                             `E_BARRIER_DEADLOCK_RISK` in the `fsm.wasm` static linter.
+                             `DagJoinBarrier` (in-degree >= 2). Supports shorthand string:
+                             `"Catch": "Evaluate_And_Join"` or standard ASL list format.
 
 --------------------------------------------------------------------------------------
-`"Resource"` URI ROUTING RULES (`compiler.py` & `bridge.py`)
+2. `"Resource"` URI ROUTING RULES (`compiler.py` & `bridge.py`)
 --------------------------------------------------------------------------------------
-Format: `"fiber://<category_keyword>/<target_id>"`
+Supports clean shorthand schemes (`<scheme>://<target_id>`) or full `fiber://` URIs:
 
-  [Compiler Keyword Scan]                [Bridge Execution Behaviour]
-  • Contains `"llm"` or `"interllm"` ──► `NodeType.PROJECTOR` -> Calls `acompletion()`
-  • Contains `"reflect"`             ──► `NodeType.REFLECT`   -> Calls `acompletion()`
-  • Contains `"tension"`             ──► `NodeType.TENSION`   -> Calls `acompletion()` +
-                                                                 `fsm.wasm` -> `phase.wasm` bridge
-  • Contains `"mcp"`, `"tool"`,      ──► `NodeType.OPERSIG`   -> Extracts `<target_id>` after the
-    or `"sidecar"` (default)                                     last `'/'` and calls:
-                                                                 `POST {mcp_gateway}/<target_id>/invoke`
-  • Contains `"pending"`             ──► `NodeType.PENDING`   -> Same MCP gateway invocation
-  • Contains `"act"` or `"io"`       ──► `NodeType.ACT`       -> No-op control step (0 Fuel cost)
+  [Shorthand / Keyword]                  [Compiler & Bridge Behaviour]
+  • `"llm://<model>"`                ->  `NodeType.PROJECTOR` -> Auto-sets `model` & calls `acompletion()`
+  • `"reflect://<model>"`             ->  `NodeType.REFLECT`   -> Auto-sets `model` & calls `acompletion()`
+  • `"tension://<model>"`            ->  `NodeType.TENSION`   -> Calls `acompletion()` + `phase.wasm` bridge
+  • `"mcp://<target_id>"`            ->  `NodeType.OPERSIG`   -> Calls `POST {mcp_gateway}/<target_id>/invoke`
+  • `"pending://<target_id>"`        ->  `NodeType.PENDING`   -> Same MCP gateway invocation
+  • `"act://<name>"`                 ->  `NodeType.ACT`       -> No-op control step (0 Fuel cost)
 
 --------------------------------------------------------------------------------------
-`"Parameters"` & `"__fiber_extensions"` CONTRACT
+3. `"Parameters"` & `"__fiber_extensions"` (`Projection`) CONTRACT
 --------------------------------------------------------------------------------------
 All `"Parameters"` are stripped from the on-ledger topology graph (`branch:<hash> <= 2KB`)
 and stored off-ledger in CAS (`blob:<hash>`).
 
 • Dynamic Binding (`".$"` suffix) : [FIXED SYNTAX] Any parameter key ending with `".$"`
-                                    (e.g., `"sql_filter.$": "$.user_tier"`) is resolved at
-                                    runtime from `cursor.meta_ctx["user_tier"]`.
-• LLM Call Parameters             : [MIXED] `"model"`, `"messages"`, `"stream"` are extracted
-                                    by `FiberExecutionBridge._execute_llm_node()`. All other
-                                    keys are passed as `**kwargs` to `acompletion()`.
-• MCP Call Parameters             : [FREE] Passed verbatim as `"arguments"` JSON to MCP Gateway.
-• `"__fiber_extensions"`          : [FIXED KEY] Stripped before calling LLM/MCP. Supports:
+                                    (e.g., `"intent_filter.$": "$.intent_type"`) is resolved
+                                    at runtime from `cursor.meta_ctx["intent_type"]`.
+• `"__fiber_extensions"`          : [FIXED KEY] Optional engine configuration block:
+    - `"Projection"`     : `{"offload_path": str, "extract_keys": List[str]}`
+                           • `offload_path`: Sub-path of heavy output to store in CAS (`blob:`).
+                           • `extract_keys`: Keys to lift into lightweight on-ledger `meta_ctx`.
+                           (Note: Any variable referenced in `"Choice"` nodes plus `"$._score"`
+                           are automatically inferred and added to `extract_keys` by the compiler!)
     - `"VCR"`            : `{"capture_mode": str, "coalescing_window_ms": int}`
-    - `"PTA_Mint"`       : `{"pointer_target": str, "meta_projection": List[str]}`
-                           `meta_projection` lifts specific fields from heavy LLM/MCP output
-                           into the lightweight on-ledger `cursor.meta_ctx` so downstream
-                           `"Choice"` (`ROUTER`) nodes and Arbiters can evaluate them.
     - `"pressure"`       : `float` (0.0 ~ 1.0)
     - `"max_failures"`   : `int` (default: 3)
     - `"allow_parallel"` : `bool` (default: False)
-    - `"step_cost"`      : `int` (default MCP step cost override)
 
 --------------------------------------------------------------------------------------
-RUNTIME `cursor.meta_ctx` RESERVED SYSTEM KEYS
+4. `"Choice"` (`ROUTER`) & RUNTIME `cursor.meta_ctx` RESERVED KEYS
 --------------------------------------------------------------------------------------
-• `"_score"`          : (`float`) Used by `ExGraphTraverser._default_arbiter` and `fsm.wasm`
-                        to select the winning branch during N:1 `DagJoinBarrier` collapse.
-• `"_hitl_yield"`     : (`bool`) When `True` (e.g., HTTP 202 from MCP Gateway), parks the
-                        cursor in-place with ZERO fuel/PTA spend. Auto-cleared on `resume()`.
-• `"_hitl_ticket"`    : (`str`) Ticket identifier attached during HTTP 202 Pre-Flight lock.
-• `"_fork_ratios"`    : (`List[float]`) Optional weight list (e.g., `[0.4, 0.4, 0.2]`) to
-                        slice remaining parent fuel asymmetrically across 1:N forked branches.
-• `"_fork_branches"`  : (`List[Tuple[str, dict]]`) Optional dynamic 1:N fork targets.
+• Choice Conditions   : Supports shorthand `"if": "$._score >= 0.95"` (`>=`, `<=`, `!=`,
+                        `==`, `>`, `<`) as well as standard ASL `"Variable"` operators.
+• `"_score"`          : (`float`) Used by Arbiter to select the winning branch on merge.
+• `"_hitl_yield"`     : (`bool`) Parks cursor in-place with ZERO fuel spend on HTTP 202.
+• `"_fork_ratios"`    : (`List[float]`) Optional weight list for asymmetric 1:N fuel slicing.
 • `"_last_ptr"`       : (`str`) Auto-populated CAS pointer (`"blob:<hash>"`) to offloaded I/O.
-• `"_fallback_error"` : (`str`) Auto-populated error message when routed via `"Catch"` (`fb`).
+======================================================================================
 """
 import asyncio
 import copy
@@ -96,96 +84,63 @@ from fiber.phase.fsm.traverser import ExGraphTraverser
 
 log = get_emitter("fsm.tester", phase="E2E_VERIFICATION")
 
-
-# REFERENCE ASL WORKFLOW (Annotated with [FIXED] vs [FREE] Binding Rules)
+# REFERENCE ASL WORKFLOW (Demonstrating Clean Shorthand & `Projection` Contract)
 SAMPLE_MULTIVERSE_ASL: Dict[str, Any] = {
-    "Version": "1.0",  # [FIXED] ASL schema version stored in `_m.v`
+    "Version": "1.0",
     "Comment": "Reference Multiverse Flow: Planner -> Parallel Branches (Safe vs HITL) -> Join -> Final",
-    "StartAt": "Plan_Intent_LLM",  # [FIXED KEY / FREE VALUE] Must match an entry key in "States"
+    "StartAt": "Plan_Intent_LLM",
     "States": {
-        # [Node 1] 1:N Multiverse Planner (Compiles to `NodeType.PROJECTOR`)
-        "Plan_Intent_LLM": {  # [FREE] User-defined Node ID
-            "Type": "Task",  # [FIXED] Task node
-            # [MIXED] Contains keyword "interllm" -> `NodeType.PROJECTOR`
-            "Resource": "fiber://wasm_sandbox/interllm_proxy",
+        "Plan_Intent_LLM": {
+            "Type": "Task",
+            "Resource": "llm://gpt-4o",  # Shorthand: sets NodeType.PROJECTOR & model="gpt-4o"
             "Parameters": {
-                "model": "gpt-4o",  # [FIXED] Extracted by bridge for `acompletion(model=...)`
-                "prompt": "Analyze user request and dispatch parallel verification strategies.",  # [FREE]
-                "__fiber_extensions": {  # [FIXED] Stripped into `TaskIOSpec` (`blob:<hash>`)
+                "prompt": "Analyze user request and dispatch parallel verification strategies.",
+                "__fiber_extensions": {
                     "VCR": {"capture_mode": "socket_stream", "coalescing_window_ms": 100},
-                    "PTA_Mint": {
-                        # [FIXED] Offloads heavy path to CAS `blob:<hash>`
-                        "pointer_target": "$.raw_stream_payload",
-                        # [FIXED] Projects `intent_type` into on-ledger `cursor.meta_ctx`
-                        "meta_projection": ["$.intent_type"],
+                    "Projection": {
+                        "offload_path": "$.raw_stream_payload",
+                        "extract_keys": ["$.intent_type"],
                     },
                     "allow_parallel": True,
                 },
             },
-            # [MIXED] List of >=2 Node IDs triggers 1:N Multiverse Fork (`runtime.fork`)
             "Next": ["Fast_Readonly_MCP", "Admin_Mutation_MCP"],
         },
-        # [Node 2 - Branch b0] Safe Read-Only MCP Tool (`NodeType.OPERSIG`)
-        "Fast_Readonly_MCP": {  # [FREE] User-defined Node ID
+        "Fast_Readonly_MCP": {
             "Type": "Task",
-            # [MIXED] Keyword "mcp_sidecar" -> `OPERSIG` | Suffix "readonly_db_search" -> MCP target_id
-            "Resource": "fiber://mcp_sidecar/readonly_db_search",
+            "Resource": "mcp://readonly_db_search",  # Shorthand: NodeType.OPERSIG, target="readonly_db_search"
             "Parameters": {
-                "query": "SELECT count(*) FROM audit_logs",  # [FREE] Sent to MCP tool
-                "intent_filter.$": "$.intent_type",  # [FIXED SYNTAX `.$`] Resolved from `meta_ctx`
-                "__fiber_extensions": {
-                    "PTA_Mint": {"meta_projection": ["$._score", "$.db_status"]},
-                },
-            },
-            "Next": "Evaluate_And_Join",  # Converges at shared Join Barrier
-            # [FIXED RULE] Mandatory on parallel branches to prevent barrier deadlock (`fb` edge)
-            "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "Evaluate_And_Join"}],
-        },
-        # [Node 3 - Branch b1] High-Risk Admin MCP Tool (`NodeType.OPERSIG` + HTTP 202 HITL)
-        "Admin_Mutation_MCP": {  # [FREE] User-defined Node ID
-            "Type": "Task",
-            # [MIXED] Keyword "mcp_sidecar" -> `OPERSIG` | Suffix "prod_db_admin" -> MCP target_id
-            "Resource": "fiber://mcp_sidecar/prod_db_admin",
-            "Parameters": {
-                "sql": "DELETE FROM stale_sessions WHERE expired = true",  # [FREE] Triggers HITL regex
-                "__fiber_extensions": {
-                    "PTA_Mint": {"meta_projection": ["$._score", "$.db_status"]},
-                },
+                "query": "SELECT count(*) FROM audit_logs",
+                "intent_filter.$": "$.intent_type",
             },
             "Next": "Evaluate_And_Join",
-            # [FIXED RULE] Mandatory fallback edge (`fb`) to Join Barrier
-            "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "Evaluate_And_Join"}],
+            "Catch": "Evaluate_And_Join",  # Shorthand Catch target! (`$._score` is auto-extracted)
         },
-        # [Node 4 - Join Barrier] Diamond Convergence & Conditional Router (`NodeType.ROUTER`)
-        # Automatically detected as `DagJoinBarrier` because forward in-degree == 2
-        "Evaluate_And_Join": {  # [FREE] User-defined Node ID
-            "Type": "Choice",  # [FIXED] Compiles to `NodeType.ROUTER` (`"t": "router"`)
-            "Choices": [
-                {
-                    # [FREE Variable] Evaluates `cursor.meta_ctx["strategy_override"] == "fallback_reflect"`
-                    "Variable": "$.strategy_override",
-                    "StringEquals": "fallback_reflect",  # [FIXED] Mapped to `==`
-                    "Next": "Reflect_Fallback_LLM",
-                },
-                {
-                    # [RESERVED Variable] Evaluates winning branch's `cursor.meta_ctx["_score"] >= 0.99`
-                    "Variable": "$._score",
-                    "NumericGreaterThanEquals": 0.99,  # [FIXED] Mapped to `>=`
-                    "Next": "Reflect_Fallback_LLM",
-                },
-            ],
-            "Default": "Final_Act",  # [FIXED] Compiles to `"dn"` (Default Next)
-        },
-        # [Node 5] Secondary Reflection LLM (`NodeType.REFLECT`)
-        "Reflect_Fallback_LLM": {  # [FREE] User-defined Node ID
+        "Admin_Mutation_MCP": {
             "Type": "Task",
-            "Resource": "fiber://wasm_sandbox/reflect_llm",  # Keyword "reflect" -> `NodeType.REFLECT`
-            "Parameters": {"model": "gpt-4o-mini", "prompt": "Verify fallback safety."},
+            "Resource": "mcp://prod_db_admin",  # Shorthand: NodeType.OPERSIG, target="prod_db_admin"
+            "Parameters": {
+                "sql": "DELETE FROM stale_sessions WHERE expired = true",
+            },
+            "Next": "Evaluate_And_Join",
+            "Catch": "Evaluate_And_Join",
+        },
+        "Evaluate_And_Join": {
+            "Type": "Choice",
+            "Choices": [
+                {"if": "$.strategy_override == fallback_reflect", "Next": "Reflect_Fallback_LLM"},
+                {"if": "$._score >= 0.99", "Next": "Reflect_Fallback_LLM"},
+            ],
+            "Default": "Final_Act",
+        },
+        "Reflect_Fallback_LLM": {
+            "Type": "Task",
+            "Resource": "reflect://gpt-4o-mini",  # Shorthand: NodeType.REFLECT & model="gpt-4o-mini"
+            "Parameters": {"prompt": "Verify fallback safety."},
             "Next": "Final_Act",
         },
-        # [Node 6] Terminal Node (`NodeType.ACT` -> `"nx": "END"`)
-        "Final_Act": {  # [FREE] User-defined Node ID
-            "Type": "Succeed",  # [FIXED] Terminal state
+        "Final_Act": {
+            "Type": "Succeed",
         },
     },
 }

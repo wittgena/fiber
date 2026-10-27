@@ -1,14 +1,14 @@
 # fiber.phase.fsm.compiler
 import hashlib
 from enum import Enum
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Set, Tuple
 from pydantic import BaseModel, Field
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
-from xphi.node.runtime.wasm.quota import QuotaPolicy
 from xphi.state.inter.fsm import FSMInterpreter
 from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.quota import QuotaPolicy
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fsm.compiler", phase="COMPILER")
@@ -75,9 +75,10 @@ class VCRConfig(BaseModel):
     coalescing_window_ms: int = Field(default=0, ge=0)
 
 
-class PTAMintConfig(BaseModel):
-    pointer_target: Optional[str] = None
-    meta_projection: List[str] = Field(default_factory=list)
+class ProjectionConfig(BaseModel):
+    """Controls Claim-Check CAS offloading and lightweight state key extraction."""
+    offload_path: Optional[str] = None
+    extract_keys: List[str] = Field(default_factory=list)
 
 
 class TaskIOSpec(BaseModel):
@@ -86,7 +87,7 @@ class TaskIOSpec(BaseModel):
     result_path: str = "$"
     call_params: Dict[str, Any] = Field(default_factory=dict)
     vcr: Optional[VCRConfig] = None
-    pta_mint: Optional[PTAMintConfig] = None
+    projection: Optional[ProjectionConfig] = None
     extras: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -197,6 +198,9 @@ class ExFSMCompiler:
         start_at = asl_schema.get("StartAt", "unknown_entry")
         states = asl_schema.get("States", {})
 
+        # Pre-scan Choice nodes to auto-infer variables required in `Projection.extract_keys`
+        auto_extract_keys = self._scan_choice_variables(states)
+
         sig = FragmentSig(
             entry_point=start_at,
             meta={
@@ -210,24 +214,29 @@ class ExFSMCompiler:
 
             if state_type == "Task":
                 resource_uri = state_def.get("Resource", "")
-                node_type = self._infer_type_from_resource(resource_uri)
+                node_type, shorthand_model = self._parse_resource_uri(resource_uri)
 
                 raw_params = dict(state_def.get("Parameters", {}))
+                if shorthand_model and "model" not in raw_params:
+                    raw_params["model"] = shorthand_model
+
                 fiber_ext = dict(raw_params.pop("__fiber_extensions", {}))
 
                 vcr_raw = fiber_ext.pop("VCR", None)
-                pta_mint_raw = fiber_ext.pop("PTA_Mint", None)
+                proj_raw = fiber_ext.pop("Projection", None)
                 pressure = float(fiber_ext.pop("pressure", 0.0))
                 max_failures = int(fiber_ext.pop("max_failures", 3))
                 allow_parallel = bool(fiber_ext.pop("allow_parallel", False))
 
-                # Offload heavy I/O parameters & extensions to CAS blob
+                # Merge user-specified `extract_keys` with auto-inferred Choice variables
+                proj_cfg = self._build_projection_config(proj_raw, auto_extract_keys)
+
                 io_spec = TaskIOSpec(
                     resource_uri=resource_uri,
                     result_path=state_def.get("ResultPath", "$"),
                     call_params=raw_params,
                     vcr=VCRConfig(**vcr_raw) if isinstance(vcr_raw, dict) else None,
-                    pta_mint=PTAMintConfig(**pta_mint_raw) if isinstance(pta_mint_raw, dict) else None,
+                    projection=proj_cfg,
                     extras=fiber_ext,
                 ).model_dump(exclude_none=True, exclude_defaults=True)
 
@@ -247,18 +256,17 @@ class ExFSMCompiler:
                     for t in targets:
                         frag.relations.append(EdgeRelation(target=t, edge_type=EdgeMode.DIRECT))
 
-                if "Catch" in state_def and state_def["Catch"]:
-                    fb_target = state_def["Catch"][0].get("Next")
-                    if fb_target:
-                        frag.relations.append(EdgeRelation(target=fb_target, edge_type=EdgeMode.FALLBACK))
+                # Support both shorthand `"Catch": "NodeName"` and standard ASL `"Catch": [{"Next": "NodeName"}]`
+                fb_target = self._extract_catch_target(state_def.get("Catch"))
+                if fb_target:
+                    frag.relations.append(EdgeRelation(target=fb_target, edge_type=EdgeMode.FALLBACK))
 
                 sig.nodes[state_name] = frag
 
             elif state_type == "Choice":
                 frag = Fragment(id=state_name, type=NodeType.ROUTER)
                 for choice in state_def.get("Choices", []):
-                    var = choice.get("Variable", "")
-                    cond_str = self._parse_choice_condition(var, choice)
+                    cond_str = self._parse_choice_condition(choice)
                     frag.relations.append(
                         EdgeRelation(
                             target=choice["Next"],
@@ -278,17 +286,112 @@ class ExFSMCompiler:
         self._validate_phase(sig)
         return sig
 
+    @classmethod
+    def _scan_choice_variables(cls, states: Dict[str, Any]) -> List[str]:
+        """Collects all variables referenced in Choice rules so Tasks can project them automatically."""
+        keys: Set[str] = {"$._score"}
+        for s_def in states.values():
+            if s_def.get("Type") == "Choice":
+                for c in s_def.get("Choices", []):
+                    if "Variable" in c:
+                        keys.add(str(c["Variable"]).strip())
+                    elif "if" in c:
+                        cond = cls._normalize_if_expr(str(c["if"]))
+                        for op in (">=", "<=", "!=", "==", ">", "<"):
+                            if op in cond:
+                                lhs = cond.split(op, 1)[0].strip()
+                                keys.add(lhs if lhs.startswith("$.") else f"$.{lhs}")
+                                break
+        return sorted(keys)
+
     @staticmethod
-    def _parse_choice_condition(var: str, choice: Dict[str, Any]) -> str:
+    def _build_projection_config(
+        proj_raw: Optional[Dict[str, Any]], auto_keys: List[str]
+    ) -> Optional[ProjectionConfig]:
+        offload_path = None
+        merged_keys: List[str] = []
+
+        if isinstance(proj_raw, dict):
+            offload_path = proj_raw.get("offload_path")
+            for k in proj_raw.get("extract_keys", []):
+                if k not in merged_keys:
+                    merged_keys.append(k)
+
+        for ak in auto_keys:
+            if ak not in merged_keys:
+                merged_keys.append(ak)
+
+        if not offload_path and not merged_keys:
+            return None
+        return ProjectionConfig(offload_path=offload_path, extract_keys=merged_keys)
+
+    @staticmethod
+    def _extract_catch_target(catch_spec: Any) -> Optional[str]:
+        if isinstance(catch_spec, str) and catch_spec.strip():
+            return catch_spec.strip()
+        if isinstance(catch_spec, list) and catch_spec:
+            first = catch_spec[0]
+            if isinstance(first, dict):
+                return first.get("Next")
+        if isinstance(catch_spec, dict):
+            return catch_spec.get("Next")
+        return None
+
+    @staticmethod
+    def _normalize_if_expr(expr: str) -> str:
+        """Normalizes shorthand `"if": "$._score >= 0.95"` into compact `"$._score>=0.95"`."""
+        for op in (">=", "<=", "!=", "==", ">", "<"):
+            if op in expr:
+                lhs, rhs = expr.split(op, 1)
+                lhs_clean = lhs.strip()
+                rhs_clean = rhs.strip().strip("'\"")
+                return f"{lhs_clean}{op}{rhs_clean}"
+        return expr.strip()
+
+    @classmethod
+    def _parse_choice_condition(cls, choice: Dict[str, Any]) -> str:
+        # 1. Shorthand `"if": "$._score >= 0.9"`
+        if "if" in choice:
+            return cls._normalize_if_expr(str(choice["if"]))
+
+        # 2. Standard ASL `{"Variable": "$._score", "NumericGreaterThanEquals": 0.9}`
+        var = choice.get("Variable", "")
         for asl_op, sym_op in ASL_CHOICE_OP_MAP.items():
             if asl_op in choice:
                 val = choice[asl_op]
-                if isinstance(val, bool):
-                    val_str = "true" if val else "false"
-                else:
-                    val_str = str(val)
+                val_str = ("true" if val else "false") if isinstance(val, bool) else str(val)
                 return f"{var}{sym_op}{val_str}"
         return f"{var}=="
+
+    @classmethod
+    def _parse_resource_uri(cls, resource_uri: str) -> Tuple[NodeType, Optional[str]]:
+        """
+        Supports both shorthand schemes (`llm://gpt-4o`, `mcp://tool_id`, `reflect://gpt-4o-mini`)
+        and full `fiber://<category>/<target>` URIs.
+        """
+        raw = resource_uri.strip()
+        lower = raw.lower()
+
+        if lower.startswith(("llm://", "interllm://")):
+            target = raw.split("://", 1)[1].strip("/")
+            model = target if target and target not in ("default", "interllm_proxy") else None
+            return NodeType.PROJECTOR, model
+        if lower.startswith("reflect://"):
+            target = raw.split("://", 1)[1].strip("/")
+            model = target if target and target not in ("default", "reflect_llm") else None
+            return NodeType.REFLECT, model
+        if lower.startswith("tension://"):
+            target = raw.split("://", 1)[1].strip("/")
+            model = target if target and target != "default" else None
+            return NodeType.TENSION, model
+        if lower.startswith(("mcp://", "tool://", "sidecar://")):
+            return NodeType.OPERSIG, None
+        if lower.startswith("pending://"):
+            return NodeType.PENDING, None
+        if lower.startswith(("act://", "io://")):
+            return NodeType.ACT, None
+
+        return cls._infer_type_from_resource(raw), None
 
     def _finalize_bundle_from_wasm(self, wasm_output_str: str) -> ExCompiledBundle:
         """Unpacks `fsm.wasm` compile output and merges partitioned sub-branches into `cas_store`."""
@@ -303,7 +406,6 @@ class ExFSMCompiler:
         state_diff = parsed.get("state_diff", {})
         inner_out = parsed.get("parsed_output", {})
 
-        # Merge all auto-partitioned `branch:<hash>` blobs into _cas_pool
         for branch_key, branch_blob in state_diff.items():
             self._cas_pool[branch_key] = branch_blob
 
