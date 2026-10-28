@@ -1,4 +1,4 @@
-# fiber.dev.console.tab.finops
+# fiber.dev.console.tab.qouta
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,7 +17,6 @@ FINOPS_ACTION_LABELS = {
     "REVOKE": "0 Balance",
 }
 
-
 def _resolve_accounts_registry_path() -> Path:
     try:
         from fiber.infra.ops.account.registry import LocalAccountRegistry
@@ -25,11 +24,10 @@ def _resolve_accounts_registry_path() -> Path:
     except Exception:
         return resolve_path("anchor") / "sign" / "local_accounts.json"
 
-
-class FinOpsTab(StudioTab):
-    title = "FinOps"
-    left_header = "Budget Control"
-    right_header = "Fuel Circuit Breaker"
+class QuotaTab(StudioTab):
+    title = "Quota"
+    left_header = "Quota Control"
+    right_header = "Circuit Breaker"
 
     def compose_left(self) -> None:
         f = state.finops

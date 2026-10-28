@@ -3,21 +3,21 @@ from typing import Dict, Any, Optional, Tuple, List
 import httpx
 
 from fiber.llm.entry import acompletion
-from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.llm.pipeline.channel.breaker import StreamBreaker
+from fiber.llm.pipeline.channel.observer import BillingObserver
 from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.phase.fsm.compiler import CompactKey, NodeType
-from fiber.phase.fsm.runtime import BranchCursor, ExBranchController
+from fiber.phase.fsm.runtime import BranchCursor, BranchController
 
 log = get_emitter("fsm.bridge", phase="ACTUATOR_BRIDGE")
-
 
 class FiberExecutionBridge:
     def __init__(
         self,
-        runtime: ExBranchController,
+        runtime: BranchController,
         tenant_id: str = "default_tenant",
         mcp_gateway_url: str = "http://127.0.0.1:8356/v1/mcp-gateway",
         interceptors: Optional[List[Any]] = None,
@@ -59,7 +59,7 @@ class FiberExecutionBridge:
         return {}, None, 1
 
     # ------------------------------------------------------------------------
-    # [Actuator 1] Fiber LLM Pipeline + FinOps FuelBreaker + VCR + Projection
+    # [Actuator 1] Fiber LLM Pipeline + StreamBreaker + VCR + Projection
     # ------------------------------------------------------------------------
     async def _execute_llm_node(
         self,
@@ -85,7 +85,7 @@ class FiberExecutionBridge:
             messages=messages,
             stream=stream,
             interceptors=self.interceptors,
-            fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
+            stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
             billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.runtime.pta),
             metadata={
                 "node_auth": auth_payload,

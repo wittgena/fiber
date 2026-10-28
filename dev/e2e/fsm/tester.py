@@ -1,6 +1,5 @@
 # fiber.dev.e2e.fsm.tester
 """
-======================================================================================
 FIBER FSM/DAG MULTIVERSE SPECIFICATION & E2E VERIFICATION SUITE
 ======================================================================================
 
@@ -8,43 +7,43 @@ This module serves both as the end-to-end verification suite and the canonical
 reference specification for authoring Fiber ASL (Agent State Language) workflows.
 
 --------------------------------------------------------------------------------------
-1. STRUCTURAL & TOPOLOGY KEYWORDS ([FIXED] System-Bound vs [FREE] User-Defined)
+STRUCTURAL & TOPOLOGY KEYWORDS ([FIXED] System-Bound vs [FREE] User-Defined)
 --------------------------------------------------------------------------------------
-• Top-Level Keys   : [FIXED] `"Version"`, `"StartAt"`, `"States"` (Required by compiler)
-• State (Node) IDs : [FREE]  Any string (e.g., `"Plan_Intent_LLM"`, `"My_Custom_Step"`).
+- Top-Level Keys   : [FIXED] `"Version"`, `"StartAt"`, `"States"` (Required by compiler)
+- State (Node) IDs : [FREE]  Any string (e.g., `"Plan_Intent_LLM"`, `"My_Custom_Step"`).
                              Must NOT use reserved terminal tokens: `"END"`, `"RETURN"`,
                              or prefixes `"blob:"`, `"branch:"`.
-• `"Type"`         : [FIXED] Allowed values: `"Task"`, `"Choice"`, `"Succeed"`, `"Fail"`.
-• `"Next"`         : [MIXED] Single node ID (`str`) for 1:1 step, or `List[str]` (len >= 2)
+- `"Type"`         : [FIXED] Allowed values: `"Task"`, `"Choice"`, `"Succeed"`, `"Fail"`.
+- `"Next"`         : [MIXED] Single node ID (`str`) for 1:1 step, or `List[str]` (len >= 2)
                              for 1:N parallel multiverse fork.
                              Can also point to `"branch:<hash>#<entry_node>"` for SYMLINK jump.
-• `"Catch"`        : [FIXED] Mandatory on parallel branch `"Task"` nodes converging at a
+- `"Catch"`        : [FIXED] Mandatory on parallel branch `"Task"` nodes converging at a
                              `DagJoinBarrier` (in-degree >= 2). Supports shorthand string:
                              `"Catch": "Evaluate_And_Join"` or standard ASL list format.
 
 --------------------------------------------------------------------------------------
-2. `"Resource"` URI ROUTING RULES (`compiler.py` & `bridge.py`)
+`"Resource"` URI ROUTING RULES (`compiler.py` & `bridge.py`)
 --------------------------------------------------------------------------------------
 Supports clean shorthand schemes (`<scheme>://<target_id>`) or full `fiber://` URIs:
 
   [Shorthand / Keyword]                  [Compiler & Bridge Behaviour]
   • `"llm://<model>"`                ->  `NodeType.PROJECTOR` -> Auto-sets `model` & calls `acompletion()`
-  • `"reflect://<model>"`             ->  `NodeType.REFLECT`   -> Auto-sets `model` & calls `acompletion()`
+  • `"reflect://<model>"`            ->  `NodeType.REFLECT`   -> Auto-sets `model` & calls `acompletion()`
   • `"tension://<model>"`            ->  `NodeType.TENSION`   -> Calls `acompletion()` + `phase.wasm` bridge
   • `"mcp://<target_id>"`            ->  `NodeType.OPERSIG`   -> Calls `POST {mcp_gateway}/<target_id>/invoke`
   • `"pending://<target_id>"`        ->  `NodeType.PENDING`   -> Same MCP gateway invocation
   • `"act://<name>"`                 ->  `NodeType.ACT`       -> No-op control step (0 Fuel cost)
 
 --------------------------------------------------------------------------------------
-3. `"Parameters"` & `"__fiber_extensions"` (`Projection`) CONTRACT
+`"Parameters"` & `"__fiber_extensions"` (`Projection`) CONTRACT
 --------------------------------------------------------------------------------------
 All `"Parameters"` are stripped from the on-ledger topology graph (`branch:<hash> <= 2KB`)
 and stored off-ledger in CAS (`blob:<hash>`).
 
-• Dynamic Binding (`".$"` suffix) : [FIXED SYNTAX] Any parameter key ending with `".$"`
+- Dynamic Binding (`".$"` suffix) : [FIXED SYNTAX] Any parameter key ending with `".$"`
                                     (e.g., `"intent_filter.$": "$.intent_type"`) is resolved
                                     at runtime from `cursor.meta_ctx["intent_type"]`.
-• `"__fiber_extensions"`          : [FIXED KEY] Optional engine configuration block:
+- `"__fiber_extensions"`          : [FIXED KEY] Optional engine configuration block:
     - `"Projection"`     : `{"offload_path": str, "extract_keys": List[str]}`
                            • `offload_path`: Sub-path of heavy output to store in CAS (`blob:`).
                            • `extract_keys`: Keys to lift into lightweight on-ledger `meta_ctx`.
@@ -56,21 +55,18 @@ and stored off-ledger in CAS (`blob:<hash>`).
     - `"allow_parallel"` : `bool` (default: False)
 
 --------------------------------------------------------------------------------------
-4. `"Choice"` (`ROUTER`) & RUNTIME `cursor.meta_ctx` RESERVED KEYS
+`"Choice"` (`ROUTER`) & RUNTIME `cursor.meta_ctx` RESERVED KEYS
 --------------------------------------------------------------------------------------
-• Choice Conditions   : Supports shorthand `"if": "$._score >= 0.95"` (`>=`, `<=`, `!=`,
+- Choice Conditions   : Supports shorthand `"if": "$._score >= 0.95"` (`>=`, `<=`, `!=`,
                         `==`, `>`, `<`) as well as standard ASL `"Variable"` operators.
-• `"_score"`          : (`float`) Used by Arbiter to select the winning branch on merge.
-• `"_hitl_yield"`     : (`bool`) Parks cursor in-place with ZERO fuel spend on HTTP 202.
-• `"_fork_ratios"`    : (`List[float]`) Optional weight list for asymmetric 1:N fuel slicing.
-• `"_last_ptr"`       : (`str`) Auto-populated CAS pointer (`"blob:<hash>"`) to offloaded I/O.
-======================================================================================
+- `"_score"`          : (`float`) Used by Arbiter to select the winning branch on merge.
+- `"_hitl_yield"`     : (`bool`) Parks cursor in-place with ZERO fuel spend on HTTP 202.
+- `"_fork_ratios"`    : (`List[float]`) Optional weight list for asymmetric 1:N fuel slicing.
+- `"_last_ptr"`       : (`str`) Auto-populated CAS pointer (`"blob:<hash>"`) to offloaded I/O.
 """
 import asyncio
 import copy
 from typing import Dict, Any, Optional, Tuple
-
-from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.phase.fsm.compiler import (
     CompactKey,
@@ -82,6 +78,7 @@ from fiber.phase.fsm.compiler import (
 from fiber.phase.fsm.runtime import BranchCursor
 from fiber.phase.fsm.traverser import ExGraphTraverser
 
+from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("fsm.tester", phase="E2E_VERIFICATION")
 
 # REFERENCE ASL WORKFLOW (Demonstrating Clean Shorthand & `Projection` Contract)
@@ -176,12 +173,11 @@ def _build_oversized_asl(node_count: int = 45) -> Dict[str, Any]:
     }
 
 # DETERMINISTIC MOCK ACTUATOR (Routes by Resource Target ID & NodeType, NOT Node Name)
-class MockFiberActuator:
+class MockActuator:
     """
     Simulates `FiberExecutionBridge` without hardcoding user-defined node names.
     Dispatches strictly by `NodeType` and the MCP `<target_id>` suffix in `task_io["resource_uri"]`.
     """
-
     def __init__(self) -> None:
         self.hitl_approved_tickets: set[str] = set()
         self.simulate_runaway_on_readonly: bool = False
@@ -264,14 +260,13 @@ class MockFiberActuator:
             cost,
         )
 
-# E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel -> Auto-Linker)
 async def run_e2e_verification_suite() -> None:
+    """E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel -> Auto-Linker)"""
     print("=" * 86)
     print(" [FIBER FSM/DAG MULTIVERSE TESTER] Starting E2E Lifecycle Verification")
     print("=" * 86)
 
-    actuator = MockFiberActuator()
-
+    actuator = MockActuator()
     async with ExGraphTraverser(node_executor=actuator) as traverser:
         # PHASE 1: ASL Compilation, Static Deadlock Guard & 2KB Separation
         print("\n" + "-" * 86)
@@ -422,7 +417,6 @@ async def run_e2e_verification_suite() -> None:
     print("\n" + "=" * 86)
     print(" ✅ ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED")
     print("=" * 86)
-
 
 if __name__ == "__main__":
     asyncio.run(run_e2e_verification_suite())

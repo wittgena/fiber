@@ -3,7 +3,7 @@
 @desc: Interactive Concurrency Stream & Console Kill-Switch Harness
 - Reuses golden VCR fixtures from `fiber.dev.e2e.inter.concurrency` (Zero API cost / Zero network).
 - Sustains staggered concurrent LLM streams without artificial pause loops: when budget hits 0,
-  workers continue attempting calls and surface actual FuelBreaker rejections/severing until restored.
+  workers continue attempting calls and surface actual StreamBreaker rejections/severing until restored.
 - ⚠️ Operational Notes:
   1. Requires local Redis (`127.0.0.1:6379`) to receive real-time Kill/Restore signals from Console.
   2. Ensure `--tenant` matches Console's Target Tenant ID (default: `accounting_dept`).
@@ -32,7 +32,8 @@ from fiber.infra.vcr.manager import (
 )
 from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 from fiber.llm.entry import acompletion
-from fiber.llm.pipeline.channel.fuel import BillingObserver, FuelBreaker
+from fiber.llm.pipeline.channel.breaker import StreamBreaker
+from fiber.llm.pipeline.channel.observer import BillingObserver
 
 from xphi.arch.bound.adapter.pta import PtaAdapter
 from xphi.arch.contract.event.next import next_trace_id
@@ -116,7 +117,7 @@ class InteractiveStreamKillHarness:
                 trace_id=shared_trace_id,
                 session_id=session_id,
                 tenant_id=self.tenant_id,
-                fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
+                stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
                 billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
                 metadata={
                     "vcr_scenario": SCENARIO_NAME,

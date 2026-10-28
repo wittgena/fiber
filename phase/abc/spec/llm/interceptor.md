@@ -14,20 +14,20 @@ Developers pass interceptors as a flat list (`interceptors=[...]`), and Fiber au
        │
        ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ OBSERVABILITY & IDENTITY (PipelineSlot.PRE_OBSERVER)                 │
+│ OBSERVABILITY & IDENTITY (PipelineSlot.PRE_OBSERVER)                         │
 │  ├─ Core Metadata Binding : Allocates trace_id, session_id, and system_meta  │
 │  └─ BaseLLMTracer         : Non-blocking start/end/error & stream hooks      │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ MUTATION & SHORT-CIRCUIT (PipelineSlot.PRE_TRANSLATE)                │
+│ MUTATION & SHORT-CIRCUIT (PipelineSlot.PRE_TRANSLATE)                        │
 │  ├─ PayloadSanitization   : Deep dictionary PII masking (sanitize_payload)   │
 │  ├─ EdgeRedisCache        : Exact/Vector lookup -> ctx.fire_channel_read()    │
 │  └─ OnnxSemanticRouter    : Intent classification -> mutates msg["model"]     │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CORE TRANSLATION (State Traverser: Raw dict ➔ Processor Object)     │
+│ CORE TRANSLATION (State Traverser: Raw dict ➔ Processor Object)              │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ EGRESS SECURITY & GOVERNANCE (PipelineSlot.POST_TRANSLATE)           │
+│ EGRESS SECURITY & GOVERNANCE (PipelineSlot.POST_TRANSLATE)                   │
 │  ├─ ActiveGuardrail       : C-level regex scan -> ctx.fire_exception_caught() │
-│  ├─ Core FuelBreaker      : Real-time PTA ledger check & mid-stream cutoff   │
+│  ├─ Core StreamBreaker    : Real-time PTA ledger check & mid-stream cutoff   │
 │  └─ Core Network I/O      : Physical HTTP/SSE transmission to LLM provider   │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```

@@ -1,4 +1,4 @@
-# fiber.llm.pipeline.channel.fuel
+# fiber.llm.pipeline.channel.breaker
 """
 Glossary:
 - fuel_budget: Fixed spending quota limit assigned via policy/Mandate (immutable until upgraded).
@@ -8,11 +8,10 @@ Glossary:
 from __future__ import annotations
 
 import asyncio
-import inspect
 import math
 import os
 import time
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
 from fiber.llm.model.token.encoder import encode
@@ -25,8 +24,7 @@ log_pipeline = get_emitter("channel.fuel", phase="BILLING")
 _ACTIVE_STREAMS: int = 0
 _STREAM_TICK_INTERVAL_SEC: float = 0.25
 
-
-def _extract_usage_info(msg: Any) -> Tuple[int, Dict[str, Any]]:
+def extract_usage_info(msg: Any) -> Tuple[int, Dict[str, Any]]:
     """Pydantic 객체와 Dict 응답 모두에서 안전하게 (total_tokens, usage_dict) 추출"""
     usage = msg.get("usage") if isinstance(msg, dict) else getattr(msg, "usage", None)
     if not usage:
@@ -58,60 +56,7 @@ def _extract_usage_info(msg: Any) -> Tuple[int, Dict[str, Any]]:
         return 0, usage_dict
 
 
-def _invoke_stream_hook(fn: Callable[..., Any], total_tokens: int, raw_usage: Any) -> None:
-    """콜백의 인자 시그니처(1개 vs 2개)를 검사하여 안전하게 호출"""
-    try:
-        sig = inspect.signature(fn)
-        params = [
-            p
-            for p in sig.parameters.values()
-            if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-        ]
-        has_varargs = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in sig.parameters.values())
-        if has_varargs or len(params) >= 2:
-            fn(total_tokens, raw_usage)
-        elif len(params) == 1:
-            fn(total_tokens)
-        else:
-            fn()
-    except Exception:
-        try:
-            fn(total_tokens)
-        except Exception:
-            pass
-
-
-def _attach_stream_complete_hook(meta: Any, callback: Callable[..., Any]) -> None:
-    """
-    기존 `on_stream_complete`에 등록된 콜백(단일 함수 또는 리스트)을 덮어쓰지 않고
-    체인(Composite) 형태로 안전하게 병합합니다.
-    """
-    flags = getattr(meta, "framework_flags", None)
-    if not isinstance(flags, dict):
-        return
-
-    existing = flags.get("on_stream_complete")
-    if existing is None:
-        flags["on_stream_complete"] = callback
-    elif isinstance(existing, list):
-        existing.append(callback)
-
-        def _chained_list_hook(total_tokens: int = 0, raw_usage: Any = None) -> None:
-            for fn in list(existing):
-                if callable(fn):
-                    _invoke_stream_hook(fn, total_tokens, raw_usage)
-
-        flags["on_stream_complete"] = _chained_list_hook
-    elif callable(existing):
-
-        def _chained_pair_hook(total_tokens: int = 0, raw_usage: Any = None) -> None:
-            _invoke_stream_hook(existing, total_tokens, raw_usage)
-            _invoke_stream_hook(callback, total_tokens, raw_usage)
-
-        flags["on_stream_complete"] = _chained_pair_hook
-
-
-class FuelBreaker(DuplexChannel):
+class StreamBreaker(DuplexChannel):
     def __init__(self, finops_watcher: Optional[Any] = None):
         self.finops_watcher = finops_watcher
 
@@ -135,7 +80,7 @@ class FuelBreaker(DuplexChannel):
         ):
             elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
             log_pipeline.signal(
-                f"[FuelBreaker] Strict Quota Enforcement blocked anonymous tenant ('{tenant_id}').",
+                f"[StreamBreaker] Strict Quota Enforcement blocked anonymous tenant ('{tenant_id}').",
                 **{
                     UIKey.SLOT.value: UISlot.FUEL.value,
                     UIKey.SLOT_STATUS.value: UISlotStatus.BLOCK.value,
@@ -158,15 +103,14 @@ class FuelBreaker(DuplexChannel):
                 in_ledger = True
                 fuel_budget = float(self.finops_watcher.local_budget_cache[tenant_id])
                 log_pipeline.debug(
-                    f"[FuelBreaker] Applied dynamic FinOps budget for '{tenant_id}': {fuel_budget}",
+                    f"[StreamBreaker] Applied dynamic FinOps budget for '{tenant_id}': {fuel_budget}",
                     **{UIKey.TENANT_ID.value: tenant_id, UIKey.FUEL_BUDGET.value: int(fuel_budget)},
                 )
 
-        # [Quota Shield] FIBER_ENFORCE_QUOTA=true 환경에서 미인가 예산 한도 주입 차단
         if enforce_quota and not in_ledger and not audit_hash and not is_explicitly_enforced:
             elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
             log_pipeline.signal(
-                f"[FuelBreaker] Quota Shield blocked unverified budget injection "
+                f"[StreamBreaker] Quota Shield blocked unverified budget injection "
                 f"(tenant='{tenant_id}', claimed={fuel_budget}).",
                 **{
                     UIKey.METRIC.value: UIMetric.KILL_SWITCH.value,
@@ -183,7 +127,7 @@ class FuelBreaker(DuplexChannel):
         # 가용 연료/예산 한도가 0 이하로 완전 소진된 경우 네트워크 I/O 진입 전 사전 차단
         if enforce_quota and fuel_budget <= 0:
             log_pipeline.signal(
-                f"[FuelBreaker] Pre-flight blocked: Budget exhausted ({fuel_budget}) for tenant '{tenant_id}'.",
+                f"[StreamBreaker] Pre-flight blocked: Budget exhausted ({fuel_budget}) for tenant '{tenant_id}'.",
                 **{
                     UIKey.METRIC.value: UIMetric.KILL_SWITCH.value,
                     UIKey.SLOT.value: UISlot.FUEL.value,
@@ -194,7 +138,6 @@ class FuelBreaker(DuplexChannel):
             )
             raise PermissionError(f"Fuel budget exhausted for tenant: {tenant_id}")
 
-        # 정상 통과 시 X-Ray 4번 슬롯(FuelBreaker) 점등 및 서브밀리초 오버헤드 기록
         pass_payload: Dict[str, Any] = {
             "mode": "RAW",
             UIKey.SLOT.value: UISlot.FUEL.value,
@@ -206,7 +149,7 @@ class FuelBreaker(DuplexChannel):
             pass_payload[UIKey.FUEL_BUDGET.value] = int(fuel_budget)
 
         log_pipeline.info(
-            f"[FuelBreaker] Pre-flight passed for '{tenant_id}' ({elapsed_ms:.3f}ms).",
+            f"[StreamBreaker] Pre-flight passed for '{tenant_id}' ({elapsed_ms:.3f}ms).",
             **pass_payload,
         )
 
@@ -224,7 +167,7 @@ class FuelBreaker(DuplexChannel):
 
         # 단일 응답(Non-stream) 처리 및 토큰 카운트 방출
         if not is_stream and not hasattr(msg, "__aiter__"):
-            total_tokens, _ = _extract_usage_info(msg)
+            total_tokens, _ = extract_usage_info(msg)
             if total_tokens > 0:
                 ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, total_tokens)
                 unary_payload: Dict[str, Any] = {
@@ -237,7 +180,7 @@ class FuelBreaker(DuplexChannel):
                     "active_streams": _ACTIVE_STREAMS,
                 }
                 log_pipeline.info(
-                    f"[FuelBreaker] Unary completion '{tenant_id}': tokens={total_tokens}",
+                    f"[StreamBreaker] Unary completion '{tenant_id}': tokens={total_tokens}",
                     **unary_payload,
                 )
 
@@ -249,11 +192,11 @@ class FuelBreaker(DuplexChannel):
 
         # 스트림(Stream) 킬 스위치 및 실시간 토큰 텔레메트리 트랩 장착
         elif hasattr(msg, "__aiter__"):
-            msg = self._fuel_trap_generator(msg, fuel_budget, tenant_id, ctx)
+            msg = self._trap_generator(msg, fuel_budget, tenant_id, ctx)
 
         await ctx.fire_channel_read(msg)
 
-    async def _fuel_trap_generator(self, raw_stream: Any, budget: float, tenant_id: str, context: ChannelContext):
+    async def _trap_generator(self, raw_stream: Any, budget: float, tenant_id: str, context: ChannelContext):
         global _ACTIVE_STREAMS
         _ACTIVE_STREAMS += 1
         chunks = 0
@@ -357,94 +300,3 @@ class FuelBreaker(DuplexChannel):
                     f"[FuelTrap] Stream completed for '{tenant_id}' (total={consumed} tokens, chunks={chunks}, active={_ACTIVE_STREAMS}).",
                     **close_payload,
                 )
-
-
-class BillingObserver(DuplexChannel):
-    def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):
-        self.tenant_eco = tenant_eco
-        self.pta_adapter = pta_adapter
-        self._background_tasks: set = set()
-
-    async def channel_read(self, ctx: ChannelContext, msg: Any):
-        meta = ctx.get_attr("system_meta")
-        req: dict = ctx.get_attr("request_kwargs", {})
-        processed_ctx = ctx.get_attr("processed_context")
-        is_stream = hasattr(msg, "__aiter__")
-
-        def execute_billing(total_tokens: int = 0, raw_usage: Any = None):
-            fuel_consumed = ctx.get_attr(BrokerKey.FUEL_CONSUMED.value, 0)
-
-            # 실제 집계된 total_tokens가 있으면 최우선 적용하고, 스트림 강제 중단 등으로 0일 때만 실시간 누적 토큰(fuel_consumed)로 폴백
-            effective_fuel = total_tokens if (total_tokens and total_tokens > 0) else fuel_consumed
-            if effective_fuel > 0:
-                ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, effective_fuel)
-
-            tenant_id = ctx.get_attr("tenant_id", "unknown")
-
-            if effective_fuel > 0 and tenant_id not in ("anonymous", "internal_system", "unknown"):
-                async def _process_billing_task():
-                    try:
-                        final_consume_amount = effective_fuel
-                        if self.tenant_eco:
-                            model_name = (
-                                getattr(processed_ctx, "model", None)
-                                or getattr(meta, "base_model", None)
-                                or req.get("model", "default-model")
-                            )
-                            provider = (
-                                getattr(processed_ctx, "custom_llm_provider", None)
-                                or req.get("custom_llm_provider")
-                            )
-                            usage_payload = raw_usage if raw_usage else {"total_tokens": effective_fuel}
-
-                            calc_res = await self.tenant_eco.calculate_tenant_billing(
-                                tenant_id=tenant_id,
-                                usage=usage_payload,
-                                model_name=model_name,
-                                provider=provider,
-                            )
-
-                            if isinstance(calc_res, dict) and calc_res.get("status") == "success":
-                                intent = calc_res.get("consume_intent", {})
-                                final_consume_amount = intent.get("amount_to_consume", final_consume_amount)
-
-                        from xphi.node.rpc.handler.fuel import execute_direct_fuel_consume
-                        await execute_direct_fuel_consume(
-                            tenant_id=tenant_id,
-                            consumed_fuel=final_consume_amount,
-                            trace_id=meta.trace_id if meta else None,
-                            pta_adapter=self.pta_adapter,
-                        )
-                        if self.pta_adapter is not None:
-                            actual_balance = await self.pta_adapter.get_balance(tenant_id, "fuel")
-                            log_pipeline.info(
-                                f"[BillingObserver] Ledger balance synced for '{tenant_id}': {actual_balance} Fuel",
-                                **{
-                                    "mode": "RAW",
-                                    UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,
-                                    UIKey.SLOT.value: UISlot.FUEL.value,
-                                    UIKey.SLOT_STATUS.value: UISlotStatus.PASS.value,
-                                    UIKey.TENANT_ID.value: tenant_id,
-                                    UIKey.LEDGER_BALANCE.value: actual_balance,
-                                },
-                            )
-                    except Exception as e:
-                        log_pipeline.error(
-                            f"[BillingObserver] Failed to process billing pipeline for '{tenant_id}': {e}",
-                            exc_info=True,
-                            **{UIKey.TENANT_ID.value: tenant_id},
-                        )
-
-                task = asyncio.create_task(_process_billing_task())
-                self._background_tasks.add(task)
-                task.add_done_callback(self._background_tasks.discard)
-
-        if is_stream:
-            if meta:
-                _attach_stream_complete_hook(meta, execute_billing)
-            await ctx.fire_channel_read(msg)
-            return
-
-        total_tokens, usage_dict = _extract_usage_info(msg)
-        execute_billing(total_tokens, raw_usage=usage_dict)
-        await ctx.fire_channel_read(msg)

@@ -1,6 +1,5 @@
 # fiber.phase.fsm.runtime
 import json
-from contextlib import suppress
 from dataclasses import dataclass, field, replace
 from typing import Dict, Set, List, Optional, Tuple, Any
 
@@ -32,16 +31,11 @@ from fiber.phase.fsm.compiler import (
 
 log = get_emitter("fsm.runtime", phase="BRANCH_RUNTIME")
 
-
-# ============================================================================
-# 1. DAG TOPOLOGY & JOIN BARRIER
-# ============================================================================
 @dataclass
 class DagTopology:
     entry_point: str
     back_edges: Set[Tuple[str, str]] = field(default_factory=set)
     join_nodes: Set[str] = field(default_factory=set)
-
 
 class DagJoinBarrier:
     """Synchronizes parallel branches at shared DAG join nodes (forward in-degree >= 2)."""
@@ -66,7 +60,6 @@ class DagJoinBarrier:
                 nx = spec.get(CompactKey.NEXT, [])
                 targets = list(nx) if isinstance(nx, list) else [nx]
 
-            # [FIX] Include Fallback (`fb` / Catch) edges in topology in-degree analysis
             fb_target = spec.get(CompactKey.FALLBACK)
             if fb_target and fb_target not in targets:
                 targets.append(fb_target)
@@ -124,10 +117,6 @@ class DagJoinBarrier:
             bucket.clear()
         return stranded
 
-
-# ============================================================================
-# 2. SELF-CONTAINED BRANCH CURSOR (Domain Model with PTA Serialization)
-# ============================================================================
 @dataclass
 class BranchCursor:
     """Active branch state handle with built-in PTA input signing and output projection."""
@@ -195,13 +184,9 @@ class BranchCursor:
             tick=int(payload.get("tick", tick)),
         )
 
-
-# ============================================================================
-# 3. LEAN BRANCH CONTROLLER (Unified M:N PTA Engine & Checkpoint Rehydration)
-# ============================================================================
-class ExBranchController:
+class BranchController:
     """
-    Executes 2KB FSM/DAG blobs via a single unified M-inputs-to-N-outputs PTA commit engine.
+    Executes 2KB FSM/DAG blobs via `fsm.wasm` and a unified M-inputs-to-N-outputs commit engine.
     Handles Genesis (0:1), Step (1:1), Fork (1:N), Merge (N:1), and O(1) Cursor Rehydration.
     """
 
@@ -213,10 +198,7 @@ class ExBranchController:
         self._blob_cache: Dict[str, Dict[str, Any]] = {}
         self.barrier: Optional[DagJoinBarrier] = None
 
-    # ------------------------------------------------------------------------
-    # [Core Engine] Unified M:N PTA Transaction Executor
-    # ------------------------------------------------------------------------
-    async def _commit_pta_transition(
+    async def _commit_transition(
         self,
         spent_cursors: List[BranchCursor],
         next_cursors: List[BranchCursor],
@@ -237,9 +219,7 @@ class ExBranchController:
             committed.append(replace(cursor, pointer=PtaPointer(tx_hash=tx_hash, output_index=idx)))
         return committed
 
-    # ------------------------------------------------------------------------
     # [Public API] Spawn (0:1), Step (1:1), Fork (1:N), Collapse (N:1), Restore
-    # ------------------------------------------------------------------------
     async def mount_bundle_and_spawn(
         self,
         bundle: ExCompiledBundle,
@@ -247,7 +227,6 @@ class ExBranchController:
         initial_fuel: int = 1000,
         initial_meta: Optional[Dict[str, Any]] = None,
     ) -> BranchCursor:
-        # Inscribe both CAS TaskIOSpecs (`blob:`) and Auto-Linked Subgraphs (`branch:`)
         for ptr_key, blob_data in bundle.cas_store.items():
             raw_hash = self.store._put_object("blob", blob_data)
             self._blob_cache[ptr_key] = blob_data
@@ -272,7 +251,7 @@ class ExBranchController:
             meta_ctx=dict(initial_meta or {}),
             tick=1,
         )
-        res = await self._commit_pta_transition(
+        res = await self._commit_transition(
             spent_cursors=[],
             next_cursors=[draft],
             phase_status="GENESIS",
@@ -298,23 +277,24 @@ class ExBranchController:
             offload_hash = self.store._put_object("blob", offload_data)
             meta["_last_ptr"] = f"{CAS_PREFIX}{offload_hash[:16]}"
 
-        node_spec = self.get_node_spec(cursor)
-        raw_target = self._evaluate_next_target(node_spec, meta)
-        next_blob, next_node, rule_kind, next_stack = self._resolve_target(cursor, raw_target, node_spec)
-
-        await self._verify_wasm_transition(cursor, raw_target, rule_kind, step_cost=step_cost, meta_ctx=meta)
+        # Delegate step evaluation (Router rules, SYMLINK/RETURN stack, Fuel deduction) directly to `fsm.wasm`
+        next_blob, next_node, rule_kind, next_stack, rem_fuel = await self._execute_wasm_step(
+            cursor=cursor,
+            step_cost=step_cost,
+            meta_ctx=meta,
+        )
 
         draft = replace(
             cursor,
             active_blob_hash=next_blob,
             curr_node=next_node,
-            fuel=cursor.fuel - step_cost,
+            fuel=rem_fuel,
             meta_ctx=meta,
             call_stack=next_stack,
             tick=cursor.tick + 1,
         )
         status = "SEALED" if draft.is_terminated else "ACTIVE"
-        res = await self._commit_pta_transition(
+        res = await self._commit_transition(
             spent_cursors=[cursor],
             next_cursors=[draft],
             phase_status=status,
@@ -341,7 +321,6 @@ class ExBranchController:
             offload_hash = self.store._put_object("blob", offload_data)
             base_meta["_last_ptr"] = f"{CAS_PREFIX}{offload_hash[:16]}"
 
-        # Safely allow Time-Travel Forking even if parent cursor is currently at END_TOKEN
         node_spec = {} if parent.is_terminated else self.get_node_spec(parent)
         remaining_fuel = parent.fuel - step_cost
         allocations = self._slice_fuel(remaining_fuel, len(branch_targets), fuel_ratios)
@@ -362,7 +341,7 @@ class ExBranchController:
                 )
             )
 
-        return await self._commit_pta_transition(
+        return await self._commit_transition(
             spent_cursors=[parent],
             next_cursors=drafts,
             phase_status="FORKED",
@@ -390,7 +369,7 @@ class ExBranchController:
             tick=winner.tick + 1,
         )
 
-        res = await self._commit_pta_transition(
+        res = await self._commit_transition(
             spent_cursors=cursors,
             next_cursors=[draft],
             phase_status="MERGED",
@@ -437,9 +416,7 @@ class ExBranchController:
 
         raise ValueError(f"[Runtime] Output for '{pointer_or_stream}' not found in commit '{commit_hash[:8]}'")
 
-    # ------------------------------------------------------------------------
-    # [Inspection & Helpers] Spec Dereferencing, Topology, WASM & Fuel Slicing
-    # ------------------------------------------------------------------------
+    # [Inspection & Helpers] Spec Dereferencing, WASM Step Engine & Slicing
     def get_node_spec(self, cursor: BranchCursor) -> Dict[str, Any]:
         blob = self._load_blob(cursor.active_blob_hash)
         spec = blob.get(CompactKey.GRAPH, {}).get(cursor.curr_node)
@@ -461,57 +438,86 @@ class ExBranchController:
             self._blob_cache[blob_hash] = json.loads(self.store.db[key].decode("utf-8"))
         return self._blob_cache[blob_hash]
 
-    @classmethod
-    def _evaluate_next_target(cls, node_spec: Dict[str, Any], meta_ctx: Dict[str, Any]) -> str:
-        if node_spec.get(CompactKey.TYPE) == NodeType.ROUTER.value:
-            for rule in node_spec.get(CompactKey.RULES, []):
-                cond = rule.get(CompactKey.IF_COND, "")
-                if cls._eval_condition(cond, meta_ctx):
-                    return rule[CompactKey.NEXT]
-            return node_spec.get(CompactKey.DEFAULT_NEXT, END_TOKEN)
+    async def _execute_wasm_step(
+        self,
+        cursor: BranchCursor,
+        step_cost: int,
+        meta_ctx: Dict[str, Any],
+    ) -> Tuple[str, str, str, List[str], int]:
+        active_blob = self._load_blob(cursor.active_blob_hash)
+        with FSMInterpreter(wasm_module_name="fsm.wasm") as fsm_vm:
+            fsm_res = fsm_vm.execute(
+                vm_target=FsmTarget.STEP,
+                target_address=cursor.active_blob_hash,
+                calldata=FsmAdapter.build_step_calldata(
+                    curr_node=cursor.curr_node,
+                    step_cost=step_cost,
+                    meta_ctx=meta_ctx,
+                    call_stack=cursor.call_stack,
+                ),
+                state_snapshot=FsmAdapter.build_runtime_snapshot(
+                    branches={cursor.active_blob_hash: active_blob}
+                ),
+                context={"fuel": cursor.fuel, "stream_id": cursor.stream_id},
+            )
+            if not fsm_res.success or not fsm_res.output:
+                err = str(getattr(fsm_res, "error", "FSM Kernel Rejected Step"))
+                self.store.save_transition(ToposBlob("wasm.reject", cursor.curr_node, END_TOKEN, 1.0, err))
+                raise PermissionError(f"[FSM WASM Rejected Transition] {err}")
 
-        nx = node_spec.get(CompactKey.NEXT, END_TOKEN)
-        return nx[0] if isinstance(nx, list) and nx else str(nx)
+            parsed = FsmAdapter.parse_broker_output(fsm_res.output)
+            if not parsed.get("success", False):
+                reason = parsed.get("revert_reason") or "Unknown FSM Step Revert"
+                self.store.save_transition(ToposBlob("wasm.reject", cursor.curr_node, END_TOKEN, 1.0, reason))
+                raise PermissionError(f"[FSM WASM Rejected Transition] {reason}")
 
-    @staticmethod
-    def _eval_condition(cond: str, meta_ctx: Dict[str, Any]) -> bool:
-        """Evaluates router conditions (`>=`, `<=`, `!=`, `==`, `>`, `<`) identically to `fsm.wasm`."""
-        for op in (">=", "<=", "!=", "==", ">", "<"):
-            if op in cond:
-                lhs_raw, rhs_raw = cond.split(op, 1)
-                key = lhs_raw.strip()
-                clean_key = key[2:] if key.startswith("$.") else key
-                rhs_str = rhs_raw.strip()
+            out = parsed["parsed_output"]
+            next_blob = str(out.get("branch", cursor.active_blob_hash))
+            next_node = str(out.get("curr_node", END_TOKEN))
+            rule_kind = str(out.get("rule_kind", "CORE"))
+            next_stack = list(out.get("call_stack", []))
+            rem_fuel = int(out.get("remaining_fuel", cursor.fuel - step_cost))
 
-                if key in meta_ctx:
-                    actual = meta_ctx[key]
-                elif clean_key in meta_ctx:
-                    actual = meta_ctx[clean_key]
-                else:
-                    return False
+            # If a SYMLINK target omitted `#<entry_node>`, resolve entry point from target blob metadata
+            if not next_node and next_blob != cursor.active_blob_hash:
+                next_node = self._load_blob(next_blob)[CompactKey.META][CompactKey.ENTRY]
 
-                # 1. Try numeric comparison
-                with suppress(ValueError, TypeError):
-                    if not isinstance(actual, bool):
-                        a_num = float(actual)
-                        b_num = float(rhs_str)
-                        if op == ">=": return a_num >= b_num
-                        if op == "<=": return a_num <= b_num
-                        if op == ">":  return a_num > b_num
-                        if op == "<":  return a_num < b_num
-                        if op == "==": return abs(a_num - b_num) < 1e-9
-                        if op == "!=": return abs(a_num - b_num) >= 1e-9
+        # Optional Phase Kernel Transition Guard (`phase.wasm` via Broker)
+        if self.broker and hasattr(self.broker, "invoke"):
+            trans_rule = StateAdapter.build_trans_rule(src=cursor.curr_node, dest=next_node, kind=rule_kind)
+            child_node = (
+                StateAdapter.build_symlink_node(cursor.curr_node, next_node)
+                if rule_kind == "SYMLINK"
+                else StateAdapter.build_core_node(cursor.curr_node, rule_kind)
+            )
+            phase_root = StateAdapter.build_core_node(
+                name=f"root_{cursor.stream_id}",
+                content=cursor.active_blob_hash,
+                children={cursor.curr_node: child_node},
+            )
+            payload = StateAdapter.build_transition_payload(
+                intent_action="FSM_BRANCH_STEP",
+                intent_payload={"from": cursor.curr_node, "to": next_node, "tick": cursor.tick},
+                evolution_ctx=StateAdapter.build_evolution_context(phase_root, [trans_rule]),
+            )
+            try:
+                res = await self.broker.invoke(
+                    "execute_transition",
+                    StateAdapter.to_canonical_bytes(payload).decode("utf-8"),
+                )
+                if hasattr(res, "success") and not res.success:
+                    err = str(getattr(res, "error", ""))
+                    self.store.save_transition(ToposBlob("wasm.reject", cursor.curr_node, next_node, 1.0, err))
+                    raise PermissionError(f"[WASM Rejected Transition] {err}")
+            except NotImplementedError:
+                pass
 
-                # 2. Fallback to string/boolean comparison
-                a_str = ("true" if actual else "false") if isinstance(actual, bool) else str(actual)
-                if op == "==": return a_str == rhs_str
-                if op == "!=": return a_str != rhs_str
-                return False
-        return False
+        return next_blob, next_node, rule_kind, next_stack, rem_fuel
 
     def _resolve_target(
         self, cursor: BranchCursor, raw_target: str, node_spec: Dict[str, Any]
     ) -> Tuple[str, str, str, List[str]]:
+        """Target resolver used by `fork()` and Catch (`fb`) fallback transitions."""
         stack = list(cursor.call_stack)
 
         if (
@@ -547,67 +553,6 @@ class ExBranchController:
             return target_blob, target_node, "SYMLINK", stack
 
         return cursor.active_blob_hash, raw_target, "CORE", stack
-
-    async def _verify_wasm_transition(
-        self,
-        cursor: BranchCursor,
-        dest_node: str,
-        rule_kind: str,
-        step_cost: int = 0,
-        meta_ctx: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        # 1. Phase Kernel Transition Guard (`phase.wasm` via Broker)
-        if self.broker and hasattr(self.broker, "invoke"):
-            trans_rule = StateAdapter.build_trans_rule(src=cursor.curr_node, dest=dest_node, kind=rule_kind)
-            child_node = (
-                StateAdapter.build_symlink_node(cursor.curr_node, dest_node)
-                if rule_kind == "SYMLINK"
-                else StateAdapter.build_core_node(cursor.curr_node, rule_kind)
-            )
-            phase_root = StateAdapter.build_core_node(
-                name=f"root_{cursor.stream_id}",
-                content=cursor.active_blob_hash,
-                children={cursor.curr_node: child_node},
-            )
-            payload = StateAdapter.build_transition_payload(
-                intent_action="FSM_BRANCH_STEP",
-                intent_payload={"from": cursor.curr_node, "to": dest_node, "tick": cursor.tick},
-                evolution_ctx=StateAdapter.build_evolution_context(phase_root, [trans_rule]),
-            )
-            try:
-                res = await self.broker.invoke(
-                    "execute_transition",
-                    StateAdapter.to_canonical_bytes(payload).decode("utf-8"),
-                )
-                if hasattr(res, "success") and not res.success:
-                    err = str(getattr(res, "error", ""))
-                    self.store.save_transition(ToposBlob("wasm.reject", cursor.curr_node, dest_node, 1.0, err))
-                    raise PermissionError(f"[WASM Rejected Transition] {err}")
-            except NotImplementedError:
-                pass
-
-        # 2. In-process FSM Kernel Guard (`fsm.wasm` via cached FSMInterpreter)
-        with suppress(FileNotFoundError, ImportError):
-            active_blob = self._load_blob(cursor.active_blob_hash)
-            with FSMInterpreter(wasm_module_name="fsm.wasm") as fsm_vm:
-                fsm_res = fsm_vm.execute(
-                    vm_target=FsmTarget.STEP,
-                    target_address=cursor.active_blob_hash,
-                    calldata=FsmAdapter.build_step_calldata(
-                        curr_node=cursor.curr_node,
-                        step_cost=step_cost,
-                        meta_ctx=meta_ctx or cursor.meta_ctx,
-                        call_stack=cursor.call_stack,
-                    ),
-                    state_snapshot=FsmAdapter.build_runtime_snapshot(
-                        branches={cursor.active_blob_hash: active_blob}
-                    ),
-                    context={"fuel": cursor.fuel, "stream_id": cursor.stream_id},
-                )
-                if not fsm_res.success:
-                    err = str(getattr(fsm_res, "error", "FSM Kernel Rejected Step"))
-                    self.store.save_transition(ToposBlob("wasm.reject", cursor.curr_node, dest_node, 1.0, err))
-                    raise PermissionError(f"[FSM WASM Rejected Transition] {err}")
 
     @staticmethod
     def _slice_fuel(total_fuel: int, count: int, ratios: Optional[List[float]] = None) -> List[int]:

@@ -8,7 +8,7 @@ from fiber.phase.fsm.compiler import (
     CompactKey,
 )
 from fiber.phase.fsm.runtime import (
-    ExBranchController,
+    BranchController,
     BranchCursor,
     DagJoinBarrier,
 )
@@ -49,7 +49,7 @@ class ExGraphTraverser:
         max_ticks: int = 500,
     ):
         self.compiler = ExFSMCompiler()
-        self.runtime = ExBranchController(broker=broker)
+        self.runtime = BranchController(broker=broker)
         self._default_bridge: Optional[FiberExecutionBridge] = None
 
         if node_executor is not None:
@@ -350,7 +350,7 @@ class ExGraphTraverser:
             tick=cursor.tick + 1,
         )
         status = "SEALED" if draft.is_terminated else "ACTIVE"
-        res = await self.runtime._commit_pta_transition(
+        res = await self.runtime._commit_transition(
             spent_cursors=[cursor],
             next_cursors=[draft],
             phase_status=status,

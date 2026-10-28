@@ -1,5 +1,4 @@
 # fiber.gateway.bridge.action.connect
-## @lineage: fiber.phase.bridge.action.connect
 import os
 import sys
 import ast
@@ -319,9 +318,8 @@ def _collect_specs_and_envs(
     target: Optional[str] = None,
     mode: Optional[str] = None,
     preflight: Optional[str] = None,
-    include_builtins_on_empty: bool = True,
+    include_builtins_on_empty: bool = False,
 ) -> Tuple[List[ResolvedTarget], Dict[str, Dict[str, str]]]:
-    """CLI 입력 인자로부터 ResolvedTarget 리스트와 원본 환경변수 맵을 추출하는 공통 헬퍼"""
     specs: List[ResolvedTarget] = []
     env_lookup: Dict[str, Dict[str, str]] = {}
 
@@ -406,7 +404,6 @@ async def _launch_all_async(specs: List[ResolvedTarget]):
     else:
         await asyncio.gather(*(launch_connector_async(spec) for spec in specs))
 
-# 1. 역할 A: `fiber connect copy` (설정 복제 및 ~/.anchor/mcp.json 생성/갱신 전용)
 def run_connect_copy(
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
@@ -420,7 +417,7 @@ def run_connect_copy(
         target=target,
         mode=mode,
         preflight=preflight,
-        include_builtins_on_empty=True,
+        include_builtins_on_empty=False,
     )
     if not specs:
         log.error("[Fiber] No MCP targets found to copy.")
@@ -432,7 +429,6 @@ def run_connect_copy(
         log.info(f"  ├─ [{s.target_id}] -> {s.exec_cmd} [{s.mode.upper()}]{guard_info}")
     return out_path or ANCHOR_MCP_PATH
 
-# `fiber connect` (워커 프로세스 런타임 실행 전용)
 def run_connect(
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
@@ -446,7 +442,7 @@ def run_connect(
         target=target,
         mode=mode,
         preflight=preflight,
-        include_builtins_on_empty=True,
+        include_builtins_on_empty=False,
     )
     if not specs:
         log.error("[Fiber] No valid MCP target resolved. Provide --exec (-e), --config (-c), or run 'fiber connect copy'.")

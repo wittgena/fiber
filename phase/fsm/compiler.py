@@ -350,11 +350,11 @@ class ExFSMCompiler:
 
     @classmethod
     def _parse_choice_condition(cls, choice: Dict[str, Any]) -> str:
-        # 1. Shorthand `"if": "$._score >= 0.9"`
+        # Shorthand `"if": "$._score >= 0.9"`
         if "if" in choice:
             return cls._normalize_if_expr(str(choice["if"]))
 
-        # 2. Standard ASL `{"Variable": "$._score", "NumericGreaterThanEquals": 0.9}`
+        # Standard ASL `{"Variable": "$._score", "NumericGreaterThanEquals": 0.9}`
         var = choice.get("Variable", "")
         for asl_op, sym_op in ASL_CHOICE_OP_MAP.items():
             if asl_op in choice:
@@ -372,9 +372,9 @@ class ExFSMCompiler:
         raw = resource_uri.strip()
         lower = raw.lower()
 
-        if lower.startswith(("llm://", "interllm://")):
+        if lower.startswith(("llm://")):
             target = raw.split("://", 1)[1].strip("/")
-            model = target if target and target not in ("default", "interllm_proxy") else None
+            model = target if target and target not in ("default", "llm_proxy") else None
             return NodeType.PROJECTOR, model
         if lower.startswith("reflect://"):
             target = raw.split("://", 1)[1].strip("/")
@@ -442,10 +442,6 @@ class ExFSMCompiler:
         )
 
     def compile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> ExCompiledBundle:
-        """
-        [Sync] Compiles ASL definition into `<= 2KB` canonical topology blobs.
-        Delegates auto-partitioning (>2KB SESE folding) and static deadlock linting to cached `fsm.wasm`.
-        """
         sig = self._build_fragment_sig(asl_schema, trace_id)
         raw_ir = self.projector.project_compact_blob(sig)
 
@@ -487,7 +483,7 @@ class ExFSMCompiler:
             return NodeType.TENSION
         if "pending" in uri:
             return NodeType.PENDING
-        if "llm" in uri or "interllm" in uri:
+        if "llm" in uri:
             return NodeType.PROJECTOR
         if "sidecar" in uri or "tool" in uri or "mcp" in uri:
             return NodeType.OPERSIG

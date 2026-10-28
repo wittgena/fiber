@@ -3,7 +3,7 @@
 
 ## 1. Overview
 
-`fiber.llm.entry` provides a drop-in replacement for standard OpenAI and LiteLLM SDKs (`completion` and `acompletion`). It preserves 100% interface and type-checking parity with existing application logic while unlocking Fiber's asynchronous `DuplexChannel` pipeline, real-time FinOps kill-switches (`FuelBreaker`), and deterministic offline fixture testing (VCR).
+`fiber.llm.entry` provides a drop-in replacement for standard OpenAI and LiteLLM SDKs (`completion` and `acompletion`). It preserves 100% interface and type-checking parity with existing application logic while unlocking Fiber's asynchronous `DuplexChannel` pipeline, mid-stream kill-switches (`StreamBreaker`), and deterministic offline fixture testing (VCR).
 
 You can execute calls in two modes without changing your business logic:
 1. **In-Process Pipeline Mode (Default):** Runs the full middleware, schema translation, and governance pipeline directly inside your Python process.
@@ -120,13 +120,14 @@ response = await acompletion(
 )
 ```
 
-### 4.2. Real-Time FinOps & Mid-Stream Kill-Switch (`fuel_breaker`)
+### 4.2. Mid-Stream Kill-Switch (`stream_breaker`)
 
-To enforce strict tenant quotas and terminate runaway streams mid-flight upon budget exhaustion or `fiber account kill` revocation, attach `FuelBreaker`, `BillingObserver`, and `NodeAuthPayload`:
+To enforce strict tenant quotas and terminate runaway streams mid-flight upon budget exhaustion or `fiber account kill` revocation, attach `StreamBreaker`, `BillingObserver`, and `NodeAuthPayload`:
 
 ```python
 from fiber.llm.entry import acompletion
-from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.llm.pipeline.channel.breaker import StreamBreaker
+from fiber.llm.pipeline.channel.observer import BillingObserver
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 
@@ -134,7 +135,7 @@ response = await acompletion(
     model="gemini/gemini-3.1-flash-lite",
     messages=[{"role": "user", "content": "Generate a comprehensive report."}],
     stream=True,
-    fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
+    stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
     billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
     metadata={
         "node_auth": NodeAuthPayload(

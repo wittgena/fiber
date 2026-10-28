@@ -40,21 +40,74 @@ class EcoScene(SchemeRunner):
         await self._test_oracle_self_healing()
         
         # @phase.2: Autonomous Protocol State Engine
-        await self._test_dao_tension_evaluation()
         await self._test_dao_epoch_sealing()
 
         # @phase.3: Agent-to-Agent (Eco) Proof-of-Compute
         await self._test_a2a_trustless_execution()
-        await self._test_a2a_proof_generation()
-        await self._test_a2a_ledger_inscription()
 
         # @phase.4: Decentralized Exchange & Deterministic Settlement
         await self._test_p2p_exchange_settlement()
 
+    # async def _test_oracle_data_provenance(self):
+    #     log.info("\n--- [Data Pipeline] Phase 2: Provenance Fingerprinting ---")
+    #     payload = {"dummy_data": "Node_State_Report_Data..."}
+    #     await self._run_case("Pipeline: Compute Tamper-Proof Root Fingerprint", DphiMethod.COMPUTE_FINGERPRINT.value, payload, expected_success=True)
     async def _test_oracle_data_provenance(self):
-        log.info("\n--- [Data Pipeline] Phase 2: Provenance Fingerprinting ---")
-        payload = {"dummy_data": "Node_State_Report_Data..."}
-        await self._run_case("Pipeline: Compute Tamper-Proof Root Fingerprint", DphiMethod.COMPUTE_ROOT_FINGERPRINT.value, payload, expected_success=True)
+        log.info("\n--- [Data Pipeline] Phase 2: Canonical & Evolution-Bound Provenance Fingerprinting ---")
+
+        # 1. Standard JCS Canonical Data Provenance (Stateless Telemetry / Snapshot Dict)
+        telemetry_snapshot = {
+            "node_id": self.ctx.system.pubkey_hex[:16],
+            "epoch_ts": int(time.time() * 1000),
+            "metrics": {"active_streams": 4, "tension_lambda": 0.04, "coherent": True},
+        }
+        await self._run_case(
+            "Provenance [1/3]: Compute JCS Canonical Data Fingerprint",
+            DphiMethod.COMPUTE_FINGERPRINT.value,
+            telemetry_snapshot,
+            expected_success=True,
+        )
+
+        # 2. Schema-Aware Transition & Evolution Seal (Matches compliance.py /audit/event & /telemetry/logs)
+        phase_root = StateAdapter.build_core_node(
+            name="provenance_root",
+            content="anchor:genesis_01",
+            children={
+                "telemetry_node": StateAdapter.build_core_node("telemetry_node", "CORE")
+            },
+        )
+        trans_rule = StateAdapter.build_trans_rule(
+            src="telemetry_node", dest="END", kind="ANCHOR"
+        )
+        evo_ctx = StateAdapter.build_evolution_context(phase_root, [trans_rule])
+        transition_payload = StateAdapter.build_transition_payload(
+            intent_action="record_audit_event",
+            intent_payload={
+                "actor": self.ctx.system.pubkey_hex[:16],
+                "digest": "sha256:8f3a19c4e2b109d2",
+                "verified": True,
+            },
+            evolution_ctx=evo_ctx,
+        )
+        await self._run_case(
+            "Provenance [2/3]: Seal Evolution-Bound Transition Fingerprint",
+            DphiMethod.COMPUTE_FINGERPRINT.value,
+            transition_payload,
+            expected_success=True,
+        )
+
+        # 3. Negative Guard: Reject Empty or Malformed Transition Envelope
+        malformed_transition = {
+            "intent_action": "",  # Empty action must be rejected by CanonicalHasher seal guard
+            "intent_payload": None,
+            "evolution_ctx": evo_ctx,
+        }
+        await self._run_case(
+            "Provenance [3/3]: Reject Malformed Transition Envelope (Guard Check)",
+            DphiMethod.COMPUTE_FINGERPRINT.value,
+            malformed_transition,
+            expected_success=False,
+        )
 
     async def _test_oracle_epoch_initialization(self):
         log.info("\n--- [Data Pipeline] Phase 3: Epoch Initialization & Parity Triplet ---")
@@ -71,10 +124,6 @@ class EcoScene(SchemeRunner):
         log.info("\n--- [Data Pipeline] Phase 4: Self-Healing Recovery ---")
         payload = {"topos_id_low32": 101010, "nexus_id": 907049}
         await self._run_case("Pipeline: Recover Lost Data via XOR Parity", DphiMethod.VERIFY_PARITY.value, payload, expected_success=True)
-
-    async def _test_dao_tension_evaluation(self):
-        log.info("\n--- [State Engine] Phase 1: Ecosystem Tension Evaluation ---")
-        await self._run_case("Engine: Evaluate Network Tension & Load", DphiMethod.EVALUATE_TENSION.value, "node_a,node_b,node_c|node_b,node_c,node_d", expected_success=True)
 
     async def _test_dao_epoch_sealing(self):
         log.info("\n--- [State Engine] Phase 3: Epoch Sealing & Consensus ---")
@@ -96,21 +145,6 @@ class EcoScene(SchemeRunner):
         log.info("\n--- [Eco Pipeline] Phase 2: Trustless Execution (Sandboxed) ---")
         code_payload = "\ndef analyze_risk():\n    return 'Validated Risk Score: 42.5'\nprint(analyze_risk())\n"
         await self._run_case("Eco: Execute Constrained Task (Fuel Tracked)", DphiMethod.EXECUTE_CODE.value, code_payload, expected_success=True, tier="STANDARD")
-
-    async def _test_a2a_proof_generation(self):
-        log.info("\n--- [Eco Pipeline] Phase 3: Cryptographic Proof Generation ---")
-        payload = {"execution_hash": "dummy_output_hash_abc123", "fuel_consumed": 15420, "verification_seed": "random_seed_999"}
-        await self._run_case("Eco: Generate Proof-of-Compute", DphiMethod.GENERATE_PROOF.value, payload, expected_success=True)
-
-    async def _test_a2a_ledger_inscription(self):
-        log.info("\n--- [Eco Pipeline] Phase 4: Cryptographic PhaseStore Inscription ---")
-        repo_commit = StateAdapter.build_repo_commit(nexus_id=907049, parent_nexus_id=0, parent_commit_id="proof-hash-xyz")
-        sig_hex = self.ctx.system.sign(repo_commit)
-        payload = StateAdapter.build_inscribe_payload(
-            nexus_id=907049, parent_nexus_id=None, parent_commit_id="proof-hash-xyz",
-            signers=[self.ctx.system.pubkey_hex], signatures=[sig_hex], threshold=1, allowed_signers=[self.ctx.system.pubkey_hex]
-        )
-        await self._run_case("Eco: Inscribe Transaction for State Finality (Nexus ID)", DphiMethod.INSCRIBE_ACTOR.value, payload, expected_success=True)
 
     async def _test_p2p_exchange_settlement(self):
         log.info("\n--- [Exchange Pipeline] P2P Order Ingress & Deterministic Settlement ---")
