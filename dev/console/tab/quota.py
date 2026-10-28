@@ -1,4 +1,5 @@
-# fiber.dev.console.tab.qouta
+# fiber.dev.console.tab.quota
+## @lineage: fiber.dev.console.tab.qouta
 from __future__ import annotations
 
 from pathlib import Path

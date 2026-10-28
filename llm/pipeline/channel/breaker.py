@@ -263,10 +263,10 @@ class StreamBreaker(DuplexChannel):
                         "active_streams": _ACTIVE_STREAMS,
                         "throughput_cps": cps,
                     }
-                    log_pipeline.info(
-                        f"[FuelTrap] Stream metering '{tenant_id}': consumed={consumed} tokens ({cps} chunks/s)",
-                        **tick_payload,
-                    )
+                    # log_pipeline.info(
+                    #     f"[FuelTrap] Stream metering '{tenant_id}': consumed={consumed} tokens ({cps} chunks/s)",
+                    #     **tick_payload,
+                    # )
 
                 yield raw_chunk
         except Exception as e:

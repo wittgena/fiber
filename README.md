@@ -1,4 +1,4 @@
-# README
+# fiber.README
 
 **AI Runtime Harness**
 
@@ -8,7 +8,7 @@ Through the same control plane, it governs model calls via an OpenAI-compatible 
 | Section | Target Focus & Key Capabilities | Quick Jump |
 | :--- | :--- | :--- |
 | **1. Local MCP Gateway** | Loopback Daemon for Agents & IDEs, Pre-Flight HITL Locks, Zero-Key LLM Routing, Config Sync | **[1. Local MCP Gateway](#1-local-mcp-gateway)** |
-| **2. LLM Guardrails & Replay** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[2.1 Pipeline](#21-the-drop-in-llm-pipeline)** · **[2.2 VCR](#22-deterministic-replay-llm-vcr--fixtures)** · **[2.3 Schema Traverser](#23-schema-traverser--compat-registry)** |
+| **2. LLM Guardrails & Replay** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[2.1 LLM Guardrails](#21-llm-guardrails)** · **[2.2 VCR](#22-deterministic-replay-llm-vcr--fixtures)** · **[2.3 Schema Traverser](#23-schema-traverser--compat-registry)** |
 | **3. CLI & Installation** | Connect CLI, Account & Quota Governance, Sandbox Provisioning (`uv pip`), Node Identity (`sign init`) & Homebrew | **[3.1 Connect CLI](#31-fiber-connect-cli)** · **[3.2 Python & CLI](#32-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[3.3 Homebrew](#33-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
 | **4–5. Benchmarks & Logs** | 200-VU Concurrency Metrics & Cryptographic Validation Logs | **[4. Benchmarks](#4-pipeline-performance-benchmarks-apple-m2-32gb-ram)** · **[5. System Logs](#5-system-validation-logs)** |
 
@@ -32,7 +32,8 @@ Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeo
   - **Hold/Fuel Reservation**: Translates external, EdDSA-signed quota mandates into linear state transitions: each mandate is consumed exactly once to produce the next quota state. Version fencing rejects stale or replayed policies, and the same mandate can never be consumed twice or drive a balance below zero.
 
 **LLM & MCP Routing for IDEs**
-Alongside the MCP endpoint, the same local daemon serves the LLM Gateway (`/v1/chat/completions`)—the HTTP face of the pipeline described in [2.1](#21-the-drop-in-llm-pipeline). By configuring your IDE's (e.g., Continue.dev, Cursor) API base URL to `http://127.0.0.1:8356/v1`, you can route all model requests through Fiber's guardrails. This eliminates the need to expose upstream provider API keys in client configs, as authentication is securely resolved by the daemon's host environment (.env files or local OS variables).
+Alongside the MCP endpoint, the same local daemon serves the LLM Gateway (`/v1/chat/completions`)—the HTTP face of the pipeline described in [2.1](#21-llm-guardrails).
+By configuring your IDE's (e.g., Continue.dev, Cursor) API base URL to `http://127.0.0.1:8356/v1`, you can route all model requests through Fiber's guardrails. This eliminates the need to expose upstream provider API keys in client configs, as authentication is securely resolved by the daemon's host environment (.env files or local OS variables).
 
 **Example: continue.dev LLM Config (config.yaml)**
 By setting the client provider to openai, Fiber enables IDEs to seamlessly interface with models they may not natively support. Simply append the target infrastructure prefix (e.g., `cohere/`, `cerebras/`, `llama_server/`) to the model string, and Fiber autonomously orchestrates the schema translation and OS credentials.
@@ -57,7 +58,6 @@ models:
     provider: openai
     model: llama_server/gemma-3-1b-it-Q4_K_M.gguf
     apiBase: http://127.0.0.1:8356/v1
-
 ```
 
 **Agent Onboarding**
@@ -99,118 +99,135 @@ $ fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesys
 
 ## 2. LLM Guardrails & Replay
 
-### 2.1. The Drop-In LLM Pipeline
+### 2.1. LLM Guardrails
 
-Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's duplex pipeline enforces in-flight guardrails and stream circuit-breaking without altering a single line of your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for cutting-edge proprietary models becomes instantly achievable when paired with Fiber's Schema Traverser **[2.3]**.
+Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's duplex pipeline enforces two-track in-flight guardrails—scrubbing soft PII and sensitive headers in-place (`PRE_TRANSLATE`), while strictly blocking leaked credentials (`POST_TRANSLATE`) and severing rogue streams via `StreamBreaker` without altering your business logic. Furthermore, because the core pipeline is decoupled from parsing logic, extending support for new proprietary models is seamless when paired with Fiber's Schema Traverser **[2.3]**.
 
-> **Unlike passive callbacks, this event-driven pipeline empowers interceptors to actively short-circuit I/O, physically intercept streams, and tunnel deep infrastructural states.**
+> **Unlike passive callbacks, this event-driven pipeline empowers interceptors to actively mutate payloads in-place, short-circuit physical I/O, and abort unauthorized streams in sub-millisecond time.**
 
-> **Remote Gateway Mode:** Beyond the Python SDK, running `fiber daemon` exposes this exact pipeline as an OpenAI-compatible REST endpoint (`/v1/chat/completions`), allowing external agents to offload execution over HTTP.
+> **Remote Gateway Mode:** Beyond the Python SDK, running `fiber daemon` exposes this exact guardrail pipeline as an OpenAI-compatible REST endpoint (`/v1/chat/completions`), allowing external agents and IDEs to offload execution over HTTP.
 
-**1. Define Guardrails & Interceptors by Target Slot:**
+**1. Two-Track Guardrails & Slot Interceptors (`PRE_TRANSLATE` vs. `POST_TRANSLATE`):**
+Production guardrails are built into `fiber.llm.pipeline.interceptor.guardrail` and ready to mount directly in **Step 2**; under the hood, each interceptor implements `DuplexChannel` for its target execution slot:
 
 ```python
 from fiber.llm.pipeline.tracer import BaseLLMTracer
 from fiber.llm.pipeline.bootstrap import PipelineSlot
+from fiber.llm.compat.secret.redact import redact_string, sanitize_payload, FastRegexRedactionEngine
 from xphi.state.phase.channel import DuplexChannel
 
-# PRE_OBSERVER: Asynchronous Telemetry with Stream-Aware Lifecycle
+# [PRE_OBSERVER] Stream-Aware Telemetry Hook
 class TelemetryTracer(BaseLLMTracer):
     async def on_llm_end(self, meta, response, duration_ms):
-        # Stream Mode: Defer telemetry until the inner pipeline exhausts the chunks
         if hasattr(response, "__aiter__"):
-            def on_stream_complete(total_tokens: int):
-                # Calculate the true end-to-end latency when the last chunk arrives
-                real_duration_ms = (time.time() - meta.framework_flags["start_time"]) * 1000
-                datadog.gauge("llm.latency", real_duration_ms, tags=[f"model:{meta.base_model}", "type:stream"])
-                datadog.count("llm.tokens", total_tokens, tags=[f"model:{meta.base_model}"])
-            
-            # Piggyback the callback onto the framework's hook lifecycle
-            hooks = meta.framework_flags.setdefault("on_stream_complete", [])
-            hooks.append(on_stream_complete)
+            meta.framework_flags.setdefault("on_stream_complete", []).append(
+                lambda tokens: datadog.count("llm.tokens", tokens, tags=[f"model:{meta.base_model}"])
+            )
             return
+        datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}"])
 
-        datadog.gauge("llm.latency", duration_ms, tags=[f"model:{meta.base_model}", "type:singular"])
-
-# PRE_TRANSLATE: Edge Caching for Instant Short-circuit
-class EdgeRedisCache(DuplexChannel):
+# [PRE_TRANSLATE - Track 1A] Recursive Dict, Header & URL Query Sanitization (Mutate & Pass)
+class PayloadSanitizationGuardrail(DuplexChannel):
     target_slot = PipelineSlot.PRE_TRANSLATE
     async def write(self, ctx, msg: dict):
-        # note: Replace this exact-match hash with an Embedding to upgrade to a VectorDB Semantic Cache.
-        prompt_hash = hashlib.sha256(str(msg.get("messages", [])).encode()).hexdigest()
-        if cached_response := await redis_client.get(prompt_hash):
-            return await ctx.fire_channel_read(cached_response)
-            
-        await ctx.fire_write(msg)
+        await ctx.fire_write(sanitize_payload(msg))
 
-# PRE_TRANSLATE: Active Payload Mutation (Dynamic Semantic Routing)
-class SemanticRouter(DuplexChannel):
+# [PRE_TRANSLATE - Track 1B] In-Place C-Regex PII Masking (Mutate & Pass)
+class CustomRegexMaskingGuardrail(DuplexChannel):
     target_slot = PipelineSlot.PRE_TRANSLATE
-    
-    def __init__(self, routing_rules: dict, default_model: str):
-        # Inject rules externally to decouple business logic from infrastructure
-        self.routing_rules = routing_rules
-        self.default_model = default_model
-
-    def _apply_routing(self, ctx, msg: dict, target_model: str):
-        """Syncs the physical payload with the logical pipeline metadata."""
-        msg["model"] = target_model
-        
-        # Must update system_meta so downstream tracers/observers track the correct model
-        meta = msg.get("system_meta") or ctx.get_attr("system_meta")
-        if meta:
-            meta.base_model = target_model
+    def __init__(self, custom_patterns: list[str]):
+        super().__init__()
+        self.engine = FastRegexRedactionEngine(patterns=custom_patterns)
 
     async def write(self, ctx, msg: dict):
-        # Evaluate intent (e.g., via lightweight ONNX CPU model) without blocking the event loop
-        intent = await asyncio.to_thread(self._predict_intent, msg.get("messages", []))
-        
-        # Actively mutate the payload and sync state based on semantic intent
-        if rule := self.routing_rules.get(intent):
-            self._apply_routing(ctx, msg, rule["target"])
-        else:
-            self._apply_routing(ctx, msg, msg.get("model", self.default_model))
-            
+        for m in msg.get("messages", []):
+            if isinstance(m, dict) and isinstance(m.get("content"), str):
+                m["content"] = self.engine.execute(m["content"].encode("utf-8")).decode("utf-8", errors="replace")
         await ctx.fire_write(msg)
 
-# POST_TRANSLATE: Strict Blocking for Standard Secrets - API Keys, Tokens
+# [POST_TRANSLATE - Track 2A] Strict Blocking for Built-in & Registry Secrets (Short-Circuit)
 class ActiveBlockingGuardrail(DuplexChannel):
     target_slot = PipelineSlot.POST_TRANSLATE
     async def write(self, ctx, processed_msg):
-        messages = getattr(processed_msg, "original_kwargs", {}).get("messages", [])
-        for msg in messages:
+        for msg in getattr(processed_msg, "original_kwargs", {}).get("messages", []):
             content = msg.get("content", "")
-            # redact_string checks against built-in credential regex patterns
+            # Scans against 33 built-in and dynamically injected credential rules
             if isinstance(content, str) and redact_string(content) != content:
-                raise PermissionError("Guardrail Block: Sensitive credential detected.") # Active pipeline break
+                return await ctx.fire_exception_caught(
+                    PermissionError("Guardrail Block: Sensitive credential detected.")
+                )
+        await ctx.fire_write(processed_msg)
+
+# [POST_TRANSLATE - Track 2B] Zero-Copy C-Regex Policy Blocking (Short-Circuit)
+class CustomRegexBlockingGuardrail(DuplexChannel):
+    target_slot = PipelineSlot.POST_TRANSLATE
+    def __init__(self, custom_patterns: list[str]):
+        super().__init__()
+        self.engine = FastRegexRedactionEngine(patterns=custom_patterns)
+
+    async def write(self, ctx, processed_msg):
+        for msg in getattr(processed_msg, "original_kwargs", {}).get("messages", []):
+            content = msg.get("content", "")
+            if isinstance(content, str) and self.engine.contains_match(content.encode("utf-8")):
+                return await ctx.fire_exception_caught(
+                    PermissionError("Guardrail Block: Custom domain policy violation.")
+                )
         await ctx.fire_write(processed_msg)
 
 ```
 
-**Out-of-the-box Guardrails**: The snippets above are conceptual examples. Fiber includes production-grade samples in `fiber.dev.pipeline.interceptor`—including INT8 Quantized ONNX Routers, Active Secret Blocking, and Custom C-Level Regex Injection—ready for enterprise deployment.
+**Built-in Guardrails & Reference Templates**: `fiber.llm.pipeline.interceptor.guardrail` provides the four two-track DLP interceptors above out of the box, alongside reference templates (`cache.EdgeRedisCache`, `router.OnnxSemanticRouter`) demonstrating how to short-circuit I/O (`ctx.fire_channel_read`) or dynamically route models in `PRE_TRANSLATE`.
 
-**2. Execute via Drop-in Facade:**
+**2. Execute Chained Defense via Drop-in Facade:**
 
 ```python
 from fiber.llm.entry import acompletion
+from fiber.llm.pipeline.interceptor.guardrail import (
+    PayloadSanitizationGuardrail,
+    CustomRegexMaskingGuardrail,
+    ActiveBlockingGuardrail,
+)
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
 from fiber.llm.pipeline.channel.observer import BillingObserver
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 
-# The framework autonomously restructures the flat list into the strict pipeline:
-# [Tracer] -> [Cache] -> [Translator] -> [Guardrail] -> [StreamBreaker] -> [Network I/O]
+# Fiber autonomously sorts the flat list into deterministic execution slots:
+# [Tracer (OBSERVER)] -> [Sanitize -> Masking (PRE_TRANSLATE)] -> [Translator] -> [Blocking -> StreamBreaker (POST_TRANSLATE)]
 response = await acompletion(
     model="lm_studio/qwen-3.5-9b", # ex: cerebras/qwen-3.8-27b, gemini/gemini-3.1-flash-lite, ollama/gemma:2b
-    messages=[{"role": "user", "content": "Analyze this data."}],
+    messages=[{"role": "user", "content": "Customer phone: 010-1234-5678. Summarize inquiry."}],
     stream=True,
-    interceptors=[TelemetryTracer(), ActiveBlockingGuardrail(), EdgeRedisCache(), SemanticRouter()],
+    interceptors=[
+        TelemetryTracer(),
+        PayloadSanitizationGuardrail(),                        # Scrubs sensitive dict keys & URL params
+        CustomRegexMaskingGuardrail([r"\b010-\d{4}-\d{4}\b"]), # Masks soft PII in-place (~0.006ms)
+        ActiveBlockingGuardrail(),                             # Hard-blocks leaked API keys (~0.014ms)
+    ],
     stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
     billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
     metadata={"node_auth": NodeAuthPayload(tenant_id="accounting_dept", fuel_budget=50000, is_enforced=True)}
 )
+```
+
+**3. Declarative Secret Registry (`FIBER_REDACT_RULES_PATH`):**
+To add custom credential patterns, override existing rules, or disable specific built-in checks globally without modifying Python code, supply an external `redact_rules.json` via `FIBER_REDACT_RULES_PATH` (`fiber.llm.compat.secret.registry`). At boot time, Fiber validates each regex via Pydantic (safely skipping malformed rules) and injects the merged Key-Value ruleset into the core redaction engine via Dependency Inversion:
+
+```json
+{
+  "patterns": {
+    "fiber_internal_token": "FIBER-INTERNAL-TOKEN-[0-9]{6}",
+    "corp_vault_key": "CORP-VAULT-[A-Z0-9]{16}"
+  },
+  "disabled_rules": ["context7_key", "generic_password_kv"],
+  "extra_secret_keys": ["FIBER_VAULT_PIN", "INTERNAL_AUTH_HEADER"]
+}
 
 ```
+
+> **Note:** Out of the box, Fiber ships with **33 built-in credential regex rules** (`BASE_SECRET_RULES`) and **14 sensitive key/URL tokens** that already cover standard cloud providers (`AKIA...`, `AIza...`), auth headers (`Bearer`, `JWT`, `PEM`), and major LLM/SaaS vendor keys (`sk-...`, `ghp_...`, `xoxb-...`) with zero configuration.
+> For most deployments, mounting `ActiveBlockingGuardrail()` and `PayloadSanitizationGuardrail()` as-is provides complete baseline protection without maintaining a custom registry file.
+> When you need to introduce proprietary internal token formats or selectively relax specific checks via `redact_rules.json`, refer to the **[Interceptor Spec](./phase/abc/dev/llm/interceptor.md)** for the full catalog of default rule IDs and slot extension patterns.
 
 > **Note on Drop-in Replacement:** Fiber operates as a drop-in replacement by maintaining compatibility with OpenAI/LiteLLM entrypoints, Pydantic return objects, and local token utilities. The following specifications detail how to preserve your existing application logic while integrating active guardrails, stream circuit-breakers, and quota tracking.
 > 🔗 **[Entrypoint Spec](./phase/abc/dev/llm/entry.md)**
@@ -262,6 +279,7 @@ async def test_semantic_routing_pipeline():
     )
     assert response is not None
 
+
 ```
 
 **Transparent Integration for Legacy Codebases**
@@ -306,6 +324,7 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 ```
 
 **Per-Request HTTP Gateway VCR**
@@ -333,31 +352,22 @@ $ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
     "vcr_scenario": "gateway_smoke_test",
     "vcr_speed": "max"
   }'
+
 ```
 
 **Pytest Record & Replay**
 
-Fiber standardizes the testing lifecycle around `pytest` for CI/CD suites and `gateway.tester` for live HTTP daemon verification—eliminating the need for separate recording scripts.
-
-* **Step 1: Record (Capture & Coalesce Network I/O)**
-Executes live API calls across your parameterized test matrix (`llama_server`, `cohere`, `gemini`, `cerebras`). The engine autonomously coalesces streaming micro-chunks within a 100ms time-window and persists normalized payloads into human-readable JSON fixtures (`fiber-compats/suites/router_suite/`).
+Once recorded (`VCR_MODE=record`), suites execute entirely offline (`VCR_MODE=replay` by default)—running at maximum velocity for CI/CD or with real-time latency and chaos jitter emulation:
 
 ```bash
-# Pytest: Generate suites via live API calls
+# 1. Record live API streams into coalesced local fixtures (100ms window)
 $ VCR_MODE=record pytest -v fiber/llm/pipeline/interceptor/tests/router.py
-```
 
-* **Step 2: Replay (Deterministic CI/CD & Gateway Verification)**
-Executes the exact same test suite entirely offline (`VCR_MODE=replay` by default). You can run at maximum velocity for CI/CD pipelines, emulate historical latencies (`VCR_SPEED=real`), inject chaos jitter (`VCR_CHAOS=500.0`), or validate the live HTTP Gateway roundtrip.
-
-```bash
-# Pytest (Default Replay): Run the multi-provider suite offline at maximum velocity (~0ms I/O)
+# 2. Replay offline at maximum velocity (~0ms I/O) or emulate real latency + 500ms chaos jitter
 $ pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
-
-# Pytest (Chaos & Latency Emulation): Validate timeout resilience with real-time pacing + 500ms jitter
 $ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 
-# HTTP Gateway Suite: Verify Unary, SSE Stream, and Dynamic Record ➔ Replay roundtrip against the daemon
+# 3. Verify live HTTP Gateway roundtrip (Unary, SSE Stream, and Dynamic Record -> Replay)
 $ python -m fiber.dev.ex.tester.gateway
 ```
 
@@ -367,8 +377,8 @@ $ python -m fiber.dev.ex.tester.gateway
 
 Applying consistent guardrails and deterministic replay across a fragmented LLM ecosystem requires unified payload normalization. Fiber eliminates brittle `if/elif` parsing logic through its **Rule-based Traverser**—using dot-notation and **Path Fallbacks** to seamlessly navigate mixed topologies (Dicts, Lists, Pydantic Objects) across request parameters, sync responses, and async stream chunks through a unified schema.
 
-**Provider Extension:**
-To integrate a new provider or override existing parsing logic, you no longer need to modify Python code. Simply map their request parameters and response extraction paths in an external JSON file and inject it via the `FIBER_COMPAT_RULES_PATH` environment variable.
+**Zero-Config Defaults & Provider Extension:**
+Built-in rules already normalize standard providers (`openai`, `gemini`, `cohere`, `cerebras`, `ollama`, `llama_server`) out of the box with zero configuration. When integrating a proprietary internal model or overriding existing extraction paths without modifying Python code, supply an external JSON file via the `FIBER_COMPAT_RULES_PATH` environment variable.
 
 Fiber loads this registry exactly once at boot-time. It performs strict Pydantic schema validation (Fail-Fast) and deep-merges the rules into the base registry. Invalid formats are safely ignored with a warning (Partial Update).
 
@@ -418,28 +428,28 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 | Command | Role | Function & Lifecycle | Example |
 | --- | --- | --- | --- |
 | **`sign`** | **[Identity & TOTP]** | Provisions Zero-Env node keys (`~/.ssh/fiber_ed25519` & `local_cipher.key`) and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
-| **`connect copy`** | **[Config Sync]** | Registers built-in workers, IDE configs (`mcp.json`), or third-party servers (with `-p` HITL guards) into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon`. | `fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"` |
+| **`connect copy`** | **[Config Sync]** | Registers built-in workers, IDE configs (`mcp.json`), or third-party servers (with `-p` HITL guards) into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon`. | `fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets\|DELETE"` |
 | **`connect`** | **[Standalone Sidecar]** | Runs MCP workers or configs directly in the foreground without writing to `~/.anchor/mcp.json` (automatically skips targets already running in the daemon). | `fiber connect -e worker.deployer -p "DROP"` |
 | **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon -s all -f .env` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
 | **`account`** | **[Account & Quota]** | Manages tenant quotas, binds optional SPIFFE identities, issues signed execution mandates, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
 
-**MCP Server Provisioning & Sidecar(`fiber connect`)**
-If `fiber daemon` is running, `fiber connect copy` automatically hot-reloads updated configs—inferring transport (`stdio` vs. `network`), concurrency modes (`multiplex`, `linear`, `ephemeral`), and pre-flight HITL guards (`-p`). Omit copy to run any worker as a standalone foreground sidecar:
+**MCP Server Provisioning & Sidecar (`fiber connect`)**
+`fiber connect copy` hot-reloads updated configs into `fiber daemon` (inferring transport, concurrency, and `-p` HITL guards); omit `copy` to run any worker as a standalone foreground sidecar:
 
 ```bash
 # Built-in Worker: Lock 'finlib' with a 6-digit TOTP Pre-Flight Guard (Default)
 $ fiber connect copy -t worker.eco.finlib -e finlib -p "normalize_order|pow\(|exp\("
 
 # Remote HTTP/SSE MCP: Register remote server with a 1-Click Pre-Flight Guard ('button:' prefix)
-$ fiber connect copy -t net-context7-remote-01 -e [https://mcp.context7.com/mcp](https://mcp.context7.com/mcp) -p "button:security|auth|secret"
+$ fiber connect copy -t net-context7-remote-01 -e https://mcp.context7.com/mcp -p "button:security|auth|secret"
 
 # Standalone Mode (without daemon): Omit 'copy' to run a worker directly in the foreground
 $ fiber connect -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE"
 ```
 
 **Node Identity & Admin TOTP (`fiber sign`)**
-Manages the node's local keychain and human-in-the-loop (HITL) TOTP credentials:
+Inspects local node keys and enrolls administrator HITL TOTP credentials:
 
 ```bash
 # Inspect local node keys, Node PubKey, and Audit
@@ -447,10 +457,11 @@ $ fiber sign status
 
 # Enroll an administrator TOTP secret (renders terminal QR code)
 $ fiber sign enroll -u fiber
+
 ```
 
 **Account & Quota Governance (`fiber account`)**
-Governs tenant quotas and policy lifecycles by translating stateless mandate tokens into enforceable runtime limits—handling idempotent top-ups, versioned policy enforcement, and instant circuit-breaker broadcasting over a linear state chain. You can optionally bind a SPIFFE ID (`--spiffe`) to an account; unenrolled identities log a non-blocking warning without interrupting execution:
+Commits EdDSA-signed quota mandates to the linear state chain and broadcasts real-time `REVOKE` kill-switches (optional `--spiffe` bindings log a non-blocking warning if unenrolled):
 
 ```bash
 # Run full lifecycle walkthrough (Provision -> TopUp -> Stale Replay Check -> Revoke)
@@ -464,6 +475,7 @@ $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROV
 
 # Trigger a Pub/Sub REVOKE kill-switch to sever active streams
 $ fiber account --tenant accounting_dept kill --ver 99
+
 ```
 
 **Control Studio (Experimental)**
@@ -475,6 +487,7 @@ Control Studio is a unified console with MCP Gateway and VCR tabs. The MCP Gatew
 ### 3.2. Python Environment via `uv pip` (Recommended for SDK & Local Control Plane)
 
 **Prerequisites**
+
 * **Python**: `>= 3.12`
 * **Redis** *(Optional)*: Only required for distributed modes (`fiber daemon`), pub/sub event routing, and stateful governance (e.g., Stream Breaker). Standalone pipeline execution runs entirely in-memory without Redis.
 
@@ -494,7 +507,6 @@ python -m xphi.node.space.bind.around
 ## 3. Provision zero-env node identity (~/.ssh/fiber_ed25519 & local_cipher.key)
 fiber sign init
 fiber sign status
-
 ```
 
 ### 3.3. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
@@ -510,6 +522,7 @@ brew install wittgena/fiber/fiber
 ## Initialize local node identity & start the background daemon service
 fiber sign init
 brew services start wittgena/fiber/fiber
+
 ```
 
 ## 4. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)
@@ -520,6 +533,7 @@ These metrics measure the **pure internal overhead** of the Fiber LLM Pipeline. 
 
 ```bash
 fiber e2e inter.concurrency --vcr replay --concurrency 200
+
 ```
 
 | Performance Dimension | Metric (M2, 32GB) | Architectural Significance |
@@ -542,4 +556,4 @@ The infrastructure guarantees execution determinism and security through end-to-
 * **[mcp.guard.log](./phase/abc/log/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
 * **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * **[fsm.tester.log](./phase/abc/log/fsm/tester.20261027.log):** Validates the declarative agent state machine, confirming that standard AWS Step Functions (ASL) workflows compile into compact execution graphs, split and reclaim budgets across parallel branches without leakage, pause in-place for pre-flight human approval, and resume or re-branch from any checkpoint without re-running prior steps.
-* **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming strict Stream Breaker terminations on streaming budget exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming sub-millisecond two-track DLP guardrails (`PRE_TRANSLATE` PII masking and `POST_TRANSLATE` credential blocking), strict Stream Breaker terminations on mid-flight policy revocation or quota exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
