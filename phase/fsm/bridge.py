@@ -9,15 +9,14 @@ from xphi.arch.model.auth import NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.phase.fsm.compiler import CompactKey, NodeType
-from fiber.phase.fsm.runtime import BranchCursor, ExBranchController
+from fiber.phase.fsm.runtime import BranchCursor, BranchController
 
 log = get_emitter("fsm.bridge", phase="ACTUATOR_BRIDGE")
-
 
 class FiberExecutionBridge:
     def __init__(
         self,
-        runtime: ExBranchController,
+        runtime: BranchController,
         tenant_id: str = "default_tenant",
         mcp_gateway_url: str = "http://127.0.0.1:8356/v1/mcp-gateway",
         interceptors: Optional[List[Any]] = None,

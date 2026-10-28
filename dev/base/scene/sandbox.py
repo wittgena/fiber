@@ -250,11 +250,11 @@ class SandboxScene(SandboxRunner):
     # --- Domain 3: Resources & Resilience ---
     async def _test_fuel_profiling(self):
         log.info("\n--- Running Suite: Resource Fuel Profiling ---")
-        await self._run_case("Profile: 10KB Payload Hashing", "compute_root_fingerprint", {"dummy_data": CONST.PAYLOAD_10K}, True)
+        await self._run_case("Profile: 10KB Payload Hashing", "compute_fingerprint", {"dummy_data": CONST.PAYLOAD_10K}, True)
         await self._set_worker_policy("STANDARD")
         await self._run_case(
             title="Boundary Test: 40MB Exhaustion under STANDARD Tier (Expect Trap)", 
-            target_func="compute_root_fingerprint", 
+            target_func="compute_fingerprint", 
             payload={"dummy_data": CONST.PAYLOAD_MASSIVE}, 
             expected_success=False,
             expected_match=None

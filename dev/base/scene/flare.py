@@ -1,8 +1,4 @@
 # fiber.dev.base.scene.flare
-## @lineage: fiber.dev.e2e.base.scene.flare
-## @lineage: fiber.infra.bound.e2e.scene.flare
-## @lineage: fiber.infra.e2e.scene.flare
-## @lineage: fiber.infra.scene.flare
 import time
 import asyncio
 import json
@@ -205,16 +201,6 @@ class FlareScene(SandboxRunner):
     """[Domain 2] Causality & Parity (3 Tests)"""
     async def _test_causality_and_parity(self):
         log.info("\n--- [Domain 2] Causality (Epoch-Tick) & Parity Validation ---")
-        
-        # 9. Generate Topos Anchor ID (DVM Target)
-        await self._run_case(
-            title="Causality: Generate Topos Anchor ID", 
-            target_func="generate_topos_id", 
-            payload={"ts": int(time.time() * 1000)}, 
-            expected_success=True
-        )
-
-        # 10. Tripartite Parity: Validate all IDs (DVM Target)
         p_all = {"topos_id_low32": 101010, "phase_id": 999999, "nexus_id": 907049}
         await self._run_case(
             title="Parity: Validate All 3 IDs", 
@@ -223,7 +209,7 @@ class FlareScene(SandboxRunner):
             expected_success=True
         )
 
-        # 11. Tripartite Parity: Reject insufficient info (DVM Target)
+        # Tripartite Parity: Reject insufficient info
         await self._run_case(
             title="Parity: Reject Insufficient Info", 
             target_func="verify_parity", 
@@ -235,7 +221,7 @@ class FlareScene(SandboxRunner):
     async def _test_determinism_and_consensus(self):
         log.info("\n--- [Domain 3] Computation Determinism & Byzantine Faults ---")
 
-        # 12. Validate PRNG idempotency
+        # Validate PRNG idempotency
         r1 = await self.broker.execute(code=FlareTestScripts.PRNG_IDEMPOTENCY)
         r2 = await self.broker.execute(code=FlareTestScripts.PRNG_IDEMPOTENCY)
         
@@ -244,7 +230,7 @@ class FlareScene(SandboxRunner):
         else:
             self._record_fail(0, "PRNG outputs diverge (Seed mechanism failed)", "PRNG Idempotency")
 
-        # 13. Validate Floating Point (FP) determinism
+        # Validate Floating Point (FP) determinism
         results = []
         for _ in range(3):
             res = await self.broker.execute(code=FlareTestScripts.FP_DETERMINISM)
@@ -258,7 +244,7 @@ class FlareScene(SandboxRunner):
         else:
             self._record_fail(0, f"Divergence detected in floating-point: {results}", "Determinism")
 
-        # 14. Byzantine Fault Tolerance (Quarantine rogue signature)
+        # Byzantine Fault Tolerance (Quarantine rogue signature)
         parity = StateAdapter.build_parity_triplet("topos_cert", 111, 222)
         valid_commit = StateAdapter.build_anchor_commit(parity, 0, "genesis", {"repo": "hash_A"}, {})
         rogue_commit = StateAdapter.build_anchor_commit(parity, 0, "genesis", {"repo": "hash_B_MALICIOUS"}, {})

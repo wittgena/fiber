@@ -1,7 +1,4 @@
 # fiber.dev.base.scene.epoch
-## @lineage: fiber.dev.base.epoch
-## @lineage: fiber.dev.e2e.base.epoch
-## @lineage: fiber.infra.bound.e2e.epoch
 import os
 import time
 import json

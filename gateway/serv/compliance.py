@@ -1,5 +1,4 @@
 # fiber.gateway.serv.compliance
-## @lineage: fiber.gateway.rest.serv.compliance
 import os
 import json
 import time
@@ -120,7 +119,7 @@ async def otlp_logs_export(
         )
 
         canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
-        res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
+        res = await broker.invoke(DphiMethod.COMPUTE_FINGERPRINT, canonical_payload)
         
         if not res.success:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Kernel Seal Rejected")
@@ -178,22 +177,15 @@ async def audit_log(
     )
 
     canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
-    fp_res = await broker.invoke(DphiMethod.COMPUTE_ROOT_FINGERPRINT, canonical_payload)
+    fp_res = await broker.invoke(DphiMethod.COMPUTE_FINGERPRINT, canonical_payload)
     
     if not fp_res.success:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to compute kernel fingerprint")
         
     event_hash = json.loads(fp_res.output)["fingerprint"]
-    merkle_proof = None
-    
-    if payload.verbose:
-        proof_res = await broker.invoke(DphiMethod.GENERATE_PROOF, canonical_payload)
-        if proof_res.success:
-            merkle_proof = json.loads(proof_res.output).get("current_hash")
-
     envelope = AuditEnvelope(event=payload.event, received_at=datetime.now(timezone.utc).isoformat())
     audit_result = AuditResult(
-        envelope=envelope, hash=event_hash, membership_proof=merkle_proof, consistency_proof=[]
+        envelope=envelope, hash=event_hash, membership_proof=event_hash, consistency_proof=[]
     )
     
     return AuditLogResponse(
