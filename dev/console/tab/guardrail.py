@@ -6,6 +6,11 @@ from nicegui import ui
 from fiber.infra.ops.account.state import state, refs
 from fiber.dev.console.bridge.pipeline import pipeline
 from fiber.dev.console.bridge.sign import oob
+from fiber.llm.compat.secret.registry import (
+    REDACT_REGISTRY_ROOT,
+    DEFAULT_REDACT_FILENAME,
+)
+import fiber.llm.compat.secret.redact as _redact_mod
 
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
@@ -14,10 +19,11 @@ from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
 from fiber.dev.console.tab.vcr import VcrTab
 from fiber.dev.console.tab.quota import QuotaTab
 
+
 class LLMGuardrailTab(StudioTab):
     title = "Guardrail"
-    left_header = "Guardrail"
-    right_header = "Pipeline"
+    left_header = "Guardrail & Registry"
+    right_header = "Pipeline X-Ray"
 
     @staticmethod
     def _ensure_telemetry_attrs(s: object) -> None:
@@ -38,12 +44,30 @@ class LLMGuardrailTab(StudioTab):
         s = state.security
         self._ensure_telemetry_attrs(s)
 
-        ui.label("Secret Guard").classes("text-[11px] font-bold text-slate-400 shrink-0")
-        kit.switch("Active Blocking", s, "block_api_keys", color="red")
-        kit.text("Guard Pattern (regex)", s, "custom_regex", flex=False, width="w-full")
+        active_rules_cnt = len(getattr(_redact_mod, "ACTIVE_SECRET_RULES", {}) or {})
+        active_keys_cnt = len(getattr(_redact_mod, "SECRET_KEY_PATTERNS", {}) or {})
+
+        with kit.bar():
+            with ui.row().classes("items-center gap-1 no-wrap"):
+                ui.badge(f"Rules: {active_rules_cnt}").props("color=slate-8 text-color=cyan-3").classes(
+                    "text-[10px] font-mono font-bold px-1.5 py-0.5"
+                )
+                ui.badge(f"Keys: {active_keys_cnt}").props("color=slate-8 text-color=emerald-3").classes(
+                    "text-[10px] font-mono font-bold px-1.5 py-0.5"
+                )
+            kit.file_link(
+                REDACT_REGISTRY_ROOT / DEFAULT_REDACT_FILENAME,
+                label=DEFAULT_REDACT_FILENAME,
+                tooltip="Open declarative secret & PII registry JSON",
+                create_if_missing=True,
+            )
+
+        ui.label("Two-Track DLP Policy").classes("text-[11px] font-bold text-slate-400 shrink-0")
+        kit.switch("Enforce Built-in & Registry Secrets", s, "block_api_keys", color="red")
+        kit.text("Custom C-Regex Pattern", s, "custom_regex", flex=False, width="w-full")
         kit.select(
             ["Strict Block (PermissionError)", "Redact (Mask with ***)"],
-            "Guardrail Mode",
+            "Guardrail Action (POST Block vs PRE Mask)",
             s,
             "guardrail_mode",
             width="w-full",
@@ -54,6 +78,7 @@ class LLMGuardrailTab(StudioTab):
 
         with kit.row(gap="gap-1.5"):
             kit.button("CALL LLM", lambda: pipeline.run_pipeline_xray(s.test_prompt), color="red", flex=True)
+            kit.button("E2E SUITE", pipeline.run_guardrail_e2e_suite, color="cyan", outline=True, flex=True)
 
     def compose_right(self) -> None:
         s = state.security
@@ -84,9 +109,7 @@ class LLMGuardrailTab(StudioTab):
 
         with ui.column().classes("w-full gap-0.5 bg-slate-950/90 px-3 py-1.5 rounded border border-slate-800 shrink-0"):
             with ui.row().classes("w-full items-center justify-between no-wrap"):
-                ui.label("⚡ Stream Velocity").classes(
-                    "text-[11px] font-mono text-slate-400"
-                )
+                ui.label("⚡ Stream Velocity").classes("text-[11px] font-mono text-slate-400")
                 ui.label().bind_text_from(
                     s, "throughput_cps", lambda v: f"{float(v or 0.0):,.1f} chunks/s"
                 ).classes("text-xs font-mono font-extrabold text-cyan-400")
@@ -99,7 +122,7 @@ class LLMGuardrailTab(StudioTab):
             for key, title, slot in [
                 ("cache", "EdgeCache", "PRE_TRANSLATE"),
                 ("router", "ONNX Router", "PRE_TRANSLATE"),
-                ("guardrail", "Secret Guard", "POST_TRANSLATE"),
+                ("guardrail", "Secret / PII Guard", "PRE & POST"),
                 ("fuel", "StreamBreaker", "STREAM_IO"),
             ]:
                 with ui.card().classes("bg-slate-800 border border-slate-700 p-2 w-36 text-center") as c:
@@ -107,14 +130,13 @@ class LLMGuardrailTab(StudioTab):
                     ui.label(title).classes("text-xs font-bold text-white")
                     ui.label(slot).classes("text-[10px] font-mono text-slate-400")
 
-        ui.label("Slot Overhead (ms)").classes(
-            "text-xs text-slate-400 mt-0.5 shrink-0"
-        )
+        ui.label("Slot Overhead (ms)").classes("text-xs text-slate-400 mt-0.5 shrink-0")
         refs.xray_chart = kit.bar_chart(
             categories=["StreamBreaker", "SecretGuard", "ONNX Router", "EdgeCache"],
             data=list(s.xray_latencies),
             x_max=1.0,
         )
+
 
 class ModelNSettingTab(StudioTab):
     title = "Model & Setting"
@@ -223,8 +245,10 @@ class ModelNSettingTab(StudioTab):
             kit.button("Verify", oob.verify_admin_totp, color="emerald", outline=True, flex=True)
             kit.button("Revoke", oob.revoke_admin_totp, color="red", outline=True)
 
+
 def build_tabs() -> list[StudioTab]:
     return [McpGatewayTab(), LLMGuardrailTab(), QuotaTab(), VcrTab(), ModelNSettingTab()]
+
 
 def build_modals() -> list[ModalTemplate]:
     return [HitlModal(), QrModal(), GuideModal()]
