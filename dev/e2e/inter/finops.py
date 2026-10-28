@@ -1,6 +1,6 @@
 # fiber.dev.e2e.inter.finops
 """
-FuelBreaker operates upstream of VCRAdapterProxy to enforce physical stream termination via aclose().
+StreamBreaker operates upstream of VCRAdapterProxy to enforce physical stream termination via aclose().
 During VCR record, the live stream is intentionally severed upon Kill-Switch activation, persisting only pre-cutoff chunks.
 During VCR replay, the engine deterministically reproduces this exact truncated state to preserve strict idempotency.
 """
@@ -21,7 +21,8 @@ from fiber.dev.base.workflow.config import Phase, E2EConfig
 from fiber.dev.base.workflow.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
-from fiber.llm.pipeline.channel.fuel import FuelBreaker, BillingObserver
+from fiber.llm.pipeline.channel.breaker import StreamBreaker
+from fiber.llm.pipeline.channel.observer import BillingObserver
 from fiber.gateway.security import TokenTranslator
 from fiber.gateway.contract.token.gen import FinOpsTokenGenerator
 from fiber.infra.mcp.connector import MCPServerConnector
@@ -63,11 +64,11 @@ LONG_FINOPS_PROMPT = (
 )
 
 
-class HybridFinOpsFuelPipeline(MockPipeline):
+class FinOpsPipeline(MockPipeline):
     def __init__(self, config: E2EConfig, vcr_config: VCRPlaybackConfig, vcr_manager: "VCRManager", target_model: str):
         super().__init__(
             config=config,
-            name="FinOps Hybrid VCR Integration Suite",
+            name="FinOps VCR Integration Suite",
             scope_name="HYBRID_FINOPS_SUITE",
         )
         self.vcr_config = vcr_config
@@ -228,7 +229,7 @@ class HybridFinOpsFuelPipeline(MockPipeline):
                     messages=messages,
                     max_tokens=2048,
                     stream=True,
-                    fuel_breaker=FuelBreaker(finops_watcher=default_finops_watcher),
+                    stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
                     billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
                     **trace_ctx,
                 )
@@ -304,7 +305,7 @@ class HybridSuiteRunner:
 
     async def execute(self):
         net_config = E2EConfig(host="127.0.0.1", port=8355, protocol="http")
-        results = await HybridFinOpsFuelPipeline(
+        results = await FinOpsPipeline(
             config=net_config,
             vcr_config=self.vcr_config,
             vcr_manager=self.vcr_manager,

@@ -1,6 +1,7 @@
 # fiber.dev.console.tab.mcp
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from nicegui import ui
 import orjson
@@ -9,6 +10,7 @@ from fiber.infra.ops.account.state import state, refs
 from fiber.dev.console.bridge.sign import oob
 from fiber.dev.console.bridge.mcp import mcp
 
+from fiber.gateway.bridge.action.connect import run_connect_copy
 from fiber.gateway.bridge.cli import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
@@ -116,6 +118,36 @@ class McpGatewayTab(StudioTab):
         self._editor: ui.codemirror | ui.textarea | None = None
         self._editor_status: ui.label | None = None
 
+    def _trigger_topology_scan(self, silent: bool = True) -> None:
+        """비동기 토폴로지 스캔 함수를 안전하게 이벤트 루프에 스케줄링"""
+        try:
+            asyncio.create_task(mcp.scan_mcp_topology_and_health(silent=silent))
+        except RuntimeError:
+            pass
+
+    def _copy_worker_to_anchor(
+        self,
+        target: str | None = None,
+        exec_cmd: str | None = None,
+        mode: str | None = None,
+        preflight: str | None = None,
+    ) -> None:
+        """서브프로세스 CLI를 거치지 않고 직접 mcp.json에 타겟 설정을 병합 및 UI 즉시 갱신"""
+        try:
+            run_connect_copy(
+                exec_cmd=exec_cmd,
+                target=target,
+                mode=mode,
+                preflight=preflight or None,
+            )
+            self._reload_editor_from_disk(notify=False)
+            self._render_dynamic_sections()
+            self._trigger_topology_scan(silent=True)
+            label = target or "discovered external configs"
+            ui.notify(f"Copied '{label}' into mcp.json", type="positive")
+        except BaseException as exc:
+            ui.notify(f"Failed to copy MCP target: {exc}", type="negative")
+
     def compose_left(self) -> None:
         s = state.security
         with kit.bar():
@@ -127,7 +159,7 @@ class McpGatewayTab(StudioTab):
                 ui.button(
                     "🔄",
                     on_click=lambda: (
-                        mcp.scan_mcp_topology_and_health(silent=False),
+                        self._trigger_topology_scan(silent=False),
                         self._reload_editor_from_disk(notify=False),
                     ),
                 ).props("flat dense size=xs color=cyan").tooltip("Rescan MCP configs & daemon status")
@@ -144,13 +176,10 @@ class McpGatewayTab(StudioTab):
                 self._configs_box = ui.row().classes("items-center gap-1 no-wrap")
                 kit.button(
                     "Copy Setting",
-                    lambda: (
-                        run_fiber_cli("connect", "copy"),
-                        self._reload_editor_from_disk(notify=False),
-                    ),
+                    lambda: self._copy_worker_to_anchor(),
                     color="cyan",
                     outline=True,
-                ).tooltip("Copy & merge all discovered configs into ~/.anchor/mcp.json")
+                ).tooltip("Copy & merge all discovered external configs into ~/.anchor/mcp.json")
 
         with kit.row(align="items-center justify-between"):
             ui.label(f"Editor — {anchor_path}").classes("text-[11px] font-mono text-slate-400 truncate")
@@ -239,8 +268,8 @@ class McpGatewayTab(StudioTab):
                 self._editor_status.set_text("Saved ✓")
                 self._editor_status.classes(replace="text-[10px] font-mono text-emerald-400")
             ui.notify(f"Saved {anchor_path.name} & rescanning topology...", type="positive")
-            mcp.scan_mcp_topology_and_health(silent=True)
             self._render_dynamic_sections()
+            self._trigger_topology_scan(silent=True)
         except Exception as exc:
             ui.notify(f"Failed to save mcp.json: {exc}", type="negative")
 
@@ -333,7 +362,7 @@ class McpGatewayTab(StudioTab):
 
             with self._workers_box:
                 if not s.discovered_workers:
-                    ui.label("No MCP workers discovered yet. Click '📥 Copy All' or '🔄'.").classes(
+                    ui.label("No MCP workers discovered yet. Click 'Copy Setting' or '🔄'.").classes(
                         "text-xs font-mono text-slate-500 py-1"
                     )
 
@@ -361,7 +390,7 @@ class McpGatewayTab(StudioTab):
                     preflight = w.get("preflight") or anchor_env.get("FIBER_PREFLIGHT_PATTERN") or ""
 
                     is_mounted = bool(w.get("is_live")) or (tid in active_set)
-                    is_in_anchor = (tid in anchor_specs) or (source in ("fiber", "builtin"))
+                    is_in_anchor = tid in anchor_specs
 
                     if is_mounted and mode != "ephemeral":
                         running_cnt += 1
@@ -377,11 +406,11 @@ class McpGatewayTab(StudioTab):
                         config_cnt += 1
                         status_badge = "🟡 CONFIG"
                         status_cls = "text-amber-300"
-                        status_tip = "Registered in fiber mcp.json (Start 'fiber daemon' to boot)"
+                        status_tip = "Registered in fiber mcp.json (Waiting for daemon or start 'fiber daemon')"
                     else:
-                        status_badge = "⚪ EXTERNAL"
+                        status_badge = "⚪ AVAILABLE" if source == "builtin" else "⚪ EXTERNAL"
                         status_cls = "text-slate-400"
-                        status_tip = "Found in external IDE config (Click 'Copy' to add to fiber mcp.json)"
+                        status_tip = "Not in fiber mcp.json (Click 'Copy' to register & auto-mount)"
 
                     guard_txt = f"🔒 {preflight[:12]}" if preflight else "🔓 Open"
 
@@ -411,23 +440,12 @@ class McpGatewayTab(StudioTab):
                             elif not is_in_anchor:
                                 kit.button(
                                     "📥 Copy",
-                                    lambda t=tid, c=exec_cmd, m=mode, p=preflight: (
-                                        run_fiber_cli(
-                                            "connect",
-                                            "copy",
-                                            "-t",
-                                            t,
-                                            "-e",
-                                            c,
-                                            "-m",
-                                            m,
-                                            *(["-p", p] if p else []),
-                                        ),
-                                        self._reload_editor_from_disk(notify=False),
+                                    lambda t=tid, c=exec_cmd, m=mode, p=preflight: self._copy_worker_to_anchor(
+                                        target=t, exec_cmd=c, mode=m, preflight=p
                                     ),
                                     color="cyan",
                                     outline=True,
-                                ).tooltip("Copy into fiber mcp.json")
+                                ).tooltip("Add to ~/.anchor/mcp.json (Daemon will auto-mount)")
                             else:
                                 kit.button(
                                     "▶ Run",

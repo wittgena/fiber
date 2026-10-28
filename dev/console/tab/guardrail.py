@@ -12,7 +12,7 @@ from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
 from fiber.dev.console.ui.guide import GuideModal
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
 from fiber.dev.console.tab.vcr import VcrTab
-from fiber.dev.console.tab.finops import FinOpsTab
+from fiber.dev.console.tab.quota import QuotaTab
 
 class LLMGuardrailTab(StudioTab):
     title = "Guardrail"
@@ -100,7 +100,7 @@ class LLMGuardrailTab(StudioTab):
                 ("cache", "EdgeCache", "PRE_TRANSLATE"),
                 ("router", "ONNX Router", "PRE_TRANSLATE"),
                 ("guardrail", "Secret Guard", "POST_TRANSLATE"),
-                ("fuel", "FuelBreaker", "STREAM_IO"),
+                ("fuel", "StreamBreaker", "STREAM_IO"),
             ]:
                 with ui.card().classes("bg-slate-800 border border-slate-700 p-2 w-36 text-center") as c:
                     refs.slot_cards[key] = c
@@ -111,7 +111,7 @@ class LLMGuardrailTab(StudioTab):
             "text-xs text-slate-400 mt-0.5 shrink-0"
         )
         refs.xray_chart = kit.bar_chart(
-            categories=["FuelBreaker", "SecretGuard", "ONNX Router", "EdgeCache"],
+            categories=["StreamBreaker", "SecretGuard", "ONNX Router", "EdgeCache"],
             data=list(s.xray_latencies),
             x_max=1.0,
         )
@@ -224,7 +224,7 @@ class ModelNSettingTab(StudioTab):
             kit.button("Revoke", oob.revoke_admin_totp, color="red", outline=True)
 
 def build_tabs() -> list[StudioTab]:
-    return [McpGatewayTab(), LLMGuardrailTab(), FinOpsTab(), VcrTab(), ModelNSettingTab()]
+    return [McpGatewayTab(), LLMGuardrailTab(), QuotaTab(), VcrTab(), ModelNSettingTab()]
 
 def build_modals() -> list[ModalTemplate]:
     return [HitlModal(), QrModal(), GuideModal()]

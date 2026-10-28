@@ -201,14 +201,6 @@ class LlmTraceProfile:
         except (IndexError, AttributeError) as e:
             raise ValueError(f"Trace Miss: Invalid response structure. {e}")
 
-    def build_fuel_breaker_payload(self, budget: int = 5) -> Dict[str, Any]:
-        return {
-            "model": self.target_model,
-            "messages": [{"role": "user", "content": "Write a very long essay about the universe."}],
-            "stream": True,
-            "metadata": {"node_auth": {"fuel_budget": budget}}
-        }
-
     def extract_stream_finish_reason(self, chunk: Union[Dict[str, Any], Any]) -> Optional[str]:
         """스트리밍 청크에서 finish_reason을 추출합니다."""
         chunk_dict = self._normalize_response(chunk)

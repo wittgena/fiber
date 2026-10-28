@@ -22,7 +22,7 @@ Fiber solves this by physically decoupling **Graph Topology & Static Verificatio
 ┌─────────────────────────────────────────┐  ┌─────────────────────────────────┐
 │ 3. ExBranchController (fsm.runtime)     │  │ 4. FiberExecutionBridge (bridge)│
 │    • Unified M:N PTA Commit Engine       │  │    • Drop-in `acompletion` LLM  │
-│      (0:1 Spawn, 1:1 Step, 1:N Fork,    │  │      + Real-time `FuelBreaker`  │
+│      (0:1 Spawn, 1:1 Step, 1:N Fork,    │  │      + Real-time `StreamBreaker`│
 │       N:1 Collapse & Merge)             │  │    • Application-Layer `VCR`    │
 │    • O(1) Cursor Rehydration (`tx:idx`) │  │    • Stateless `MCP Gateway`    │
 │    • Dual-WASM Guard & `DagJoinBarrier` │  │      + Pre-Flight HITL (`202`)  │
@@ -41,7 +41,7 @@ Fiber solves this by physically decoupling **Graph Topology & Static Verificatio
 │ 1. Canonical FSM WASM Kernel (`theoria.fsm` / `fsm.wasm` + `phase.wasm`)     │
 │    • Auto-Linker: Bottom-Up SESE Rolling Fold for `>2KB` Graphs (`SYMLINK`)  │
 │    • Static Sandbox: Pre-Mount `DagJoinBarrier` Deadlock Linter (`fb` check) │
-│    • Runtime Step Guard: `FuelBreaker`, `ROUTER` Eval, and Cross-VM Bridge   │
+│    • Runtime Step Guard: `StreamBreaker`, `ROUTER` Eval, and Cross-VM Bridge │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ Fiber solves this by physically decoupling **Graph Topology & Static Verificatio
 | **`xphi.arch.bound.adapter.fsm`** | `FsmAdapter` | Constructs standardized `FSM_COMPILE`, `FSM_STEP`, `FORK`, `MERGE`, and `HITL_PARK` payloads for `FSMInterpreter` and `DphiBroker`. |
 | **`fiber.phase.fsm.compiler`** | `ExFSMCompiler` | Parses ASL JSON (supporting shorthand URIs and `if` expressions), auto-infers `Choice` variables into `Projection.extract_keys`, strips `Parameters` into off-ledger `TaskIOSpec` CAS blobs (`blob:<hash>`), and delegates 2KB linking/linting to `fsm.wasm`. |
 | **`fiber.phase.fsm.runtime`** | `ExBranchController` | Drives state transitions via a unified M-inputs-to-N-outputs PTA engine, verifies step transitions against both `phase.wasm` and `fsm.wasm`, synchronizes `DagJoinBarrier` nodes (including fallback edges), and rehydrates cursors in $O(1)$ time. |
-| **`fiber.phase.fsm.bridge`** | `FiberExecutionBridge` | Connects FSM nodes to Fiber's Drop-in LLM Pipeline (`acompletion`, `FuelBreaker`, `BillingObserver`, `VCR`) and Stateless MCP Gateway (`/v1/mcp-gateway/{target}/invoke` with `HTTP 202` Pre-Flight HITL and `checkpoint_handle`). |
+| **`fiber.phase.fsm.bridge`** | `FiberExecutionBridge` | Connects FSM nodes to Fiber's Drop-in LLM Pipeline (`acompletion`, `StreamBreaker`, `BillingObserver`, `VCR`) and Stateless MCP Gateway (`/v1/mcp-gateway/{target}/invoke` with `HTTP 202` Pre-Flight HITL and `checkpoint_handle`). |
 | **`fiber.phase.fsm.traverser`** | `ExGraphTraverser` | Orchestrates the end-to-end multiverse lifecycle (`run`, `traverse_bundle`, `resume`), routes faulted/exhausted branches via `Catch` (`fb`) edges, manages HITL-parked siblings, and guarantees 100% fuel reclamation. |
 
 ---

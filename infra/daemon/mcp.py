@@ -45,93 +45,100 @@ class McpWorkerDaemon(AbstractDaemon):
         return 0.0
 
     def _build_desired_specs(self) -> Dict[str, ResolvedTarget]:
-        """
-        내장 워커(builtin)와 내부 고정 설정(agent='fiber' -> anchor/mcp.json)을 결합하여
-        단일 진실 공급원(SSOT) 타겟 스펙 딕셔너리를 구성합니다.
-        """
         desired: Dict[str, ResolvedTarget] = {}
-        log.info(f"[{self.name}] 🔍 Scanning builtin workers in package: '{self.base_package}'...")
-        builtin_map = discover_builtin_workers(self.base_package)
-
-        # 1. 내장 워커 기본 스펙 수집
-        seen_cmds = set()
-        builtin_ids = []
-        for key, val in builtin_map.items():
-            if len(val) == 3:
-                tid, cmd, default_mode = val
-            else:
-                tid = key
-                cmd, default_mode = val[0], val[1]
-
-            if cmd not in seen_cmds:
-                seen_cmds.add(cmd)
-                try:
-                    spec = resolve_connector_spec(
-                        target=tid,
-                        exec_cmd=cmd,
-                        mode=default_mode,
-                        transport="stdio",
-                    )
-                    desired[spec.target_id] = spec
-                    builtin_ids.append(spec.target_id)
-                except BaseException as e:
-                    log.error(f"[{self.name}] Failed to resolve builtin worker '{tid}': {e}")
-
-        log.info(
-            f"[{self.name}] 📦 Discovered {len(builtin_ids)} builtin worker(s): {builtin_ids}"
-        )
-
-        # 2. 고정 설정(anchor/mcp.json) 확인 및 최초 부트스트랩 처리
         anchor_path = McpConfigMapper.get_anchor_config_path()
-        needs_initial_bootstrap = not anchor_path.is_file()
 
-        if needs_initial_bootstrap:
-            log.info(
-                f"[{self.name}] Anchor config not found at {anchor_path}. Running initial external scan..."
-            )
-            anchor_entries = McpConfigMapper.scan_and_parse(sync_to_anchor=False)
-        else:
-            log.info(f"[{self.name}] 📖 Loading canonical MCP config from: {anchor_path}")
-            anchor_entries = McpConfigMapper.scan_and_parse(agent="fiber")
+        if not anchor_path.is_file():
+            log.info(f"[{self.name}] Anchor config not found at {anchor_path}. No workers will be started.")
+            self._last_anchor_mtime = 0.0
+            return desired
 
-        env_lookup: Dict[str, Dict[str, str]] = {
-            e.target_id: dict(e.env) for e in anchor_entries if e.env
-        }
+        log.info(f"[{self.name}] Loading canonical MCP config from: {anchor_path}")
+        anchor_entries = McpConfigMapper.scan_and_parse(agent="fiber")
 
-        # 3. anchor/mcp.json 스펙 반영 (Override 및 외부 워커 추가)
         try:
-            mapped_specs = _specs_from_mapped_entries(anchor_entries)
-            overridden_ids = []
-            added_ids = []
-            for spec in mapped_specs:
-                if spec.target_id in desired:
-                    overridden_ids.append(spec.target_id)
-                else:
-                    added_ids.append(spec.target_id)
+            for spec in _specs_from_mapped_entries(anchor_entries):
                 desired[spec.target_id] = spec
-
-            if overridden_ids or added_ids:
-                log.info(
-                    f"[{self.name}] 🔗 Applied anchor config -> "
-                    f"Overridden builtins: {overridden_ids}, External added: {added_ids}"
-                )
+            log.info(f"[{self.name}] 🔗 Loaded {len(desired)} target(s) from mcp.json: {list(desired.keys())}")
         except BaseException as e:
             log.error(f"[{self.name}] Failed to resolve anchor config entries: {e}")
 
-        # 4. 최초 부팅 시 anchor/mcp.json 파일 생성 보장
-        if needs_initial_bootstrap and desired:
-            with suppress(Exception):
-                _sync_to_anchor_config(list(desired.values()), env_lookup=env_lookup)
-
         self._last_anchor_mtime = self._get_anchor_mtime()
         return desired
+
+    # def _build_desired_specs(self) -> Dict[str, ResolvedTarget]:
+    #     desired: Dict[str, ResolvedTarget] = {}
+    #     log.info(f"[{self.name}] 🔍 Scanning builtin workers in package: '{self.base_package}'...")
+    #     builtin_map = discover_builtin_workers(self.base_package)
+
+    #     seen_cmds = set()
+    #     builtin_ids = []
+    #     for key, val in builtin_map.items():
+    #         if len(val) == 3:
+    #             tid, cmd, default_mode = val
+    #         else:
+    #             tid = key
+    #             cmd, default_mode = val[0], val[1]
+
+    #         if cmd not in seen_cmds:
+    #             seen_cmds.add(cmd)
+    #             try:
+    #                 spec = resolve_connector_spec(
+    #                     target=tid,
+    #                     exec_cmd=cmd,
+    #                     mode=default_mode,
+    #                     transport="stdio",
+    #                 )
+    #                 desired[spec.target_id] = spec
+    #                 builtin_ids.append(spec.target_id)
+    #             except BaseException as e:
+    #                 log.error(f"[{self.name}] Failed to resolve builtin worker '{tid}': {e}")
+
+    #     log.info(f"[{self.name}] Discovered {len(builtin_ids)} builtin worker(s): {builtin_ids}")
+    #     anchor_path = McpConfigMapper.get_anchor_config_path()
+    #     needs_initial_bootstrap = not anchor_path.is_file()
+    #     if needs_initial_bootstrap:
+    #         log.info(f"[{self.name}] Anchor config not found at {anchor_path}. Running initial external scan...")
+    #         anchor_entries = McpConfigMapper.scan_and_parse(sync_to_anchor=False)
+    #     else:
+    #         log.info(f"[{self.name}] Loading canonical MCP config from: {anchor_path}")
+    #         anchor_entries = McpConfigMapper.scan_and_parse(agent="fiber")
+
+    #     env_lookup: Dict[str, Dict[str, str]] = {
+    #         e.target_id: dict(e.env) for e in anchor_entries if e.env
+    #     }
+
+    #     try:
+    #         mapped_specs = _specs_from_mapped_entries(anchor_entries)
+    #         overridden_ids = []
+    #         added_ids = []
+    #         for spec in mapped_specs:
+    #             if spec.target_id in desired:
+    #                 overridden_ids.append(spec.target_id)
+    #             else:
+    #                 added_ids.append(spec.target_id)
+    #             desired[spec.target_id] = spec
+
+    #         if overridden_ids or added_ids:
+    #             log.info(
+    #                 f"[{self.name}] 🔗 Applied anchor config -> "
+    #                 f"Overridden builtins: {overridden_ids}, External added: {added_ids}"
+    #             )
+    #     except BaseException as e:
+    #         log.error(f"[{self.name}] Failed to resolve anchor config entries: {e}")
+
+    #     if needs_initial_bootstrap and desired:
+    #         with suppress(Exception):
+    #             _sync_to_anchor_config(list(desired.values()), env_lookup=env_lookup)
+
+    #     self._last_anchor_mtime = self._get_anchor_mtime()
+    #     return desired
 
     def _collect_target_specs(self) -> List[ResolvedTarget]:
         self._target_specs = self._build_desired_specs()
         return list(self._target_specs.values())
 
     def _log_boot_roster(self, specs: List[ResolvedTarget]):
-        """부팅될 전체 MCP 워커 목록과 설정 상태를 한눈에 볼 수 있도록 테이블 형태로 출력"""
         lines = [
             f"\n{'=' * 95}",
             f"[{self.name}] MCP WORKER BOOT ROSTER (Total: {len(specs)} Target(s))",

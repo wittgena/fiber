@@ -43,7 +43,7 @@ class DummyTestTracer(BaseLLMTracer):
 
 class StartCompatMsg(WorkflowMessage): pass
 class MockBypassTestMsg(WorkflowMessage): pass
-class FuelBreakerTestMsg(WorkflowMessage): pass
+class StreamBreakerTestMsg(WorkflowMessage): pass
 class TokenUtilsTestMsg(WorkflowMessage): pass
 class AdapterMappingTestMsg(WorkflowMessage): pass
 class InterceptorTestMsg(WorkflowMessage): pass
@@ -131,11 +131,11 @@ class LlmCompatWorkflow(Workflow):
             self.fail_count += 1
             return ErrorMessage(f"Mock Bypass Failed: {e}")
 
-        return FuelBreakerTestMsg()
+        return StreamBreakerTestMsg()
 
     @step
-    async def phase_fuel_breaker(self, msg: FuelBreakerTestMsg) -> WorkflowMessage:
-        self.log.info(f"[{self.name}] [Phase 3] Fuel Breaker Streaming")
+    async def phase_stream_breaker(self, msg: StreamBreakerTestMsg) -> WorkflowMessage:
+        self.log.info(f"[{self.name}] [Phase 3] Stream Breaker Streaming")
         try:
             budget = 5 
             self.log.info(f"[{self.name}] Injecting artificial fuel budget: {budget}")
@@ -156,12 +156,11 @@ class LlmCompatWorkflow(Workflow):
                 self.success_count += 1
                 self.total_fuel += chunks_received
             else:
-                raise ValueError(f"Fuel breaker failed to kill stream. Received {chunks_received} chunks.")
-
+                raise ValueError(f"Stream breaker failed to kill stream. Received {chunks_received} chunks.")
         except Exception as e:
             self.log.error(f"[{self.name}] Failed: {e}")
             self.fail_count += 1
-            return ErrorMessage(f"Fuel Breaker Failed: {e}")
+            return ErrorMessage(f"Stream Breaker Failed: {e}")
 
         return TokenUtilsTestMsg()
 
@@ -293,7 +292,7 @@ class LlmCompatWorkflow(Workflow):
         self.log.info("\n" + "="*60)
         self.log.info(f"[COMPAT TOPOLOGY FINALIZED] Edge State: {'SUCCESS' if self.fail_count == 0 else 'FRACTURED'}")
         self.log.info(f"  Suite Results       : Passed: {self.success_count} / Failed: {self.fail_count}")
-        self.log.info(f"  Fuel Burned         : {self.total_fuel}")
+        self.log.info(f"  Total Fuel          : {self.total_fuel}")
         self.log.info(f"  Audit Hashes Sealed : {', '.join(self.audit_traces)}")
         self.log.info("="*60 + "\n")
 

@@ -175,7 +175,7 @@ class FsmMultiverseScene(SandboxRunner):
     """
     @suite: multiverse
     @desc : L2 런타임 전이 원자성 검증 — 1:N 차등 연료 분할(_slice_fuel),
-            SYMLINK Call-Stack Push/Pop, HTTP 202 무비용 파킹, FuelBreaker 차단
+            SYMLINK Call-Stack Push/Pop, HTTP 202 무비용 파킹, StreamBreaker 차단
     """
 
     def __init__(self, broker: Any):
@@ -183,14 +183,14 @@ class FsmMultiverseScene(SandboxRunner):
 
     async def run_all(self):
         log.info("\n=======================================================")
-        log.info("🌌 [START] Suite 2: Multiverse Transitions & Fuel Conservation")
+        log.info("[START] Suite 2: Multiverse Transitions & Fuel Conservation")
         log.info("=======================================================\n")
 
         await self._set_worker_policy("SYSTEM")
         await self._test_weighted_fork_fuel_slicing()
         await self._test_symlink_call_and_return_stack()
         await self._test_zero_spend_hitl_parking()
-        await self._test_fuel_breaker_exhaustion_trap()
+        await self._test_stream_breaker_exhaustion_trap()
         self.report()
 
     async def _test_weighted_fork_fuel_slicing(self):
@@ -297,11 +297,10 @@ class FsmMultiverseScene(SandboxRunner):
         else:
             self._record_fail(0, f"HITL Parking deducted fuel or failed: {parsed}", "Zero-Spend HITL")
 
-    async def _test_fuel_breaker_exhaustion_trap(self):
-        log.info("\n--- [Multiverse 4] FuelBreaker Exhaustion Guard (wasm.reject) ---")
+    async def _test_stream_breaker_exhaustion_trap(self):
+        log.info("\n--- [Multiverse 4] StreamBreaker Exhaustion Guard ---")
         branch_id = "branch:root_test"
         snapshot = FsmAdapter.build_runtime_snapshot(branches={branch_id: FsmTestTopologies.VALID_DIAMOND_IR})
-        # 잔여 연료는 10인데 step_cost가 50인 노드 실행 시도 -> FuelExhausted Revert 유도
         payload = FsmAdapter.build_fsm_payload(
             target_address=branch_id,
             calldata=FsmAdapter.build_step_calldata(curr_node="Branch_B2", step_cost=50),
@@ -312,9 +311,9 @@ class FsmMultiverseScene(SandboxRunner):
         reason = str(parsed.get("revert_reason") or getattr(res, "error", ""))
 
         if not res.success and "FuelExhausted" in reason:
-            self._record_success(0, f"Runaway branch cleanly cut off by FuelBreaker: {reason}")
+            self._record_success(0, f"Runaway branch cleanly cut off by StreamBreaker: {reason}")
         else:
-            self._record_fail(0, f"Failed to trap fuel exhaustion: {parsed}", "FuelBreaker Guard")
+            self._record_fail(0, f"Failed to trap fuel exhaustion: {parsed}", "StreamBreaker Guard")
 
 
 class FsmKillerIncidentScene(SandboxRunner):
@@ -424,7 +423,7 @@ class FsmPipelineConfig:
 
     default_suites: List[str] = field(default_factory=lambda: [
         "compile",     # 1. L1: 정적 데드락 Linter, 2KB Auto-Linker, 해시 결정론 검증
-        "multiverse",  # 2. L2: 1:N 연료 분할, SYMLINK 콜스택, HTTP 202 무비용 파킹, FuelBreaker
+        "multiverse",  # 2. L2: 1:N 연료 분할, SYMLINK 콜스택, HTTP 202 무비용 파킹, StreamBreaker
         "incident",    # 3. L3: 새벽 3시 결제 장애 E2E 멀티버스 합류 및 라우팅 검증
     ])
     wasm_filename: str = "fsm.wasm"
