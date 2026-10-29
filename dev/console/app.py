@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import os
+from pathlib import Path
 import socket
 import subprocess
+import sys
 import time
-from typing import Sequence
+from typing import Optional, Sequence
 import webbrowser
 from nicegui import app, ui
 
@@ -22,19 +24,23 @@ from fiber.dev.console.bridge.sign import oob
 from fiber.dev.console.bridge.mcp import mcp
 
 from fiber.dev.console.tab.mcp import McpGatewayTab, HitlModal, QrModal
-from fiber.dev.console.tab.guardrail import LLMGuardrailTab, ModelNSettingTab
+from fiber.dev.console.tab.guardrail import LLMGuardrailTab
 from fiber.dev.console.tab.metering import MeteringTab
 from fiber.dev.console.tab.vcr import VcrTab
+from fiber.dev.console.tab.setting import ModelNSettingTab
+
 from fiber.dev.console.ui.guide import GuideModal
 import fiber.dev.console.observer.plane as plane
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ConsoleTemplate, StudioTab, ModalTemplate
-import fiber.dev.console.tab.guardrail as tab
+from xphi.node.space.bind.resolver import resolve_path
 
+DAEMON_PORT: int = 8356
 _tick_counter: int = 0
 _bg_tasks: list[asyncio.Task] = []
+_managed_daemon_proc: Optional[subprocess.Popen] = None
 
 async def _sync_initial_node_and_account_state() -> None:
     await oob.refresh_sign_status(silent=True)
@@ -57,10 +63,16 @@ def _flush_100ms_ringbuffer() -> None:
             f.x_ticks.append(time.strftime("%H:%M:%S"))
             f.y_fuel.append(f.ledger_balance)
             f.y_core.append(f.fuel_budget)
-        refs.finops_chart.options["xAxis"]["data"] = list(f.x_ticks)
-        refs.finops_chart.options["series"][0]["data"] = list(f.y_fuel)
-        refs.finops_chart.options["series"][0]["markLine"]["data"][0]["yAxis"] = f.fuel_budget
-        refs.finops_chart.options["series"][1]["data"] = list(f.y_core)
+        opts = refs.finops_chart.options
+        if isinstance(opts.get("xAxis"), dict):
+            opts["xAxis"]["data"] = list(f.x_ticks)
+        series = opts.get("series")
+        if isinstance(series, list) and len(series) >= 2:
+            series[0]["data"] = list(f.y_fuel)
+            mark_line = series[0].get("markLine")
+            if isinstance(mark_line, dict) and isinstance(mark_line.get("data"), list) and mark_line["data"]:
+                mark_line["data"][0]["yAxis"] = f.fuel_budget
+            series[1]["data"] = list(f.y_core)
         refs.finops_chart.update()
         f.chart_dirty = False
 
@@ -89,7 +101,30 @@ def _open_app_window(url: str) -> None:
 
 def _is_port_active(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.2)
         return s.connect_ex(("127.0.0.1", port)) == 0
+
+def _ensure_local_daemon(env_file: Optional[str] = None) -> None:
+    """Spawns a managed background daemon (:8356) if not already running via brew services or CLI."""
+    global _managed_daemon_proc
+    if _is_port_active(DAEMON_PORT):
+        diag.info("Attached to running Fiber Gateway Daemon", port=DAEMON_PORT)
+        return
+
+    try:
+        log_dir = Path(str(resolve_path("log")))
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "daemon.log"
+        cmd = [sys.executable, "-m", "fiber.phase.cli", "daemon", "-s", "all"]
+        if env_file:
+            cmd.extend(["-f", env_file])
+
+        child_env = {k: v for k, v in os.environ.items() if k != "FIBER_CONSOLE_ACTIVE"}
+        out = open(log_file, "a", encoding="utf-8")
+        _managed_daemon_proc = subprocess.Popen(cmd, stdout=out, stderr=out, env=child_env)
+        diag.info("Auto-spawned managed Fiber Gateway Daemon for Console", pid=_managed_daemon_proc.pid, port=DAEMON_PORT)
+    except Exception as exc:
+        diag.exception("Failed to auto-spawn Fiber Gateway Daemon", exc=exc)
 
 def _build_drawer() -> None:
     with kit.dual_drawer() as (left_col, right_col):
@@ -164,22 +199,28 @@ async def _delayed_open_window(url: str) -> None:
 async def _on_startup(url: str) -> None:
     """Initialize node/account/MCP state and spawn non-blocking background workers."""
     await _sync_initial_node_and_account_state()
+    _bg_tasks.append(asyncio.create_task(header.ensure_console_compats(silent=True), name="fiber-compats-sync"))
     _bg_tasks.append(asyncio.create_task(plane.redis_pubsub_worker(), name="fiber-redis-pubsub"))
     _bg_tasks.append(asyncio.create_task(mcp.mcp_gateway_health_worker(), name="fiber-mcp-health"))
     _bg_tasks.append(asyncio.create_task(_delayed_open_window(url), name="fiber-open-window"))
 
 async def _on_shutdown() -> None:
-    """Cancel background polling tasks cleanly and persist final state to disk."""
+    """Cancel background polling tasks cleanly, stop managed daemon if spawned, and persist final state to disk."""
+    global _managed_daemon_proc
     for task in _bg_tasks:
         if not task.done():
             task.cancel()
     if _bg_tasks:
         await asyncio.gather(*_bg_tasks, return_exceptions=True)
     _bg_tasks.clear()
+
+    if _managed_daemon_proc is not None and _managed_daemon_proc.poll() is None:
+        _managed_daemon_proc.terminate()
+        _managed_daemon_proc = None
+
     save_state_to_disk(force=False)
 
-
-def launch_console(port: int = 8357) -> None:
+def launch_console(port: int = 8357, auto_daemon: bool = True, env_file: Optional[str] = None) -> None:
     if os.environ.get("FIBER_CONSOLE_ACTIVE") == "1":
         return
 
@@ -189,6 +230,9 @@ def launch_console(port: int = 8357) -> None:
         diag.info("Attached to existing Fiber Console instance", url=url)
         _open_app_window(url)
         return
+
+    if auto_daemon:
+        _ensure_local_daemon(env_file=env_file)
 
     os.environ["FIBER_CONSOLE_ACTIVE"] = "1"
 

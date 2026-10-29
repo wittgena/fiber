@@ -1,7 +1,4 @@
 # fiber.dev.base.workflow.pipeline
-## @lineage: fiber.dev.base.pipeline
-## @lineage: fiber.dev.e2e.base.pipeline
-## @lineage: fiber.infra.bound.e2e.pipeline
 import os
 import sys
 import time
@@ -20,7 +17,7 @@ from fiber.dev.base.workflow.config import (
 )
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
-from xphi.state.anchor.store import PhaseStore, AnchorRole
+from xphi.state.anchor.store import AnchorStore, AnchorRole
 import xphi.node.rpc.registry as rpc_registry
 import xphi.node.ops.daemon.rpc as daemon_module
 from xphi.node.ops.daemon.rpc import RpcWorkerDaemon
@@ -36,7 +33,7 @@ class MockStream:
         self.metadata = {"target": target, "fuel_locked": fuel, "risk_score": 0}
 
 
-class MockPhaseStore:
+class MockAnchorStore:
     def __init__(self):
         self.states = {}
         self.yield_timestamps = {}
@@ -96,17 +93,13 @@ class MockPhaseStore:
         self.states[handle_id] = DummyState(metadata)
         self.yield_timestamps.pop(handle_id, None)
 
-
-# =========================================================================
-# 1. MockPipeline: 인메모리 MockPhaseStore 및 RPC 몽키패치 기반 격리 파이프라인
-# =========================================================================
 class MockPipeline(PipelineRunner):
     def __init__(self, config: E2EConfig, name: str, scope_name: str):
         super().__init__(name=name, scope_name=scope_name)
         self.config = config
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
 
-        self.mock_store = MockPhaseStore()
+        self.mock_store = MockAnchorStore()
         self.rpc: Optional[InternalRpcClient] = None
 
         self.connectors = []
@@ -218,14 +211,14 @@ class MockPipeline(PipelineRunner):
         self.worker_daemon.running = True
         self._worker_task = asyncio.create_task(self.worker_daemon.run())
 
-        log.info("[MockPipeline] RPC Bus & Core Daemons Ignited (Mock PhaseStore & Real Validators Aligned).")
+        log.info("[MockPipeline] RPC Bus & Core Daemons Ignited (Mock AnchorStore & Real Validators Aligned).")
 
     async def _setup_rest_edge(self):
         tunnel = await TunnelFactory.get_default()
         rest_app = create_app(
             config=Config(wasm_timeout=5.0),
             tunnel=tunnel,
-            phase_store=self.mock_store,
+            anchor_store=self.mock_store,
         )
         u_config = uvicorn.Config(
             app=rest_app,
@@ -308,7 +301,7 @@ class BasePipeline(PipelineRunner):
         self.config = config
         self.local_url = f"{self.config.protocol}://127.0.0.1:{self.config.port}"
 
-        self.phase_store: Optional[PhaseStore] = None
+        self.anchor_store: Optional[AnchorStore] = None
         self.rpc: Optional[InternalRpcClient] = None
         self.external_node_active: bool = False
 
@@ -332,7 +325,7 @@ class BasePipeline(PipelineRunner):
 
     async def _is_live_node_running(self) -> bool:
         """원장 Role(PROPOSER 여부) 또는 Tunnel의 활성 데몬 키로 외부 마스터 노드 생존 여부 판별"""
-        if self.phase_store and getattr(self.phase_store, "role", None) == AnchorRole.PROPOSER:
+        if self.anchor_store and getattr(self.anchor_store, "role", None) == AnchorRole.PROPOSER:
             return True
         try:
             tunnel = await TunnelFactory.get_default()
@@ -345,30 +338,30 @@ class BasePipeline(PipelineRunner):
 
     async def _setup_rpc_bus(self):
         self.rpc = InternalRpcClient()
-        self.phase_store = PhaseStore()
+        self.anchor_store = AnchorStore()
         self.external_node_active = await self._is_live_node_running()
 
         if self.external_node_active:
             log.info(
                 "[BasePipeline] 🔗 Live Master Node detected (Operating as PROPOSER). "
-                "Delegating RPC & Real PhaseStore transitions directly to live node."
+                "Delegating RPC & Real AnchorStore transitions directly to live node."
             )
         else:
             class RealDaemonCtx:
                 broker = None
-                store = self.phase_store
+                store = self.anchor_store
 
             self.worker_daemon = RpcWorkerDaemon(ctx=RealDaemonCtx())
             self.worker_daemon.running = True
             self._worker_task = asyncio.create_task(self.worker_daemon.run())
-            log.info("[BasePipeline] Standalone Mode: Real PhaseStore (SEALER) & local RpcWorkerDaemon ignited.")
+            log.info("[BasePipeline] Standalone Mode: Real AnchorStore (SEALER) & local RpcWorkerDaemon ignited.")
 
     async def _setup_rest_edge(self):
         tunnel = await TunnelFactory.get_default()
         rest_app = create_app(
             config=Config(wasm_timeout=5.0),
             tunnel=tunnel,
-            phase_store=self.phase_store,
+            anchor_store=self.anchor_store,
         )
         u_config = uvicorn.Config(
             app=rest_app,
@@ -379,7 +372,7 @@ class BasePipeline(PipelineRunner):
         )
         self.server = ManagedTestServer(u_config)
         self._server_task = asyncio.create_task(self.server.serve())
-        log.info("[BasePipeline] REST Edge Bootstrapped with Real PhaseStore.")
+        log.info("[BasePipeline] REST Edge Bootstrapped with Real AnchorStore.")
 
     async def run_pipeline(self) -> List[TestResult]:
         log.info(f"\n=== Starting Suite: {self.name} ===")
@@ -435,9 +428,9 @@ class BasePipeline(PipelineRunner):
         if self._server_task:
             await asyncio.gather(self._server_task, return_exceptions=True)
 
-        if self.phase_store and not self.external_node_active:
+        if self.anchor_store and not self.external_node_active:
             try:
-                self.phase_store.close()
+                self.anchor_store.close()
             except Exception:
                 pass
 

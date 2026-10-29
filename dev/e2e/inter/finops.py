@@ -51,7 +51,7 @@ CURRENT_INVOKER = "fiber.dev.e2e.inter.finops"
 LONG_FINOPS_PROMPT = (
     "Write a comprehensive, deeply technical 8-section architectural whitepaper on Enterprise AI FinOps, "
     "Real-Time Token Metering, and Deterministic Stream Governance. "
-    "Section 1: Distributed Token Ledger Topologies and Atomic Quota Enforcement. "
+    "Section 1: Distributed Token AnchorStore Topologies and Atomic Quota Enforcement. "
     "Section 2: Asynchronous Stream Interception and Sub-Millisecond Kill-Switch Mechanics. "
     "Section 3: Cryptographic Mandate Translation (JWT to AP2) and Zero-Trust Identity Binding. "
     "Section 4: Time-Window Chunk Coalescing and Application-Layer VCR Replay Determinism. "
@@ -127,7 +127,7 @@ class FinOpsPipeline(MockPipeline):
 
     # Test Phases
     async def phase_pta_setup(self):
-        log.info(f"  └─ Bootstrapping PTA Ledger for '{self.test_tenant}' with {self.initial_fuel} Fuel.")
+        log.info(f"  └─ Bootstrapping PTA AnchorStore for '{self.test_tenant}' with {self.initial_fuel} Fuel.")
         produce_tx = PtaTransaction(
             inputs=[],
             outputs=[PtaOutput(amount=self.initial_fuel, owner=self.test_tenant, asset_type="fuel")],

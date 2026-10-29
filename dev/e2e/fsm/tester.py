@@ -76,7 +76,7 @@ from fiber.phase.fsm.compiler import (
     BRANCH_PREFIX,
 )
 from fiber.phase.fsm.runtime import BranchCursor
-from fiber.phase.fsm.traverser import ExGraphTraverser
+from fiber.phase.fsm.traverser import GraphTraverser
 
 from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("fsm.tester", phase="E2E_VERIFICATION")
@@ -267,7 +267,7 @@ async def run_e2e_verification_suite() -> None:
     print("=" * 86)
 
     actuator = MockActuator()
-    async with ExGraphTraverser(node_executor=actuator) as traverser:
+    async with GraphTraverser(node_executor=actuator) as traverser:
         # PHASE 1: ASL Compilation, Static Deadlock Guard & 2KB Separation
         print("\n" + "-" * 86)
         print(" [Phase 1: Compile] Stripping heavy Task I/O into CAS & projecting <=2KB Topology Blob")
@@ -276,7 +276,7 @@ async def run_e2e_verification_suite() -> None:
         cas_io_count = sum(1 for k in bundle.cas_store if k.startswith(CAS_PREFIX))
         branch_count = sum(1 for k in bundle.cas_store if k.startswith(BRANCH_PREFIX))
 
-        print(f"  • Root Graph Hash : {bundle.root_hash} (On-Ledger Compact IR)")
+        print(f"  • Root Graph Hash : {bundle.root_hash} (On-AnchorStore Compact IR)")
         print(f"  • Root Graph Size : {bundle.total_root_bytes}B / 2048B Limit ({round(bundle.total_root_bytes / 2048 * 100, 1)}% used)")
         print(f"  • Offloaded Blobs : {len(bundle.cas_store)} CAS objects ({cas_io_count} TaskIOSpecs + {branch_count} Branch Blob)")
         assert bundle.total_root_bytes <= 2048, "Root blob exceeded 2KB limit!"
@@ -414,9 +414,9 @@ async def run_e2e_verification_suite() -> None:
         assert res4.final_cursor.curr_node == END_TOKEN
         assert res4.reclaimed_fuel == 475, f"Expected 475 reclaimed fuel from surviving branch, got {res4.reclaimed_fuel}"
 
-    print("\n" + "=" * 86)
+    print("\n" + "=" * 70)
     print(" ✅ ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED")
-    print("=" * 86)
+    print("=" * 70)
 
 if __name__ == "__main__":
     asyncio.run(run_e2e_verification_suite())

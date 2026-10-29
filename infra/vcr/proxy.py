@@ -22,6 +22,34 @@ from xphi.watcher.plane.emitter import get_emitter
 log = get_emitter("vcr.proxy", phase="LLM_INTER")
 
 
+def _resolve_ctx_provider(ctx: Any, fixture_data: Optional[dict] = None) -> str:
+    """컨텍스트 또는 픽스처의 request_context에서 타겟 provider 식별자를 일관되게 추출합니다."""
+    provider = getattr(ctx, "custom_llm_provider", None)
+    if not provider and isinstance(fixture_data, dict):
+        provider = (fixture_data.get("request_context") or {}).get("provider")
+    if not provider:
+        model_name = getattr(ctx, "model", "")
+        provider = model_name.split("/")[0] if "/" in model_name else "openai"
+    return str(provider)
+
+
+def _extract_provider_tool_calls(target_obj: Any, provider: str) -> Optional[List[Dict[str, Any]]]:
+    """
+    하드코딩된 경로 리스트 대신, StateMapper(또는 StreamChunkParser)의
+    provider별 선언적 EXTRACTION_RULES를 사용하여 tool_calls를 추출합니다.
+    """
+    if target_obj is None:
+        return None
+    if hasattr(StateMapper, "extract_tool_calls"):
+        return StateMapper.extract_tool_calls(target_obj, provider)
+    # StateMapper.extract_tool_calls가 아직 없는 환경일 경우 StreamChunkParser의 provider 룰 재사용
+    parsed = StreamChunkParser.parse(provider, target_obj)
+    if isinstance(parsed, dict) and parsed.get("tool_calls"):
+        tc = _melt_alien_objects(parsed["tool_calls"])
+        return tc if isinstance(tc, list) else None
+    return None
+
+
 def _sanitize_for_json(obj: Any) -> Any:
     if isinstance(obj, dict):
         return {str(k): _sanitize_for_json(v) for k, v in obj.items()}
@@ -51,9 +79,11 @@ def _estimate_saved_metrics(usage_data: Optional[Dict[str, Any]], chunk_count: i
     saved_usd = round(tokens * 0.000015, 5)
     return tokens, saved_usd
 
+
 class VCRRawPayloadState(DynamicSurgeModel):
     sync_response: Optional[Any] = None
     stream_chunks: List[Any] = []
+
 
 def _reconstruct_vcr_exception(exc_data: dict, provider: str, model: str) -> Exception:
     error_type = exc_data.get("error_type", "Exception")
@@ -110,28 +140,29 @@ async def stream_recorder_proxy(
     tick_ms = eff_config.record_tick_ms
     buffer_text = ""
     buffer_time = 0.0
+    buffer_tool_calls: List[Dict[str, Any]] = []
 
-    provider = getattr(ctx, "custom_llm_provider", None)
-    if not provider:
-        model_name = getattr(ctx, "model", "")
-        provider = model_name.split("/")[0] if "/" in model_name else "openai"
+    provider = _resolve_ctx_provider(ctx, fixture_data)
 
     include_raw = getattr(eff_config, "include_raw_payload", False)
     payload_state = VCRRawPayloadState(stream_chunks=[]) if include_raw else None
 
     def flush_buffer(f_reason: Optional[str] = None):
-        nonlocal buffer_text, buffer_time
-        if buffer_text or f_reason:
-            payload = {
+        nonlocal buffer_text, buffer_time, buffer_tool_calls
+        if buffer_text or f_reason or buffer_tool_calls:
+            payload: Dict[str, Any] = {
                 "delta_ms": buffer_time,
                 "chunk": buffer_text,
             }
+            if buffer_tool_calls:
+                payload["tool_calls"] = list(buffer_tool_calls)
             if f_reason:
                 payload["finish_reason"] = f_reason
             fixture_data["response_timeline"].append(payload)
 
         buffer_text = ""
         buffer_time = 0.0
+        buffer_tool_calls = []
 
     try:
         async for chunk in original_stream:
@@ -149,6 +180,9 @@ async def stream_recorder_proxy(
             content = parsed_chunk.get("text", "") if parsed_chunk else ""
             chunk_usage = parsed_chunk.get("usage") if parsed_chunk else None
             finish_reason = parsed_chunk.get("finish_reason") if parsed_chunk else None
+            chunk_tools = parsed_chunk.get("tool_calls") if parsed_chunk else None
+            if not chunk_tools:
+                chunk_tools = _extract_provider_tool_calls(chunk, provider)
 
             if chunk_usage:
                 has_real_value = (
@@ -162,8 +196,10 @@ async def stream_recorder_proxy(
             if is_first:
                 fixture_data["network_metrics"]["ttfb_ms"] = (current_time - start_time) * 1000
                 is_first = False
-                if content or finish_reason:
-                    payload = {"delta_ms": delta_ms, "chunk": content}
+                if content or finish_reason or chunk_tools:
+                    payload: Dict[str, Any] = {"delta_ms": delta_ms, "chunk": content}
+                    if chunk_tools:
+                        payload["tool_calls"] = _melt_alien_objects(chunk_tools)
                     if finish_reason:
                         payload["finish_reason"] = finish_reason
                     fixture_data["response_timeline"].append(payload)
@@ -172,6 +208,10 @@ async def stream_recorder_proxy(
 
             buffer_text += content
             buffer_time += delta_ms
+            if chunk_tools:
+                melted_tc = _melt_alien_objects(chunk_tools)
+                if isinstance(melted_tc, list):
+                    buffer_tool_calls.extend(melted_tc)
 
             if finish_reason:
                 flush_buffer(f_reason=finish_reason)
@@ -235,13 +275,17 @@ async def stream_player_emulator(
         if config.speed == "real" and item.get("delta_ms", 0) > 0:
             await asyncio.sleep(item["delta_ms"] / 1000.0)
 
+        delta_payload: Dict[str, Any] = {"content": item.get("chunk", "")}
+        if item.get("tool_calls"):
+            delta_payload["tool_calls"] = item["tool_calls"]
+
         yield ModelResponse(
             id=f"vcr-{trace_short}",
             model=model_name,
             choices=[
                 {
                     "index": 0,
-                    "delta": {"content": item.get("chunk", "")},
+                    "delta": delta_payload,
                     "finish_reason": item.get("finish_reason"),
                 }
             ],
@@ -327,6 +371,8 @@ class VCRAdapterProxy:
                 log.error(f"[VCR:Replay] Fixture miss for trace_id='{trace_id}'.", trace_id=trace_id)
                 raise ValueError(f"No VCR fixture found for trace_id: '{trace_id}'")
 
+            provider = _resolve_ctx_provider(safe_ctx, fixture)
+
             vcr_latency = fixture["network_metrics"].get("total_duration_ms", 0)
             if system_meta and hasattr(system_meta, "metadata") and isinstance(system_meta.metadata, dict):
                 system_meta.metadata["_vcr_injected_latency_ms"] = vcr_latency + eff_config.chaos_latency_ms
@@ -335,9 +381,6 @@ class VCRAdapterProxy:
                 if eff_config.chaos_latency_ms > 0:
                     await asyncio.sleep(eff_config.chaos_latency_ms / 1000.0)
 
-                provider = getattr(safe_ctx, "custom_llm_provider", None)
-                if not provider:
-                    provider = model_name.split("/")[0] if "/" in model_name else "openai"
                 log.warning(
                     f"[VCR:Replay] Replaying recorded exception '{fixture['exception_boundary'].get('error_type')}' ({trace_id[:8]}).",
                     trace_id=trace_id,
@@ -354,6 +397,18 @@ class VCRAdapterProxy:
 
             timeline = fixture.get("response_timeline", [])
             content = "".join([t.get("chunk", "") for t in timeline])
+
+            # 1순위: response_timeline에 기록된 tool_calls
+            # 2순위: raw_payload.sync_response가 있으면 해당 provider의 선언적 룰(StateMapper)로 추출
+            replayed_tool_calls = None
+            for t in timeline:
+                if isinstance(t, dict) and t.get("tool_calls"):
+                    replayed_tool_calls = t["tool_calls"]
+                    break
+            if not replayed_tool_calls:
+                sync_raw = (fixture.get("raw_payload") or {}).get("sync_response")
+                replayed_tool_calls = _extract_provider_tool_calls(sync_raw, provider)
+
             usage_data = fixture.get("usage")
             if usage_data:
                 safe_usage = {k: (v if v is not None else 0) for k, v in usage_data.items()}
@@ -375,10 +430,16 @@ class VCRAdapterProxy:
                 },
             )
 
+            msg_payload: Dict[str, Any] = {"role": "assistant", "content": content}
+            choice_payload: Dict[str, Any] = {"index": 0, "message": msg_payload}
+            if replayed_tool_calls:
+                msg_payload["tool_calls"] = replayed_tool_calls
+                choice_payload["finish_reason"] = "tool_calls"
+
             return ModelResponse(
                 id=f"vcr-{trace_id[:8]}",
                 model=model_name,
-                choices=[{"index": 0, "message": {"role": "assistant", "content": content}}],
+                choices=[choice_payload],
                 usage=usage_obj,
             )
 
@@ -397,12 +458,11 @@ class VCRAdapterProxy:
                     )
 
                 duration = round((time.perf_counter() - start_time) * 1000, 2)
-                provider = getattr(safe_ctx, "custom_llm_provider", None)
-                if not provider:
-                    model_name = getattr(safe_ctx, "model", "")
-                    provider = model_name.split("/")[0] if "/" in model_name else "openai"
+                provider = _resolve_ctx_provider(safe_ctx, fixture_data)
 
                 content, usage_dict = StateMapper.extract_response(response, provider)
+                recorded_tool_calls = _extract_provider_tool_calls(response, provider)
+
                 if getattr(eff_config, "include_raw_payload", False):
                     try:
                         raw_data = getattr(response, "raw", response)
@@ -427,7 +487,11 @@ class VCRAdapterProxy:
 
                 fixture_data["network_metrics"]["ttfb_ms"] = duration
                 fixture_data["network_metrics"]["total_duration_ms"] = duration
-                fixture_data["response_timeline"].append({"delta_ms": 0, "chunk": content})
+                timeline_entry: Dict[str, Any] = {"delta_ms": 0, "chunk": content}
+                if recorded_tool_calls:
+                    timeline_entry["tool_calls"] = recorded_tool_calls
+                    timeline_entry["finish_reason"] = "tool_calls"
+                fixture_data["response_timeline"].append(timeline_entry)
                 self.manager.save_fixture(trace_id, _sanitize_for_json(fixture_data), safe_ctx)
 
                 if system_meta and hasattr(system_meta, "metadata") and isinstance(system_meta.metadata, dict):

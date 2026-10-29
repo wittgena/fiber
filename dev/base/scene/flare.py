@@ -314,7 +314,7 @@ class FlareScene(SandboxRunner):
             self._record_fail(0, "Kinetic Trap failed! Blocking payload bypassed without intervention.", "Kinetic Trap")
         except asyncio.TimeoutError:
             self._record_success(0, "Broker timed out. Kinetic Trap neutralized via Timeout cutoff.")
-            log.info("⏳ Allowing Edge Thread to breathe and recover PhaseStore (2.5s)...")
+            log.info("⏳ Allowing Edge Thread to breathe and recover AnchorStore (2.5s)...")
             await asyncio.sleep(2.5)
         except Exception as e:
             err_msg = str(e).lower()

@@ -1,9 +1,11 @@
 # fiber.phase.cli
 import os
 import sys
+import socket
 import asyncio
 import inspect
 import importlib
+import subprocess
 from pathlib import Path
 from typing import Annotated, Optional
 import typer
@@ -20,20 +22,24 @@ if determine_execution_mode() == "USER" and not (Path.home() / ".anchor" / "boun
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
+from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.factory import TunnelFactory
 from fiber.gateway.bridge.action.sign import app as sign_app
 
 log = get_emitter("phase.cli")
 
+DAEMON_PORT = 8356
+CONSOLE_PORT = 8357
+
 app = typer.Typer(
     help="Fiber: The Universal Integration Boundary & OS Kernel",
     no_args_is_help=True,
-    add_completion=False
+    add_completion=False,
 )
 
 compat_app = typer.Typer(
     help="Manage LLM compatibility rules and test fixtures (fiber-compats)",
-    no_args_is_help=True
+    no_args_is_help=True,
 )
 app.add_typer(compat_app, name="compat")
 app.add_typer(sign_app, name="sign")
@@ -44,6 +50,12 @@ connect_app = typer.Typer(
     no_args_is_help=False,
 )
 app.add_typer(connect_app, name="connect")
+
+
+def _is_port_active(port: int = DAEMON_PORT, host: str = "127.0.0.1") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.2)
+        return s.connect_ex((host, port)) == 0
 
 
 def _load_env(env_file: Optional[str]):
@@ -78,27 +90,43 @@ def run_init(
     """Initializes workspace boundary (~/.anchor/bound.json) and local node cryptographic keys."""
     _load_env(env_file)
     log.info("[Fiber] Bootstrapping workspace and node identity...")
-    
-    # 워크스페이스 바인딩 (USER 모드 시 bound.json 자동 생성)
+
     if determine_execution_mode() == "USER":
         project_user_mode(Path.home() / ".anchor")
 
-    # 노드 키 초기화 실행
     from fiber.gateway.bridge.action.sign import ensure_node_keys
     import json
     info = ensure_node_keys(force_regenerate_cipher=rotate_cipher)
-    
+
     ssh_msg = "newly created" if info["ssh_key_status"] == "CREATED" else "already exists (skipped)"
     cip_msg = "newly created" if info["local_cipher_status"] == "CREATED" else "already exists (skipped)"
     log.info(f"Node Cryptographic Identity Initialized (SSH: {ssh_msg}, Cipher: {cip_msg}):")
     print(json.dumps(info, indent=2, ensure_ascii=False))
 
+
 @app.command("daemon")
 def run_daemon(
-    start: Annotated[str, typer.Option("--start", "-s", help="Daemons to start or topology preset (e.g., core, eco)")] = "core",
+    start: Annotated[str, typer.Option("--start", "-s", help="Daemons to start or topology preset (e.g., edge, all)")] = "edge",
+    detach: Annotated[bool, typer.Option("--detach", "-d", help="Run daemon in the background and log to <log>/daemon.log")] = False,
     env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
 ):
-    """Boots Fiber node daemons. Defaults to 'core' (Edge + RPC) for standalone operation."""
+    """Boots Fiber node daemons (:8356). Defaults to 'edge' (REST Edge + RPC + MCP Worker)."""
+    if _is_port_active(DAEMON_PORT):
+        log.info(f"🟢 [Fiber] Daemon is already running on http://127.0.0.1:{DAEMON_PORT}.")
+        return
+
+    if detach:
+        log_dir = Path(str(resolve_path("log")))
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "daemon.log"
+        cmd = [sys.executable, "-m", "fiber.phase.cli", "daemon", "-s", start]
+        if env_file:
+            cmd.extend(["-f", env_file])
+        with open(log_file, "a", encoding="utf-8") as out:
+            proc = subprocess.Popen(cmd, stdout=out, stderr=out, start_new_session=True)
+        log.info(f"🚀 [Fiber] Background daemon started (PID: {proc.pid}) -> Log: {log_file}")
+        return
+
     _load_env(env_file)
     PRESETS = {
         "edge": "rest_edge,rpc_worker,mcp_worker",
@@ -118,6 +146,18 @@ def run_daemon(
         os.environ["NODE_PROFILE"] = "ALL"
 
     boot_kernel("Gateway Daemon")
+
+
+@app.command("console")
+def run_console(
+    port: Annotated[int, typer.Option("--port", "-p", help="Port for Control Studio UI")] = CONSOLE_PORT,
+    auto_daemon: Annotated[bool, typer.Option("--auto-daemon/--no-auto-daemon", help="Auto-spawn local daemon (:8356) if offline")] = True,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+):
+    """Launches Fiber Control Studio (:8357) and ensures the local gateway daemon (:8356) is active."""
+    _load_env(env_file)
+    from fiber.dev.console.app import launch_console
+    launch_console(port=port, auto_daemon=auto_daemon, env_file=env_file)
 
 
 @app.command("account", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
@@ -145,7 +185,14 @@ def run_e2e(
 ):
     _load_env(env_file)
     extra_args = ctx.args
-    KNOWN_SUITES = ["llm.trace", "gateway.compliance", "inter.wasm.phase", "inter.plane.flare", "inter.finops"]
+    KNOWN_SUITES = [
+        "llm.trace",
+        "llm.guardrail",
+        "gateway.compliance",
+        "inter.wasm.phase",
+        "inter.plane.flare",
+        "inter.finops",
+    ]
     targets = KNOWN_SUITES if target == "all" else [target]
 
     log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")
@@ -246,7 +293,7 @@ def copy_connector_config(
         preflight=preflight,
     )
 
-# fiber.phase.cli 내 @compat_app.command("fixture") 부분 (전체 교체 가능)
+
 @compat_app.command("fixture")
 def manage_compat_fixtures(
     model: Annotated[str, typer.Option("--model", "-m", help="Model name (e.g., ollama/gemma:2b)")],
@@ -307,8 +354,10 @@ def manage_compat_fixtures(
         log.error(f"[Fiber] Invalid --vcr mode: '{vcr}'. Supported modes are 'record' (gen) or 'replay' (test).")
         raise typer.Exit(1)
 
+
 def main():
     app()
+
 
 if __name__ == "__main__":
     main()

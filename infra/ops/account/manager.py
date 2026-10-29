@@ -92,11 +92,9 @@ class LocalAccountManager(AccountManagerProtocol):
         await self.close()
 
     async def _get_oracle_balance(self, asset_type: str = "fuel") -> int:
-        """디스크 PhaseStore에 확정(Sealed)된 SSOT 잔액을 AnchorOracle을 통해 직접 조회합니다."""
         return await self.pta_adapter.oracle.get_balance(self.tenant_id, asset_type=asset_type)
 
     async def _get_ledger_balance(self, asset_type: str = "fuel") -> int:
-        """SSOT(Oracle)를 우선 조회하되, 동일 프로세스 내 전이 직후에는 PTA 어댑터 뷰와 정렬합니다."""
         oracle_bal = await self._get_oracle_balance(asset_type=asset_type)
         pta_bal = await self.pta_adapter.get_balance(self.tenant_id, asset_type=asset_type)
         return oracle_bal if oracle_bal == pta_bal else pta_bal
@@ -376,7 +374,7 @@ class LocalAccountManager(AccountManagerProtocol):
             last_op="REVOKE_ZERO",
         )
 
-        log.info(f"[LocalAccountManager] Ledger Burned & 'REVOKE' event published for '{self.tenant_id}' (v{effective_ver}).")
+        log.info(f"[LocalAccountManager] AnchorStore consumed & 'REVOKE' event published for '{self.tenant_id}' (v{effective_ver}).")
 
         status = await self.get_status()
         return AccountRevokeResult(

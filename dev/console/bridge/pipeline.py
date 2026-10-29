@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
@@ -44,10 +46,44 @@ def evaluate_guardrail_payload(
     elapsed_ms = max(0.01, round((time.perf_counter() - t0) * 1000, 3))
     return matched, mutated, elapsed_ms
 
+
+def _load_vcr_fixture_stats(model_id: str) -> Tuple[str, int, int]:
+    """
+    현재 선택된 compat_model에 대응하는 fiber-compats 픽스처를 찾아
+    (표시 라벨, 청크 개수, 토큰 수)를 반환합니다.
+    """
+    try:
+        from fiber.dev.console.tab.vcr import _discover_compat_models_and_dirs
+
+        model_dirs = _discover_compat_models_and_dirs()
+        target_dir = model_dirs.get(model_id)
+        if target_dir and target_dir.is_dir():
+            for fname in ("stream_compat_traverser.json", "sync_declarative_rule.json"):
+                fpath = target_dir / fname
+                if fpath.is_file():
+                    data = json.loads(fpath.read_text(encoding="utf-8"))
+                    chunks = len(data) if isinstance(data, list) else len(data.get("chunks", data.get("events", [])) or [1])
+                    chunks = max(6, min(chunks, 40))
+                    tokens = chunks * 4
+                    return f"{model_id} ({fname})", chunks, tokens
+    except Exception:
+        pass
+    return f"{model_id} (built-in seed)", 14, 56
+
+
 class PipelineActionBridge:
     async def run_pipeline_xray(self, prompt: str) -> None:
-        s = state.security
+        s, f, p = state.security, state.finops, state.pipeline
         is_mask_mode = "Redact" in str(getattr(s, "guardrail_mode", ""))
+        target_model = getattr(p, "compat_model", "gemini/gemini-3.1-flash-lite")
+
+        # 로컬에 fiber-compats 픽스처가 없으면 백그라운드 동기화 유도 (비차단)
+        try:
+            from fiber.dev.console.ui.header import ensure_console_compats, has_console_fixtures
+            if not has_console_fixtures():
+                asyncio.create_task(ensure_console_compats(silent=True))
+        except Exception:
+            pass
 
         for key in ("cache", "router", "guardrail", "fuel"):
             if c := refs.slot_cards.get(key):
@@ -74,36 +110,75 @@ class PipelineActionBridge:
         for key in ("cache", "router"):
             if c := refs.slot_cards.get(key):
                 c.classes(replace="bg-emerald-900 border-2 border-emerald-400 p-2 w-36 text-center")
-            await asyncio.sleep(0.12)
+            await asyncio.sleep(0.10)
 
-        # [Track 2: POST_TRANSLATE Strict Blocking Mode] 발견 즉시 숏서킷 차단
+        # [Track 2: POST_TRANSLATE Strict Blocking Mode] 발견 즉시 숏서킷 차단 (VCR 리플레이 미진입)
         if not is_mask_mode and matched:
             if c := refs.slot_cards.get("guardrail"):
                 c.classes(replace="bg-red-900 border-2 border-red-500 animate-pulse p-2 w-36 text-center")
             s.xray_latencies = [0.0, guard_ms, 0.19, 0.09]
             s.xray_chart_dirty = True
+            est_saved = max(12, len(prompt or "") // 3)
+            f.saved_tokens = int(getattr(f, "saved_tokens", 0)) + est_saved
+
             refs.push_pubsub(
                 "mcp:audit",
-                f"🛑 [PermissionError] Blocked in POST_TRANSLATE ({guard_ms:.3f}ms)",
+                f"🛑 [PermissionError] Blocked in POST_TRANSLATE ({guard_ms:.3f}ms) — Upstream & VCR I/O short-circuited",
             )
-            ui.notify(f"🛑 Guardrail Block: Sensitive pattern detected ({guard_ms:.3f}ms)!", type="negative")
+            ui.notify(
+                f"🛑 Guardrail Block: Sensitive pattern detected ({guard_ms:.3f}ms) — Short-circuited before LLM/VCR!",
+                type="negative",
+            )
             return
 
-        # Clean Pass 또는 Mask & Pass 완료
+        # [Track 3: Clean Pass 또는 Mask & Pass -> VCR Fixture Stream Replay 구동]
+        fixture_label, chunk_cnt, token_cnt = _load_vcr_fixture_stats(target_model)
+        refs.push_cli(f"$ fiber xray --vcr replay -m {target_model} -> Replaying {chunk_cnt} chunks from VCR fixture")
+
         for key in ("guardrail", "fuel"):
             if key == "guardrail" and is_mask_mode and matched:
                 continue  # 이미 Amber(Masked) 상태로 표시됨
             if c := refs.slot_cards.get(key):
                 c.classes(replace="bg-emerald-900 border-2 border-emerald-400 p-2 w-36 text-center")
-            await asyncio.sleep(0.1)
+
+        # VCR Fixture 스트림 리플레이 텔레메트리(Active Streams, Velocity, Tokens) 실시간 연출
+        s.active_streams = int(getattr(s, "active_streams", 0)) + 1
+        s.plane_bursting = True
+        try:
+            steps = 4
+            tokens_per_step = max(1, token_cnt // steps)
+            for i in range(steps):
+                s.live_stream_tokens = (i + 1) * tokens_per_step
+                s.throughput_cps = round(1420.0 + (i * 195.0), 1)
+                s.plane_density = round(48.0 + (i * 12.5), 1)
+                await asyncio.sleep(0.07)
+        finally:
+            s.active_streams = max(0, int(getattr(s, "active_streams", 1)) - 1)
+            s.total_processed_tokens = int(getattr(s, "total_processed_tokens", 0)) + token_cnt
+            s.live_stream_tokens = 0
+            s.throughput_cps = 0.0
+            s.plane_bursting = False
+            s.plane_density = 1.2
 
         s.xray_latencies = [0.11, guard_ms, 0.42, 0.08]
         s.xray_chart_dirty = True
         total_ms = round(sum(s.xray_latencies), 2)
+
+        refs.push_pubsub(
+            "vcr:xray",
+            f"🎞️ [VCR Fixture Replay] model={target_model} chunks={chunk_cnt} tokens=+{token_cnt} overhead={total_ms}ms",
+        )
+
         if is_mask_mode and matched:
-            ui.notify(f"🎭 Masked in-place & passed ({total_ms}ms total overhead)", type="warning")
+            ui.notify(
+                f"🎭 Masked in-place & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
+                type="warning",
+            )
         else:
-            ui.notify(f"✓ Pipeline passed ({total_ms}ms total overhead)", type="positive")
+            ui.notify(
+                f"✓ Passed Guardrail & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
+                type="positive",
+            )
 
     run_xray = run_pipeline_xray
 

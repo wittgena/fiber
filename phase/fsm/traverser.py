@@ -3,8 +3,8 @@ from dataclasses import dataclass, field, replace
 from typing import Dict, Any, List, Optional, Callable, Awaitable, Tuple, Sequence, Union
 
 from fiber.phase.fsm.compiler import (
-    ExFSMCompiler,
-    ExCompiledBundle,
+    FSMCompiler,
+    CompiledBundle,
     CompactKey,
 )
 from fiber.phase.fsm.runtime import (
@@ -38,7 +38,7 @@ class TraversalResult:
     parked_cursors: List[BranchCursor] = field(default_factory=list)  # HITL-parked & barrier-waiting sibling cursors
     join_collapses: int = 0
 
-class ExGraphTraverser:
+class GraphTraverser:
     def __init__(
         self,
         broker: Optional[DphiBroker] = None,
@@ -48,7 +48,7 @@ class ExGraphTraverser:
         mcp_gateway_url: str = "http://127.0.0.1:8356/v1/mcp-gateway",
         max_ticks: int = 500,
     ):
-        self.compiler = ExFSMCompiler()
+        self.compiler = FSMCompiler()
         self.runtime = BranchController(broker=broker)
         self._default_bridge: Optional[FiberExecutionBridge] = None
 
@@ -109,7 +109,7 @@ class ExGraphTraverser:
 
     async def traverse_bundle(
         self,
-        bundle: ExCompiledBundle,
+        bundle: CompiledBundle,
         base_stream_id: str,
         initial_fuel: int = 1000,
         initial_meta: Optional[Dict[str, Any]] = None,

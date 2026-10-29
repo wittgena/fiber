@@ -211,7 +211,7 @@ class EcoScene(SchemeRunner):
         await self._run_case("Trade Settlement: 3-of-3 Multi-sig State Committed to Nexus", DphiMethod.SEAL_EPOCH.value, seal_payload, expected_success=True)
         return signatures
 
-class LedgerSecuritySuite(SchemeRunner):
+class StoreSecuritySuite(SchemeRunner):
     """@desc: Multi-sig Consensus, Ed25519 Signatures, and Sybil Defense scenarios"""
     def __init__(self, broker):
         super().__init__(broker)
@@ -220,7 +220,7 @@ class LedgerSecuritySuite(SchemeRunner):
         self.rogue = ActorIdentity("Rogue_Attacker")
 
     async def execute_suite(self):
-        log.info("\n=== [PHASE 2] Executing PhaseStore Cryptographic Security Boundaries ===")
+        log.info("\n=== [PHASE 2] Executing AnchorStore Cryptographic Security Boundaries ===")
         await self._test_multisig_authorized()
         await self._test_multisig_threshold_fail()
         await self._test_multisig_sybil_attack()
@@ -243,7 +243,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, active_members), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: 2-of-3 Valid Multi-sig", DphiMethod.SEAL_EPOCH.value, payload, expected_success=True)
+        await self._run_case("AnchorStore: 2-of-3 Valid Multi-sig", DphiMethod.SEAL_EPOCH.value, payload, expected_success=True)
 
     async def _test_multisig_threshold_fail(self):
         log.info("\n--- Running Suite: Insufficient Signatures ---")
@@ -258,7 +258,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, [self.committee[0]]), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: Reject Insufficient Threshold", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
+        await self._run_case("AnchorStore: Reject Insufficient Threshold", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
     async def _test_multisig_sybil_attack(self):
         log.info("\n--- Running Suite: Sybil Attack Defense (Duplicate Keys) ---")
@@ -274,7 +274,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, [attacker, attacker]), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: Reject Sybil Attack (Duplicate Signer)", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
+        await self._run_case("AnchorStore: Reject Sybil Attack (Duplicate Signer)", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
     async def _test_multisig_acl_rejection(self):
         log.info("\n--- Running Suite: Dynamic ACL Filtering ---")
@@ -290,8 +290,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, active_members), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: Reject Unauthorized Signer via ACL", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
-
+        await self._run_case("AnchorStore: Reject Unauthorized Signer via ACL", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
 # Anchor Lifecycles (Swarm Consensus & Provenance Alignment)
 class SwarmConsensusScene(EpochBase):
@@ -367,7 +366,7 @@ class AnchorScene(SchemeRunner):
         self.fail_count += eco.fail_count
         self.failed_cases.extend(eco.failed_cases)
         
-        ledger = LedgerSecuritySuite(self.broker)
+        ledger = StoreSecuritySuite(self.broker)
         await ledger.execute_suite()
         self.success_count += ledger.success_count
         self.fail_count += ledger.fail_count

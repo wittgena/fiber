@@ -285,11 +285,11 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                 try:
                     event_data = await asyncio.wait_for(listen_for_ledger(), timeout=15.0)
                 except asyncio.TimeoutError:
-                    raise RuntimeError(f"Handle {handle_id} on {target_id} did not resolve within timeout (Ledger Consensus stalled).")
+                    raise RuntimeError(f"Handle {handle_id} on {target_id} did not resolve within timeout (AnchorStore Consensus stalled).")
 
                 status = event_data.get("status")
                 if status == "RESOLVED":
-                    log.info(f"  ├─ [Boundary 1] Ledger Consensus verified via PubSub ({handle_id}).")
+                    log.info(f"  ├─ [Boundary 1] AnchorStore Consensus verified via PubSub ({handle_id}).")
                 elif status == "FAULTED":
                     err_detail = event_data.get("error_detail", "Unknown")
                     raise RuntimeError(f"Handle {handle_id} FAULTED after RESUME ({mode_badge}): {err_detail}")

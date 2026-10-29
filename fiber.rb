@@ -3,8 +3,9 @@ class Fiber < Formula
   homepage "https://github.com/wittgena/fiber"
   url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.8.tar.gz"
   sha256 "b9a15631373710a8b04616affd2dcbe318b160e2034c97852c629bbe062c43e3"
-  
+
   depends_on "python@3.12"
+  depends_on "redis"
 
   def install
     # Inject pretend version for hatch-vcs (setuptools-scm) when building from tarball without .git
@@ -15,7 +16,7 @@ class Fiber < Formula
     system "python3.12", "-m", "venv", libexec
     system libexec/"bin/pip", "install", "-U", "pip"
     system libexec/"bin/pip", "install", "."
-    
+
     # Symlink CLI entrypoint into Homebrew PATH
     bin.install_symlink libexec/"bin/fiber"
   end
@@ -28,19 +29,19 @@ class Fiber < Formula
 
   def caveats
     <<~EOS
-      To complete local workspace binding (~/.anchor/bound.json) and provision
-      your Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key),
-      run once in your terminal:
+      To bootstrap your local workspace (~/.anchor/bound.json) and provision
+      Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
 
         #{opt_bin}/fiber init
 
-      To start the background daemon service (use full tap name to avoid core conflict):
+      To start the Redis tunnel and Fiber background daemon service:
+        brew services start redis
         brew services start wittgena/fiber/fiber
     EOS
   end
 
   service do
-    run [opt_bin/"fiber", "daemon", "-s", "all"]
+    run [opt_bin/"fiber", "daemon"]
     keep_alive true
     working_dir var/"fiber"
     environment_variables PATH: std_service_path_env
@@ -53,5 +54,6 @@ class Fiber < Formula
     system "#{bin}/fiber", "init"
     assert_predicate testpath/".anchor/bound.json", :exist?
     assert_predicate testpath/".ssh/fiber_ed25519", :exist?
+    assert_predicate testpath/".ssh/fiber_ed25519.pub", :exist?
   end
 end

@@ -107,10 +107,10 @@ async def lifespan(app: FastAPI):
         log.info("SecretAuditor mounted successfully to app.state.")
 
         tunnel = app.state.tunnel
-        phase_store = app.state.phase_store
+        anchor_store = app.state.anchor_store
 
-        if not all([tunnel, phase_store]):
-            log.warning("Some infrastructure dependencies (tunnel, phase_store) are missing from injection.")
+        if not all([tunnel, anchor_store]):
+            log.warning("Some infrastructure dependencies (tunnel, anchor_store) are missing from injection.")
 
         app.state.pipeline_interceptors = InterceptorConfigLoader.load_from_config()
         if app.state.pipeline_interceptors:
@@ -185,7 +185,7 @@ def _get_root_path(config: Config) -> str:
 def create_app(
     config: Optional[Config] = None,
     tunnel: Optional[Any] = None,
-    phase_store: Optional[Any] = None  
+    anchor_store: Optional[Any] = None  
 ) -> FastAPI:
     config = config or get_default_config()
     app = FastAPI(
@@ -198,7 +198,7 @@ def create_app(
     
     app.state.config = config
     app.state.tunnel = tunnel
-    app.state.phase_store = phase_store  
+    app.state.anchor_store = anchor_store  
     app.state.is_ready = False  
     
     # Routers Binding

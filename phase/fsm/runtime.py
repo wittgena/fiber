@@ -13,13 +13,13 @@ from xphi.arch.bound.adapter.pta import (
 )
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
-from xphi.state.anchor.store import PhaseStore, ToposBlob
+from xphi.state.anchor.store import AnchorStore, ToposBlob
 from xphi.state.inter.fsm import FSMInterpreter
 from xphi.node.runtime.wasm.broker import DphiBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.phase.fsm.compiler import (
-    ExCompiledBundle,
+    CompiledBundle,
     CompactKey,
     NodeType,
     CAS_PREFIX,
@@ -192,7 +192,7 @@ class BranchController:
 
     def __init__(self, broker: Optional[DphiBroker] = None):
         self.broker = broker or DphiBroker.get_shared()
-        self.store = PhaseStore()
+        self.store = AnchorStore()
         self.pta = PtaAdapter(broker=self.broker)
         self.signer = NodeSigner.get_instance()
         self._blob_cache: Dict[str, Dict[str, Any]] = {}
@@ -222,7 +222,7 @@ class BranchController:
     # [Public API] Spawn (0:1), Step (1:1), Fork (1:N), Collapse (N:1), Restore
     async def mount_bundle_and_spawn(
         self,
-        bundle: ExCompiledBundle,
+        bundle: CompiledBundle,
         base_stream_id: str,
         initial_fuel: int = 1000,
         initial_meta: Optional[Dict[str, Any]] = None,
@@ -381,7 +381,7 @@ class BranchController:
     def restore_cursor(self, pointer_or_stream: str) -> BranchCursor:
         """
         Rehydrates a live BranchCursor in O(1) directly from an unspent PTA pointer ('tx_hash:idx')
-        or a PhaseStore branch head ('ref:<stream_id>') without re-running prior nodes.
+        or a AnchorStore branch head ('ref:<stream_id>') without re-running prior nodes.
         """
         if ":" in pointer_or_stream and pointer_or_stream in self.pta._unfold_pool:
             tx_hash, idx_str = pointer_or_stream.split(":", 1)

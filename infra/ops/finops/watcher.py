@@ -2,7 +2,7 @@
 """
 Glossary:
 - fuel_budget: Fixed spending quota limit assigned via policy/Mandate (immutable until upgraded).
-- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA Ledger SSOT.
+- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA SSOT.
 - Ensure UI signals and state tracking keep these two concepts strictly decoupled.
 """
 from __future__ import annotations
