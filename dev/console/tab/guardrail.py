@@ -17,7 +17,7 @@ from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
 from fiber.dev.console.ui.guide import GuideModal
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
 from fiber.dev.console.tab.vcr import VcrTab
-from fiber.dev.console.tab.quota import QuotaTab
+from fiber.dev.console.tab.metering import MeteringTab
 
 
 class LLMGuardrailTab(StudioTab):
@@ -77,8 +77,8 @@ class LLMGuardrailTab(StudioTab):
         kit.text("Input Prompt", s, "test_prompt", flex=False, width="w-full")
 
         with kit.row(gap="gap-1.5"):
-            kit.button("CALL LLM", lambda: pipeline.run_pipeline_xray(s.test_prompt), color="red", flex=True)
-            kit.button("E2E SUITE", pipeline.run_guardrail_e2e_suite, color="cyan", outline=True, flex=True)
+            kit.button("Test Prompt", lambda: pipeline.run_pipeline_xray(s.test_prompt), color="red", flex=True)
+            kit.button("E2E SUITE Test", pipeline.run_guardrail_e2e_suite, color="cyan", outline=True, flex=True)
 
     def compose_right(self) -> None:
         s = state.security
@@ -245,10 +245,8 @@ class ModelNSettingTab(StudioTab):
             kit.button("Verify", oob.verify_admin_totp, color="emerald", outline=True, flex=True)
             kit.button("Revoke", oob.revoke_admin_totp, color="red", outline=True)
 
-
 def build_tabs() -> list[StudioTab]:
-    return [McpGatewayTab(), LLMGuardrailTab(), QuotaTab(), VcrTab(), ModelNSettingTab()]
-
+    return [McpGatewayTab(), LLMGuardrailTab(), MeteringTab(), VcrTab(), ModelNSettingTab()]
 
 def build_modals() -> list[ModalTemplate]:
     return [HitlModal(), QrModal(), GuideModal()]

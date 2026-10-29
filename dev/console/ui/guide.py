@@ -44,9 +44,48 @@ $ fiber connect copy
 # Lock 3rd-party stdio MCP with 1-Click Slack Button ('button:' prefix)
 $ fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE" """
 
+GUARDRAIL_RULES_JSON = """{
+  "patterns": {
+    "fiber_internal_token": "FIBER-INTERNAL-TOKEN-[0-9]{6}",
+    "corp_vault_key": "CORP-VAULT-[A-Z0-9]{16}",
+    "slack_token": "xox[baprs]-[A-Za-z0-9_-]{24,}"
+  },
+  "disabled_rules": [
+    "context7_key",
+    "generic_password_kv"
+  ],
+  "extra_secret_keys": [
+    "FIBER_VAULT_PIN",
+    "INTERNAL_AUTH_HEADER"
+  ]
+}"""
+
+COMPAT_RULES_JSON = """{
+  "provider_param_rules": {
+    "my_custom_llm": {
+      "message_schema": "openai_array",
+      "supported": ["temperature", "max_tokens", "stream"],
+      "mapping": {
+        "max_tokens": "max_output_tokens"
+      }
+    }
+  },
+  "extraction_rules": {
+    "ollama": {
+      "text": ["choices.0.delta.content", "message.content", "response"],
+      "finish_reason": ["done_reason", "choices.0.finish_reason"],
+      "is_finished_cond": {"path": "done", "value": true},
+      "usage": [
+        "usage",
+        {"prompt_tokens": "prompt_eval_count", "completion_tokens": "eval_count"}
+      ]
+    }
+  }
+}"""
+
 
 class GuideModal(ModalTemplate):
-    width_cls = "w-[720px] max-w-[95vw]"
+    width_cls = "w-[760px] max-w-[95vw]"
     border_cls = "border border-slate-700"
     persistent = False
 
@@ -54,12 +93,14 @@ class GuideModal(ModalTemplate):
         setattr(refs, "guide_dialog", dialog)
 
         with ui.row().classes("w-full items-center justify-between border-b border-slate-800 pb-2 mb-1"):
-            ui.label("IDE Setup Guide").classes("text-sm font-bold text-white tracking-wide")
+            ui.label("IDE & Declarative Registry Guide").classes("text-sm font-bold text-white tracking-wide")
             ui.button(icon="close", on_click=dialog.close).props("flat dense round size=sm color=slate-4")
 
         with ui.tabs().classes("w-full text-xs bg-slate-950 rounded border border-slate-800") as tabs:
             tab_llm = ui.tab("LLM Gateway")
             tab_mcp = ui.tab("MCP Gateway & HITL")
+            tab_guard = ui.tab("Guardrail Rules")
+            tab_compat = ui.tab("Compat Rules")
 
         with ui.tab_panels(tabs, value=tab_llm).classes("w-full bg-transparent p-0 mt-2"):
             with ui.tab_panel(tab_llm).classes("p-0 gap-2 flex flex-col"):
@@ -78,6 +119,25 @@ class GuideModal(ModalTemplate):
                 ui.code(MCP_GATEWAY_JSON, language="json").classes("w-full text-xs")
                 ui.label("Declarative Sync & Hot-Reload CLI:").classes("text-xs font-bold text-cyan-400 mt-1")
                 ui.code(CONNECT_CLI_SH, language="bash").classes("w-full text-xs")
+
+            with ui.tab_panel(tab_guard).classes("p-0 gap-2 flex flex-col"):
+                ui.label(
+                    "33 built-in credential regex rules and 14 sensitive key tokens are active out of the box. To add custom patterns, override rules, or disable specific rule IDs without code changes, supply 'redact_rules.json'."
+                ).classes("text-xs text-slate-400")
+                ui.label(
+                    "• Env Override: FIBER_REDACT_RULES_PATH=/path/to/redact_rules.json  |  Default: .anchor/registry/redact_rules.json"
+                ).classes("text-xs font-mono text-emerald-400")
+                ui.code(GUARDRAIL_RULES_JSON, language="json").classes("w-full text-xs")
+
+            with ui.tab_panel(tab_compat).classes("p-0 gap-2 flex flex-col"):
+                ui.label(
+                    "Standard providers (openai, gemini, cohere, cerebras, ollama, llama_server) are normalized out of the box. To onboard custom models or override dot-notation extraction paths declaratively, supply 'compat_rules.json'."
+                ).classes("text-xs text-slate-400")
+                ui.label(
+                    "• Env Override: FIBER_COMPAT_RULES_PATH=/path/to/compat_rules.json  |  Validate: fiber compat fixture --vcr replay"
+                ).classes("text-xs font-mono text-cyan-400")
+                ui.code(COMPAT_RULES_JSON, language="json").classes("w-full text-xs")
+
 
 def open_guide_modal() -> None:
     dlg = getattr(refs, "guide_dialog", None)

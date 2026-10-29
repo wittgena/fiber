@@ -23,7 +23,7 @@ from fiber.dev.console.bridge.mcp import mcp
 
 from fiber.dev.console.tab.mcp import McpGatewayTab, HitlModal, QrModal
 from fiber.dev.console.tab.guardrail import LLMGuardrailTab, ModelNSettingTab
-from fiber.dev.console.tab.quota import QuotaTab
+from fiber.dev.console.tab.metering import MeteringTab
 from fiber.dev.console.tab.vcr import VcrTab
 from fiber.dev.console.ui.guide import GuideModal
 import fiber.dev.console.observer.plane as plane
@@ -138,7 +138,7 @@ def _on_tick(tabs: Sequence[StudioTab]) -> None:
         diag.exception("100ms tick flush error", exc=exc)
 
 def build_tabs() -> list[StudioTab]:
-    return [McpGatewayTab(), LLMGuardrailTab(), QuotaTab(), VcrTab(), ModelNSettingTab()]
+    return [McpGatewayTab(), LLMGuardrailTab(), MeteringTab(), VcrTab(), ModelNSettingTab()]
 
 def build_modals() -> list[ModalTemplate]:
     return [HitlModal(), QrModal(), GuideModal()]

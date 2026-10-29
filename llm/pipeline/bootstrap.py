@@ -10,7 +10,7 @@ from fiber.llm.model.types.provider.general import EmbeddingResponse
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.llm.pipeline.channel.core import CompletionTransport, EmbeddingTransport, StreamAggregator, PayloadTranslator, FallbackHandler, MockBypass, ContextBinder
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
-from fiber.llm.pipeline.channel.observer import BillingObserver
+from fiber.llm.pipeline.channel.observer import MeteringObserver
 
 from xphi.state.phase.channel import ChannelPipeline, DuplexChannel, RpcBridge
 
@@ -34,7 +34,7 @@ class PipelineBootstrap:
         
         pipeline_hooks: Dict[PipelineSlot, List[DuplexChannel]] = kwargs.pop("pipeline_hooks", {})
         stream_breaker = kwargs.pop("stream_breaker", StreamBreaker())
-        billing_observer = kwargs.pop("billing_observer", BillingObserver())
+        metering_observer = kwargs.pop("metering_observer", MeteringObserver())
 
         ## Head
         pipeline.add_last(CompletionTransport())
@@ -61,7 +61,7 @@ class PipelineBootstrap:
             
         ## Tail
         # Legacy Core: 절대 순서 유지
-        pipeline.add_last(billing_observer)        
+        pipeline.add_last(metering_observer)        
         pipeline.add_last(ContextBinder())          
         pipeline.add_last(bridge)
 
@@ -76,7 +76,7 @@ class PipelineBootstrap:
         
         pipeline_hooks: Dict[PipelineSlot, List[DuplexChannel]] = kwargs.pop("pipeline_hooks", {})
         stream_breaker = kwargs.pop("stream_breaker", StreamBreaker())
-        billing_observer = kwargs.pop("billing_observer", BillingObserver())
+        metering_observer = kwargs.pop("metering_observer", MeteringObserver())
         
         ## Head
         pipeline.add_last(EmbeddingTransport())
@@ -99,7 +99,7 @@ class PipelineBootstrap:
             
         ## Tail
         # Core: 절대 순서 유지
-        pipeline.add_last(billing_observer)
+        pipeline.add_last(metering_observer)
         pipeline.add_last(ContextBinder())
         pipeline.add_last(bridge)
 

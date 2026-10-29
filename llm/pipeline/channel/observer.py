@@ -11,7 +11,7 @@ from xphi.arch.model.auth import BrokerKey
 from xphi.state.phase.channel import ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
 
-log_pipeline = get_emitter("channel.observer", phase="BILLING")
+log_pipeline = get_emitter("channel.observer", phase="METERING")
 
 def _invoke_stream_hook(fn: Callable[..., Any], total_tokens: int, raw_usage: Any) -> None:
     """콜백의 인자 시그니처(1개 vs 2개)를 검사하여 안전하게 호출"""
@@ -66,7 +66,7 @@ def _attach_stream_complete_hook(meta: Any, callback: Callable[..., Any]) -> Non
         flags["on_stream_complete"] = _chained_pair_hook
 
 
-class BillingObserver(DuplexChannel):
+class MeteringObserver(DuplexChannel):
     def __init__(self, tenant_eco: Optional[Any] = None, pta_adapter: Optional[Any] = None):
         self.tenant_eco = tenant_eco
         self.pta_adapter = pta_adapter
@@ -78,10 +78,8 @@ class BillingObserver(DuplexChannel):
         processed_ctx = ctx.get_attr("processed_context")
         is_stream = hasattr(msg, "__aiter__")
 
-        def execute_billing(total_tokens: int = 0, raw_usage: Any = None):
+        def execute_metering(total_tokens: int = 0, raw_usage: Any = None):
             fuel_consumed = ctx.get_attr(BrokerKey.FUEL_CONSUMED.value, 0)
-
-            # 실제 집계된 total_tokens가 있으면 최우선 적용하고, 스트림 강제 중단 등으로 0일 때만 실시간 누적 토큰(fuel_consumed)로 폴백
             effective_fuel = total_tokens if (total_tokens and total_tokens > 0) else fuel_consumed
             if effective_fuel > 0:
                 ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, effective_fuel)
@@ -125,7 +123,7 @@ class BillingObserver(DuplexChannel):
                         if self.pta_adapter is not None:
                             actual_balance = await self.pta_adapter.get_balance(tenant_id, "fuel")
                             log_pipeline.info(
-                                f"[BillingObserver] Ledger balance synced for '{tenant_id}': {actual_balance} Fuel",
+                                f"[MeteringObserver] Ledger balance synced for '{tenant_id}': {actual_balance} Fuel",
                                 **{
                                     "mode": "RAW",
                                     UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,
@@ -137,7 +135,7 @@ class BillingObserver(DuplexChannel):
                             )
                     except Exception as e:
                         log_pipeline.error(
-                            f"[BillingObserver] Failed to process billing pipeline for '{tenant_id}': {e}",
+                            f"[MeteringObserver] Failed to process billing pipeline for '{tenant_id}': {e}",
                             exc_info=True,
                             **{UIKey.TENANT_ID.value: tenant_id},
                         )
@@ -148,10 +146,10 @@ class BillingObserver(DuplexChannel):
 
         if is_stream:
             if meta:
-                _attach_stream_complete_hook(meta, execute_billing)
+                _attach_stream_complete_hook(meta, execute_metering)
             await ctx.fire_channel_read(msg)
             return
 
         total_tokens, usage_dict = extract_usage_info(msg)
-        execute_billing(total_tokens, raw_usage=usage_dict)
+        execute_metering(total_tokens, raw_usage=usage_dict)
         await ctx.fire_channel_read(msg)

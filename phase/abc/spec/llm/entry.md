@@ -122,12 +122,12 @@ response = await acompletion(
 
 ### 4.2. Mid-Stream Kill-Switch (`stream_breaker`)
 
-To enforce strict tenant quotas and terminate runaway streams mid-flight upon budget exhaustion or `fiber account kill` revocation, attach `StreamBreaker`, `BillingObserver`, and `NodeAuthPayload`:
+To enforce strict tenant quotas and terminate runaway streams mid-flight upon budget exhaustion or `fiber account kill` revocation, attach `StreamBreaker`, `MeteringObserver`, and `NodeAuthPayload`:
 
 ```python
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
-from fiber.llm.pipeline.channel.observer import BillingObserver
+from fiber.llm.pipeline.channel.observer import MeteringObserver
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 
@@ -136,7 +136,7 @@ response = await acompletion(
     messages=[{"role": "user", "content": "Generate a comprehensive report."}],
     stream=True,
     stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
-    billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
+    metering_observer=MeteringObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
     metadata={
         "node_auth": NodeAuthPayload(
             tenant_id="accounting_dept",

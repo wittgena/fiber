@@ -22,7 +22,7 @@ from fiber.dev.base.workflow.pipeline import MockPipeline, log
 
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
-from fiber.llm.pipeline.channel.observer import BillingObserver
+from fiber.llm.pipeline.channel.observer import MeteringObserver
 from fiber.gateway.security import TokenTranslator
 from fiber.gateway.contract.token.gen import FinOpsTokenGenerator
 from fiber.infra.mcp.connector import MCPServerConnector
@@ -57,7 +57,7 @@ LONG_FINOPS_PROMPT = (
     "Section 4: Time-Window Chunk Coalescing and Application-Layer VCR Replay Determinism. "
     "Section 5: Multi-Tenant Cost Attribution, Dynamic Tier Fallback, and Budget Circuit Breakers. "
     "Section 6: Edge Caching, Semantic Routing, and Pre-Flight Payload Sanitization. "
-    "Section 7: Failure Modes, Network Partition Recovery, and Idempotent Billing Reconciliation. "
+    "Section 7: Failure Modes, Network Partition Recovery, and Idempotent Metering Reconciliation. "
     "Section 8: Full Reference Architecture and Production Deployment Checklist. "
     "Provide exhaustive explanations, concrete architectural trade-offs, and detailed step-by-step "
     "walkthroughs for every single section without summarizing or skipping any details."
@@ -230,7 +230,7 @@ class FinOpsPipeline(MockPipeline):
                     max_tokens=2048,
                     stream=True,
                     stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
-                    billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
+                    metering_observer=MeteringObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
                     **trace_ctx,
                 )
                 chunks = 0

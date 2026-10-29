@@ -4,7 +4,7 @@ import httpx
 
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
-from fiber.llm.pipeline.channel.observer import BillingObserver
+from fiber.llm.pipeline.channel.observer import MeteringObserver
 from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
@@ -86,7 +86,7 @@ class FiberExecutionBridge:
             stream=stream,
             interceptors=self.interceptors,
             stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
-            billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.runtime.pta),
+            metering_observer=MeteringObserver(tenant_eco=default_tenant_eco, pta_adapter=self.runtime.pta),
             metadata={
                 "node_auth": auth_payload,
                 "checkpoint_handle": cursor.pointer.to_key(),
