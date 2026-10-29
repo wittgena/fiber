@@ -17,7 +17,7 @@ from xphi.node.space.bind.resolver import resolve_path
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.watcher.plane.emitter import get_emitter
 
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.arch.bound.adapter.pta import NodeSigner, SignStateAdapter
 
@@ -211,7 +211,7 @@ class NodeAuthenticator:
             "receipt": receipt
         }
         
-        broker: DphiBroker = getattr(request.app.state, "broker", None)
+        broker: WasmBroker = getattr(request.app.state, "broker", None)
         if not broker:
             log.critical("[KernelAuthenticator] Wasm Broker is offline or not injected.")
             raise HTTPException(status_code=500, detail="Internal Security Engine Offline")

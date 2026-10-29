@@ -30,7 +30,7 @@ from xphi.arch.bound.adapter.pta import (
     PtaTransaction,
 )
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.anchor.key import KeyGen
 from xphi.watcher.plane.emitter import get_emitter
@@ -76,7 +76,7 @@ class AccountManagerProtocol(Protocol):
 class LocalAccountManager(AccountManagerProtocol):
     def __init__(self, tenant_id: str = DEFAULT_TENANT_ID, broker_timeout: float = 5.0):
         self.tenant_id = tenant_id or DEFAULT_TENANT_ID
-        self.broker = DphiBroker(timeout=broker_timeout)
+        self.broker = WasmBroker(timeout=broker_timeout)
         self.pta_adapter = PtaAdapter(broker=self.broker)
         self.token_gen = FinOpsTokenGenerator()
         self.signer = NodeSigner.get_instance()

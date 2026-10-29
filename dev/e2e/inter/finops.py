@@ -42,7 +42,7 @@ from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.bound.adapter.pta import PtaAdapter, PtaTransaction, PtaOutput
 from xphi.node.space.bind.resolver import resolve_path
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.state.phase.reactor import PhaseReactor
 
 FIXTURE_ROOT = "fiber-compats/suites/e2e"
@@ -85,7 +85,7 @@ class FinOpsPipeline(MockPipeline):
         self.initial_fuel = 1000
         self.issued_jwt: Optional[str] = None
 
-        self.broker = DphiBroker(timeout=5.0)
+        self.broker = WasmBroker(timeout=5.0)
         self.pta_adapter = PtaAdapter(broker=self.broker)
 
         self.set_phases([

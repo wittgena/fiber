@@ -38,7 +38,7 @@ from fiber.llm.pipeline.channel.observer import MeteringObserver
 from xphi.arch.bound.adapter.pta import PtaAdapter
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.model.auth import NodeAuthPayload
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 
@@ -70,7 +70,7 @@ class InteractiveStreamKillHarness:
         self.auto_kill_sec = auto_kill_sec
         self.run_once = run_once
 
-        self.broker = DphiBroker(timeout=5.0)
+        self.broker = WasmBroker(timeout=5.0)
         self.pta_adapter = PtaAdapter(broker=self.broker)
 
     def _build_shared_trace_id(self, messages: list) -> str:

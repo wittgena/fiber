@@ -10,7 +10,7 @@ from typing import List, Dict
 
 import fiber.dev.base.scene as scene_module
 
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.watcher.plane.flare.tunnel import FlareTunnelFactory
 from xphi.watcher.plane.flare.controller import FlareController
@@ -81,8 +81,8 @@ class FlareFlow:
         await FlareTunnelFactory.get_default(mq_url=edge_url)
 
         self.log.debug(f"[FlareFlow:test] FlareTunnelFactory initialized in {time.time() - t0:.3f}s")
-        self.log.debug("[FlareFlow:test] Instantiating DphiBroker with timeout=15.0s (Dynamic Timeout Enable)")
-        broker = DphiBroker(
+        self.log.debug("[FlareFlow:test] Instantiating WasmBroker with timeout=15.0s (Dynamic Timeout Enable)")
+        broker = WasmBroker(
             tunnel_factory=FlareTunnelFactory,
             request_stream="wasm:execute:stream:tester_isolated",
             timeout=15.0

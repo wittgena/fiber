@@ -26,7 +26,7 @@ from fiber.infra.vcr.injector import VCRInjector
 from xphi.arch.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
@@ -140,7 +140,7 @@ async def lifespan(app: FastAPI):
         app.state.pubsub = pubsub
         
         # WASM Broker 초기화
-        app.state.broker = DphiBroker(timeout=config.wasm_timeout)
+        app.state.broker = WasmBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
         # OTLP Parser & Extraction Engine Init

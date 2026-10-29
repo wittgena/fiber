@@ -15,7 +15,7 @@ from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
 from xphi.state.anchor.store import AnchorStore, ToposBlob
 from xphi.state.inter.fsm import FSMInterpreter
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 from fiber.phase.fsm.compiler import (
@@ -190,8 +190,8 @@ class BranchController:
     Handles Genesis (0:1), Step (1:1), Fork (1:N), Merge (N:1), and O(1) Cursor Rehydration.
     """
 
-    def __init__(self, broker: Optional[DphiBroker] = None):
-        self.broker = broker or DphiBroker.get_shared()
+    def __init__(self, broker: Optional[WasmBroker] = None):
+        self.broker = broker or WasmBroker.get_shared()
         self.store = AnchorStore()
         self.pta = PtaAdapter(broker=self.broker)
         self.signer = NodeSigner.get_instance()

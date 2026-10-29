@@ -25,7 +25,7 @@ from xphi.node.rpc.schema.receipt import EdgeState, EdgeHeader, IntentValidation
 from xphi.arch.xor.parser.ruleset.otlp import OtlpExtractionEngine
 
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.runtime.wasm.broker import DphiBroker, DphiMethod
+from xphi.node.runtime.wasm.broker import WasmBroker, WasmMethod
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.model.schema.audit import (
     HandshakeIntent,
@@ -85,7 +85,7 @@ async def otlp_logs_export(
     # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
-    broker: DphiBroker = Depends(get_wasm_broker),
+    broker: WasmBroker = Depends(get_wasm_broker),
     otlp_engine: OtlpExtractionEngine = Depends(get_otlp_engine)
 ):
     internal_receipt = getattr(request.state, "fuel_receipt", None)
@@ -119,7 +119,7 @@ async def otlp_logs_export(
         )
 
         canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
-        res = await broker.invoke(DphiMethod.COMPUTE_FINGERPRINT, canonical_payload)
+        res = await broker.invoke(WasmMethod.COMPUTE_FINGERPRINT, canonical_payload)
         
         if not res.success:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Kernel Seal Rejected")
@@ -152,7 +152,7 @@ async def audit_log(
     payload: AuditLogRequest,
     # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
-    broker: DphiBroker = Depends(get_wasm_broker)
+    broker: WasmBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:
     internal_receipt = getattr(request.state, "fuel_receipt", None)
     request_time = str(time.time())
@@ -177,7 +177,7 @@ async def audit_log(
     )
 
     canonical_payload = StateAdapter.to_canonical_bytes(transition_payload).decode('utf-8')
-    fp_res = await broker.invoke(DphiMethod.COMPUTE_FINGERPRINT, canonical_payload)
+    fp_res = await broker.invoke(WasmMethod.COMPUTE_FINGERPRINT, canonical_payload)
     
     if not fp_res.success:
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to compute kernel fingerprint")

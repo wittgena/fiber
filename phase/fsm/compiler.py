@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
 from xphi.state.inter.fsm import FSMInterpreter
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.node.runtime.wasm.quota import QuotaPolicy
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -454,12 +454,12 @@ class FSMCompiler:
         return self._fallback_python_compile(raw_ir)
 
     async def acompile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> CompiledBundle:
-        """[Async] Distributed compilation and static verification via DphiBroker & TaskWasm daemon."""
+        """[Async] Distributed compilation and static verification via WasmBroker & TaskWasm daemon."""
         sig = self._build_fragment_sig(asl_schema, trace_id)
         raw_ir = self.projector.project_compact_blob(sig)
 
         payload = FsmAdapter.build_compile_payload(trace_id=trace_id, compact_ir=raw_ir)
-        res = await DphiBroker.get_shared().execute(code=payload, context={"fuel": 2000})
+        res = await WasmBroker.get_shared().execute(code=payload, context={"fuel": 2000})
         if res.output:
             return self._finalize_bundle_from_wasm(res.output)
         raise ValueError(f"FSM Broker Compile Failed: {res.error}")

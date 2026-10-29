@@ -6,7 +6,7 @@ from xphi.arch.bound.client.rpc import InternalRpcClient
 
 from xphi.watcher.receptor.warden import SecretAuditor
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.arch.xor.parser.ruleset.otlp import OtlpExtractionEngine
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -28,7 +28,7 @@ async def get_rpc_client() -> InternalRpcClient:
     """내부망 워커와 통신하기 위한 메시지 버스 기반 RPC 클라이언트"""
     return InternalRpcClient()
 
-async def get_wasm_broker(request: Request) -> DphiBroker:
+async def get_wasm_broker(request: Request) -> WasmBroker:
     """WASM 커널 제어 및 암호학적 증명(Fingerprint) 발급용 브로커"""
     return _get_state_attr(request, "broker")
 

@@ -10,7 +10,7 @@ from fiber.dev.base.scene.runner import SandboxRunner, ScriptDef, TestScripts
 from fiber.dev.base.scene.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.node.runtime.wasm.method import DphiMethod
+from xphi.node.runtime.wasm.method import WasmMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")
@@ -140,7 +140,7 @@ print(f"{val:.15f}")
         # 남은 2개의 유효 서명이 Threshold(2)를 만족하므로 합의를 성공시켜야 합니다.
         await self._run_case(
             title="Byzantine Defense: Quarantine rogue signature & accept 2-of-3 threshold",
-            target_func=DphiMethod.SEAL_EPOCH.value,
+            target_func=WasmMethod.SEAL_EPOCH.value,
             payload=payload,
             expected_success=True 
         )
@@ -295,7 +295,7 @@ class DynamicsScene(SandboxRunner):
         }
         
         res = await self.broker.invoke(
-            target_func=DphiMethod.PROCESS_FIELD_DYNAMICS, 
+            target_func=WasmMethod.PROCESS_FIELD_DYNAMICS, 
             payload=json.dumps(payload),
             tier="SYSTEM"
         )
@@ -325,7 +325,7 @@ class DynamicsScene(SandboxRunner):
             "dt": 0.1
         }
         
-        res = await self.broker.invoke(target_func=DphiMethod.PROCESS_FIELD_DYNAMICS, payload=json.dumps(payload), tier="SYSTEM")
+        res = await self.broker.invoke(target_func=WasmMethod.PROCESS_FIELD_DYNAMICS, payload=json.dumps(payload), tier="SYSTEM")
         
         if res.success:
             deltas = json.loads(res.output)
@@ -353,7 +353,7 @@ class DynamicsScene(SandboxRunner):
             "dt": 0.1
         }
         
-        res = await self.broker.invoke(target_func=DphiMethod.PROCESS_FIELD_DYNAMICS, payload=json.dumps(payload), tier="SYSTEM")
+        res = await self.broker.invoke(target_func=WasmMethod.PROCESS_FIELD_DYNAMICS, payload=json.dumps(payload), tier="SYSTEM")
         
         if res.success:
             deltas = json.loads(res.output)
@@ -379,7 +379,7 @@ class DynamicsScene(SandboxRunner):
         ]
         
         for title, raw_str in bad_payloads:
-            res = await self.broker.invoke(target_func=DphiMethod.PROCESS_FIELD_DYNAMICS, payload=raw_str, tier="SYSTEM")
+            res = await self.broker.invoke(target_func=WasmMethod.PROCESS_FIELD_DYNAMICS, payload=raw_str, tier="SYSTEM")
             if not res.success and "Invalid DynamicsPayload" in str(res.error) or "malformed" in str(res.error):
                 self._record_success(0, f"Correctly trapped bad payload: {title}")
             else:

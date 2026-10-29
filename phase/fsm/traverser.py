@@ -14,7 +14,7 @@ from fiber.phase.fsm.runtime import (
 )
 from fiber.phase.fsm.bridge import FiberExecutionBridge
 
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("fsm.traverser", phase="MULTIVERSE_TRAVERSER")
@@ -41,7 +41,7 @@ class TraversalResult:
 class GraphTraverser:
     def __init__(
         self,
-        broker: Optional[DphiBroker] = None,
+        broker: Optional[WasmBroker] = None,
         node_executor: Optional[NodeExecutorFn] = None,
         arbiter: Optional[ArbiterFn] = None,
         tenant_id: str = "default_tenant",
