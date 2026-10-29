@@ -1,4 +1,4 @@
-# fiber.dev.ex.tester.gateway
+# fiber.dev.tester.gateway
 import argparse
 import asyncio
 import json

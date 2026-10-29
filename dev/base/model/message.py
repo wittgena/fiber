@@ -1,5 +1,4 @@
-# fiber.dev.ex.model.message
-## @lineage: fiber.llm.model.message
+# fiber.dev.base.model.message
 import json
 from collections.abc import Sequence
 from typing import Any, ClassVar
