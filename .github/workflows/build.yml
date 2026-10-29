@@ -38,7 +38,7 @@ jobs:
       - name: Checkout fiber-compats (Fixtures)
         uses: actions/checkout@v4
         with:
-          repository: wittgena/fiber-compats
+          repository: dphi-network/fiber-compats
           path: fiber-compats
 
       - name: Setup Python

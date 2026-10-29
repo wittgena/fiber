@@ -22,7 +22,7 @@ import fiber.dev.console.ui.kit as kit
 from xphi.node.space.bind.resolver import resolve_path
 
 DIAG_LOG_PATH = resolve_path("log") / "ui_diag.log"
-COMPATS_REPO = "wittgena/fiber-compats"
+COMPATS_REPO = "dphi-network/fiber-compats"
 COMPATS_TARBALL_URL = f"https://github.com/{COMPATS_REPO}/archive/refs/heads/main.tar.gz"
 COMPATS_LOCAL_DIR = Path(str(resolve_path("fixture")))
 
@@ -149,7 +149,7 @@ def build_header() -> None:
                         .bind_text_from(state.pipeline, "compats_badge_text")
                         .props("color=slate-8 text-color=amber-3")
                         .classes("text-xs px-2 py-0.5 cursor-pointer")
-                        .tooltip("Click to sync latest model fixtures from github.com/wittgena/fiber-compats")
+                        .tooltip(f"Click to sync latest model fixtures from github.com/{COMPATS_REPO}")
                     )
                     compats_badge.on("click", lambda: asyncio.create_task(ensure_console_compats(force=True, silent=False)))
 
