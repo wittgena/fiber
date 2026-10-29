@@ -40,25 +40,31 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
   end
 
   def post_install
-    # Ensure log directory exists to prevent launchd exit 78 on service start
+    # Ensure working and log directories exist to prevent launchd exit 78 on service start
+    (var/"{{PROJECT_NAME_LOWER}}").mkpath
     (var/"log/{{PROJECT_NAME_LOWER}}").mkpath
   end
 
   def caveats
     <<~EOS
-      To complete local workspace binding and provision your Zero-Env node keys
-      (~/.ssh/fiber_ed25519 & local_cipher.key), run once in your terminal:
+      To complete local workspace binding (~/.anchor/bound.json) and provision
+      your Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key),
+      run once in your terminal:
 
         #{opt_libexec}/bin/python -m {{BIND_MODULE}}
-        {{PROJECT_NAME_LOWER}} sign init
-        {{PROJECT_NAME_LOWER}} sign status
+        #{opt_bin}/{{PROJECT_NAME_LOWER}} sign init
+        #{opt_bin}/{{PROJECT_NAME_LOWER}} sign status
+
+      To start the background daemon service (use full tap name to avoid core conflict):
+        brew services start {{GITHUB_REPO}}/{{PROJECT_NAME_LOWER}}
     EOS
   end
 
   service do
     run [opt_bin/"{{PROJECT_NAME_LOWER}}", "daemon", "-s", "all"]
     keep_alive true
-    working_dir var
+    working_dir var/"{{PROJECT_NAME_LOWER}}"
+    environment_variables PATH: std_service_path_env
     log_path var/"log/{{PROJECT_NAME_LOWER}}/daemon.log"
     error_log_path var/"log/{{PROJECT_NAME_LOWER}}/daemon.error.log"
   end
@@ -68,6 +74,7 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
     system "#{libexec}/bin/python", "-m", "{{BIND_MODULE}}"
     system "#{bin}/{{PROJECT_NAME_LOWER}}", "sign", "init"
     system "#{bin}/{{PROJECT_NAME_LOWER}}", "sign", "status"
+    assert_predicate testpath/".anchor/bound.json", :exist?
     assert_predicate testpath/".ssh/fiber_ed25519", :exist?
   end
 end
@@ -111,7 +118,6 @@ def generate_formula(version: str):
     except ValueError:
         rel_path = output_path
     print(f"[+] Successfully generated Homebrew formula at: {rel_path}")
-
 
 if __name__ == "__main__":
     if len(sys.argv) > 2:

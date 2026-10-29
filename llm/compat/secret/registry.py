@@ -16,7 +16,7 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log_redact = get_emitter("redact.registry")
 
-REDACT_REGISTRY_ROOT = resolve_path("abc") / "registry"
+REDACT_REGISTRY_ROOT = resolve_path("anchor") / "registry"
 DEFAULT_REDACT_FILENAME = "redact_rules.json"
 
 

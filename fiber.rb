@@ -1,8 +1,8 @@
 class Fiber < Formula
   desc "The Universal Integration Boundary for heterogeneous AI ecosystems"
   homepage "https://github.com/wittgena/fiber"
-  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.7.tar.gz"
-  sha256 "0239da342b14075265f32955f3884123a2eb9d4c2a1ec366b7f1acbf44410163"
+  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.8.tar.gz"
+  sha256 "b9a15631373710a8b04616affd2dcbe318b160e2034c97852c629bbe062c43e3"
   
   depends_on "python@3.12"
 
@@ -21,25 +21,31 @@ class Fiber < Formula
   end
 
   def post_install
-    # Ensure log directory exists to prevent launchd exit 78 on service start
+    # Ensure working and log directories exist to prevent launchd exit 78 on service start
+    (var/"fiber").mkpath
     (var/"log/fiber").mkpath
   end
 
   def caveats
     <<~EOS
-      To complete local workspace binding and provision your Zero-Env node keys
-      (~/.ssh/fiber_ed25519 & local_cipher.key), run once in your terminal:
+      To complete local workspace binding (~/.anchor/bound.json) and provision
+      your Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key),
+      run once in your terminal:
 
         #{opt_libexec}/bin/python -m xphi.node.space.bind.around
-        fiber sign init
-        fiber sign status
+        #{opt_bin}/fiber sign init
+        #{opt_bin}/fiber sign status
+
+      To start the background daemon service (use full tap name to avoid core conflict):
+        brew services start wittgena/fiber/fiber
     EOS
   end
 
   service do
     run [opt_bin/"fiber", "daemon", "-s", "all"]
     keep_alive true
-    working_dir var
+    working_dir var/"fiber"
+    environment_variables PATH: std_service_path_env
     log_path var/"log/fiber/daemon.log"
     error_log_path var/"log/fiber/daemon.error.log"
   end
@@ -49,6 +55,7 @@ class Fiber < Formula
     system "#{libexec}/bin/python", "-m", "xphi.node.space.bind.around"
     system "#{bin}/fiber", "sign", "init"
     system "#{bin}/fiber", "sign", "status"
+    assert_predicate testpath/".anchor/bound.json", :exist?
     assert_predicate testpath/".ssh/fiber_ed25519", :exist?
   end
 end

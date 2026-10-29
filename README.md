@@ -188,7 +188,7 @@ from fiber.llm.pipeline.interceptor.guardrail import (
     ActiveBlockingGuardrail,
 )
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
-from fiber.llm.pipeline.channel.observer import BillingObserver
+from fiber.llm.pipeline.channel.observer import MeteringObserver
 from fiber.infra.watcher.finops import default_finops_watcher, default_tenant_eco
 from xphi.arch.model.auth import NodeAuthPayload
 
@@ -205,7 +205,7 @@ response = await acompletion(
         ActiveBlockingGuardrail(),                             # Hard-blocks leaked API keys (~0.014ms)
     ],
     stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
-    billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
+    metering_observer=MeteringObserver(tenant_eco=default_tenant_eco, pta_adapter=pta_adapter),
     metadata={"node_auth": NodeAuthPayload(tenant_id="accounting_dept", fuel_budget=50000, is_enforced=True)}
 )
 ```

@@ -33,7 +33,7 @@ from fiber.infra.vcr.manager import (
 from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenant_eco
 from fiber.llm.entry import acompletion
 from fiber.llm.pipeline.channel.breaker import StreamBreaker
-from fiber.llm.pipeline.channel.observer import BillingObserver
+from fiber.llm.pipeline.channel.observer import MeteringObserver
 
 from xphi.arch.bound.adapter.pta import PtaAdapter
 from xphi.arch.contract.event.next import next_trace_id
@@ -118,7 +118,7 @@ class InteractiveStreamKillHarness:
                 session_id=session_id,
                 tenant_id=self.tenant_id,
                 stream_breaker=StreamBreaker(finops_watcher=default_finops_watcher),
-                billing_observer=BillingObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
+                metering_observer=MeteringObserver(tenant_eco=default_tenant_eco, pta_adapter=self.pta_adapter),
                 metadata={
                     "vcr_scenario": SCENARIO_NAME,
                     "vcr_invoker": CONCURRENCY_INVOKER,

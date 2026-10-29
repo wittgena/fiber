@@ -1,5 +1,4 @@
-# fiber.dev.console.tab.quota
-## @lineage: fiber.dev.console.tab.qouta
+# fiber.dev.console.tab.metering
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,8 +24,8 @@ def _resolve_accounts_registry_path() -> Path:
     except Exception:
         return resolve_path("anchor") / "sign" / "local_accounts.json"
 
-class QuotaTab(StudioTab):
-    title = "Quota"
+class MeteringTab(StudioTab):
+    title = "Metering"
     left_header = "Quota Control"
     right_header = "Circuit Breaker"
 
@@ -35,12 +34,10 @@ class QuotaTab(StudioTab):
         if f.jwt_op not in FINOPS_ACTION_LABELS:
             f.jwt_op = "SYNC_QUOTA"
 
-        # [Step 1] 대상 계정(Tenant) 식별
         ui.label("Target Account Identity").classes("text-[11px] font-bold text-slate-400 shrink-0")
         with kit.row():
             kit.text("Target Tenant ID", f, "tenant_id")
 
-        # [Step 2] 직관적 3단계 잔액 제어 (예산과 일치 / 추가 충전 / 잔액 0으로 초기화)
         with kit.row(align="items-center justify-between"):
             ui.label("Fuel Balance Control ($1 = 1,000,000 Fuel)").classes(
                 "text-[11px] font-bold text-emerald-400 shrink-0"
@@ -49,12 +46,12 @@ class QuotaTab(StudioTab):
                 f,
                 "jwt_usd",
                 lambda u: (
-                    "➔ Target Balance: 0 Fuel (REVOKE)"
+                    "-> Target Balance: 0 Fuel (REVOKE)"
                     if f.jwt_op == "REVOKE"
                     else (
-                        f"➔ Add +{int((u or 0) * USD_TO_FUEL_RATE):,} Fuel (New: {f.ledger_balance + int((u or 0) * USD_TO_FUEL_RATE):,})"
+                        f"-> Add +{int((u or 0) * USD_TO_FUEL_RATE):,} Fuel (New: {f.ledger_balance + int((u or 0) * USD_TO_FUEL_RATE):,})"
                         if f.jwt_op == "TOP_UP"
-                        else f"➔ Match Balance to {int((u or 0) * USD_TO_FUEL_RATE):,} Fuel"
+                        else f"-> Match Balance to {int((u or 0) * USD_TO_FUEL_RATE):,} Fuel"
                     )
                 ),
             ).classes("text-[11px] font-mono font-bold text-amber-300")
@@ -89,7 +86,6 @@ class QuotaTab(StudioTab):
             f, "last_jwt_preview", lambda j: f"Signed Mandate Token (EdDSA): {j}"
         ).classes(kit.CLS_MONO_LABEL)
 
-        # [Step 3] 할당 예산 사본(fuel_budget) 대비 현재 남은 연료(ledger_balance) 비교 게이지
         with ui.column().classes("w-full gap-1 bg-slate-950/90 px-3 py-2 rounded border border-slate-800 mt-1 shrink-0"):
             with ui.row().classes("w-full items-center justify-between no-wrap"):
                 ui.label("Remaining Balance vs Allocated Quota Baseline:").classes(

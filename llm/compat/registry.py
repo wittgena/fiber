@@ -15,9 +15,8 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log_compat = get_emitter("compat.registry")
 
-COMPAT_REGISTRY_ROOT = resolve_path("abc") / "registry"
-DEFAULT_COMPAT_FILENAME = "provider_compat_rules.json"
-
+COMPAT_REGISTRY_ROOT = resolve_path("anchor") / "registry"
+DEFAULT_COMPAT_FILENAME = "compat_rules.json"
 
 class CompatRegistryIO:
     @classmethod
