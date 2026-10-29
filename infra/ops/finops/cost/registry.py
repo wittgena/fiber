@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Dict, Tuple, Optional, Union
 
-from xphi.arch.contract.config.resolver import config
+from xphi.arch.contract.config.env import config
 from xphi.node.space.bind.resolver import resolve_path 
 from xphi.watcher.plane.emitter import get_emitter 
 

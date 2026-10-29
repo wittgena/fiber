@@ -8,7 +8,7 @@ from typing import Optional
 from xphi.arch.contract.config.constants import DEFAULT_MAX_RECURSE_DEPTH
 from fiber.llm.exception.eco import JSONSchemaValidationError, APIResponseValidationError
 
-from xphi.arch.contract.config.resolver import config
+from xphi.arch.contract.config.env import config
 
 class Rules:
     def __init__(self) -> None:

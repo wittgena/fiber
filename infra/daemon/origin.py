@@ -11,7 +11,7 @@ import aiohttp
 
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.arch.contract.config.attestation import attestation_config, delegation_config
+from xphi.arch.contract.config.notary import attestation_config, delegation_config
 from xphi.arch.contract.registry.unified import contract
 
 from xphi.node.ops.daemon.base import AbstractDaemon
@@ -20,9 +20,7 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.origin")
 
-# =========================================================================
 # Origin Delegator Daemon
-# =========================================================================
 @contract.daemon("origin_delegator")
 class OriginDelegatorDaemon(AbstractDaemon):
     def __init__(self, ctx):

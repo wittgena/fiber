@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 from fiber.llm.model.types.provider.general import CostPerToken
 
-from xphi.arch.contract.config.resolver import config as global_config
+from xphi.arch.contract.config.env import config as global_config
 from xphi.arch.contract.config.constants import DEFAULT_REPLICATE_GPU_PRICE_PER_SECOND
 from xphi.watcher.plane.emitter import get_emitter
 
