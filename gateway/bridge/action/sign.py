@@ -115,13 +115,19 @@ def ensure_node_keys(force_regenerate_cipher: bool = False) -> dict:
         )
         SSH_PRIV_KEY_PATH.write_bytes(openssh_priv)
         os.chmod(SSH_PRIV_KEY_PATH, 0o600)
-
-        if not SSH_PUB_KEY_PATH.exists():
-            SSH_PUB_KEY_PATH.write_bytes(openssh_pub + b" fiber-node\n")
-            os.chmod(SSH_PUB_KEY_PATH, 0o644)
+        SSH_PUB_KEY_PATH.write_bytes(openssh_pub + b" fiber-node\n")
+        os.chmod(SSH_PUB_KEY_PATH, 0o644)
 
         ssh_created = True
         NodeSigner._instance = None
+    elif not SSH_PUB_KEY_PATH.exists():
+        priv_key = serialization.load_ssh_private_key(SSH_PRIV_KEY_PATH.read_bytes(), password=None)
+        openssh_pub = priv_key.public_key().public_bytes(
+            encoding=serialization.Encoding.OpenSSH,
+            format=serialization.PublicFormat.OpenSSH,
+        )
+        SSH_PUB_KEY_PATH.write_bytes(openssh_pub + b" fiber-node\n")
+        os.chmod(SSH_PUB_KEY_PATH, 0o644)
 
     SIGN_ROOT.mkdir(parents=True, exist_ok=True)
     cipher_created = False
@@ -322,7 +328,9 @@ def cmd_init(
 ):
     """Initialize local node cryptographic keys (~/.ssh/fiber_ed25519 & local_cipher.key)."""
     info = ensure_node_keys(force_regenerate_cipher=rotate_cipher)
-    log_sign.info("🔐 Node Cryptographic Identity Initialized:")
+    ssh_msg = "newly created" if info["ssh_key_status"] == "CREATED" else "already exists (skipped)"
+    cip_msg = "newly created" if info["local_cipher_status"] == "CREATED" else "already exists (skipped)"
+    log_sign.info(f"🔐 Node Cryptographic Identity Initialized (SSH: {ssh_msg}, Cipher: {cip_msg}):")
     print(json.dumps(info, indent=2, ensure_ascii=False))
 
 
@@ -439,7 +447,6 @@ def cmd_revoke(
     conn.close()
     log_sign.info(f"✅ Revoked TOTP access for '{canonical_id}'.")
 
-
 admin_app = typer.Typer(help="Alias group for admin TOTP commands")
 admin_app.command("totp-enroll")(cmd_enroll)
 admin_app.command("totp-verify")(cmd_verify)
@@ -447,10 +454,8 @@ admin_app.command("totp-revoke")(cmd_revoke)
 admin_app.command("totp-list")(cmd_status)
 app.add_typer(admin_app, name="admin")
 
-
 def main():
     app()
-
 
 if __name__ == "__main__":
     main()

@@ -51,9 +51,7 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
       your Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key),
       run once in your terminal:
 
-        #{opt_libexec}/bin/python -m {{BIND_MODULE}}
-        #{opt_bin}/{{PROJECT_NAME_LOWER}} sign init
-        #{opt_bin}/{{PROJECT_NAME_LOWER}} sign status
+        #{opt_bin}/{{PROJECT_NAME_LOWER}} init
 
       To start the background daemon service (use full tap name to avoid core conflict):
         brew services start {{GITHUB_REPO}}/{{PROJECT_NAME_LOWER}}
@@ -71,9 +69,7 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
 
   test do
     ENV["HOME"] = testpath
-    system "#{libexec}/bin/python", "-m", "{{BIND_MODULE}}"
-    system "#{bin}/{{PROJECT_NAME_LOWER}}", "sign", "init"
-    system "#{bin}/{{PROJECT_NAME_LOWER}}", "sign", "status"
+    system "#{bin}/{{PROJECT_NAME_LOWER}}", "init"
     assert_predicate testpath/".anchor/bound.json", :exist?
     assert_predicate testpath/".ssh/fiber_ed25519", :exist?
   end

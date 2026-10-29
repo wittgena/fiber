@@ -158,6 +158,5 @@ def generate_install_script():
         rel_path = output_path
     print(f"[+] Successfully generated Universal Installer at: {rel_path}")
 
-
 if __name__ == "__main__":
     generate_install_script()

@@ -32,9 +32,7 @@ class Fiber < Formula
       your Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key),
       run once in your terminal:
 
-        #{opt_libexec}/bin/python -m xphi.node.space.bind.around
-        #{opt_bin}/fiber sign init
-        #{opt_bin}/fiber sign status
+        #{opt_bin}/fiber init
 
       To start the background daemon service (use full tap name to avoid core conflict):
         brew services start wittgena/fiber/fiber
@@ -52,9 +50,7 @@ class Fiber < Formula
 
   test do
     ENV["HOME"] = testpath
-    system "#{libexec}/bin/python", "-m", "xphi.node.space.bind.around"
-    system "#{bin}/fiber", "sign", "init"
-    system "#{bin}/fiber", "sign", "status"
+    system "#{bin}/fiber", "init"
     assert_predicate testpath/".anchor/bound.json", :exist?
     assert_predicate testpath/".ssh/fiber_ed25519", :exist?
   end

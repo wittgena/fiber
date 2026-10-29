@@ -11,6 +11,18 @@ from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotSta
 import fiber.dev.console.observer.plane as plane
 from fiber.infra.ops.account.state import state, refs
 
+
+def _extract_json_payload(raw_out: str) -> dict | None:
+    """CLI 표준 출력에서 JSON 블록만 안전하게 추출합니다."""
+    try:
+        start, end = raw_out.find("{"), raw_out.rfind("}")
+        if start != -1 and end > start:
+            return json.loads(raw_out[start : end + 1])
+    except Exception:
+        pass
+    return None
+
+
 async def run_fiber_cli(*args: str) -> None:
     refs.push_cli(f"$ fiber {' '.join(args)}")
     output_lines: list[str] = []
@@ -33,10 +45,19 @@ async def run_fiber_cli(*args: str) -> None:
                 refs.push_cli(f"  {decoded}")
                 plane.bridge_cli_line(decoded)
         await proc.wait()
+
+        raw_out = "\n".join(output_lines)
+
+        # [정렬 1] sign verify 실패(exit 1)는 CLI 크래시가 아니라 비즈니스 검증 실패이므로
+        # fallback 시뮬레이션으로 넘어가지 않고 상태 동기화만 수행
         if proc.returncode != 0:
-            await _simulate_cli_fallback(args)
+            if len(args) >= 2 and args[0] == "sign" and args[1] in ("verify", "admin"):
+                await _sync_after_cli_success(raw_out, args)
+                ui.notify("🚨 TOTP Verification Failed or Unregistered Admin", type="negative")
+            else:
+                await _simulate_cli_fallback(args)
         else:
-            await _sync_after_cli_success("\n".join(output_lines), args)
+            await _sync_after_cli_success(raw_out, args)
     except Exception:
         await _simulate_cli_fallback(args)
 
@@ -53,21 +74,42 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
     if domain_cmd == "connect":
         await mcp.scan_mcp_topology_and_health(silent=True)
         return
+
     if domain_cmd == "sign":
+        sub_cmd = args[1] if len(args) > 1 else ""
+        data = _extract_json_payload(raw_out)
+
+        # [정렬 2] 자식 프로세스에서 키가 새로 생성되었을 수 있으므로 부모 프로세스의 싱글톤 캐시도 초기화
+        if sub_cmd == "init":
+            try:
+                from xphi.arch.bound.adapter.pta import NodeSigner
+                NodeSigner._instance = None
+            except Exception:
+                pass
+
+            if data:
+                ssh_st = data.get("ssh_key_status", "EXISTING")
+                pub_st = data.get("ssh_pub_status", "EXISTING")
+                cip_st = data.get("local_cipher_status", "EXISTING")
+
+                if all(st == "EXISTING" for st in (ssh_st, pub_st, cip_st)):
+                    ui.notify("ℹ️ 모든 노드 키 파일이 이미 존재하여 기존 키를 유지합니다.", type="info")
+                else:
+                    ui.notify(
+                        f"🔐 노드 키 초기화 완료 (SSH: {ssh_st}, Pub: {pub_st}, Cipher: {cip_st})",
+                        type="positive",
+                    )
+
         await oob.refresh_sign_status(silent=True)
         return
+
     if domain_cmd == "account":
         await finops_manager.refresh_account_status(silent=True)
 
     f = state.finops
-    try:
-        start, end = raw_out.find("{"), raw_out.rfind("}")
-        if start != -1 and end > start:
-            data = json.loads(raw_out[start : end + 1])
-            if isinstance(data.get("jwt"), str):
-                f.last_jwt_preview = f"{data['jwt'][:44]}... (v{f.policy_ver})"
-    except Exception:
-        pass
+    data = _extract_json_payload(raw_out)
+    if data and isinstance(data.get("jwt"), str):
+        f.last_jwt_preview = f"{data['jwt'][:44]}... (v{f.policy_ver})"
 
 
 async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
@@ -80,6 +122,32 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
 
     if "--spiffe" in args:
         oob.sync_spiffe_and_check_totp(emit_warning=True)
+
+    # [정렬 3] 서브프로세스 실행 불가 환경에서도 action.sign의 Headless 함수를 통해 동일하게 동작하도록 보장
+    if args and args[0] == "sign":
+        from fiber.gateway.bridge.action.sign import ensure_node_keys
+        sub_cmd = args[1] if len(args) > 1 else "status"
+
+        if sub_cmd == "init":
+            rotate = "--rotate-cipher" in args
+            info = await asyncio.to_thread(ensure_node_keys, rotate)
+            ssh_st = info.get("ssh_key_status", "EXISTING")
+            pub_st = info.get("ssh_pub_status", "EXISTING")
+            cip_st = info.get("local_cipher_status", "EXISTING")
+
+            refs.push_cli(
+                f"  ✓ [Sign Init] SSH={ssh_st}, Pub={pub_st}, Cipher={cip_st}"
+            )
+            if all(st == "EXISTING" for st in (ssh_st, pub_st, cip_st)):
+                ui.notify("ℹ️ 모든 노드 키 파일이 이미 존재합니다 (기존 파일 유지).", type="info")
+            else:
+                ui.notify(
+                    f"🔐 노드 키 초기화 완료 (SSH: {ssh_st}, Pub: {pub_st}, Cipher: {cip_st})",
+                    type="positive",
+                )
+
+        await oob.refresh_sign_status(silent=False)
+        return
 
     if args and args[0] == "connect":
         is_copy = len(args) > 1 and args[1] == "copy"
@@ -160,7 +228,6 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
                 UIKey.SLOT_STATUS.value: UISlotStatus.SEVER.value,
             },
         )
-
     elif "compat" in cmd:
         refs.push_cli("  ✓ [Schema Verified] VCR replay extracted 14 chunks (0ms network I/O)")
         plane.emit(
