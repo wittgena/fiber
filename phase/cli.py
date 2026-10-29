@@ -13,6 +13,10 @@ try:
 except ImportError:
     dotenv = None
 
+from xphi.node.space.bind.around import determine_execution_mode, project_user_mode
+if determine_execution_mode() == "USER" and not (Path.home() / ".anchor" / "bound.json").exists():
+    project_user_mode(Path.home() / ".anchor")
+
 from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
@@ -65,6 +69,29 @@ def boot_kernel(mode_name: str):
         log.error(f"[Fiber] FATAL Kernel panic: {e}", exc_info=True)
         sys.exit(1)
 
+
+@app.command("init")
+def run_init(
+    rotate_cipher: Annotated[bool, typer.Option("--rotate-cipher", help="Regenerate local_cipher.key (invalidates existing TOTP DB)")] = False,
+    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+):
+    """Initializes workspace boundary (~/.anchor/bound.json) and local node cryptographic keys."""
+    _load_env(env_file)
+    log.info("[Fiber] Bootstrapping workspace and node identity...")
+    
+    # 워크스페이스 바인딩 (USER 모드 시 bound.json 자동 생성)
+    if determine_execution_mode() == "USER":
+        project_user_mode(Path.home() / ".anchor")
+
+    # 노드 키 초기화 실행
+    from fiber.gateway.bridge.action.sign import ensure_node_keys
+    import json
+    info = ensure_node_keys(force_regenerate_cipher=rotate_cipher)
+    
+    ssh_msg = "newly created" if info["ssh_key_status"] == "CREATED" else "already exists (skipped)"
+    cip_msg = "newly created" if info["local_cipher_status"] == "CREATED" else "already exists (skipped)"
+    log.info(f"Node Cryptographic Identity Initialized (SSH: {ssh_msg}, Cipher: {cip_msg}):")
+    print(json.dumps(info, indent=2, ensure_ascii=False))
 
 @app.command("daemon")
 def run_daemon(

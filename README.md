@@ -501,12 +501,8 @@ pyenv local fiber-user
 uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.7
 # OR: uv pip install -e /path/to/local/self/fiber
 
-## 2. Bootstrap workspace topology (~/.anchor/bound.json)
-python -m xphi.node.space.bind.around
-
-## 3. Provision zero-env node identity (~/.ssh/fiber_ed25519 & local_cipher.key)
-fiber sign init
-fiber sign status
+## Bootstrap workspace & Provision node identity
+fiber init
 ```
 
 ### 3.3. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
@@ -520,9 +516,8 @@ Best suited for running Fiber as a standalone background service (`fiber daemon`
 brew install wittgena/fiber/fiber
 
 ## Initialize local node identity & start the background daemon service
-fiber sign init
+fiber init
 brew services start wittgena/fiber/fiber
-
 ```
 
 ## 4. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)

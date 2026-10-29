@@ -65,11 +65,9 @@ jobs:
           pip install uv hatch
           uv pip install --system -e .[dev]
 
-      - name: Bootstrap Topology & Initialize Node Keys
+      - name: Bootstrap Workspace & Initialize Node Identity
         run: |
-          python -m xphi.node.space.bind.around
-          fiber sign init
-          fiber sign status
+          fiber init
       
       - name: Boot Node (Background)
         env:
