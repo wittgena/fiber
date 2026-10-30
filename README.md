@@ -1,5 +1,4 @@
-# fiber.README
-@lineage: README
+# README
 
 **AI Runtime Harness**
 
