@@ -269,6 +269,25 @@ class UIRefs:
     def push_pubsub(self, channel: str, msg: str) -> None:
         state.pipeline.pubsub_eps += 1
         self.pubsub_buffer.append(f"[{time.strftime('%H:%M:%S.%f')[:-3]}] [{channel}] {msg}")
+    
+    def refresh_finops_chart(self) -> None:
+        chart = self.finops_chart
+        if chart is None:
+            return
+        f = state.finops
+        try:
+            opts = chart.options
+            if "xAxis" in opts and isinstance(opts["xAxis"], dict):
+                opts["xAxis"]["data"] = list(f.x_ticks)
+            if "series" in opts and isinstance(opts["series"], list):
+                if len(opts["series"]) > 0 and isinstance(opts["series"][0], dict):
+                    opts["series"][0]["data"] = list(f.y_fuel)
+                if len(opts["series"]) > 1 and isinstance(opts["series"][1], dict):
+                    opts["series"][1]["data"] = list(f.y_core)
+            chart.update()
+            f.chart_dirty = False
+        except Exception:
+            pass
 
 
 state = StudioState()

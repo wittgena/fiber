@@ -10,11 +10,12 @@ from pydantic import BaseModel, Field
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
+from fiber.dev.base.scene.runner import SchemeRunner
+
 from xphi.arch.bound.adapter.settlement import MandateAdapter, Ap2MandateResult, SettlementReceipt, TransactionReceipt
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.node.space.sandbox.runner import SchemeRunner
-from xphi.node.runtime.wasm.broker import DphiBroker
-from xphi.node.runtime.wasm.method import DphiMethod
+from xphi.node.runtime.wasm.broker import WasmBroker
+from xphi.node.runtime.wasm.method import WasmMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("infra.e2e.epoch")
@@ -67,9 +68,9 @@ class EpochBase(SchemeRunner):
                 "injected_tick": None
             }
             init_payload = StateAdapter.to_canonical_bytes(init_req).decode('utf-8')
-            res = await self.broker.invoke(DphiMethod.INIT_EPOCH.value, init_payload)
+            res = await self.broker.invoke(WasmMethod.INIT_EPOCH.value, init_payload)
             if not res.success:
-                raise RuntimeError(f"{DphiMethod.INIT_EPOCH.value} Failed: {res.error}")
+                raise RuntimeError(f"{WasmMethod.INIT_EPOCH.value} Failed: {res.error}")
                 
             parity_triplet = json.loads(res.output)
             log.info(f"  └─ Generated Nexus ID: {parity_triplet.get('nexus_id')}")
@@ -90,9 +91,9 @@ class EpochBase(SchemeRunner):
             seal_payload_dict = await self.hook_seal_epoch(parity_triplet, repos, economy_state, current_ts)
             
             seal_payload_str = StateAdapter.to_canonical_bytes(seal_payload_dict).decode('utf-8')
-            seal_res = await self.broker.invoke(DphiMethod.SEAL_EPOCH.value, seal_payload_str)
+            seal_res = await self.broker.invoke(WasmMethod.SEAL_EPOCH.value, seal_payload_str)
             if not seal_res.success:
-                raise RuntimeError(f"{DphiMethod.SEAL_EPOCH.value} Failed: {seal_res.error}")
+                raise RuntimeError(f"{WasmMethod.SEAL_EPOCH.value} Failed: {seal_res.error}")
                 
             sealed_data = json.loads(seal_res.output)
             log.info("  └─ Epoch Sealed Successfully via Multi-sig Consensus.")
@@ -108,7 +109,7 @@ class EpochBase(SchemeRunner):
             )
             await self._run_case(
                 f"{self.scenario_name} (Flow 4): Execute Transition", 
-                DphiMethod.EXECUTE_TRANSITION.value, 
+                WasmMethod.EXECUTE_TRANSITION.value, 
                 transition_payload, 
                 expected_success=True
             )
@@ -122,7 +123,7 @@ class EpochBase(SchemeRunner):
             }
             await self._run_case(
                 f"{self.scenario_name} (Flow 5): Verify Parity Completeness", 
-                DphiMethod.VERIFY_PARITY.value, 
+                WasmMethod.VERIFY_PARITY.value, 
                 parity_req, 
                 expected_success=True
             )

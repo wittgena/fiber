@@ -2,7 +2,7 @@
 """
 Glossary:
 - fuel_budget: Fixed spending quota limit assigned via policy/Mandate (immutable until upgraded).
-- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA Ledger SSOT.
+- ledger_balance: Real-time remaining fuel balance strictly anchored to the PTA SSOT.
 - Ensure UI signals and state tracking keep these two concepts strictly decoupled.
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ from fiber.infra.ops.finops.cost.registry import ModelCostRegistry
 from fiber.infra.ops.finops.model.calculator import UnitCostCalculator
 from fiber.llm.model.types.provider.general import ModelInfo
 
-from xphi.arch.contract.config.resolver import config as global_config
+from xphi.arch.contract.config.env import config as global_config
 from xphi.arch.contract.event.next import LogEvent
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import flow_scope, get_emitter, register_interceptor

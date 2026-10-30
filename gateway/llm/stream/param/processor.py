@@ -18,7 +18,7 @@ from fiber.gateway.llm.context.metadata import ExecutionMetadata, CompletionCont
 from fiber.llm.compat.param import FRAMEWORK_KWARGS, AUTH_PREFIXES, FLAG_KEYS, PROVIDER_ALIAS, OPENAI_REGIONAL_HOSTS, DEFAULT_CHAT_COMPLETION_PARAM_VALUES, DEFAULT_EMBEDDING_PARAM_VALUES
 from fiber.llm.compat.registry import PROVIDER_PARAM_RULES
 
-from xphi.arch.contract.config.resolver import config
+from xphi.arch.contract.config.env import config
 from xphi.arch.contract.config.constants import COMPLETION_HTTP_FALLBACK_SECONDS, DEFAULT_REQUEST_TIMEOUT_SECONDS, REQUEST_TIMEOUT
 from xphi.watcher.plane.emitter import get_emitter
 

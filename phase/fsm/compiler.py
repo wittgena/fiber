@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
 from xphi.state.inter.fsm import FSMInterpreter
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.node.runtime.wasm.quota import QuotaPolicy
 from xphi.watcher.plane.emitter import get_emitter
 
@@ -67,19 +67,15 @@ class CompactKey:
     DEFAULT_NEXT = "dn"
 
 
-# ============================================================================
-# 2. OPTIMAL SCHEMAS (Off-Ledger Task IO vs On-Ledger Pointer IR)
-# ============================================================================
+# OPTIMAL SCHEMAS (Off-Store Task IO vs On-Store Pointer IR)
 class VCRConfig(BaseModel):
     capture_mode: str = Field(default="rpc_payload")
     coalescing_window_ms: int = Field(default=0, ge=0)
-
 
 class ProjectionConfig(BaseModel):
     """Controls Claim-Check CAS offloading and lightweight state key extraction."""
     offload_path: Optional[str] = None
     extract_keys: List[str] = Field(default_factory=list)
-
 
 class TaskIOSpec(BaseModel):
     """Heavy I/O & extension config stripped from the graph and stored in CAS (`blob:<hash>`)."""
@@ -98,7 +94,6 @@ class AgentAttributes(BaseModel):
     max_failures: int = Field(default=3, ge=1)
     allow_parallel: bool = False
 
-
 class EdgeRelation(BaseModel):
     target: str
     edge_type: EdgeMode = EdgeMode.DIRECT
@@ -111,32 +106,27 @@ class EdgeRelation(BaseModel):
             or self.target.startswith((CAS_PREFIX, BRANCH_PREFIX, f"{RETURN_TOKEN}#"))
         )
 
-
 class Fragment(BaseModel):
     id: str
     type: NodeType
     attributes: AgentAttributes = Field(default_factory=AgentAttributes)
     relations: List[EdgeRelation] = Field(default_factory=list)
 
-
 class FragmentSig(BaseModel):
     entry_point: str
     nodes: Dict[str, Fragment] = Field(default_factory=dict)
     meta: Dict[str, Any] = Field(default_factory=dict)
 
-
-class ExCompiledBundle(BaseModel):
-    """Final compiled artifact consumed directly by ExBranchController and ExGraphTraverser."""
+class CompiledBundle(BaseModel):
+    """Final compiled artifact consumed directly by BranchController and GraphTraverser."""
     root_hash: str
     root_blob: Dict[str, Any]
     cas_store: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
     total_root_bytes: int = 0
 
 
-# ============================================================================
-# 3. COMPILER & PROJECTOR (ASL -> CAS Stripping -> WASM Auto-Linker & Sandbox)
-# ============================================================================
-class ExStateProjector:
+# COMPILER & PROJECTOR (ASL -> CAS Stripping -> WASM Auto-Linker & Sandbox)
+class StateProjector:
     @staticmethod
     def project_compact_blob(signature: FragmentSig) -> Dict[str, Any]:
         graph_specs: Dict[str, Any] = {}
@@ -178,11 +168,11 @@ class ExStateProjector:
         }
 
 
-class ExFSMCompiler:
+class FSMCompiler:
     def __init__(self, byte_limit: int = MAX_BLOB_BYTES, use_wasm_linker: bool = True):
         self.byte_limit = byte_limit
         self.use_wasm_linker = use_wasm_linker
-        self.projector = ExStateProjector()
+        self.projector = StateProjector()
         self._cas_pool: Dict[str, Dict[str, Any]] = {}
 
     def _inscribe_blob(self, data: Dict[str, Any], prefix: str = CAS_PREFIX) -> str:
@@ -393,7 +383,7 @@ class ExFSMCompiler:
 
         return cls._infer_type_from_resource(raw), None
 
-    def _finalize_bundle_from_wasm(self, wasm_output_str: str) -> ExCompiledBundle:
+    def _finalize_bundle_from_wasm(self, wasm_output_str: str) -> CompiledBundle:
         """Unpacks `fsm.wasm` compile output and merges partitioned sub-branches into `cas_store`."""
         parsed = FsmAdapter.parse_broker_output(wasm_output_str)
         if not parsed.get("success", False):
@@ -418,14 +408,14 @@ class ExFSMCompiler:
                 f"Compiled FSM graph ({total_root_bytes}B) exceeds {self.byte_limit}B limit."
             )
 
-        return ExCompiledBundle(
+        return CompiledBundle(
             root_hash=root_hash,
             root_blob=root_blob,
             cas_store=dict(self._cas_pool),
             total_root_bytes=total_root_bytes,
         )
 
-    def _fallback_python_compile(self, raw_ir: Dict[str, Any]) -> ExCompiledBundle:
+    def _fallback_python_compile(self, raw_ir: Dict[str, Any]) -> CompiledBundle:
         """Fallback compiler when `fsm.wasm` binary is not yet built or disabled."""
         raw_bytes = StateAdapter.to_canonical_bytes(raw_ir)
         if len(raw_bytes) > self.byte_limit:
@@ -434,14 +424,14 @@ class ExFSMCompiler:
                 f"Modularize sub-branches via '{BRANCH_PREFIX}<hash>' targets."
             )
         root_hash = self._inscribe_blob(raw_ir, prefix=BRANCH_PREFIX)
-        return ExCompiledBundle(
+        return CompiledBundle(
             root_hash=root_hash,
             root_blob=raw_ir,
             cas_store=dict(self._cas_pool),
             total_root_bytes=len(raw_bytes),
         )
 
-    def compile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> ExCompiledBundle:
+    def compile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> CompiledBundle:
         sig = self._build_fragment_sig(asl_schema, trace_id)
         raw_ir = self.projector.project_compact_blob(sig)
 
@@ -463,13 +453,13 @@ class ExFSMCompiler:
 
         return self._fallback_python_compile(raw_ir)
 
-    async def acompile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> ExCompiledBundle:
-        """[Async] Distributed compilation and static verification via DphiBroker & TaskWasm daemon."""
+    async def acompile_from_asl(self, asl_schema: Dict[str, Any], trace_id: str = "turn_0") -> CompiledBundle:
+        """[Async] Distributed compilation and static verification via WasmBroker & TaskWasm daemon."""
         sig = self._build_fragment_sig(asl_schema, trace_id)
         raw_ir = self.projector.project_compact_blob(sig)
 
         payload = FsmAdapter.build_compile_payload(trace_id=trace_id, compact_ir=raw_ir)
-        res = await DphiBroker.get_shared().execute(code=payload, context={"fuel": 2000})
+        res = await WasmBroker.get_shared().execute(code=payload, context={"fuel": 2000})
         if res.output:
             return self._finalize_bundle_from_wasm(res.output)
         raise ValueError(f"FSM Broker Compile Failed: {res.error}")

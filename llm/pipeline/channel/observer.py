@@ -123,7 +123,7 @@ class MeteringObserver(DuplexChannel):
                         if self.pta_adapter is not None:
                             actual_balance = await self.pta_adapter.get_balance(tenant_id, "fuel")
                             log_pipeline.info(
-                                f"[MeteringObserver] Ledger balance synced for '{tenant_id}': {actual_balance} Fuel",
+                                f"[MeteringObserver] AnchorStore balance synced for '{tenant_id}': {actual_balance} Fuel",
                                 **{
                                     "mode": "RAW",
                                     UIKey.METRIC.value: UIMetric.LEDGER_SYNC.value,

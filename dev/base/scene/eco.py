@@ -7,12 +7,12 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 
 from fiber.dev.base.scene.epoch import EpochBase
-from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from fiber.dev.base.scene.epoch import ActorIdentity
+from fiber.dev.base.scene.runner import SchemeRunner
 
-from xphi.node.space.sandbox.runner import SchemeRunner
+from xphi.arch.bound.adapter.settlement import ClearingAdapter
 from xphi.arch.bound.adapter.state import StateAdapter
-from xphi.node.runtime.wasm.method import DphiMethod
+from xphi.node.runtime.wasm.method import WasmMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.eco")
@@ -48,14 +48,10 @@ class EcoScene(SchemeRunner):
         # @phase.4: Decentralized Exchange & Deterministic Settlement
         await self._test_p2p_exchange_settlement()
 
-    # async def _test_oracle_data_provenance(self):
-    #     log.info("\n--- [Data Pipeline] Phase 2: Provenance Fingerprinting ---")
-    #     payload = {"dummy_data": "Node_State_Report_Data..."}
-    #     await self._run_case("Pipeline: Compute Tamper-Proof Root Fingerprint", DphiMethod.COMPUTE_FINGERPRINT.value, payload, expected_success=True)
     async def _test_oracle_data_provenance(self):
         log.info("\n--- [Data Pipeline] Phase 2: Canonical & Evolution-Bound Provenance Fingerprinting ---")
 
-        # 1. Standard JCS Canonical Data Provenance (Stateless Telemetry / Snapshot Dict)
+        # Standard JCS Canonical Data Provenance (Stateless Telemetry / Snapshot Dict)
         telemetry_snapshot = {
             "node_id": self.ctx.system.pubkey_hex[:16],
             "epoch_ts": int(time.time() * 1000),
@@ -63,7 +59,7 @@ class EcoScene(SchemeRunner):
         }
         await self._run_case(
             "Provenance [1/3]: Compute JCS Canonical Data Fingerprint",
-            DphiMethod.COMPUTE_FINGERPRINT.value,
+            WasmMethod.COMPUTE_FINGERPRINT.value,
             telemetry_snapshot,
             expected_success=True,
         )
@@ -91,7 +87,7 @@ class EcoScene(SchemeRunner):
         )
         await self._run_case(
             "Provenance [2/3]: Seal Evolution-Bound Transition Fingerprint",
-            DphiMethod.COMPUTE_FINGERPRINT.value,
+            WasmMethod.COMPUTE_FINGERPRINT.value,
             transition_payload,
             expected_success=True,
         )
@@ -104,7 +100,7 @@ class EcoScene(SchemeRunner):
         }
         await self._run_case(
             "Provenance [3/3]: Reject Malformed Transition Envelope (Guard Check)",
-            DphiMethod.COMPUTE_FINGERPRINT.value,
+            WasmMethod.COMPUTE_FINGERPRINT.value,
             malformed_transition,
             expected_success=False,
         )
@@ -118,12 +114,12 @@ class EcoScene(SchemeRunner):
             "rupture": False, 
             "injected_tick": None
         }
-        await self._run_case("Pipeline: Generate Parity Triplet (init_epoch)", DphiMethod.INIT_EPOCH.value, payload, expected_success=True)
+        await self._run_case("Pipeline: Generate Parity Triplet (init_epoch)", WasmMethod.INIT_EPOCH.value, payload, expected_success=True)
 
     async def _test_oracle_self_healing(self):
         log.info("\n--- [Data Pipeline] Phase 4: Self-Healing Recovery ---")
         payload = {"topos_id_low32": 101010, "nexus_id": 907049}
-        await self._run_case("Pipeline: Recover Lost Data via XOR Parity", DphiMethod.VERIFY_PARITY.value, payload, expected_success=True)
+        await self._run_case("Pipeline: Recover Lost Data via XOR Parity", WasmMethod.VERIFY_PARITY.value, payload, expected_success=True)
 
     async def _test_dao_epoch_sealing(self):
         log.info("\n--- [State Engine] Phase 3: Epoch Sealing & Consensus ---")
@@ -139,12 +135,12 @@ class EcoScene(SchemeRunner):
             timestamp=int(time.time() * 1000),
             signers=[self.ctx.system.pubkey_hex], signatures=[sig_hex], threshold=1, allowed_signers=[self.ctx.system.pubkey_hex]
         )
-        await self._run_case("Engine: Seal Epoch & Finalize State Transition", DphiMethod.SEAL_EPOCH.value, payload, expected_success=True)
+        await self._run_case("Engine: Seal Epoch & Finalize State Transition", WasmMethod.SEAL_EPOCH.value, payload, expected_success=True)
 
     async def _test_a2a_trustless_execution(self):
         log.info("\n--- [Eco Pipeline] Phase 2: Trustless Execution (Sandboxed) ---")
         code_payload = "\ndef analyze_risk():\n    return 'Validated Risk Score: 42.5'\nprint(analyze_risk())\n"
-        await self._run_case("Eco: Execute Constrained Task (Fuel Tracked)", DphiMethod.EXECUTE_CODE.value, code_payload, expected_success=True, tier="STANDARD")
+        await self._run_case("Eco: Execute Constrained Task (Fuel Tracked)", WasmMethod.EXECUTE_CODE.value, code_payload, expected_success=True, tier="STANDARD")
 
     async def _test_p2p_exchange_settlement(self):
         log.info("\n--- [Exchange Pipeline] P2P Order Ingress & Deterministic Settlement ---")
@@ -175,7 +171,7 @@ class EcoScene(SchemeRunner):
             "injected_tick": None
         }
         
-        res = await self.broker.invoke(DphiMethod.INIT_EPOCH.value, StateAdapter.to_canonical_bytes(ingress_payload).decode('utf-8'))
+        res = await self.broker.invoke(WasmMethod.INIT_EPOCH.value, StateAdapter.to_canonical_bytes(ingress_payload).decode('utf-8'))
         if not res.success:
             log.error(f"Init Epoch Failed: {res.error}")
             return None
@@ -208,10 +204,10 @@ class EcoScene(SchemeRunner):
             repos=entangled_state["repos"], cached_states={}, timestamp=int(time.time() * 1000),
             signers=signers, signatures=signatures, threshold=3, allowed_signers=signers
         )
-        await self._run_case("Trade Settlement: 3-of-3 Multi-sig State Committed to Nexus", DphiMethod.SEAL_EPOCH.value, seal_payload, expected_success=True)
+        await self._run_case("Trade Settlement: 3-of-3 Multi-sig State Committed to Nexus", WasmMethod.SEAL_EPOCH.value, seal_payload, expected_success=True)
         return signatures
 
-class LedgerSecuritySuite(SchemeRunner):
+class StoreSecuritySuite(SchemeRunner):
     """@desc: Multi-sig Consensus, Ed25519 Signatures, and Sybil Defense scenarios"""
     def __init__(self, broker):
         super().__init__(broker)
@@ -220,7 +216,7 @@ class LedgerSecuritySuite(SchemeRunner):
         self.rogue = ActorIdentity("Rogue_Attacker")
 
     async def execute_suite(self):
-        log.info("\n=== [PHASE 2] Executing PhaseStore Cryptographic Security Boundaries ===")
+        log.info("\n=== [PHASE 2] Executing AnchorStore Cryptographic Security Boundaries ===")
         await self._test_multisig_authorized()
         await self._test_multisig_threshold_fail()
         await self._test_multisig_sybil_attack()
@@ -243,7 +239,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, active_members), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: 2-of-3 Valid Multi-sig", DphiMethod.SEAL_EPOCH.value, payload, expected_success=True)
+        await self._run_case("AnchorStore: 2-of-3 Valid Multi-sig", WasmMethod.SEAL_EPOCH.value, payload, expected_success=True)
 
     async def _test_multisig_threshold_fail(self):
         log.info("\n--- Running Suite: Insufficient Signatures ---")
@@ -258,7 +254,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, [self.committee[0]]), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: Reject Insufficient Threshold", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
+        await self._run_case("AnchorStore: Reject Insufficient Threshold", WasmMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
     async def _test_multisig_sybil_attack(self):
         log.info("\n--- Running Suite: Sybil Attack Defense (Duplicate Keys) ---")
@@ -274,7 +270,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, [attacker, attacker]), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: Reject Sybil Attack (Duplicate Signer)", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
+        await self._run_case("AnchorStore: Reject Sybil Attack (Duplicate Signer)", WasmMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
     async def _test_multisig_acl_rejection(self):
         log.info("\n--- Running Suite: Dynamic ACL Filtering ---")
@@ -290,8 +286,7 @@ class LedgerSecuritySuite(SchemeRunner):
             signatures=self._generate_multisig(anchor_commit, active_members), 
             threshold=2, allowed_signers=self.committee_pubs
         )
-        await self._run_case("Ledger: Reject Unauthorized Signer via ACL", DphiMethod.SEAL_EPOCH.value, payload, expected_success=False)
-
+        await self._run_case("AnchorStore: Reject Unauthorized Signer via ACL", WasmMethod.SEAL_EPOCH.value, payload, expected_success=False)
 
 # Anchor Lifecycles (Swarm Consensus & Provenance Alignment)
 class SwarmConsensusScene(EpochBase):
@@ -309,7 +304,7 @@ class SwarmConsensusScene(EpochBase):
                 signers=[agent.pubkey_hex], signatures=[agent.sign(repo_commit)],
                 threshold=1, allowed_signers=[agent.pubkey_hex]
             )
-            await self._run_case(f"Swarm: Inscribe {agent_name}", DphiMethod.INSCRIBE_ACTOR.value, payload, expected_success=True)
+            await self._run_case(f"Swarm: Inscribe {agent_name}", WasmMethod.INSCRIBE_ACTOR.value, payload, expected_success=True)
         return agent_targets
 
     async def hook_seal_epoch(self, parity_triplet: dict, repos: dict, economy_state: dict, timestamp: int) -> dict:
@@ -339,7 +334,7 @@ class ProvAlignScene(EpochBase):
                 signers=[agent.pubkey_hex], signatures=[agent.sign(repo_commit)],
                 threshold=1, allowed_signers=[agent.pubkey_hex]
             )
-            await self._run_case(f"Provenance: Inscribe {repo_name}", DphiMethod.INSCRIBE_ACTOR.value, payload, expected_success=True)
+            await self._run_case(f"Provenance: Inscribe {repo_name}", WasmMethod.INSCRIBE_ACTOR.value, payload, expected_success=True)
         return repo_targets
 
     async def hook_seal_epoch(self, parity_triplet: dict, repos: dict, economy_state: dict, timestamp: int) -> dict:
@@ -367,7 +362,7 @@ class AnchorScene(SchemeRunner):
         self.fail_count += eco.fail_count
         self.failed_cases.extend(eco.failed_cases)
         
-        ledger = LedgerSecuritySuite(self.broker)
+        ledger = StoreSecuritySuite(self.broker)
         await ledger.execute_suite()
         self.success_count += ledger.success_count
         self.fail_count += ledger.fail_count

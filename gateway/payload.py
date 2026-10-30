@@ -26,7 +26,7 @@ from fiber.infra.vcr.injector import VCRInjector
 from xphi.arch.xor.parser.ruleset.otlp import OtlpRulesetParser, default_otlp_ruleset
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.subs import DistributedPubSub
-from xphi.node.runtime.wasm.broker import DphiBroker
+from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter(__name__)
@@ -107,10 +107,10 @@ async def lifespan(app: FastAPI):
         log.info("SecretAuditor mounted successfully to app.state.")
 
         tunnel = app.state.tunnel
-        phase_store = app.state.phase_store
+        anchor_store = app.state.anchor_store
 
-        if not all([tunnel, phase_store]):
-            log.warning("Some infrastructure dependencies (tunnel, phase_store) are missing from injection.")
+        if not all([tunnel, anchor_store]):
+            log.warning("Some infrastructure dependencies (tunnel, anchor_store) are missing from injection.")
 
         app.state.pipeline_interceptors = InterceptorConfigLoader.load_from_config()
         if app.state.pipeline_interceptors:
@@ -140,7 +140,7 @@ async def lifespan(app: FastAPI):
         app.state.pubsub = pubsub
         
         # WASM Broker 초기화
-        app.state.broker = DphiBroker(timeout=config.wasm_timeout)
+        app.state.broker = WasmBroker(timeout=config.wasm_timeout)
         log.info(f"WasmBroker initialized (timeout: {config.wasm_timeout}s).")
 
         # OTLP Parser & Extraction Engine Init
@@ -185,7 +185,7 @@ def _get_root_path(config: Config) -> str:
 def create_app(
     config: Optional[Config] = None,
     tunnel: Optional[Any] = None,
-    phase_store: Optional[Any] = None  
+    anchor_store: Optional[Any] = None  
 ) -> FastAPI:
     config = config or get_default_config()
     app = FastAPI(
@@ -198,7 +198,7 @@ def create_app(
     
     app.state.config = config
     app.state.tunnel = tunnel
-    app.state.phase_store = phase_store  
+    app.state.anchor_store = anchor_store  
     app.state.is_ready = False  
     
     # Routers Binding

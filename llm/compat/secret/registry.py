@@ -18,15 +18,10 @@ log_redact = get_emitter("redact.registry")
 
 REDACT_REGISTRY_ROOT = resolve_path("anchor") / "registry"
 DEFAULT_REDACT_FILENAME = "redact_rules.json"
+BASE_SECRET_KEYS = frozenset(SECRET_KEY_PATTERNS)
 
 
 class RedactRulesetSchema(BaseModel):
-    """
-    redact_rules.json 선언적 스키마:
-    - patterns          : {rule_id: regex_str} 형태의 추가 또는 오버라이드 정규식 사전
-    - disabled_rules    : 비활성화할 내장 룰의 정확한 rule_id 리스트 (예: ["context7_key", "generic_password_kv"])
-    - extra_secret_keys : Dict Key 및 URL 쿼리 파라미터 마스킹에 공통 적용할 민감 키워드 리스트 (3글자 이상)
-    """
     patterns: Dict[str, str] = Field(default_factory=dict)
     disabled_rules: List[str] = Field(default_factory=list)
     extra_secret_keys: List[str] = Field(default_factory=list)
@@ -42,7 +37,6 @@ class RedactRulesetSchema(BaseModel):
                 re.compile(pattern)
                 valid[rule_id] = pattern
             except re.error as e:
-                # 개별 정규식 문법 오류 시 해당 rule_id만 건너뛰고 나머지는 정상 반영 (Partial Update)
                 log_redact.warning(f"[REDACT - {rule_id}] Invalid regex skipped ('{pattern}'): {e}")
         return valid
 
@@ -69,24 +63,74 @@ class RedactRegistryIO:
         return p / filename if (p.is_dir() or not p.suffix) else p
 
     @classmethod
-    def initialize_and_inject(cls, custom_path_env: Optional[str] = None) -> Tuple[Dict[str, str], List[str]]:
-        merged_rules = dict(BASE_SECRET_RULES)
-        base_keys = list(SECRET_KEY_PATTERNS)
-
+    def ensure_default_file(cls, custom_path_env: Optional[str] = None) -> Path:
+        """파일이 없거나 빈 파일일 경우 기본 스키마 포맷(patterns, disabled_rules, extra_secret_keys)으로 초기화"""
         target_path = cls.resolve_target_path(custom_path_env)
-        if not target_path.exists() or not target_path.is_file():
-            log_redact.debug(f"No custom redact registry found at '{target_path}'. Using base rules only.")
-            return merged_rules, base_keys
+        if not target_path.exists() or target_path.stat().st_size == 0:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            default_payload = RedactRulesetSchema().model_dump()
+            with open(target_path, "w", encoding="utf-8") as f:
+                json.dump(default_payload, f, indent=2, ensure_ascii=False)
+        return target_path
 
+    @classmethod
+    def load_schema(cls, custom_path_env: Optional[str] = None) -> RedactRulesetSchema:
+        target_path = cls.resolve_target_path(custom_path_env)
+        if not target_path.exists() or not target_path.is_file() or target_path.stat().st_size == 0:
+            return RedactRulesetSchema()
         try:
             with open(target_path, "r", encoding="utf-8") as f:
-                raw_data = json.load(f)
-            validated = RedactRulesetSchema(**raw_data)
+                return RedactRulesetSchema(**json.load(f))
         except Exception as e:
             log_redact.error(f"Failed to load redact registry at '{target_path}': {e}")
+            return RedactRulesetSchema()
+
+    @classmethod
+    def save_preferences(
+        cls,
+        disabled_rules: Optional[List[str]] = None,
+        extra_secret_keys: Optional[List[str]] = None,
+        patterns: Optional[Dict[str, str]] = None,
+        custom_path_env: Optional[str] = None,
+    ) -> Tuple[Dict[str, str], List[str]]:
+        """Dialog 등에서 변경한 설정(disabled_rules, extra_secret_keys, patterns)을 저장하고 런타임 엔진에 즉시 재주입"""
+        target_path = cls.ensure_default_file(custom_path_env)
+        schema = cls.load_schema(custom_path_env)
+
+        if disabled_rules is not None:
+            schema.disabled_rules = sorted(set(disabled_rules))
+        if extra_secret_keys is not None:
+            schema.extra_secret_keys = sorted({k.strip().upper() for k in extra_secret_keys if len(k.strip()) >= 3})
+        if patterns is not None:
+            schema.patterns = RedactRulesetSchema.validate_regex_dict(patterns)
+
+        with open(target_path, "w", encoding="utf-8") as f:
+            json.dump(schema.model_dump(), f, indent=2, ensure_ascii=False)
+
+        return cls.initialize_and_inject(custom_path_env)
+
+    @classmethod
+    def save_disabled_rules(
+        cls, disabled_rules: List[str], custom_path_env: Optional[str] = None
+    ) -> Tuple[Dict[str, str], List[str]]:
+        return cls.save_preferences(disabled_rules=disabled_rules, custom_path_env=custom_path_env)
+
+    @classmethod
+    def initialize_and_inject(cls, custom_path_env: Optional[str] = None) -> Tuple[Dict[str, str], List[str]]:
+        global REDACT_RULES, SECRET_KEYS
+
+        merged_rules = dict(BASE_SECRET_RULES)
+        base_keys = list(BASE_SECRET_KEYS)
+
+        target_path = cls.resolve_target_path(custom_path_env)
+        if not target_path.exists() or not target_path.is_file() or target_path.stat().st_size == 0:
+            configure_redaction(rules=merged_rules, secret_keys=base_keys)
+            REDACT_RULES, SECRET_KEYS = merged_rules, base_keys
             return merged_rules, base_keys
 
-        # 정확한 rule_id 기반 비활성화 (부분 문자열 매칭 오류 원천 차단)
+        validated = cls.load_schema(custom_path_env)
+
+        merged_rules.update(validated.patterns)
         disabled_count = 0
         for rule_id in validated.disabled_rules:
             if merged_rules.pop(rule_id, None) is not None:
@@ -94,15 +138,9 @@ class RedactRegistryIO:
             else:
                 log_redact.warning(f"[REDACT - disable] Unknown rule_id '{rule_id}' ignored.")
 
-        # Key-Value 패턴 병합 (신규 rule_id 추가 또는 기존 rule_id 정규식 오버라이드)
-        merged_rules.update(validated.patterns)
-
-        # 민감 키 병합 (Dict Key 및 URL 쿼리 파라미터 공통 적용)
-        merged_keys = list({k.upper() for k in (base_keys + validated.extra_secret_keys)})
-        configure_redaction(
-            rules=merged_rules,
-            secret_keys=merged_keys,
-        )
+        merged_keys = sorted({k.upper() for k in (base_keys + validated.extra_secret_keys)})
+        configure_redaction(rules=merged_rules, secret_keys=merged_keys)
+        REDACT_RULES, SECRET_KEYS = merged_rules, merged_keys
 
         log_redact.info(
             f"Custom redact rules injected -> +{len(validated.patterns)} rules, "
@@ -111,4 +149,6 @@ class RedactRegistryIO:
         return merged_rules, merged_keys
 
 
-REDACT_RULES, SECRET_KEYS = RedactRegistryIO.initialize_and_inject()
+REDACT_RULES: Dict[str, str] = {}
+SECRET_KEYS: List[str] = []
+RedactRegistryIO.initialize_and_inject()

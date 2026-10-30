@@ -1,4 +1,4 @@
-# fiber.dev.ex.switch
+# fiber.dev.tester.switch
 import os
 import asyncio
 import time
@@ -28,7 +28,7 @@ async def analyze_and_extract_stream(scenario_id: str, prompt: str, model_name: 
             temperature=0.7,
             metadata={
                 "vcr_scenario": scenario_id.replace(" ", "_").lower(),
-                "vcr_invoker": "ex.switch"
+                "vcr_invoker": "tester.switch"
             }
         )
 

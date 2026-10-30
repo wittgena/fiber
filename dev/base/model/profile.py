@@ -1,4 +1,4 @@
-# fiber.dev.ex.model.profile
+# fiber.dev.base.model.profile
 from __future__ import annotations
 
 import os

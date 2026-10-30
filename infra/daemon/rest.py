@@ -19,7 +19,7 @@ from xphi.arch.contract.registry.unified import contract
 from xphi.node.ops.daemon.base import AbstractDaemon
 from xphi.node.ops.reaper import SystemOps
 from xphi.node.space.tunnel.factory import TunnelFactory
-from xphi.state.anchor.store import PhaseStore
+from xphi.state.anchor.store import AnchorStore
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("daemon.rest")
@@ -68,10 +68,10 @@ class RestEdgeDaemon(AbstractDaemon):
             await clear_zombie_ports([self.target_port], tag=self.name)
             self._tunnel = await TunnelFactory.get_default()
 
-            phase_store = getattr(self.ctx, "phase_store", None)
-            if phase_store is None:
-                log.info(f"[{self.name}] PhaseStore not found in context. Bootstrapping local PhaseStore.")
-                phase_store = PhaseStore()
+            anchor_store = getattr(self.ctx, "anchor_store", None)
+            if anchor_store is None:
+                log.info(f"[{self.name}] AnchorStore not found in context. Bootstrapping local AnchorStore.")
+                anchor_store = AnchorStore()
 
             resolved_url = os.getenv("FIBER_GATEWAY_URL", f"http://127.0.0.1:{self.target_port}")
             runtime_config = Config(
@@ -85,7 +85,7 @@ class RestEdgeDaemon(AbstractDaemon):
             injected_app = create_app(
                 config=runtime_config,
                 tunnel=self._tunnel,
-                phase_store=phase_store
+                anchor_store=anchor_store
             )
 
             config = uvicorn.Config(

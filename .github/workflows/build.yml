@@ -38,7 +38,7 @@ jobs:
       - name: Checkout fiber-compats (Fixtures)
         uses: actions/checkout@v4
         with:
-          repository: wittgena/fiber-compats
+          repository: dphi-network/fiber-compats
           path: fiber-compats
 
       - name: Setup Python
@@ -121,7 +121,7 @@ jobs:
           fiber e2e inter.wasm.gateway
           fiber e2e inter.wasm.phase
           fiber e2e inter.plane.flare --mode dev
-          VCR_MODE=replay python -m fiber.dev.ex.switch
+          VCR_MODE=replay python -m fiber.dev.tester.switch
       
       - name: Run E2E Concurrency & Load Benchmark
         env:

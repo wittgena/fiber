@@ -6,13 +6,13 @@ from typing import List, Dict, Any
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.contract.protocol.worker import WorkerProtocol
-from xphi.state.anchor.store import PhaseStore
+from xphi.state.anchor.store import AnchorStore
 
 class WorkerReaper(WorkerProtocol):
-    def __init__(self, ledger: PhaseStore, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):
+    def __init__(self, anchor_store: AnchorStore, rpc_client: InternalRpcClient, sweep_interval: float = 5.0):
         super().__init__(agent_name="worker.reaper")
         
-        self.ledger = ledger
+        self.anchor_store = anchor_store
         self.rpc = rpc_client
         self.sweep_interval = sweep_interval
         self.running = False
@@ -24,7 +24,7 @@ class WorkerReaper(WorkerProtocol):
     def handle_tools_list(self, req_id: Any):
         tools = [{
             "name": "trigger_manual_reconciliation",
-            "description": "Force an immediate ledger sweep to detect and rollback orphaned transactions.",
+            "description": "Force an immediate anchor store sweep to detect and rollback orphaned transactions.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -74,7 +74,7 @@ class WorkerReaper(WorkerProtocol):
 
     async def _sweep_and_reconcile(self) -> int:
         now = time.time()
-        stale_streams = await self.ledger.query_stale_streams(now, self.ttl_thresholds)
+        stale_streams = await self.anchor_store.query_stale_streams(now, self.ttl_thresholds)
         if not stale_streams:
             return 0
 
@@ -116,7 +116,7 @@ class WorkerReaper(WorkerProtocol):
         )
 
         # Phase 2: 원장 씰링 및 증거 기록 (Sealing the Truth)
-        await self.ledger.force_transition(
+        await self.anchor_store.force_transition(
             handle_id=handle_id,
             new_action="transition.resolve",
             metadata={
@@ -126,7 +126,7 @@ class WorkerReaper(WorkerProtocol):
                 "risk_score": risk_score
             }
         )
-        self.log.info(f"Reverted {handle_id}. Entropy cleared and ledger marked for future reconciliation.")
+        self.log.info(f"Reverted {handle_id}. Entropy cleared and anchor store marked for future reconciliation.")
 
 async def main():
     class MockStore:
@@ -135,7 +135,7 @@ async def main():
         async def force_transition(self, *args, **kwargs):
             pass
 
-    sentinel = WorkerReaper(ledger=MockStore(), rpc_client=InternalRpcClient())
+    sentinel = WorkerReaper(anchor_store=MockStore(), rpc_client=InternalRpcClient())
     await sentinel.ignite()
 
 if __name__ == "__main__":

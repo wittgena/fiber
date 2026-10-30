@@ -1,4 +1,4 @@
-# fiber.dev.ex.model.fallback
+# fiber.dev.base.model.fallback
 import json
 import time
 from pathlib import Path

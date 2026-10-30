@@ -8,7 +8,7 @@
 
 Traditional agent graph frameworks serialize massive, mutable state snapshots into databases—leading to out-of-memory (OOM) crashes, unreplayable side effects, barrier deadlocks, and runaway API costs during parallel exploration.
 
-Fiber solves this by physically decoupling **Graph Topology & Static Verification (`fsm.wasm` + Space)**, **Heavy I/O Payloads (`CAS`)**, and **Execution Lineage & Budget (`PTA Ledger`)** across five tightly integrated layers:
+Fiber solves this by physically decoupling **Graph Topology & Static Verification (`fsm.wasm` + Space)**, **Heavy I/O Payloads (`CAS`)**, and **Execution Lineage & Budget (`PTA AnchorStore`)** across five tightly integrated layers:
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -17,7 +17,7 @@ Fiber solves this by physically decoupling **Graph Topology & Static Verificatio
 │    • Automatic 1:N Fan-Out Detection, Barrier Sync, and N:1 Arbiter Collapse │
 │    • Fault-Tolerant `Catch` (`fb`) Fallback Routing & Fuel Reclamation       │
 └──────────────────┬────────────────────────────────────────┬──────────────────┘
-                   │ State & Ledger Transitions             │ I/O Actuation
+                   │ State & Anchor Transitions             │ I/O Actuation
                    ▼                                        ▼
 ┌─────────────────────────────────────────┐  ┌─────────────────────────────────┐
 │ 3. ExBranchController (fsm.runtime)     │  │ 4. FiberExecutionBridge (bridge)│
@@ -32,7 +32,7 @@ Fiber solves this by physically decoupling **Graph Topology & Static Verificatio
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ 2. ExFSMCompiler & ExStateProjector (fiber.phase.fsm.compiler)                │
 │    • Shorthand & Standard ASL Parser + `__fiber_extensions` (`Projection`)    │
-│    • Automatic `Choice` Variable Inference & Off-Ledger `TaskIOSpec`(`blob:`)│
+│    • Automatic `Choice` Variable Inference & Off-Store `TaskIOSpec`(`blob:`) │
 │    • Compact 2KB JCS Projection (`CompactKey`) & Unified `NodeType`           │
 └─────────────────────────────────────┬────────────────────────────────────────┘
                                       │ FFI (`FSMInterpreter` & `FsmAdapter`)
@@ -50,7 +50,7 @@ Fiber solves this by physically decoupling **Graph Topology & Static Verificatio
 | Module | Primary Class / Binary | Core Responsibility |
 | --- | --- | --- |
 | **`theoria.fsm` (`fsm.wasm`)** | `execute_router` (`FSMInterpreter`) | Executes AOT-cached WASM compilation and runtime guards. Automatically partitions `>2KB` graphs into `branch:<hash>#entry` subgraphs, rejects parallel branches lacking `Catch` (`fb`) fallbacks, and validates runtime transitions. |
-| **`xphi.arch.bound.adapter.fsm`** | `FsmAdapter` | Constructs standardized `FSM_COMPILE`, `FSM_STEP`, `FORK`, `MERGE`, and `HITL_PARK` payloads for `FSMInterpreter` and `DphiBroker`. |
+| **`xphi.arch.bound.adapter.fsm`** | `FsmAdapter` | Constructs standardized `FSM_COMPILE`, `FSM_STEP`, `FORK`, `MERGE`, and `HITL_PARK` payloads for `FSMInterpreter` and `WasmBroker`. |
 | **`fiber.phase.fsm.compiler`** | `ExFSMCompiler` | Parses ASL JSON (supporting shorthand URIs and `if` expressions), auto-infers `Choice` variables into `Projection.extract_keys`, strips `Parameters` into off-ledger `TaskIOSpec` CAS blobs (`blob:<hash>`), and delegates 2KB linking/linting to `fsm.wasm`. |
 | **`fiber.phase.fsm.runtime`** | `ExBranchController` | Drives state transitions via a unified M-inputs-to-N-outputs PTA engine, verifies step transitions against both `phase.wasm` and `fsm.wasm`, synchronizes `DagJoinBarrier` nodes (including fallback edges), and rehydrates cursors in $O(1)$ time. |
 | **`fiber.phase.fsm.bridge`** | `FiberExecutionBridge` | Connects FSM nodes to Fiber's Drop-in LLM Pipeline (`acompletion`, `StreamBreaker`, `MeteringObserver`, `VCR`) and Stateless MCP Gateway (`/v1/mcp-gateway/{target}/invoke` with `HTTP 202` Pre-Flight HITL and `checkpoint_handle`). |
@@ -66,7 +66,7 @@ To guarantee sub-millisecond state transitions and prevent ledger bloat, every o
 
 When compiling an ASL state machine, `ExFSMCompiler` and `fsm.wasm` execute a three-stage pipeline:
 
-1. **Off-Ledger `TaskIOSpec` Stripping (`blob:<sha256_16>`):** Strips `resource_uri`, `result_path`, `call_params` (prompts, SQL queries, tool schemas), `vcr` config, and `projection` (`offload_path`, `extract_keys`) rules into `PhaseStore`.
+1. **Off-Store `TaskIOSpec` Stripping (`blob:<sha256_16>`):** Strips `resource_uri`, `result_path`, `call_params` (prompts, SQL queries, tool schemas), `vcr` config, and `projection` (`offload_path`, `extract_keys`) rules into `AnchorStore`.
 2. **Pre-Mount Static Deadlock Sandbox (`E_BARRIER_DEADLOCK_RISK`):** `fsm.wasm` analyzes forward in-degrees across the topology. If a `1:N` parallel fork converges at a `DagJoinBarrier` (in-degree >= 2) and any parallel `Task` node omits a `Catch` (`fb`) fallback edge, compilation is rejected prior to ledger inscription.
 3. **Bottom-Up SESE Auto-Linker (`SYMLINK` Call-Stack):** If the projected topology exceeds `2,048 Bytes`, `fsm.wasm` iteratively folds trailing subgraphs into independent `<= 2KB` `branch:<sub_hash>` bundles, replaces terminal `END` tokens with `RETURN`, and rewrites parent edges into `"branch:<sub_hash>#<entry_node>"` `SYMLINK` pointers.
 
@@ -276,9 +276,9 @@ SAMPLE_MULTIVERSE_ASL = {
 
 All state movements in `ExBranchController` execute through a single cryptographic commit pipeline (`_commit_pta_transition`), enforcing strict fuel conservation across the multiverse:
 
-| Operation | PTA Cardinality | PTA Phase Status | WASM Guard & Ledger Mechanics |
+| Operation | PTA Cardinality | PTA Phase Status | WASM Guard & AnchorStore Mechanics |
 | --- | --- | --- | --- |
-| **`mount_bundle_and_spawn`** | `0 Inputs -> 1 Output` | `GENESIS` | Inscribes `blob:` and auto-linked `branch:` objects into `PhaseStore`, initializes `DagJoinBarrier` via DFS cycle/in-degree analysis (including `fb` edges), and mints the root `BranchCursor` with `initial_fuel`. |
+| **`mount_bundle_and_spawn`** | `0 Inputs -> 1 Output` | `GENESIS` | Inscribes `blob:` and auto-linked `branch:` objects into `AnchorStore`, initializes `DagJoinBarrier` via DFS cycle/in-degree analysis (including `fb` edges), and mints the root `BranchCursor` with `initial_fuel`. |
 | **`step`** | `1 Input -> 1 Output` | `ACTIVE` / `SEALED` | Verifies transition via dual WASM guards (`phase.wasm` & `fsm.wasm`; logs `wasm.reject` on failure), spends current PTA, deducts `step_cost`, offloads heavy output to CAS (`_last_ptr`), and mints next PTA. |
 | **`fork`** | `1 Input -> N Outputs` | `FORKED` | Deducts parent `step_cost`, inscribes parent `offload_data` into CAS, spends parent PTA, and atomically slices remaining fuel (`parent.fuel - step_cost`) across $N$ child branches (`stream_id/b0..bN-1`) via `_slice_fuel` (weighted by `fuel_ratios` or equal split). |
 | **`collapse_and_merge`** | `N Inputs -> 1 Output` | `MERGED` | Spends all $N$ arriving branch PTAs at a `DagJoinBarrier` (or exit sweep), selects winner via `ArbiterFn`, and reclaims $\sum \text{fuel}_i$ into a single stream. |
@@ -380,5 +380,5 @@ asyncio.run(main(SAMPLE_MULTIVERSE_ASL))
 
 | Verification Target | Command | Validated Subsystems |
 | --- | --- | --- |
-| **FSM Lifecycle & PTA Ledger Suite** | `python -m dev.e2e.fsm.tester` | Shorthand ASL compilation, pre-mount deadlock linter, `1:N` fork, `HTTP 202` zero-spend parking, $O(1)$ PTA rehydration, time-travel re-branching, `>2KB` Auto-Linker (45 nodes $\rightarrow$ 5 sub-branches), and runaway `Catch` recovery. |
-| **Isolated WASM Kernel & Broker Suite** | `python -m dev.e2e.inter.wasm.fsm` | Distributed `DphiBroker` $\leftrightarrow$ `TaskWasm` $\leftrightarrow$ `FSMInterpreter` (`fsm.wasm`) execution across `compile`, `multiverse`, and `incident` (03:00 AM outage) test suites with canonical proof sealing via `phase.wasm`. |
+| **FSM Lifecycle & PTA Suite** | `python -m dev.e2e.fsm.tester` | Shorthand ASL compilation, pre-mount deadlock linter, `1:N` fork, `HTTP 202` zero-spend parking, $O(1)$ PTA rehydration, time-travel re-branching, `>2KB` Auto-Linker (45 nodes $\rightarrow$ 5 sub-branches), and runaway `Catch` recovery. |
+| **Isolated WASM Kernel & Broker Suite** | `python -m dev.e2e.inter.wasm.fsm` | Distributed `WasmBroker` $\leftrightarrow$ `TaskWasm` $\leftrightarrow$ `FSMInterpreter` (`fsm.wasm`) execution across `compile`, `multiverse`, and `incident` (03:00 AM outage) test suites with canonical proof sealing via `phase.wasm`. |

@@ -40,11 +40,11 @@ class FiberExecutionBridge:
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
         node_type = node_spec.get(CompactKey.TYPE)
 
-        # 1. Pure Control / Terminal Nodes: Zero external I/O, zero fuel cost
+        # Pure Control / Terminal Nodes: Zero external I/O, zero fuel cost
         if node_type in (NodeType.ROUTER.value, NodeType.ACT.value):
             return {}, None, 0
 
-        # 2. LLM Inference & Cognitive Nodes -> Fiber Drop-in LLM Pipeline
+        # LLM Inference & Cognitive Nodes -> Fiber Drop-in LLM Pipeline
         if node_type in (
             NodeType.PROJECTOR.value,
             NodeType.REFLECT.value,
@@ -52,15 +52,13 @@ class FiberExecutionBridge:
         ):
             return await self._execute_llm_node(cursor, task_io)
 
-        # 3. External Tool / Sidecar Nodes -> Fiber MCP Gateway
+        # External Tool / Sidecar Nodes -> Fiber MCP Gateway
         if node_type in (NodeType.OPERSIG.value, NodeType.PENDING.value):
             return await self._execute_mcp_node(cursor, task_io)
 
         return {}, None, 1
 
-    # ------------------------------------------------------------------------
-    # [Actuator 1] Fiber LLM Pipeline + StreamBreaker + VCR + Projection
-    # ------------------------------------------------------------------------
+    # [Actuator] Fiber LLM Pipeline + StreamBreaker + VCR + Projection
     async def _execute_llm_node(
         self,
         cursor: BranchCursor,
@@ -115,9 +113,7 @@ class FiberExecutionBridge:
 
         return meta_updates, offload_payload, max(1, int(tokens_used))
 
-    # ------------------------------------------------------------------------
-    # [Actuator 2] Fiber MCP Gateway + Idempotent Checkpoint Handle + HITL
-    # ------------------------------------------------------------------------
+    # [Actuator] Fiber MCP Gateway + Idempotent Checkpoint Handle + HITL
     async def _execute_mcp_node(
         self,
         cursor: BranchCursor,
@@ -166,9 +162,6 @@ class FiberExecutionBridge:
         default_cost = int(extras.get("step_cost", tool_result.get("step_cost", 5)))
         return meta_updates, tool_result, max(1, default_cost)
 
-    # ------------------------------------------------------------------------
-    # [Internal Helpers] Stream Coalescing & Dot-Path Parameter Resolution
-    # ------------------------------------------------------------------------
     @staticmethod
     def _normalize_llm_response(response: Any, stream: bool) -> Any:
         # Retained as coroutine below

@@ -1,4 +1,4 @@
-# fiber.README
+# README
 
 **AI Runtime Harness**
 
@@ -9,7 +9,7 @@ Through the same control plane, it governs model calls via an OpenAI-compatible 
 | :--- | :--- | :--- |
 | **1. Local MCP Gateway** | Loopback Daemon for Agents & IDEs, Pre-Flight HITL Locks, Zero-Key LLM Routing, Config Sync | **[1. Local MCP Gateway](#1-local-mcp-gateway)** |
 | **2. LLM Guardrails & Replay** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[2.1 LLM Guardrails](#21-llm-guardrails)** · **[2.2 VCR](#22-deterministic-replay-llm-vcr--fixtures)** · **[2.3 Schema Traverser](#23-schema-traverser--compat-registry)** |
-| **3. CLI & Installation** | Connect CLI, Account & Quota Governance, Sandbox Provisioning (`uv pip`), Node Identity (`sign init`) & Homebrew | **[3.1 Connect CLI](#31-fiber-connect-cli)** · **[3.2 Python & CLI](#32-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[3.3 Homebrew](#33-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
+| **3. CLI & Installation** | Connect CLI, Account & Quota Governance, Sandbox Provisioning (`uv pip`), Node Identity (`fiber init`) & Homebrew | **[3.1 Connect CLI](#31-fiber-connect-cli)** · **[3.2 Python & CLI](#32-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[3.3 Homebrew](#33-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
 | **4–5. Benchmarks & Logs** | 200-VU Concurrency Metrics & Cryptographic Validation Logs | **[4. Benchmarks](#4-pipeline-performance-benchmarks-apple-m2-32gb-ram)** · **[5. System Logs](#5-system-validation-logs)** |
 
 ---
@@ -105,7 +105,8 @@ Serving as a drop-in replacement for standard OpenAI and LiteLLM SDKs, Fiber's d
 
 > **Unlike passive callbacks, this event-driven pipeline empowers interceptors to actively mutate payloads in-place, short-circuit physical I/O, and abort unauthorized streams in sub-millisecond time.**
 
-> **Remote Gateway Mode:** Beyond the Python SDK, running `fiber daemon` exposes this exact guardrail pipeline as an OpenAI-compatible REST endpoint (`/v1/chat/completions`), allowing external agents and IDEs to offload execution over HTTP.
+> **In-Process SDK vs. Gateway Daemon:** While the Python SDK and pytest VCR run entirely in-process without a daemon, running `fiber daemon` exposes this exact guardrail pipeline as an OpenAI-compatible REST endpoint (`/v1/chat/completions`) for external agents, IDEs, and Console Studio.
+
 
 **1. Two-Track Guardrails & Slot Interceptors (`PRE_TRANSLATE` vs. `POST_TRANSLATE`):**
 Production guardrails are built into `fiber.llm.pipeline.interceptor.guardrail` and ready to mount directly in **Step 2**; under the hood, each interceptor implements `DuplexChannel` for its target execution slot:
@@ -427,10 +428,11 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 
 | Command | Role | Function & Lifecycle | Example |
 | --- | --- | --- | --- |
-| **`sign`** | **[Identity & TOTP]** | Provisions Zero-Env node keys (`~/.ssh/fiber_ed25519` & `local_cipher.key`) and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
+| **`init`** | **[Bootstrap]** | Initializes workspace topology (`~/.anchor/bound.json`) and Zero-Env node keys (`~/.ssh/fiber_ed25519` & `local_cipher.key`). | `fiber init` |
+| **`sign`** | **[Identity & TOTP]** | Inspects local node key status and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
 | **`connect copy`** | **[Config Sync]** | Registers built-in workers, IDE configs (`mcp.json`), or third-party servers (with `-p` HITL guards) into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon`. | `fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets\|DELETE"` |
 | **`connect`** | **[Standalone Sidecar]** | Runs MCP workers or configs directly in the foreground without writing to `~/.anchor/mcp.json` (automatically skips targets already running in the daemon). | `fiber connect -e worker.deployer -p "DROP"` |
-| **`daemon`** | **[Production Host]** | Ignites the control-plane kernel (`rest_edge`, `rpc_worker`, `mcp_worker`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon -s all -f .env` |
+| **`daemon`** | **[Local Gateway]** | Ignites the local gateway daemon (`127.0.0.1:8356`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
 | **`account`** | **[Account & Quota]** | Manages tenant quotas, binds optional SPIFFE identities, issues signed execution mandates, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
 
@@ -470,7 +472,7 @@ $ fiber account demo
 # List all tracked local accounts and their bound SPIFFE identities from the registry
 $ fiber account list
 
-# Provision $50.0 (50,000 Fuel) via EdDSA JWT, bind a SPIFFE ID, and commit as a linear state transition
+# Provision $50.0 (50,000,000 Fuel) via EdDSA JWT, bind a SPIFFE ID, and commit as a linear state transition
 $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROVISION --ver 1 --sync
 
 # Trigger a Pub/Sub REVOKE kill-switch to sever active streams
@@ -478,9 +480,8 @@ $ fiber account --tenant accounting_dept kill --ver 99
 
 ```
 
-**Control Studio (Experimental)**
-
-Control Studio is a unified console with MCP Gateway and VCR tabs. The MCP Gateway tab shows worker status, tenant fuel balances, and transactions parked for Pre-Flight HITL approval; the VCR tab (shown in [2.2](#22-deterministic-replay-llm-vcr--fixtures)) lets you inspect recorded fixtures. Launch with `python -m fiber.dev.console.app`.
+**Console Studio (Experimental)**
+Console Studio is a unified web console for the local daemon (`127.0.0.1:8356`) featuring **MCP Gateway, Guardrail, Metering, VCR, and Setting** tabs—allowing you to approve parked HITL transactions, toggle secret rules, monitor real-time token velocity and fuel budgets, and inspect VCR fixtures. Launch with `fiber console` (or `python -m fiber.dev.console.app`).
 
 ---
 
@@ -498,11 +499,14 @@ Best suited for full-stack integration—including the drop-in Python SDK (`from
 mkdir -p ~/fiber-user && cd ~/fiber-user
 pyenv local fiber-user
 
-uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.7
+uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.8
 # OR: uv pip install -e /path/to/local/self/fiber
 
 ## Bootstrap workspace & Provision node identity
 fiber init
+
+## (Optional) Start the local gateway daemon for MCP/LLM HTTP routing & Console
+fiber daemon
 ```
 
 ### 3.3. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
@@ -528,7 +532,6 @@ These metrics measure the **pure internal overhead** of the Fiber LLM Pipeline. 
 
 ```bash
 fiber e2e inter.concurrency --vcr replay --concurrency 200
-
 ```
 
 | Performance Dimension | Metric (M2, 32GB) | Architectural Significance |

@@ -21,7 +21,7 @@ from fiber.llm.model.types.provider.openai import (
 from fiber.llm.response import ChatCompletionToolParam
 from fiber.llm.model.types.provider.general import SelectTokenizerResponse
 from fiber.llm.model.token.vision import VisionMetadataExtractor
-from xphi.arch.contract.config.resolver import config
+from xphi.arch.contract.config.env import config
 from xphi.arch.contract.config.constants import DEFAULT_IMAGE_TOKEN_COUNT
 
 from fiber.llm.response import Message

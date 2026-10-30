@@ -12,7 +12,7 @@ from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.bind.resolver import resolve_path
 
-ORIGIN_ROOT = resolve_path("origin")
+ANCHOR_ROOT = resolve_path("anchor")
 log = get_emitter("contract.origin")
 
 class TrustedOriginState(BaseModel):
@@ -22,11 +22,11 @@ class TrustedOriginState(BaseModel):
     root_pubkey: str
 
 class OriginRegistry:
-    def __init__(self, config_path: Optional[str] = None):
-        if not config_path:
-            self.config_path = os.path.join(str(ORIGIN_ROOT), "config.json")
+    def __init__(self, origin_path: Optional[str] = None):
+        if not origin_path:
+            self.config_path = os.path.join(str(ANCHOR_ROOT), "origin.json")
         else:
-            self.config_path = config_path
+            self.config_path = origin_path
             
         self._state: Optional[TrustedOriginState] = None
 

@@ -11,7 +11,7 @@ import time
 from dataclasses import dataclass
 from typing import List, Tuple, Any, Optional
 
-from fiber.dev.ex.model.fallback import fallback_model_registry
+from fiber.dev.base.model.fallback import fallback_model_registry
 from xphi.arch.bound.scope.manager import managed_scope
 
 from xphi.state.topos.workflow import ErrorMessage, StopMessage, Workflow, WorkflowMessage, step

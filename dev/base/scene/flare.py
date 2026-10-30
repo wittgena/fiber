@@ -11,7 +11,7 @@ from fiber.dev.base.scene.epoch import ActorIdentity
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.pta import compute_merkle_root
-from xphi.node.runtime.wasm.method import DphiMethod
+from xphi.node.runtime.wasm.method import WasmMethod
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.flare")
@@ -138,7 +138,7 @@ class FlareScene(SandboxRunner):
         # 2. Block file system access (Detect Native Errno 44)
         await self._run_case(
             title="Isolation: Prevent Host Filesystem Scan",
-            target_func=DphiMethod.EXECUTE_CODE.value,
+            target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.IO_VIOLATION.code, "variables": {}},
             expected_success=False,
             expected_match="[Errno 44]" 
@@ -147,7 +147,7 @@ class FlareScene(SandboxRunner):
         # 3. Block network binding (Detect Native Errno 26)
         await self._run_case(
             title="Isolation: Prevent Low-level Socket Binding",
-            target_func=DphiMethod.EXECUTE_CODE.value,
+            target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.NET_VIOLATION.code, "variables": {}},
             expected_success=False,
             expected_match="[Errno 26]"
@@ -156,7 +156,7 @@ class FlareScene(SandboxRunner):
         # 4. Prevent environment variable leaks
         await self._run_case(
             title="Isolation: Prevent Host Environment Variable Leakage",
-            target_func=DphiMethod.EXECUTE_CODE.value,
+            target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.ENV_LEAK.code, "variables": {}},
             expected_success=False,
             expected_match="Isolated"
@@ -165,7 +165,7 @@ class FlareScene(SandboxRunner):
         # 5. Block subprocess creation (Emscripten limitation)
         await self._run_case(
             title="Isolation: Emscripten Process Restriction",
-            target_func=DphiMethod.EXECUTE_CODE.value,
+            target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.SUBPROCESS_ATTACK.code, "variables": {}},
             expected_success=False,
             expected_match="emscripten does not support processes"
@@ -174,7 +174,7 @@ class FlareScene(SandboxRunner):
         # 6. Block thread creation (Native Python limitation)
         await self._run_case(
             title="Isolation: Prevent Thread Creation",
-            target_func=DphiMethod.EXECUTE_CODE.value,
+            target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.THREAD_ATTACK.code, "variables": {}},
             expected_success=False,
             expected_match="can't start new thread"
@@ -183,7 +183,7 @@ class FlareScene(SandboxRunner):
         # 7. Defend against Sys Exit attacks
         await self._run_case(
             title="Isolation: Prevent sys.exit() Engine Shutdown",
-            target_func=DphiMethod.EXECUTE_CODE.value,
+            target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.SYS_EXIT_ATTACK.code, "variables": {}},
             expected_success=False,
             expected_match="SystemExit"
@@ -265,7 +265,7 @@ class FlareScene(SandboxRunner):
         
         await self._run_case(
             title="Byzantine Defense: Quarantine rogue signature (2-of-3 threshold)",
-            target_func=DphiMethod.SEAL_EPOCH.value,
+            target_func=WasmMethod.SEAL_EPOCH.value,
             payload=payload,
             expected_success=True 
         )
@@ -314,7 +314,7 @@ class FlareScene(SandboxRunner):
             self._record_fail(0, "Kinetic Trap failed! Blocking payload bypassed without intervention.", "Kinetic Trap")
         except asyncio.TimeoutError:
             self._record_success(0, "Broker timed out. Kinetic Trap neutralized via Timeout cutoff.")
-            log.info("⏳ Allowing Edge Thread to breathe and recover PhaseStore (2.5s)...")
+            log.info("⏳ Allowing Edge Thread to breathe and recover AnchorStore (2.5s)...")
             await asyncio.sleep(2.5)
         except Exception as e:
             err_msg = str(e).lower()
