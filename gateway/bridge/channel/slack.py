@@ -1,4 +1,4 @@
-# fiber.gateway.bridge.slack
+# fiber.gateway.bridge.channel.slack
 import os
 import uuid
 import json
@@ -17,7 +17,7 @@ from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("mcp.bridge.slack")
+log = get_emitter("bridge.channel.slack")
 
 
 class SlackHitlBridge(OutOfBandApprovalBridge):

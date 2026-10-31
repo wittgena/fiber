@@ -33,7 +33,7 @@ async def dispatch_slack_oob_payload(
     tool_name: str = "drop_table",
     tool_args: dict[str, Any] | None = None,
 ) -> SlackOobDispatchResult:
-    from fiber.gateway.bridge.slack import SlackHitlBridge
+    from fiber.gateway.bridge.channel.slack import SlackHitlBridge
 
     args_payload = tool_args or {"table": "customer_ledgers", "cascade": True}
     handle_id = f"h_{int(time.time() * 1000) % 1000000:06d}"
@@ -68,7 +68,7 @@ async def dispatch_slack_oob_payload(
 def build_hitl_resolution_receipt(
     *, slack_channel: str, slack_user_map: str, admin_user: str, require_totp: bool
 ) -> dict[str, Any]:
-    from fiber.gateway.bridge.slack import SlackHitlBridge
+    from fiber.gateway.bridge.channel.slack import SlackHitlBridge
 
     bridge = SlackHitlBridge(default_channel=slack_channel)
     token = bridge.mint_approval_state_token("h_active", "postgres-prod-db", "req_1", require_totp=require_totp)

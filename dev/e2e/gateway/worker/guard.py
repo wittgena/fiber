@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.worker.guard
-## @lineage: fiber.dev.e2e.worker.guard
 import os
 import sys
 import time
@@ -31,7 +30,7 @@ from fiber.infra.mcp.payload import McpPayloadBuilder
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 
 from fiber.dev.base.workflow.audit.context import AuditContext
-from fiber.gateway.bridge.slack import SlackHitlBridge
+from fiber.gateway.bridge.channel.slack import SlackHitlBridge
 
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
