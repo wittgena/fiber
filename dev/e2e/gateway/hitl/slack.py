@@ -1,5 +1,4 @@
-# fiber.dev.e2e.gateway.worker.hitl
-## @lineage: fiber.dev.e2e.worker.hitl
+# fiber.dev.e2e.gateway.hitl.slack
 import os
 import sys
 import time
@@ -24,7 +23,7 @@ from fiber.infra.mcp.connector import MCPServerConnector
 from fiber.infra.mcp.payload import McpPayloadBuilder
 
 from fiber.dev.base.workflow.audit.context import AuditContext
-from fiber.gateway.bridge.slack import SlackHitlBridge
+from fiber.gateway.bridge.channel.slack import SlackHitlBridge
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.state.phase.reactor import PhaseReactor

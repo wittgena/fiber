@@ -10,7 +10,7 @@ from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("mcp.bridge.oob")
+log = get_emitter("gateway.bridge.oob")
 
 class OutOfBandApprovalBridge:
     MAX_TIMESTAMP_DRIFT_SEC = 300  # 5분 이상 지연된 웹훅 차단
