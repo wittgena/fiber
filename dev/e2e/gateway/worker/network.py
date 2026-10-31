@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.worker.network
-## @lineage: fiber.dev.e2e.worker.network
 """standalone E2E test suite for Network Transport (Local HTTP/SSE & Remote Context7 MCP)"""
 
 import os

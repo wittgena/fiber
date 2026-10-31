@@ -1,45 +1,30 @@
 # fiber.gateway.bridge.action.compat
+from __future__ import annotations
+
 import os
 import sys
-import asyncio
 import time
-from pathlib import Path
-from typing import Any, Optional
+from dataclasses import dataclass
+from typing import Any, List, Optional
 
-from fiber.llm.model.resolver import get_llm_provider
 import fiber.llm.entry as llm_entry
-
 from fiber.gateway.llm.state.traverser import StateMapper
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
-from fiber.infra.vcr.manager import VCRPlaybackConfig
+from fiber.infra.vcr.fixture.schema import (
+    DEFAULT_SYNTH_TOOLS,
+    SynthContext,
+    VCRTargetInfo,
+)
 from fiber.infra.vcr.injector import VCRInjector
-
-from xphi.node.space.bind.resolver import find_current_self, resolve_path
+from fiber.infra.vcr.manager import VCRPlaybackConfig
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.compat")
 
-COMPAT_SAMPLE_TOOLS = [
-    {
-        "type": "function",
-        "function": {
-            "name": "query_ledger_balance",
-            "description": "Fetch the remaining fuel balance for a target tenant account.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "tenant_id": {
-                        "type": "string",
-                        "description": "The tenant identifier (e.g. accounting_dept)",
-                    }
-                },
-                "required": ["tenant_id"],
-            },
-        },
-    }
-]
+# 하위 호환성 유지를 위한 Alias
+COMPAT_SAMPLE_TOOLS = DEFAULT_SYNTH_TOOLS
 
-STANDARD_PROMPTS = [
+STANDARD_PROMPTS: List[dict[str, Any]] = [
     {
         "scenario": "Stream Compat Traverser",
         "stream": True,
@@ -73,67 +58,34 @@ STANDARD_PROMPTS = [
     },
 ]
 
-
-def _parse_model_list(model_arg: str) -> list[str]:
-    items = [m.strip() for m in (model_arg or "").split(",") if m.strip()]
-    if len(items) == 1 and items[0].lower() == "all":
-        try:
-            from fiber.dev.console.tab.vcr import discover_compat_models
-            discovered = discover_compat_models()
-            if discovered:
-                return discovered
-        except Exception:
-            pass
-    return items
+LOCAL_PROVIDERS = {"lm_studio", "llama_server", "ollama", "vllm"}
 
 
-def _resolve_default_compats_base() -> Path:
-    """환경변수, 로컬 개발 레포지토리(fiber-compats), 또는 콘솔 다운로드 경로(fixture)를 순차 탐색합니다."""
-    if env_dir := os.getenv("FIBER_COMPATS_DIR"):
-        return Path(env_dir).resolve()
+@dataclass
+class CompatSuiteStats:
+    """_execute_suite의 (passed, total, skipped) 3-튜플 및 배치 요약을 대체하는 결과 데이터 클래스"""
+    model: str
+    passed: int = 0
+    executed: int = 0
+    skipped: int = 0
+    location: str = ""
 
-    self_dir = find_current_self()
-    if self_dir:
-        cand = self_dir.parent / "fiber-compats"
-        if cand.is_dir():
-            return cand.resolve()
-
-    for rel in (Path("fiber-compats"), Path("../fiber-compats")):
-        if rel.is_dir():
-            return rel.resolve()
-
-    fixture_root = Path(str(resolve_path("fixture")))
-    if (fixture_root / "adapters").is_dir():
-        return fixture_root.resolve()
-
-    return Path(os.getcwd()) / "fiber-compats"
-
-
-def _resolve_target_dir(model: str, target_dir: Optional[str], is_multi: bool = False) -> tuple[str, str, str]:
-    _, resolved_provider, dynamic_api_key, _ = get_llm_provider(model=model)
-    safe_model_name = model.replace("/", "_").replace(":", "_")
-    if target_dir:
-        final_dir = os.path.join(target_dir, resolved_provider, safe_model_name) if is_multi else target_dir
-    else:
-        compats_base = _resolve_default_compats_base()
-        final_dir = str(compats_base / "adapters" / resolved_provider / safe_model_name)
-    return final_dir, resolved_provider, dynamic_api_key
+    @property
+    def all_passed(self) -> bool:
+        return self.passed == self.executed and self.executed > 0
 
 
 def _format_tool_calls(tool_calls: Optional[list[dict[str, Any]]]) -> str:
-    """StateMapper.extract_tool_calls가 반환한 정규화된 tool_calls 리스트를 검증 출력용 문자열로 포맷팅합니다."""
     if not tool_calls:
         return ""
-    formatted = []
-    for tc in tool_calls:
-        fn = tc.get("function") if isinstance(tc, dict) else None
-        if isinstance(fn, dict) and fn.get("name"):
-            formatted.append(f"[TOOL_CALL] {fn['name']}({fn.get('arguments', '{}')})")
-    return "\n".join(formatted)
+    return "\n".join(
+        f"[TOOL_CALL] {fn['name']}({fn.get('arguments', '{}')})"
+        for tc in tool_calls
+        if isinstance(tc, dict) and isinstance(fn := tc.get("function"), dict) and fn.get("name")
+    )
 
 
 def _is_unsupported_capability_error(exc: Exception) -> bool:
-    """모델/프로바이더가 특정 기능(예: Function calling)을 지원하지 않는 정상 스펙 제약인지 판별합니다."""
     cls_name = type(exc).__name__
     msg = str(exc).lower()
     return (
@@ -144,69 +96,35 @@ def _is_unsupported_capability_error(exc: Exception) -> bool:
     )
 
 
-def _init_vcr(
-    mode: str,
-    target_dir: str,
-    *,
-    vcr_speed: str = "max",
-    vcr_chaos: float = 0.0,
-    vcr_tick: float = 100.0,
-    vcr_targets: str = "",
-    include_raw: bool = False,
-):
-    os.environ["VCR_MODE"] = mode
-    if include_raw:
-        os.environ["VCR_INCLUDE_RAW"] = "true"
-
-    config = VCRPlaybackConfig(
-        mode=mode,
-        speed=vcr_speed,
-        chaos_latency_ms=vcr_chaos,
-        target_traces=vcr_targets,
-        record_tick_ms=vcr_tick,
-        include_raw_payload=include_raw,
-    )
-    VCRInjector.apply(config=config, fixture_dir=target_dir)
-    log.info(
-        f"[Compat: VCR] Injector applied -> mode={mode}, speed={vcr_speed}, "
-        f"chaos={vcr_chaos:.1f}ms, tick={vcr_tick:.1f}ms, dir={target_dir}"
-    )
-
-
 async def _execute_suite(
-    model: str,
+    target: VCRTargetInfo,
     final_api_key: Optional[str],
     invoker_mode: str,
-    provider: str,
-    target_dir: str,
-) -> tuple[int, int, int]:
-    """Returns (success_count, executed_count, skipped_unsupported_count)."""
-    success_count = 0
-    executed_count = 0
-    skipped_count = 0
+) -> CompatSuiteStats:
+    stats = CompatSuiteStats(model=target.full_model, location=str(target.fixture_dir))
 
     for test in STANDARD_PROMPTS:
         scenario_id = test["scenario"].replace(" ", "_").lower()
-        fixture_filename = f"{scenario_id}.json"
-        fixture_path = Path(target_dir) / fixture_filename
-        is_stream = test["stream"]
+        fixture_path = target.fixture_path(scenario_id)
+        is_stream = bool(test["stream"])
         tools = test.get("tools")
 
-        # Replay 모드에서 미지원 모델 등으로 녹화되지 않은 선택적(Tool Call) 픽스처는 안전하게 스킵
         if invoker_mode == "test_fixture" and tools and not fixture_path.exists():
-            skipped_count += 1
-            log.info(
-                f"⚪ [Compat: SKIPPED] '{fixture_filename}' not present for {model} "
-                f"(Tool calling unsupported or not recorded)."
-            )
+            stats.skipped += 1
+            log.info(f"⚪ [Compat: SKIPPED] '{fixture_path.name}' not present for {target.full_model}.")
             continue
 
-        executed_count += 1
+        stats.executed += 1
+        ctx = SynthContext(
+            scenario=scenario_id,
+            filename=fixture_path.name,
+            invoker=f"action.compat.{invoker_mode}",
+        )
 
         print(f"\n{'='*80}")
         print(f"[COMPAT: {invoker_mode.upper()}] Executing Test: {test['scenario']}")
-        print(f"   ├─ Model    : {model}")
-        print(f"   ├─ Provider : {provider} (Rule targeting)")
+        print(f"   ├─ Model    : {target.full_model}")
+        print(f"   ├─ Provider : {target.provider} (Rule targeting)")
         print(f"   ├─ Stream   : {is_stream}" + (" | Tools: Enabled" if tools else ""))
         print(f"   └─ Prompt   : {test['messages'][0]['content'][:60]}...")
         print(f"{'-'*80}")
@@ -220,72 +138,47 @@ async def _execute_suite(
 
             start_time = time.perf_counter()
             response = await llm_entry.acompletion(
-                model=model,
+                model=target.full_model,
                 messages=test["messages"],
                 stream=is_stream,
-                metadata={
-                    "vcr_scenario": scenario_id,
-                    "vcr_invoker": f"action.compat.{invoker_mode}",
-                    "vcr_filename": fixture_filename,
-                },
+                metadata=ctx.metadata,
                 **kwargs,
             )
 
-            full_content = ""
-            usage_info = "N/A"
-            chunk_count = 0
-
-            print("[NETWORK] Connection established. Receiving payload...\n")
-            print("[AI RESPONSE]")
-            print("-" * 40)
+            full_content, usage_info, chunk_count = "", "N/A", 0
+            print("[NETWORK] Connection established. Receiving payload...\n\n[AI RESPONSE]\n" + "-" * 40)
 
             if is_stream:
                 async for chunk in response:
                     chunk_count += 1
-                    parsed_chunk = StreamChunkParser.parse(provider, chunk)
-                    if not parsed_chunk:
+                    if not (parsed_chunk := StreamChunkParser.parse(target.provider, chunk)):
                         continue
-
-                    text = parsed_chunk.get("text", "")
-                    if text:
+                    if text := parsed_chunk.get("text", ""):
                         full_content += text
                         sys.stdout.write(text)
                         sys.stdout.flush()
-
-                    chunk_usage = parsed_chunk.get("usage")
-                    if chunk_usage:
-                        has_real_value = (
-                            any(v is not None for v in chunk_usage.values())
-                            if isinstance(chunk_usage, dict)
-                            else True
-                        )
-                        if has_real_value:
-                            usage_info = str(chunk_usage)
+                    if (chunk_usage := parsed_chunk.get("usage")) and (
+                        any(v is not None for v in chunk_usage.values()) if isinstance(chunk_usage, dict) else True
+                    ):
+                        usage_info = str(chunk_usage)
             else:
-                content, usage_dict = StateMapper.extract_response(response, provider)
+                content, usage_dict = StateMapper.extract_response(response, target.provider)
                 if tools:
-                    # 우회 로직 없이 StateMapper.extract_tool_calls로 파이프라인 응답 객체에서 직접 추출 검증
-                    extracted_tools = StateMapper.extract_tool_calls(response, provider)
+                    extracted_tools = StateMapper.extract_tool_calls(response, target.provider)
                     full_content = _format_tool_calls(extracted_tools)
                 else:
                     full_content = content or ""
-
                 if usage_dict:
                     usage_info = str(usage_dict)
-
                 if full_content:
                     sys.stdout.write(full_content)
                     sys.stdout.flush()
 
             duration = (time.perf_counter() - start_time) * 1000
-            print("\n\n" + "-" * 40)
-            print("[VALIDATION PHASE]")
-            print(f"full_content = {full_content}")
+            print("\n\n" + "-" * 40 + f"\n[VALIDATION PHASE]\nfull_content = {full_content}")
             if not full_content.strip():
                 target_kind = "tool_calls" if tools else "content"
-                raise ValueError(
-                    f"Extracted {target_kind} is empty! Missing or invalid extraction rule for provider: '{provider}'"
-                )
+                raise ValueError(f"Extracted {target_kind} is empty! Missing rule for '{target.provider}'")
 
             print(f"   ├─ Extracted Output  : OK ({len(full_content)} chars)")
             print(f"   ├─ Extracted Usage   : {usage_info}")
@@ -293,19 +186,19 @@ async def _execute_suite(
                 print(f"   └─ Total Chunks      : {chunk_count}")
 
             log.info(f"[Compat: {invoker_mode.upper()}] Scenario Passed! ({duration:.2f}ms)")
-            success_count += 1
+            stats.passed += 1
 
         except Exception as e:
             print("\n" + "-" * 40)
             if _is_unsupported_capability_error(e):
-                executed_count -= 1
-                skipped_count += 1
+                stats.executed -= 1
+                stats.skipped += 1
                 fixture_path.unlink(missing_ok=True)
                 log.info(f"⚪ [Compat: UNSUPPORTED] Skipped '{test['scenario']}' -> {e}")
             else:
                 log.error(f"[Compat: {invoker_mode.upper()}] Failed: {type(e).__name__} - {e}")
 
-    return success_count, executed_count, skipped_count
+    return stats
 
 
 async def run_gen_fixture(
@@ -314,50 +207,41 @@ async def run_gen_fixture(
     target_dir: Optional[str] = None,
     vcr_tick: float = 100.0,
 ):
-    models = _parse_model_list(model)
+    models = VCRTargetInfo.parse_models(model)
     is_multi = len(models) > 1
-    LOCAL_PROVIDERS = ["lm_studio", "llama_server", "ollama", "vllm"]
-    summary: list[tuple[str, int, int, int, str]] = []
+    summary: List[CompatSuiteStats] = []
 
     for m in models:
         log.info(f"[Compat: GEN-FIXTURE] Resolving configuration for {m}...")
         try:
-            resolved_dir, resolved_provider, dynamic_api_key = _resolve_target_dir(m, target_dir, is_multi=is_multi)
+            target = VCRTargetInfo.resolve(m, target_dir, is_multi=is_multi, strict=True)
         except Exception as e:
             log.error(f"[Compat: GEN-FIXTURE] Invalid model identifier '{m}': {e}")
             if not is_multi:
                 sys.exit(1)
-            summary.append((m, 0, len(STANDARD_PROMPTS), 0, "INVALID_MODEL"))
+            summary.append(CompatSuiteStats(model=m, executed=len(STANDARD_PROMPTS), location="INVALID_MODEL"))
             continue
 
-        if api_key or dynamic_api_key:
-            final_api_key = api_key or dynamic_api_key
-        elif resolved_provider in LOCAL_PROVIDERS:
-            final_api_key = "sk-mock-local-key"
-        else:
-            final_api_key = None
+        final_api_key = api_key or target.api_key or ("sk-mock-local-key" if target.provider in LOCAL_PROVIDERS else None)
+        target.fixture_dir.mkdir(parents=True, exist_ok=True)
 
-        os.makedirs(resolved_dir, exist_ok=True)
-        _init_vcr(mode="record", target_dir=resolved_dir, vcr_tick=vcr_tick, include_raw=True)
-        try:
-            passed, total, skipped = await _execute_suite(
-                m, final_api_key, "gen_fixture", resolved_provider, resolved_dir
-            )
-            summary.append((m, passed, total, skipped, resolved_dir))
-            skip_note = f", {skipped} unsupported skipped" if skipped else ""
+        vcr_cfg = VCRPlaybackConfig(mode="record", record_tick_ms=vcr_tick, include_raw_payload=True)
+        with VCRInjector.use_cassette(config=vcr_cfg, fixture_dir=str(target.fixture_dir)):
+            stats = await _execute_suite(target, final_api_key, "gen_fixture")
+            summary.append(stats)
+            skip_note = f", {stats.skipped} unsupported skipped" if stats.skipped else ""
             print(f"\n{'='*80}")
             log.info(
-                f"[COMPAT: FIXTURE GENERATION COMPLETE] [{m}] ({passed}/{total} passed{skip_note}) saved at: {resolved_dir}"
+                f"[COMPAT: FIXTURE GENERATION COMPLETE] [{m}] "
+                f"({stats.passed}/{stats.executed} passed{skip_note}) saved at: {target.fixture_dir}"
             )
-        finally:
-            VCRInjector.remove()
 
     if is_multi:
         print(f"\n{'='*80}")
         log.info(f"[COMPAT: BATCH GENERATION SUMMARY] ({len(models)} models processed)")
-        for m, passed, total, skipped, loc in summary:
-            skip_str = f" (⚪ {skipped} unsupported)" if skipped else ""
-            log.info(f"  • {m:<42} : {passed}/{total} scenarios{skip_str} -> {loc}")
+        for s in summary:
+            skip_str = f" (⚪ {s.skipped} unsupported)" if s.skipped else ""
+            log.info(f"  • {s.model:<42} : {s.passed}/{s.executed} scenarios{skip_str} -> {s.location}")
 
 
 async def run_test_fixture(
@@ -367,18 +251,15 @@ async def run_test_fixture(
     vcr_chaos: float = 0.0,
     vcr_targets: str = "",
 ):
-    models = _parse_model_list(model)
+    models = VCRTargetInfo.parse_models(model)
     is_multi = len(models) > 1
     all_passed = True
-    summary: list[tuple[str, int, int, int]] = []
+    summary: List[CompatSuiteStats] = []
 
     for m in models:
-        log.info(
-            f"[Compat: TEST-FIXTURE] Preparing Replay environment for {m} "
-            f"(--vcr-speed {vcr_speed} --vcr-chaos {vcr_chaos})..."
-        )
+        log.info(f"[Compat: TEST-FIXTURE] Preparing Replay environment for {m} (--vcr-speed {vcr_speed} --vcr-chaos {vcr_chaos})...")
         try:
-            resolved_dir, resolved_provider, _ = _resolve_target_dir(m, target_dir, is_multi=is_multi)
+            target = VCRTargetInfo.resolve(m, target_dir, is_multi=is_multi, strict=True)
         except Exception as e:
             log.error(f"[Compat: TEST-FIXTURE] Invalid model identifier '{m}': {e}")
             all_passed = False
@@ -386,48 +267,39 @@ async def run_test_fixture(
                 sys.exit(1)
             continue
 
-        if not os.path.exists(resolved_dir):
-            log.error(f"[Compat: TEST-FIXTURE] Fixture directory not found: {resolved_dir}")
-            log.error(f"Run 'fiber compat fixture -m {m} --vcr record' first to generate required test data.")
+        if not target.fixture_dir.exists():
+            log.error(f"[Compat: TEST-FIXTURE] Fixture directory not found: {target.fixture_dir}")
             all_passed = False
             if not is_multi:
                 sys.exit(1)
-            summary.append((m, 0, len(STANDARD_PROMPTS), 0))
+            summary.append(CompatSuiteStats(model=m, executed=len(STANDARD_PROMPTS)))
             continue
 
-        _init_vcr(
+        vcr_cfg = VCRPlaybackConfig(
             mode="replay",
-            target_dir=resolved_dir,
-            vcr_speed=vcr_speed,
-            vcr_chaos=vcr_chaos,
-            vcr_targets=vcr_targets,
-            include_raw=False,
+            speed=vcr_speed,
+            chaos_latency_ms=vcr_chaos,
+            target_traces=vcr_targets,
+            include_raw_payload=False,
         )
-        try:
-            mock_api_key = "sk-vcr-replay-mock-key"
-            passed, total, skipped = await _execute_suite(
-                m, mock_api_key, "test_fixture", resolved_provider, resolved_dir
-            )
-            summary.append((m, passed, total, skipped))
-            skip_note = f" ({skipped} unsupported skipped)" if skipped else ""
+        with VCRInjector.use_cassette(config=vcr_cfg, fixture_dir=str(target.fixture_dir)):
+            stats = await _execute_suite(target, "sk-vcr-replay-mock-key", "test_fixture")
+            summary.append(stats)
+            skip_note = f" ({stats.skipped} unsupported skipped)" if stats.skipped else ""
             print(f"\n{'='*80}")
-            if passed == total and total > 0:
-                log.info(f"[COMPAT: TEST SUCCESS] All ({passed}/{total}) supported rules verified for {m}{skip_note}.")
+            if stats.all_passed:
+                log.info(f"[COMPAT: TEST SUCCESS] All ({stats.passed}/{stats.executed}) supported rules verified for {m}{skip_note}.")
             else:
                 all_passed = False
-                log.error(
-                    f"[COMPAT: TEST FAILED] ({passed}/{total}) scenarios passed for {m}{skip_note}. Review extraction rules."
-                )
-        finally:
-            VCRInjector.remove()
+                log.error(f"[COMPAT: TEST FAILED] ({stats.passed}/{stats.executed}) scenarios passed for {m}{skip_note}.")
 
     if is_multi:
         print(f"\n{'='*80}")
         log.info(f"[COMPAT: BATCH REPLAY SUMMARY] ({len(summary)} models tested)")
-        for m, passed, total, skipped in summary:
-            status_icon = "✅" if (passed == total and total > 0) else "❌"
-            skip_str = f" (⚪ {skipped} unsupported)" if skipped else ""
-            log.info(f"  {status_icon} {m:<42} : {passed}/{total} passed{skip_str}")
+        for s in summary:
+            status_icon = "✅" if s.all_passed else "❌"
+            skip_str = f" (⚪ {s.skipped} unsupported)" if s.skipped else ""
+            log.info(f"  {status_icon} {s.model:<42} : {s.passed}/{s.executed} passed{skip_str}")
 
     if not all_passed:
         sys.exit(1)
