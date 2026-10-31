@@ -186,12 +186,12 @@ def run_e2e(
     _load_env(env_file)
     extra_args = ctx.args
     KNOWN_SUITES = [
-        "llm.trace",
-        "llm.guardrail",
+        "fsm.tester",
+        "gateway.llm.guardrail",
         "gateway.compliance",
-        "inter.wasm.phase",
-        "inter.plane.flare",
-        "inter.finops",
+        "gateway.inter.finops",
+        "infra.wasm.phase",
+        "infra.plane.flare",
     ]
     targets = KNOWN_SUITES if target == "all" else [target]
 

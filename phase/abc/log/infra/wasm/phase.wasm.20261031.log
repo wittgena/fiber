@@ -1,0 +1,431 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.infra.wasm.phase  
+ LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 15 aliases.
+[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-43707
+ LOG | SYSTEM | INFO  |  wasm.entry: 
+[CLI] Starting Isolated WasmTester for suites: ['sandbox', 'anchor', 'cert', 'dynamics']...
+ LOG | SYSTEM | INFO  |  wasm.tester: 
+--- [START] Orchestrating Distributed WASM Environment (Target: phase.wasm) ---
+[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | SYSTEM | INFO  |  wasm.tester: [SYSTEM] Initializing TaskSupervisor and WasmTaskerDaemon...
+ LOG | SYSTEM | INFO  |  xphi.node.ops.task.supervisor: [Supervisor] Mounted Daemon: TaskWasm
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [tasker-0f84dc-43707] Pre-warming 5 WASM instances...
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [tasker-0f84dc-43707] WASM Instance Pool initialized successfully.
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: TaskWasm listening: Stream[wasm:execute:stream:tester_isolated] | PubSub[wasm:control:req:tester_isolated] (Max Concurrency: 5, PID: 43707)
+ LOG | SYSTEM | INFO  |  wasm.tester: [SYSTEM] Initializing WasmBroker & Scenarios...
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: SANDBOX <<<
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+=== [START] Executing Sandbox & Compute Scenarios ===
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [f4bcce88] Global Cgroup default tier updated -> SYSTEM
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   └─ Policy successfully enforced to SYSTEM.
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- Running Suite: WasmCG Resilience ---
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] WasmCG: Unregistered API Call (O(1) Guard) (Func: hack_system_memory)
+ LOG | SYSTEM | INFO  |  inter.wasm: [AOT Compile] Compiling phase.wasm (Only once per process)...
+ LOG | SYSTEM | INFO  |  inter.wasm: [AOT Compile] phase.wasm cached successfully.
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 89.58ms | Output: Phase Collapse Failed: Drift topology malformed (json_parse_err). Root envelope rejected: unknown variant `hack_system_memory`, expected one of `execu
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- Running Suite: Determinism & Legacy Isolation ---
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [974f20b9] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "print(sum([x**2 for x in range(1000)]))", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415891815, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [974f20b9] [Perf] ⚡(Cached) Wait: 70.13ms | Exec: 5.42ms | Total: 75.55ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [974f20b9] Sandbox Metrics: {'mem_usage_bytes': 18371, 'mem_peak_bytes': 41365, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 70.13, 'spawn': 0.0, 'exec': 5.42}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 232.28ms | Output: 332833500 
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [aa1e4e6b] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "def is_prime(n):\n    if n < 2: return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0: return False\n    return True\nprimes = [p for p in range(30000) if is_prime(p)]\nprint(f'Found {len(primes)} primes')", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415892052, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [aa1e4e6b] [Perf] ⚡(Cached) Wait: 1099.02ms | Exec: 42.98ms | Total: 1142.00ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [aa1e4e6b] Sandbox Metrics: {'mem_usage_bytes': 80763, 'mem_peak_bytes': 101078, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 1099.02, 'spawn': 0.0, 'exec': 42.98}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1222.47ms | Output: Found 3245 primes 
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8feda825] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import json\ndata = [{'id': i, 'val': i * 2.5, 'active': i % 2 == 0} for i in range(20000)]\nserialized = json.dumps(data)\nparsed = json.loads(serialized)\nprint(f'Processed {len(parsed)} records')", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415893275, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8feda825] [Perf] ⚡(Cached) Wait: 1067.64ms | Exec: 199.56ms | Total: 1267.20ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8feda825] Sandbox Metrics: {'mem_usage_bytes': 6707680, 'mem_peak_bytes': 6727995, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 1067.64, 'spawn': 0.0, 'exec': 199.56}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1516.75ms | Output: Processed 20000 records 
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [e4e7f279] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "with open('/etc/passwd', 'r') as f:\n    print(f.read())", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415894795, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [e4e7f279] [Perf] ⚡(Cached) Wait: 762.21ms | Exec: 12.50ms | Total: 774.71ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [e4e7f279] Sandbox Metrics: {'mem_usage_bytes': 62918, 'mem_peak_bytes': 158515, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 762.21, 'spawn': 0.0, 'exec': 12.5}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 848.57ms | Output: FileNotFoundError: [44, 'No such file or directory']
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [be7363d5] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import socket\ns = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\ns.connect(('8.8.8.8', 53))", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415895651, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [be7363d5] [Perf] ⚡(Cached) Wait: 1150.70ms | Exec: 82.10ms | Total: 1232.80ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [be7363d5] Sandbox Metrics: {'mem_usage_bytes': 64825, 'mem_peak_bytes': 160537, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 1150.7, 'spawn': 0.0, 'exec': 82.1}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1371.61ms | Output: OSError: [23, 'Host is unreachable']
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [4613739f] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import os\nenv = os.environ\n\n## 1. Active Gateway Permeability: Verify that the explicitly whitelisted orchestration marker successfully penetrates the host-to-sandbox bridge\nis_gateway_working = env.get('FIBER_ISOLATION_MARKER') == '1'\n\n## 2. Host Environment Segregation: Guarantee strict absence of platform-specific or CI-injected variables to maintain absolute determinism across OS architectures.\nblocked_keys = ['GITHUB_ACTIONS', 'COMPUTERNAME', 'XPC_SERVICE_NAME', 'COMMAND_MODE', 'TERM_PROGRAM']\nis_host_blocked = all(k not in env for k in blocked_keys)\n\n## 3. State Entropy Constraint: Strictly cap the total quantity of environment variables\nis_minimal = len(env) <= 11\n\n## [Assertion] A controlled closed system\nisolated = is_gateway_working and is_host_blocked and is_minimal\n\nprint(f'Isolated: {isolated} | Dump: {dict(env)}')", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415897025, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [4613739f] [Perf] ⚡(Cached) Wait: 997.74ms | Exec: 18.59ms | Total: 1016.33ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [4613739f] Sandbox Metrics: {'mem_usage_bytes': 20114, 'mem_peak_bytes': 56180, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 997.74, 'spawn': 0.0, 'exec': 18.59}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1104.52ms | Output: Isolated: True | Dump: {'USER': 'web_user', 'LOGNAME': 'web_user', 'PATH': '/', 'PWD': '/', 'HOME': '/home/pyodide', 'LANG': 'en_US-u-va-posix.UTF-8',
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8a1d90e7] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import subprocess\nsubprocess.run(['ls', '-la'])", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415898131, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8a1d90e7] [Perf] ⚡(Cached) Wait: 1145.37ms | Exec: 38.96ms | Total: 1184.33ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8a1d90e7] Sandbox Metrics: {'mem_usage_bytes': 204630, 'mem_peak_bytes': 516062, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms':{'wait': 1145.37, 'spawn': 0.0, 'exec': 38.96}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1256.86ms | Output: OSError: [138, 'emscripten does not support processes.']
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [b94eadfb] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import threading\ndef f(): pass\nt = threading.Thread(target=f)\nt.start()", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415899389, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [b94eadfb] [Perf] ⚡(Cached) Wait: 1077.80ms | Exec: 30.89ms | Total: 1108.69ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [b94eadfb] Sandbox Metrics: {'mem_usage_bytes': 158513, 'mem_peak_bytes': 299968, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms':{'wait': 1077.8, 'spawn': 0.0, 'exec': 30.89}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1193.16ms | Output: RuntimeError: ["can't start new thread"]
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8671c79e] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import sys\nsys.exit(1)", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415900590, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8671c79e] [Perf] ⚡(Cached) Wait: 1135.73ms | Exec: 64.92ms | Total: 1200.65ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [8671c79e] Sandbox Metrics: {'mem_usage_bytes': 176419, 'mem_peak_bytes': 272230, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms':{'wait': 1135.73, 'spawn': 0.0, 'exec': 64.92}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1283.52ms | Output: Error: Unhandled async error: PythonError
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [99bb1b30] Entering Python Legacy Jail (Tier: STANDARD, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "x = 2\nwhile True: x = x ** 2", "context": {"sandbox_tier": "STANDARD", "timestamp": 1793415901876, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | TEST_EXECUTION | WARN  |  wasm.broker: [99bb1b30] Remote execution timeout (5.0s) on wasm:execute:stream:tester_isolated. (Infinite loop or payload blocked)
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 5049.52ms | Output: Remote execution timeout (5.0s)
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [653464b6] Entering Python Legacy Jail (Tier: STANDARD, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "lst = []\nwhile True:\n    lst.append(bytearray(10 * 1024 * 1024))", "context": {"sandbox_tier": "STANDARD", "timestamp": 1793415906927, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [653464b6] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 758.05ms | Total: 758.05ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [653464b6] Sandbox Metrics: {'mem_usage_bytes': -27152881, 'mem_peak_bytes': -27073037, 'fuel_consumed': 11765, 'fuel_remaining': 9988235, 'tier': 'STANDARD', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 758.05}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1027.35ms | Output: MemoryError: 
+ LOG | SYSTEM | WARN  |  daemon.taskwasm: [99bb1b30] Sandbox Execution Timeout (Infinite loop/Deadlock defended).
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [c014a96f] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import time\nprint(f'{time.time()}|{time.perf_counter()}')", "context": {"sandbox_tier": "SYSTEM", "timestamp": 1793415911050, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [c014a96f] [Perf] ⚡(Cached) Wait: 0.01ms | Exec: 43.68ms | Total: 43.68ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [c014a96f] Sandbox Metrics: {'mem_usage_bytes': 17400, 'mem_peak_bytes': 38854, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 0.01, 'spawn': 0.0, 'exec': 43.68}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 145.04ms | Output: 1793415911050.0|0.001 
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [53452704] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import time, random\nprint(f'{time.time()}|{random.random()}')", "context":{"timestamp": 1600000000, "seed": "proof_of_compute_seed_777", "sandbox_tier": "SYSTEM", "timeout": 5.0}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [53452704] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 25.28ms | Total: 25.29ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [53452704] Sandbox Metrics: {'mem_usage_bytes': 17372, 'mem_peak_bytes': 39023, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 25.28}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 61.06ms | Output: 1600000000.0|0.7736597448236722 
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [45ea818e] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import random, os\nprint(f'{random.random()}|{os.urandom(4).hex()}')", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415911258, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [45ea818e] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 5.46ms | Total: 5.46ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [45ea818e] Sandbox Metrics: {'mem_usage_bytes': 17400, 'mem_peak_bytes': 40763, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 5.46}}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [81650056] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "import random, os\nprint(f'{random.random()}|{os.urandom(4).hex()}')", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415911288, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [81650056] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 4.76ms | Total: 4.77ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [81650056] Sandbox Metrics: {'mem_usage_bytes': 17337, 'mem_peak_bytes': 40670, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 4.76}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: PRNG sequences are 100% identical (0.7946015362095357|71a45460)
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- Running Suite: Causality (Epoch-Tick) ---
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Event: Generate Topos Anchor ID (Func: generate_topos_id)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 2.18ms | Output: {"id": "109850127484583936"}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Event: Generate Phase & Nexus ID (Func: generate_phase_id)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1.89ms | Output: {"nexus_id": 25370634, "phase_id": 25370634}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] DI: Phase with Injected State (Func: generate_phase_id)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1.58ms | Output: {"nexus_id": 3448310519, "phase_id": 3448129736}
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- Running Suite: Tripartite Parity ---
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Parity: Validate All 3 IDs (Func: verify_parity)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 3.96ms | Output: {"is_valid": false}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Parity: Recover Missing Phase (Func: verify_parity)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1.05ms | Output: {"is_valid": true, "recovered_missing": 810427, "recovered_type": "phase_id"}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Parity: Insufficient Info (Func: verify_parity)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.76ms | Output: At least two identification IDs are required for parity recovery and correction
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- Running Suite: FFI Robustness ---
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] FFI Guard: Malformed JSON (Func: generate_phase_id)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.98ms | Output: Invalid PhaseRequest JSON
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- Running Suite: Resource Fuel Profiling ---
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Profile: 10KB Payload Hashing (Func: compute_fingerprint)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 1.56ms | Output: {"fingerprint": "72559e6d4fe02260f550ca4e686c309ba696f187b74857c9b0c1a49a7579ec33", "input_bytes": 10017}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> STANDARD
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [fae4efe2] Global Cgroup default tier updated -> STANDARD
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:1.0] [Acc:2.4] base.scene.runner:   └─ Policy successfully enforced to STANDARD.
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.9] [Acc:2.5] base.scene.runner: 
+[TEST] Boundary Test: 40MB Exhaustion under STANDARD Tier (Expect Trap) (Func: compute_fingerprint)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500500432] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.9] [Acc:-0.3] base.scene.runner:   [PASS] Time: 455.44ms | Output: WASM Invoke Failed: error while executing at wasm backtrace:     0:  0x4158c - <unknown>!<wasm function 294>  Caused by:     wasm trap: all fuel consu
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.8] [Acc:-0.2] base.scene.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [5822341c] Global Cgroup default tier updated -> SYSTEM
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.8] [Acc:-0.2] base.scene.runner:   └─ Policy successfully enforced to SYSTEM.
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.8] [Acc:-0.0] base.scene.runner: 
+=== [DONE] Scenarios Completed: 24 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: ANCHOR <<<
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+=== [START] Unified Master Pipeline (Eco + Anchor) ===
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+=== [PHASE 1] Executing Unified Ecosystem & Eco Structural Scenarios ===
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Data Pipeline] Phase 2: Canonical & Evolution-Bound Provenance Fingerprinting ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.7] [Acc:0.1] base.scene.runner: 
+[TEST] Provenance [1/3]: Compute JCS Canonical Data Fingerprint (Func: compute_fingerprint)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.7] [Acc:0.2] base.scene.runner:   [PASS] Time: 3.46ms | Output: {"fingerprint": "46b43c009b9491041224edb94a7aca47ccac0ae0aa48956abe108ced21b767b1", "input_bytes": 124}
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.7] [Acc:0.3] base.scene.runner: 
+[TEST] Provenance [2/3]: Seal Evolution-Bound Transition Fingerprint (Func: compute_fingerprint)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.7] [Acc:0.4] base.scene.runner:   [PASS] Time: 1.18ms | Output: {"fingerprint": "216a0678313cb6a9475d30762ce18c28c247efd001a692ab5c2567f1d9ac6708", "input_bytes": 239, "intent_action": "record_audit_event", "state_
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:0.5] base.scene.runner: 
+[TEST] Provenance [3/3]: Reject Malformed Transition Envelope (Guard Check) (Func: compute_fingerprint)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:0.6] base.scene.runner:   [PASS] Time: 2.85ms | Output: TransitionPayload missing required intent_action or intent_payload
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Data Pipeline] Phase 3: Epoch Initialization & Parity Triplet ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:0.8] base.scene.runner: 
+[TEST] Pipeline: Generate Parity Triplet (init_epoch) (Func: init_epoch)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:0.9] base.scene.runner:   [PASS] Time: 2.76ms | Output: {"nexus_id": 4031131843, "phase_id": 2164666563, "topos_id": "109850129866948608"}
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Data Pipeline] Phase 4: Self-Healing Recovery ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:1.0] base.scene.runner: 
+[TEST] Pipeline: Recover Lost Data via XOR Parity (Func: verify_parity)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.6] [Acc:1.1] base.scene.runner:   [PASS] Time: 0.95ms | Output: {"is_valid": true, "recovered_missing": 810427, "recovered_type": "phase_id"}
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [State Engine] Phase 3: Epoch Sealing & Consensus ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.2] base.scene.runner: 
+[TEST] Engine: Seal Epoch & Finalize State Transition (Func: seal_epoch)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.3] base.scene.runner:   [PASS] Time: 3.18ms | Output: {"anchor_result": {"commit_hash": "90b3abc4210b7aeab6646ea8dbc73b7c10f1462dc788424c5d7e20ef3118719a", "payload_json": "{\"cached_states\":{\"tension_r
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Eco Pipeline] Phase 2: Trustless Execution (Sandboxed) ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.4] base.scene.runner: 
+[TEST] Eco: Execute Constrained Task (Fuel Tracked) (Func: execute_code)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [ae9a6c12] Entering Python Legacy Jail (Tier: STANDARD, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "\ndef analyze_risk():\n    return 'Validated Risk Score: 42.5'\nprint(analyze_risk())\n", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415911889, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [ae9a6c12] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 6.99ms | Total: 7.00ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [ae9a6c12] Sandbox Metrics: {'mem_usage_bytes': 22677, 'mem_peak_bytes': 47791, 'fuel_consumed': 9525, 'fuel_remaining': 9990475, 'tier': 'STANDARD', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 6.99}}
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.4] base.scene.runner:   [PASS] Time: 23.74ms | Output: Validated Risk Score: 42.5 
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Exchange Pipeline] P2P Order Ingress & Deterministic Settlement ---
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Gateway Ingress] Validating trade intent from 1f8d6c75... ---
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  scene.eco:   └─ [Ingress Validated] Topos: 109850130026332160, Phase: 25376783
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Gateway Ingress] Validating trade intent from 97d9a5d8... ---
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  scene.eco:   └─ [Ingress Validated] Topos: 109850130043109376, Phase: 2173061120
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Matching Engine] Binding Execution State A (Bid) and State B (Ask) ---
+ LOG | TEST_EXECUTION | INFO  |  scene.eco:   └─ [Matched] Opposite intents paired successfully. Remaining imbalance = 0.
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- [Trade Settlement] Finalizing clearing via 3-of-3 Multi-sig Consensus ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.1] base.scene.runner: 
+[TEST] Trade Settlement: 3-of-3 Multi-sig State Committed to Nexus (Func: seal_epoch)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.0] base.scene.runner:   [PASS] Time: 3.37ms | Output: {"anchor_result": {"commit_hash": "44f2b309a2b588966a225c60be0f48ee1b0d84f30eec601243497211ac3024f4", "payload_json": "{\"cached_states\":{},\"parent_
+ LOG | TEST_EXECUTION | INFO  |  adapter.settlement: [ExchangeAdapter] Settlement Finalized. Topos: clearing_batch_1793415911, Parity: 2147840015, Cost: $0.000350
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+[Exchange Ready] Payload for External Network:
+{
+  "batch_id": "clearing_batch_1793415911",
+  "state_root": "2147840015",
+  "attestations": [],
+  "gas_used": 35000,
+  "timestamp": 1793415911
+}
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+=== [PHASE 2] Executing AnchorStore Cryptographic Security Boundaries ===
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- Running Suite: Authorized Multi-sig (2-of-3 Consensus) ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.1] base.scene.runner: 
+[TEST] AnchorStore: 2-of-3 Valid Multi-sig (Func: seal_epoch)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.5] [Acc:1.2] base.scene.runner:   [PASS] Time: 1.59ms | Output: {"anchor_result": {"commit_hash": "29a527dc026483c40665c5ba2d94ce158a63518dff77f8d9327b303a3dde4a0d", "payload_json": "{\"cached_states\":{},\"parent_
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- Running Suite: Insufficient Signatures ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:1.4] base.scene.runner: 
+[TEST] AnchorStore: Reject Insufficient Threshold (Func: seal_epoch)
+SUMMARY🔥| SYSTEM | INFO  |  [G:1.0] [Acc:0.9] wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:1.5] base.scene.runner:   [PASS] Time: 1.17ms | Output: UNAUTHORIZED_PROPOSER (Consensus Failed): Insufficient signers provided (1 < 2)
+ LOG | TEST_EXECUTION | INFO  |  scene.eco: 
+--- Running Suite: Sybil Attack Defense (Duplicate Keys) ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:1.6] base.scene.runner: 
+[TEST] AnchorStore: Reject Sybil Attack (Duplicate Signer) (Func: seal_epoch)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.0] wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:1.7] base.scene.runner:   [PASS] Time: 1.22ms | Output: UNAUTHORIZED_PROPOSER (Consensus Failed): Duplicate signer detected: 4fb8b69e38cd5da5c3a54e14021398aeda46904d753d2492f34d6dc7e0075d39
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:1.0] [Acc:2.4] scene.eco: 
+--- Running Suite: Dynamic ACL Filtering ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:1.8] base.scene.runner: 
+[TEST] AnchorStore: Reject Unauthorized Signer via ACL (Func: seal_epoch)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.9] [Acc:1.1] wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:1.9] base.scene.runner:   [PASS] Time: 0.98ms | Output: UNAUTHORIZED_PROPOSER (Consensus Failed): Consensus Threshold not met: 1/2
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.9] [Acc:2.5] scene.eco: 
+=== [PHASE 3] Executing 5-Flow Complete Epoch Scenarios ===
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: 
+=== [Lifecycle START] AI Agent Swarm Consensus (M-of-N) ===
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 1] Initialization: Requesting Parity Triplet ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.2] wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch:   └─ Generated Nexus ID: 2151684099
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 1.5] Economy: AP2 Mandate Validation ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 2] Inscription: Gathering Local Node States ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.0] base.scene.runner: 
+[TEST] Swarm: Inscribe CodeAgent (Func: inscribe_actor)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.8] [Acc:1.3] wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.2] base.scene.runner:   [PASS] Time: 1.22ms | Output: {"commit_hash": "c3ff1308fdf1af18896c59650fd3332b483677c7c95dfbc98dd4aef88ddce077", "payload_json": "{\"nexus_id\":2151684099,\"parent_commit_id\":\"h
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.3] base.scene.runner: 
+[TEST] Swarm: Inscribe SecurityAgent (Func: inscribe_actor)
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.4] base.scene.runner:   [PASS] Time: 0.98ms | Output: {"commit_hash": "f8986c5a68be44d94e393ac8edf5e01fb584e2141e2f535d21e8b529b040cf3d", "payload_json": "{\"nexus_id\":2151684099,\"parent_commit_id\":\"h
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.5] base.scene.runner: 
+[TEST] Swarm: Inscribe GovAgent (Func: inscribe_actor)
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.6] base.scene.runner:   [PASS] Time: 0.80ms | Output: {"commit_hash": "bdf687cd598a08e0885ca7d6f8ec0859beea89fdc028b9456cb0c187ccafdb70", "payload_json": "{\"nexus_id\":2151684099,\"parent_commit_id\":\"h
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 2.5] Economy: Off-chain Capability Token Issuance / Metering ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 3] Sealing: Cryptographic Epoch Alignment ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch:   └─ Epoch Sealed Successfully via Multi-sig Consensus.
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 4] Transition: Validating & Applying State Evolution ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.4] [Acc:2.7] base.scene.runner: 
+[TEST] AI Agent Swarm Consensus (M-of-N) (Flow 4): Execute Transition (Func: execute_transition)
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.3] [Acc:2.8] base.scene.runner:   [PASS] Time: 0.88ms | Output: {"all_residues": [], "final_root": {"children": {"CodeAgent": {"children": {}, "content": "hash-code-v1", "kind": "CORE", "name": "CodeAgent", "ref_ta
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 5] Finality: Zero-Trust Parity & Recovery Verification ---
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.3] [Acc:3.0] base.scene.runner: 
+[TEST] AI Agent Swarm Consensus (M-of-N) (Flow 5): Verify Parity Completeness (Func: verify_parity)
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.07) Den: 30.00)
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.1] [Acc:3.1] base.scene.runner:   [PASS] Time: 1.28ms | Output: {"is_valid": false}
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:infra.e2e.epoch'
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: 
+=== [Lifecycle START] Cross-Repo Provenance Alignment (M-of-N) ===
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 1] Initialization: Requesting Parity Triplet ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch:   └─ Generated Nexus ID: 117446659
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 1.5] Economy: AP2 Mandate Validation ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 2] Inscription: Gathering Local Node States ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.18) Den: 30.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.30) Den: 31.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.52) Den: 32.00)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:infra.e2e.epoch'
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 2.5] Economy: Off-chain Capability Token Issuance / Metering ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 3] Sealing: Cryptographic Epoch Alignment ---
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch:   └─ Epoch Sealed Successfully via Multi-sig Consensus.
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 4] Transition: Validating & Applying State Evolution ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.64) Den: 32.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.75) Den: 33.00)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:infra.e2e.epoch'
+ LOG | TEST_EXECUTION | INFO  |  infra.e2e.epoch: --- [Flow 5] Finality: Zero-Trust Parity & Recovery Verification ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.86) Den: 33.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 3.98) Den: 34.00)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:wasm.tester'
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: CERT <<<
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+=======================================================
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 🚀 [START] Master System Certification Pipeline (4 Core Proofs)
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: =======================================================
+
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 4.20) Den: 35.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:daemon.taskwasm'
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [da5d2429] Global Cgroup default tier updated -> SYSTEM
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 4.32) Den: 35.50)
+[Telemetry] 🟢 System Stabilized on 'TEST_EXECUTION:scene.sandbox'
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- [Proof 1] Gas Boundary & Memory Trap ---
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 4.43) Den: 36.00)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:daemon.taskwasm'
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [d94ea48a] Global Cgroup default tier updated -> STANDARD
+[Telemetry] 🚨 Burst Alert Triggered on 'TEST_EXECUTION:base.scene.runner' (Acc: 4.55) Den: 36.50)
+[Telemetry] 🟢 System Stabilized on 'SYSTEM:wasm.quota'
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.5] [Acc:2.7] wasm.quota: [worker-4500354576] enforced: Tier=STANDARD, Mem=64MB, Fuel=10,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [88174fff] Entering Python Legacy Jail (Tier: STANDARD, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "\nstate_mock = []\nwhile True:\n    state_mock.append('A' * 1024)\n", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415911985, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [88174fff] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 2403.42ms | Total: 2403.43ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [88174fff] Sandbox Metrics: {'mem_usage_bytes': 22042686, 'mem_peak_bytes': 22138374, 'fuel_consumed': 10000000, 'fuel_remaining': 0, 'tier': 'STANDARD', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 2403.42}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: Fuel/Memory Trap triggered successfully. Error: RuntimeError: ['Quota Error: CPU Fuel Quota Exceeded (10000000)']
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [c0412408] Global Cgroup default tier updated -> SYSTEM
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   └─ Policy successfully enforced to SYSTEM.
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- [Proof 3] Floating-Point Determinism ---
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:2.3] wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000 (x3)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [bd30165a] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "\nimport math\n# \ube44\uc120\ud615 \uc5f0\uc0b0 \ud6c4 15\uc790\ub9ac \uc815\ubc00\ub3c4\ub85c \ucd9c\ub825\nval = sum(math.sin(i * 0.1) * math.cos(i * 0.05) for i in range(1000))\nprint(f\"{val:.15f}\")\n", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415914406, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [bd30165a] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 8.98ms | Total: 8.99ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [bd30165a] Sandbox Metrics: {'mem_usage_bytes': 17200, 'mem_peak_bytes': 49881, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 8.98}}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:2.4] wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000 (x3)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [5c995a7c] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "\nimport math\n# \ube44\uc120\ud615 \uc5f0\uc0b0 \ud6c4 15\uc790\ub9ac \uc815\ubc00\ub3c4\ub85c \ucd9c\ub825\nval = sum(math.sin(i * 0.1) * math.cos(i * 0.05) for i in range(1000))\nprint(f\"{val:.15f}\")\n", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415914430, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [5c995a7c] [Perf] ⚡(Cached) Wait: 0.00ms | Exec: 9.64ms | Total: 9.64ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [5c995a7c] Sandbox Metrics: {'mem_usage_bytes': 17230, 'mem_peak_bytes': 49911, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 0.0, 'spawn': 0.0, 'exec': 9.64}}
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:2.5] wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000 (x3)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [7f119070] Entering Python Legacy Jail (Tier: SYSTEM, Cached: True)
+ LOG | SYSTEM | INFO  |  inter.python: [Deno RPC Request] -> {"jsonrpc": "2.0", "method": "execute", "params": {"code": "\nimport math\n# \ube44\uc120\ud615 \uc5f0\uc0b0 \ud6c4 15\uc790\ub9ac \uc815\ubc00\ub3c4\ub85c \ucd9c\ub825\nval = sum(math.sin(i * 0.1) * math.cos(i * 0.05) for i in range(1000))\nprint(f\"{val:.15f}\")\n", "context": {"phase": "TEST_EXECUTION", "flow_id": "109850040666836994", "timestamp": 1793415914454, "timeout": 5.0, "seed": "dphi_secure_fallback_seed"}}, "id": 4}
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [7f119070] [Perf] ⚡(Cached) Wait: 543.02ms | Exec: 9.34ms | Total: 552.36ms
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [7f119070] Sandbox Metrics: {'mem_usage_bytes': 17224, 'mem_peak_bytes': 49875, 'fuel_consumed': 0, 'fuel_remaining': -1, 'tier': 'SYSTEM', 'timing_ms': {'wait': 543.02, 'spawn': 0.0, 'exec': 9.34}}
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: Perfect Determinism achieved. Result: 1.595196469450608
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- [Proof 4] Byzantine Fault & Quarantine ---
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[TEST] Byzantine Defense: Quarantine rogue signature & accept 2-of-3 threshold (Func: seal_epoch)
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:2.6] wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000 (x4)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 2.20ms | Output: {"anchor_result": {"commit_hash": "f099fdc0738917003d8e6ed0cfaad3bb9e784cd82503b304494fa90204c36c8f", "payload_json": "{\"cached_states\":{},\"parent_
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+=== [DONE] Scenarios Completed: 3 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+>>> [PHASE] Starting Test Suite: DYNAMICS <<<
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+=======================================================
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 🌌 [START] Field Dynamics & Continuous Math Kernel Suite
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: =======================================================
+
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+[Control Plane] Shifting WasmCgroup Policy Tier -> SYSTEM
+ LOG | SYSTEM | INFO  |  daemon.taskwasm: [cce3e393] Global Cgroup default tier updated -> SYSTEM
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   └─ Policy successfully enforced to SYSTEM.
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+SUMMARY🔥| SYSTEM | INFO  |  [G:0.6] [Acc:2.1] wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000 (x3)
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: Kuramoto Math Verified. d_phase: 0.1000
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- [Kernel] FitzHugh-Nagumo Action Potential ---
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500499824] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: FHN Spiking logic and high tension (100.0) accurately triggered.
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- [Topology] Attractor / Reflector Bypass ---
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500500432] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: Attractor & Reflector correctly bypassed O(N^2) interactions.
+ LOG | TEST_EXECUTION | INFO  |  scene.sandbox: 
+--- [Guard] Dynamics Payload FFI Boundary ---
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500353616] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: Correctly trapped bad payload: Malformed JSON
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4501258992] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner:   [PASS] Time: 0.00ms | Output: Correctly trapped bad payload: Missing Type
+ LOG | TEST_EXECUTION | INFO  |  base.scene.runner: 
+=== [DONE] Scenarios Completed: 5 Passed, 0 Failed ===
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: 
+[SYSTEM] Generating Canonical Proof via Phase Kernel (phase.wasm)...
+ LOG | SYSTEM | INFO  |  wasm.quota: [worker-4500354576] enforced: Tier=SYSTEM, Mem=256MB, Fuel=2,000,000,000
+ LOG | TEST_EXECUTION | INFO  |  wasm.tester: [AnchorStore] Test Execution Proof successfully sealed! Hash: 2ed1dfa7734c6f948b7a32238bd3753bda3dbc7af7686789a2b662f2fa90be4e
+ LOG | SYSTEM | INFO  |  wasm.tester: [SYSTEM] Tearing down Sandbox (Shutting down Supervisor)...
+ LOG | SYSTEM | INFO  |  xphi.node.ops.task.supervisor: [Supervisor] Gracefully stopping 1 daemons concurrently...
+ LOG | SYSTEM | INFO  |  infra.wasm.phase: 
+===========================================================================
+ LOG | SYSTEM | INFO  |  infra.wasm.phase:                         🚀 PIPELINE EXECUTION REPORT                        
+ LOG | SYSTEM | INFO  |  infra.wasm.phase: ===========================================================================
+ LOG | SYSTEM | INFO  |  wasm.entry: 🟢 [SUCCESS] All Test Suites (sandbox, anchor, cert, dynamics) PASSED.
+ LOG | SYSTEM | INFO  |  wasm.entry: 🔗 Execution Canonical Hash: 2ed1dfa7734c6f948b7a32238bd3753bda3dbc7af7686789a2b662f2fa90be4e
+ LOG | SYSTEM | INFO  |  infra.wasm.phase: ===========================================================================
+
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| TEST_EXECUTION | INFO  |  [G:0.1] [Acc:4.5] base.scene.runner: [base.scene.runner] Bursting logs suppressed... (x14)
