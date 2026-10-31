@@ -1,5 +1,4 @@
 # README
-
 **AI Runtime Harness**
 
 Fiber is a local runtime harness that sits between AI agents and everything they call—tools and models alike. A single loopback daemon (127.0.0.1:8356) fronts your MCP servers as a Local MCP Gateway with idempotent execution and pre-flight human approval (**1**), unified under a zero-boilerplate CLI for config sync and quota governance (**3.1**). 
@@ -10,7 +9,8 @@ Through the same control plane, it governs model calls via an OpenAI-compatible 
 | **1. Local MCP Gateway** | Loopback Daemon for Agents & IDEs, Pre-Flight HITL Locks, Zero-Key LLM Routing, Config Sync | **[1. Local MCP Gateway](#1-local-mcp-gateway)** |
 | **2. LLM Guardrails & Replay** | Drop-in SDK, Mid-Stream Kill-Switch, Offline Record/Replay, Schema Traverser | **[2.1 LLM Guardrails](#21-llm-guardrails)** · **[2.2 VCR](#22-deterministic-replay-llm-vcr--fixtures)** · **[2.3 Schema Traverser](#23-schema-traverser--compat-registry)** |
 | **3. CLI & Installation** | Connect CLI, Account & Quota Governance, Sandbox Provisioning (`uv pip`), Node Identity (`fiber init`) & Homebrew | **[3.1 Connect CLI](#31-fiber-connect-cli)** · **[3.2 Python & CLI](#32-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[3.3 Homebrew](#33-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
-| **4–5. Benchmarks & Logs** | 200-VU Concurrency Metrics & Cryptographic Validation Logs | **[4. Benchmarks](#4-pipeline-performance-benchmarks-apple-m2-32gb-ram)** · **[5. System Logs](#5-system-validation-logs)** |
+| **4. Planes & Benchmarks** | Multi-Plane Orchestration (`compose` / `flare`) & 200-VU Concurrency Metrics | **[4.1 Execution Planes](#41-execution-planes-compose--flare)** · **[4.2 Benchmarks](#42-pipeline-performance-benchmarks-apple-m2-32gb-ram)** |
+| **5. System Validation Logs** | End-to-End Security, FSM, Guardrail & Edge Cryptographic Audit Logs | **[5. System Validation Logs](#5-system-validation-logs)** |
 
 ---
 
@@ -524,34 +524,56 @@ fiber init
 brew services start wittgena/fiber/fiber
 ```
 
-## 4. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)
+## 4. Execution Planes & Pipeline Benchmarks
 
-These metrics measure the **pure internal overhead** of the Fiber LLM Pipeline. To eliminate network variance and isolate the framework's performance, the suite was executed in deterministic **VCR Replay** mode.
+Beyond the host loopback daemon, Fiber extends its runtime governance across **Docker Compose** for containerized CI parity and **Cloudflare Edge V8 Isolates** for zero-trust sandbox execution.
+
+### 4.1. Execution Planes (`compose` & `flare`)
+
+Fiber dynamically synthesizes target infrastructure blueprints (`docker-compose.yml`, `wrangler.toml`), executes plane-specific verification suites, and tears down ephemeral workspaces automatically (or preserves crash dumps via `--keep-workspace`):
+
+```bash
+# Container Plane: Replicates the GitHub Actions CI topology locally (--rebuild for no-cache)
+$ fiber e2e infra.plane.compose --mode dev
+
+# Edge Sandbox Plane: Provisions Dual V8 Isolates and seals execution into a Merkle root
+$ fiber e2e infra.plane.flare --mode dev     # or --mode deploy for *.workers.dev
+```
+
+| Execution Plane | Entrypoint & Substrate | Architectural Role & Security Boundary |
+| --- | --- | --- |
+| **Host / CI Plane** | `fiber daemon` (Native OS + Redis) | Runs the primary loopback control plane (`127.0.0.1:8356`) across local environments and GitHub Actions PR gates with automated process reaping. |
+| **Container Plane** | `infra.plane.compose` (Docker Compose) | Synthesizes a network-coupled (`service:redis`) container topology in `VCR_MODE=replay` to cross-validate gateway, FinOps, and WASM suites locally. |
+| **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a WASM Gateway (`gateway`/`phase`/`fsm.wasm`) to a native Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and sealing states into Merkle roots. |
+
+---
+
+### 4.2. Pipeline Performance Benchmarks (Apple M2, 32GB RAM)
+
+These metrics measure the **pure internal overhead** of the Fiber LLM Pipeline. To eliminate network variance and isolate framework performance, the suite was executed in deterministic **VCR Replay** mode.
 
 **Run the benchmark with VCR driving 200 concurrent streams locally:**
 
 ```bash
-fiber e2e inter.concurrency --vcr replay --concurrency 200
+fiber e2e gateway.inter.concurrency --vcr replay --concurrency 200
 ```
 
 | Performance Dimension | Metric (M2, 32GB) | Architectural Significance |
 | --- | --- | --- |
-| **Unary Throughput** | **~1,180 req/s** | Handles over 1,000 enterprise control-plane pipeline transactions per second in a single Python process. |
-| **Stream Interleaving** | **~2,200 chunks/s** | High-density multiplexing of asynchronous byte-streams (SSE) without blocking the main event loop. |
-| **Routing Overhead** | **p50: <1.0ms / p95: <1.5ms** | Negligible framework-level latency added to the Time-To-First-Token under heavy concurrent bursts. |
-| **Memory Footprint** | **<1 MB (Unary) / ~25 MB (Streams)** | Near-zero GC pressure; safely buffers 200 highly active parallel streams within strict memory boundaries. |
-| **Context Isolation** | **Guaranteed Isolation (Zero Cross-talk)** | Flawless asynchronous coroutine interleaving with deterministic state safety across parallel contexts. |
-
-**Measuring Actual LLM Performance?**
-If you want to benchmark actual LLM inference metrics (like TTFT and Chunks/sec) against a live provider or local server, run the suite in `record` or live mode and specify your target model.
+| **Unary Throughput** | **~1,180 req/s** | Sustains over 1,000 control-plane transactions per second in a single Python process. |
+| **Stream Interleaving** | **~2,200 chunks/s** | High-density multiplexing of asynchronous SSE byte-streams without blocking the event loop. |
+| **Routing Overhead** | **p50: <1.0ms / p95: <1.5ms** | Sub-millisecond framework latency added to Time-To-First-Token under concurrent bursts. |
+| **Memory Footprint** | **<1 MB (Unary) / ~25 MB (Streams)** | Minimal GC pressure; buffers 200 active parallel streams within strict memory bounds. |
+| **Context Isolation** | **Zero Cross-Talk** | Strict coroutine context isolation across parallel streams without state bleeding. |
 
 ---
 
 ## 5. System Validation Logs
 
-The infrastructure guarantees execution determinism and security through end-to-end integration tests upon every build.
+Fiber enforces execution determinism and runtime safety through automated CI gates (on every PR and release tag) alongside targeted end-to-end validation suites across each subsystem:
 
-* **[mcp.guard.log](./phase/abc/log/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
+* **[mcp.guard.log](./phase/abc/log/gateway/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
 * **[ex.switch.log](./phase/abc/log/vcr/ex.switch.llama_server.20260929.log):** Validates the legacy migration, confirming that module aliasing seamlessly intercepts legacy SDK calls, normalizes heterogeneous streams, and achieves duck-typing parity during real-time VCR playback.
 * **[fsm.tester.log](./phase/abc/log/fsm/tester.20261027.log):** Validates the declarative agent state machine, confirming that standard AWS Step Functions (ASL) workflows compile into compact execution graphs, split and reclaim budgets across parallel branches without leakage, pause in-place for pre-flight human approval, and resume or re-branch from any checkpoint without re-running prior steps.
-* **[llm.compat.log](./phase/abc/log/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming sub-millisecond two-track DLP guardrails (`PRE_TRANSLATE` PII masking and `POST_TRANSLATE` credential blocking), strict Stream Breaker terminations on mid-flight policy revocation or quota exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+* **[llm.compat.log](./phase/abc/log/gateway/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming sub-millisecond two-track DLP guardrails (`PRE_TRANSLATE` PII masking and `POST_TRANSLATE` credential blocking), strict Stream Breaker terminations on mid-flight policy revocation or quota exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the InterLLM adapter, and zero-overhead plug-and-play tracer injection for custom observability.
+- **[infra.plane.flare.log](./phase/abc/log/infra/plane/flare.20261031.log):** Validates remote sandbox execution on Cloudflare Edge V8 isolates, confirming zero-leakage host isolation, bit-exact compute determinism, and tamper-proof state verification via Merkle roots.

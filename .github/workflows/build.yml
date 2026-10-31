@@ -90,7 +90,7 @@ jobs:
         run: |
           fiber e2e gateway.compliance
           fiber e2e gateway.security
-          fiber e2e inter.finops --vcr replay
+          fiber e2e gateway.inter.finops --vcr replay
 
       - name: Execute Reaper (Teardown)
         if: always()
@@ -118,16 +118,16 @@ jobs:
         env:
           REDIS_URL: "redis://localhost:6379/0" 
         run: |
-          fiber e2e inter.wasm.gateway
-          fiber e2e inter.wasm.phase
-          fiber e2e inter.plane.flare --mode dev
+          fiber e2e infra.wasm.gateway
+          fiber e2e infra.wasm.phase
+          fiber e2e infra.plane.flare --mode dev
           VCR_MODE=replay python -m fiber.dev.tester.switch
       
       - name: Run E2E Concurrency & Load Benchmark
         env:
           REDIS_URL: "redis://localhost:6379/0" 
         run: |
-          fiber e2e inter.concurrency --vcr replay --concurrency 50
+          fiber e2e gateway.inter.concurrency --vcr replay --concurrency 50
 
       - name: Run Router Semantic Routing Tests
         env:
