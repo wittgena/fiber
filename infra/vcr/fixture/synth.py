@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-import fiber.bridge.llm.entry as llm_entry
+import fiber.llm.entry as llm_entry
 from fiber.gateway.llm.state.traverser import StateMapper
 from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 from fiber.infra.vcr.fixture.schema import (
@@ -104,23 +104,59 @@ class VCRSpecGenerator:
         req_keys = (first_fn.get("parameters") or {}).get("required") or ["tenant_id"]
         return VCRToolCallSpec(name=fn_name, arguments={req_keys[0]: quoted[-1] if quoted else "accounting_dept"})
 
-
 @dataclass
 class VCRFixtureSynthesizer:
-    """픽스처 합성, VCRManager 저장, VCRInjector 리플레이 실행을 총괄하는 엔진"""
+    """픽스처 합성, 인메모리 직접 주입(Zero-I/O) 또는 디스크 저장, 리플레이 실행을 총괄하는 엔진"""
     vcr_config: VCRPlaybackConfig = field(default_factory=lambda: VCRPlaybackConfig(mode="replay", speed="max"))
     target_dir: Optional[str] = None
 
-    def synthesize_and_save(self, req: VCRSynthRequest) -> VCRSynthResult:
+    def _build_trace_and_target(self, req: VCRSynthRequest) -> tuple[VCRTargetInfo, VCRSynthSpec, str, dict]:
         target = VCRTargetInfo.resolve(req.target_model, self.target_dir, is_multi=req.is_multi)
         spec = VCRSpecGenerator.generate(req, target.provider)
         trace_id = target.generate_trace_id(req.scenario_id)
         trace_state = spec.to_trace_state(trace_id, target, req)
+        return target, spec, trace_id, trace_state.model_dump(exclude_none=True)
 
+    def synthesize_to_memory(self, req: VCRSynthRequest, manager: VCRManager) -> VCRSynthResult:
+        target, spec, trace_id, trace_dict = self._build_trace_and_target(req)
         fpath = target.fixture_path(req.scenario_id)
+        filepath_key = os.path.join(manager.fixture_dir, fpath.name)
+        file_data = manager.memory_fixtures.get(filepath_key) or {
+            "scenario": req.scenario_id,
+            "latest_trace_id": "",
+            "history_keys": [],
+            "traces": {},
+        }
+
+        file_data["scenario"] = req.scenario_id
+        file_data["latest_trace_id"] = trace_id
+        file_data["traces"][trace_id] = trace_dict
+
+        if trace_id in file_data["history_keys"]:
+            file_data["history_keys"].remove(trace_id)
+        file_data["history_keys"].append(trace_id)
+
+        while len(file_data["history_keys"]) > manager.MAX_HISTORY:
+            oldest = file_data["history_keys"].pop(0)
+            file_data["traces"].pop(oldest, None)
+
+        manager.memory_fixtures[filepath_key] = file_data
+        return VCRSynthResult(
+            trace_id=trace_id,
+            provider=target.provider,
+            fixture_path=Path(filepath_key),
+            content=spec.content,
+            usage=spec.usage_dict,
+        )
+
+    def synthesize_and_save(self, req: VCRSynthRequest) -> VCRSynthResult:
+        """디스크 영구 저장이 필요한 경우(CLI 사전 생성 등)에만 사용합니다."""
+        target, spec, trace_id, trace_dict = self._build_trace_and_target(req)
+        fpath = target.fixture_path(req.scenario_id)
+
         vcr_mgr = VCRManager(config=VCRPlaybackConfig(mode="record"), fixture_dir=str(target.fixture_dir))
         ctx = SynthContext(scenario=req.scenario_id, filename=fpath.name)
-        vcr_mgr.save_fixture(trace_id, trace_state.model_dump(exclude_none=True), ctx)
+        vcr_mgr.save_fixture(trace_id, trace_dict, ctx)
 
         return VCRSynthResult(
             trace_id=trace_id,
@@ -129,64 +165,3 @@ class VCRFixtureSynthesizer:
             content=spec.content,
             usage=spec.usage_dict,
         )
-
-    async def emulate_and_replay(self, req: VCRSynthRequest) -> VCRSynthResult:
-        saved = self.synthesize_and_save(req)
-        replay_cfg = VCRPlaybackConfig(
-            mode="replay",
-            speed=self.vcr_config.speed,
-            chaos_latency_ms=self.vcr_config.chaos_latency_ms,
-            include_raw_payload=False,
-        )
-
-        with VCRInjector.use_cassette(config=replay_cfg, fixture_dir=str(saved.fixture_path.parent)):
-            kwargs: Dict[str, Any] = {"api_key": "sk-vcr-synth"}
-            if req.stream:
-                kwargs["stream_options"] = {"include_usage": True}
-            if req.effective_tools:
-                kwargs["tools"] = req.effective_tools
-
-            response = await llm_entry.acompletion(
-                model=req.target_model,
-                messages=req.messages,
-                stream=req.stream,
-                metadata=SynthContext(scenario=req.scenario_id, filename=saved.fixture_path.name).metadata,
-                **kwargs,
-            )
-            text, tools_out, usage = await self._consume_response(response, saved.provider, req.stream)
-
-        return VCRSynthResult(
-            trace_id=saved.trace_id,
-            provider=saved.provider,
-            fixture_path=saved.fixture_path,
-            content=text,
-            tool_calls=tools_out,
-            usage=usage,
-        )
-
-    @staticmethod
-    async def _consume_response(response: Any, provider: str, stream: bool):
-        full_text, extracted_tools, usage_dict = "", None, None
-        if stream:
-            async for chunk in response:
-                if parsed := StreamChunkParser.parse(provider, chunk):
-                    if piece := parsed.get("text", ""):
-                        full_text += piece
-                        sys.stdout.write(piece)
-                        sys.stdout.flush()
-                    if parsed.get("usage"):
-                        usage_dict = parsed["usage"]
-                if tc := StateMapper.extract_tool_calls(chunk, provider):
-                    extracted_tools = tc
-        else:
-            full_text, usage_dict = StateMapper.extract_response(response, provider)
-            extracted_tools = StateMapper.extract_tool_calls(response, provider)
-            if extracted_tools:
-                for tc in extracted_tools:
-                    fn = tc.get("function") or {}
-                    sys.stdout.write(f"[TOOL_CALL] {fn.get('name')}({fn.get('arguments', '{}')})\n")
-            elif full_text:
-                sys.stdout.write(full_text)
-            sys.stdout.flush()
-        print()
-        return full_text, extracted_tools, usage_dict

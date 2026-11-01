@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.llm.trace
-## @lineage: fiber.dev.e2e.llm.trace
 from __future__ import annotations
 
 import asyncio

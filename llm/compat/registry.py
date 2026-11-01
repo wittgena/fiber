@@ -112,7 +112,7 @@ def _initialize_compat_rules() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     if param_ok:
         summary.append(f"PARAM({','.join(param_ok)})")
     if summary:
-        log_compat.info(f"Custom compat rules injected -> {' | '.join(summary)}")
+        log_compat.debug(f"Custom compat rules injected -> {' | '.join(summary)}")
 
     extraction_rules = CompatRegistryIO.deep_merge(BASE_EXTRACTION_RULES, valid_extraction)
     param_rules = CompatRegistryIO.deep_merge(BASE_PROVIDER_PARAM_RULES, valid_params)

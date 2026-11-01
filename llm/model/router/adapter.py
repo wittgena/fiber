@@ -35,7 +35,7 @@ class BaseProviderAdapter:
 
 class GenericHTTPAdapter(BaseProviderAdapter):
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
-        req_id = str(uuid4())[:8]
+        req_id = (ctx.system_meta.call_id[:8] if getattr(ctx, "system_meta", None) and ctx.system_meta.call_id else uuid4().hex[-8:])
         provider = ctx.custom_llm_provider
         adapter_log.debug(f"[GenericHTTP-{req_id}] 🚀 execute START | model={ctx.model}, provider={provider}")
         
@@ -73,10 +73,10 @@ class GenericHTTPAdapter(BaseProviderAdapter):
             provider=provider,
             base_url=ctx.api_base or ""
         )
-        adapter_log.debug(f"[GenericHTTP-{req_id}] 📦 URL: {target_url} | Payload: {json.dumps(payload, ensure_ascii=False)[:300]}...")
+        adapter_log.debug(f"[GenericHTTP-{req_id}] URL: {target_url} | Payload: {json.dumps(payload, ensure_ascii=False)[:300]}...")
 
         if ctx.stream:
-            adapter_log.debug(f"[GenericHTTP-{req_id}] 🌊 Initiating STREAM Execution")
+            adapter_log.debug(f"[GenericHTTP-{req_id}] Initiating STREAM Execution")
             
             async def stream_generator():
                 async with client.stream(
@@ -105,7 +105,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
             )
 
             if response.is_error:
-                adapter_log.error(f"[GenericHTTP-{req_id}] 🚨 단일 HTTP 에러 ({response.status_code}): {response.text}")
+                adapter_log.error(f"[GenericHTTP-{req_id}] 단일 HTTP 에러 ({response.status_code}): {response.text}")
 
             response.raise_for_status()
             data = response.json()
@@ -134,7 +134,6 @@ class GenericHTTPAdapter(BaseProviderAdapter):
 
             return model_response
 
-
 class InterLLMAdapter(BaseProviderAdapter):
     def __init__(self):
         self.router = LLMRouter()
@@ -143,7 +142,7 @@ class InterLLMAdapter(BaseProviderAdapter):
     async def execute(self, ctx: CompletionContext) -> Any:
         req_id = str(uuid4())[:8]
         provider = ctx.custom_llm_provider or "inter"
-        llm_log.debug(f"[InterLLM-{req_id}] 🚀 execute START | model={ctx.model}, provider={provider}, stream={ctx.stream}")
+        llm_log.debug(f"[InterLLM-{req_id}] execute START | model={ctx.model}, provider={provider}, stream={ctx.stream}")
 
         resolved_api_key = ctx.api_key
         if not resolved_api_key or resolved_api_key == "not-needed":
@@ -154,9 +153,7 @@ class InterLLMAdapter(BaseProviderAdapter):
             except Exception as e:
                 llm_log.warning(f"[InterLLM-{req_id}] ⚠️ Locator key resolution bypassed/failed: {e}")
 
-        # 원본 ctx.optional_params 오염 방지를 위해 얕은 복사 수행
         opt_params = (ctx.optional_params or {}).copy()
-        
         execution_kwargs = {}
         if "tools" in opt_params:
             execution_kwargs["tools"] = opt_params.pop("tools")
@@ -180,7 +177,7 @@ class InterLLMAdapter(BaseProviderAdapter):
                 **llama_kwargs
             )
         except Exception as e:
-            llm_log.error(f"[InterLLM-{req_id}] 🚨 모델 인스턴스 생성 실패: {e}")
+            llm_log.error(f"[InterLLM-{req_id}] 모델 인스턴스 생성 실패: {e}")
             raise exception_type(
                 model=ctx.model,
                 original_exception=e,
@@ -191,7 +188,7 @@ class InterLLMAdapter(BaseProviderAdapter):
         llama_messages = self.mapper.to_chat_messages(ctx.messages)
 
         if ctx.stream:
-            llm_log.debug(f"[InterLLM-{req_id}] 🌊 Initiating STREAM Execution")
+            llm_log.debug(f"[InterLLM-{req_id}] Initiating STREAM Execution")
             if ctx.acompletion:
                 response_stream = await llm.astream_chat(llama_messages, **execution_kwargs)
             else:
@@ -202,10 +199,7 @@ class InterLLMAdapter(BaseProviderAdapter):
                 def normalize_chunk(chunk_obj: Any) -> dict:
                     raw_target = getattr(chunk_obj, "raw", None) or chunk_obj
                     
-                    # StreamChunkParser로 파싱 일원화 (inter_llm_fallback 룰셋 활용)
                     parsed = StreamChunkParser.parse(provider, raw_target)
-                    
-                    # chunk.raw에서 텍스트가 안 뽑혔을 경우 상위 래퍼(chunk_obj.delta 등)에서 2차 시도
                     content = parsed["text"]
                     if not content and raw_target is not chunk_obj:
                         fallback_parsed = StreamChunkParser.parse("inter_llm_fallback", chunk_obj)
@@ -261,11 +255,8 @@ class InterLLMAdapter(BaseProviderAdapter):
                 chat_func = functools.partial(llm.chat, llama_messages, **execution_kwargs)
                 response = await asyncio.to_thread(chat_func)
             
-            # 하드코딩된 기본값("gemini") 대신 실제 provider 전달
             choice_data = self.mapper.to_openai_choice(response, req_id, llm_log, provider=provider)
             ctx.model_response.choices = [choice_data]
-            
-            # 누락되었던 Usage 추출 및 할당 보완
             _, usage_dict = self.mapper.extract_response(response, provider=provider)
             if usage_dict:
                 ctx.model_response.usage = usage_dict
@@ -274,7 +265,6 @@ class InterLLMAdapter(BaseProviderAdapter):
                 ctx.model_response.raw = response.raw
             
             return ctx.model_response
-
 
 class InterEmbeddingAdapter(BaseProviderAdapter):
     def __init__(self):
@@ -328,7 +318,6 @@ class InterEmbeddingAdapter(BaseProviderAdapter):
             "model": ctx.model,
             "usage": usage_placeholder
         }
-
 
 class AdapterRegistry:
     _adapters: Dict[str, Dict[str, BaseProviderAdapter]] = {
