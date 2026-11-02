@@ -1,8 +1,6 @@
 # fiber.phase.fsm.compiler
 import hashlib
-from enum import Enum
 from typing import List, Dict, Any, Optional, Union, Set, Tuple
-from pydantic import BaseModel, Field
 
 from xphi.arch.bound.adapter.state import StateAdapter
 from xphi.arch.bound.adapter.fsm import FsmAdapter, FsmTarget
@@ -11,121 +9,30 @@ from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.node.runtime.wasm.quota import QuotaPolicy
 from xphi.watcher.plane.emitter import get_emitter
 
+from fiber.phase.fsm.contract import (
+    MAX_BLOB_BYTES,
+    CAS_PREFIX,
+    BRANCH_PREFIX,
+    END_TOKEN,
+    RETURN_TOKEN,
+    ASL_CHOICE_OP_MAP,
+    NodeType,
+    EdgeMode,
+    CompactKey,
+    ParsedResource,
+    parse_resource_uri,
+    VCRConfig,
+    ProjectionConfig,
+    TaskIOSpec,
+    AgentAttributes,
+    EdgeRelation,
+    Fragment,
+    FragmentSig,
+    CompiledBundle,
+)
+
 log = get_emitter("fsm.compiler", phase="COMPILER")
 
-MAX_BLOB_BYTES = 2048
-CAS_PREFIX = "blob:"
-BRANCH_PREFIX = "branch:"
-END_TOKEN = "END"
-RETURN_TOKEN = "RETURN"
-
-# ASL Choice 연산자 -> fsm.wasm 및 runtime 조건식 연산자 매핑 테이블
-ASL_CHOICE_OP_MAP: Dict[str, str] = {
-    "StringEquals": "==",
-    "NumericEquals": "==",
-    "BooleanEquals": "==",
-    "NumericGreaterThanEquals": ">=",
-    "NumericLessThanEquals": "<=",
-    "NumericGreaterThan": ">",
-    "NumericLessThan": "<",
-    "StringNotEquals": "!=",
-    "NumericNotEquals": "!=",
-}
-
-
-# ============================================================================
-# 1. VOCAB & COMPACT KEYS (Unified NodeType & Terminal Tokens)
-# ============================================================================
-class NodeType(str, Enum):
-    PROJECTOR = "projector"
-    OPERSIG = "opersig"
-    ACT = "act"
-    PENDING = "pending"
-    REFLECT = "reflect"
-    TENSION = "tension"
-    ROUTER = "router"
-
-
-class EdgeMode(str, Enum):
-    DIRECT = "direct"
-    CONDITIONAL = "conditional"
-    FALLBACK = "fallback"
-
-
-class CompactKey:
-    META = "_m"
-    ENTRY = "ep"
-    TRACE = "tr"
-    VERSION = "v"
-    GRAPH = "g"
-    TYPE = "t"
-    ATTRS = "a"
-    NEXT = "nx"
-    FALLBACK = "fb"
-    RULES = "rl"
-    IF_COND = "if"
-    DEFAULT_NEXT = "dn"
-
-
-# OPTIMAL SCHEMAS (Off-Store Task IO vs On-Store Pointer IR)
-class VCRConfig(BaseModel):
-    capture_mode: str = Field(default="rpc_payload")
-    coalescing_window_ms: int = Field(default=0, ge=0)
-
-class ProjectionConfig(BaseModel):
-    """Controls Claim-Check CAS offloading and lightweight state key extraction."""
-    offload_path: Optional[str] = None
-    extract_keys: List[str] = Field(default_factory=list)
-
-class TaskIOSpec(BaseModel):
-    """Heavy I/O & extension config stripped from the graph and stored in CAS (`blob:<hash>`)."""
-    resource_uri: str = ""
-    result_path: str = "$"
-    call_params: Dict[str, Any] = Field(default_factory=dict)
-    vcr: Optional[VCRConfig] = None
-    projection: Optional[ProjectionConfig] = None
-    extras: Dict[str, Any] = Field(default_factory=dict)
-
-
-class AgentAttributes(BaseModel):
-    """Lightweight on-ledger node attributes. Defaults are omitted during projection."""
-    io_ref: Optional[str] = None  # Points to serialized TaskIOSpec in cas_store (`blob:<hash>`)
-    pressure: float = Field(default=0.0, ge=0.0, le=1.0)
-    max_failures: int = Field(default=3, ge=1)
-    allow_parallel: bool = False
-
-class EdgeRelation(BaseModel):
-    target: str
-    edge_type: EdgeMode = EdgeMode.DIRECT
-    condition: Optional[str] = None
-
-    @property
-    def is_external_or_terminal(self) -> bool:
-        return (
-            self.target in (END_TOKEN, RETURN_TOKEN)
-            or self.target.startswith((CAS_PREFIX, BRANCH_PREFIX, f"{RETURN_TOKEN}#"))
-        )
-
-class Fragment(BaseModel):
-    id: str
-    type: NodeType
-    attributes: AgentAttributes = Field(default_factory=AgentAttributes)
-    relations: List[EdgeRelation] = Field(default_factory=list)
-
-class FragmentSig(BaseModel):
-    entry_point: str
-    nodes: Dict[str, Fragment] = Field(default_factory=dict)
-    meta: Dict[str, Any] = Field(default_factory=dict)
-
-class CompiledBundle(BaseModel):
-    """Final compiled artifact consumed directly by BranchController and GraphTraverser."""
-    root_hash: str
-    root_blob: Dict[str, Any]
-    cas_store: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
-    total_root_bytes: int = 0
-
-
-# COMPILER & PROJECTOR (ASL -> CAS Stripping -> WASM Auto-Linker & Sandbox)
 class StateProjector:
     @staticmethod
     def project_compact_blob(signature: FragmentSig) -> Dict[str, Any]:
@@ -204,11 +111,11 @@ class FSMCompiler:
 
             if state_type == "Task":
                 resource_uri = state_def.get("Resource", "")
-                node_type, shorthand_model = self._parse_resource_uri(resource_uri)
+                parsed_uri = parse_resource_uri(resource_uri)
 
                 raw_params = dict(state_def.get("Parameters", {}))
-                if shorthand_model and "model" not in raw_params:
-                    raw_params["model"] = shorthand_model
+                if parsed_uri.model_hint and "model" not in raw_params:
+                    raw_params["model"] = parsed_uri.model_hint
 
                 fiber_ext = dict(raw_params.pop("__fiber_extensions", {}))
 
@@ -238,7 +145,7 @@ class FSMCompiler:
                     max_failures=max_failures,
                     allow_parallel=allow_parallel,
                 )
-                frag = Fragment(id=state_name, type=node_type, attributes=attrs)
+                frag = Fragment(id=state_name, type=parsed_uri.node_type, attributes=attrs)
 
                 if "Next" in state_def:
                     nxt: Union[str, List[str]] = state_def["Next"]
@@ -246,7 +153,6 @@ class FSMCompiler:
                     for t in targets:
                         frag.relations.append(EdgeRelation(target=t, edge_type=EdgeMode.DIRECT))
 
-                # Support both shorthand `"Catch": "NodeName"` and standard ASL `"Catch": [{"Next": "NodeName"}]`
                 fb_target = self._extract_catch_target(state_def.get("Catch"))
                 if fb_target:
                     frag.relations.append(EdgeRelation(target=fb_target, edge_type=EdgeMode.FALLBACK))
@@ -340,11 +246,9 @@ class FSMCompiler:
 
     @classmethod
     def _parse_choice_condition(cls, choice: Dict[str, Any]) -> str:
-        # Shorthand `"if": "$._score >= 0.9"`
         if "if" in choice:
             return cls._normalize_if_expr(str(choice["if"]))
 
-        # Standard ASL `{"Variable": "$._score", "NumericGreaterThanEquals": 0.9}`
         var = choice.get("Variable", "")
         for asl_op, sym_op in ASL_CHOICE_OP_MAP.items():
             if asl_op in choice:
@@ -355,33 +259,9 @@ class FSMCompiler:
 
     @classmethod
     def _parse_resource_uri(cls, resource_uri: str) -> Tuple[NodeType, Optional[str]]:
-        """
-        Supports both shorthand schemes (`llm://gpt-4o`, `mcp://tool_id`, `reflect://gpt-4o-mini`)
-        and full `fiber://<category>/<target>` URIs.
-        """
-        raw = resource_uri.strip()
-        lower = raw.lower()
-
-        if lower.startswith(("llm://")):
-            target = raw.split("://", 1)[1].strip("/")
-            model = target if target and target not in ("default", "llm_proxy") else None
-            return NodeType.PROJECTOR, model
-        if lower.startswith("reflect://"):
-            target = raw.split("://", 1)[1].strip("/")
-            model = target if target and target not in ("default", "reflect_llm") else None
-            return NodeType.REFLECT, model
-        if lower.startswith("tension://"):
-            target = raw.split("://", 1)[1].strip("/")
-            model = target if target and target != "default" else None
-            return NodeType.TENSION, model
-        if lower.startswith(("mcp://", "tool://", "sidecar://")):
-            return NodeType.OPERSIG, None
-        if lower.startswith("pending://"):
-            return NodeType.PENDING, None
-        if lower.startswith(("act://", "io://")):
-            return NodeType.ACT, None
-
-        return cls._infer_type_from_resource(raw), None
+        """Backward-compatible wrapper delegating to `contract.parse_resource_uri`."""
+        parsed = parse_resource_uri(resource_uri)
+        return parsed.node_type, parsed.model_hint
 
     def _finalize_bundle_from_wasm(self, wasm_output_str: str) -> CompiledBundle:
         """Unpacks `fsm.wasm` compile output and merges partitioned sub-branches into `cas_store`."""
@@ -463,23 +343,6 @@ class FSMCompiler:
         if res.output:
             return self._finalize_bundle_from_wasm(res.output)
         raise ValueError(f"FSM Broker Compile Failed: {res.error}")
-
-    @staticmethod
-    def _infer_type_from_resource(resource_uri: str) -> NodeType:
-        uri = resource_uri.lower()
-        if "reflect" in uri:
-            return NodeType.REFLECT
-        if "tension" in uri:
-            return NodeType.TENSION
-        if "pending" in uri:
-            return NodeType.PENDING
-        if "llm" in uri:
-            return NodeType.PROJECTOR
-        if "sidecar" in uri or "tool" in uri or "mcp" in uri:
-            return NodeType.OPERSIG
-        if "io" in uri or "act" in uri:
-            return NodeType.ACT
-        return NodeType.OPERSIG
 
     @staticmethod
     def _validate_phase(signature: FragmentSig) -> None:

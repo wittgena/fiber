@@ -1,85 +1,73 @@
-# fiber.dev.e2e.fsm.tester
+# fiber.dev.tester.fsm
 """
-FIBER FSM/DAG MULTIVERSE SPECIFICATION & E2E VERIFICATION SUITE
+FIBER FSM/DAG MULTIVERSE SPECIFICATION, CLI RUNNER & E2E VERIFICATION SUITE
 ======================================================================================
 
-This module serves both as the end-to-end verification suite and the canonical
-reference specification for authoring Fiber ASL (Agent State Language) workflows.
+This module serves both as the canonical reference specification for authoring
+Fiber ASL (Agent State Language) workflows and as a dual-mode CLI runner:
+  1. Default Suite Mode (no `--asl` arg): Runs the 5-phase multiverse E2E verification suite.
+  2. Custom ASL Runner Mode (`--asl <file.json | inline_json>`): Compiles and executes any
+     user-provided ASL workflow using either `MockActuator` (`--mock true`) or the live
+     `PolyglotExecutionBridge` (`--live` / `--mock false`).
 
 --------------------------------------------------------------------------------------
-STRUCTURAL & TOPOLOGY KEYWORDS ([FIXED] System-Bound vs [FREE] User-Defined)
+CLI USAGE EXAMPLES
 --------------------------------------------------------------------------------------
-- Top-Level Keys   : [FIXED] `"Version"`, `"StartAt"`, `"States"` (Required by compiler)
-- State (Node) IDs : [FREE]  Any string (e.g., `"Plan_Intent_LLM"`, `"My_Custom_Step"`).
-                             Must NOT use reserved terminal tokens: `"END"`, `"RETURN"`,
-                             or prefixes `"blob:"`, `"branch:"`.
-- `"Type"`         : [FIXED] Allowed values: `"Task"`, `"Choice"`, `"Succeed"`, `"Fail"`.
-- `"Next"`         : [MIXED] Single node ID (`str`) for 1:1 step, or `List[str]` (len >= 2)
-                             for 1:N parallel multiverse fork.
-                             Can also point to `"branch:<hash>#<entry_node>"` for SYMLINK jump.
-- `"Catch"`        : [FIXED] Mandatory on parallel branch `"Task"` nodes converging at a
-                             `DagJoinBarrier` (in-degree >= 2). Supports shorthand string:
-                             `"Catch": "Evaluate_And_Join"` or standard ASL list format.
+  # 1. Run default 5-phase E2E verification suite (Mock mode)
+  python -m dev.tester.fsm
+
+  # 2. Run a custom ASL JSON file in deterministic Mock mode
+  python -m dev.tester.fsm --asl ./my_workflow.asl.json --fuel 2000
+
+  # 3. Run a custom ASL JSON file in LIVE Polyglot mode (LLM + MCP + HTTPS + CLI)
+  python -m dev.tester.fsm --asl ./my_workflow.asl.json --live --tenant finops_prod
+
+  # 4. Run SAMPLE_MULTIVERSE_ASL in single-shot mode with custom initial meta_ctx
+  python -m dev.tester.fsm --single --meta '{"intent_type": "custom_audit"}'
+
+  # 5. Resume parked PTA pointers ('tx_hash:idx') after HITL approval
+  python -m dev.tester.fsm --asl ./my_workflow.asl.json --live --resume "4421f309..:0,dbbc3268..:1"
 
 --------------------------------------------------------------------------------------
-`"Resource"` URI ROUTING RULES (`compiler.py` & `bridge.py`)
+`"Resource"` URI ROUTING RULES (`contract.py`, `compiler.py` & `polyglot.py`)
 --------------------------------------------------------------------------------------
-Supports clean shorthand schemes (`<scheme>://<target_id>`) or full `fiber://` URIs:
-
   [Shorthand / Keyword]                  [Compiler & Bridge Behaviour]
-  • `"llm://<model>"`                ->  `NodeType.PROJECTOR` -> Auto-sets `model` & calls `acompletion()`
-  • `"reflect://<model>"`            ->  `NodeType.REFLECT`   -> Auto-sets `model` & calls `acompletion()`
-  • `"tension://<model>"`            ->  `NodeType.TENSION`   -> Calls `acompletion()` + `phase.wasm` bridge
+  • `"llm://<provider>/<model>"`     ->  `NodeType.PROJECTOR` -> Auto-sets `model` & calls `acompletion()`
+  • `"reflect://<provider>/<model>"` ->  `NodeType.REFLECT`   -> Auto-sets `model` & calls `acompletion()`
+  • `"tension://<provider>/<model>"` ->  `NodeType.TENSION`   -> Calls `acompletion()` + `phase.wasm` bridge
   • `"mcp://<target_id>"`            ->  `NodeType.OPERSIG`   -> Calls `POST {mcp_gateway}/<target_id>/invoke`
-  • `"pending://<target_id>"`        ->  `NodeType.PENDING`   -> Same MCP gateway invocation
+  • `"fn://<name>"` / `"py://m:fn"`  ->  `NodeType.OPERSIG`   -> Calls in-process Python function (`PolyglotBridge`)
+  • `"http(s)://<url>"`              ->  `NodeType.OPERSIG`   -> Direct REST call + `HTTP 202` HITL park
+  • `"exec://<cmd>"`                 ->  `NodeType.OPERSIG`   -> Async stdio subprocess + `exit 202` HITL park
+  • `"pending://<target_id>"`        ->  `NodeType.PENDING`   -> Async external wait gate via MCP gateway
   • `"act://<name>"`                 ->  `NodeType.ACT`       -> No-op control step (0 Fuel cost)
-
---------------------------------------------------------------------------------------
-`"Parameters"` & `"__fiber_extensions"` (`Projection`) CONTRACT
---------------------------------------------------------------------------------------
-All `"Parameters"` are stripped from the on-ledger topology graph (`branch:<hash> <= 2KB`)
-and stored off-ledger in CAS (`blob:<hash>`).
-
-- Dynamic Binding (`".$"` suffix) : [FIXED SYNTAX] Any parameter key ending with `".$"`
-                                    (e.g., `"intent_filter.$": "$.intent_type"`) is resolved
-                                    at runtime from `cursor.meta_ctx["intent_type"]`.
-- `"__fiber_extensions"`          : [FIXED KEY] Optional engine configuration block:
-    - `"Projection"`     : `{"offload_path": str, "extract_keys": List[str]}`
-                           • `offload_path`: Sub-path of heavy output to store in CAS (`blob:`).
-                           • `extract_keys`: Keys to lift into lightweight on-ledger `meta_ctx`.
-                           (Note: Any variable referenced in `"Choice"` nodes plus `"$._score"`
-                           are automatically inferred and added to `extract_keys` by the compiler!)
-    - `"VCR"`            : `{"capture_mode": str, "coalescing_window_ms": int}`
-    - `"pressure"`       : `float` (0.0 ~ 1.0)
-    - `"max_failures"`   : `int` (default: 3)
-    - `"allow_parallel"` : `bool` (default: False)
-
---------------------------------------------------------------------------------------
-`"Choice"` (`ROUTER`) & RUNTIME `cursor.meta_ctx` RESERVED KEYS
---------------------------------------------------------------------------------------
-- Choice Conditions   : Supports shorthand `"if": "$._score >= 0.95"` (`>=`, `<=`, `!=`,
-                        `==`, `>`, `<`) as well as standard ASL `"Variable"` operators.
-- `"_score"`          : (`float`) Used by Arbiter to select the winning branch on merge.
-- `"_hitl_yield"`     : (`bool`) Parks cursor in-place with ZERO fuel spend on HTTP 202.
-- `"_fork_ratios"`    : (`List[float]`) Optional weight list for asymmetric 1:N fuel slicing.
-- `"_last_ptr"`       : (`str`) Auto-populated CAS pointer (`"blob:<hash>"`) to offloaded I/O.
 """
+import argparse
 import asyncio
 import copy
-from typing import Dict, Any, Optional, Tuple
+import json
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from fiber.phase.fsm.compiler import (
+from fiber.phase.fsm.bridge.polyglot import PolyglotExecutionBridge
+from fiber.phase.fsm.contract import (
+    BRANCH_PREFIX,
+    CAS_PREFIX,
+     END_TOKEN,
     CompactKey,
     NodeType,
-    END_TOKEN,
-    CAS_PREFIX,
-    BRANCH_PREFIX,
+    parse_resource_uri,
 )
 from fiber.phase.fsm.runtime import BranchCursor
 from fiber.phase.fsm.traverser import GraphTraverser
-
 from xphi.watcher.plane.emitter import get_emitter
+
 log = get_emitter("fsm.tester", phase="E2E_VERIFICATION")
+
+# Canonical adapter model identifiers from `fiber-compats/adapters`
+DEFAULT_PLANNER_LLM = "llm://cerebras/qwen-3.8-27b"
+DEFAULT_REFLECT_LLM = "reflect://gemini/gemini-3.1-flash-lite"
 
 # REFERENCE ASL WORKFLOW (Demonstrating Clean Shorthand & `Projection` Contract)
 SAMPLE_MULTIVERSE_ASL: Dict[str, Any] = {
@@ -89,7 +77,7 @@ SAMPLE_MULTIVERSE_ASL: Dict[str, Any] = {
     "States": {
         "Plan_Intent_LLM": {
             "Type": "Task",
-            "Resource": "llm://gpt-4o",  # Shorthand: sets NodeType.PROJECTOR & model="gpt-4o"
+            "Resource": DEFAULT_PLANNER_LLM,  # Shorthand: NodeType.PROJECTOR & model="cerebras/qwen-3.8-27b"
             "Parameters": {
                 "prompt": "Analyze user request and dispatch parallel verification strategies.",
                 "__fiber_extensions": {
@@ -132,7 +120,7 @@ SAMPLE_MULTIVERSE_ASL: Dict[str, Any] = {
         },
         "Reflect_Fallback_LLM": {
             "Type": "Task",
-            "Resource": "reflect://gpt-4o-mini",  # Shorthand: NodeType.REFLECT & model="gpt-4o-mini"
+            "Resource": DEFAULT_REFLECT_LLM,  # Shorthand: NodeType.REFLECT & model="gemini/gemini-3.1-flash-lite"
             "Parameters": {"prompt": "Verify fallback safety."},
             "Next": "Final_Act",
         },
@@ -142,6 +130,7 @@ SAMPLE_MULTIVERSE_ASL: Dict[str, Any] = {
     },
 }
 
+
 def _short_pta(cursor: BranchCursor) -> str:
     """Formats PTA pointer ('tx_hash:idx') into a readable short handle."""
     key = cursor.pointer.to_key()
@@ -149,6 +138,7 @@ def _short_pta(cursor: BranchCursor) -> str:
         tx_h, idx = key.split(":", 1)
         return f"{tx_h[:8]}..:{idx}"
     return key[:10]
+
 
 def _build_oversized_asl(node_count: int = 45) -> Dict[str, Any]:
     """Generates a >2KB ASL definition to verify WASM Auto-Linker SESE subgraph partitioning."""
@@ -172,15 +162,50 @@ def _build_oversized_asl(node_count: int = 45) -> Dict[str, Any]:
         "States": states,
     }
 
-# DETERMINISTIC MOCK ACTUATOR (Routes by Resource Target ID & NodeType, NOT Node Name)
+
+def _load_asl_input(asl_arg: Optional[str]) -> Tuple[Dict[str, Any], str]:
+    """
+    Loads ASL definition from a JSON file path, stdin ('-'), or inline JSON string.
+    Falls back to `SAMPLE_MULTIVERSE_ASL` if `asl_arg` is None.
+    """
+    if not asl_arg:
+        return copy.deepcopy(SAMPLE_MULTIVERSE_ASL), "SAMPLE_MULTIVERSE_ASL (Built-in)"
+
+    raw_str = asl_arg.strip()
+    if raw_str == "-":
+        return json.loads(sys.stdin.read()), "stdin"
+
+    if raw_str.startswith("{"):
+        return json.loads(raw_str), "inline_json"
+
+    path = Path(raw_str).expanduser().resolve()
+    if not path.is_file():
+        raise FileNotFoundError(f"ASL file not found: '{path}'")
+    return json.loads(path.read_text(encoding="utf-8")), str(path.name)
+
+
+def _str_to_bool(val: str) -> bool:
+    if isinstance(val, bool):
+        return val
+    v = val.strip().lower()
+    if v in ("1", "true", "t", "yes", "y", "mock"):
+        return True
+    if v in ("0", "false", "f", "no", "n", "live"):
+        return False
+    raise argparse.ArgumentTypeError(f"Boolean value expected, got '{val}'")
+
+
+# DETERMINISTIC MOCK ACTUATOR (Routes by ParsedResource & NodeType, NOT Node Name)
 class MockActuator:
     """
     Simulates `FiberExecutionBridge` without hardcoding user-defined node names.
-    Dispatches strictly by `NodeType` and the MCP `<target_id>` suffix in `task_io["resource_uri"]`.
+    Dispatches strictly by `NodeType` and `parse_resource_uri(resource_uri)`.
     """
-    def __init__(self) -> None:
+
+    def __init__(self, auto_approve_hitl: bool = False) -> None:
         self.hitl_approved_tickets: set[str] = set()
         self.simulate_runaway_on_readonly: bool = False
+        self.auto_approve_hitl: bool = auto_approve_hitl
 
     async def __call__(
         self,
@@ -189,8 +214,8 @@ class MockActuator:
         task_io: Dict[str, Any],
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
         node_type = node_spec.get(CompactKey.TYPE)
-        resource_uri = task_io.get("resource_uri", "")
-        target_id = resource_uri.split("/")[-1] if "/" in resource_uri else ""
+        parsed_uri = parse_resource_uri(task_io.get("resource_uri", ""))
+        target_id = parsed_uri.target_id
         call_params = task_io.get("call_params", {})
 
         # Control / Terminal Nodes (`NodeType.ROUTER`, `NodeType.ACT`)
@@ -211,14 +236,14 @@ class MockActuator:
             )
             return (
                 {"intent_type": "parallel_audit"},
-                {"llm_output": f"Executed {cursor.curr_node} at tick {cursor.tick}"},
+                {"llm_output": f"Executed {cursor.curr_node} ({target_id}) at tick {cursor.tick}"},
                 cost,
             )
 
         # MCP Tool Target: `prod_db_admin` (Simulates HTTP 202 Pre-Flight HITL Lock on DELETE SQL)
         if target_id == "prod_db_admin" or "DELETE" in str(call_params.get("sql", "")):
             ticket_id = "hitl_ticket_drop_99"
-            if ticket_id not in self.hitl_approved_tickets:
+            if not self.auto_approve_hitl and ticket_id not in self.hitl_approved_tickets:
                 print(
                     f"  [Actuator] MCP Pre-Flight HITL Trap (HTTP 202) at '{cursor.curr_node}' (target='{target_id}') "
                     f"on '{cursor.stream_id}'! Regex matched 'DELETE'. "
@@ -249,21 +274,106 @@ class MockActuator:
             )
             return {"_score": 0.0}, None, runaway_cost
 
-        cost = 5
+        cost = int(task_io.get("extras", {}).get("step_cost", 5))
         print(
-            f"  [Actuator] 🛠️  Safe MCP Node '{cursor.curr_node}' (target='{target_id}') on '{cursor.stream_id}' "
+            f"  [Actuator] 🛠️  Safe Tool Node '{cursor.curr_node}' (scheme='{parsed_uri.scheme}', target='{target_id}') on '{cursor.stream_id}' "
             f"| Tick={cursor.tick} | Spending {cost} Fuel ({cursor.fuel} -> {cursor.fuel - cost}) | Score=0.70"
         )
         return (
             {"_score": 0.70, "db_status": "readonly_ok"},
-            {"count": 1024},
+            {"count": 1024, "uri": parsed_uri.raw_uri},
             cost,
         )
 
-async def run_e2e_verification_suite() -> None:
-    """E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel -> Auto-Linker)"""
+
+# ======================================================================================
+# MODE A: Custom ASL / Single-Workflow Runner (Supports `--mock` & `--live`)
+# ======================================================================================
+async def run_custom_asl_workflow(
+    asl_schema: Dict[str, Any],
+    source_label: str,
+    use_mock: bool = True,
+    stream_id: str = "custom_run_01",
+    initial_fuel: int = 1000,
+    initial_meta: Optional[Dict[str, Any]] = None,
+    tenant_id: str = "default_tenant",
+    mcp_gateway_url: str = "http://127.0.0.1:8356/v1/mcp-gateway",
+    allow_exec: bool = False,
+    auto_approve_hitl: bool = False,
+    resume_pointers: Optional[List[str]] = None,
+) -> None:
+    mode_str = "MOCK (MockActuator)" if use_mock else "LIVE (PolyglotExecutionBridge)"
     print("=" * 86)
-    print(" [FIBER FSM/DAG MULTIVERSE TESTER] Starting E2E Lifecycle Verification")
+    print(f" [FIBER FSM RUNNER] Source='{source_label}' | Mode={mode_str}")
+    print("=" * 86)
+
+    actuator = MockActuator(auto_approve_hitl=auto_approve_hitl) if use_mock else None
+    async with GraphTraverser(
+        node_executor=actuator,
+        tenant_id=tenant_id,
+        mcp_gateway_url=mcp_gateway_url,
+    ) as traverser:
+        live_bridge: Optional[PolyglotExecutionBridge] = None
+        if not use_mock:
+            live_bridge = PolyglotExecutionBridge(
+                runtime=traverser.runtime,
+                tenant_id=tenant_id,
+                mcp_gateway_url=mcp_gateway_url,
+                allow_exec_subprocess=allow_exec,
+            )
+            traverser.node_executor = live_bridge
+
+        try:
+            # 1. Compile & Static Sandbox Verification
+            bundle = traverser.compiler.compile_from_asl(asl_schema, trace_id=stream_id)
+            cas_io_count = sum(1 for k in bundle.cas_store if k.startswith(CAS_PREFIX))
+            branch_count = sum(1 for k in bundle.cas_store if k.startswith(BRANCH_PREFIX))
+            print(f"  • Compiled Root   : {bundle.root_hash} ({bundle.total_root_bytes}B / 2048B)")
+            print(f"  • CAS Objects     : {len(bundle.cas_store)} ({cas_io_count} TaskIOSpecs + {branch_count} Sub-Branches)\n")
+
+            # 2. Execute or Resume
+            if resume_pointers:
+                print(f"  • Resuming from PTA Pointers: {resume_pointers}\n")
+                res = await traverser.resume(targets=resume_pointers, base_stream_id=stream_id)
+            else:
+                res = await traverser.traverse_bundle(
+                    bundle=bundle,
+                    base_stream_id=stream_id,
+                    initial_fuel=initial_fuel,
+                    initial_meta=initial_meta,
+                )
+
+            # 3. Report Summary
+            print("\n" + "-" * 86)
+            print(" [Execution Summary]")
+            print("-" * 86)
+            print(f"  • Visited Trace   : {' -> '.join(res.visited_history)}")
+            if res.parked_cursors:
+                print(f"  • Status          : PARKED ({len(res.parked_cursors)} cursor(s) awaiting HITL / Barrier)")
+                for pc in res.parked_cursors:
+                    print(
+                        f"    - Stream='{pc.stream_id}' | Node='{pc.curr_node}' | "
+                        f"PTA='{pc.pointer.to_key()}' | Fuel={pc.fuel} | Ticket='{pc.meta_ctx.get('_hitl_ticket', '')}'"
+                    )
+            else:
+                print(f"  • Status          : COMPLETED (Final Node='{res.final_cursor.curr_node}')")
+                print(f"  • Final PTA       : {_short_pta(res.final_cursor)} ({res.final_cursor.pointer.to_key()})")
+                print(f"  • Reclaimed Fuel  : {res.reclaimed_fuel} / {initial_fuel}")
+                print(f"  • Final meta_ctx  : {json.dumps(res.final_cursor.meta_ctx, ensure_ascii=False)}")
+            print("=" * 86)
+        finally:
+            if live_bridge is not None:
+                await live_bridge.aclose()
+
+
+# ======================================================================================
+# MODE B: Canonical 5-Phase Multiverse E2E Verification Suite (Default)
+# ======================================================================================
+async def run_e2e_verification_suite(asl_schema: Optional[Dict[str, Any]] = None) -> None:
+    """E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel -> Auto-Linker)"""
+    target_asl = copy.deepcopy(asl_schema or SAMPLE_MULTIVERSE_ASL)
+    print("=" * 86)
+    print(" [FIBER FSM/DAG MULTIVERSE TESTER] Starting 5-Phase E2E Lifecycle Verification")
     print("=" * 86)
 
     actuator = MockActuator()
@@ -272,7 +382,7 @@ async def run_e2e_verification_suite() -> None:
         print("\n" + "-" * 86)
         print(" [Phase 1: Compile] Stripping heavy Task I/O into CAS & projecting <=2KB Topology Blob")
         print("-" * 86)
-        bundle = traverser.compiler.compile_from_asl(SAMPLE_MULTIVERSE_ASL, trace_id="test_suite_01")
+        bundle = traverser.compiler.compile_from_asl(target_asl, trace_id="test_suite_01")
         cas_io_count = sum(1 for k in bundle.cas_store if k.startswith(CAS_PREFIX))
         branch_count = sum(1 for k in bundle.cas_store if k.startswith(BRANCH_PREFIX))
 
@@ -282,14 +392,15 @@ async def run_e2e_verification_suite() -> None:
         assert bundle.total_root_bytes <= 2048, "Root blob exceeded 2KB limit!"
 
         # Verify WASM Static Deadlock Linter catches missing `Catch` on parallel branch
-        bad_asl = copy.deepcopy(SAMPLE_MULTIVERSE_ASL)
-        bad_asl["States"]["Fast_Readonly_MCP"].pop("Catch", None)
-        try:
-            traverser.compiler.compile_from_asl(bad_asl, trace_id="bad_deadlock_check")
-            raise AssertionError("Static sandbox should have rejected parallel branch without Catch!")
-        except ValueError as e:
-            assert "E_BARRIER_DEADLOCK_RISK" in str(e)
-            print(f"  • Static Linter   : Verified pre-mount deadlock rejection ({str(e).splitlines()[0][:68]}...)")
+        bad_asl = copy.deepcopy(target_asl)
+        if "Fast_Readonly_MCP" in bad_asl.get("States", {}):
+            bad_asl["States"]["Fast_Readonly_MCP"].pop("Catch", None)
+            try:
+                traverser.compiler.compile_from_asl(bad_asl, trace_id="bad_deadlock_check")
+                raise AssertionError("Static sandbox should have rejected parallel branch without Catch!")
+            except ValueError as e:
+                assert "E_BARRIER_DEADLOCK_RISK" in str(e)
+                print(f"  • Static Linter   : Verified pre-mount deadlock rejection ({str(e).splitlines()[0][:68]}...)")
 
         # PHASE 2: Genesis Spawn -> 1:N Fan-Out -> Safe Branch Join vs HITL Park
         print("\n" + "-" * 86)
@@ -319,7 +430,6 @@ async def run_e2e_verification_suite() -> None:
             f"| PTA={_short_pta(parked_b1)} | Fuel={parked_b1.fuel} (490 - 0) | Tick={parked_b1.tick}"
         )
 
-        # Verify fuel accounting: 1000 - 20 (Plan_LLM) = 980 -> Sliced [490, 490]. b0 spent 5 -> 485, b1 spent 0 -> 490
         assert waiting_b0.fuel == 485 and parked_b1.fuel == 490
 
         # PHASE 3: O(1) Cursor Rehydration -> HITL Release -> N:1 Barrier Merge
@@ -332,11 +442,9 @@ async def run_e2e_verification_suite() -> None:
             f"| PTA={_short_pta(restored_b1)} | Preserved Tick={restored_b1.tick} | Preserved Fuel={restored_b1.fuel}"
         )
 
-        # Simulate Admin TOTP / 1-Click Approval releasing ticket 'hitl_ticket_drop_99'
         actuator.hitl_approved_tickets.add("hitl_ticket_drop_99")
         print("  • Admin Action        : Approved TOTP/Slack Ticket 'hitl_ticket_drop_99'. Resuming branches...\n")
 
-        # Resume directly using PTA pointer strings (automatically rehydrates & merges at Join Barrier)
         res2 = await traverser.resume(
             targets=[waiting_b0.pointer.to_key(), parked_b1.pointer.to_key()],
             base_stream_id="run_101",
@@ -370,7 +478,6 @@ async def run_e2e_verification_suite() -> None:
             )
         print("")
 
-        # Resume both experimental branches; b1 waits at Join Node 'Final_Act' until b0 finishes 'Reflect_Fallback_LLM'
         res3 = await traverser.resume(
             targets=exp_cursors,
             base_stream_id="run_101_exp",
@@ -383,7 +490,6 @@ async def run_e2e_verification_suite() -> None:
         )
         print(f"  • Winning Strategy    : '{res3.final_cursor.meta_ctx.get('strategy_override')}' (_score={res3.final_cursor.meta_ctx.get('_score')})")
 
-        # 960 split into [480, 480]. b0 runs Reflect_Fallback_LLM (-20 -> 460), b1 runs Final_Act (0 -> 480) -> Merged = 940
         assert res3.final_cursor.curr_node == END_TOKEN
         assert res3.reclaimed_fuel == 940, f"Expected 940 reclaimed fuel, got {res3.reclaimed_fuel}"
 
@@ -399,7 +505,6 @@ async def run_e2e_verification_suite() -> None:
         )
         assert oversized_bundle.total_root_bytes <= 2048 and len(sub_branches) >= 2
 
-        # Inject runaway fault on b0 ('readonly_db_search') -> Verify it drains to 0 Fuel via Catch and merges with b1 (475 Fuel)
         actuator.simulate_runaway_on_readonly = True
         res4 = await traverser.traverse_bundle(
             bundle=bundle,
@@ -418,5 +523,117 @@ async def run_e2e_verification_suite() -> None:
     print(" ✅ ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED")
     print("=" * 70)
 
+
+def _build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python -m dev.tester.fsm",
+        description="Fiber FSM/DAG Multiverse E2E Suite & Custom ASL Workflow Runner",
+    )
+    parser.add_argument(
+        "-a",
+        "--asl",
+        type=str,
+        default=None,
+        help="Path to an ASL JSON file, inline JSON string, or '-' for stdin. If omitted, uses SAMPLE_MULTIVERSE_ASL.",
+    )
+    parser.add_argument(
+        "--mock",
+        type=_str_to_bool,
+        nargs="?",
+        const=True,
+        default=True,
+        help="Use deterministic MockActuator (true/false, default: true). Pass '--mock false' or '--live' for real execution.",
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Shortcut for '--mock false': binds PolyglotExecutionBridge for real LLM/MCP/HTTP/CLI execution.",
+    )
+    parser.add_argument(
+        "--single",
+        action="store_true",
+        help="Run a single workflow pass instead of the 5-phase verification suite even when '--asl' is omitted.",
+    )
+    parser.add_argument(
+        "-f",
+        "--fuel",
+        type=int,
+        default=1000,
+        help="Initial fuel budget allocated at Genesis spawn (default: 1000).",
+    )
+    parser.add_argument(
+        "-s",
+        "--stream-id",
+        type=str,
+        default="run_custom_01",
+        help="Base stream identifier for PTA ledger anchoring (default: 'run_custom_01').",
+    )
+    parser.add_argument(
+        "-m",
+        "--meta",
+        type=str,
+        default=None,
+        help="Initial `meta_ctx` as a JSON object string (e.g. '{\"intent_type\": \"audit\"}').",
+    )
+    parser.add_argument(
+        "--tenant",
+        type=str,
+        default="default_tenant",
+        help="Tenant ID passed to FiberExecutionBridge / PolyglotExecutionBridge.",
+    )
+    parser.add_argument(
+        "--gateway-url",
+        type=str,
+        default="http://127.0.0.1:8356/v1/mcp-gateway",
+        help="Fiber Local MCP Gateway URL (default: http://127.0.0.1:8356/v1/mcp-gateway).",
+    )
+    parser.add_argument(
+        "--allow-exec",
+        action="store_true",
+        help="Allow `exec://` subprocess execution in live PolyglotExecutionBridge mode.",
+    )
+    parser.add_argument(
+        "--approve-hitl",
+        action="store_true",
+        help="Pre-approve HITL tickets in MockActuator so single-shot runs complete without parking.",
+    )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default=None,
+        help="Comma-separated PTA pointers ('tx_hash:idx,tx_hash:idx') to resume a parked workflow.",
+    )
+    return parser
+
+
+async def _async_main() -> None:
+    parser = _build_arg_parser()
+    args = parser.parse_args()
+
+    use_mock = False if args.live else bool(args.mock)
+
+    # Default behavior: if no custom ASL, no --single, no --live, and no --resume, run full 5-phase suite
+    if args.asl is None and not args.single and use_mock and not args.resume:
+        await run_e2e_verification_suite()
+        return
+
+    asl_schema, source_label = _load_asl_input(args.asl)
+    initial_meta = json.loads(args.meta) if args.meta else None
+    resume_list = [p.strip() for p in args.resume.split(",") if p.strip()] if args.resume else None
+
+    await run_custom_asl_workflow(
+        asl_schema=asl_schema,
+        source_label=source_label,
+        use_mock=use_mock,
+        stream_id=args.stream_id,
+        initial_fuel=args.fuel,
+        initial_meta=initial_meta,
+        tenant_id=args.tenant,
+        mcp_gateway_url=args.gateway_url,
+        allow_exec=args.allow_exec,
+        auto_approve_hitl=args.approve_hitl,
+        resume_pointers=resume_list,
+    )
+
 if __name__ == "__main__":
-    asyncio.run(run_e2e_verification_suite())
+    asyncio.run(_async_main())

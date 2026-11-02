@@ -18,7 +18,7 @@ from xphi.state.inter.fsm import FSMInterpreter
 from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.phase.fsm.compiler import (
+from fiber.phase.fsm.contract import (
     CompiledBundle,
     CompactKey,
     NodeType,
@@ -31,11 +31,13 @@ from fiber.phase.fsm.compiler import (
 
 log = get_emitter("fsm.runtime", phase="BRANCH_RUNTIME")
 
+
 @dataclass
 class DagTopology:
     entry_point: str
     back_edges: Set[Tuple[str, str]] = field(default_factory=set)
     join_nodes: Set[str] = field(default_factory=set)
+
 
 class DagJoinBarrier:
     """Synchronizes parallel branches at shared DAG join nodes (forward in-degree >= 2)."""
@@ -117,6 +119,7 @@ class DagJoinBarrier:
             bucket.clear()
         return stranded
 
+
 @dataclass
 class BranchCursor:
     """Active branch state handle with built-in PTA input signing and output projection."""
@@ -184,6 +187,7 @@ class BranchCursor:
             tick=int(payload.get("tick", tick)),
         )
 
+
 class BranchController:
     """
     Executes 2KB FSM/DAG blobs via `fsm.wasm` and a unified M-inputs-to-N-outputs commit engine.
@@ -197,6 +201,30 @@ class BranchController:
         self.signer = NodeSigner.get_instance()
         self._blob_cache: Dict[str, Dict[str, Any]] = {}
         self.barrier: Optional[DagJoinBarrier] = None
+
+    def _cache_and_inscribe_blob(
+        self,
+        blob_data: Dict[str, Any],
+        prefix: str = CAS_PREFIX,
+        alias_key: Optional[str] = None,
+    ) -> str:
+        """
+        Inscribes a blob into `AnchorStore` and populates `_blob_cache` across both
+        16-char short pointers and full 64-char hashes so `PROPOSER (Read-Only)` nodes
+        can always dereference runtime CAS objects in O(1).
+        """
+        raw_hash = self.store._put_object("blob", blob_data)
+        short_hash = raw_hash[:16]
+        short_ptr = f"{prefix}{short_hash}"
+
+        self._blob_cache[short_ptr] = blob_data
+        self._blob_cache[f"{CAS_PREFIX}{short_hash}"] = blob_data
+        self._blob_cache[f"{CAS_PREFIX}{raw_hash}"] = blob_data
+        self._blob_cache[raw_hash] = blob_data
+        if alias_key:
+            self._blob_cache[alias_key] = blob_data
+
+        return short_ptr
 
     async def _commit_transition(
         self,
@@ -228,15 +256,14 @@ class BranchController:
         initial_meta: Optional[Dict[str, Any]] = None,
     ) -> BranchCursor:
         for ptr_key, blob_data in bundle.cas_store.items():
-            raw_hash = self.store._put_object("blob", blob_data)
-            self._blob_cache[ptr_key] = blob_data
             prefix = BRANCH_PREFIX if ptr_key.startswith(BRANCH_PREFIX) else CAS_PREFIX
-            self._blob_cache[f"{prefix}{raw_hash[:16]}"] = blob_data
-            self._blob_cache[f"{CAS_PREFIX}{raw_hash[:16]}"] = blob_data
+            self._cache_and_inscribe_blob(blob_data, prefix=prefix, alias_key=ptr_key)
 
-        raw_root_hash = self.store._put_object("blob", bundle.root_blob)
-        self._blob_cache[bundle.root_hash] = bundle.root_blob
-        self._blob_cache[f"{BRANCH_PREFIX}{raw_root_hash[:16]}"] = bundle.root_blob
+        self._cache_and_inscribe_blob(
+            bundle.root_blob,
+            prefix=BRANCH_PREFIX,
+            alias_key=bundle.root_hash,
+        )
 
         self.barrier = DagJoinBarrier(bundle.root_blob)
         entry_node = bundle.root_blob[CompactKey.META][CompactKey.ENTRY]
@@ -274,8 +301,7 @@ class BranchController:
 
         meta = {**cursor.meta_ctx, **(meta_updates or {})}
         if offload_data:
-            offload_hash = self.store._put_object("blob", offload_data)
-            meta["_last_ptr"] = f"{CAS_PREFIX}{offload_hash[:16]}"
+            meta["_last_ptr"] = self._cache_and_inscribe_blob(offload_data, prefix=CAS_PREFIX)
 
         # Delegate step evaluation (Router rules, SYMLINK/RETURN stack, Fuel deduction) directly to `fsm.wasm`
         next_blob, next_node, rule_kind, next_stack, rem_fuel = await self._execute_wasm_step(
@@ -318,8 +344,7 @@ class BranchController:
 
         base_meta = dict(parent.meta_ctx)
         if offload_data:
-            offload_hash = self.store._put_object("blob", offload_data)
-            base_meta["_last_ptr"] = f"{CAS_PREFIX}{offload_hash[:16]}"
+            base_meta["_last_ptr"] = self._cache_and_inscribe_blob(offload_data, prefix=CAS_PREFIX)
 
         node_spec = {} if parent.is_terminated else self.get_node_spec(parent)
         remaining_fuel = parent.fuel - step_cost
@@ -430,13 +455,26 @@ class BranchController:
         return self._load_blob(io_ref) if io_ref else {}
 
     def _load_blob(self, blob_hash: str) -> Dict[str, Any]:
-        if blob_hash not in self._blob_cache:
-            clean_hash = blob_hash.replace(BRANCH_PREFIX, "").replace(CAS_PREFIX, "")
-            key = f"blob:{clean_hash}".encode("utf-8")
-            if key not in self.store.db:
-                raise KeyError(f"[Runtime] CAS Blob '{blob_hash}' not found.")
-            self._blob_cache[blob_hash] = json.loads(self.store.db[key].decode("utf-8"))
-        return self._blob_cache[blob_hash]
+        if blob_hash in self._blob_cache:
+            return self._blob_cache[blob_hash]
+
+        clean_hash = blob_hash.replace(BRANCH_PREFIX, "").replace(CAS_PREFIX, "")
+        exact_key = f"blob:{clean_hash}".encode("utf-8")
+
+        if exact_key in self.store.db:
+            loaded = json.loads(self.store.db[exact_key].decode("utf-8"))
+            self._blob_cache[blob_hash] = loaded
+            return loaded
+
+        # Prefix fallback: match 16-char short hash against 64-char keys in `self.store.db`
+        prefix_bytes = exact_key
+        for k in self.store.db.keys():
+            if isinstance(k, bytes) and k.startswith(prefix_bytes):
+                loaded = json.loads(self.store.db[k].decode("utf-8"))
+                self._blob_cache[blob_hash] = loaded
+                return loaded
+
+        raise KeyError(f"[Runtime] CAS Blob '{blob_hash}' not found.")
 
     async def _execute_wasm_step(
         self,
