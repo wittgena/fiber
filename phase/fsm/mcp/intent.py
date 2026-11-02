@@ -1,9 +1,10 @@
-# fiber.infra.mcp.intent
+# fiber.phase.fsm.mcp.intent
+## @lineage: fiber.infra.mcp.intent
 from enum import Enum, auto
 from typing import Dict, Any, Optional
 
 from xphi.node.rpc.method import RpcMethod
-from fiber.infra.mcp.preflight import PreflightGuard
+from fiber.infra.mcp.guard.preflight import PreflightGuard
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.watcher.plane.emitter import get_emitter
 

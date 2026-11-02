@@ -1,4 +1,4 @@
-# fiber.gateway.bridge.oob
+# fiber.gateway.bridge.channel.oob
 import os
 import time
 import hmac

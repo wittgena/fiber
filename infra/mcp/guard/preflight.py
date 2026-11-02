@@ -1,16 +1,16 @@
-# fiber.infra.mcp.preflight
+# fiber.infra.mcp.guard.preflight
 import hashlib
 import json
 import os
 import re
 from typing import Any, Dict, Optional, Tuple
-
 from cryptography.hazmat.primitives.asymmetric import ed25519
+
 from fiber.dev.console.observer.signal import UIKey, UIModal, UISlot, UISlotStatus
+
 from xphi.arch.bound.adapter.pta import NodeSigner
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.watcher.plane.emitter import get_emitter
-
 
 class PreflightGuard:
     ENV_KEYS = ("FIBER_PREFLIGHT_PATTERN", "FIBER_HITL_ON")

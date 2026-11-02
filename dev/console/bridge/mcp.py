@@ -10,7 +10,7 @@ from typing import Any
 from nicegui import ui
 import orjson
 
-from fiber.gateway.bridge.schema import (
+from fiber.gateway.bridge.action.schema import (
     McpConfigCandidate,
     McpTopologyScanResult,
     McpWorkerInfo,
@@ -94,15 +94,15 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
     except Exception:
         pass
 
+    # 오직 canonical ~/.anchor/mcp.json ("fiber")에 등록된 항목만 워커 목록으로 로드
     if force_parse or current_stat_sig != _last_config_stat_sig:
-        _cached_mapped_entries = await asyncio.to_thread(McpConfigMapper.scan_and_parse)
+        _cached_mapped_entries = await asyncio.to_thread(McpConfigMapper.scan_and_parse, "fiber")
         _last_config_stat_sig = current_stat_sig
 
     builtins = await asyncio.to_thread(discover_builtin_workers)
-    builtin_default_modes: dict[str, tuple[str, str]] = {}
-    for _, (canon_id, cmd, def_mode) in builtins.items():
-        if canon_id not in builtin_default_modes:
-            builtin_default_modes[canon_id] = (cmd, def_mode)
+    builtin_default_modes: dict[str, tuple[str, str]] = {
+        canon_id: (cmd, def_mode) for _, (canon_id, cmd, def_mode) in builtins.items()
+    }
 
     workers_by_id: dict[str, McpWorkerInfo] = {}
     for entry in _cached_mapped_entries:
@@ -117,28 +117,16 @@ async def scan_mcp_topology_and_health(gateway_url: str, *, force_parse: bool = 
             mode=effective_mode,
             preflight=env_preflight,
         )
+        source_label = "builtin" if spec.target_id in builtin_default_modes else entry.source_agent
         workers_by_id[spec.target_id] = McpWorkerInfo(
             target_id=spec.target_id,
-            source=entry.source_agent,
+            source=source_label,
             transport=spec.transport,
             mode=spec.mode,
             preflight=env_preflight or spec.preflight or "",
             is_live=spec.target_id in live_targets,
             exec_cmd=spec.exec_cmd,
         )
-
-    # 3. 아직 설정 파일에 없더라도 내장 워커(builtin)가 누락되지 않도록 병합
-    for canon_id, (cmd, def_mode) in builtin_default_modes.items():
-        if canon_id not in workers_by_id:
-            workers_by_id[canon_id] = McpWorkerInfo(
-                target_id=canon_id,
-                source="builtin",
-                transport="stdio",
-                mode=def_mode,
-                preflight="",
-                is_live=canon_id in live_targets,
-                exec_cmd=cmd,
-            )
 
     workers = list(workers_by_id.values())
 
@@ -188,7 +176,7 @@ class McpActionBridge:
 
             if not silent:
                 ui.notify(
-                    f"🔍 Active in Daemon: {len(s.active_target_ids)} / Total Discovered: {len(s.discovered_workers)}",
+                    f"🔍 Active in Daemon: {len(s.active_target_ids)} / Registered in mcp.json: {len(s.discovered_workers)}",
                     type="info",
                 )
         except Exception as exc:
@@ -198,5 +186,6 @@ class McpActionBridge:
         while True:
             await self.scan_mcp_topology_and_health(silent=True)
             await asyncio.sleep(3.0)
+
 
 mcp = McpActionBridge()

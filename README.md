@@ -47,7 +47,7 @@ Govern external AI agents (Claude Code, Cursor, Continue) with pre-flight HITL l
 
 ```bash
 $ fiber init          # Provision workspace (~/.anchor) & local node keys
-$ fiber connect copy  # Scan and sync local IDE MCP configs (.mcp.json)
+$ fiber connect all   # Explicitly scan & sync local IDE MCP configs into ~/.anchor/mcp.json
 $ fiber console       # Auto-spawn gateway daemon (:8356) & launch Studio UI (:8357) (or `fiber daemon` for headless)
 ```
 
@@ -98,7 +98,7 @@ models:
 ```
 
 **Agent Onboarding**
-Instead of manually supervising fragmented MCP processes, Fiber automatically scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) alongside built-in workers.
+Instead of manually supervising fragmented MCP processes, Fiber explicitly scans and normalizes existing agent configs (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`) and third-party MCP servers.
 
 To route your agent through Fiber, simply inject the `fiber-gateway` entry into your agent's configuration file (optionally attaching `FIBER_PREFLIGHT_PATTERN` in `env`—prefixed with `button:` for 1-Click Slack approval instead of default 6-digit TOTP—to lock third-party servers without modifying their code):
 
@@ -121,15 +121,15 @@ To route your agent through Fiber, simply inject the `fiber-gateway` entry into 
 
 **Coexistence**: Fiber's declarative mapper automatically ignores the self-referential fiber-gateway entry during scanning while mounting the remaining servers. Once verified, you can progressively remove redundant direct entries at your own pace.
 
-**Declarative Provisioning (`fiber connect copy`)**
-Rather than manually supervising background processes, `fiber connect copy` scans and registers your IDE configs (`.mcp.json`) and third-party servers into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon` (see **[3.1](#31-fiber-connect-cli)** for advanced targeting and standalone sidecar modes):
+**Declarative Provisioning (`fiber connect`)**
+Rather than manually supervising background processes, `fiber connect` scans and registers your IDE configs (`.mcp.json`) and third-party servers into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon` (see **[3.1](#31-fiber-connect-cli)** for advanced targeting and standalone sidecar modes):
 
 ```bash
-# Auto-Scan & Sync: Registers all built-in workers and local IDE mcp.json configs
-$ fiber connect copy
+# Explicitly scan & sync IDE configs (e.g., 'claude', 'cursor', or 'all') into ~/.anchor/mcp.json
+$ fiber connect all
 
-# Lock a 3rd-Party Stdio MCP with a 1-Click Slack Pre-Flight Guard ('button:' prefix)
-$ fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
+# Register & lock a 3rd-Party Stdio MCP with a 1-Click Slack Pre-Flight Guard ('button:' prefix)
+$ fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
 ```
 
 ---
@@ -468,24 +468,25 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 | **`init`** | **[Bootstrap]** | Initializes workspace topology (`~/.anchor/bound.json`) and local node keys. | `fiber init` |
 | **`console`** | **[Web Studio]** | Launches the Console Studio web UI (`MCP Gateway`, `Guardrail`, `Metering`, `VCR`, `Setting`) for HITL approvals and live telemetry. | `fiber console` |
 | **`sign`** | **[Identity & TOTP]** | Inspects local node key status and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
-| **`connect copy`** | **[Config Sync]** | Registers built-in workers, IDE configs (`mcp.json`), or third-party servers (with `-p` HITL guards) into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon`. | `fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets\|DELETE"` |
-| **`connect`** | **[Standalone Sidecar]** | Runs MCP workers or configs directly in the foreground without writing to `~/.anchor/mcp.json` (automatically skips targets already running in the daemon). | `fiber connect -e worker.deployer -p "DROP"` |
+| **`connect`** | **[Config Sync]** | Explicitly scans and registers IDE configs (`fiber connect claude`, `fiber connect all`) or third-party servers into `~/.anchor/mcp.json`. | `fiber connect all`, `fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:DELETE"` |
+| **`connect --standalone`** | **[Standalone Sidecar]** | Runs MCP servers directly in the foreground without writing to `~/.anchor/mcp.json`. | `fiber connect --standalone -t prod-db -e "npx -y @modelcontextprotocol/server-postgres"` |
 | **`daemon`** | **[Local Gateway]** | Ignites the local gateway daemon (`127.0.0.1:8356`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
 | **`account`** | **[Account & Quota]** | Manages tenant quotas, binds optional tenant identities, issues signed execution mandates, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
 
 **MCP Server Provisioning & Sidecar (`fiber connect`)**
-`fiber connect copy` hot-reloads updated configs into `fiber daemon` (inferring transport, concurrency, and `-p` HITL guards); omit `copy` to run any worker as a standalone foreground sidecar:
+`fiber connect` hot-reloads updated configs into `fiber daemon` (inferring transport, concurrency, and `-p` HITL guards); add option `--standalone` to run any worker as a standalone foreground sidecar:
 
 ```bash
-# Built-in Worker: Lock 'finlib' with a 6-digit TOTP Pre-Flight Guard (Default)
-$ fiber connect copy -t worker.eco.finlib -e finlib -p "normalize_order|pow\(|exp\("
+# Explicitly scan & sync discovery configs (e.g., Claude, Cursor, or 'all') into ~/.anchor/mcp.json
+$ fiber connect claude
+$ fiber connect all
 
-# Remote HTTP/SSE MCP: Register remote server with a 1-Click Pre-Flight Guard ('button:' prefix)
-$ fiber connect copy -t net-context7-remote-01 -e https://mcp.context7.com/mcp -p "button:security|auth|secret"
+# Register a 3rd-Party Stdio MCP with a 1-Click Pre-Flight Guard ('button:' prefix)
+$ fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
 
-# Standalone Mode (without daemon): Omit 'copy' to run a worker directly in the foreground
-$ fiber connect -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE"
+# Standalone Mode: Run a worker directly in the foreground
+$ fiber connect --standalone -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE"
 ```
 
 **Node Identity & Admin TOTP (`fiber sign`)**

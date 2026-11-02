@@ -38,11 +38,15 @@ MCP_GATEWAY_JSON = """{
   }
 }"""
 
-CONNECT_CLI_SH = """# Auto-Scan & Sync local IDE configs (.mcp.json) to ~/.anchor/mcp.json
-$ fiber connect copy
+CONNECT_CLI_SH = """# Explicitly scan & sync IDE configs (e.g., 'claude', 'cursor', or 'all') to ~/.anchor/mcp.json
+$ fiber connect claude
+$ fiber connect all
 
-# Lock 3rd-party stdio MCP with 1-Click Slack Button ('button:' prefix)
-$ fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE" """
+# Register & lock 3rd-party stdio MCP with 1-Click Slack Button ('button:' prefix)
+$ fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets|DELETE"
+
+# Standalone Mode (without daemon): Run a worker directly in the foreground
+$ fiber connect --standalone -t prod-db -e "npx -y @modelcontextprotocol/server-postgres" -p "DROP|DELETE" """
 
 GUARDRAIL_RULES_JSON = """{
   "patterns": {
@@ -137,7 +141,6 @@ class GuideModal(ModalTemplate):
                     "• Env Override: FIBER_COMPAT_RULES_PATH=/path/to/compat_rules.json  |  Validate: fiber compat fixture --vcr replay"
                 ).classes("text-xs font-mono text-cyan-400")
                 ui.code(COMPAT_RULES_JSON, language="json").classes("w-full text-xs")
-
 
 def open_guide_modal() -> None:
     dlg = getattr(refs, "guide_dialog", None)

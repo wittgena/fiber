@@ -8,9 +8,9 @@ from typing import Dict, Any, Optional, Protocol
 
 import orjson
 
-from fiber.infra.mcp.payload import McpPayloadBuilder
-from fiber.infra.mcp.registry import AdapterRegistry
-from fiber.infra.mcp.intent import IntentLifecycleFSM, IntentState
+from fiber.infra.mcp.mapper.registry import AdapterRegistry
+from fiber.dev.base.mcp.payload import McpPayloadBuilder
+from fiber.phase.fsm.mcp.intent import IntentLifecycleFSM, IntentState
 
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory

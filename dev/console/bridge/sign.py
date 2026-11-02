@@ -14,7 +14,7 @@ from fiber.gateway.bridge.action.sign import (
     revoke_admin_totp,
     verify_admin_totp,
 )
-from fiber.gateway.bridge.schema import SlackOobDispatchResult
+from fiber.gateway.bridge.action.schema import SlackOobDispatchResult
 from fiber.infra.ops.account.state import state, refs
 import fiber.dev.console.ui.diag as diag
 from fiber.infra.ops.finops.console import (

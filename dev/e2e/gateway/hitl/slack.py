@@ -20,7 +20,7 @@ from fiber.dev.base.workflow.pipeline import MockPipeline, log
 from fiber.dev.base.workflow.mcp import MockMcpServer
 from fiber.gateway.bridge.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.infra.mcp.payload import McpPayloadBuilder
+from fiber.dev.base.mcp.payload import McpPayloadBuilder
 
 from fiber.dev.base.workflow.audit.context import AuditContext
 from fiber.gateway.bridge.channel.slack import SlackHitlBridge

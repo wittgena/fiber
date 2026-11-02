@@ -13,14 +13,14 @@ from typing import Dict, Tuple, Optional, List, Any
 import orjson
 import typer
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.infra.mcp.preflight import PreflightGuard
+from fiber.infra.mcp.guard.preflight import PreflightGuard
 from fiber.infra.mcp.mapper.config import McpConfigMapper, MappedMcpEntry
 
 from xphi.node.space.bind.resolver import resolve_path
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("action.connect")
+log = get_emitter("bridge.action.connect")
 
 ACTIVE_TARGETS_TUNNEL_KEY = "mcp:registry:active_targets"
 
@@ -47,8 +47,9 @@ BUILTIN_ALIASES: Dict[str, str] = {
     "search.archive": "worker.search.archive",
 }
 
+_BUILTIN_CACHE: Dict[str, Dict[str, Tuple[str, str, str]]] = {}
+
 def _extract_base_name(b: ast.expr) -> str:
-    """AST 부모 클래스 노드에서 이름 추출 (제네릭 Subscript 및 Attribute 모두 대응)"""
     if isinstance(b, ast.Name):
         return b.id
     if isinstance(b, ast.Attribute):
@@ -57,9 +58,13 @@ def _extract_base_name(b: ast.expr) -> str:
         return _extract_base_name(b.value)
     return ""
 
+
 def discover_builtin_workers(
     base_package: str = DEFAULT_WORKER_PACKAGE,
 ) -> Dict[str, Tuple[str, str, str]]:
+    if base_package in _BUILTIN_CACHE:
+        return _BUILTIN_CACHE[base_package]
+
     discovered: Dict[str, Tuple[str, str, str]] = {}
     try:
         spec = importlib.util.find_spec(base_package)
@@ -81,13 +86,11 @@ def discover_builtin_workers(
             continue
 
         rel_parts = py_file.relative_to(root_dir).with_suffix("").parts
-        rel_key = ".".join(rel_parts)  # 예: 'deployer', 'eco.oracle', 'model.oracle', 'search.archive'
+        rel_key = ".".join(rel_parts)
         module_path = f"{base_package}.{rel_key}"
         leaf = rel_parts[-1]
 
         matched_mode: Optional[str] = None
-
-        # 1차: AST 클래스 상속 검사
         for node in tree.body:
             if not isinstance(node, ast.ClassDef):
                 continue
@@ -97,17 +100,13 @@ def discover_builtin_workers(
                 matched_mode = "multiplex" if "AsyncWorkerProtocol" in matched else "linear"
                 break
 
-        # 2차 폴백: BUILTIN_ALIASES에 등록된 경로이거나 실행 엔트리가 존재하는 워커 파일
         if matched_mode is None and (rel_key in BUILTIN_ALIASES or leaf in BUILTIN_ALIASES or "__main__" in source_text):
             matched_mode = "multiplex" if "Async" in source_text else "linear"
 
         if matched_mode is not None:
-            # rel_key('eco.oracle' vs 'model.oracle')를 우선 조회하여 동명 파일 충돌 방지
             canonical_id = BUILTIN_ALIASES.get(rel_key, f"worker.{rel_key}")
-            cmd = f"{sys.executable} -m {module_path}"
-            entry = (canonical_id, cmd, matched_mode)
+            entry = (canonical_id, f"{sys.executable} -m {module_path}", matched_mode)
 
-            # 정규화 ID 및 상대 경로 키 등록
             discovered[canonical_id] = entry
             discovered[rel_key] = entry
             discovered[f"worker.{rel_key}"] = entry
@@ -118,6 +117,7 @@ def discover_builtin_workers(
                 if target_cid == canonical_id:
                     discovered[alias_key] = entry
 
+    _BUILTIN_CACHE[base_package] = discovered
     return discovered
 
 
@@ -152,8 +152,7 @@ def _resolve_all_builtin_specs(
 
 def _infer_fallback_target_id(raw_cmd: str, is_http_url: bool) -> str:
     if is_http_url:
-        parsed = urlparse(raw_cmd)
-        return parsed.hostname or "remote-mcp"
+        return urlparse(raw_cmd).hostname or "remote-mcp"
     try:
         parts = shlex.split(raw_cmd)
     except ValueError:
@@ -173,32 +172,25 @@ def resolve_connector_spec(
         log.error("[Fiber] Empty execution command provided.")
         raise typer.Exit(1)
 
-    inferred_target: Optional[str] = None
-    inferred_default_mode: Optional[str] = None
-
     builtin_map = discover_builtin_workers()
     if raw_cmd in builtin_map:
         inferred_target, resolved_cmd, inferred_default_mode = builtin_map[raw_cmd]
     else:
-        resolved_cmd = raw_cmd
+        inferred_target, resolved_cmd, inferred_default_mode = None, raw_cmd, None
 
     is_http_url = resolved_cmd.startswith(("http://", "https://"))
     is_managed_bin_dir = not is_http_url and Path(resolved_cmd).is_dir()
 
-    if transport is not None:
-        resolved_transport = transport.lower().strip()
-    else:
-        resolved_transport = "network" if (is_http_url or is_managed_bin_dir) else "stdio"
-
+    resolved_transport = (
+        transport.lower().strip()
+        if transport is not None
+        else ("network" if (is_http_url or is_managed_bin_dir) else "stdio")
+    )
     if resolved_transport not in ("stdio", "network"):
         log.error(f"[Fiber] Invalid transport '{resolved_transport}'. Allowed values: 'stdio', 'network'.")
         raise typer.Exit(1)
 
-    resolved_target = (
-        target
-        or inferred_target
-        or _infer_fallback_target_id(resolved_cmd, is_http_url)
-    ).strip()
+    resolved_target = (target or inferred_target or _infer_fallback_target_id(resolved_cmd, is_http_url)).strip()
 
     if mode is not None:
         resolved_mode = mode.lower().strip()
@@ -211,15 +203,14 @@ def resolve_connector_spec(
         log.error(f"[Fiber] Invalid mode '{resolved_mode}'. Allowed values: 'ephemeral', 'linear', 'multiplex'.")
         raise typer.Exit(1)
 
-    resolved_preflight = PreflightGuard.resolve_pattern(resolved_target, preflight)
-
     return ResolvedTarget(
         target_id=resolved_target,
         exec_cmd=resolved_cmd,
         mode=resolved_mode,
         transport=resolved_transport,
-        preflight=resolved_preflight,
+        preflight=PreflightGuard.resolve_pattern(resolved_target, preflight),
     )
+
 
 def _specs_from_mapped_entries(
     entries: List[MappedMcpEntry],
@@ -237,13 +228,11 @@ def _specs_from_mapped_entries(
         if clean_env:
             os.environ.update(clean_env)
 
-        effective_mode = mode_override or env_mode
-
         specs.append(
             resolve_connector_spec(
                 target=entry.target_id,
                 exec_cmd=entry.exec_cmd,
-                mode=effective_mode,
+                mode=mode_override or env_mode,
                 preflight=entry_preflight,
             )
         )
@@ -254,10 +243,7 @@ def _sync_to_anchor_config(
     specs: List[ResolvedTarget],
     env_lookup: Optional[Dict[str, Dict[str, str]]] = None,
 ) -> Optional[Path]:
-    """
-    해석된 모든 ResolvedTarget(내장 워커 + 외부 워커)을
-    ~/.anchor/mcp.json의 표준 mcpServers 포맷으로 병합(Upsert)합니다.
-    """
+    """해석된 ResolvedTarget 목록을 ~/.anchor/mcp.json의 표준 mcpServers 포맷으로 병합(Upsert)합니다."""
     if not specs:
         return None
 
@@ -307,59 +293,52 @@ def _sync_to_anchor_config(
         servers[spec.target_id] = entry_dict
 
     ANCHOR_MCP_PATH.write_bytes(orjson.dumps(data, option=orjson.OPT_INDENT_2))
-    log.info(
-        f"[Fiber] Copied & locked {len(specs)} target(s) into canonical config: {ANCHOR_MCP_PATH}"
-    )
+    log.info(f"[Fiber] Copied & locked {len(specs)} target(s) into canonical config: {ANCHOR_MCP_PATH}")
     return ANCHOR_MCP_PATH
 
+
 def _collect_specs_and_envs(
+    agent: Optional[str] = None,
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
     target: Optional[str] = None,
     mode: Optional[str] = None,
     preflight: Optional[str] = None,
-    include_builtins_on_empty: bool = False,
 ) -> Tuple[List[ResolvedTarget], Dict[str, Dict[str, str]]]:
-    specs: List[ResolvedTarget] = []
+    specs_by_id: Dict[str, ResolvedTarget] = {}
     env_lookup: Dict[str, Dict[str, str]] = {}
 
-    if config is not None:
-        mapped_entries = McpConfigMapper.parse_file(config)
-        for e in mapped_entries:
+    def _ingest_mapped(entries: List[MappedMcpEntry]):
+        for e in entries:
             env_lookup[e.target_id] = dict(e.env)
-        specs.extend(
-            _specs_from_mapped_entries(
-                mapped_entries, target_filter=target, mode_override=mode, preflight_override=preflight
-            )
-        )
+        for s in _specs_from_mapped_entries(entries, target_filter=target, mode_override=mode, preflight_override=preflight):
+            specs_by_id[s.target_id] = s
 
-    if exec_cmd is not None:
-        if exec_cmd.strip().lower() in ("builtin", "builtins", "all"):
-            specs.extend(_resolve_all_builtin_specs(target, mode, preflight))
+    # 1. 명시적 에이전트 스캔 ('claude', 'cursor', 'vscode', 'fiber', 'all' 또는 내부용 'builtin')
+    if agent is not None:
+        norm_agent = agent.strip().lower()
+        if norm_agent in ("builtin", "builtins"):
+            for s in _resolve_all_builtin_specs(target, mode, preflight):
+                specs_by_id[s.target_id] = s
         else:
-            specs.append(resolve_connector_spec(target=target, exec_cmd=exec_cmd, mode=mode, preflight=preflight))
+            scan_agent = None if norm_agent == "all" else norm_agent
+            _ingest_mapped(McpConfigMapper.scan_and_parse(agent=scan_agent))
 
-    if config is None and exec_cmd is None:
-        seen_ids: set[str] = set()
-        if include_builtins_on_empty:
-            builtin_specs = _resolve_all_builtin_specs(target, mode, preflight)
-            seen_ids.update(s.target_id for s in builtin_specs)
-            specs.extend(builtin_specs)
+    # 2. 명시적 설정 파일 (--config / -c)
+    if config is not None:
+        _ingest_mapped(McpConfigMapper.parse_file(config))
 
-        mapped_entries = McpConfigMapper.scan_and_parse()
-        for e in mapped_entries:
-            env_lookup[e.target_id] = dict(e.env)
-        external_specs = _specs_from_mapped_entries(
-            mapped_entries, target_filter=target, mode_override=mode, preflight_override=preflight
-        )
-        for ext_spec in external_specs:
-            if ext_spec.target_id in seen_ids:
-                specs = [ext_spec if s.target_id == ext_spec.target_id else s for s in specs]
-            else:
-                specs.append(ext_spec)
-                seen_ids.add(ext_spec.target_id)
+    # 3. 명시적 실행 명령 (--exec / -e: 내부용 'builtin' 또는 개별 명령/별칭)
+    if exec_cmd is not None:
+        if exec_cmd.strip().lower() in ("builtin", "builtins"):
+            for s in _resolve_all_builtin_specs(target, mode, preflight):
+                specs_by_id[s.target_id] = s
+        else:
+            s = resolve_connector_spec(target=target, exec_cmd=exec_cmd, mode=mode, preflight=preflight)
+            specs_by_id[s.target_id] = s
 
-    return specs, env_lookup
+    return list(specs_by_id.values()), env_lookup
+
 
 async def _filter_unmounted_specs(specs: List[ResolvedTarget]) -> List[ResolvedTarget]:
     """데몬에 이미 떠 있는 타겟을 제외하여 중복 실행 방지"""
@@ -371,13 +350,12 @@ async def _filter_unmounted_specs(specs: List[ResolvedTarget]) -> List[ResolvedT
             unmounted = [s for s in specs if s.target_id not in active_ids]
             skipped = [s.target_id for s in specs if s.target_id in active_ids]
             if skipped:
-                log.info(
-                    f"[Fiber] Skipping {len(skipped)} target(s) already active in McpWorkerDaemon: {skipped}"
-                )
+                log.info(f"[Fiber] Skipping {len(skipped)} target(s) already active in McpWorkerDaemon: {skipped}")
             return unmounted
     except Exception:
         pass
     return specs
+
 
 async def launch_connector_async(spec: ResolvedTarget):
     guard_badge = f", Pre-Flight: /{spec.preflight}/i" if spec.preflight else ""
@@ -404,23 +382,32 @@ async def _launch_all_async(specs: List[ResolvedTarget]):
     else:
         await asyncio.gather(*(launch_connector_async(spec) for spec in specs))
 
+
 def run_connect_copy(
+    agent: Optional[str] = None,
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
     target: Optional[str] = None,
     mode: Optional[str] = None,
     preflight: Optional[str] = None,
 ) -> Path:
+    if agent is None and exec_cmd is None and config is None:
+        log.error(
+            "[Fiber] Specify an agent to sync (e.g., 'fiber connect claude', 'fiber connect all'), "
+            "--config (-c), or --exec (-e)."
+        )
+        raise typer.Exit(1)
+
     specs, env_lookup = _collect_specs_and_envs(
+        agent=agent,
         exec_cmd=exec_cmd,
         config=config,
         target=target,
         mode=mode,
         preflight=preflight,
-        include_builtins_on_empty=False,
     )
     if not specs:
-        log.error("[Fiber] No MCP targets found to copy.")
+        log.error("[Fiber] No MCP targets found to sync.")
         raise typer.Exit(1)
 
     out_path = _sync_to_anchor_config(specs, env_lookup=env_lookup)
@@ -429,23 +416,28 @@ def run_connect_copy(
         log.info(f"  ├─ [{s.target_id}] -> {s.exec_cmd} [{s.mode.upper()}]{guard_info}")
     return out_path or ANCHOR_MCP_PATH
 
-def run_connect(
+def run_connect_standalone(
     exec_cmd: Optional[str] = None,
     config: Optional[Path] = None,
     target: Optional[str] = None,
     mode: Optional[str] = None,
     preflight: Optional[str] = None,
 ):
+    # standalone 실행 시 외부 인자가 없으면 오직 ~/.anchor/mcp.json("fiber")에 등록된 타겟만 실행
+    default_agent = "fiber" if (exec_cmd is None and config is None) else None
     specs, _ = _collect_specs_and_envs(
+        agent=default_agent,
         exec_cmd=exec_cmd,
         config=config,
         target=target,
         mode=mode,
         preflight=preflight,
-        include_builtins_on_empty=False,
     )
     if not specs:
-        log.error("[Fiber] No valid MCP target resolved. Provide --exec (-e), --config (-c), or run 'fiber connect copy'.")
+        log.error(
+            "[Fiber] No valid MCP target resolved for standalone execution. "
+            "Provide --exec (-e), --config (-c), or register targets via 'fiber connect'."
+        )
         raise typer.Exit(1)
 
     async def _orchestrate_launch():
