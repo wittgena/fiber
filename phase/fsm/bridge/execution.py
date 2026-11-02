@@ -1,4 +1,5 @@
-# fiber.phase.fsm.bridge
+# fiber.phase.fsm.bridge.execution
+import json
 from typing import Dict, Any, Optional, Tuple, List
 import httpx
 
@@ -9,10 +10,17 @@ from fiber.infra.ops.finops.watcher import default_finops_watcher, default_tenan
 from xphi.arch.model.auth import NodeAuthPayload
 from xphi.watcher.plane.emitter import get_emitter
 
-from fiber.phase.fsm.compiler import CompactKey, NodeType
+from fiber.phase.fsm.contract import (
+    CompactKey,
+    NodeType,
+    apply_projection,
+    extract_json_path,
+    parse_resource_uri,
+    resolve_dynamic_params,
+)
 from fiber.phase.fsm.runtime import BranchCursor, BranchController
 
-log = get_emitter("fsm.bridge", phase="ACTUATOR_BRIDGE")
+log = get_emitter("fsm.bridge.execution", phase="ACTUATOR_BRIDGE")
 
 class FiberExecutionBridge:
     def __init__(
@@ -64,12 +72,25 @@ class FiberExecutionBridge:
         cursor: BranchCursor,
         task_io: Dict[str, Any],
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
-        call_params = self._resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
+        parsed_uri = parse_resource_uri(task_io.get("resource_uri", ""))
+        call_params = resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
         vcr_cfg = task_io.get("vcr") or {}
-        projection = task_io.get("projection") or {}
+        projection = task_io.get("projection")
 
-        model = call_params.pop("model", "auto")
-        messages = call_params.pop("messages", [{"role": "user", "content": str(cursor.meta_ctx)}])
+        # 1. Resolve `<provider>/<model>` from Parameters or URI (`llm://openai/gpt-4o`)
+        model = call_params.pop("model", None) or parsed_uri.model_hint or "auto"
+
+        # 2. Convert shorthand ASL `"prompt"` (and optional `"system"`) into OpenAI `"messages"`
+        prompt_text = call_params.pop("prompt", None)
+        system_text = call_params.pop("system", None)
+        messages = call_params.pop("messages", None)
+        if not messages:
+            messages = []
+            if system_text:
+                messages.append({"role": "system", "content": str(system_text)})
+            user_content = str(prompt_text) if prompt_text is not None else json.dumps(cursor.meta_ctx, default=str)
+            messages.append({"role": "user", "content": user_content})
+
         stream = bool(call_params.pop("stream", False))
 
         auth_payload = NodeAuthPayload(
@@ -95,22 +116,9 @@ class FiberExecutionBridge:
         )
 
         raw_dump = await self._normalize_llm_response(response, stream=stream)
-        tokens_used = self._extract_path(raw_dump, "usage.total_tokens") or 10
+        tokens_used = extract_json_path(raw_dump, "usage.total_tokens") or 10
 
-        # Extract lightweight routing variables via Projection.extract_keys
-        meta_updates: Dict[str, Any] = {}
-        for key_path in projection.get("extract_keys", []):
-            val = self._extract_path(raw_dump, key_path)
-            if val is not None:
-                meta_updates[key_path] = val
-                meta_updates[key_path.split(".")[-1]] = val
-
-        # Extract heavy payload target via Projection.offload_path, otherwise offload full response dump
-        offload_path = projection.get("offload_path")
-        offload_payload = self._extract_path(raw_dump, offload_path) if offload_path else raw_dump
-        if not isinstance(offload_payload, dict):
-            offload_payload = {"data": offload_payload}
-
+        meta_updates, offload_payload = apply_projection(raw_output=raw_dump, projection=projection)
         return meta_updates, offload_payload, max(1, int(tokens_used))
 
     # [Actuator] Fiber MCP Gateway + Idempotent Checkpoint Handle + HITL
@@ -119,10 +127,9 @@ class FiberExecutionBridge:
         cursor: BranchCursor,
         task_io: Dict[str, Any],
     ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]], int]:
-        resource_uri = task_io.get("resource_uri", "")
-        target_id = resource_uri.split("/")[-1] if "/" in resource_uri else resource_uri.split("://")[-1]
-        resolved_args = self._resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
-        projection = task_io.get("projection") or {}
+        parsed_uri = parse_resource_uri(task_io.get("resource_uri", ""))
+        resolved_args = resolve_dynamic_params(task_io.get("call_params", {}), cursor.meta_ctx)
+        projection = task_io.get("projection")
         extras = task_io.get("extras") or {}
 
         payload = {
@@ -131,7 +138,7 @@ class FiberExecutionBridge:
             "meta": cursor.meta_ctx,
         }
 
-        resp = await self._http_client.post(f"{self.mcp_gateway_url}/{target_id}/invoke", json=payload)
+        resp = await self._http_client.post(f"{self.mcp_gateway_url}/{parsed_uri.target_id}/invoke", json=payload)
 
         # HTTP 202 (SEP-2322 Pre-Flight HITL Yield): Park cursor without advancing state
         if resp.status_code == 202:
@@ -151,24 +158,21 @@ class FiberExecutionBridge:
         if not isinstance(tool_result, dict):
             tool_result = {"data": tool_result}
 
-        # Extract lightweight routing variables via Projection.extract_keys
-        meta_updates: Dict[str, Any] = {"intent_type": "tool_completed", "_hitl_yield": False}
-        for key_path in projection.get("extract_keys", []):
-            val = self._extract_path(tool_result, key_path)
-            if val is not None:
-                meta_updates[key_path] = val
-                meta_updates[key_path.split(".")[-1]] = val
-
+        meta_updates, offload_payload = apply_projection(
+            raw_output=tool_result,
+            projection=projection,
+            base_meta={"intent_type": "tool_completed", "_hitl_yield": False},
+        )
         default_cost = int(extras.get("step_cost", tool_result.get("step_cost", 5)))
-        return meta_updates, tool_result, max(1, default_cost)
+        return meta_updates, offload_payload, max(1, default_cost)
 
-    @staticmethod
-    def _normalize_llm_response(response: Any, stream: bool) -> Any:
-        # Retained as coroutine below
-        pass
-
-    @staticmethod
-    async def _normalize_llm_response(response: Any, stream: bool) -> Dict[str, Any]:
+    @classmethod
+    async def _normalize_llm_response(cls, response: Any, stream: bool) -> Dict[str, Any]:
+        """
+        Normalizes both streaming and unary `acompletion` responses into a unified dict.
+        Automatically surfaces assistant text under `content` / `raw_stream_payload` and
+        unpacks JSON-formatted assistant replies so `Projection.extract_keys` can lift fields directly.
+        """
         if stream and hasattr(response, "__aiter__"):
             chunks: List[str] = []
             async for chunk in response:
@@ -176,43 +180,57 @@ class FiberExecutionBridge:
                     delta = getattr(chunk.choices[0], "delta", None)
                     if delta and getattr(delta, "content", None):
                         chunks.append(delta.content)
+                elif isinstance(chunk, dict):
+                    delta_content = extract_json_path(chunk, "choices.0.delta.content")
+                    if delta_content:
+                        chunks.append(str(delta_content))
             text = "".join(chunks)
-            return {"content": text, "raw_stream_payload": text, "usage": {"total_tokens": max(1, len(chunks))}}
+            dump: Dict[str, Any] = {
+                "content": text,
+                "raw_stream_payload": text,
+                "usage": {"total_tokens": max(1, len(chunks))},
+            }
+            cls._try_merge_json_content(dump, text)
+            return dump
 
         if hasattr(response, "model_dump"):
-            return response.model_dump()
-        if isinstance(response, dict):
-            return response
-        return {"raw": str(response)}
+            dump = response.model_dump()
+        elif isinstance(response, dict):
+            dump = dict(response)
+        else:
+            dump = {"raw": str(response)}
 
-    @classmethod
-    def _resolve_dynamic_params(cls, params: Dict[str, Any], meta_ctx: Dict[str, Any]) -> Dict[str, Any]:
-        """Resolves ASL dynamic parameter references (e.g., `"query.$": "$.event.tool_args"`) from `meta_ctx`."""
-        resolved: Dict[str, Any] = {}
-        for k, v in params.items():
-            if k.endswith(".$") and isinstance(v, str):
-                clean_key = k[:-2]
-                resolved[clean_key] = cls._extract_path(meta_ctx, v) or meta_ctx.get(v, v)
-            else:
-                resolved[k] = v
-        return resolved
+        # Surface `choices.0.message.content` to top-level `content` and `raw_stream_payload` for parity
+        msg_content = extract_json_path(dump, "choices.0.message.content")
+        if isinstance(msg_content, str):
+            dump.setdefault("content", msg_content)
+            dump.setdefault("raw_stream_payload", msg_content)
+            cls._try_merge_json_content(dump, msg_content)
+
+        return dump
+
+    @staticmethod
+    def _try_merge_json_content(target_dump: Dict[str, Any], text: str) -> None:
+        """If the LLM output is a JSON object string, merges its keys into top-level dump for `extract_keys`."""
+        stripped = text.strip()
+        if stripped.startswith("```"):
+            lines = stripped.splitlines()
+            if len(lines) >= 3:
+                stripped = "\n".join(lines[1:-1]).strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed_json = json.loads(stripped)
+                if isinstance(parsed_json, dict):
+                    for k, v in parsed_json.items():
+                        target_dump.setdefault(k, v)
+            except Exception:
+                pass
+
+    # Backward-compatible static delegates for subclasses
+    @staticmethod
+    def _resolve_dynamic_params(params: Dict[str, Any], meta_ctx: Dict[str, Any]) -> Dict[str, Any]:
+        return resolve_dynamic_params(params, meta_ctx)
 
     @staticmethod
     def _extract_path(data: Dict[str, Any], path: Optional[str]) -> Any:
-        if not path or not isinstance(data, dict):
-            return None
-        if path in data:
-            return data[path]
-        clean = path.lstrip("$.")
-        if clean in data:
-            return data[clean]
-
-        curr: Any = data
-        for part in clean.split("."):
-            if isinstance(curr, dict) and part in curr:
-                curr = curr[part]
-            elif isinstance(curr, list) and part.isdigit() and int(part) < len(curr):
-                curr = curr[int(part)]
-            else:
-                return None
-        return curr
+        return extract_json_path(data, path)

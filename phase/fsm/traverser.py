@@ -2,17 +2,9 @@
 from dataclasses import dataclass, field, replace
 from typing import Dict, Any, List, Optional, Callable, Awaitable, Tuple, Sequence, Union
 
-from fiber.phase.fsm.compiler import (
-    FSMCompiler,
-    CompiledBundle,
-    CompactKey,
-)
-from fiber.phase.fsm.runtime import (
-    BranchController,
-    BranchCursor,
-    DagJoinBarrier,
-)
-from fiber.phase.fsm.bridge import FiberExecutionBridge
+from fiber.phase.fsm.compiler import FSMCompiler, CompiledBundle, CompactKey
+from fiber.phase.fsm.runtime import BranchController, BranchCursor, DagJoinBarrier
+from fiber.phase.fsm.bridge.execution import FiberExecutionBridge
 
 from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.watcher.plane.emitter import get_emitter
