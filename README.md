@@ -14,22 +14,59 @@ Through the same control plane, it governs model calls via an OpenAI-compatible 
 
 ---
 
+## 0. Quick Start
+
+```bash
+uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.8
+```
+
+**Track A: In-Process Python SDK**
+Run the guardrail pipeline, schema traverser, and VCR directly inside your Python process:
+
+```python
+import asyncio
+from fiber.llm.entry import acompletion
+from fiber.llm.pipeline.interceptor.guardrail import CustomRegexMaskingGuardrail, ActiveBlockingGuardrail
+
+async def main():
+    res = await acompletion(
+        model="cerebras/qwen-3.8-27b", # or openai/gpt-4o, gemini/gemini-2.5-flash, llama_server/gemma-3-1b-it-Q4_K_M.gguf
+        messages=[{"role": "user", "content": "My phone is 010-1234-5678. Say 'Received'."}],
+        interceptors=[
+            CustomRegexMaskingGuardrail([r"\b010-\d{4}-\d{4}\b"]), # Masks PII in-place (~0.01ms)
+            ActiveBlockingGuardrail(),                             # Blocks leaked API keys
+        ],
+    )
+    print(res.choices[0].message.content)
+
+asyncio.run(main())
+```
+
+**Track B: Local Gateway Daemon & Console Studio (`127.0.0.1:8356`)**
+Govern external AI agents (Claude Code, Cursor, Continue) with pre-flight HITL locks, real-time stream kill-switches, and a unified web control plane:
+
+```bash
+$ fiber init          # Provision workspace (~/.anchor) & local node keys
+$ fiber connect copy  # Scan and sync local IDE MCP configs (.mcp.json)
+$ fiber console       # Auto-spawn gateway daemon (:8356) & launch Studio UI (:8357) (or `fiber daemon` for headless)
+```
+
 ## 1. Local MCP Gateway
 
-The **Fiber Connect CLI** (`fiber`) is the single entrypoint for the local control plane. It registers your MCP servers and IDE configs, mounts them as workers on the Redis Tunnel under one host-local daemon, and—when needed—extends the same governance across remote nodes with zero boilerplate.
+The **Fiber Connect CLI** (`fiber`) is the single entrypoint for the local control plane. It registers your MCP servers and IDE configs, mounts them as managed workers under one host-local daemon, and—when needed—extends the same governance across remote nodes with zero boilerplate.
 
-Most AI agents (Claude Code, Cursor, VSCode, Zed) launch MCP servers directly on your machine through point-to-point pipes—with your filesystem, databases, and credentials in reach, and nothing in between to absorb retries or demand approval. Fiber's **Local MCP Gateway** runs as a loopback daemon on the same host, absorbs your existing agent configurations onto the Redis Tunnel, and exposes them through a single stateless endpoint (`/v1/mcp-gateway/invoke`, `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`). Local stdio servers are spawned and supervised by the daemon itself, and remote HTTP/SSE servers can be registered behind the same gate—so every tool call passes through one control point on your machine.
+Most AI agents (Claude Code, Cursor, VSCode, Zed) launch MCP servers directly on your machine through point-to-point pipes—with your filesystem, databases, and credentials in reach, and nothing in between to absorb retries or demand approval. Fiber's **Local MCP Gateway** runs as a loopback daemon on the same host, absorbs your existing agent configurations and exposes them through a single stateless endpoint (`/v1/mcp-gateway/invoke`, `/tools`, or per-target `/v1/mcp-gateway/{target_id}/invoke`). Local stdio servers are spawned and supervised by the daemon itself, and remote HTTP/SSE servers can be registered behind the same gate—so every tool call passes through one control point on your machine.
 
 **Why a Local Gateway?**
 Standard MCP clients treat tool calls as fire-and-forget pipes: on network timeouts, agents blindly retry or hallucinate parameters, causing duplicate database writes or runaway API charges. Fiber’s MCP Gateway interposes a deterministic control plane between the agent and the tool:
 
-  - **Idempotent Execution & Lineage**: Maps every invocation to a deterministic transaction handle backed by a Phase Transition Anchor. Duplicate agent retries immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
+  - **Idempotent Execution & Lineage**: Maps every invocation to a deterministic transaction handle backed by a local state ledger. Duplicate agent retries immediately return cached resolutions without re-executing the underlying tool, while upstream timeouts trigger automatic rollbacks.
 
-  - **Pre-Flight HITL & Cryptographic Gate (`HTTP 202` / `SEP-2322` Aligned)**: On high-risk operations—detected either natively by the worker or zero-code prior to worker I/O via pre-flight regex traps (--preflight, guaranteeing Zero-I/O on persistent workers and Zero-Spawn on ephemeral sandboxes until approved)—the gateway parks the transaction via a stateless multi-round-trip yield (YIELD / HTTP 202) and awaits **Ed25519 attestation** via **RFC-6238 TOTP** (default) or **1-Click Approve/Reject buttons** (`button:<regex>`) across Slack Socket Mode, CLI, or Control Studio before resuming.
+  - **Pre-Flight HITL & Approval Gate (`HTTP 202`)**: On high-risk operations—detected either natively by the worker or zero-code prior to worker I/O via pre-flight regex traps (--preflight, guaranteeing Zero-I/O on persistent workers and Zero-Spawn on ephemeral sandboxes until approved)—the gateway parks the transaction via a stateless multi-round-trip yield (YIELD / HTTP 202) and awaits **human attestation** via **TOTP** (default) or **1-Click Approve/Reject buttons** (`button:<regex>`) across Slack Socket Mode, CLI, or Control Studio before resuming.
 
-  - **Host-Local Trust Boundary**: Upstream API keys are resolved from the daemon's host environment (`.env` or OS variables) and never appear in client configs; node identity (`~/.ssh/fiber_ed25519`) and server registry (`~/.anchor/mcp.json`) stay on the machine.
+  - **Host-Local Trust Boundary**: Upstream API keys are resolved from the daemon's host environment (`.env` or OS variables) and never appear in client configs; node identity and server registry (`~/.anchor/mcp.json`) stay on the machine.
 
-  - **Hold/Fuel Reservation**: Translates external, EdDSA-signed quota mandates into linear state transitions: each mandate is consumed exactly once to produce the next quota state. Version fencing rejects stale or replayed policies, and the same mandate can never be consumed twice or drive a balance below zero.
+  - **Hold/Fuel Reservation**: Translates signed quota mandates into linear state transitions: each mandate is consumed exactly once to produce the next quota state. Version fencing rejects stale or replayed policies, and the same mandate can never be consumed twice or drive a balance below zero.
 
 **LLM & MCP Routing for IDEs**
 Alongside the MCP endpoint, the same local daemon serves the LLM Gateway (`/v1/chat/completions`)—the HTTP face of the pipeline described in [2.1](#21-llm-guardrails).
@@ -212,7 +249,7 @@ response = await acompletion(
 ```
 
 **3. Declarative Secret Registry (`FIBER_REDACT_RULES_PATH`):**
-To add custom credential patterns, override existing rules, or disable specific built-in checks globally without modifying Python code, supply an external `redact_rules.json` via `FIBER_REDACT_RULES_PATH` (`fiber.llm.compat.secret.registry`). At boot time, Fiber validates each regex via Pydantic (safely skipping malformed rules) and injects the merged Key-Value ruleset into the core redaction engine via Dependency Inversion:
+To add custom credential patterns, override existing rules, or disable specific built-in checks globally without modifying Python code, supply an external `redact_rules.json` via `FIBER_REDACT_RULES_PATH` (`fiber.llm.compat.secret.registry`). At boot time, Fiber validates each regex via Pydantic (safely skipping malformed rules) and and injects the merged ruleset into the core redaction engine at boot:
 
 ```json
 {
@@ -428,13 +465,14 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 
 | Command | Role | Function & Lifecycle | Example |
 | --- | --- | --- | --- |
-| **`init`** | **[Bootstrap]** | Initializes workspace topology (`~/.anchor/bound.json`) and Zero-Env node keys (`~/.ssh/fiber_ed25519` & `local_cipher.key`). | `fiber init` |
+| **`init`** | **[Bootstrap]** | Initializes workspace topology (`~/.anchor/bound.json`) and local node keys. | `fiber init` |
+| **`console`** | **[Web Studio]** | Launches the Console Studio web UI (`MCP Gateway`, `Guardrail`, `Metering`, `VCR`, `Setting`) for HITL approvals and live telemetry. | `fiber console` |
 | **`sign`** | **[Identity & TOTP]** | Inspects local node key status and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
 | **`connect copy`** | **[Config Sync]** | Registers built-in workers, IDE configs (`mcp.json`), or third-party servers (with `-p` HITL guards) into `~/.anchor/mcp.json` for automatic hot-reload by `fiber daemon`. | `fiber connect copy -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:prod_secrets\|DELETE"` |
 | **`connect`** | **[Standalone Sidecar]** | Runs MCP workers or configs directly in the foreground without writing to `~/.anchor/mcp.json` (automatically skips targets already running in the daemon). | `fiber connect -e worker.deployer -p "DROP"` |
 | **`daemon`** | **[Local Gateway]** | Ignites the local gateway daemon (`127.0.0.1:8356`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
-| **`account`** | **[Account & Quota]** | Manages tenant quotas, binds optional SPIFFE identities, issues signed execution mandates, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
+| **`account`** | **[Account & Quota]** | Manages tenant quotas, binds optional tenant identities, issues signed execution mandates, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
 
 **MCP Server Provisioning & Sidecar (`fiber connect`)**
 `fiber connect copy` hot-reloads updated configs into `fiber daemon` (inferring transport, concurrency, and `-p` HITL guards); omit `copy` to run any worker as a standalone foreground sidecar:
@@ -459,11 +497,10 @@ $ fiber sign status
 
 # Enroll an administrator TOTP secret (renders terminal QR code)
 $ fiber sign enroll -u fiber
-
 ```
 
 **Account & Quota Governance (`fiber account`)**
-Commits EdDSA-signed quota mandates to the linear state chain and broadcasts real-time `REVOKE` kill-switches (optional `--spiffe` bindings log a non-blocking warning if unenrolled):
+Commits signed quota mandates to the linear state chain and broadcasts real-time `REVOKE` kill-switches (optional `--spiffe` bindings log a non-blocking warning if unenrolled):
 
 ```bash
 # Run full lifecycle walkthrough (Provision -> TopUp -> Stale Replay Check -> Revoke)
@@ -472,7 +509,7 @@ $ fiber account demo
 # List all tracked local accounts and their bound SPIFFE identities from the registry
 $ fiber account list
 
-# Provision $50.0 (50,000,000 Fuel) via EdDSA JWT, bind a SPIFFE ID, and commit as a linear state transition
+# Provision $50.0 (50,000,000 Fuel), bind an optional identity ID, and commit as a linear state transition
 $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROVISION --ver 1 --sync
 
 # Trigger a Pub/Sub REVOKE kill-switch to sever active streams
@@ -480,7 +517,7 @@ $ fiber account --tenant accounting_dept kill --ver 99
 
 ```
 
-**Console Studio (Experimental)**
+**Console Studio**
 Console Studio is a unified web console for the local daemon (`127.0.0.1:8356`) featuring **MCP Gateway, Guardrail, Metering, VCR, and Setting** tabs—allowing you to approve parked HITL transactions, toggle secret rules, monitor real-time token velocity and fuel budgets, and inspect VCR fixtures. Launch with `fiber console` (or `python -m fiber.dev.console.app`).
 
 ---
@@ -544,7 +581,7 @@ $ fiber e2e infra.plane.flare --mode dev     # or --mode deploy for *.workers.de
 | --- | --- | --- |
 | **Host / CI Plane** | `fiber daemon` (Native OS + Redis) | Runs the primary loopback control plane (`127.0.0.1:8356`) across local environments and GitHub Actions PR gates with automated process reaping. |
 | **Container Plane** | `infra.plane.compose` (Docker Compose) | Synthesizes a network-coupled (`service:redis`) container topology in `VCR_MODE=replay` to cross-validate gateway, FinOps, and WASM suites locally. |
-| **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a WASM Gateway (`gateway`/`phase`/`fsm.wasm`) to a native Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and sealing states into Merkle roots. |
+| **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a WASM Gateway (`gateway`/`phase`/`fsm.wasm`) to a native Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and cryptographic state verification. |
 
 ---
 

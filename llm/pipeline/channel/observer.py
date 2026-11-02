@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, Optional
 
 from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
 from fiber.llm.pipeline.channel.breaker import extract_usage_info
+
 from xphi.arch.model.auth import BrokerKey
 from xphi.state.phase.channel import ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter

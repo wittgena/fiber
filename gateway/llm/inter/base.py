@@ -49,7 +49,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# [추가됨] 시스템 표준 텔레메트리 로거 할당
 log = get_emitter(__name__, phase="LLM_INTER")
 
 class InterLLM(LLMBase):
@@ -173,8 +172,7 @@ class InterLLM(LLMBase):
     # ------------------------------------------
     @observe(name="llm.inter.predict")
     def predict(self, prompt: BasePromptTemplate, **prompt_args: Any) -> str:
-        # [수정됨] 비대화 방지 - 거대한 텍스트 대신 메타데이터(Key)만 로깅
-        log.info("Starting LLM predict", context={"template_args_keys": list(prompt_args.keys())})
+        log.debug("Starting LLM predict", context={"template_args_keys": list(prompt_args.keys())})
         
         self._log_template_data(prompt, **prompt_args)
 
@@ -188,14 +186,12 @@ class InterLLM(LLMBase):
             output = response.text
             
         parsed_output = self._parse_output(output)
-        
-        # [수정됨] 완료 이벤트 명시
         log.debug("LLM predict complete", context={"output_length": len(parsed_output)})
         return parsed_output
 
     @observe(name="llm.inter.stream")
     def stream(self, prompt: BasePromptTemplate, **prompt_args: Any) -> TokenGen:
-        log.info("Starting LLM stream", context={"template_args_keys": list(prompt_args.keys())})
+        log.debug("Starting LLM stream", context={"template_args_keys": list(prompt_args.keys())})
         
         self._log_template_data(prompt, **prompt_args)
         
@@ -216,7 +212,7 @@ class InterLLM(LLMBase):
 
     @observe(name="llm.inter.apredict")
     async def apredict(self, prompt: BasePromptTemplate, **prompt_args: Any) -> str:
-        log.info("Starting async LLM predict", context={"template_args_keys": list(prompt_args.keys())})
+        log.debug("Starting async LLM predict", context={"template_args_keys": list(prompt_args.keys())})
         
         self._log_template_data(prompt, **prompt_args)
 
@@ -236,7 +232,7 @@ class InterLLM(LLMBase):
 
     @observe(name="llm.inter.astream")
     async def astream(self, prompt: BasePromptTemplate, **prompt_args: Any) -> TokenAsyncGen:
-        log.info("Starting async LLM stream", context={"template_args_keys": list(prompt_args.keys())})
+        log.debug("Starting async LLM stream", context={"template_args_keys": list(prompt_args.keys())})
         
         self._log_template_data(prompt, **prompt_args)
         
@@ -408,11 +404,9 @@ class InterLLM(LLMBase):
         from fiber.llm.model.router.chat_engine.types import AgentChatResponse
         from fiber.llm.model.router.tools.calling import call_tool_with_selection
 
-        # [추가됨] 동작 맥락(보유 툴 개수/이름) 로깅
         tool_names = [getattr(t, "metadata", t).name for t in tools] if tools else []
-        log.info("Starting predict_and_call", context={"available_tools": tool_names})
+        log.debug("Starting predict_and_call", context={"available_tools": tool_names})
 
-        # Fallback to ReAct Agent if native function calling is not supported
         if not getattr(self.metadata, "is_function_calling_model", False):
             log.debug("Native function calling unsupported, falling back to ReAct.")
             return self._predict_and_call_with_react(
@@ -472,7 +466,7 @@ class InterLLM(LLMBase):
         from fiber.llm.model.router.tools.calling import acall_tool_with_selection
 
         tool_names = [getattr(t, "metadata", t).name for t in tools] if tools else []
-        log.info("Starting async apredict_and_call", context={"available_tools": tool_names})
+        log.debug("Starting async apredict_and_call", context={"available_tools": tool_names})
 
         if not getattr(self.metadata, "is_function_calling_model", False):
             log.debug("Native function calling unsupported, falling back to ReAct.")

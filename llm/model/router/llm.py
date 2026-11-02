@@ -9,7 +9,7 @@ from fiber.llm.model.types.inter.llm import LLMBase
 import fiber.gateway.llm.inter as llm_pkg 
 from xphi.watcher.plane.emitter import get_emitter
 
-registry_log = get_emitter("registry.llm")
+registry_log = get_emitter("router.llm")
 
 _LLM_PKG_NAME = llm_pkg.__name__
 
@@ -76,7 +76,7 @@ class LLMInstalledScanner:
                 break
 
     def scan(self) -> Dict[str, Any]:
-        registry_log.info(f"[*] Starting runtime introspection on package: {self.base_pkg}")
+        registry_log.debug(f"[*] Starting runtime introspection on package: {self.base_pkg}")
         registry: Dict[str, LLMInfo] = {}
 
         try:
@@ -179,7 +179,7 @@ class LLMRouter:
             }
             dynamic_count += 1
             
-        registry_log.info(f"[Router] Registry Ready: {len(DEFAULT_LLM_REGISTRY)} Native, {dynamic_count} Dynamic modules.")
+        registry_log.debug(f"[Router] Registry Ready: {len(DEFAULT_LLM_REGISTRY)} Native, {dynamic_count} Dynamic modules.")
 
     def route_and_load(self, model_name: str, custom_llm_provider: str, **kwargs) -> Any:
         provider = custom_llm_provider
@@ -218,7 +218,7 @@ class LLMRouter:
                 if obj.__module__ == module.__name__:
                     if name.endswith("LLM") or hasattr(obj, 'chat') or hasattr(obj, 'complete'):
                         LLMClass = obj
-                        registry_log.info(f"[Router] 동적 추론 성공: '{name}' 클래스를 LLM 구현체로 바인딩합니다.")
+                        registry_log.debug(f"[Router] 동적 추론 성공: '{name}' 클래스를 LLM 구현체로 바인딩합니다.")
                         break
 
         if not LLMClass:
@@ -229,7 +229,7 @@ class LLMRouter:
             valid_kwargs = {k: v for k, v in kwargs.items() if k in accepted_kwargs}
             dropped_kwargs = set(kwargs.keys()) - set(valid_kwargs.keys())
             if dropped_kwargs:
-                registry_log.warning(f"[Router] Filtered unsupported kwargs for {provider} ({model_name}): {dropped_kwargs}")
+                registry_log.debug(f"[Router] Filtered unsupported kwargs for {provider} ({model_name}): {dropped_kwargs}")
             
             return LLMClass(model=model_name, **valid_kwargs)
         

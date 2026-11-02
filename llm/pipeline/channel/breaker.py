@@ -7,14 +7,17 @@ Glossary:
 """
 from __future__ import annotations
 
-import asyncio
+import json
 import math
 import os
 import time
 from typing import Any, Dict, Optional, Tuple
 
 from fiber.dev.console.observer.signal import UIKey, UIMetric, UISlot, UISlotStatus
+from fiber.gateway.llm.state.traverser import StateMapper
+from fiber.gateway.llm.stream.parser.chunk import StreamChunkParser
 from fiber.llm.model.token.encoder import encode
+
 from xphi.arch.model.auth import BrokerKey, NodeAuthPayload
 from xphi.state.phase.channel import ChannelContext, DuplexChannel
 from xphi.watcher.plane.emitter import get_emitter
@@ -24,36 +27,67 @@ log_pipeline = get_emitter("channel.fuel", phase="BILLING")
 _ACTIVE_STREAMS: int = 0
 _STREAM_TICK_INTERVAL_SEC: float = 0.25
 
-def extract_usage_info(msg: Any) -> Tuple[int, Dict[str, Any]]:
-    """Pydantic 객체와 Dict 응답 모두에서 안전하게 (total_tokens, usage_dict) 추출"""
-    usage = msg.get("usage") if isinstance(msg, dict) else getattr(msg, "usage", None)
-    if not usage:
-        return 0, {}
 
-    if hasattr(usage, "model_dump") and callable(getattr(usage, "model_dump")):
-        try:
-            usage_dict = usage.model_dump(exclude_unset=True)
-        except Exception:
+def extract_usage_info(msg: Any, provider: Optional[str] = None) -> Tuple[int, Dict[str, Any]]:
+    """StateMapper의 선언적 EXTRACTION_RULES를 우선 사용하여 (total_tokens, usage_dict) 추출"""
+    _, usage_dict = StateMapper.extract_response(msg, provider=provider)
+    if not usage_dict:
+        usage = msg.get("usage") if isinstance(msg, dict) else getattr(msg, "usage", None)
+        if not usage:
+            return 0, {}
+        if hasattr(usage, "model_dump") and callable(getattr(usage, "model_dump")):
+            try:
+                usage_dict = usage.model_dump(exclude_unset=True)
+            except Exception:
+                usage_dict = {}
+        elif isinstance(usage, dict):
+            usage_dict = usage
+        elif hasattr(usage, "__dict__"):
+            usage_dict = {k: v for k, v in vars(usage).items() if not k.startswith("_") and v is not None}
+        else:
             usage_dict = {}
-    elif isinstance(usage, dict):
-        usage_dict = usage
-    elif hasattr(usage, "__dict__"):
-        usage_dict = {k: v for k, v in vars(usage).items() if not k.startswith("_") and v is not None}
-    else:
-        usage_dict = {}
 
     total_tokens = usage_dict.get("total_tokens")
     if total_tokens is None:
-        total_tokens = getattr(usage, "total_tokens", None)
-    if total_tokens is None:
-        p = usage_dict.get("prompt_tokens") or getattr(usage, "prompt_tokens", 0) or 0
-        c = usage_dict.get("completion_tokens") or getattr(usage, "completion_tokens", 0) or 0
+        p = usage_dict.get("prompt_tokens") or 0
+        c = usage_dict.get("completion_tokens") or 0
         total_tokens = int(p) + int(c)
 
     try:
         return int(total_tokens), usage_dict
     except (ValueError, TypeError):
         return 0, usage_dict
+
+
+def _extract_chunk_consumable_text(provider: Optional[str], raw_chunk: Any) -> str:
+    """StreamChunkParser(SSOT)를 통해 원시 청크를 파싱하고 과금 대상 텍스트(content + tool_calls)를 추출"""
+    parsed = StreamChunkParser.parse(provider, raw_chunk)
+    if not parsed:
+        return ""
+
+    text = parsed.get("text") or ""
+    tool_calls = parsed.get("tool_calls")
+    if not tool_calls:
+        return text
+
+    tc_parts = [text] if text else []
+    if isinstance(tool_calls, list):
+        for tc in tool_calls:
+            if isinstance(tc, dict):
+                fn = tc.get("function")
+                if isinstance(fn, dict):
+                    if fn.get("name"):
+                        tc_parts.append(str(fn["name"]))
+                    if fn.get("arguments"):
+                        tc_parts.append(str(fn["arguments"]))
+                else:
+                    tc_parts.append(json.dumps(tc, ensure_ascii=False, default=str))
+            else:
+                tc_parts.append(str(tc))
+    else:
+        tc_parts.append(str(tool_calls))
+
+    return "".join(tc_parts)
 
 
 class StreamBreaker(DuplexChannel):
@@ -148,7 +182,7 @@ class StreamBreaker(DuplexChannel):
         if math.isfinite(fuel_budget):
             pass_payload[UIKey.FUEL_BUDGET.value] = int(fuel_budget)
 
-        log_pipeline.info(
+        log_pipeline.debug(
             f"[StreamBreaker] Pre-flight passed for '{tenant_id}' ({elapsed_ms:.3f}ms).",
             **pass_payload,
         )
@@ -159,6 +193,11 @@ class StreamBreaker(DuplexChannel):
 
     async def channel_read(self, ctx: ChannelContext, msg: Any):
         req: dict = ctx.get_attr("request_kwargs", {})
+        processed_ctx = ctx.get_attr("processed_context")
+        provider = (
+            getattr(processed_ctx, "custom_llm_provider", None)
+            or req.get("custom_llm_provider")
+        )
         is_stream = req.get("stream", False) or "stream" in str(req.get("call_type", ""))
 
         fuel_budget = ctx.get_attr(BrokerKey.FUEL_BUDGET.value, float("inf"))
@@ -167,7 +206,7 @@ class StreamBreaker(DuplexChannel):
 
         # 단일 응답(Non-stream) 처리 및 토큰 카운트 방출
         if not is_stream and not hasattr(msg, "__aiter__"):
-            total_tokens, _ = extract_usage_info(msg)
+            total_tokens, _ = extract_usage_info(msg, provider=provider)
             if total_tokens > 0:
                 ctx.set_attr(BrokerKey.FUEL_CONSUMED.value, total_tokens)
                 unary_payload: Dict[str, Any] = {
@@ -179,7 +218,7 @@ class StreamBreaker(DuplexChannel):
                     UIKey.CHUNKS.value: total_tokens,
                     "active_streams": _ACTIVE_STREAMS,
                 }
-                log_pipeline.info(
+                log_pipeline.debug(
                     f"[StreamBreaker] Unary completion '{tenant_id}': tokens={total_tokens}",
                     **unary_payload,
                 )
@@ -192,11 +231,18 @@ class StreamBreaker(DuplexChannel):
 
         # 스트림(Stream) 킬 스위치 및 실시간 토큰 텔레메트리 트랩 장착
         elif hasattr(msg, "__aiter__"):
-            msg = self._trap_generator(msg, fuel_budget, tenant_id, ctx)
+            msg = self._trap_generator(msg, fuel_budget, tenant_id, provider, ctx)
 
         await ctx.fire_channel_read(msg)
 
-    async def _trap_generator(self, raw_stream: Any, budget: float, tenant_id: str, context: ChannelContext):
+    async def _trap_generator(
+        self,
+        raw_stream: Any,
+        budget: float,
+        tenant_id: str,
+        provider: Optional[str],
+        context: ChannelContext,
+    ):
         global _ACTIVE_STREAMS
         _ACTIVE_STREAMS += 1
         chunks = 0
@@ -210,14 +256,9 @@ class StreamBreaker(DuplexChannel):
             async for raw_chunk in raw_stream:
                 chunks += 1
                 try:
-                    choices = raw_chunk.get("choices") if isinstance(raw_chunk, dict) else getattr(raw_chunk, "choices", None)
-                    if choices:
-                        c0 = choices[0]
-                        delta = c0.get("delta") if isinstance(c0, dict) else getattr(c0, "delta", None)
-                        if delta:
-                            txt = (delta.get("content") if isinstance(delta, dict) else getattr(delta, "content", None)) or ""
-                            if txt:
-                                consumed += len(encode(txt))
+                    txt = _extract_chunk_consumable_text(provider, raw_chunk)
+                    if txt:
+                        consumed += len(encode(txt))
                 except Exception:
                     pass
 
@@ -263,11 +304,6 @@ class StreamBreaker(DuplexChannel):
                         "active_streams": _ACTIVE_STREAMS,
                         "throughput_cps": cps,
                     }
-                    # log_pipeline.info(
-                    #     f"[FuelTrap] Stream metering '{tenant_id}': consumed={consumed} tokens ({cps} chunks/s)",
-                    #     **tick_payload,
-                    # )
-
                 yield raw_chunk
         except Exception as e:
             log_pipeline.error(
@@ -296,7 +332,7 @@ class StreamBreaker(DuplexChannel):
                     "active_streams": _ACTIVE_STREAMS,
                     "throughput_cps": 0.0 if _ACTIVE_STREAMS == 0 else None,
                 }
-                log_pipeline.info(
+                log_pipeline.debug(
                     f"[FuelTrap] Stream completed for '{tenant_id}' (total={consumed} tokens, chunks={chunks}, active={_ACTIVE_STREAMS}).",
                     **close_payload,
                 )

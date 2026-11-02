@@ -142,7 +142,7 @@ class RedactRegistryIO:
         configure_redaction(rules=merged_rules, secret_keys=merged_keys)
         REDACT_RULES, SECRET_KEYS = merged_rules, merged_keys
 
-        log_redact.info(
+        log_redact.debug(
             f"Custom redact rules injected -> +{len(validated.patterns)} rules, "
             f"-{disabled_count} disabled, +{len(validated.extra_secret_keys)} keys"
         )

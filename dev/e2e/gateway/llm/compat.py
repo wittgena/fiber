@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.llm.compat
-## @lineage: fiber.dev.e2e.llm.compat
 from __future__ import annotations
 
 import argparse
@@ -338,7 +337,7 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
 
     is_online = check_online()
     resolved_model = getattr(args, 'model', None) or os.environ.get("LLM_COMPAT_MODEL")
-    use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
+    # use_proxy = getattr(args, 'proxy', False) or os.environ.get("LLM_COMPAT_PROXY", "false").lower() == "true"
 
     if not is_online:
         log.warning("[System Offline] Forcing fallback to Local Engine.")
@@ -346,9 +345,10 @@ def get_environment_context(args: argparse.Namespace) -> Tuple[dict, dict]:
     elif not resolved_model:
         resolved_model = "gemini/gemini-3.1-flash-lite"
 
-    scope_kwargs = {"use_proxy": use_proxy if is_online else False, "show_logs": True}
+    # scope_kwargs = {"use_proxy": use_proxy if is_online else False, "show_logs": True}
+    scope_kwargs = {"show_logs": True}
     run_context = {
-        "use_proxy": scope_kwargs["use_proxy"], 
+        # "use_proxy": scope_kwargs["use_proxy"], 
         "target_model": resolved_model
     }
     return scope_kwargs, run_context

@@ -26,7 +26,7 @@ class PayloadSanitizationGuardrail(DuplexChannel):
         sanitized_msg = sanitize_payload(msg)
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
 
-        guardrail_log.info(
+        guardrail_log.debug(
             f"[GUARDRAIL SANITIZE] Deep-sanitized payload in {elapsed_ms:.3f}ms.",
             **{
                 UIKey.SLOT.value: UISlot.GUARDRAIL.value,
@@ -77,7 +77,7 @@ class CustomRegexMaskingGuardrail(DuplexChannel):
                 masked_count += self._mask_messages(orig_kwargs.get("messages"))
 
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
-        guardrail_log.info(
+        guardrail_log.debug(
             f"[GUARDRAIL MASK] Custom C-Regex masked {masked_count} message(s) in {elapsed_ms:.3f}ms.",
             **{
                 UIKey.SLOT.value: UISlot.GUARDRAIL.value,
@@ -122,7 +122,7 @@ class ActiveBlockingGuardrail(DuplexChannel):
                     return
 
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
-        guardrail_log.info(
+        guardrail_log.debug(
             f"[GUARDRAIL PASS] Clean prompt verified in {elapsed_ms:.3f}ms.",
             **{
                 UIKey.SLOT.value: UISlot.GUARDRAIL.value,
@@ -169,7 +169,7 @@ class CustomRegexBlockingGuardrail(DuplexChannel):
                     return
 
         elapsed_ms = round((time.perf_counter() - t0) * 1000, 3)
-        guardrail_log.info(
+        guardrail_log.debug(
             f"[GUARDRAIL PASS] Custom C-Regex scan clean in {elapsed_ms:.3f}ms.",
             **{
                 UIKey.SLOT.value: UISlot.GUARDRAIL.value,
