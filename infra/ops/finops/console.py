@@ -137,7 +137,7 @@ class FinOpsConsoleManager:
                 )
         except Exception:
             if not silent:
-                from fiber.gateway.bridge.cli import run_fiber_cli
+                from fiber.gateway.bridge.console import run_fiber_cli
                 await run_fiber_cli("account", "--tenant", f.tenant_id, "status")
 
     async def issue_account_jwt(self) -> None:
@@ -185,7 +185,7 @@ class FinOpsConsoleManager:
                 type="positive",
             )
         except Exception:
-            from fiber.gateway.bridge.cli import run_fiber_cli
+            from fiber.gateway.bridge.console import run_fiber_cli
 
             args = ["account", "--tenant", f.tenant_id]
             if spiffe_arg:
@@ -228,7 +228,7 @@ class FinOpsConsoleManager:
             )
             ui.notify(f"🚨 Balance Zeroed & Revoked '{f.tenant_id}' (v{f.policy_ver})", type="negative")
         except Exception:
-            from fiber.gateway.bridge.cli import run_fiber_cli
+            from fiber.gateway.bridge.console import run_fiber_cli
 
             await run_fiber_cli("account", "--tenant", f.tenant_id, "kill")
 

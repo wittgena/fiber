@@ -14,7 +14,7 @@ from fiber.dev.base.workflow.pipeline import MockPipeline, log
 from fiber.dev.base.workflow.mcp import MockMcpServer
 from fiber.gateway.bridge.action.connect import resolve_connector_spec
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.infra.mcp.payload import McpPayloadBuilder
+from fiber.dev.base.mcp.payload import McpPayloadBuilder
 
 from xphi.arch.contract.config.env import DEFAULT_GATEWAY_PORT
 from xphi.state.phase.reactor import PhaseReactor

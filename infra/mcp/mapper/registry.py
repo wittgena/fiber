@@ -1,4 +1,5 @@
-# fiber.infra.mcp.registry
+# fiber.infra.mcp.mapper.registry
+## @lineage: fiber.infra.mcp.registry
 import os
 import re
 import orjson

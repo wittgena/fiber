@@ -1,5 +1,5 @@
 class Fiber < Formula
-  desc "The Universal Integration Boundary for heterogeneous AI ecosystems"
+  desc "AI Runtime Harness"
   homepage "https://github.com/wittgena/fiber"
   url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.8.tar.gz"
   sha256 "b9a15631373710a8b04616affd2dcbe318b160e2034c97852c629bbe062c43e3"
@@ -30,11 +30,11 @@ class Fiber < Formula
   def caveats
     <<~EOS
       To bootstrap your local workspace (~/.anchor/bound.json) and provision
-      Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
+      local node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
 
         #{opt_bin}/fiber init
 
-      To start the Redis tunnel and Fiber background daemon service:
+      To start the Redis tunnel and background daemon service:
         brew services start redis
         brew services start wittgena/fiber/fiber
     EOS

@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import orjson
 from aiohttp import web
 
-from fiber.infra.mcp.payload import McpRequest, McpPayloadBuilder
+from fiber.dev.base.mcp.payload import McpRequest, McpPayloadBuilder
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("e2e.mcp.server")

@@ -35,7 +35,7 @@ from fiber.infra.ops.account.manager import (
     SyncQuotaCommand,
 )
 from fiber.infra.ops.account.registry import DEFAULT_TENANT_ID, LocalAccountRegistry
-from fiber.gateway.bridge.schema import (
+from fiber.gateway.bridge.action.schema import (
     AccountAllocateResult,
     AccountListResult,
     AccountMandateResult,

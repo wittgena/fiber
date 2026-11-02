@@ -13,7 +13,7 @@ from typing import Dict, Any, Optional, List, Set
 
 import httpx
 
-from fiber.gateway.bridge.oob import OutOfBandApprovalBridge
+from fiber.gateway.bridge.channel.oob import OutOfBandApprovalBridge
 from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter

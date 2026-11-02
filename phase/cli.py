@@ -1,13 +1,14 @@
 # fiber.phase.cli
 import os
 import sys
+import json
 import socket
 import asyncio
 import inspect
 import importlib
 import subprocess
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Callable, Any
 import typer
 
 try:
@@ -23,7 +24,6 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.node.ops.boot import main_async, teardown
 from xphi.watcher.plane.emitter import get_emitter
 from xphi.node.space.bind.resolver import resolve_path
-from xphi.node.space.tunnel.factory import TunnelFactory
 from fiber.gateway.bridge.action.sign import app as sign_app
 
 log = get_emitter("phase.cli")
@@ -31,25 +31,19 @@ log = get_emitter("phase.cli")
 DAEMON_PORT = 8356
 CONSOLE_PORT = 8357
 
+EnvFileOpt = Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True, help="Path to .env file")]
+
 app = typer.Typer(
     help="Fiber: The Universal Integration Boundary & OS Kernel",
     no_args_is_help=True,
     add_completion=False,
 )
-
 compat_app = typer.Typer(
     help="Manage LLM compatibility rules and test fixtures (fiber-compats)",
     no_args_is_help=True,
 )
 app.add_typer(compat_app, name="compat")
 app.add_typer(sign_app, name="sign")
-
-connect_app = typer.Typer(
-    help="Sublimate MCP servers or copy/sync configurations into ~/.anchor/mcp.json",
-    invoke_without_command=True,
-    no_args_is_help=False,
-)
-app.add_typer(connect_app, name="connect")
 
 
 def _is_port_active(port: int = DAEMON_PORT, host: str = "127.0.0.1") -> bool:
@@ -59,33 +53,37 @@ def _is_port_active(port: int = DAEMON_PORT, host: str = "127.0.0.1") -> bool:
 
 
 def _load_env(env_file: Optional[str]):
-    if env_file:
-        if dotenv:
-            try:
-                dotenv.load_dotenv(env_file)
-                log.info(f"[Fiber] Loaded environment from {env_file}")
-            except Exception as e:
-                log.error(f"[Fiber] Failed to load .env file: {e}")
-                raise typer.Exit(1)
-        else:
-            log.warning("[Fiber] python-dotenv is not installed. Ignoring --env-file option.")
-
-
-def boot_kernel(mode_name: str):
-    log.info(f"[Fiber] Igniting Kernel in {mode_name.upper()} mode...")
+    if not env_file:
+        return
+    if not dotenv:
+        log.warning("[Fiber] python-dotenv is not installed. Ignoring --env-file option.")
+        return
     try:
-        PhaseReactor.ignite(main_coro_func=main_async, teardown_hook=teardown)
-    except KeyboardInterrupt:
-        log.info("\n[Fiber] Manual interrupt (SIGINT) received. Safely collapsing kernel...")
+        dotenv.load_dotenv(env_file)
+        log.info(f"[Fiber] Loaded environment from {env_file}")
     except Exception as e:
-        log.error(f"[Fiber] FATAL Kernel panic: {e}", exc_info=True)
+        log.error(f"[Fiber] Failed to load .env file: {e}")
+        raise typer.Exit(1)
+
+
+def _run_guarded(label: str, fn: Callable[[], Any]):
+    try:
+        res = fn()
+        if inspect.iscoroutine(res):
+            asyncio.run(res)
+    except KeyboardInterrupt:
+        log.info(f"\n[Fiber] {label} manually terminated by user.")
+    except typer.Exit:
+        raise
+    except Exception as e:
+        log.error(f"[Fiber] {label} failed: {e}", exc_info=True)
         sys.exit(1)
 
 
 @app.command("init")
 def run_init(
     rotate_cipher: Annotated[bool, typer.Option("--rotate-cipher", help="Regenerate local_cipher.key (invalidates existing TOTP DB)")] = False,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+    env_file: EnvFileOpt = None,
 ):
     """Initializes workspace boundary (~/.anchor/bound.json) and local node cryptographic keys."""
     _load_env(env_file)
@@ -95,7 +93,6 @@ def run_init(
         project_user_mode(Path.home() / ".anchor")
 
     from fiber.gateway.bridge.action.sign import ensure_node_keys
-    import json
     info = ensure_node_keys(force_regenerate_cipher=rotate_cipher)
 
     ssh_msg = "newly created" if info["ssh_key_status"] == "CREATED" else "already exists (skipped)"
@@ -108,7 +105,7 @@ def run_init(
 def run_daemon(
     start: Annotated[str, typer.Option("--start", "-s", help="Daemons to start or topology preset (e.g., edge, all)")] = "edge",
     detach: Annotated[bool, typer.Option("--detach", "-d", help="Run daemon in the background and log to <log>/daemon.log")] = False,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+    env_file: EnvFileOpt = None,
 ):
     """Boots Fiber node daemons (:8356). Defaults to 'edge' (REST Edge + RPC + MCP Worker)."""
     if _is_port_active(DAEMON_PORT):
@@ -119,40 +116,31 @@ def run_daemon(
         log_dir = Path(str(resolve_path("log")))
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "daemon.log"
-        cmd = [sys.executable, "-m", "fiber.phase.cli", "daemon", "-s", start]
-        if env_file:
-            cmd.extend(["-f", env_file])
+        cmd = [sys.executable, "-m", "fiber.phase.cli", "daemon", "-s", start] + (["-f", env_file] if env_file else [])
         with open(log_file, "a", encoding="utf-8") as out:
             proc = subprocess.Popen(cmd, stdout=out, stderr=out, start_new_session=True)
         log.info(f"🚀 [Fiber] Background daemon started (PID: {proc.pid}) -> Log: {log_file}")
         return
 
     _load_env(env_file)
-    PRESETS = {
+    presets = {
         "edge": "rest_edge,rpc_worker,mcp_worker",
         "all": "rest_edge,rpc_worker,mcp_worker,dynamic_pricing,risk_vault",
     }
-
-    resolved_daemons = PRESETS.get(start.lower(), start)
-    daemons_list = [d.strip() for d in resolved_daemons.split(",")]
-
-    os.environ["NODE_DAEMONS"] = resolved_daemons
+    resolved = presets.get(start.lower(), start)
+    os.environ["NODE_DAEMONS"] = resolved
     os.environ["GATEWAY_TOPOLOGY"] = "EMBEDDED_BYPASS"
+    os.environ["NODE_PROFILE"] = "EDGE" if all(d.strip() == "rest_edge" for d in resolved.split(",")) else "ALL"
 
-    is_edge_only = all(d in ["rest_edge"] for d in daemons_list)
-    if is_edge_only:
-        os.environ["NODE_PROFILE"] = "EDGE"
-    else:
-        os.environ["NODE_PROFILE"] = "ALL"
-
-    boot_kernel("Gateway Daemon")
+    log.info("[Fiber] Igniting Kernel in GATEWAY DAEMON mode...")
+    _run_guarded("Gateway Daemon", lambda: PhaseReactor.ignite(main_coro_func=main_async, teardown_hook=teardown))
 
 
 @app.command("console")
 def run_console(
     port: Annotated[int, typer.Option("--port", "-p", help="Port for Control Studio UI")] = CONSOLE_PORT,
     auto_daemon: Annotated[bool, typer.Option("--auto-daemon/--no-auto-daemon", help="Auto-spawn local daemon (:8356) if offline")] = True,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+    env_file: EnvFileOpt = None,
 ):
     """Launches Fiber Control Studio (:8357) and ensures the local gateway daemon (:8356) is active."""
     _load_env(env_file)
@@ -160,75 +148,19 @@ def run_console(
     launch_console(port=port, auto_daemon=auto_daemon, env_file=env_file)
 
 
-@app.command("account", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
-def run_account(
-    ctx: typer.Context,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    """Manages local/tenant FinOps accounts, EdDSA JWT quotas, fuel allocate, and live Kill-Switches."""
-    _load_env(env_file)
-    from fiber.gateway.bridge.action.account import main as account_main
-    try:
-        account_main(ctx.args)
-    except KeyboardInterrupt:
-        log.info("\n[Fiber] Account operation manually terminated by user.")
-    except Exception as e:
-        log.error(f"[Fiber] Account command failed: {e}", exc_info=True)
-        sys.exit(1)
-
-
-@app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
-def run_e2e(
-    ctx: typer.Context,
-    target: Annotated[str, typer.Argument(help="Target test suite")],
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    _load_env(env_file)
-    extra_args = ctx.args
-    KNOWN_SUITES = [
-        "fsm.tester",
-        "gateway.llm.guardrail",
-        "gateway.compliance",
-        "gateway.inter.finops",
-        "infra.wasm.phase",
-        "infra.plane.flare",
-    ]
-    targets = KNOWN_SUITES if target == "all" else [target]
-
-    log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")
-    for t in targets:
-        module_path = f"fiber.dev.e2e.{t}"
-        try:
-            test_module = importlib.import_module(module_path)
-            if hasattr(test_module, "main"):
-                log.info(f"\n{'='*60}\nLaunching Suite: {module_path}\n{'='*60}")
-                sig = inspect.signature(test_module.main)
-                if len(sig.parameters) > 0:
-                    test_module.main(extra_args)
-                else:
-                    test_module.main()
-            else:
-                log.error(f"[Fiber] Module {module_path} lacks 'main'. Skipping.")
-                continue
-        except ImportError as e:
-            log.error(f"[Fiber] Test module not found: {module_path} (Reason: {e})")
-            if target != "all":
-                sys.exit(1)
-        except Exception as e:
-            log.error(f"[Fiber] E2E Test {module_path} failed: {e}", exc_info=True)
-            sys.exit(1)
-
-
-@connect_app.callback()
-def run_connector(
-    ctx: typer.Context,
+@app.command("connect")
+def run_connect_cmd(
+    agent: Annotated[
+        Optional[str],
+        typer.Argument(help="IDE agent to scan & sync ('claude', 'cursor', 'vscode', 'all') or 'standalone' to run in foreground"),
+    ] = None,
     exec_cmd: Annotated[
         Optional[str],
-        typer.Option("--exec", "-e", help="Worker preset ('builtin' or alias), shell cmd, bin_root dir, or HTTP(S) URL"),
+        typer.Option("--exec", "-e", help="Shell command, bin_root dir, or HTTP(S) URL"),
     ] = None,
     config: Annotated[
         Optional[Path],
-        typer.Option("--config", "-c", exists=True, help="Path to standard mcp.json file to mount"),
+        typer.Option("--config", "-c", exists=True, help="External mcp.json file to sync or mount"),
     ] = None,
     target: Annotated[
         Optional[str],
@@ -240,58 +172,69 @@ def run_connector(
     ] = None,
     preflight: Annotated[
         Optional[str],
-        typer.Option("--preflight", "-p", help="Regex pattern to trigger Zero-Code HITL YIELD before worker execution"),
+        typer.Option("--preflight", "-p", help="Regex pattern to lock as FIBER_PREFLIGHT_PATTERN (HITL YIELD)"),
     ] = None,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+    standalone: Annotated[
+        bool,
+        typer.Option("--standalone", "-s", help="Run MCP server(s) directly in the foreground without writing to ~/.anchor/mcp.json"),
+    ] = False,
+    env_file: EnvFileOpt = None,
 ):
-    """[Runtime Launcher] Sublimates local stdio commands, builtin workers, or remote HTTP(S) MCP servers."""
-    if ctx.invoked_subcommand is not None:
+    """Syncs IDE/external MCP configs into ~/.anchor/mcp.json (or runs in foreground via 'standalone' / '-s')."""
+    _load_env(env_file)
+    from fiber.gateway.bridge.action.connect import run_connect_standalone, run_connect_copy
+
+    norm_agent = agent.strip().lower() if agent else None
+    if standalone or norm_agent == "standalone":
+        run_connect_standalone(exec_cmd=exec_cmd, config=config, target=target, mode=mode, preflight=preflight)
         return
-    _load_env(env_file)
-    from fiber.gateway.bridge.action.connect import run_connect
-    run_connect(
-        exec_cmd=exec_cmd,
-        config=config,
-        target=target,
-        mode=mode,
-        preflight=preflight,
-    )
 
-
-@connect_app.command("copy")
-def copy_connector_config(
-    exec_cmd: Annotated[
-        Optional[str],
-        typer.Option("--exec", "-e", help="Worker preset ('builtin' or alias), shell cmd, or HTTP(S) URL to lock into ~/.anchor/mcp.json"),
-    ] = None,
-    config: Annotated[
-        Optional[Path],
-        typer.Option("--config", "-c", exists=True, help="External mcp.json file to copy/merge into ~/.anchor/mcp.json"),
-    ] = None,
-    target: Annotated[
-        Optional[str],
-        typer.Option("--target", "-t", help="Optional Target ID override"),
-    ] = None,
-    mode: Annotated[
-        Optional[str],
-        typer.Option("--mode", "-m", help="Optional mode override: ephemeral, linear, or multiplex"),
-    ] = None,
-    preflight: Annotated[
-        Optional[str],
-        typer.Option("--preflight", "-p", help="Regex pattern to lock as FIBER_PREFLIGHT_PATTERN in ~/.anchor/mcp.json"),
-    ] = None,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
-):
-    """[Config Provisioner] Copies & locks builtin workers and external MCP configs into ~/.anchor/mcp.json without spawning processes."""
-    _load_env(env_file)
-    from fiber.gateway.bridge.action.connect import run_connect_copy
+    effective_agent = "all" if norm_agent == "copy" and not (exec_cmd or config) else (None if norm_agent == "copy" else norm_agent)
     run_connect_copy(
+        agent=effective_agent,
         exec_cmd=exec_cmd,
         config=config,
         target=target,
         mode=mode,
         preflight=preflight,
     )
+
+
+@app.command("account", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def run_account(ctx: typer.Context, env_file: EnvFileOpt = None):
+    """Manages local/tenant FinOps accounts, EdDSA JWT quotas, fuel allocate, and live Kill-Switches."""
+    _load_env(env_file)
+    from fiber.gateway.bridge.action.account import main as account_main
+    _run_guarded("Account operation", lambda: account_main(ctx.args))
+
+
+@app.command("e2e", context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+def run_e2e(
+    ctx: typer.Context,
+    target: Annotated[str, typer.Argument(help="Target test suite")],
+    env_file: EnvFileOpt = None,
+):
+    _load_env(env_file)
+    known = ["fsm.tester", "gateway.llm.guardrail", "gateway.compliance", "gateway.inter.finops", "infra.wasm.phase", "infra.plane.flare"]
+    targets = known if target == "all" else [target]
+
+    log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")
+    for t in targets:
+        module_path = f"fiber.dev.e2e.{t}"
+        try:
+            mod = importlib.import_module(module_path)
+            if not hasattr(mod, "main"):
+                log.error(f"[Fiber] Module {module_path} lacks 'main'. Skipping.")
+                continue
+            log.info(f"\n{'='*60}\nLaunching Suite: {module_path}\n{'='*60}")
+            mod.main(ctx.args) if inspect.signature(mod.main).parameters else mod.main()
+        except ImportError as e:
+            log.error(f"[Fiber] Test module not found: {module_path} (Reason: {e})")
+            if target != "all":
+                sys.exit(1)
+        except Exception as e:
+            log.error(f"[Fiber] E2E Test {module_path} failed: {e}", exc_info=True)
+            sys.exit(1)
 
 
 @compat_app.command("fixture")
@@ -304,60 +247,26 @@ def manage_compat_fixtures(
     vcr_targets: Annotated[str, typer.Option("--vcr-targets", help="Specific trace IDs to target (e.g., 'scenario:trace_id')")] = "",
     api_key: Annotated[Optional[str], typer.Option("--api-key", "-k", envvar="COMPAT_API_KEY", help="API Key (Optional if set in Env)")] = None,
     target_dir: Annotated[Optional[str], typer.Option("--target-dir", "-o", help="Custom target directory for fixtures")] = None,
-    env_file: Annotated[Optional[str], typer.Option("--env-file", "-f", exists=True)] = None,
+    env_file: EnvFileOpt = None,
 ):
-    """
-    @desc: Manages VCR fixtures for compatibility testing
-    - Use '--vcr record' to generate raw payloads, or '--vcr replay' (with '--vcr-speed' / '--vcr-chaos') to verify extraction rules offline.
-    """
+    """Manages VCR fixtures for compatibility testing ('--vcr record' or '--vcr replay')."""
     _load_env(env_file)
-    mode = vcr.lower().strip()
-    speed = vcr_speed.lower().strip()
+    mode, speed = vcr.lower().strip(), vcr_speed.lower().strip()
     if speed not in ("max", "real"):
         log.error(f"[Fiber] Invalid --vcr-speed: '{vcr_speed}'. Supported values are 'max' or 'real'.")
         raise typer.Exit(1)
 
+    from fiber.gateway.bridge.action import compat
     if mode in ("record", "gen", "generate"):
-        from fiber.gateway.bridge.action.compat import run_gen_fixture
-        try:
-            asyncio.run(
-                run_gen_fixture(
-                    model=model,
-                    api_key=api_key,
-                    target_dir=target_dir,
-                    vcr_tick=vcr_tick,
-                )
-            )
-        except KeyboardInterrupt:
-            log.info("\n[Fiber] Compat fixture generation manually terminated by user.")
-        except Exception as e:
-            log.error(f"[Fiber] Fixture generation failed: {e}", exc_info=True)
-            sys.exit(1)
+        _run_guarded("Compat fixture generation", lambda: compat.run_gen_fixture(model=model, api_key=api_key, target_dir=target_dir, vcr_tick=vcr_tick))
     elif mode in ("replay", "test", "verify"):
-        from fiber.gateway.bridge.action.compat import run_test_fixture
-        try:
-            asyncio.run(
-                run_test_fixture(
-                    model=model,
-                    target_dir=target_dir,
-                    vcr_speed=speed,
-                    vcr_chaos=vcr_chaos,
-                    vcr_targets=vcr_targets,
-                )
-            )
-        except KeyboardInterrupt:
-            log.info("\n[Fiber] Compat fixture testing manually terminated by user.")
-        except Exception as e:
-            log.error(f"[Fiber] Fixture testing failed: {e}", exc_info=True)
-            sys.exit(1)
+        _run_guarded("Compat fixture testing", lambda: compat.run_test_fixture(model=model, target_dir=target_dir, vcr_speed=speed, vcr_chaos=vcr_chaos, vcr_targets=vcr_targets))
     else:
         log.error(f"[Fiber] Invalid --vcr mode: '{vcr}'. Supported modes are 'record' (gen) or 'replay' (test).")
         raise typer.Exit(1)
 
-
 def main():
     app()
-
 
 if __name__ == "__main__":
     main()

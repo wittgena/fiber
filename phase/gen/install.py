@@ -14,7 +14,7 @@ PROJECT_NAME_LOWER = "fiber"
 FIBER_ROOT = resolve_path("fiber")
 INSTALL_TEMPLATE = """#!/usr/bin/env bash
 # ==============================================================================
-# {{PROJECT_NAME_TITLE}} Universal Installer (Linux / systemd)
+# {{PROJECT_NAME_TITLE}} AI Runtime Harness (Linux / systemd)
 #
 # Steps:
 # - Detect or install the 'uv' package manager
@@ -75,8 +75,8 @@ fi
 
 echo -e "${GREEN}[2/5] {{PROJECT_NAME_TITLE}} installed successfully at $FIBER_BIN.${NC}"
 
-# Bootstrap workspace anchor (bind.around) & Zero-Env keys (sign init)
-echo -e "${BLUE}[3/5] Bootstrapping Topology Anchor & Zero-Env Node Identity...${NC}"
+# Bootstrap workspace anchor (bind.around) & local node keys (sign init)
+echo -e "${BLUE}[3/5] Bootstrapping Anchor & Node Identity...${NC}"
 "$FIBER_PYTHON" -m xphi.node.space.bind.around
 "$FIBER_BIN" sign init
 "$FIBER_BIN" sign status
@@ -133,7 +133,6 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo -e "  ${BLUE}export PATH=\\"\\$HOME/.local/bin:\\$PATH\\"${NC}\\n"
 fi
 """
-
 
 def generate_install_script():
     output_path = FIBER_ROOT / "phase" / "install.sh"
