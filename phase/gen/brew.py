@@ -10,7 +10,7 @@ GITHUB_REPO = "wittgena/fiber"
 PYTHON_VERSION = "3.12"
 PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
-PROJECT_DESC = "The Universal Integration Boundary for heterogeneous AI ecosystems"
+PROJECT_DESC = "AI Runtime Harness"
 DEFAULT_VERSION = "v1.1.4.8"
 
 FIBER_ROOT = resolve_path("fiber")
@@ -48,11 +48,11 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
   def caveats
     <<~EOS
       To bootstrap your local workspace (~/.anchor/bound.json) and provision
-      Zero-Env node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
+      local node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
 
         #{opt_bin}/{{PROJECT_NAME_LOWER}} init
 
-      To start the Redis tunnel and Fiber background daemon service:
+      To start the Redis tunnel and background daemon service:
         brew services start redis
         brew services start {{GITHUB_REPO}}/{{PROJECT_NAME_LOWER}}
     EOS

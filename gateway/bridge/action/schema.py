@@ -1,12 +1,10 @@
-# fiber.gateway.bridge.schema
-## @lineage: fiber.phase.bridge.schema
+# fiber.gateway.bridge.action.schema
 from __future__ import annotations
 from typing import Any
 from pydantic import Field
 from xphi.arch.model.surge.model import SurgeBaseModel
 
-
-# 1. FinOps / Account Schemas
+# FinOps / Account Schemas
 class AccountStatusResult(SurgeBaseModel):
     tenant_id: str = ""
     registry_file: str = ""
@@ -18,7 +16,6 @@ class AccountStatusResult(SurgeBaseModel):
     active_allocations: int = 0
     active_quota: int = 0
     policy_ver: int = 0
-
 
 class AccountMandateResult(SurgeBaseModel):
     jwt: str = ""
@@ -33,12 +30,10 @@ class AccountMandateResult(SurgeBaseModel):
     def ledger_balance(self) -> int:
         return self.balance
 
-
 class AccountAllocateResult(SurgeBaseModel):
     tx_hash: str | None = None
     allocated_amount: int = 0
     status: AccountStatusResult
-
 
 class AccountRevokeResult(SurgeBaseModel):
     tenant_id: str
@@ -46,23 +41,19 @@ class AccountRevokeResult(SurgeBaseModel):
     signal: str = "REVOKE_PUBLISHED"
     status: AccountStatusResult
 
-
 class AccountListResult(SurgeBaseModel):
     default_tenant: str
     registry_file: str
     accounts: dict[str, Any] = Field(default_factory=dict)
 
-
-# 2. Sign / TOTP / Slack OOB Schemas
+# Sign / TOTP / Slack OOB Schemas
 class KeyFileInfo(SurgeBaseModel):
     path: str
     exists: bool
 
-
 class EnrolledAdminInfo(SurgeBaseModel):
     user_id: str
     cipher_prefix: str
-
 
 class SignStatusResult(SurgeBaseModel):
     ssh_fiber_ed25519: KeyFileInfo
@@ -71,12 +62,10 @@ class SignStatusResult(SurgeBaseModel):
     audit_db: str
     enrolled_admins: list[EnrolledAdminInfo] = Field(default_factory=list)
 
-
 class NodeKeysInitResult(SurgeBaseModel):
     ssh_key_status: str = "unknown"
     local_cipher_status: str = "unknown"
     raw_info: dict[str, Any] = Field(default_factory=dict)
-
 
 class TotpEnrollmentResult(SurgeBaseModel):
     canonical_id: str
@@ -86,14 +75,12 @@ class TotpEnrollmentResult(SurgeBaseModel):
     issuer: str
     qr_ascii: str
 
-
 class TotpVerificationResult(SurgeBaseModel):
     registered: bool
     valid: bool
     code: str
     pubkey: str
     user_id: str
-
 
 class SlackOobDispatchResult(SurgeBaseModel):
     handle_id: str
@@ -102,15 +89,13 @@ class SlackOobDispatchResult(SurgeBaseModel):
     ts: str | None = None
     blocks: list[dict[str, Any]] | dict[str, Any] = Field(default_factory=list)
 
-
-# 3. MCP Topology & Gateway Health Schemas
+# MCP Gateway Health Schemas
 class McpConfigCandidate(SurgeBaseModel):
     agent: str
     path: str
     name: str
     exists: bool
     file_present: bool
-
 
 class McpWorkerInfo(SurgeBaseModel):
     target_id: str
@@ -120,7 +105,6 @@ class McpWorkerInfo(SurgeBaseModel):
     preflight: str = ""
     is_live: bool = False
     exec_cmd: str = ""
-
 
 class McpTopologyScanResult(SurgeBaseModel):
     configs: list[McpConfigCandidate] = Field(default_factory=list)

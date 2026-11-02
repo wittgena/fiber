@@ -11,7 +11,7 @@ from fiber.dev.console.bridge.sign import oob
 from fiber.dev.console.bridge.mcp import mcp
 
 from fiber.gateway.bridge.action.connect import run_connect_copy
-from fiber.gateway.bridge.cli import run_fiber_cli
+from fiber.gateway.bridge.console import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import ModalTemplate, StudioTab
 from xphi.node.space.bind.resolver import resolve_path
@@ -119,7 +119,6 @@ class McpGatewayTab(StudioTab):
         self._editor_status: ui.label | None = None
 
     def _trigger_topology_scan(self, silent: bool = True) -> None:
-        """비동기 토폴로지 스캔 함수를 안전하게 이벤트 루프에 스케줄링"""
         try:
             asyncio.create_task(mcp.scan_mcp_topology_and_health(silent=silent))
         except RuntimeError:
@@ -127,14 +126,17 @@ class McpGatewayTab(StudioTab):
 
     def _copy_worker_to_anchor(
         self,
+        agent: str | None = None,
         target: str | None = None,
         exec_cmd: str | None = None,
         mode: str | None = None,
         preflight: str | None = None,
     ) -> None:
-        """서브프로세스 CLI를 거치지 않고 직접 mcp.json에 타겟 설정을 병합 및 UI 즉시 갱신"""
+        """명시적 agent('all', 'claude', 'cursor' 등) 또는 단일 타겟을 ~/.anchor/mcp.json에 병합 및 UI 즉시 갱신"""
         try:
+            effective_agent = agent or ("all" if (target is None and exec_cmd is None) else None)
             run_connect_copy(
+                agent=effective_agent,
                 exec_cmd=exec_cmd,
                 target=target,
                 mode=mode,
@@ -143,10 +145,10 @@ class McpGatewayTab(StudioTab):
             self._reload_editor_from_disk(notify=False)
             self._render_dynamic_sections()
             self._trigger_topology_scan(silent=True)
-            label = target or "discovered external configs"
-            ui.notify(f"Copied '{label}' into mcp.json", type="positive")
+            label = target or (f"'{effective_agent}' configs" if effective_agent else "MCP target")
+            ui.notify(f"Synced {label} into mcp.json", type="positive")
         except BaseException as exc:
-            ui.notify(f"Failed to copy MCP target: {exc}", type="negative")
+            ui.notify(f"Failed to sync MCP config: {exc}", type="negative")
 
     def compose_left(self) -> None:
         s = state.security
@@ -176,10 +178,10 @@ class McpGatewayTab(StudioTab):
                 self._configs_box = ui.row().classes("items-center gap-1 no-wrap")
                 kit.button(
                     "Copy Setting",
-                    lambda: self._copy_worker_to_anchor(),
+                    lambda: self._copy_worker_to_anchor(agent="all"),
                     color="cyan",
                     outline=True,
-                ).tooltip("Copy & merge all discovered external configs into ~/.anchor/mcp.json")
+                ).tooltip("Scan & sync all discovered external IDE configs into ~/.anchor/mcp.json (fiber connect all)")
 
         with kit.row(align="items-center justify-between"):
             ui.label(f"Editor — {anchor_path}").classes("text-[11px] font-mono text-slate-400 truncate")
@@ -326,7 +328,10 @@ class McpGatewayTab(StudioTab):
                         "items-center gap-0.5 px-1.5 py-0 rounded border "
                         "border-emerald-500/50 bg-emerald-950/30 text-emerald-300 text-[10px] font-mono"
                     ):
-                        ui.label(f"🟢 {ag}").tooltip(f"{cfg['name']} — {p_str}")
+                        # 에이전트 라벨 클릭 시 해당 에이전트 설정만 명시적으로 동기화 (fiber connect <agent>)
+                        ui.label(f"🟢 {ag}").classes("cursor-pointer hover:underline").tooltip(
+                            f"Click to sync '{ag}' ({cfg['name']}) into mcp.json — {p_str}"
+                        ).on("click", lambda _, a=ag: self._copy_worker_to_anchor(agent=a))
                         kit.file_link(
                             p_str,
                             label="",
@@ -353,7 +358,7 @@ class McpGatewayTab(StudioTab):
                                             create_if_missing=True,
                                         )
 
-        # 2. 좌측 워커 리스트 렌더링
+        # 2. 좌측 워커 리스트 렌더링 (오직 ~/.anchor/mcp.json에 등록된 워커만 표시)
         if self._workers_box is not None:
             self._workers_box.clear()
             running_cnt = 0
@@ -362,13 +367,13 @@ class McpGatewayTab(StudioTab):
 
             with self._workers_box:
                 if not s.discovered_workers:
-                    ui.label("No MCP workers discovered yet. Click 'Copy Setting' or '🔄'.").classes(
+                    ui.label("No MCP workers in mcp.json yet. Click 'Copy Setting' or an IDE chip to sync.").classes(
                         "text-xs font-mono text-slate-500 py-1"
                     )
 
                 for w in s.discovered_workers:
                     tid = w["target_id"]
-                    source = str(w.get("source", "ext"))
+                    source = str(w.get("source", "fiber"))
                     transport = str(w.get("transport", "stdio")).lower()
                     exec_cmd = w.get("exec_cmd", "")
 
@@ -380,17 +385,13 @@ class McpGatewayTab(StudioTab):
                     raw_mode = str(w.get("mode", "")).lower()
                     if anchor_env.get("FIBER_MODE"):
                         mode = str(anchor_env["FIBER_MODE"]).lower()
-                    elif raw_mode in ("multiplex", "linear"):
+                    elif raw_mode in ("multiplex", "linear", "ephemeral"):
                         mode = raw_mode
-                    elif tid.startswith("worker."):
-                        mode = "linear" if tid in ("worker.eco.finlib", "worker.reaper") else "multiplex"
                     else:
-                        mode = raw_mode or "ephemeral"
+                        mode = "ephemeral"
 
                     preflight = w.get("preflight") or anchor_env.get("FIBER_PREFLIGHT_PATTERN") or ""
-
                     is_mounted = bool(w.get("is_live")) or (tid in active_set)
-                    is_in_anchor = tid in anchor_specs
 
                     if is_mounted and mode != "ephemeral":
                         running_cnt += 1
@@ -402,15 +403,11 @@ class McpGatewayTab(StudioTab):
                         status_badge = "⚡ STANDBY"
                         status_cls = "text-cyan-400"
                         status_tip = "Mounted in Daemon (Ephemeral Zero-Spawn: boots on tool call)"
-                    elif is_in_anchor:
+                    else:
                         config_cnt += 1
                         status_badge = "🟡 CONFIG"
                         status_cls = "text-amber-300"
-                        status_tip = "Registered in fiber mcp.json (Waiting for daemon or start 'fiber daemon')"
-                    else:
-                        status_badge = "⚪ AVAILABLE" if source == "builtin" else "⚪ EXTERNAL"
-                        status_cls = "text-slate-400"
-                        status_tip = "Not in fiber mcp.json (Click 'Copy' to register & auto-mount)"
+                        status_tip = "Registered in ~/.anchor/mcp.json (Waiting for daemon or run standalone)"
 
                     guard_txt = f"🔒 {preflight[:12]}" if preflight else "🔓 Open"
 
@@ -437,22 +434,13 @@ class McpGatewayTab(StudioTab):
                                 ui.badge("Zero-Spawn").props(
                                     "outline color=cyan text-color=cyan-3"
                                 ).classes("text-[10px] font-mono px-1.5")
-                            elif not is_in_anchor:
-                                kit.button(
-                                    "📥 Copy",
-                                    lambda t=tid, c=exec_cmd, m=mode, p=preflight: self._copy_worker_to_anchor(
-                                        target=t, exec_cmd=c, mode=m, preflight=p
-                                    ),
-                                    color="cyan",
-                                    outline=True,
-                                ).tooltip("Add to ~/.anchor/mcp.json (Daemon will auto-mount)")
                             else:
                                 kit.button(
                                     "▶ Run",
-                                    lambda t=tid, c=exec_cmd: run_fiber_cli("connect", "-t", t, "-e", c),
+                                    lambda t=tid, c=exec_cmd: run_fiber_cli("connect", "--standalone", "-t", t, "-e", c),
                                     color="amber",
                                     outline=True,
-                                ).tooltip("Daemon is offline; run this worker standalone")
+                                ).tooltip("Daemon is offline; run this worker in standalone mode")
 
             if self._roster_summary_label is not None:
                 self._roster_summary_label.set_text(

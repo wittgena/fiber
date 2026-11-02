@@ -26,7 +26,7 @@ from fiber.gateway.bridge.action.connect import (
     run_connect_copy,
 )
 from fiber.infra.mcp.connector import MCPServerConnector
-from fiber.infra.mcp.payload import McpPayloadBuilder
+from fiber.dev.base.mcp.payload import McpPayloadBuilder
 import fiber.infra.mcp.worker.eco.finlib as worker_finlib
 
 from fiber.dev.base.workflow.audit.context import AuditContext

@@ -15,7 +15,7 @@ from fiber.gateway.contract.token.gen import (
 from fiber.gateway.security import TokenTranslator
 from fiber.infra.ops.account.registry import DEFAULT_TENANT_ID, LocalAccountRegistry
 from fiber.infra.ops.finops.watcher import default_finops_watcher
-from fiber.gateway.bridge.schema import (
+from fiber.gateway.bridge.action.schema import (
     AccountAllocateResult,
     AccountMandateResult,
     AccountRevokeResult,

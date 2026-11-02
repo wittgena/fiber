@@ -6,7 +6,7 @@ from pathlib import Path
 from nicegui import ui
 
 from fiber.infra.ops.account.state import state, refs
-from fiber.gateway.bridge.cli import run_fiber_cli
+from fiber.gateway.bridge.console import run_fiber_cli
 import fiber.dev.console.ui.kit as kit
 from fiber.dev.console.ui.kit import StudioTab
 from xphi.node.space.bind.resolver import find_current_self

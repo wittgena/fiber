@@ -23,7 +23,7 @@ import pyotp
 import qrcode
 import typer
 
-from fiber.gateway.bridge.schema import (
+from fiber.gateway.bridge.action.schema import (
     EnrolledAdminInfo,
     KeyFileInfo,
     NodeKeysInitResult,
