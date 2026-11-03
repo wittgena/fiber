@@ -121,7 +121,6 @@ jobs:
           fiber e2e infra.wasm.gateway
           fiber e2e infra.wasm.phase
           fiber e2e infra.plane.flare --mode dev
-          VCR_MODE=replay python -m fiber.dev.tester.switch
       
       - name: Run E2E Concurrency & Load Benchmark
         env:

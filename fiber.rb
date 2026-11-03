@@ -1,8 +1,8 @@
 class Fiber < Formula
   desc "AI Runtime Harness"
   homepage "https://github.com/wittgena/fiber"
-  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.8.tar.gz"
-  sha256 "b9a15631373710a8b04616affd2dcbe318b160e2034c97852c629bbe062c43e3"
+  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.9.tar.gz"
+  sha256 "be9246d13dae0f5965e9815d47d98b7a30dbef5f930aa41d5d7c153bb2a1b2c4"
 
   depends_on "python@3.12"
   depends_on "redis"

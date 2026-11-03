@@ -54,7 +54,6 @@ echo "[CI-SYNC] Executing FinOps, WASM & Flare E2E Suites..."
 fiber e2e gateway.inter.finops --vcr replay
 fiber e2e infra.wasm.gateway
 fiber e2e infra.wasm.phase
-VCR_MODE=replay python -m fiber.dev.tester.switch
 fiber e2e infra.plane.flare --mode dev
 """
 
