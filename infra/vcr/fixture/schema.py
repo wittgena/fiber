@@ -99,9 +99,9 @@ class VCRTargetInfo:
         for rel in (Path("fiber-compats"), Path("../fiber-compats")):
             if rel.is_dir():
                 return rel.resolve()
-        fixture_root = Path(str(resolve_path("fixture")))
-        if (fixture_root / "adapters").is_dir():
-            return fixture_root.resolve()
+        compats_root = Path(str(resolve_path("compats")))
+        if (compats_root / "adapters").is_dir():
+            return compats_root.resolve()
         return Path(os.getcwd()) / "fiber-compats"
 
     @classmethod

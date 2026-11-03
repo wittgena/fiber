@@ -24,7 +24,7 @@ from xphi.node.space.bind.resolver import resolve_path
 DIAG_LOG_PATH = resolve_path("log") / "ui_diag.log"
 COMPATS_REPO = "dphi-network/fiber-compats"
 COMPATS_TARBALL_URL = f"https://github.com/{COMPATS_REPO}/archive/refs/heads/main.tar.gz"
-COMPATS_LOCAL_DIR = Path(str(resolve_path("fixture")))
+COMPATS_LOCAL_DIR = Path(str(resolve_path("compats")))
 
 _sync_lock = asyncio.Lock()
 

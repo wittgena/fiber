@@ -13,34 +13,18 @@ from xphi.node.space.bind.resolver import find_current_self
 
 def _resolve_compat_adapters_dir() -> Path:
     from xphi.node.space.bind.resolver import resolve_path
-    # 로컬 개발 워크스페이스 (../fiber-compats/adapters)
     self_dir = find_current_self()
     if self_dir:
         cand = self_dir.parent / "fiber-compats" / "adapters"
         if cand.is_dir():
             return cand.resolve()
-    for fallback in (Path("fiber-compats/adapters"), Path("../fiber-compats/adapters")):
-        if fallback.is_dir():
-            return fallback.resolve()
-    # 콘솔이 백그라운드로 다운로드한 ~/.anchor/io/fixture/adapters (또는 console)
-    fixture_root = Path(str(resolve_path("fixture")))
-    for sub in ("adapters", "console", "fiber-compats/adapters"):
-        cand_fix = fixture_root / sub
+
+    compats_root = Path(str(resolve_path("compats")))
+    for sub in ("adapters", "fiber-compats/adapters"):
+        cand_fix = compats_root / sub
         if cand_fix.is_dir():
             return cand_fix.resolve()
-    return fixture_root / "adapters"
-
-def _resolve_compat_adapters_dir() -> Path:
-    self_dir = find_current_self()
-    if self_dir:
-        cand = self_dir.parent / "fiber-compats" / "adapters"
-        if cand.is_dir():
-            return cand.resolve()
-    for fallback in (Path("fiber-compats/adapters"), Path("../fiber-compats/adapters")):
-        if fallback.is_dir():
-            return fallback.resolve()
-    return Path("fiber-compats/adapters")
-
+    return compats_root / "adapters"
 
 def _discover_compat_models_and_dirs() -> dict[str, Path]:
     adapters_root = _resolve_compat_adapters_dir()
