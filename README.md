@@ -512,17 +512,21 @@ fiber daemon
 
 ### 3.3. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
 
-Best suited for running Fiber as a standalone background service (`fiber daemon`) to govern local AI agents via the **Local MCP & LLM Gateway** without managing Python virtual environments.
+Best suited for running Fiber as a persistent, OS-supervised background service (`fiber daemon`) to govern local AI agents via the **Local MCP & LLM Gateway** (`127.0.0.1:8356`) without manually managing Python virtual environments.
 
-> **Note (Experimental):** The Homebrew packaging pipeline is currently undergoing stabilization across macOS environments (e.g., Xcode Command Line Tools & build metadata bindings). If you encounter environment-specific build issues, please fall back to the `uv pip` installation above.
+> **Isolated Runtime & Service Supervision:** The Homebrew formula provisions a dedicated Python 3.12 runtime under `libexec`, links the `fiber` CLI into your system `PATH`, and registers a `launchd` service (`keep_alive`) with managed logs under `$(brew --prefix)/var/log/fiber/`.
 
 ```bash
-## Install Fiber and its isolated runtime in a single command
+## Install Fiber (auto-provisions isolated Python 3.12 runtime & Redis dependency)
 brew install wittgena/fiber/fiber
 
-## Initialize local node identity & start the background daemon service
+## Bootstrap local workspace (~/.anchor) & start background services
 fiber init
+brew services start redis
 brew services start wittgena/fiber/fiber
+
+## Verify install, bootstrap, and gateway(:8356)
+python -m fiber.dev.tester.brew.verify
 ```
 
 ## 4. Execution Planes & Pipeline Benchmarks

@@ -1,7 +1,7 @@
 # fiber.phase.gen.brew
+import hashlib
 import sys
 import urllib.request
-import hashlib
 from pathlib import Path
 from xphi.node.space.bind.resolver import resolve_path
 
@@ -10,12 +10,12 @@ GITHUB_REPO = "wittgena/fiber"
 PYTHON_VERSION = "3.12"
 PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
-PROJECT_DESC = "AI Runtime Harness"
-DEFAULT_VERSION = "v1.1.4.8"
+PROJECT_DESC = "Agent Runtime Harness"
+DEFAULT_VERSION = "v1.1.4.9"
 
 FIBER_ROOT = resolve_path("fiber")
 
-# Formula Template
+# Formula Template (Compliant with `brew audit --strict` & RuboCop Homebrew Cops)
 FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
   desc "{{PROJECT_DESC}}"
   homepage "https://github.com/{{GITHUB_REPO}}"
@@ -39,18 +39,12 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
     bin.install_symlink libexec/"bin/{{PROJECT_NAME_LOWER}}"
   end
 
-  def post_install
-    # Ensure working and log directories exist to prevent launchd exit 78 on service start
-    (var/"{{PROJECT_NAME_LOWER}}").mkpath
-    (var/"log/{{PROJECT_NAME_LOWER}}").mkpath
-  end
-
   def caveats
     <<~EOS
       To bootstrap your local workspace (~/.anchor/bound.json) and provision
       local node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
 
-        #{opt_bin}/{{PROJECT_NAME_LOWER}} init
+        {{PROJECT_NAME_LOWER}} init
 
       To start the Redis tunnel and background daemon service:
         brew services start redis
@@ -69,16 +63,17 @@ FORMULA_TEMPLATE = """class {{PROJECT_NAME_TITLE}} < Formula
 
   test do
     ENV["HOME"] = testpath
-    system "#{bin}/{{PROJECT_NAME_LOWER}}", "init"
-    assert_predicate testpath/".anchor/bound.json", :exist?
-    assert_predicate testpath/".ssh/fiber_ed25519", :exist?
-    assert_predicate testpath/".ssh/fiber_ed25519.pub", :exist?
+    system bin/"{{PROJECT_NAME_LOWER}}", "init"
+    assert_path_exists testpath/".anchor/bound.json"
+    assert_path_exists testpath/".anchor/origin.json"
+    assert_path_exists testpath/".ssh/fiber_ed25519"
+    assert_path_exists testpath/".ssh/fiber_ed25519.pub"
   end
 end
 """
 
 
-def generate_formula(version: str):
+def generate_formula(version: str) -> None:
     tag_version = version if version.startswith("v") else f"v{version}"
     tarball_url = f"https://github.com/{GITHUB_REPO}/archive/refs/tags/{tag_version}.tar.gz"
     output_path = FIBER_ROOT / f"{PROJECT_NAME_LOWER}.rb"
@@ -98,6 +93,7 @@ def generate_formula(version: str):
 
     rendered_content = (
         FORMULA_TEMPLATE
+        .replace("\u00a0", " ")  # Guard against accidental non-breaking spaces
         .replace("{{PROJECT_NAME_TITLE}}", PROJECT_NAME_TITLE)
         .replace("{{PROJECT_NAME_LOWER}}", PROJECT_NAME_LOWER)
         .replace("{{PROJECT_DESC}}", PROJECT_DESC)
