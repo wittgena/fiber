@@ -1,4 +1,5 @@
-# fiber.phase.fsm.mcp.intent
+# fiber.phase.fsm.bridge.mcp
+## @lineage: fiber.phase.fsm.mcp.intent
 ## @lineage: fiber.infra.mcp.intent
 from enum import Enum, auto
 from typing import Dict, Any, Optional

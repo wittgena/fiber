@@ -1,5 +1,5 @@
 # README
-**AI Runtime Harness**
+**Agent Runtime Harness**
 
 Fiber is a local runtime harness that sits between AI agents and everything they call—tools and models alike. A single loopback daemon (127.0.0.1:8356) fronts your MCP servers as a Local MCP Gateway with idempotent execution and pre-flight human approval (**1**), unified under a zero-boilerplate CLI for config sync and quota governance (**3.1**). 
 Through the same control plane, it governs model calls via an OpenAI-compatible endpoint and a drop-in Python SDK with mid-stream kill-switches (**2.1**), captures live streams into content-addressed fixtures for zero-cost deterministic replay (**2.2**), and normalizes heterogeneous LLM schemas declaratively (**2.3**)—achieving execution determinism, runtime safety, and quota governance without changing your agent configs or business logic.
@@ -301,7 +301,7 @@ def inject_vcr():
     config = VCRPlaybackConfig(mode=vcr_mode, speed="max", record_tick_ms=100.0)
     
     # Context manager cleanly scopes the proxy injection to a target suite directory
-    with VCRInjector.use_cassette(config=config, fixture_dir="../fiber-compats/suites/router_suite"):
+    with VCRInjector.use_cassette(config=config, fixture_dir="../fiber-compats/suites/pytest"):
         yield
 
 @pytest.mark.asyncio

@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.llm.vcr
-## @lineage: fiber.dev.e2e.llm.vcr
 from __future__ import annotations
 
 import asyncio
@@ -25,7 +24,7 @@ from xphi.state.topos.workflow import WorkflowMessage, step
 from xphi.node.space.bind.resolver import resolve_path, get_invoker
 from xphi.arch.contract.event.next import next_trace_id
 
-FIXTURE_ROOT = resolve_path("fixture")
+FIXTURE_ROOT = resolve_path("compats") / "suites" / "e2e"
 CURRENT_INVOKER, _ = get_invoker(Path(__file__))
 
 class StartTraceMsg(WorkflowMessage): pass

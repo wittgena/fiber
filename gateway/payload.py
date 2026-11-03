@@ -118,7 +118,7 @@ async def lifespan(app: FastAPI):
             log.info(f"Pipeline Interceptors Ready: {loaded_names}")
 
         # VCR Engine Proxy Mounting (Supports dynamic per-request live/record/replay switching)
-        fixture_root = config.vcr_fixture_dir or str(resolve_path("fixture"))
+        fixture_root = config.vcr_fixture_dir or str(resolve_path("compats") / "suites" / "base")
         default_vcr_mode = (config.vcr_default_mode or "live").lower()
         bootstrap_cfg = VCRPlaybackConfig(
             mode="record" if default_vcr_mode == "live" else default_vcr_mode,

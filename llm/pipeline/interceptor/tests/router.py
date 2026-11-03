@@ -50,7 +50,7 @@ def inject_vcr_proxy():
     default_compats_dir = os.path.abspath(os.path.join(os.getcwd(), "fiber-compats"))
 
     compats_dir = os.getenv("FIBER_COMPATS_DIR", default_compats_dir)
-    fixture_dir = os.path.join(compats_dir, "suites", "router_suite")
+    fixture_dir = os.path.join(compats_dir, "suites", "pytest")
     
     # Determine VCR mode (default to 'replay', override with 'record')
     vcr_mode = os.getenv("VCR_MODE", "replay")

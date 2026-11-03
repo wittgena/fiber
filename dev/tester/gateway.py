@@ -12,7 +12,7 @@ from xphi.node.space.bind.resolver import resolve_path
 
 
 def _resolve_expected_fixture_path(scenario: str, invoker: str = "rest_gateway") -> str:
-    fixture_root = os.getenv("VCR_FIXTURE_DIR") or str(resolve_path("fixture"))
+    fixture_root = os.getenv("VCR_FIXTURE_DIR") or str(resolve_path("compats") / "suites" / "base")
     invoker_prefix = VCRIdentityRule._get_flattened_invoker(invoker)
     clean_scenario = scenario.replace(" ", "_").lower()
     filename = f"fixture_{invoker_prefix}_{clean_scenario}.json"
