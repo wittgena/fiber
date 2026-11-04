@@ -17,7 +17,7 @@ As the counterpart on the model path, the same control plane governs LLM calls�
 ## 0. Quick Start
 
 ```bash
-uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.9
+uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
 ```
 
 **1. Boot the Local Control Plane (`127.0.0.1:8356`)**
@@ -369,7 +369,7 @@ $ pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 $ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
 
 # 3. Verify live HTTP Gateway roundtrip (Unary, SSE Stream, and Dynamic Record -> Replay)
-$ python -m fiber.dev.ex.tester.gateway
+$ python -m fiber.dev.tester.gateway
 ```
 
 ---
@@ -500,7 +500,7 @@ Best suited for full-stack integration—including the in-process Python harness
 mkdir -p ~/fiber-user && cd ~/fiber-user
 pyenv local fiber-user
 
-uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.9
+uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
 # OR: uv pip install -e /path/to/local/self/fiber
 
 ## Bootstrap workspace & Provision node identity
@@ -514,16 +514,16 @@ fiber daemon
 
 Best suited for running Fiber as a persistent, OS-supervised background service (`fiber daemon`) to govern local AI agents via the **Local MCP & LLM Gateway** (`127.0.0.1:8356`) without manually managing Python virtual environments.
 
-> **Isolated Runtime & Service Supervision:** The Homebrew formula provisions a dedicated Python 3.12 runtime under `libexec`, links the `fiber` CLI into your system `PATH`, and registers a `launchd` service (`keep_alive`) with managed logs under `$(brew --prefix)/var/log/fiber/`.
+> **Isolated Runtime & Service Supervision:** The Homebrew formula provisions a dedicated Python 3.12 runtime under `libexec`, links the `fiber` CLI into your system `PATH`, and registers a `launchd` service (`keep_alive`).
 
 ```bash
 ## Install Fiber (auto-provisions isolated Python 3.12 runtime & Redis dependency)
-brew install wittgena/fiber/fiber
+brew install dphi-network/fiber/fiber
 
 ## Bootstrap local workspace (~/.anchor) & start background services
 fiber init
 brew services start redis
-brew services start wittgena/fiber/fiber
+brew services start dphi-network/fiber/fiber
 
 ## Verify install, bootstrap, and gateway(:8356)
 python -m fiber.dev.tester.brew.verify
@@ -542,7 +542,7 @@ Fiber dynamically synthesizes target infrastructure blueprints (`docker-compose.
 $ fiber e2e infra.plane.compose --mode dev
 
 # Edge Sandbox Plane: Provisions Dual V8 Isolates and seals execution into a Merkle root
-$ fiber e2e infra.plane.flare --mode dev     # or --mode deploy for *.workers.dev
+$ fiber e2e infra.plane.flare --mode dev
 ```
 
 | Execution Plane | Entrypoint & Substrate | Architectural Role & Security Boundary |
@@ -578,7 +578,7 @@ fiber e2e inter.concurrency --vcr replay --concurrency 200
 Fiber enforces execution determinism and runtime safety through automated CI gates (on every PR and release tag) alongside targeted end-to-end validation suites across each subsystem:
 
 * **[mcp.guard.log](./phase/abc/log/gateway/worker/guard.20261104.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
-* **[fsm.contract.log](./phase/abc/log/fsm/contract.20261102.log):** Validates the declarative agent state machine and polyglot execution bridge, confirming 10-scheme URI routing (`llm://`, `mcp://`, `fn://`, `py://`, `https://`, `exec://`), <=2KB content-addressed state projection slicing, asymmetric M:N PTA fuel conservation, and zero-spend 202 HITL parking with $O(1)$ mid-flow resumption across heterogeneous DAGs.
+* **[fsm.contract.log](./phase/abc/log/fsm/contract.20261102.log):** Validates the declarative agent state machine and polyglot execution bridge, confirming 10-scheme URI routing (`llm://`, `mcp://`, `fn://`, `py://`, `https://`, `exec://`), <=2KB content-addressed state projection slicing, asymmetric M:N fuel conservation, and zero-spend 202 HITL parking with $O(1)$ mid-flow resumption across heterogeneous DAGs.
 - **[llm.guardrail.log](./phase/abc/log/gateway/llm/guardrail.20261104.log):** Validates the two-track DLP guardrail pipeline and dynamic secret registry, confirming zero-I/O edge cache short-circuiting, in-place `PRE_TRANSLATE` PII masking, strict `POST_TRANSLATE` credential blocking, fault-tolerant JSON rule injection (DIP), and chained `[Mask -> Block]` defense with fallback shielding.
 **[llm.vcr.log](./phase/abc/log/gateway/llm/vcr.20261104.log):** Validates deterministic VCR replay and tracer isolation across the LLM pipeline, confirming sub-millisecond synchronous fixture playback, zero-I/O asynchronous stream chunk tracking, strict exception boundary verification, and idempotent fallback routing with deepcopy payload shielding.
 - **[infra.plane.flare.log](./phase/abc/log/infra/plane/flare.20261104.log):** Validates remote sandbox execution on Cloudflare Edge V8 isolates, confirming zero-leakage host isolation, bit-exact compute determinism, and tamper-proof state verification via Merkle roots.

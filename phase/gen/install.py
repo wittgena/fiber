@@ -6,7 +6,7 @@ from pathlib import Path
 from xphi.node.space.bind.resolver import resolve_path
 
 # Configuration Constants
-GITHUB_REPO = "wittgena/fiber"
+GITHUB_REPO = "dphi-network/fiber"
 PYTHON_VERSION = "3.12"
 PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
@@ -34,7 +34,7 @@ NC='\\033[0m'
 
 echo -e "${BLUE}▶ Starting {{PROJECT_NAME_TITLE}} LLM Pipeline & MCP Gateway Installation...${NC}\\n"
 
-# Parse optional target version (e.g., curl ... | bash -s -- v1.1.4.7)
+# Parse optional target version (e.g., curl ... | bash -s -- v1.1.4.10)
 FIBER_VERSION=${1:-""}
 REPO_URL="git+https://github.com/{{GITHUB_REPO}}.git"
 

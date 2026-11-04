@@ -84,7 +84,7 @@ pyenv local fiber-user
 
   ## [Scenario 3: Direct Remote Release] Clean installation from GitHub release tag
   ## (Downloads both fiber and xphi from remote repository without local source dependencies)
-  uv pip install git+https://github.com/wittgena/fiber.git@v1.1.4.7
+  uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
 
   ## [Scenario 4: Mismatch & Ref Locking] Forced cross-version compatibility testing
   ## (Locks xphi to a specific remote tag or local commit against latest local fiber)
@@ -105,19 +105,18 @@ fiber sign status
 Best suited for running `fiber daemon` as a background OS service to govern local AI agents (Cursor, Claude Code, `continue.dev`) without managing Python virtual environments.
 
 ```bash
-## 1. Install Fiber and its isolated runtime in a single command
-brew install wittgena/fiber/fiber
+## Install Fiber and its isolated runtime in a single command
+brew install dphi-network/fiber/fiber
 
-## 2. Initialize Zero-Env node identity & verify cryptographic keychain
-fiber sign init
+## Initialize Zero-Env node identity & verify cryptographic keychain
+fiber init
 fiber sign status
 
-## 3. Start background daemon service (Exposes :8356/v1 LLM & MCP Gateway)
-brew services start wittgena/fiber/fiber
+## Start background daemon service (Exposes :8356/v1 LLM & MCP Gateway)
+brew services start dphi-network/fiber/fiber
 
 ## Note: If Xcode Command Line Tools or macOS build metadata issues occur during tap build,
 ## fall back to the Phase C (uv pip) installation above.
-
 ```
 
 ---
