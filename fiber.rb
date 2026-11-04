@@ -1,5 +1,5 @@
 class Fiber < Formula
-  desc "AI Runtime Harness"
+  desc "Agent Runtime Harness"
   homepage "https://github.com/wittgena/fiber"
   url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.9.tar.gz"
   sha256 "be9246d13dae0f5965e9815d47d98b7a30dbef5f930aa41d5d7c153bb2a1b2c4"
@@ -19,12 +19,6 @@ class Fiber < Formula
 
     # Symlink CLI entrypoint into Homebrew PATH
     bin.install_symlink libexec/"bin/fiber"
-  end
-
-  def post_install
-    # Ensure working and log directories exist to prevent launchd exit 78 on service start
-    (var/"fiber").mkpath
-    (var/"log/fiber").mkpath
   end
 
   def caveats
@@ -51,9 +45,9 @@ class Fiber < Formula
 
   test do
     ENV["HOME"] = testpath
-    system "#{bin}/fiber", "init"
-    assert_predicate testpath/".anchor/bound.json", :exist?
-    assert_predicate testpath/".ssh/fiber_ed25519", :exist?
-    assert_predicate testpath/".ssh/fiber_ed25519.pub", :exist?
+    system bin/"fiber", "init"
+    assert_path_exists testpath/".anchor/bound.json"
+    assert_path_exists testpath/".ssh/fiber_ed25519"
+    assert_path_exists testpath/".ssh/fiber_ed25519.pub"
   end
 end

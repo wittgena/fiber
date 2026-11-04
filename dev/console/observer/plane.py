@@ -61,7 +61,6 @@ def _is_self_diagnostic(payload: Dict[str, Any]) -> bool:
     src = str(payload.get("source_id") or "").strip().lower()
     return src.startswith(_SELF_SOURCE_PREFIXES)
 
-
 def _format_line(payload: Dict[str, Any], meta: RoutedSurfaceMeta) -> str:
     p_mark = "🔥" if meta.is_bursting else ""
     gain = payload.get("gain")
@@ -119,7 +118,7 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
 
         # REVOKE 또는 Stream Break 카운트다운 도중에는 구세대 워커의 지연 정산/틱이 잔액을 덮어쓰지 못하도록 방어
         is_frozen_state = (
-            f.last_op == "REVOKE" or str(getattr(f, "stream_status_text", "")).startswith("🛑")
+            f.last_op == "REVOKE" or str(getattr(f, "stream_status_text", "")).startswith("[FAIL]")
         ) and not (has_newer_ver and int(d.get(UIKey.FUEL_BUDGET.value) or d.get(UIKey.LEDGER_BALANCE.value) or 0) > 0)
 
         if not is_frozen_state:
@@ -144,7 +143,6 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
             if (chunks := d.get(UIKey.CHUNKS.value)) is not None:
                 chunk_val = int(chunks)
                 s.live_stream_tokens = chunk_val
-                # 이전 청크 대비 증분(Delta) 계산하여 누적 처리 토큰에 합산 및 실시간 잔액 증분 차감
                 prev_chunks = getattr(s, "_last_stream_chunks", 0)
                 delta = chunk_val if chunk_val < prev_chunks else (chunk_val - prev_chunks)
                 pos_delta = max(0, delta)
@@ -158,10 +156,10 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
             if not is_frozen_state:
                 if active_cnt > 0:
                     f.stream_active = True
-                    f.stream_status_text = f"🟢 LIVE STREAMING ({active_cnt} active | {s.throughput_cps:,.1f} c/s)"
+                    f.stream_status_text = f"LIVE STREAMING ({active_cnt} active | {s.throughput_cps:,.1f} c/s)"
                 else:
                     f.stream_active = False
-                    f.stream_status_text = "✓ STREAM COMPLETE"
+                    f.stream_status_text = "STREAM COMPLETE"
 
             s.xray_chart_dirty = True
 
@@ -175,7 +173,7 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
         p.vcr_bench_live_ms = float(d[UIKey.ELAPSED_MS.value])
         p.vcr_chart_dirty = True
 
-    # 5. 실시간 Kill-Switch (HTTP 402 절단) 인터럽트 처리
+    # 실시간 Kill-Switch (HTTP 402 절단) 인터럽트 처리
     if is_target_tenant and meta.is_kill_signal:
         ev_ver = d.get(UIKey.POLICY_VER.value)
         if ev_ver is not None and int(ev_ver) >= f.policy_ver:
@@ -193,22 +191,19 @@ def _apply_meta(meta: RoutedSurfaceMeta, payload: Dict[str, Any], raw_msg: str =
         s._last_stream_chunks = 0
         f.stream_active = False
 
-        # Temporary Stream Break 카운트다운("🛑 BREAK (Ns)...") 중이면 카운트다운 텍스트를 덮어쓰지 않고 유지
-        if not str(getattr(f, "stream_status_text", "")).startswith("🛑 BREAK"):
-            f.stream_status_text = "🛑 SEVERED MID-FLIGHT (HTTP 402)"
+        if not str(getattr(f, "stream_status_text", "")).startswith("[BREAK]"):
+            f.stream_status_text = "SEVERED MID-FLIGHT (HTTP 402)"
 
         # 다중 VU 동시 절단 시 동일한 토스트 알림 및 스트림 로그가 수백 번 중복 실행되는 것을 방지 (2초 쿨다운)
         now_ts = time.monotonic()
         if (now_ts - _last_kill_notify_ts) >= 2.0:
             _last_kill_notify_ts = now_ts
             if refs.live_stream_log:
-                refs.live_stream_log.push("\n🛑 [FUEL BREAKER] Stream physically severed via aclose()!")
-                refs.live_stream_log.push("↩ Agent Response: 'HTTP 402: Remaining fuel exhausted. Halted safely.'")
-            ui.notify("🚨 Kill-Switch Activated! Active stream severed.", type="negative", position="top")
+                refs.live_stream_log.push("\n[FUEL BREAKER] Stream physically severed via aclose()!")
+                refs.live_stream_log.push("Agent Response: 'HTTP 402: Remaining fuel exhausted. Halted safely.'")
+            ui.notify("Kill-Switch Activated! Active stream severed.", type="negative", position="top")
 
-# ==========================================
 # Public Ingestion API (In-Memory / CLI / Redis)
-# ==========================================
 def ingest(event_or_dict: Union[LogEvent, Dict[str, Any]]) -> bool:
     """모든 플레인 이벤트가 통과하는 단일 진입점 (자기 진단 로그 루프 차단 내장)"""
     payload = event_or_dict if isinstance(event_or_dict, dict) else event_or_dict.__dict__
@@ -248,7 +243,6 @@ def ingest(event_or_dict: Union[LogEvent, Dict[str, Any]]) -> bool:
 def emit(source_id: str, message: str, level: str = "INFO", **ctx: Any) -> None:
     ingest({"source_id": source_id, "message": message, "level": level, "context": ctx})
 
-
 def emit_ledger(source_id: str, message: str, fuel: int, core: int, ver: int, level: str = "INFO") -> None:
     emit(
         source_id,
@@ -262,7 +256,6 @@ def emit_ledger(source_id: str, message: str, fuel: int, core: int, ver: int, le
         },
     )
 
-
 def bridge_cli_line(line: str) -> None:
     """CLI stdout의 `LOG | PHASE | LEVEL | src: msg` 포맷을 파싱하여 ingest로 연결"""
     if "|" not in line or ":" not in line:
@@ -274,14 +267,11 @@ def bridge_cli_line(line: str) -> None:
         src, msg = parts[3].split(":", 1)
         emit(src.split()[-1], msg.strip(), parts[2], phase=parts[1])
 
-
 class StudioPlaneObserver(EventObserver):
     def update(self, event: LogEvent) -> None:
         ingest(event)
 
-
 _studio_observer: StudioPlaneObserver | None = None
-
 
 def mount_studio_plane() -> None:
     """콘솔(Studio UI) 시작 시에만 명시적으로 호출하여 default_plane에 옵저버를 연결합니다."""

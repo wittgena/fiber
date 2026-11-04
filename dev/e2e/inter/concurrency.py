@@ -1,4 +1,4 @@
-# fiber.dev.e2e.gateway.inter.concurrency
+# fiber.dev.e2e.inter.concurrency
 """
 Validates core ChannelPipeline concurrency, context isolation, and stream interleaving determinism.
 Integrates PipelineLoadProfiler (fiber.dev.trace.profile.metrics) to report k6-style latency percentiles
@@ -126,7 +126,6 @@ class PipelineConcurrencySuite(MockPipeline):
         vu_count = 1 if self.is_record else self.concurrency
         total_iters = 1 if self.is_record else self.iterations
 
-        # 💡 [개선 포인트] 로깅 메시지에 실행 모드의 목적 명시
         mode_info = "Record (Actual LLM Network)" if self.is_record else "Replay (Zero-Network Engine Benchmark)"
         log.info(f"  └─ Executing {total_iters} unary requests across {vu_count} VUs (Mode: {mode_info})...")
 

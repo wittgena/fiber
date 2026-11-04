@@ -15,36 +15,28 @@ from xphi.arch.bound.adapter.pta import NodeSigner
 
 log = logging.getLogger("worker.deployer")
 
-
 class ExecutionDeployer(AsyncWorkerProtocol):
     def __init__(self):
         super().__init__(agent_name="execution.deployer")
         self.validator_pub_key: Optional[ed25519.Ed25519PublicKey] = self._load_validator_public_key()
-
-        # 비동기 Elicitation(프롬프트) 및 RPC Delegation(대행) 응답을 대기하기 위한 Future 레지스트리
         self.pending_prompts: Dict[str, asyncio.Future] = {}
 
     def _load_validator_public_key(self) -> Optional[ed25519.Ed25519PublicKey]:
-        """
-        1순위: 명시적 환경변수 (DPHI_VALIDATOR_PUBLIC_KEY)
-        2순위: NodeSigner 싱글톤의 결정론적 노드 공개키 (환경변수 노출 없이 자동 동기화)
-        """
         pub_key_hex = os.environ.get("DPHI_VALIDATOR_PUBLIC_KEY")
         if not pub_key_hex:
             try:
                 pub_key_hex = NodeSigner.get_instance().pubkey_hex
             except Exception as e:
-                self.log.error(f"⚠️ Failed to resolve NodeSigner public key: {e}")
+                self.log.error(f"Failed to resolve NodeSigner public key: {e}")
                 return None
 
         try:
             return ed25519.Ed25519PublicKey.from_public_bytes(bytes.fromhex(pub_key_hex.strip()))
         except Exception as e:
-            self.log.error(f"⚠️ Invalid Ed25519 public key format: {e}")
+            self.log.error(f"Invalid Ed25519 public key format: {e}")
             return None
 
     async def _route_request_async(self, req: Dict[str, Any]):
-        # 1. Multiplex/Ephemeral Intent 제어 메시지 (RESUME) 언래핑 처리
         if req.get("action") == "RESUME":
             payload = req.get("payload", {})
             prompt_id = payload.get("id")
@@ -58,7 +50,6 @@ class ExecutionDeployer(AsyncWorkerProtocol):
                 self.log.warning(f"Unmatched RESUME prompt_id: {prompt_id}")
             return
 
-        # 2. 순수 JSON-RPC Response (RPC 대행 결과 및 Sentinel 강제 롤백 등의 에러 메시지) 처리
         if "method" not in req and ("result" in req or "error" in req):
             req_id = req.get("id")
             if req_id in self.pending_prompts:
@@ -66,7 +57,6 @@ class ExecutionDeployer(AsyncWorkerProtocol):
                 if not future.done():
                     future.set_result(req)
             else:
-                # 호환성 방어: 상위 래퍼 없이 직접 prompt_id로 들어온 응답인 경우 매칭 시도
                 alt_id = f"prompt_{req_id}"
                 if alt_id in self.pending_prompts:
                     future = self.pending_prompts.pop(alt_id)
@@ -76,7 +66,6 @@ class ExecutionDeployer(AsyncWorkerProtocol):
                     self.log.warning(f"Unmatched response received for unknown ID: {req_id}")
             return
 
-        # 3. 일반 Request는 부모 프로토콜 엔진에 위임
         await super()._route_request_async(req)
 
     async def handle_tools_call(self, req_id: Any, tool_name: str, arguments: Dict[str, Any], meta: Dict[str, Any]):
@@ -98,17 +87,13 @@ class ExecutionDeployer(AsyncWorkerProtocol):
             if not self.validator_pub_key:
                 return await self.send_error(req_id, -500, "Validator Public Key is not initialized.")
 
-            self.log.warning("⚠️ DESTRUCTIVE PAYLOAD. Halting execution and delegating validation.")
-
+            self.log.warning("DESTRUCTIVE PAYLOAD. Halting execution and delegating validation.")
             canonical_payload = json.dumps({"service": service, "env": env, "sql": sql}, sort_keys=True).encode()
             payload_hash = hashlib.sha256(canonical_payload).digest()
-
-            # 비동기 Await를 통해 트랜잭션을 안전하게 정지(Park)하고 OTP 요청
             otp_code = await self._request_user_otp_async(req_id, service)
             if not otp_code:
                 return await self.send_error(req_id, -32000, "OTP Input Cancelled or Timed Out.")
 
-            # Connector로 백엔드 Validator RPC 대행(Delegation) 요청
             delegate_req_id = f"delegate_{req_id}"
             loop = asyncio.get_running_loop()
             future = loop.create_future()
@@ -151,7 +136,6 @@ class ExecutionDeployer(AsyncWorkerProtocol):
                 signature_hex = rpc_response.get("signature") if isinstance(rpc_response, dict) else None
                 if not signature_hex:
                     return await self.send_error(req_id, -502, "Validator returned empty signature.")
-
             except asyncio.TimeoutError:
                 self.pending_prompts.pop(delegate_req_id, None)
                 return await self.send_error(req_id, -504, "Validator RPC delegation timed out.")
@@ -162,12 +146,12 @@ class ExecutionDeployer(AsyncWorkerProtocol):
             # 로컬에서 NodeSigner Public Key로 Ed25519 서명 검증 (무결성 보장)
             try:
                 self.validator_pub_key.verify(bytes.fromhex(signature_hex), payload_hash)
-                self.log.info("🛡️ Cryptographic Attestation Verified. Authorization Granted.")
+                self.log.info("Cryptographic Attestation Verified. Authorization Granted.")
             except InvalidSignature:
-                self.log.critical("🚨 SECURITY BREACH: Invalid Attestation Signature!")
+                self.log.critical("SECURITY BREACH: Invalid Attestation Signature!")
                 return await self.send_error(req_id, -32000, "Invalid Cryptographic Signature.")
 
-        self.log.info(f"✅ Executing migration for {service}")
+        self.log.info(f"Executing migration for {service}")
         await self.send_response(
             req_id,
             {"content": [{"type": "text", "text": "Migration executed successfully."}], "isError": False},
@@ -196,14 +180,12 @@ class ExecutionDeployer(AsyncWorkerProtocol):
             self.pending_prompts.pop(prompt_req_id, None)
             return ""
 
-
 def main():
     server = ExecutionDeployer()
     try:
         asyncio.run(server.serve_forever_async())
     except KeyboardInterrupt:
         log.info("Server shutting down.")
-
 
 if __name__ == "__main__":
     main()

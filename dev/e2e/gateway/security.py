@@ -67,9 +67,9 @@ class SecurityBoundWorkflow(Workflow):
         passed = expected_range[0] <= actual <= expected_range[1]
         self.reports.append(DefenseReport(vector, attack_type, expected_range, actual, passed, details))
         if passed:
-            self.log.info(f"  └─ 🛡 Defended [{vector}]: {details} (Status: {actual})")
+            self.log.info(f"  └─ Defended [{vector}]: {details} (Status: {actual})")
         else:
-            self.log.critical(f"  └─ 🚨 BREACH [{vector}]: Failed to defend! Got {actual}, Expected {expected_range}. {details}")
+            self.log.critical(f"  └─ BREACH [{vector}]: Failed to defend! Got {actual}, Expected {expected_range}. {details}")
         return passed
 
     @step
@@ -78,7 +78,7 @@ class SecurityBoundWorkflow(Workflow):
         try:
             res = await self.client.get("/openapi.json")
             if res.status_code == 200:
-                self.log.info("  └─ ✅ Perimeter Active. Target Locked.")
+                self.log.info("  └─ Perimeter Active. Target Locked.")
                 return VolumetricAttackMsg()
             return ErrorMessage(f"Target server unreachable at {self.base_url}")
         except Exception as e:
@@ -238,9 +238,8 @@ class SecuritySuiteRunner:
     def __init__(self):
         self.log = log
         
-        # 프로덕션 환경에서의 강제 실행 차단 장치
         if XPHI_ENV not in ("test", "e2e", "local"):
-            self.log.critical(f"⚠ SECURITY HALT: Cannot run E2E penetration tests in strict environment ({XPHI_ENV}).")
+            self.log.critical(f"SECURITY HALT: Cannot run E2E penetration tests in strict environment ({XPHI_ENV}).")
             exit(1)
             
         self.base_url = FIBER_GATEWAY_URL
@@ -248,14 +247,14 @@ class SecuritySuiteRunner:
 
     def _print_report(self):
         self.log.info("\n" + "="*90)
-        self.log.info("🛡️ [DPHI BOUND PENETRATION TEST REPORT]")
+        self.log.info("[Gateway BOUND PENETRATION TEST REPORT]")
         self.log.info("="*90)
         
         reports = self.workflow.reports
         failed = sum(1 for r in reports if not r.passed)
         
         for idx, r in enumerate(reports, 1):
-            status_icon = "✅" if r.passed else "❌"
+            status_icon = "[O]" if r.passed else "[X]"
             result_str = "PASSED" if r.passed else "FAILED"
             prefix = f"{status_icon} {idx:02d}. [{r.vector}]".ljust(26)
             scenario = f"{r.attack_type}".ljust(22)
@@ -264,15 +263,15 @@ class SecuritySuiteRunner:
             
         self.log.info("-" * 90)
         if failed == 0 and not self.workflow.halted_by_error:
-            self.log.info("🎉 ALL BOUND PENETRATION TESTS EXECUTED SUCCESSFULLY. (ZERO-TRUST BOUNDARY SECURE)")
+            self.log.info("ALL BOUND PENETRATION TESTS EXECUTED SUCCESSFULLY. (ZERO-TRUST BOUNDARY SECURE)")
         else:
-            self.log.critical(f"💥 BOUNDARY COMPROMISED! Failed: {failed} (Halted: {self.workflow.halted_by_error}). Immediate patching required.")
+            self.log.critical(f"BOUNDARY COMPROMISED! Failed: {failed} (Halted: {self.workflow.halted_by_error}). Immediate patching required.")
             exit(1)
         self.log.info("="*90 + "\n")
 
     async def execute_suite(self):
         self.log.info("\n" + "="*80)
-        self.log.info(f"🧪 [DPHI SECURITY BOUND] Executing Chaos & Security Tests against {self.base_url}")
+        self.log.info(f"[DPHI SECURITY BOUND] Executing Chaos & Security Tests against {self.base_url}")
         self.log.info("="*80)
         
         try:

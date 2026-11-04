@@ -512,17 +512,21 @@ fiber daemon
 
 ### 3.3. macOS Homebrew Tap *(For Local Daemon & MCP Gateway)*
 
-Best suited for running Fiber as a standalone background service (`fiber daemon`) to govern local AI agents via the **Local MCP & LLM Gateway** without managing Python virtual environments.
+Best suited for running Fiber as a persistent, OS-supervised background service (`fiber daemon`) to govern local AI agents via the **Local MCP & LLM Gateway** (`127.0.0.1:8356`) without manually managing Python virtual environments.
 
-> **Note (Experimental):** The Homebrew packaging pipeline is currently undergoing stabilization across macOS environments (e.g., Xcode Command Line Tools & build metadata bindings). If you encounter environment-specific build issues, please fall back to the `uv pip` installation above.
+> **Isolated Runtime & Service Supervision:** The Homebrew formula provisions a dedicated Python 3.12 runtime under `libexec`, links the `fiber` CLI into your system `PATH`, and registers a `launchd` service (`keep_alive`) with managed logs under `$(brew --prefix)/var/log/fiber/`.
 
 ```bash
-## Install Fiber and its isolated runtime in a single command
+## Install Fiber (auto-provisions isolated Python 3.12 runtime & Redis dependency)
 brew install wittgena/fiber/fiber
 
-## Initialize local node identity & start the background daemon service
+## Bootstrap local workspace (~/.anchor) & start background services
 fiber init
+brew services start redis
 brew services start wittgena/fiber/fiber
+
+## Verify install, bootstrap, and gateway(:8356)
+python -m fiber.dev.tester.brew.verify
 ```
 
 ## 4. Execution Planes & Pipeline Benchmarks
@@ -545,7 +549,7 @@ $ fiber e2e infra.plane.flare --mode dev     # or --mode deploy for *.workers.de
 | --- | --- | --- |
 | **Host / CI Plane** | `fiber daemon` (Native OS + Redis) | Runs the primary loopback control plane (`127.0.0.1:8356`) across local environments and GitHub Actions PR gates with automated process reaping. |
 | **Container Plane** | `infra.plane.compose` (Docker Compose) | Synthesizes a network-coupled (`service:redis`) container topology in `VCR_MODE=replay` to cross-validate gateway, FinOps, and WASM suites locally. |
-| **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a compiled WASM state engine (`fsm.wasm`) to a native Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and cryptographic state verification. |
+| **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a compiled WASM state engine (`fsm.wasm`) to a Pyodide/Wasm Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and cryptographic state verification. |
 
 ---
 
@@ -556,7 +560,7 @@ These metrics measure the **pure internal overhead** of the Fiber LLM Pipeline. 
 **Run the benchmark with VCR driving 200 concurrent streams locally:**
 
 ```bash
-fiber e2e gateway.inter.concurrency --vcr replay --concurrency 200
+fiber e2e inter.concurrency --vcr replay --concurrency 200
 ```
 
 | Performance Dimension | Metric (M2, 32GB) | Architectural Significance |
@@ -573,7 +577,8 @@ fiber e2e gateway.inter.concurrency --vcr replay --concurrency 200
 
 Fiber enforces execution determinism and runtime safety through automated CI gates (on every PR and release tag) alongside targeted end-to-end validation suites across each subsystem:
 
-* **[mcp.guard.log](./phase/abc/log/gateway/worker/guard.20261022.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
+* **[mcp.guard.log](./phase/abc/log/gateway/worker/guard.20261104.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
 * **[fsm.contract.log](./phase/abc/log/fsm/contract.20261102.log):** Validates the declarative agent state machine and polyglot execution bridge, confirming 10-scheme URI routing (`llm://`, `mcp://`, `fn://`, `py://`, `https://`, `exec://`), <=2KB content-addressed state projection slicing, asymmetric M:N PTA fuel conservation, and zero-spend 202 HITL parking with $O(1)$ mid-flow resumption across heterogeneous DAGs.
-* **[llm.compat.log](./phase/abc/log/gateway/llm/compat.20260918.log):** Validates the LLM governance pipeline, confirming sub-millisecond two-track DLP guardrails (`PRE_TRANSLATE` PII masking and `POST_TRANSLATE` credential blocking), strict Stream Breaker terminations on mid-flight policy revocation or quota exhaustion, dynamic tier-based fallback routing, deterministic recovery of heterogeneous tool calls via the Schema Traverser, and zero-overhead plug-and-play tracer injection for custom observability.
-- **[infra.plane.flare.log](./phase/abc/log/infra/plane/flare.20261031.log):** Validates remote sandbox execution on Cloudflare Edge V8 isolates, confirming zero-leakage host isolation, bit-exact compute determinism, and tamper-proof state verification via Merkle roots.
+- **[llm.guardrail.log](./phase/abc/log/gateway/llm/guardrail.20261104.log):** Validates the two-track DLP guardrail pipeline and dynamic secret registry, confirming zero-I/O edge cache short-circuiting, in-place `PRE_TRANSLATE` PII masking, strict `POST_TRANSLATE` credential blocking, fault-tolerant JSON rule injection (DIP), and chained `[Mask -> Block]` defense with fallback shielding.
+**[llm.vcr.log](./phase/abc/log/gateway/llm/vcr.20261104.log):** Validates deterministic VCR replay and tracer isolation across the LLM pipeline, confirming sub-millisecond synchronous fixture playback, zero-I/O asynchronous stream chunk tracking, strict exception boundary verification, and idempotent fallback routing with deepcopy payload shielding.
+- **[infra.plane.flare.log](./phase/abc/log/infra/plane/flare.20261104.log):** Validates remote sandbox execution on Cloudflare Edge V8 isolates, confirming zero-leakage host isolation, bit-exact compute determinism, and tamper-proof state verification via Merkle roots.

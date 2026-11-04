@@ -33,12 +33,12 @@ class WasmGatewayTestSuite:
         
     async def setup(self):
         self.log.info("\n" + "-"*80)
-        self.log.info("🔌 [GATEWAY SETUP] Initializing Zero-WASI WasmGateway (L0 Firewall)...")
+        self.log.info("[GATEWAY SETUP] Initializing Zero-WASI WasmGateway (L0 Firewall)...")
         try:
             self.gateway = await asyncio.to_thread(GatewayWasm, "gateway.wasm")
-            self.log.info("✅ Gateway Initialized (Pre-allocated Buffer: 1MB & Thread-Safe Locked)")
+            self.log.info("Gateway Initialized (Pre-allocated Buffer: 1MB & Thread-Safe Locked)")
         except Exception as e:
-            self.log.critical(f"❌ [FATAL] Gateway initialization failed: {e}")
+            self.log.critical(f"[FATAL] Gateway initialization failed: {e}")
             self.gateway = None
         self.log.info("-" * 80)
 
@@ -49,10 +49,9 @@ class WasmGatewayTestSuite:
         payload_kwargs: Dict[str, Any], 
         validator: Callable[[Dict[str, Any]], bool] = None
     ):
-        self.log.info(f"\n▶️ [FIREWALL DOMAIN] Scenario: {title}")
-        
+        self.log.info(f"\n[FIREWALL DOMAIN] Scenario: {title}")
         if not self.gateway:
-            self.log.error("💥 Gateway is offline. Auto-failing scenario.")
+            self.log.error("Gateway is offline. Auto-failing scenario.")
             self.results.append(TestResult("GATEWAY", title, False, expected_success))
             return
 
@@ -65,17 +64,17 @@ class WasmGatewayTestSuite:
             test_passed = (is_success == expected_success)
             
             if test_passed and validator and not validator(receipt):
-                self.log.error(f"❌ [VALIDATION FAILED] Revert reason mismatch. Receipt: {receipt}")
+                self.log.error(f"[VALIDATION FAILED] Revert reason mismatch. Receipt: {receipt}")
                 test_passed = False
                 
             if not is_success and not expected_success:
                 if test_passed:
-                    self.log.info(f"✅ Defense mechanism triggered (Revert: {revert_reason})")
+                    self.log.info(f"Defense mechanism triggered (Revert: {revert_reason})")
             elif is_success and expected_success:
                 intent_data = receipt.get("intent", {})
-                self.log.info(f"✅ Passed L0 Firewall! Extracted AST: {intent_data}")
+                self.log.info(f"Passed L0 Firewall! Extracted AST: {intent_data}")
             elif not test_passed:
-                self.log.error(f"💥 Scenario failed. Expected: {expected_success}, Got: {is_success} ({revert_reason})")
+                self.log.error(f"Scenario failed. Expected: {expected_success}, Got: {is_success} ({revert_reason})")
                 
             self.results.append(TestResult(
                 target="WASM_GATEWAY",
@@ -86,18 +85,18 @@ class WasmGatewayTestSuite:
             
         except ValueError as ve:
             if not expected_success:
-                self.log.info(f"✅ Python Adapter defense triggered (Revert: {ve})")
+                self.log.info(f"Python Adapter defense triggered (Revert: {ve})")
                 self.results.append(TestResult("WASM_GATEWAY", title, False, False))
             else:
-                self.log.error(f"💥 Unexpected Python error: {ve}")
+                self.log.error(f"Unexpected Python error: {ve}")
                 self.results.append(TestResult("WASM_GATEWAY", title, False, True))
         except Exception as e:
-            self.log.error(f"💥 [CRASH] Unexpected gateway exception: {e}")
+            self.log.error(f"[CRASH] Unexpected gateway exception: {e}")
             self.results.append(TestResult("WASM_GATEWAY", title, False, expected_success))
 
     async def execute(self) -> List[TestResult]:
         await self.setup()
-        self.log.info("\n[CLI] 🏃‍♂️ Initiating L0 Zero-Trust Isolation Tests...")
+        self.log.info("\n[CLI] Initiating L0 Zero-Trust Isolation Tests...")
         
         await self.run_scenario(
             title="OpCode, Budget, Target, Hex Payload",
@@ -173,7 +172,7 @@ class WasmFsmTestSuite:
         expected_next_state: str = None,
         expected_command_type: str = None
     ):
-        self.log.info(f"\n⚙ [FSM DOMAIN] Scenario: {title}")
+        self.log.info(f"\n[FSM DOMAIN] Scenario: {title}")
         
         try:
             receipt = await asyncio.to_thread(fsm_method, fsm_state=fsm_state, event=event)
@@ -188,20 +187,20 @@ class WasmFsmTestSuite:
             if is_success and expected_success:
                 actual_state = next_state_data.get("state") or next_state_data.get("edge")
                 if expected_next_state and actual_state != expected_next_state:
-                    self.log.error(f"❌ [STATE MISMATCH] Expected '{expected_next_state}', Got '{actual_state}'")
+                    self.log.error(f"[STATE MISMATCH] Expected '{expected_next_state}', Got '{actual_state}'")
                     test_passed = False
                 
                 actual_command = command_data.get("command_type") if command_data else None
                 if expected_command_type and actual_command != expected_command_type:
-                    self.log.error(f"❌ [COMMAND MISMATCH] Expected '{expected_command_type}', Got '{actual_command}'")
+                    self.log.error(f"[COMMAND MISMATCH] Expected '{expected_command_type}', Got '{actual_command}'")
                     test_passed = False
 
             if not is_success and not expected_success:
-                self.log.info(f"✅ FSM properly rejected transition (Revert: {revert_reason})")
+                self.log.info(f"[REJECT] FSM properly rejected transition (Revert: {revert_reason})")
             elif test_passed:
-                self.log.info(f"✅ FSM Transitioned successfully! Next State: {next_state_data}, Command: {command_data.get('command_type', 'None')}")
+                self.log.info(f"[PASS] FSM Transitioned successfully! Next State: {next_state_data}, Command: {command_data.get('command_type', 'None')}")
             else:
-                self.log.error(f"💥 Scenario failed. Receipt: {receipt}")
+                self.log.error(f"[FAIL] Scenario failed. Receipt: {receipt}")
 
             self.results.append(TestResult(
                 target="FSM",
@@ -209,13 +208,12 @@ class WasmFsmTestSuite:
                 success=test_passed,
                 expected_success=True
             ))
-
         except Exception as e:
-            self.log.error(f"💥 [CRASH] FSM exception: {e}")
+            self.log.error(f"[CRASH] FSM exception: {e}")
             self.results.append(TestResult("WASM_FSM", title, False, True))
 
     async def execute(self) -> List[TestResult]:
-        self.log.info("\n[Gateway] 🔄 Initiating FSM Determinism & State Transition Tests...")
+        self.log.info("\n[Gateway] Initiating FSM Determinism & State Transition Tests...")
         
         await self.run_fsm_scenario(
             title="Transaction FSM: Init -> ExecuteVmCmd",
@@ -290,12 +288,12 @@ class MasterGatewaySuite:
 
     def _print_report(self):
         self.log.info("\n" + "="*90)
-        self.log.info("📊 [WASM GATEWAY E2E REPORT: PEST ISOLATION & FSM DETERMINISM]")
+        self.log.info("[WASM GATEWAY E2E REPORT: PEST ISOLATION & FSM DETERMINISM]")
         self.log.info("="*90)
         
         all_passed = True
         for idx, res in enumerate(self.all_results, 1):
-            status_icon = "✅" if res.passed else "❌"
+            status_icon = "[O]" if res.passed else "[X]"
             status_text = "PASSED" if res.passed else "FAILED"
             if not res.passed: all_passed = False
             
@@ -304,15 +302,15 @@ class MasterGatewaySuite:
             
         self.log.info("-" * 90)
         if all_passed:
-            self.log.info("🎉 ALL L0 GATEWAY SCENARIOS EXECUTED SUCCESSFULLY.")
+            self.log.info("ALL L0 GATEWAY SCENARIOS EXECUTED SUCCESSFULLY.")
         else:
-            self.log.critical("💥 E2E GATEWAY FAILED. Inspect physical memory bounds, AST parsing rules, and FSM transition logic.")
+            self.log.critical("E2E GATEWAY FAILED. Inspect physical memory bounds, AST parsing rules, and FSM transition logic.")
         self.log.info("="*90 + "\n")
 
     async def execute(self):
         if self.force_build:
             self.log.info("\n" + "="*90)
-            self.log.info("🔨 [PRE-FLIGHT] Forcing Rebuild of 'gateway.wasm' Artifact...")
+            self.log.info("[PRE-FLIGHT] Forcing Rebuild of 'gateway.wasm' Artifact...")
             self.log.info("="*90)
             
             builder = WasmBuilder(target_projects=["gateway"])
@@ -322,15 +320,15 @@ class MasterGatewaySuite:
                 await builder.execute()
             
             if getattr(builder, 'rupture_confirmed', False):
-                self.log.critical("💥 [FATAL] Gateway WASM build failed. Aborting E2E Sequence.")
+                self.log.critical("[FATAL] Gateway WASM build failed. Aborting E2E Sequence.")
                 sys.exit(1)
                 
-            self.log.info("✅ [PRE-FLIGHT] Binary synced. Proceeding to Tests.")
+            self.log.info("[PRE-FLIGHT] Binary synced. Proceeding to Tests.")
         else:
-            self.log.info("⏩ [PRE-FLIGHT] Build skipped. Reusing existing 'gateway.wasm'. (Use --build to recompile)")
+            self.log.info("[PRE-FLIGHT] Build skipped. Reusing existing 'gateway.wasm'. (Use --build to recompile)")
 
         self.log.info("\n" + "="*90)
-        self.log.info("🧪 [MASTER SUITE] Commencing Decoupled WasmGateway Integration Tests")
+        self.log.info("[MASTER SUITE] Commencing Decoupled WasmGateway Integration Tests")
         self.log.info("="*90)
         
         gateway_suite = WasmGatewayTestSuite()

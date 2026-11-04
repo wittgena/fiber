@@ -125,11 +125,10 @@ class MCPRouterPipeline(MockPipeline):
         for tid in required_target_ids:
             if tid in active_daemon_ids:
                 log.info(
-                    f"[E2E Router] 🔗 Attached to live McpWorkerDaemon target: [{tid}] (Zero duplicate spawn)"
+                    f"[E2E Router] Attached to live McpWorkerDaemon target: [{tid}] (Zero duplicate spawn)"
                 )
                 continue
 
-            # 데몬이 떠 있지 않은 경우 ANCHOR_ROOT/mcp.json 스펙(또는 폴백)으로 로컬 커넥터 기동
             if tid in anchor_specs:
                 spec = anchor_specs[tid]
                 log.info(
@@ -455,12 +454,12 @@ class CoreSuiteRunner:
         all_passed = all(r.passed for r in self.results)
         report_buffer = [
             "\n" + "=" * 80,
-            "⚡ [CORE ROUTING BENCHMARK REPORT]",
+            "[CORE ROUTING BENCHMARK REPORT]",
             "=" * 80,
         ]
 
         for idx, res in enumerate(self.results, 1):
-            status_icon = "✅" if res.passed else "❌"
+            status_icon = "[O]" if res.passed else "[X]"
             line = (
                 f"{status_icon} {idx:02d}. [{res.target}]".ljust(28)
                 + f"{res.scenario.ljust(50)} | {'PASSED' if res.passed else 'FAILED'}"

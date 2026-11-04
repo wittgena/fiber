@@ -135,7 +135,7 @@ class SecurityState:
     )
     oob_inspector_json: str = (
         '{\n  "oob_bridge": "SlackHitlBridge Ready",\n'
-        '  "hint": "Click \'📤 Dispatch OOB\' or \'🚨 Simulate 202\' to inspect signed State Token & Slack Block Kit."\n}'
+        '  "hint": "Click \'Dispatch OOB\' or \'Simulate 202\' to inspect signed State Token & Slack Block Kit."\n}'
     )
 
     gateway_url: str = "http://127.0.0.1:8356"

@@ -1,5 +1,4 @@
 # fiber.dev.base.workflow.builder
-## @lineage: fiber.dev.base.llm.trace
 from __future__ import annotations
 
 import argparse
@@ -35,7 +34,7 @@ class TraceTestResult:
 
     @property
     def status_icon(self) -> str:
-        return "✅ PASS" if self.success else "❌ FAIL"
+        return "[O] PASS" if self.success else "[X] FAIL"
 
 class ReportMsg(WorkflowMessage): pass
 
@@ -58,15 +57,15 @@ class E2EBaseWorkflow(Workflow):
         self.all_results.append(res)
         
         if success:
-            self.log.info(f"[{self.name}] ✅ Passed: {scenario} (Total: {total_latency:.2f}ms | Tokens: {usage_tokens})")
+            self.log.info(f"[{self.name}] Passed: {scenario} (Total: {total_latency:.2f}ms | Tokens: {usage_tokens})")
         else:
-            self.log.error(f"[{self.name}] ❌ Failed: {scenario}")
+            self.log.error(f"[{self.name}] Failed: {scenario}")
 
     @step
     async def generate_report(self, msg: ReportMsg) -> WorkflowMessage:
         lines = []
         lines.append("\n" + "=" * 120)
-        lines.append(f"📊 [{self.name.upper()}] E2E LATENCY & USAGE BREAKDOWN REPORT")
+        lines.append(f"[{self.name.upper()}] E2E LATENCY & USAGE BREAKDOWN REPORT")
         lines.append("-" * 120)
         
         all_passed = True
@@ -74,7 +73,6 @@ class E2EBaseWorkflow(Workflow):
             if not res.success: all_passed = False
             target_label = f"[PHASE {res.phase_num}]".ljust(10)
             
-            # VCR 등에서 I/O 지연을 제공한 경우 오버헤드 분리 출력
             if res.llm_latency_ms > 0:
                 breakdown = f"(I/O: {res.llm_latency_ms:7.2f}ms | Overhead: {res.overhead_ms:7.2f}ms)"
             else:
@@ -87,9 +85,9 @@ class E2EBaseWorkflow(Workflow):
             
         lines.append("-" * 120)
         if all_passed:
-            lines.append(f"🎉 ALL {self.name.upper()} SCENARIOS EXECUTED SUCCESSFULLY.")
+            lines.append(f"ALL {self.name.upper()} SCENARIOS EXECUTED SUCCESSFULLY.")
         else:
-            lines.append(f"💥 {self.name.upper()} PIPELINE FAILED. Inspect structural logs for deviations.")
+            lines.append(f"{self.name.upper()} PIPELINE FAILED. Inspect structural logs for deviations.")
         lines.append("=" * 120 + "\n")
         
         full_report = "\n".join(lines)
@@ -102,7 +100,7 @@ class E2EBaseWorkflow(Workflow):
 
     @step
     async def handle_rupture(self, msg: ErrorMessage) -> None:
-        self.log.error(f"[{self.name}] 🚨 Fatal topological rupture: {msg.msg}")
+        self.log.error(f"[{self.name}] Fatal topological rupture: {msg.msg}")
         self.post_message(StopMessage(result=False))
 
 class E2EBaseApplication:
@@ -122,14 +120,14 @@ class E2EBaseApplication:
             await getattr(self.workflow, "execute")()
             await workflow_task
             if any(not res.success for res in self.workflow.all_results):
-                self.log.error(f"🚨 {self.workflow_name} finished with failures.")
+                self.log.error(f"{self.workflow_name} finished with failures.")
                 sys.exit(1)
 
     async def _teardown_hook(self):
-        self.log.info(f"🧹 Reclaiming {self.workflow_name} suite resources...")
+        self.log.info(f"Reclaiming {self.workflow_name} suite resources...")
 
     def execute(self):
-        self.log.info(f"🚀 Igniting {self.workflow_name} Workflow via Reactor...")
+        self.log.info(f"Igniting {self.workflow_name} Workflow via Reactor...")
         PhaseReactor.ignite(
             main_coro_func=self._startup_hook,
             teardown_hook=self._teardown_hook

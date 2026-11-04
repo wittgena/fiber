@@ -19,11 +19,10 @@ log = get_emitter("infra.wasm.fsm")
 
 MODULE_PATH = __name__
 
-# 1. [Test Fixtures & Topologies for FSM WASM Verification]
 class FsmTestTopologies:
     """fsm.wasm 커널의 정적 검증기(Linter), 2KB 분할기(Linker), 멀티버스 런타임 검증용 픽스처"""
 
-    # 1. 정상 다이아몬드 분기 그래프 (Catch 폴백 완비)
+    # 정상 분기 그래프
     VALID_DIAMOND_IR = {
         "_m": {"ep": "Triage_LLM", "tr": "turn_01", "v": "1.0"},
         "g": {
@@ -40,18 +39,18 @@ class FsmTestTopologies:
         },
     }
 
-    # 2. 병렬 브랜치에 Catch(`fb`)가 누락되어 배리어 데드락 위험이 있는 불량 그래프
+    # 병렬 브랜치에 Catch(`fb`)가 누락되어 배리어 데드락 위험이 있는 불량 그래프
     DEADLOCK_RISK_IR = {
         "_m": {"ep": "Triage_LLM", "v": "1.0"},
         "g": {
             "Triage_LLM": {"t": "projector", "nx": ["Safe_Branch", "Unsafe_Branch"]},
             "Safe_Branch": {"t": "opersig", "fb": "Join_Barrier", "nx": "Join_Barrier"},
-            "Unsafe_Branch": {"t": "opersig", "nx": "Join_Barrier"},  # 🚨 fb 누락!
+            "Unsafe_Branch": {"t": "opersig", "nx": "Join_Barrier"},
             "Join_Barrier": {"t": "router", "dn": "END"},
         },
     }
 
-    # 3. DB 진단 서브그래프 (`branch:db_diag#entry` 역할을 할 독립 모듈)
+    # DB 진단 서브그래프 (`branch:db_diag#entry` 역할을 할 독립 모듈)
     DB_DIAG_SUBGRAPH_IR = {
         "_m": {"ep": "Check_Pool_Metrics", "v": "1.0"},
         "g": {
@@ -74,23 +73,14 @@ class FsmTestTopologies:
             }
         return {"_m": {"ep": "Chain_Step_Node_Identifier_000", "v": "1.0"}, "g": g}
 
-
-# =========================================================================
-# 2. [Embedded FSM Test Scenes (Inheriting SandboxRunner)]
-# =========================================================================
 class FsmCompileScene(SandboxRunner):
-    """
-    @suite: compile
-    @desc : L1 정적 검증(Deadlock Linter), 2KB 초과 그래프 자동 분할(Auto-Linker),
-            FFI 경계 방어 및 JCS 해시(`branch:<hash>`) 결정론 검증
-    """
-
+    """@desc : L1 정적 검증(Deadlock Linter), 2KB 초과 그래프 자동 분할(Auto-Linker), FFI 경계 방어 및 JCS 해시(`branch:<hash>`) 결정론 검증"""
     def __init__(self, broker: Any):
         super().__init__(broker)
 
     async def run_all(self):
         log.info("\n=======================================================")
-        log.info("🛠️ [START] Suite 1: FSM Compiler, Auto-Linker & Static Sandbox")
+        log.info("[START] Suite: FSM Compiler, Auto-Linker & Static Sandbox")
         log.info("=======================================================\n")
 
         await self._set_worker_policy("SYSTEM")
@@ -170,20 +160,15 @@ class FsmCompileScene(SandboxRunner):
         else:
             self._record_fail(0, f"Expected E_MISSING_ENTRY, got: {parsed}", "FFI Entry Guard")
 
-
 class FsmMultiverseScene(SandboxRunner):
-    """
-    @suite: multiverse
-    @desc : L2 런타임 전이 원자성 검증 — 1:N 차등 연료 분할(_slice_fuel),
-            SYMLINK Call-Stack Push/Pop, HTTP 202 무비용 파킹, StreamBreaker 차단
-    """
+    """@desc: L2 런타임 전이 원자성 검증 — 1:N 차등 연료 분할(_slice_fuel), SYMLINK Call-Stack Push/Pop, HTTP 202 무비용 파킹, StreamBreaker 차단"""
 
     def __init__(self, broker: Any):
         super().__init__(broker)
 
     async def run_all(self):
         log.info("\n=======================================================")
-        log.info("[START] Suite 2: Multiverse Transitions & Fuel Conservation")
+        log.info("[START] Suite: Multiverse Transitions & Fuel Conservation")
         log.info("=======================================================\n")
 
         await self._set_worker_policy("SYSTEM")
@@ -317,18 +302,13 @@ class FsmMultiverseScene(SandboxRunner):
 
 
 class FsmKillerIncidentScene(SandboxRunner):
-    """
-    @suite: incident
-    @desc : L3 '새벽 3시 결제 장애' 엔드투엔드 멀티버스 라이프사이클 검증
-            (차등 Fork -> b0/b1 파킹 & b2 연료 소진 -> N:1 Arbiter 병합 & 연료 회수 -> Time-Travel 재분기)
-    """
-
+    """@desc: 엔드투엔드 라이프사이클(차등 Fork -> b0/b1 파킹 & b2 연료 소진 -> N:1 Arbiter 병합 & 연료 회수 -> Time-Travel 재분기)"""
     def __init__(self, broker: Any):
         super().__init__(broker)
 
     async def run_all(self):
         log.info("\n=======================================================")
-        log.info("🚨 [START] Suite 3: 03:00 AM Payment Outage")
+        log.info("[START] Suite: Life cycle Ex - 03:00 AM Payment Outage")
         log.info("=======================================================\n")
 
         await self._set_worker_policy("SYSTEM")
@@ -344,7 +324,7 @@ class FsmKillerIncidentScene(SandboxRunner):
         root_hash = comp_data.get("state_root", "branch:default")
         snapshot = FsmAdapter.build_runtime_snapshot(branches=comp_data.get("state_diff", {}))
 
-        # 2. 03:02 — Triage_LLM (-30 Fuel) & 1:3 확신도 비율 Fork ([0.4, 0.4, 0.2] -> [1188, 1188, 594])
+        # 03:02 — Triage_LLM (-30 Fuel) & 1:3 확신도 비율 Fork ([0.4, 0.4, 0.2] -> [1188, 1188, 594])
         fork_res = await self.broker.execute(
             code=FsmAdapter.build_fsm_payload(
                 target_address=root_hash,
@@ -360,8 +340,8 @@ class FsmKillerIncidentScene(SandboxRunner):
         children = FsmAdapter.parse_broker_output(fork_res.output).get("parsed_output", {}).get("children", [])
         b0_fuel, b1_fuel, b2_fuel = children[0]["fuel"], children[1]["fuel"], children[2]["fuel"]
 
-        # 3. 03:17 ~ 03:25 — b0(롤백 후 1098 잔여, _score=0.95), b1(DB 진단 후 1113 잔여, _score=0.70),
-        #    b2(연료 594 전액 소진 후 Catch 폴백으로 0 잔여, _score=0.0)가 Verify_And_Join 배리어에 도착해 N:1 MERGE
+        # b0(롤백 후 1098 잔여, _score=0.95), b1(DB 진단 후 1113 잔여, _score=0.70),
+        # b2(연료 594 전액 소진 후 Catch 폴백으로 0 잔여, _score=0.0)가 Verify_And_Join 배리어에 도착해 N:1 MERGE
         arriving_cursors = [
             {"branch_idx": 0, "fuel": b0_fuel - 90, "meta_ctx": {"_score": 0.95, "cause": "deploy_regression"}},
             {"branch_idx": 1, "fuel": b1_fuel - 75, "meta_ctx": {"_score": 0.70, "cause": "db_pool"}},
@@ -388,7 +368,7 @@ class FsmKillerIncidentScene(SandboxRunner):
             return
         self._record_success(0, f"Barrier Collapsed: Winner='deploy_regression' (_score=0.95), Reclaimed Fuel={reclaimed_fuel}")
 
-        # 4. Verify_And_Join (Router: $._score >= 0.9 -> Postmortem_Act) 전이 확인
+        # Verify_And_Join (Router: $._score >= 0.9 -> Postmortem_Act) 전이 확인
         router_res = await self.broker.execute(
             code=FsmAdapter.build_fsm_payload(
                 target_address=root_hash,
@@ -408,10 +388,6 @@ class FsmKillerIncidentScene(SandboxRunner):
         else:
             self._record_fail(0, f"Router condition evaluation failed: {router_out}", "Incident Router")
 
-
-# =========================================================================
-# 3. [Pipeline Configuration & Orchestrator (FsmWasmFlow)]
-# =========================================================================
 @dataclass
 class FsmPipelineConfig:
     suites_registry: Dict[str, str] = field(default_factory=lambda: {
@@ -421,16 +397,13 @@ class FsmPipelineConfig:
     })
 
     default_suites: List[str] = field(default_factory=lambda: [
-        "compile",     # 1. L1: 정적 데드락 Linter, 2KB Auto-Linker, 해시 결정론 검증
-        "multiverse",  # 2. L2: 1:N 연료 분할, SYMLINK 콜스택, HTTP 202 무비용 파킹, StreamBreaker
-        "incident",    # 3. L3: 새벽 3시 결제 장애 E2E 멀티버스 합류 및 라우팅 검증
+        "compile",     # L1: 정적 데드락 Linter, 2KB Auto-Linker, 해시 결정론 검증
+        "multiverse",  # L2: 1:N 연료 분할, SYMLINK 콜스택, HTTP 202 무비용 파킹, StreamBreaker
+        "incident",    # L3: 새벽 3시 결제 장애 E2E 멀티버스 합류 및 라우팅 검증
     ])
     wasm_filename: str = "fsm.wasm"
 
-
 class FsmWasmFlow:
-    """@role: FSM WASM Pipeline Orchestrator (Build & Isolated E2E Test)"""
-
     def __init__(self, should_build: bool = False, suites: List[str] = None, config: FsmPipelineConfig = None):
         self.config = config or FsmPipelineConfig()
         self.should_build = should_build
@@ -466,10 +439,10 @@ class FsmWasmFlow:
         await builder.trace()
 
         if builder.rupture_confirmed:
-            self.log.error("❌ [CLI] Builder encountered a fatal rupture.")
+            self.log.error("[CLI] Builder encountered a fatal rupture.")
             return False
 
-        self.log.info("✅ [CLI] Builder completed successfully.")
+        self.log.info("[CLI] Builder completed successfully.")
         return True
 
     async def test(self) -> bool:
@@ -477,7 +450,7 @@ class FsmWasmFlow:
 
         if not self.dest_wasm_file.exists():
             self.log.error(
-                f"❌ [CLI] Missing WASM binary at {self.dest_wasm_file}. Please run with '--build' or compile fsm.wasm."
+                f"[CLI] Missing WASM binary at {self.dest_wasm_file}. Please run with '--build' or compile fsm.wasm."
             )
             return False
 
@@ -493,7 +466,7 @@ class FsmWasmFlow:
             suite_map[suite_name] = resolved_class
 
         if not suite_map:
-            self.log.error("❌ [CLI] No valid FSM test suites found to execute.")
+            self.log.error("[CLI] No valid FSM test suites found to execute.")
             return False
 
         tester = WasmTester(
@@ -505,30 +478,30 @@ class FsmWasmFlow:
         success, err_msg = await tester.execute()
 
         log.info("\n" + "=" * 75)
-        log.info("🚀 FSM WASM PIPELINE EXECUTION REPORT".center(75))
+        log.info("FSM WASM PIPELINE EXECUTION REPORT".center(75))
         log.info("=" * 75)
 
         if success:
-            self.log.info(f"🟢 [SUCCESS] All FSM Test Suites ({', '.join(suite_map.keys())}) PASSED.")
+            self.log.info(f"[SUCCESS] All FSM Test Suites ({', '.join(suite_map.keys())}) PASSED.")
             if getattr(tester, "test_execution_hash", None):
-                self.log.info(f"🔗 Execution Canonical Hash: {tester.test_execution_hash}")
+                self.log.info(f"Execution Canonical Hash: {tester.test_execution_hash}")
             log.info("=" * 75 + "\n")
             return True
         else:
-            self.log.critical("🔴 [FAILED] FSM Test execution terminated with errors.")
-            self.log.critical(f"📝 [SUMMARY] {err_msg}")
+            self.log.critical("[FAILED] FSM Test execution terminated with errors.")
+            self.log.critical(f"[SUMMARY] {err_msg}")
 
             if hasattr(tester, "suite_runners") and tester.suite_runners:
-                log.info("\n" + "🔥" * 37)
-                log.info("🚨 DETAILED FAILURE TRACES 🚨".center(75))
-                log.info("🔥" * 37)
+                log.info("\n" + "=" * 37)
+                log.info("DETAILED FAILURE TRACES".center(75))
+                log.info("=" * 37)
 
                 for s_name, runner in tester.suite_runners.items():
                     fail_cnt = getattr(runner, "fail_count", 0)
                     failed_cases = getattr(runner, "failed_cases", [])
 
                     if fail_cnt > 0 or failed_cases:
-                        log.info(f"\n❌ [SUITE: {s_name.upper()}] ➔ {fail_cnt} Test(s) Failed")
+                        log.info(f"\n[SUITE: {s_name.upper()}] -> {fail_cnt} Test(s) Failed")
                         for idx, fc in enumerate(failed_cases, 1):
                             title = fc.get("title", "Unknown Test Case")
                             err = fc.get("error", "No error details provided")
@@ -550,7 +523,7 @@ class FsmWasmFlow:
         except SystemExit:
             raise
         except Exception as e:
-            self.log.error(f"💥 [FATAL] Unhandled exception in FSM E2E runner: {e}", exc_info=True)
+            self.log.error(f"[FATAL] Unhandled exception in FSM E2E runner: {e}", exc_info=True)
             sys.exit(1)
 
 
@@ -576,9 +549,8 @@ def main(args_list: list[str] = None):
     except SystemExit as e:
         sys.exit(e.code)
     except Exception as e:
-        log.error(f"💥 [FATAL] PhaseReactor crashed: {e}")
+        log.error(f"[FATAL] PhaseReactor crashed: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

@@ -56,7 +56,7 @@ class KubeWorkflowScene:
             if not success:
                 raise RuntimeError("System E2E job fractured via kubectl exec. Check pod logs.")
                 
-            self.log.info("  └─ System E2E Test Passed ✅")
+            self.log.info("  └─ System E2E Test Passed")
         except Exception as e:
             self.fail_count += 1
             self.failed_cases.append({"title": "System E2E Test Job", "error": str(e)})
@@ -82,7 +82,7 @@ class KubeWorkflowScene:
                     self.log.error(f"  [FATAL_RUPTURE] {msg}")
                     raise RuntimeError(msg)
                 else:
-                    self.log.info("  └─ Artifact Boundary Intact: Wheel determinism verified ✅")
+                    self.log.info("  └─ Artifact Boundary Intact: Wheel determinism verified")
                     
         except Exception as e:
             self.fail_count += 1
@@ -128,7 +128,7 @@ class KubeWorkflowScene:
                         raise RuntimeError(f"Compliance WAF Breach! '{vector_name}' bypassed defenses.")
             self.log.info("  │  └─ WAF Defense fully operational against raw payloads.")
             
-            self.log.info("  └─ Compliance SDK Tests Passed ✅")
+            self.log.info("  └─ Compliance SDK Tests Passed")
 
         except Exception as e:
             self.fail_count += 1
@@ -141,11 +141,11 @@ class KubeWorkflowScene:
     async def run_all(self):
         self.log.info("\n=== [START] Executing KUBERNETES CI/CD Workflow Scenes ===")
         if not self.adapter:
-            self.log.error("  └─ Kubernetes Runtime Availability: Failed 🔴")
+            self.log.error("  └─ Kubernetes Runtime Availability: Failed")
             self.fail_count += 1
             return
 
-        self.log.info("  └─ Kubernetes Runtime Availability: Confirmed 🟢")
+        self.log.info("  └─ Kubernetes Runtime Availability: Confirmed")
 
         await self.phase_system_e2e_test()
         await self.phase_build_release_audit()
@@ -181,15 +181,15 @@ class KubeFlow:
             
             success, err_msg = await controller.execute(broker=None)
             
-            log.info("\n" + "="*75)
-            log.info(f"🚀 KUBERNETES CI/CD PIPELINE EXECUTION REPORT 🚀".center(75))
-            log.info("="*75)
+            log.info("\n" + "="*70)
+            log.info(f"KUBERNETES CI/CD PIPELINE EXECUTION REPORT".center(70))
+            log.info("="*70)
             
             if success:
-                log.info(f"🟢 [SUCCESS] All Workflow Declarative Tests PASSED.")
-                log.info("="*75 + "\n")
+                log.info(f"[SUCCESS] All Workflow Declarative Tests PASSED.")
+                log.info("="*70 + "\n")
             else:
-                log.critical(f"🔴 [FAILED] KUBERNETES CI Test execution terminated with errors.")
+                log.critical(f"[FAILED] KUBERNETES CI Test execution terminated with errors.")
                 if err_msg:
                      log.error(f"Reason: {err_msg}")
                 sys.exit(1)
@@ -211,7 +211,7 @@ def main(args_list: list[str] = None):
     args, _ = parser.parse_known_args(args_list)
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-        log.info("🐛 [DEBUG MODE] Internal execution logging is ENABLED.")
+        log.info("[DEBUG MODE] Internal execution logging is ENABLED.")
 
     app = KubeFlow(mode=args.mode, keep_workspace=args.keep_workspace, rebuild=args.rebuild)
     PhaseReactor.ignite(main_coro_func=app.run)

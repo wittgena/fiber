@@ -1,5 +1,4 @@
 # fiber.dev.tester.entry
-# fiber/dev/tester/entry.py
 from __future__ import annotations
 
 import argparse
@@ -36,7 +35,7 @@ async def run_step(
     timeout: float = 30.0,
 ) -> Dict[str, Any]:
     print(f"\n================================================================================")
-    print(f"▶ [{step_name}] model={model} | stream={stream}")
+    print(f"> [{step_name}] model={model} | stream={stream}")
     print(f"  └─ Prompt: \"{prompt}\"")
     print(f"--------------------------------------------------------------------------------")
 
@@ -91,7 +90,7 @@ async def run_step(
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
     print(f"--------------------------------------------------------------------------------")
-    print(f"✔ Status: {status} | Elapsed: {elapsed_ms:.1f}ms | Length: {len(full_text)} chars")
+    print(f" Status: {status} | Elapsed: {elapsed_ms:.1f}ms | Length: {len(full_text)} chars")
 
     return {
         "step": step_name,
@@ -144,7 +143,6 @@ async def main() -> None:
             )
         )
     else:
-        # 1. 기본 단발 호출 (Unary)
         results.append(
             await run_step(
                 step_name="1. Unary Completion",
@@ -154,8 +152,6 @@ async def main() -> None:
                 timeout=args.timeout,
             )
         )
-
-        # 2. 스트리밍 호출 (Stream)
         results.append(
             await run_step(
                 step_name="2. Stream Completion",
@@ -165,8 +161,6 @@ async def main() -> None:
                 timeout=args.timeout,
             )
         )
-
-        # 3. 가드레일 마스킹 통과 (PRE_TRANSLATE PII Masking)
         results.append(
             await run_step(
                 step_name="3. Guardrail (PII Masking)",
@@ -177,8 +171,6 @@ async def main() -> None:
                 timeout=args.timeout,
             )
         )
-
-        # 4. 가드레일 시크릿 차단 (POST_TRANSLATE Secret Block)
         results.append(
             await run_step(
                 step_name="4. Guardrail (Secret Block)",

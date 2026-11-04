@@ -53,9 +53,9 @@ class ComplianceSuiteWorkflow(Workflow):
     def _record(self, phase: str, passed: bool, details: str) -> bool:
         self.reports.append(ComplianceReport(phase, "PASSED" if passed else "FAILED", passed, details))
         if passed:
-            self.log.info(f"  └─ ✅ [{phase}]: {details}")
+            self.log.info(f"  └─ [{phase}]: {details}")
         else:
-            self.log.critical(f"  └─ 🚨 BREACH [{phase}]: {details}")
+            self.log.critical(f"  └─ BREACH [{phase}]: {details}")
         return passed
 
     @step
@@ -118,7 +118,6 @@ class ComplianceSuiteWorkflow(Workflow):
                 fuel_receipt="mock_receipt_trade"
             )
             
-            # ✅ [FIX APPLIED] : API 응답의 중첩된 'result' 객체 내부의 증명(Proof) 데이터를 참조
             audit_result = res.get("result", {})
             if "membership_proof" not in audit_result or not audit_result.get("membership_proof"):
                 raise RuntimeError("CRITICAL: SDK did not return Cryptographic Proof (Merkle).")
@@ -162,28 +161,28 @@ class ComplianceSuiteRunner:
 
     def _print_report(self):
         self.log.info("\n" + "=" * 80)
-        self.log.info("📜 [EDGE COMPLIANCE TEST SUITE REPORT]")
+        self.log.info("[EDGE COMPLIANCE TEST SUITE REPORT]")
         self.log.info("=" * 80)
         
         reports = self.workflow.reports
         failed = sum(1 for r in reports if not r.passed)
         
         for idx, r in enumerate(reports, 1):
-            status_icon = "✅" if r.passed else "❌"
+            status_icon = "[O]" if r.passed else "[X]"
             prefix = f"{status_icon} {idx:02d}. [{r.phase}]".ljust(26)
             self.log.info(f"{prefix} | Result: {r.status.ljust(6)} | {r.details}")
             
         self.log.info("-" * 80)
         if failed == 0 and not self.workflow.halted_by_error:
-            self.log.info("🎉 ALL COMPLIANCE NOTARIZATION & SECURITY TESTS PASSED.")
+            self.log.info("ALL COMPLIANCE NOTARIZATION & SECURITY TESTS PASSED.")
         else:
-            self.log.critical(f"💥 COMPLIANCE BOUNDARY COMPROMISED! Failed: {failed}. Check logs for details.")
+            self.log.critical(f"COMPLIANCE BOUNDARY COMPROMISED! Failed: {failed}. Check logs for details.")
             exit(1)
         self.log.info("=" * 80 + "\n")
 
     async def execute_suite(self):
         self.log.info("\n" + "=" * 80)
-        self.log.info(f"🧪 [DPHI COMPLIANCE SUITE] Commencing Cryptographic Tests against {self.base_url}")
+        self.log.info(f"[Gateway COMPLIANCE SUITE] Commencing Cryptographic Tests against {self.base_url}")
         self.log.info("=" * 80)
         
         try:

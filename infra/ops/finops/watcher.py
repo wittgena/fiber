@@ -289,7 +289,7 @@ class FinOpsWatcher:
         if op_upper == "REVOKE":
             self.local_budget_cache[tenant_id] = 0.0
             finops_emitter.signal(
-                f"[FinOpsWatcher] 🚨 REVOKE executed: Tenant '{tenant_id}' budget frozen to 0.0 Fuel (v{effective_ver}).",
+                f"[FinOpsWatcher] REVOKE executed: Tenant '{tenant_id}' budget frozen to 0.0 Fuel (v{effective_ver}).",
                 **{
                     UIKey.METRIC.value: UIMetric.KILL_SWITCH.value,
                     UIKey.SLOT.value: UISlot.FUEL.value,

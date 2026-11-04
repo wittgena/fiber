@@ -94,7 +94,7 @@ class FlareScene(SandboxRunner):
 
     async def run_all(self):
         log.info("\n" + "="*70)
-        log.info("🚀 [START] CLOUDFLARE NATIVE UNIFIED VALIDATION PIPELINE")
+        log.info("[START] CLOUDFLARE EDGE ISOLATE & WASM VALIDATION SUITE")
         log.info("="*70)
 
         # 1. Native Isolation & Jailbreak Defense
@@ -120,22 +120,24 @@ class FlareScene(SandboxRunner):
             "message": "All Cloudflare Edge validations completed successfully."
         }
 
-    """[Domain 1] Native Isolation & Jailbreak Defense (8 Tests)"""
+    """[Domain 1] V8 Isolate & Wasm Runtime Boundary Isolation (8 Tests)"""
     async def _test_native_isolation_defense(self):
-        log.info("\n--- [Domain 1] Native OS-Level Isolation & Security ---")
+        log.info("\n--- [Domain 1] V8 Isolate & Wasm Runtime Boundary Isolation ---")
         
-        # 1. WasmCG: Block unregistered API calls
+        # WasmCG: Block unregistered API calls
+        t0 = time.perf_counter()
         res = await self.broker.invoke(
             target_func="hack_system_memory", 
             payload={}, 
             wasm_path="phase.wasm"
         )
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
         if not res.success:
-            self._record_success(0, f"WasmCG successfully blocked unregistered API: {getattr(res, 'error', 'Unknown Error')}")
+            self._record_success(elapsed_ms, f"WasmCG successfully blocked unregistered API: {getattr(res, 'error', 'Unknown Error')}")
         else:
-            self._record_fail(0, "WasmCG failed to block unregistered API.", "WasmCG")
+            self._record_fail(elapsed_ms, "WasmCG failed to block unregistered API.", "WasmCG")
 
-        # 2. Block file system access (Detect Native Errno 44)
+        # Block file system access (Detect Wasm VFS Errno 44)
         await self._run_case(
             title="Isolation: Prevent Host Filesystem Scan",
             target_func=WasmMethod.EXECUTE_CODE.value,
@@ -144,7 +146,7 @@ class FlareScene(SandboxRunner):
             expected_match="[Errno 44]" 
         )
 
-        # 3. Block network binding (Detect Native Errno 26)
+        # Block network binding (Detect Wasm Socket Errno 26)
         await self._run_case(
             title="Isolation: Prevent Low-level Socket Binding",
             target_func=WasmMethod.EXECUTE_CODE.value,
@@ -153,7 +155,7 @@ class FlareScene(SandboxRunner):
             expected_match="[Errno 26]"
         )
 
-        # 4. Prevent environment variable leaks
+        # Prevent environment variable leaks
         await self._run_case(
             title="Isolation: Prevent Host Environment Variable Leakage",
             target_func=WasmMethod.EXECUTE_CODE.value,
@@ -162,25 +164,25 @@ class FlareScene(SandboxRunner):
             expected_match="Isolated"
         )
 
-        # 5. Block subprocess creation (Emscripten limitation)
+        # Block subprocess creation (Wasm/Emscripten boundary)
         await self._run_case(
-            title="Isolation: Emscripten Process Restriction",
+            title="Isolation: Wasm/Emscripten Subprocess Restriction",
             target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.SUBPROCESS_ATTACK.code, "variables": {}},
             expected_success=False,
             expected_match="emscripten does not support processes"
         )
         
-        # 6. Block thread creation (Native Python limitation)
+        # Block thread creation (Single-threaded Isolate boundary)
         await self._run_case(
-            title="Isolation: Prevent Thread Creation",
+            title="Isolation: Wasm Single-Thread Enforcement",
             target_func=WasmMethod.EXECUTE_CODE.value,
             payload={"code": TestScripts.THREAD_ATTACK.code, "variables": {}},
             expected_success=False,
             expected_match="can't start new thread"
         )
 
-        # 7. Defend against Sys Exit attacks
+        # Defend against Sys Exit attacks
         await self._run_case(
             title="Isolation: Prevent sys.exit() Engine Shutdown",
             target_func=WasmMethod.EXECUTE_CODE.value,
@@ -189,14 +191,16 @@ class FlareScene(SandboxRunner):
             expected_match="SystemExit"
         )
         
-        # 8. SSRF (Block Metadata IP access)
+        # SSRF (Block Metadata IP access)
+        t0 = time.perf_counter()
         res = await self.broker.execute(code=FlareTestScripts.SSRF_ATTACK)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
         if getattr(res, 'success', True) and "BLOCKED" in res.output:
-            self._record_success(0, "SSRF attempt successfully intercepted.")
+            self._record_success(elapsed_ms, "Metadata SSRF attempt intercepted by Isolate network boundary.")
         elif getattr(res, 'success', True) and "LEAKED" in res.output:
-            self._record_fail(0, "CRITICAL: Metadata endpoint accessed!", "SSRF Defense")
+            self._record_fail(elapsed_ms, "CRITICAL: Metadata endpoint accessed!", "SSRF Defense")
         else:
-            self._record_success(0, f"Network access gracefully denied (Error: {getattr(res, 'error', 'Unknown')})")
+            self._record_success(elapsed_ms, f"Network access denied by Isolate policy (Error: {getattr(res, 'error', 'Unknown')})")
 
     """[Domain 2] Causality & Parity (3 Tests)"""
     async def _test_causality_and_parity(self):
@@ -222,15 +226,18 @@ class FlareScene(SandboxRunner):
         log.info("\n--- [Domain 3] Computation Determinism & Byzantine Faults ---")
 
         # Validate PRNG idempotency
+        t0 = time.perf_counter()
         r1 = await self.broker.execute(code=FlareTestScripts.PRNG_IDEMPOTENCY)
         r2 = await self.broker.execute(code=FlareTestScripts.PRNG_IDEMPOTENCY)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
         
         if r1.success and r2.success and (r1.output == r2.output):
-            self._record_success(0, f"PRNG sequences are perfectly identical ({r1.output.strip()})")
+            self._record_success(elapsed_ms, f"PRNG sequences are deterministic across runs ({r1.output.strip()})")
         else:
-            self._record_fail(0, "PRNG outputs diverge (Seed mechanism failed)", "PRNG Idempotency")
+            self._record_fail(elapsed_ms, "PRNG outputs diverge (Seed mechanism failed)", "PRNG Idempotency")
 
         # Validate Floating Point (FP) determinism
+        t0 = time.perf_counter()
         results = []
         for _ in range(3):
             res = await self.broker.execute(code=FlareTestScripts.FP_DETERMINISM)
@@ -238,11 +245,12 @@ class FlareScene(SandboxRunner):
                 results.append(res.output.strip())
             else:
                 log.error(f"  [FP Error] {getattr(res, 'error', 'Unknown Error')}")
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
         if len(results) == 3 and len(set(results)) == 1:
-            self._record_success(0, f"Perfect FP Determinism achieved: {results[0]}")
+            self._record_success(elapsed_ms, f"IEEE-754 FP Determinism verified across 3 runs: {results[0]}")
         else:
-            self._record_fail(0, f"Divergence detected in floating-point: {results}", "Determinism")
+            self._record_fail(elapsed_ms, f"Divergence detected in floating-point: {results}", "Determinism")
 
         # Byzantine Fault Tolerance (Quarantine rogue signature)
         parity = StateAdapter.build_parity_triplet("topos_cert", 111, 222)
@@ -270,77 +278,89 @@ class FlareScene(SandboxRunner):
             expected_success=True 
         )
 
-    """[Domain 4] Edge Physical Limits (3 Tests)"""
+    """[Domain 4] Edge Isolate Execution Limits & Side-Channel Guards (3 Tests)"""
     async def _test_edge_physical_boundaries(self):
-        log.info("\n--- [Domain 4] Cloudflare Edge Physical Boundaries ---")
+        log.info("\n--- [Domain 4] Cloudflare Worker Execution Limits & Side-Channel Guards ---")
         
-        # 15. Validate defense against Warm-Start State Bleeding
+        # Validate defense against Warm-Start State Bleeding
+        t0 = time.perf_counter()
         res_inject = await self.broker.execute(code=FlareTestScripts.INJECT_STATE)
         if getattr(res_inject, 'success', False) and "INJECTED" in res_inject.output:
             log.debug("  └─ Payload injected into V8 global state.")
         else:
-            self._record_fail(0, "Failed to inject state.", "State Bleeding")
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            self._record_fail(elapsed_ms, "Failed to inject state.", "State Bleeding")
 
         res_read = await self.broker.execute(code=FlareTestScripts.READ_STATE)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
         if getattr(res_read, 'success', False):
             output = res_read.output.strip()
             if output == "CLEAN":
-                self._record_success(0, "Edge context perfectly isolated. Warm-start bleeding neutralized.")
+                self._record_success(elapsed_ms, "Isolate context verified clean (Zero warm-start state leakage).")
             else:
-                self._record_fail(0, f"Critical Memory Bleeding Detected: {output}", "State Bleeding")
+                self._record_fail(elapsed_ms, f"Critical Memory Bleeding Detected: {output}", "State Bleeding")
         else:
-            self._record_fail(0, "Failed to read state.", "State Bleeding")
+            self._record_fail(elapsed_ms, "Failed to read state.", "State Bleeding")
 
-        # 16. Spectre defense mechanism (Time Freezing)
+        # Spectre defense mechanism (Time Freezing)
+        t0 = time.perf_counter()
         res = await self.broker.execute(code=FlareTestScripts.TIME_FREEZE)
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
         if getattr(res, 'success', False):
             try:
                 start_str, end_str, _ = res.output.strip().split('|')
                 if float(start_str) == float(end_str):
-                    self._record_success(0, f"Time Freezing active. Spectre attack neutralized.")
+                    self._record_success(elapsed_ms, "Deterministic clock freezing verified (Timer side-channel mitigated).")
                 else:
-                    self._record_fail(0, f"Clock advanced during sync block.", "Time Freezing")
-            except Exception as e:
-                self._record_fail(0, f"Unexpected output: {res.output}", "Time Freezing")
+                    self._record_fail(elapsed_ms, "Clock advanced during synchronous CPU block.", "Time Freezing")
+            except Exception:
+                self._record_fail(elapsed_ms, f"Unexpected output: {res.output}", "Time Freezing")
 
-        # Defense against Async Bottlenecks/Thread Locking)
-        log.warning("⚠️ Simulating a Kinetic Trap (Timeout 5.0s). Expecting client cutoff.")
+        # Defense against Runaway Execution (Wall-Time Limit Cutoff)
+        log.warning("[TEST] Enforcing Wall-Time Execution Cutoff (Timeout: 5.0s). Expecting client cutoff.")
+        t0 = time.perf_counter()
         try:
             # Wait for 5 seconds to force a timeout
             await asyncio.wait_for(
                 self.broker.execute(code=FlareTestScripts.KINETIC_TRAP), 
                 timeout=5.0
             )
-            self._record_fail(0, "Kinetic Trap failed! Blocking payload bypassed without intervention.", "Kinetic Trap")
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            self._record_fail(elapsed_ms, "Wall-Time cutoff failed! Blocking payload bypassed timeout.", "Wall-Time Cutoff")
         except asyncio.TimeoutError:
-            self._record_success(0, "Broker timed out. Kinetic Trap neutralized via Timeout cutoff.")
-            log.info("⏳ Allowing Edge Thread to breathe and recover AnchorStore (2.5s)...")
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            self._record_success(elapsed_ms, "Broker timed out. Runaway execution neutralized via Wall-Time cutoff.")
+            log.info("[WAIT] Awaiting Isolate drain and AnchorStore lock recovery (2.5s)...")
             await asyncio.sleep(2.5)
         except Exception as e:
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
             err_msg = str(e).lower()
             if "502" in err_msg or "1102" in err_msg or "disconnect" in err_msg or "eof" in err_msg:
-                self._record_success(0, f"Kinetic Trap triggered successfully! Edge terminated process.")
+                self._record_success(elapsed_ms, "Wall-Time cutoff triggered! Edge isolate terminated runaway process.")
             else:
-                self._record_fail(0, f"Kinetic Trap resulted in unknown anomaly: {e}", "Kinetic Trap")
+                self._record_fail(elapsed_ms, f"Wall-Time cutoff resulted in unknown anomaly: {e}", "Wall-Time Cutoff")
 
     """[Domain 5] PTA Merkle Rollup & State Sealing"""
     async def _test_pta_merkle_rollup(self):
-        log.info("\n--- [Domain 5] PTA & Epoch Merkle Sealing ---")
+        log.info("\n--- [Domain 5] PTA Ledger & Epoch Merkle Sealing ---")
         if not self.collected_edge_hashes:
-            log.warning("⚠️ WASM Hash Generation Failed during tests. Using mock tx hashes for PTA Merkle verification.")
+            log.warning("[WARN] Wasm Hash Generation missing during tests. Using fallback tx hashes for PTA Merkle verification.")
             self.collected_edge_hashes = [hashlib.sha256(f"mock_tx_{i}".encode()).hexdigest() for i in range(5)]
 
         total_txs = len(self.collected_edge_hashes)
-        log.info(f"📦 Assembling {total_txs} Edge-Sealed Transactions (pta) into Merkle Tree...")
+        log.info(f"[SEAL] Aggregating {total_txs} Edge-verified transactions (PTA) into Epoch Merkle Root...")
 
+        t0 = time.perf_counter()
         try:
             # Combine individual PTAs into a single Root (Rollup) via PTA's compute_merkle_root
             epoch_root_hash = compute_merkle_root(self.collected_edge_hashes)
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
             if epoch_root_hash:
-                self._record_success(0, f"PTA Rollup Complete. Epoch Merkle Root: {epoch_root_hash[:16]}...")
+                self._record_success(elapsed_ms, f"PTA Rollup Complete. Epoch Merkle Root: {epoch_root_hash[:16]}...")
                 self.broker.collected_edge_hashes = self.collected_edge_hashes
                 self.broker.epoch_root_hash = epoch_root_hash
             else:
-                self._record_fail(0, "Failed to compute PTA Merkle Root. Result was empty.", "PTA Merkle Rollup")
+                self._record_fail(elapsed_ms, "Failed to compute PTA Merkle Root. Result was empty.", "PTA Merkle Rollup")
         except Exception as e:
-            self._record_fail(0, f"Exception during PTA Merkle Root generation: {e}", "PTA Merkle Rollup")
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            self._record_fail(elapsed_ms, f"Exception during PTA Merkle Root generation: {e}", "PTA Merkle Rollup")

@@ -639,7 +639,7 @@ async def run_all_unit_and_bridge_suites() -> None:
     await verify_suite_4_heterogeneous_dag()
 
     print("\n" + "=" * 86)
-    print(" ✅ ALL CONTRACT, RUNTIME PTA, AND POLYGLOT BRIDGE E2E ASSERTIONS PASSED")
+    print("ALL CONTRACT, RUNTIME PTA, AND POLYGLOT BRIDGE E2E ASSERTIONS PASSED")
     print("=" * 86)
 
 

@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.llm.guardrail
-## @lineage: fiber.dev.e2e.llm.guardrail
 from __future__ import annotations
 
 import asyncio

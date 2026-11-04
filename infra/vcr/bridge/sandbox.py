@@ -49,29 +49,25 @@ def _resolve_transitive_dependencies() -> list[str]:
         current_dir = current_dir.parent
 
     if not toml_path:
-        log.warning("[Fiber Sandbox] ⚠️ pyproject.toml not found. Strict sandbox might block valid modules.")
+        log.warning("[Fiber Sandbox] pyproject.toml not found. Strict sandbox might block valid modules.")
         return []
 
-    # 2. TOML에서 1차 의존성(Base Dependencies) 추출
     base_deps = []
     try:
         with open(toml_path, "rb") as f:
             data = tomllib.load(f)
             
-        # project.dependencies 및 tool.hatch...base_dependencies 모두 수용
         base_deps.extend(data.get("project", {}).get("dependencies", []))
         base_deps.extend(
             data.get("tool", {}).get("hatch", {}).get("metadata", {})
             .get("hooks", {}).get("custom", {}).get("base_dependencies", [])
         )
     except Exception as e:
-        log.error(f"[Fiber Sandbox] ⚠️ Failed to parse pyproject.toml: {e}")
+        log.error(f"[Fiber Sandbox] Failed to parse pyproject.toml: {e}")
         return []
 
-    # 3. 하위 의존성 재귀적 추적 (BFS)
     resolved_pkgs = set()
     queue = list(base_deps)
-
     while queue:
         raw_pkg = queue.pop(0)
         # PEP 508 문자열 정리: 'mcp==2.0.0a3; python_version < "3.12"' -> 'mcp'
@@ -89,7 +85,7 @@ def _resolve_transitive_dependencies() -> list[str]:
         except importlib.metadata.PackageNotFoundError:
             pass
 
-    # 4. 샌드박스 경로 포맷으로 변환
+    # 샌드박스 경로 포맷으로 변환
     allowed_paths = set()
     for pkg in resolved_pkgs:
         pkg_dash = pkg.replace('_', '-')
@@ -139,17 +135,17 @@ def create_security_sandbox(vcr_mode: str = "live"):
         try:
             caller_path = get_caller_origin()
             
-            # 1. Block C-Level FFI to prevent sandbox escape
+            # Block C-Level FFI to prevent sandbox escape
             if event in ("ctypes.dlopen", "ctypes.dlsym", "ctypes.c_void_p"):
                 if not is_authorized_caller(caller_path):
                     raise SecurityViolationError(f"C-Level FFI access blocked from {caller_path}")
 
-            # 2. Block unauthorized OS command execution
+            # Block unauthorized OS command execution
             if event in ("os.system", "subprocess.Popen", "os.posix_spawn", "os.execv"):
                 if not is_authorized_caller(caller_path):
                     raise SecurityViolationError(f"OS command execution blocked from {caller_path}")
             
-            # 3. Block sensitive file access
+            # Block sensitive file access
             if event == "open" and isinstance(args[0], str):
                 try:
                     real_path = os.path.realpath(args[0])
@@ -158,7 +154,7 @@ def create_security_sandbox(vcr_mode: str = "live"):
                 except Exception:
                     pass
 
-            # 4. Enforce strict network air-gap in REPLAY mode
+            # Enforce strict network air-gap in REPLAY mode
             if vcr_mode == "replay" and event == "socket.connect":
                  if len(args) > 0 and isinstance(args[0], tuple):
                      host = args[0][0]
@@ -169,7 +165,7 @@ def create_security_sandbox(vcr_mode: str = "live"):
 
     try:
         sys.addaudithook(audit_hook)
-        log.info(f"[Fiber Sandbox] 🛡️ PEP-578 Audit Hooks Injected (Mode: {vcr_mode.upper()}).")
+        log.info(f"[Fiber Sandbox] PEP-578 Audit Hooks Injected (Mode: {vcr_mode.upper()}).")
     except Exception as e:
-        log.error(f"[Fiber Sandbox] 💥 Failed to inject audit hook: {e}")
+        log.error(f"[Fiber Sandbox] Failed to inject audit hook: {e}")
         raise

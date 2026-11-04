@@ -126,7 +126,6 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         token_str = json.dumps(state_token, separators=(",", ":"))
 
         # blocks[3] 슬롯: TOTP 필수 시 입력창 렌더링, 버튼 단독 모드 시 1-Click 안내 컨텍스트 렌더링
-        # (이를 통해 fiber_decision_block이 항상 blocks[4]에 위치하여 기존 테스트 코드와 100% 호환됨)
         if require_totp:
             auth_slot_block: Dict[str, Any] = {
                 "type": "input",
@@ -138,7 +137,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                     "min_length": 6,
                     "max_length": 6,
                 },
-                "label": {"type": "plain_text", "text": "🔐 Authenticator TOTP Code"},
+                "label": {"type": "plain_text", "text": "Authenticator TOTP Code"},
             }
         else:
             auth_slot_block = {
@@ -147,18 +146,18 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                 "elements": [
                     {
                         "type": "mrkdwn",
-                        "text": "⚡ *1-Click Approval Mode Active:* TOTP input is bypassed for this guard. Click below to attest with your Node Identity.",
+                        "text": "*1-Click Approval Mode Active:* TOTP input is bypassed for this guard. Click below to attest with your Node Identity.",
                     }
                 ],
             }
 
         return {
             "channel": channel or self.default_channel,
-            "text": f"🚨 [Fiber HITL] Approval required for {handle_id} on {target_id}",
+            "text": f"[Fiber HITL] Approval required for {handle_id} on {target_id}",
             "blocks": [
                 {
                     "type": "header",
-                    "text": {"type": "plain_text", "text": "🚨 Fiber HITL: High-Risk Execution Parked"},
+                    "text": {"type": "plain_text", "text": "Fiber HITL: High-Risk Execution Parked"},
                 },
                 {
                     "type": "section",
@@ -180,14 +179,14 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                     "elements": [
                         {
                             "type": "button",
-                            "text": {"type": "plain_text", "text": "🛡️ Approve & Resume"},
+                            "text": {"type": "plain_text", "text": "Approve & Resume"},
                             "style": "primary",
                             "action_id": "fiber_action_approve",
                             "value": token_str,
                         },
                         {
                             "type": "button",
-                            "text": {"type": "plain_text", "text": "🛑 Deny & Rollback"},
+                            "text": {"type": "plain_text", "text": "Deny & Rollback"},
                             "style": "danger",
                             "action_id": "fiber_action_deny",
                             "value": token_str,
@@ -212,20 +211,20 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
         utc_now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         if is_approved:
-            header_text = "✅ Fiber HITL: Cryptographic Sudo Granted"
-            status_badge = "🟢 `RESUMED -> EXECUTING`"
+            header_text = "Fiber HITL: Cryptographic Sudo Granted"
+            status_badge = "`RESUMED -> EXECUTING`"
             seal_type = "RFC-6238 TOTP + Ed25519" if require_totp else "1-Click Button + Ed25519"
             detail_md = (
-                f"🛡️ *Zero-Trust Attestation Receipt*\n"
+                f"*Zero-Trust Attestation Receipt*\n"
                 f"• *Attested Identity:* `{spiffe_id}` (by <@{slack_user}>)\n"
                 f"• *Cryptographic Seal:* `{seal_type} ({sig_preview}...)`\n"
                 f"• *Action Taken:* Parked sandbox unlocked & destructive payload released."
             )
         else:
-            header_text = "🛑 Fiber HITL: Execution Aborted & Rolled Back"
-            status_badge = "🔴 `ROLLED_BACK (FAULTED)`"
+            header_text = "Fiber HITL: Execution Aborted & Rolled Back"
+            status_badge = "`ROLLED_BACK (FAULTED)`"
             detail_md = (
-                f"🛑 *Security Intervention Receipt*\n"
+                f"*Security Intervention Receipt*\n"
                 f"• *Rejected By:* <@{slack_user}>\n"
                 f"• *Action Taken:* `FORCE_ROLLBACK` dispatched. Parked sandbox terminated immediately."
             )
@@ -257,7 +256,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                     "elements": [
                         {
                             "type": "mrkdwn",
-                            "text": f"🔒 Immutable PTA state transition anchored at `{utc_now}`",
+                            "text": f"Immutable PTA state transition anchored at `{utc_now}`",
                         }
                     ],
                 },
@@ -358,7 +357,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                 return None
             mode_tag = "TOTP" if yield_event.get("prompt", {}).get("params", {}).get("require_totp", True) else "1-Click"
             log.info(
-                f"[SlackBridge] 📤 Sent HITL ({mode_tag}) prompt to Slack channel {msg_payload['channel']} (ts: {data.get('ts')})"
+                f"[SlackBridge] Sent HITL ({mode_tag}) prompt to Slack channel {msg_payload['channel']} (ts: {data.get('ts')})"
             )
             return data.get("ts")
 
@@ -415,7 +414,7 @@ class SlackHitlBridge(OutOfBandApprovalBridge):
                         raise RuntimeError(f"apps.connections.open failed: {conn_info.get('error')}")
                     ws_url = conn_info["url"]
 
-                log.info("[SlackBridge:SocketMode] 🔌 Connected to Slack Outbound WebSocket.")
+                log.info("[SlackBridge:SocketMode] Connected to Slack Outbound WebSocket.")
                 async with websockets.connect(ws_url) as ws:
                     async for raw_frame in ws:
                         if not self.running:

@@ -119,7 +119,7 @@ def run_daemon(
         cmd = [sys.executable, "-m", "fiber.phase.cli", "daemon", "-s", start] + (["-f", env_file] if env_file else [])
         with open(log_file, "a", encoding="utf-8") as out:
             proc = subprocess.Popen(cmd, stdout=out, stderr=out, start_new_session=True)
-        log.info(f"🚀 [Fiber] Background daemon started (PID: {proc.pid}) -> Log: {log_file}")
+        log.info(f"[Fiber] Background daemon started (PID: {proc.pid}) -> Log: {log_file}")
         return
 
     _load_env(env_file)
@@ -215,7 +215,7 @@ def run_e2e(
     env_file: EnvFileOpt = None,
 ):
     _load_env(env_file)
-    known = ["fsm.tester", "gateway.llm.guardrail", "gateway.compliance", "gateway.inter.finops", "infra.wasm.phase", "infra.plane.flare"]
+    known = ["fsm.tester", "gateway.llm.guardrail", "gateway.compliance", "inter.finops", "infra.wasm.phase", "infra.plane.flare"]
     targets = known if target == "all" else [target]
 
     log.info(f"[Fiber] Igniting E2E Test Suite(s): {', '.join(targets)}")

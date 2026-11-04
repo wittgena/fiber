@@ -269,14 +269,14 @@ class MockActuator:
         if self.simulate_runaway_on_readonly and target_id == "readonly_db_search":
             runaway_cost = cursor.fuel + 500
             print(
-                f"  [Actuator] 💥 Runaway Fault Injected at '{cursor.curr_node}' (target='{target_id}') on '{cursor.stream_id}'! "
+                f"  [Actuator] Runaway Fault Injected at '{cursor.curr_node}' (target='{target_id}') on '{cursor.stream_id}'! "
                 f"Attempting to spend {runaway_cost} Fuel (Available={cursor.fuel}) -> Triggering Catch Fallback"
             )
             return {"_score": 0.0}, None, runaway_cost
 
         cost = int(task_io.get("extras", {}).get("step_cost", 5))
         print(
-            f"  [Actuator] 🛠️  Safe Tool Node '{cursor.curr_node}' (scheme='{parsed_uri.scheme}', target='{target_id}') on '{cursor.stream_id}' "
+            f"  [Actuator] Safe Tool Node '{cursor.curr_node}' (scheme='{parsed_uri.scheme}', target='{target_id}') on '{cursor.stream_id}' "
             f"| Tick={cursor.tick} | Spending {cost} Fuel ({cursor.fuel} -> {cursor.fuel - cost}) | Score=0.70"
         )
         return (
@@ -286,9 +286,7 @@ class MockActuator:
         )
 
 
-# ======================================================================================
 # MODE A: Custom ASL / Single-Workflow Runner (Supports `--mock` & `--live`)
-# ======================================================================================
 async def run_custom_asl_workflow(
     asl_schema: Dict[str, Any],
     source_label: str,
@@ -365,10 +363,7 @@ async def run_custom_asl_workflow(
             if live_bridge is not None:
                 await live_bridge.aclose()
 
-
-# ======================================================================================
 # MODE B: Canonical 5-Phase Multiverse E2E Verification Suite (Default)
-# ======================================================================================
 async def run_e2e_verification_suite(asl_schema: Optional[Dict[str, Any]] = None) -> None:
     """E2E SCENARIO RUNNER (Compile -> Run & Park -> Resume -> Time-Travel -> Auto-Linker)"""
     target_asl = copy.deepcopy(asl_schema or SAMPLE_MULTIVERSE_ASL)
@@ -520,7 +515,7 @@ async def run_e2e_verification_suite(asl_schema: Optional[Dict[str, Any]] = None
         assert res4.reclaimed_fuel == 475, f"Expected 475 reclaimed fuel from surviving branch, got {res4.reclaimed_fuel}"
 
     print("\n" + "=" * 70)
-    print(" ✅ ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED")
+    print(" ALL MULTIVERSE FSM/DAG, WASM AUTO-LINKER & PTA LEDGER ASSERTIONS PASSED")
     print("=" * 70)
 
 

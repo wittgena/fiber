@@ -30,11 +30,10 @@ class ComposeWorkflowScene:
         self.log = get_emitter("scene.compose")
 
     async def phase_system_e2e_test(self):
-        self.log.info("  ▶️ [TEST] System E2E Job (Infrastructure & Intent Validation)")
-        
+        self.log.info(" [TEST] System E2E Job (Infrastructure & Intent Validation)")
         e2e_bash_script = """
 set -e
-trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ] && [ -f kernel_boot.log ]; then echo -e "\\n🔥 [FATAL] E2E CLIENT FAILED! DUMPING KERNEL LOG: 🔥\\n"; cat kernel_boot.log; echo -e "\\n[CI-SYNC] 💾 Saving kernel log to artifact mount..."; cp kernel_boot.log /artifact_mount/kernel_error_dump.log || true; fi; echo "[CI-SYNC] 🧹 Executing Kernel Reaper (Teardown)..."; python -m xphi.node.ops.reaper; exit $EXIT_CODE' EXIT
+trap 'EXIT_CODE=$?; if [ $EXIT_CODE -ne 0 ] && [ -f kernel_boot.log ]; then echo -e "\\n[FATAL] E2E CLIENT FAILED! DUMPING KERNEL LOG:\\n"; cat kernel_boot.log; echo -e "\\n[CI-SYNC] Saving kernel log to artifact mount..."; cp kernel_boot.log /artifact_mount/kernel_error_dump.log || true; fi; echo "[CI-SYNC] Executing Kernel Reaper (Teardown)..."; python -m xphi.node.ops.reaper; exit $EXIT_CODE' EXIT
 
 echo "[CI-SYNC] Verifying Pre-initialized Node Identity (Baked in Image)..."
 fiber sign status
@@ -43,7 +42,7 @@ echo "[CI-SYNC] Booting Kernel (Background)..."
 nohup python -u -m xphi.node.ops.boot > kernel_boot.log 2>&1 &
 
 echo "[CI-SYNC] Waiting for Kernel Healthcheck..."
-timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8356/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\n🔥 KERNEL BOOT FAILED! DUMPING LOG: 🔥\\n"; cat kernel_boot.log; exit 1; }
+timeout 30 bash -c 'while ! curl -s http://127.0.0.1:8356/v1/exchange/keys > /dev/null; do sleep 1; done' || { echo -e "\\nKERNEL BOOT FAILED! DUMPING LOG: \\n"; cat kernel_boot.log; exit 1; }
 echo "Kernel is fully up and running!"
 
 echo "[CI-SYNC] Executing E2E Gateway Client..."
@@ -79,11 +78,11 @@ fiber e2e infra.plane.flare --mode dev
         self.log.info("\n=== [START] Executing COMPOSE CI/CD Workflow Scenes ===")
         
         if not self.adapter:
-            self.log.error("  └─ Compose Runtime Availability: Failed 🔴")
+            self.log.error("  └─ Compose Runtime Availability: Failed")
             self.fail_count += 1
             return
 
-        self.log.info("  └─ Compose Runtime Availability: Confirmed 🟢")
+        self.log.info("  └─ Compose Runtime Availability: Confirmed")
         await self.phase_system_e2e_test()
         if self.fail_count == 0:
             self.log.info("=== [DONE] All Workflow Scenes Passed Successfully ===")
@@ -114,14 +113,14 @@ class ComposeFlow:
             
             success, err_msg = await controller.execute(broker=None)
             
-            self.log.info("\n" + "="*75)
-            self.log.info(f"🚀 COMPOSE CI/CD PIPELINE EXECUTION REPORT 🚀".center(75))
-            self.log.info("="*75)
+            self.log.info("\n" + "="*70)
+            self.log.info(f"COMPOSE CI/CD PIPELINE EXECUTION REPORT".center(70))
+            self.log.info("="*70)
             if success:
-                self.log.info(f"🟢 [SUCCESS] All Workflow Declarative Tests PASSED.")
-                self.log.info("="*75 + "\n")
+                self.log.info(f"[SUCCESS] All Workflow Declarative Tests PASSED.")
+                self.log.info("="*70 + "\n")
             else:
-                self.log.critical(f"🔴 [FAILED] COMPOSE CI Test execution terminated with errors.")
+                self.log.critical(f"[FAILED] COMPOSE CI Test execution terminated with errors.")
                 if err_msg:
                      self.log.error(f"Reason: {err_msg}")
                 sys.exit(1)
@@ -131,7 +130,6 @@ class ComposeFlow:
 
     async def run(self):
         await self.test()
-
 
 def main(args_list: list[str] = None):
     parser = argparse.ArgumentParser(description="Fiber CI/CD E2E Orchestrator via DOCKER COMPOSE")

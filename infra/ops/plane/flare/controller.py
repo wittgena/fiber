@@ -12,7 +12,7 @@ from xphi.watcher.plane.tracer.base import BaseStreamAuditor, SystemBound, log_s
 TIME_ROOT = resolve_path("time")
 EDGE_WORKSPACE_ROOT = resolve_path("flaretime")
 
-log = get_emitter("flane.flare.controller")
+log = get_emitter("plane.flare.controller")
 
 class WranglerSandboxAuditor(BaseStreamAuditor):
     """@desc: Observes standard I/O from local V8 Isolate (Wrangler) processes."""
@@ -40,7 +40,7 @@ class WranglerSandboxAuditor(BaseStreamAuditor):
         
         if f"Ready on http://127.0.0.1:{self.port}" in line or f"Ready on http://localhost:{self.port}" in line:
             self.is_ready = True
-            self.log.info(f"  [{self.worker_name.upper()}] ⚡ V8 Isolate Provisioned (Port {self.port} / Debug {self.inspector_port}).")
+            self.log.info(f"  [{self.worker_name.upper()}] [READY] V8 Isolate Provisioned (Port {self.port} / Inspector {self.inspector_port}).")
         elif "1102" in line or "CPU time limit exceeded" in line:
             self.hit_cpu_limit = True
             self.log.warning(f"  [{self.worker_name.upper()}] [RESOURCE_EXHAUSTION] Hard CPU Time Limit (Error 1102) Exceeded!")
@@ -51,7 +51,7 @@ class WranglerSandboxAuditor(BaseStreamAuditor):
 
 
 class FlareController:
-    """@desc: Orchestrates Dual V8 Isolates (WASM Gateway & Python Native) and monitors for execution limits."""
+    """@desc: Orchestrates Dual V8 Isolates (Wasm Gateway & Pyodide Engine) and monitors for execution limits."""
     def __init__(self, target_name: str = "xphi-edge-sandbox", mode: str = "dev", timeout: int = 120, suites: Dict[str, Type] = None):
         self.worker_name = target_name
         self.mode = mode
@@ -103,7 +103,7 @@ service = "xphi-python-node"
 """
         (self.gateway_dir / "wrangler.toml").write_text(gateway_toml.strip())
 
-        # Setup Native Python Engine Worker
+        # Setup Pyodide Python Engine Worker
         self.python_dir.mkdir(parents=True, exist_ok=True)
         shutil.copy2(edge_root / "engine.py", self.python_dir / "index.py")
         
@@ -114,7 +114,7 @@ compatibility_date = "2024-03-20"
 compatibility_flags = ["python_workers"]
 """
         (self.python_dir / "wrangler.toml").write_text(python_toml.strip())
-        log.info("📦 Edge Microservices Provisioned: WASM Gateway Node & Native Python Engine.")
+        log.info("[PROVISION] Edge Workers Mounted: Wasm Gateway Node & Pyodide Python Engine.")
 
     async def _await_crash_or_limit(self) -> None:
         """Monitors for intentional CPU Limits (Error 1102) or fatal WASM Traps during tests"""
@@ -137,7 +137,7 @@ compatibility_flags = ["python_workers"]
 
     async def _run_all_suites(self, broker: Any) -> int:
         """Executes all injected test scenarios and collects resulting edge hashes"""
-        log.debug(f"[FlareController:_run_all_suites] Test suite execution started.")
+        log.debug("[FlareController:_run_all_suites] Test suite execution started.")
         total_fails = 0
         for suite_name, suite_cls in self.suites.items():
             log.info(f"\n>>> [PHASE] Starting Edge Integration Suite: {suite_name.upper()} <<<")
@@ -158,14 +158,14 @@ compatibility_flags = ["python_workers"]
         return total_fails
 
     async def execute(self, broker: Any) -> Tuple[bool, str]:
-        log.info(f"\n--- [START] Orchestrating Edge V8 Sandbox Environment ({self.mode.upper()}) ---")
+        log.info(f"\n--- [START] Orchestrating Edge V8 Isolate Environment ({self.mode.upper()}) ---")
         try:
             if self.workspace.exists(): 
                 shutil.rmtree(self.workspace)
             self._provision_microservices()
             
             if self.mode == "dev":
-                log.info("[SYSTEM] Starting Dual V8 Isolate Workers (WASM Gateway & Python Engine)...")
+                log.info("[SYSTEM] Starting Dual V8 Isolate Workers (Wasm Gateway & Pyodide Engine)...")
                 self.auditor_python = WranglerSandboxAuditor(self.python_dir, 8788, "python_engine")
                 self.auditor_python.attach()
 
@@ -177,7 +177,7 @@ compatibility_flags = ["python_workers"]
                     py_ready = getattr(self.auditor_python, 'is_ready', False)
                     
                     if gw_ready and py_ready:
-                        log.info("⏳ Waiting 3.0s for Cloudflare Local Registry & Pyodide stabilization...")
+                        log.info("[WAIT] Awaiting local workerd runtime & Pyodide snapshot stabilization (3.0s)...")
                         await asyncio.sleep(3.0)
                         break
                     await asyncio.sleep(1)
@@ -212,7 +212,7 @@ compatibility_flags = ["python_workers"]
                         log.warning("[FlareController] Root Hash missing! (Did Domain 5 PTA Rollup fail or was Broker bypassed?)")
                         self.test_execution_hash = "EMPTY_EPOCH_ROOT"
                         
-                    log.info(f"[Telemetry] Edge Execution Proof sealed via PTA! Root Hash: {self.test_execution_hash}")
+                    log.info(f"[Telemetry] Edge Execution Proof sealed via PTA | Root Hash: {self.test_execution_hash}")
                     return True, ""
         except Exception as e:
             log.error(f"[FATAL] Sandbox Orchestration failed: {e}")

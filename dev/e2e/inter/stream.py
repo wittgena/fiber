@@ -1,10 +1,10 @@
-# fiber.dev.e2e.gateway.inter.stream
+# fiber.dev.e2e.inter.stream
 """
 @desc: Interactive Concurrency Stream & Console Kill-Switch Harness
 - Reuses golden VCR fixtures from `fiber.dev.e2e.inter.concurrency` (Zero API cost / Zero network).
 - Sustains staggered concurrent LLM streams without artificial pause loops: when budget hits 0,
   workers continue attempting calls and surface actual StreamBreaker rejections/severing until restored.
-- ⚠️ Operational Notes:
+- Operational Notes:
   1. Requires local Redis (`127.0.0.1:6379`) to receive real-time Kill/Restore signals from Console.
   2. Ensure `--tenant` matches Console's Target Tenant ID (default: `accounting_dept`).
   3. Runs continuously until terminated via `Ctrl+C` (or pass `--once` to exit on first kill).
@@ -43,7 +43,7 @@ from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.state.phase.reactor import PhaseReactor
 
 FIXTURE_ROOT = "fiber-compats/suites/e2e"
-CONCURRENCY_INVOKER = "fiber.dev.e2e.gateway.inter.concurrency"
+CONCURRENCY_INVOKER = "fiber.dev.e2e.inter.concurrency"
 SCENARIO_NAME = "concurrency_phase_2_stream"
 
 STREAM_PROMPT = (
@@ -51,7 +51,6 @@ STREAM_PROMPT = (
     "framing, backpressure watermarks, and coroutine context propagation operate "
     "under high concurrency."
 )
-
 
 class InteractiveStreamKillHarness:
     def __init__(
@@ -145,7 +144,7 @@ class InteractiveStreamKillHarness:
                 if (chunks + worker_idx * 3) % 12 == 0 and rolling_buf.strip():
                     snippet = " ".join(rolling_buf.strip().split())[-48:]
                     log.info(
-                        f"💬 [LLM Stream | VU #{worker_idx:02d}] chunk #{chunks:03d} ({chars:,} chars) "
+                        f"[LLM Stream | VU #{worker_idx:02d}] chunk #{chunks:03d} ({chars:,} chars) "
                         f"-> \"...{snippet}\""
                     )
                     rolling_buf = ""
@@ -153,8 +152,7 @@ class InteractiveStreamKillHarness:
                 await asyncio.sleep(self.pace_sec * random.uniform(0.8, 1.2))
 
         except Exception as exc:
-            # Pre-flight 또는 스트림 도중 발생한 실제 예외를 그대로 에러 로그로 출력
-            log.error(f"❌ [STREAM ERROR | VU #{worker_idx:02d}] session='{session_id}' failed: {exc}")
+            log.error(f"[STREAM ERROR | VU #{worker_idx:02d}] session='{session_id}' failed: {exc}")
             return {"worker_idx": worker_idx, "chunks": chunks, "chars": chars, "severed": True, "error": str(exc)}
 
         rem_budget = default_finops_watcher.local_budget_cache.get(self.tenant_id, 0.0)
@@ -163,12 +161,12 @@ class InteractiveStreamKillHarness:
         if severed:
             if chunks <= 1:
                 log.error(
-                    f"❌ [HTTP 402 PRE-FLIGHT / IMMEDIATE BLOCK | VU #{worker_idx:02d}] "
+                    f"[HTTP 402 PRE-FLIGHT / IMMEDIATE BLOCK | VU #{worker_idx:02d}] "
                     f"Call '{session_id}' rejected immediately (budget={rem_budget:.1f} Fuel)."
                 )
             else:
                 log.warning(
-                    f"🛑 [MID-FLIGHT SEVERED | VU #{worker_idx:02d}] "
+                    f"[MID-FLIGHT SEVERED | VU #{worker_idx:02d}] "
                     f"Stream '{session_id}' physically cut via aclose() at chunk #{chunks} ({chars:,} chars)!"
                 )
 
@@ -191,9 +189,9 @@ class InteractiveStreamKillHarness:
             init_bal = await self._ensure_initial_budget()
 
             log.info("=" * 76)
-            log.info(f"🚀 [Continuous Stream Kill Harness] Tenant: '{self.tenant_id}' | VUs: {self.concurrency}")
-            log.info(f"   Model: '{self.target_model}' | Initial Balance: {init_bal:,} Fuel")
-            log.info("   Mode : UNGATED CONTINUOUS CALLS (Fails/Severs on 0 Fuel, Ctrl+C to stop)")
+            log.info(f"[Continuous Stream Kill Harness] Tenant: '{self.tenant_id}' | VUs: {self.concurrency}")
+            log.info(f" Model: '{self.target_model}' | Initial Balance: {init_bal:,} Fuel")
+            log.info(" Mode : UNGATED CONTINUOUS CALLS (Fails/Severs on 0 Fuel, Ctrl+C to stop)")
             log.info("=" * 76)
 
             first_chunk_event = asyncio.Event()
@@ -211,7 +209,6 @@ class InteractiveStreamKillHarness:
                     if res["severed"]:
                         if self.run_once:
                             return
-                        # 인위적인 복구 대기 없이 1.2초 후 곧바로 다음 호출을 시도하여 계속 차단 에러가 나도록 함
                         await asyncio.sleep(1.2)
                     else:
                         await asyncio.sleep(0.08)
@@ -222,20 +219,20 @@ class InteractiveStreamKillHarness:
                 try:
                     await asyncio.wait_for(first_chunk_event.wait(), timeout=10.0)
                     log.info(
-                        f"⚡ {self.concurrency} concurrent LLM streams flowing! "
-                        f"Click '🚨 LLM STREAM BREAK' or 'Zero (Kill)' in Console to observe live severing & errors."
+                        f"{self.concurrency} concurrent LLM streams flowing! "
+                        f"Click 'LLM STREAM BREAK' or 'Zero (Kill)' in Console to observe live severing & errors."
                     )
                 except asyncio.TimeoutError:
-                    log.warning("⚠️ [Stream Harness] Timed out waiting for first chunk; continuing VU loops...")
+                    log.warning("[Stream Harness] Timed out waiting for first chunk; continuing VU loops...")
             else:
                 log.warning(
-                    f"🛑 [Initial Balance = 0 Fuel] Starting in blocked state ({self.concurrency} VUs). "
+                    f"[Initial Balance = 0 Fuel] Starting in blocked state ({self.concurrency} VUs). "
                     f"Streams will continuously fail with HTTP 402 until budget is provisioned."
                 )
 
             if self.auto_kill_sec > 0:
                 await asyncio.sleep(self.auto_kill_sec)
-                log.info("🚨 [Auto-Kill] Publishing REVOKE signal to 'finops:control_plane'...")
+                log.info("[Auto-Kill] Publishing REVOKE signal to 'finops:control_plane'...")
                 tunnel = await TunnelFactory.get_default()
                 next_ver = default_finops_watcher.policy_versions.get(self.tenant_id, 1) + 1
                 await tunnel.publish(
@@ -256,7 +253,7 @@ class InteractiveStreamKillHarness:
             await asyncio.gather(*vu_tasks)
 
         except (KeyboardInterrupt, asyncio.CancelledError):
-            log.info("\n🛑 [Ctrl+C Detected] Cancelling active LLM streams and shutting down harness cleanly...")
+            log.info("\n[Ctrl+C Detected] Cancelling active LLM streams and shutting down harness cleanly...")
         finally:
             for t in vu_tasks:
                 if not t.done():

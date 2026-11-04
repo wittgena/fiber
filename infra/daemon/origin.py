@@ -55,7 +55,7 @@ class OriginDelegatorDaemon(AbstractDaemon):
             
             pubsub = self.tunnel.pubsub()
             await pubsub.subscribe(self.listen_channel)
-            log.info(f"[{self.name}] 🚀 Listening for delegation intents on: {self.listen_channel}")
+            log.info(f"[{self.name}] Listening for delegation intents on: {self.listen_channel}")
             log.info(f"[{self.name}] Target Origin URL: {self.origin_url}")
 
             async for msg in pubsub.listen():
@@ -63,7 +63,6 @@ class OriginDelegatorDaemon(AbstractDaemon):
                     break
                 if msg and msg["type"] == "message":
                     intent_data = json.loads(msg["data"])
-                    # 병목 방지를 위해 위탁 처리 로직을 비동기 Task로 분리 (Multiplexing)
                     task = asyncio.create_task(self._process_delegation(intent_data))
                     self._tasks.add(task)
                     task.add_done_callback(self._tasks.discard)
@@ -89,7 +88,6 @@ class OriginDelegatorDaemon(AbstractDaemon):
 
         try:
             # @phase.1: DPoP Wrapping & Receipt Injection
-            # 오리진으로 보낼 요청을 게이트웨이의 프라이빗 키로 서명하여 무결성 보장
             target_endpoint = f"{self.origin_url}/v1/mcp-gateway/invoke"
             wrapped_headers = self._build_delegation_headers(target_endpoint, payload)
 
@@ -103,12 +101,11 @@ class OriginDelegatorDaemon(AbstractDaemon):
                 resp.raise_for_status()
                 origin_response = await resp.json()
 
-            # @phase.3: Verify Origin Attestation (수학적 무결성 검증)
+            # @phase.3: Verify Origin Attestation
             verified_payload = self._verify_and_unwrap(origin_response)
 
             # @phase.4: Resolve Local State
-            # 성공 시 로컬 브릿지(TransitionBridge)가 기다리는 채널로 결과 발행
-            log.info(f"[Delegator:{handle_id}] ✨ Origin response verified successfully.")
+            log.info(f"[Delegator:{handle_id}] Origin response verified successfully.")
             await self.tunnel.publish(reply_channel, json.dumps({
                 "status": "RESOLVED",
                 "executable_payload": verified_payload,
@@ -129,10 +126,8 @@ class OriginDelegatorDaemon(AbstractDaemon):
         canonical_payload = StateAdapter.to_canonical_bytes(payload).decode('utf-8')
         payload_hash = hashlib.sha256(canonical_payload.encode()).hexdigest()
         
-        # DPoP 토큰 구성 요소
         nonce = os.urandom(16).hex()
         timestamp = int(time.time() * 1000)
-        
         dpop_message = f"POST:{target_url}:{payload_hash}:{nonce}:{timestamp}"
         signature = self.signer.sign_payload(dpop_message.encode())
         
@@ -148,7 +143,6 @@ class OriginDelegatorDaemon(AbstractDaemon):
         }
 
     def _verify_and_unwrap(self, origin_response: dict) -> dict:
-        # 일반적인 엣지 에러나 거절(Reject)인 경우 검증 패스 (에러는 바로 던짐)
         if origin_response.get("error"):
             raise RuntimeError(origin_response.get("error").get("message", "Origin Returned Error"))
 
@@ -172,7 +166,7 @@ class OriginDelegatorDaemon(AbstractDaemon):
         if not is_valid:
             raise ValueError("Cryptographic verification failed: Origin signature is forged or unrecognized.")
 
-        # 4. 검증 통과 시 순수 데이터(Observation/Payload)만 추출하여 반환
+        # 검증 통과 시 순수 데이터(Observation/Payload)만 추출하여 반환
         return origin_response.get("observation", origin_response.get("payload", origin_response))
 
     async def _teardown(self):

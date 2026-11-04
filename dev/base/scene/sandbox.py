@@ -15,9 +15,7 @@ from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("scene.sandbox")
 
-# =========================================================================
 # [Shared Constants & Payloads]
-# =========================================================================
 class TestPayloads:
     PHASE_GEN       = {"topo": 50, "press": -10, "rupture": False}
     INJECTED_STATE  = {"topo": 100, "press": 200, "rupture": True, "injected_anchor": 999999, "injected_tick": 77}
@@ -56,7 +54,7 @@ class CertProofScene(SandboxRunner):
 
     async def run_all(self):
         log.info("\n=======================================================")
-        log.info("🚀 [START] Master System Certification Pipeline (4 Core Proofs)")
+        log.info("[START] Master System Certification Pipeline")
         log.info("=======================================================\n")
 
         await self._set_worker_policy("SYSTEM")
@@ -137,7 +135,7 @@ print(f"{val:.15f}")
         )
         
         # 브로커(엔드포인트)는 rogue_commit의 서명 불일치를 감지하여 Quarantine 시키고, 
-        # 남은 2개의 유효 서명이 Threshold(2)를 만족하므로 합의를 성공시켜야 합니다.
+        # 남은 2개의 유효 서명이 Threshold(2)를 만족하므로 합의를 성공
         await self._run_case(
             title="Byzantine Defense: Quarantine rogue signature & accept 2-of-3 threshold",
             target_func=WasmMethod.SEAL_EPOCH.value,
@@ -150,16 +148,16 @@ class SandboxScene(SandboxRunner):
         log.info("\n=== [START] Executing Sandbox & Compute Scenarios ===")
         await self._set_worker_policy("SYSTEM")
         
-        # 1. Isolation & Security
+        # Isolation & Security
         await self._test_wasmcg_resilience()
         await self._test_legacy_isolation()
         
-        # 2. Causality & State
+        # Causality & State
         await self._test_topos_and_phase()
         await self._test_tripartite_parity()
         await self._test_ffi_robustness()
         
-        # 3. Resources & Resilience
+        # Resources & Resilience
         await self._test_fuel_profiling()
         await self._set_worker_policy("SYSTEM")
         self.report()
@@ -178,12 +176,12 @@ class SandboxScene(SandboxRunner):
     async def _test_legacy_isolation(self):
         log.info("\n--- Running Suite: Determinism & Legacy Isolation ---")
         
-        # 1. 시맨틱 및 워크로드(Workload) 성능 검증
+        # 시맨틱 및 워크로드(Workload) 성능 검증
         await self._assert_script(TestScripts.LEGACY_NORMAL)
         await self._assert_script(TestScripts.COMPUTE_HEAVY)
         await self._assert_script(TestScripts.DATA_PROCESSING)
         
-        # 2. 시스템 탈옥 방어 (Escape Defense)
+        # 시스템 탈옥 방어 (Escape Defense)
         await self._assert_script(TestScripts.IO_VIOLATION)
         await self._assert_script(TestScripts.NET_VIOLATION)
         await self._assert_script(TestScripts.ENV_LEAK)
@@ -191,12 +189,12 @@ class SandboxScene(SandboxRunner):
         await self._assert_script(TestScripts.THREAD_ATTACK)
         await self._assert_script(TestScripts.SYS_EXIT_ATTACK)
         
-        # 3. 악성 자원 소모 방어 (Cgroup Trap - STANDARD Tier 강제)
+        # 악성 자원 소모 방어 (Cgroup Trap - STANDARD Tier 강제)
         await self._assert_script(TestScripts.INFINITE_LOOP_ATTACK)
         await self._assert_script(TestScripts.HEAP_ALLOCATION_ATTACK)
         await asyncio.sleep(3.0)
         
-        # 4. 시간 누수 및 멱등성 검증 (Determinism)
+        # 시간 누수 및 멱등성 검증 (Determinism)
         def validate_time_leak(out: str) -> bool:
             try:
                 epoch_time, perf_time = map(float, out.strip().split('|'))
@@ -270,7 +268,7 @@ class DynamicsScene(SandboxRunner):
 
     async def run_all(self):
         log.info("\n=======================================================")
-        log.info("🌌 [START] Field Dynamics & Continuous Math Kernel Suite")
+        log.info("[START] Field Dynamics & Continuous Math Kernel Suite")
         log.info("=======================================================\n")
 
         await self._set_worker_policy("SYSTEM")
@@ -278,7 +276,6 @@ class DynamicsScene(SandboxRunner):
         await self._test_fitzhugh_spiking()
         await self._test_attractor_reflector_bypass()
         await self._test_dynamics_payload_robustness()
-
         self.report()
 
     ## Domain A: Kuramoto Model (Phase Sync & Tension)

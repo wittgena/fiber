@@ -174,7 +174,7 @@ class StateMapper:
 
         rules = StateMapper._get_provider_rules(provider)
 
-        # 1. InterLLM / LangChain 스타일 message.additional_kwargs.tool_calls 확인
+        # InterLLM - message.additional_kwargs.tool_calls 확인
         add_tc = StateTraverser.resolve(response, "message.additional_kwargs.tool_calls")
         if add_tc is None and hasattr(response, "message"):
             add_kwargs = getattr(response.message, "additional_kwargs", None)
@@ -185,7 +185,7 @@ class StateMapper:
             if norm:
                 return norm
 
-        # 2. 선언적 'tool_calls' 경로 리스트 탐색 (response 및 response.raw 대상)
+        # 선언적 'tool_calls' 경로 리스트 탐색 (response 및 response.raw 대상)
         tc_paths = rules.get("tool_calls")
         if tc_paths:
             for target in (response, getattr(response, "raw", None)):
@@ -197,7 +197,7 @@ class StateMapper:
                     if norm:
                         return norm
 
-        # 3. 선언적 'fallback_tool_name' & 'fallback_tool_args' 탐색 (Gemini 등 단일 function_call 구조)
+        # 선언적 'fallback_tool_name' & 'fallback_tool_args' 탐색 (Gemini 등 단일 function_call 구조)
         fb_name_rule = rules.get("fallback_tool_name")
         fb_args_rule = rules.get("fallback_tool_args")
         f_name, f_args = None, None
@@ -211,13 +211,13 @@ class StateMapper:
                     if f_name:
                         f_args = StateTraverser.resolve(target, fb_args_rule) if fb_args_rule else "{}"
                         if logger and req_id:
-                            logger.debug(f"[InterLLM-{req_id}] 🎯 [Traverser] Tool Call 복원 성공: {f_name}")
+                            logger.debug(f"[InterLLM-{req_id}] [Traverser] Tool Call 복원 성공: {f_name}")
                         break
                 except Exception as e:
                     if logger and req_id:
-                        logger.debug(f"[InterLLM-{req_id}] ⚠️ [Traverser] 탐색 에러: {e}")
+                        logger.debug(f"[InterLLM-{req_id}] [Traverser] 탐색 에러: {e}")
 
-        # 4. 최후 Imperative Fallback (response.raw 또는 response 자체)
+        # 최후 Imperative Fallback (response.raw 또는 response 자체)
         if not f_name:
             for target in (getattr(response, "raw", None), response):
                 if target is None:
@@ -225,7 +225,7 @@ class StateMapper:
                 f_name, f_args = ImperativeFallbackRule.recover_tool_call(target)
                 if f_name:
                     if logger and req_id:
-                        logger.debug(f"[InterLLM-{req_id}] 🛠️ [Fallback] 하드코딩 로직으로 복원 성공: {f_name}")
+                        logger.debug(f"[InterLLM-{req_id}] [Fallback] 하드코딩 로직으로 복원 성공: {f_name}")
                     break
 
         if f_name:
@@ -312,7 +312,6 @@ class StateMapper:
             return ""
 
         clean_base = base_url.rstrip("/")
-
         if clean_base.endswith("/api/chat") or clean_base.endswith("/chat/completions"):
             return clean_base
 
@@ -335,9 +334,7 @@ class StateMapper:
         for msg in messages:
             role = StateTraverser.resolve(msg, "role") or msg.get("role", EXTRACTION_RULES["defaults"]["role"])
             raw_content = StateTraverser.resolve(msg, "content") or msg.get("content", "")
-
             parsed_content = ImperativeFallbackRule.parse_content_blocks(raw_content)
-
             chat_messages.append(ChatMessage(role=MessageRole(role), content=parsed_content))
 
         return chat_messages

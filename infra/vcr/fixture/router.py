@@ -172,7 +172,7 @@ class VCRFixtureRouter(DuplexChannel):
             force_tool=rule.force_tool,
         )
         self.synthesizer.synthesize_to_memory(req, self.vcr_manager)
-        log.debug(f"⚡ [FixtureRouter] In-memory fixture synthesized: {rule.filename}")
+        log.debug(f"[FixtureRouter] In-memory fixture synthesized: {rule.filename}")
 
     def _record_probe_hit(self, rule: FixtureRoutingRule) -> int:
         metric_key = f"fixture:probe_hit:{rule.route_id}:v{rule.version}"

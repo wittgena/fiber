@@ -141,7 +141,7 @@ async def execute_call(
 
     print(f"--------------------------------------------------------------------------------")
     print(
-        f"✔ Status: {status_code} | ID: {resp_id or 'N/A'} "
+        f" Status: {status_code} | ID: {resp_id or 'N/A'} "
         f"({'VCR_REPLAY' if is_vcr_hit else 'LIVE_MODEL'}) | "
         f"Elapsed: {elapsed_ms:.1f}ms | Length: {len(full_text)} chars"
     )
@@ -182,7 +182,7 @@ def print_summary(results: List[Dict[str, Any]]) -> None:
     print("================================================================================")
     for r in results:
         if r.get("fixture_path"):
-            print(f"💾 [{r['mode'].upper()}] {r['step']} -> {r['fixture_path']}")
+            print(f"[{r['mode'].upper()}] {r['step']} -> {r['fixture_path']}")
     print()
 
 
@@ -304,7 +304,7 @@ async def main():
 
                 if rec_res["status"] == 200 and rep_res["status"] == 200:
                     match = rec_res["text"].strip() == rep_res["text"].strip()
-                    print(f"\n🔍 [VCR Roundtrip Parity] Content Match: {'PASS ✅' if match else 'MISMATCH ❌'}")
+                    print(f"\n[VCR Roundtrip Parity] Content Match: {'PASS' if match else 'MISMATCH'}")
 
     print_summary(results)
 

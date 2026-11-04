@@ -1,4 +1,4 @@
-# fiber.dev.e2e.gateway.inter.finops
+# fiber.dev.e2e.inter.finops
 """
 StreamBreaker operates upstream of VCRAdapterProxy to enforce physical stream termination via aclose().
 During VCR record, the live stream is intentionally severed upon Kill-Switch activation, persisting only pre-cutoff chunks.

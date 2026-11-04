@@ -67,7 +67,7 @@ class FlareFlow:
             suite_map[suite_name] = self._resolve_suite_class(suite_name)
             
         if not suite_map:
-            self.log.error("❌ [CLI] No valid test suites found to execute.")
+            self.log.error("[CLI] No valid test suites found to execute.")
             sys.exit(1)
             
         self.log.debug(f"[FlareFlow:test] Suite map constructed: {list(suite_map.keys())}")
@@ -105,30 +105,30 @@ class FlareFlow:
         self.log.debug(f"[FlareFlow:test] controller.execute() returned in {time.time() - t1:.3f}s. Success={success}")
         
         log.info("\n" + "="*75)
-        log.info("🚀 CLOUDFLARE EDGE PIPELINE EXECUTION REPORT 🚀".center(75))
+        log.info("CLOUDFLARE EDGE PIPELINE EXECUTION REPORT".center(75))
         log.info("="*75)
         
         if success:
-            self.log.info(f"🟢 [SUCCESS] All Edge Test Suites ({', '.join(suite_map.keys())}) PASSED.")
+            self.log.info(f"[STATUS] PASS | All Edge Test Suites ({', '.join(suite_map.keys())}) PASSED.")
             if getattr(controller, 'test_execution_hash', None):
-                self.log.info(f"🔗 Execution Canonical Hash (Sealed at Edge): {controller.test_execution_hash}")
+                self.log.info(f"[MERKLE_ROOT] Execution Canonical Hash (Sealed at Edge): {controller.test_execution_hash}")
             log.info("="*75 + "\n")
         else:
-            self.log.critical(f"🔴 [FAILED] Edge Test execution terminated with errors.")
+            self.log.critical("[STATUS] FAIL | Edge Test execution terminated with errors.")
             for line in err_msg.split('\n'):
-                self.log.critical(f"📝 {line}")
+                self.log.critical(f"  [ERROR] {line}")
             
             if hasattr(controller, 'suite_runners') and controller.suite_runners:
-                log.info("\n" + "🔥"*37)
-                log.info("🚨 DETAILED EDGE FAILURE TRACES 🚨".center(75))
-                log.info("🔥"*37)
+                log.info("\n" + "-"*75)
+                log.info("DETAILED EDGE FAILURE TRACES".center(75))
+                log.info("-"*75)
                 
                 for suite_name, runner in controller.suite_runners.items():
                     fail_cnt = getattr(runner, 'fail_count', 0)
                     failed_cases = getattr(runner, 'failed_cases', [])
                     
                     if fail_cnt > 0 or failed_cases:
-                        log.info(f"\n❌ [SUITE: {suite_name.upper()}] ➔ {fail_cnt} Test(s) Failed")
+                        log.info(f"\n[SUITE: {suite_name.upper()}] -> {fail_cnt} Test(s) Failed")
                         for idx, fc in enumerate(failed_cases, 1):
                             title = fc.get('title', 'Unknown Test Case')
                             err = fc.get('error', 'No error details provided')
@@ -157,7 +157,7 @@ def main(args_list: list[str] = None):
             handler.setLevel(logging.DEBUG)
         
         logging.getLogger("auditor.flare.dev").setLevel(logging.DEBUG)
-        log.info("🐛 [DEBUG MODE] Internal stream logging is ENABLED.")
+        log.info("[DEBUG] Internal stream logging is ENABLED.")
         log.debug(f"[main] Parsed CLI arguments: mode={args.mode}, suites={args.suites}, keep_workspace={args.keep_workspace}")
 
     config = FlarePipelineConfig()

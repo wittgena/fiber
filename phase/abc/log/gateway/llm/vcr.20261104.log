@@ -1,0 +1,94 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.gateway.llm.vcr --vcr replay --model cerebras/qwen-3.8-27b
+ LOG | SYSTEM | INFO  |  vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+ LOG | SYSTEM | INFO  |  app.vcrsuiteapp: Igniting VcrSuiteApp Workflow via Reactor...
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-65061
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Entered Trace Path: [logical:local]
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Initializing Local Direct Surface...
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: ========================================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: [MASTER SUITE] Igniting LLM VCR Trace Suite (cerebras/qwen-3.8-27b)
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: [VCR ENGINE] Mode: REPLAY | Speed: MAX | Chaos Jitter: 0.0ms
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: ========================================================================================================================
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: 
+[VcrSuiteApp] [Phase 1] SINGULAR TRACING: Synchronous I/O Isolation
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '9b38cf61' in 0.26ms (original live: 1334.5ms).
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : 9b38cf616e81494f197f6af39bcf23ee
+ ├─ Model    : cerebras/qwen-3.8-27b
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL COMPLETED] 
+ ├─ Trace ID : 9b38cf616e81494f197f6af39bcf23ee
+ ├─ Latency  : 1.89 ms
+ └─ Usage    : 506 tokens
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: [VcrSuiteApp] Passed: Singular Tracing Isolation (Total: 16.32ms | Tokens: 506)
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: 
+[VcrSuiteApp] [Phase 2] STREAM TRACING: Asynchronous Chunk Tracking
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '7c7f8484' (7 chunks in 101.07ms, 0ms upstream I/O).
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : 7c7f8484931fcf7d543d6ace63f8ca7d
+ ├─ Model    : cerebras/qwen-3.8-27b
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM STREAM ESTABLISHED] 
+ ├─ Trace ID : 7c7f8484931fcf7d543d6ace63f8ca7d
+ ├─ Handshake: 0.84 ms
+ └─ Note     : Usage will be tracked dynamically at stream end.
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: [VcrSuiteApp] Passed: Asynchronous Stream Tracking (Total: 114.45ms | Tokens: 1112)
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: 
+[VcrSuiteApp] [Phase 3] ERROR TRACING: Exception Boundary Verification
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : bbc0f1a69e0e9371934e11e5d1d4f49c
+ ├─ Model    : invalid/fake
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | ERROR |  llm.tracer: 
+[LLM CALL FAILED] 
+ ├─ Trace ID : bbc0f1a69e0e9371934e11e5d1d4f49c
+ ├─ Latency  : 0.33 ms
+ └─ Error    : GateBadRequestError - LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model=invalid/fake
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: [VcrSuiteApp] Passed: Exception Boundary Verification (Total: 11.93ms | Tokens: N/A)
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: 
+[VcrSuiteApp] [Phase 4] FALLBACK TRACING: Idempotent Retry & Deepcopy Shield
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | SYSTEM | WARN  |  executor.handlers: Fallback attempt triggered. Retrying with model: cerebras/qwen-3.8-27b
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '4b0491ab' in 0.20ms (original live: 365.0ms).
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : 4b0491ab6be44bec0322b493d6915f1c
+ ├─ Model    : cerebras/qwen-3.8-27b
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL COMPLETED] 
+ ├─ Trace ID : 4b0491ab6be44bec0322b493d6915f1c
+ ├─ Latency  : 1.34 ms
+ └─ Usage    : 159 tokens
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: [VcrSuiteApp] Passed: Fallback & Deepcopy Shielding (Total: 12.98ms | Tokens: 159)
+ LOG | SYSTEM | INFO  |  e2e.vcrsuiteapp: 
+========================================================================================================================
+[VCRSUITEAPP] E2E LATENCY & USAGE BREAKDOWN REPORT
+------------------------------------------------------------------------------------------------------------------------
+01. [O] PASS | [PHASE 1]  | Singular Tracing Isolation               | Total:   16.32ms (I/O: 1334.49ms | Overhead:    0.00ms)     | Tokens:   506
+02. [O] PASS | [PHASE 2]  | Asynchronous Stream Tracking             | Total:  114.45ms (I/O: 1229.07ms | Overhead:    0.00ms)     | Tokens:  1112
+03. [O] PASS | [PHASE 3]  | Exception Boundary Verification          | Total:   11.93ms (Overhead Only:   11.93ms)                 | Tokens:   N/A
+04. [O] PASS | [PHASE 4]  | Fallback & Deepcopy Shielding            | Total:   12.98ms (I/O:  365.00ms | Overhead:    0.00ms)     | Tokens:   159
+------------------------------------------------------------------------------------------------------------------------
+ALL VCRSUITEAPP SCENARIOS EXECUTED SUCCESSFULLY.
+========================================================================================================================
+
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  scope.manager: [managed_scope] Triggering safe teardown sequence for infrastructure resources.
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Folding Local Surface...
+ LOG | SYSTEM | INFO  |  scope.manager: [+] Context Manager closed safely.
+[Reactor] Executing user-defined teardown hook...
+ LOG | SYSTEM | INFO  |  app.vcrsuiteapp: Reclaiming VcrSuiteApp suite resources...
+[Reactor] Lifecycle terminated cleanly.
+(self) wittgena@wittgenas-MacBook-Pro self % 

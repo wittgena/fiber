@@ -87,7 +87,7 @@ class PhaseAirlock:
             try:
                 target_module = importlib.import_module(canonical_path)
                 sys.modules[legacy_path] = target_module
-                log.info(f"[*] Alias: {legacy_path} ➔ {canonical_path}")
+                log.info(f"[*] Alias: {legacy_path} -> {canonical_path}")
             except ImportError as e:
                 log.error(f"[!] Failed to load canonical module '{canonical_path}' for alias '{legacy_path}'.")
                 raise e

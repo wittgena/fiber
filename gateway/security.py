@@ -55,7 +55,7 @@ class SecurityProvisioner:
             cls.LOCAL_KEY_PATH.write_text(new_secret_key, encoding="utf-8")
             if os.name != 'nt':
                 cls.LOCAL_KEY_PATH.chmod(0o600)
-            log.warning(f"🚨 [ZERO-CONFIG] Generated and securely persisted a NEW cipher key to {cls.LOCAL_KEY_PATH}")
+            log.warning(f"[ZERO-CONFIG] Generated and securely persisted a NEW cipher key to {cls.LOCAL_KEY_PATH}")
             log.warning("Please backup this file! If lost, previously encrypted audit logs cannot be decrypted.")
         except Exception as e:
             log.error(f"Failed to persist new cipher key to disk: {e}")

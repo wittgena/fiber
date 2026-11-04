@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.worker.audit
-## @lineage: fiber.dev.e2e.worker.audit
 import sys
 import uuid
 import asyncio
@@ -62,7 +61,7 @@ class AuditSecurityPipeline(MockPipeline):
         )
 
         self.sentinel = worker_reaper.WorkerReaper(
-            ledger=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0
+            anchor_store=self.mock_store, rpc_client=self.rpc, sweep_interval=1.0
         )
         self._sentinel_task = asyncio.create_task(self.sentinel.ignite())
         log.info("[AuditPipeline] Sentinel Autonomous Daemon & Worker Connectors Ignited.")
@@ -96,12 +95,11 @@ class AuditSecurityPipeline(MockPipeline):
         if not self.prompt_id:
             raise RuntimeError(f"Elicitation response missing prompt 'id': {prompt_data}")
 
-        # 2차 호출 (동일 Idempotency Key 재시도): 샌드박스 중복 실행 없이 캐싱된 202 즉시 반환 검증
         res2 = await self.gw_client.invoke(self.deploy_payload, idempotency_key=self.idem_key_otp)
         if res2.status_code != 202:
             raise RuntimeError(f"Fast-Path failed. Expected 202, got {res2.status_code}")
 
-        log.info("   └─ ✨ Idempotency Shield deflected duplicate request without crashing Sandbox.")
+        log.info("   └─ Idempotency Shield deflected duplicate request without crashing Sandbox.")
 
     async def phase_stateless_otp_resume(self):
         valid_totp = self.crypto_ctx.generate_totp()
@@ -111,7 +109,6 @@ class AuditSecurityPipeline(MockPipeline):
             totp_code=valid_totp,
         )
 
-        # 동일 Idempotency Key로 TOTP 응답 주입 -> Parked 샌드박스 깨우기 및 NodeSigner 서명 검증
         res = await self.gw_client.invoke(resume_payload, idempotency_key=self.idem_key_otp, timeout=10.0)
         if res.status_code != 200:
             raise RuntimeError(f"Bridge failed to Resume Sandbox. Expected 200 OK, got {res.status_code} ({res.text})")
@@ -122,7 +119,7 @@ class AuditSecurityPipeline(MockPipeline):
         if "successfully" not in final_text:
             raise RuntimeError(f"Resume succeeded, but payload failed: {body}")
 
-        log.info("   └─ ✨ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.")
+        log.info("   └─ Stateless Resume -> Stateful Sentinel Execution -> 200 OK Resolution Verified.")
 
     async def phase_sentinel_reconciliation(self):
         # 고아 트랜잭션(Orphaned Stream) 빠른 감지를 위해 TTL 임계치를 1.0초로 단축
@@ -150,7 +147,7 @@ class AuditSecurityPipeline(MockPipeline):
         for _ in range(20):
             final_state = await self.mock_store.query_state(handle_id)
             if final_state and final_state.metadata.get("status") == "FAULTED":
-                log.info("   └─ ✨ Sentinel Autonomous Reconciliation Successful.")
+                log.info("   └─ Sentinel Autonomous Reconciliation Successful.")
                 return
             await asyncio.sleep(0.5)
 
@@ -169,12 +166,12 @@ class AuditSuiteRunner:
 
     def _print_report(self):
         self.log.info("\n" + "=" * 80)
-        self.log.info("🛡️ [SECURITY & AUDIT BENCHMARK REPORT]")
+        self.log.info("[SECURITY & AUDIT BENCHMARK REPORT]")
         self.log.info("=" * 80)
         all_passed = all(r.passed for r in self.results)
 
         for idx, res in enumerate(self.results, 1):
-            status_icon = "✅" if res.passed else "❌"
+            status_icon = "[O]" if res.passed else "[X]"
             self.log.info(
                 f"{status_icon} {idx:02d}. [{res.target}]".ljust(22)
                 + f"{res.scenario.ljust(50)} | {'PASSED' if res.passed else 'FAILED'}"

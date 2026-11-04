@@ -28,20 +28,12 @@ class PipelineConfig:
         "dynamics": f"{MODULE_PATH}.sandbox:DynamicsScene", 
     })
     
-    default_suites: List[str] = field(default_factory=lambda: [
-        "sandbox",     # 1. 런타임 보안 및 단일 샌드박스 격리 검증 (L1)
-        "anchor",      # 2. 영지식 증명, 다중 서명, 탈중앙 합의 로직 검증 (L3)
-        "cert",        # 3. 극한 환경 엣지 케이스 방어 및 무결성 최종 인증 (L4)
-        "dynamics",    # 4. [NEW] O(N^2) 수학 연산 무결성 및 성능, 위상 변이 검증 (L2)
-    ])
+    default_suites: List[str] = field(default_factory=lambda: ["sandbox", "anchor", "cert", "dynamics"])
     wasm_filename: str = "phase.wasm"
-
 
 class DphiFlow:
     """
     @role: WASM Pipeline Orchestrator (Build & Test)
-    @desc: WASM 빌드를 수행하고, WasmTester를 통해 In-process(로컬 격리) 환경에서 
-           명확하고 추적 가능한 엔드투엔드 통합 테스트를 수행합니다.
     """
     def __init__(self, should_build: bool = False, suites: List[str] = None, config: PipelineConfig = None):
         self.config = config or PipelineConfig()
@@ -67,27 +59,25 @@ class DphiFlow:
             return getattr(module, cls_name)
         except Exception as e:
             self.log.error(f"[CLI] Failed to dynamically load suite '{suite_name_or_path}': {e}")
-            return None # 예외 발생 시 None을 반환하여 상위에서 처리하도록 위임
+            return None
 
     async def build(self) -> bool:
-        """WASM 바이너리를 빌드합니다. 성공 시 True, 실패 시 False 반환."""
+        """WASM 바이너리를 빌드"""
         self.log.info("\n[CLI] Starting standalone WasmBuilder...")
         builder = WasmBuilder()
         await builder.trace()
         
         if builder.rupture_confirmed:
-            self.log.error("❌ [CLI] Builder encountered a fatal rupture.")
+            self.log.error("[CLI] Builder encountered a fatal rupture.")
             return False
             
-        self.log.info("✅ [CLI] Builder completed successfully.")
+        self.log.info("[CLI] Builder completed successfully.")
         return True
 
     async def test(self) -> bool:
-        """로컬 격리 테스트를 수행합니다. 성공 시 True, 실패 시 False 반환."""
         self.log.info(f"\n[CLI] Starting Isolated WasmTester for suites: {self.suites}...")
-        
         if not self.dest_wasm_file.exists():
-            self.log.error(f"❌ [CLI] Missing WASM binary at {self.dest_wasm_file}. Please run with '--build' option or pre-compile it.")
+            self.log.error(f"[CLI] Missing WASM binary at {self.dest_wasm_file}. Please run with '--build' option or pre-compile it.")
             return False
             
         suite_map = {}
@@ -102,7 +92,7 @@ class DphiFlow:
             suite_map[suite_name] = resolved_class
             
         if not suite_map:
-            self.log.error("❌ [CLI] No valid test suites found to execute.")
+            self.log.error("[CLI] No valid test suites found to execute.")
             return False
 
         tester = WasmTester(
@@ -114,30 +104,29 @@ class DphiFlow:
         success, err_msg = await tester.execute()
         
         log.info("\n" + "="*75)
-        log.info("🚀 PIPELINE EXECUTION REPORT".center(75))
+        log.info("PIPELINE EXECUTION REPORT".center(75))
         log.info("="*75)
         
         if success:
-            self.log.info(f"🟢 [SUCCESS] All Test Suites ({', '.join(suite_map.keys())}) PASSED.")
+            self.log.info(f"[SUCCESS] All Test Suites ({', '.join(suite_map.keys())}) PASSED.")
             if getattr(tester, 'test_execution_hash', None):
-                self.log.info(f"🔗 Execution Canonical Hash: {tester.test_execution_hash}")
+                self.log.info(f"Execution Canonical Hash: {tester.test_execution_hash}")
             log.info("="*75 + "\n")
             return True
         else:
-            self.log.critical(f"🔴 [FAILED] Test execution terminated with errors.")
-            self.log.critical(f"📝 [SUMMARY] {err_msg}")
+            self.log.critical(f"[FAILED] Test execution terminated with errors.")
+            self.log.critical(f"[SUMMARY] {err_msg}")
             
             if hasattr(tester, 'suite_runners') and tester.suite_runners:
-                log.info("\n" + "🔥"*37)
-                log.info("🚨 DETAILED FAILURE TRACES 🚨".center(75))
-                log.info("🔥"*37)
+                log.info("\n" + "="*37)
+                log.info("DETAILED FAILURE TRACES".center(75))
+                log.info("="*37)
                 
                 for suite_name, runner in tester.suite_runners.items():
                     fail_cnt = getattr(runner, 'fail_count', 0)
                     failed_cases = getattr(runner, 'failed_cases', [])
-                    
                     if fail_cnt > 0 or failed_cases:
-                        log.info(f"\n❌ [SUITE: {suite_name.upper()}] ➔ {fail_cnt} Test(s) Failed")
+                        log.info(f"\n[SUITE: {suite_name.upper()}] -> {fail_cnt} Test(s) Failed")
                         for idx, fc in enumerate(failed_cases, 1):
                             title = fc.get('title', 'Unknown Test Case')
                             err = fc.get('error', 'No error details provided')
@@ -150,19 +139,16 @@ class DphiFlow:
     async def run(self):
         """최상위 실행 파이프라인. 논리적 흐름을 제어하고 실패 시 시스템 종료 코드를 반환합니다."""
         try:
-            # 1. 빌드 옵션이 활성화된 경우에만 빌드 수행
             if self.should_build:
                 if not await self.build():
                     sys.exit(1)
                     
-            # 2. 테스트 수행
             if not await self.test():
                 sys.exit(1)
-                
         except SystemExit:
-            raise  # 정상적인 파이프라인 실패로 인한 종료는 통과시킴
+            raise
         except Exception as e:
-            self.log.error(f"💥 [FATAL] Unhandled exception in E2E runner: {e}", exc_info=True)
+            self.log.error(f"[FATAL] Unhandled exception in E2E runner: {e}", exc_info=True)
             sys.exit(1)
 
 
@@ -183,7 +169,7 @@ def main(args_list: list[str] = None):
     except SystemExit as e:
         sys.exit(e.code)
     except Exception as e:
-        log.error(f"💥 [FATAL] PhaseReactor crashed: {e}")
+        log.error(f"[FATAL] PhaseReactor crashed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

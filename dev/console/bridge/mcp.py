@@ -176,7 +176,7 @@ class McpActionBridge:
 
             if not silent:
                 ui.notify(
-                    f"🔍 Active in Daemon: {len(s.active_target_ids)} / Registered in mcp.json: {len(s.discovered_workers)}",
+                    f"Active in Daemon: {len(s.active_target_ids)} / Registered in mcp.json: {len(s.discovered_workers)}",
                     type="info",
                 )
         except Exception as exc:

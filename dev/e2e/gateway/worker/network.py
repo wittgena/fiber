@@ -170,9 +170,9 @@ async def run_suite() -> None:
     results: List[TestResult] = await pipeline.run_pipeline()
     all_passed = all(r.passed for r in results)
 
-    lines = ["\n" + "=" * 80, "🌐 [NETWORK TRANSPORT & REMOTE CONTEXT7 MCP E2E REPORT]", "=" * 80]
+    lines = ["\n" + "=" * 80, "[NETWORK TRANSPORT & REMOTE CONTEXT7 MCP E2E REPORT]", "=" * 80]
     for idx, r in enumerate(results, 1):
-        lines.append(f"{'✅' if r.passed else '❌'} {idx:02d}. [{r.target}]".ljust(22) + f"{r.scenario.ljust(50)} | {'PASSED' if r.passed else 'FAILED'}")
+        lines.append(f"{'[O]' if r.passed else '[X]'} {idx:02d}. [{r.target}]".ljust(22) + f"{r.scenario.ljust(50)} | {'PASSED' if r.passed else 'FAILED'}")
     lines.extend(["-" * 80, "NETWORK PIPELINE VALIDATED SUCCESSFULLY." if all_passed else "NETWORK PIPELINE FAILURE DETECTED.", "=" * 80 + "\n"])
     print("\n".join(lines), flush=True)
 

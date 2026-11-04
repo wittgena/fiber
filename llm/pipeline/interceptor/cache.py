@@ -26,18 +26,13 @@ class EdgeRedisCache(DuplexChannel):
         messages = msg.get("messages", [])
         
         # Generate a deterministic hash of the request (Exact-match logic)
-        # - Replace this SHA-256 hash generation with an Embedding model call and query a Vector DB (e.g., Milvus, Qdrant)
         try:
             serialized_msgs = json.dumps(messages, sort_keys=True)
             prompt_hash = hashlib.sha256(serialized_msgs.encode('utf-8')).hexdigest()
         except TypeError:
-            # Fallback for unserializable payloads
             prompt_hash = str(messages)
             
-        cache_log.debug(f"🔍 [CACHE CHECK] Evaluating prompt hash: {prompt_hash[:8]}...")
-
-        # Acquire the UniversalFacade (Redis Tunnel) dynamically
-        # - TunnelFactory uses a singleton pattern, making this extremely fast after initialization.
+        cache_log.debug(f"[CACHE CHECK] Evaluating prompt hash: {prompt_hash[:8]}...")
         tunnel = await TunnelFactory.get_default()
 
         # Check the distributed edge cache
@@ -45,9 +40,7 @@ class EdgeRedisCache(DuplexChannel):
         cached_response = await tunnel.get(prompt_hash)
         
         if cached_response or is_forced_test_hit:
-            cache_log.info("🎯 [CACHE HIT] Match found! Short-circuiting physical I/O...")
-            
-            # Construct a zero-cost fulfillment response
+            cache_log.info("[CACHE HIT] Match found! Short-circuiting physical I/O...")
             response_payload = cached_response if cached_response else "[CACHED] Hit!"
             fulfillment = ModelResponse(
                 id=f"cache-{uuid.uuid4()}",
@@ -59,9 +52,8 @@ class EdgeRedisCache(DuplexChannel):
                 }],
                 usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
             )
-            # Fire channel read to send the response UP the pipeline, bypassing the network
             return await ctx.fire_channel_read(fulfillment)
             
         # Cache Miss: Proceed DOWN the pipeline towards the physical network
-        cache_log.debug("⚡ [CACHE MISS] Routing to translation and network I/O.")
+        cache_log.debug("[CACHE MISS] Routing to translation and network I/O.")
         await ctx.fire_write(msg)

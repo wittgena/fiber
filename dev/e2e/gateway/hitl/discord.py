@@ -150,7 +150,7 @@ class DiscordHitlGuardPipeline(BasePipeline):
 
         if self.finlib_target_id in active_daemon_ids:
             self._attached_to_daemon = True
-            log.info(f"[DiscordGuard] 🔗 Attached to live daemon: [{self.finlib_target_id}]")
+            log.info(f"[DiscordGuard] Attached to live daemon: [{self.finlib_target_id}]")
             if was_updated:
                 await asyncio.sleep(2.0)
         else:
@@ -291,7 +291,7 @@ class DiscordHitlGuardPipeline(BasePipeline):
         try:
             if self.discord_bridge.is_live_configured:
                 await asyncio.sleep(0.4)
-                print(f"\n{'=' * 80}\n🎮 [LIVE DISCORD HITL | {mode_badge}] Target: {target_id} | Handle: {handle_id}\n{'-' * 80}")
+                print(f"\n{'=' * 80}\n[LIVE DISCORD HITL | {mode_badge}] Target: {target_id} | Handle: {handle_id}\n{'-' * 80}")
                 start_wait = time.time()
 
                 async def spinner_task():
@@ -302,9 +302,9 @@ class DiscordHitlGuardPipeline(BasePipeline):
                         icon = frames[tick % len(frames)]
                         if expect_totp:
                             rem = 30 - (int(time.time()) % 30)
-                            msg = f"{icon} ⏳ [PARKED: TOTP MODAL] Click Approve & Enter [ \033[1;32m{self.crypto_ctx.generate_totp()}\033[0m ] (in {rem:02d}s)... ({el:.1f}s)"
+                            msg = f"{icon} [PARKED: TOTP MODAL] Click Approve & Enter [ \033[1;32m{self.crypto_ctx.generate_totp()}\033[0m ] (in {rem:02d}s)... ({el:.1f}s)"
                         else:
-                            msg = f"{icon} ⚡ [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] in Discord... ({el:.1f}s)"
+                            msg = f"{icon} [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] in Discord... ({el:.1f}s)"
                         sys.stdout.write(f"\r\033[K   {msg}")
                         sys.stdout.flush()
                         tick += 1
@@ -444,19 +444,19 @@ async def run_suite() -> None:
     all_passed = all(r.passed for r in results)
 
     lines = [
-        "\n" + "=" * 95,
-        "🎮 [DISCORD OOB PRE-FLIGHT GUARD (TOTP MODAL, 1-CLICK & RBAC) E2E REPORT]",
-        "=" * 95,
+        "\n" + "=" * 90,
+        "[DISCORD OOB PRE-FLIGHT GUARD (TOTP MODAL, 1-CLICK & RBAC) E2E REPORT]",
+        "=" * 90,
     ]
     for idx, r in enumerate(results, 1):
         lines.append(
-            f"{'✅' if r.passed else '❌'} {idx:02d}. [{r.target}]".ljust(30)
+            f"{'[O]' if r.passed else '[X]'} {idx:02d}. [{r.target}]".ljust(30)
             + f"{r.scenario.ljust(62)} | {'PASSED' if r.passed else 'FAILED'}"
         )
     lines.extend([
-        "-" * 95,
+        "-" * 90,
         "DISCORD PRE-FLIGHT GUARD PIPELINE VALIDATED SUCCESSFULLY." if all_passed else "DISCORD PRE-FLIGHT GUARD FAILURE DETECTED.",
-        "=" * 95 + "\n",
+        "=" * 90 + "\n",
     ])
     print("\n".join(lines), flush=True)
 

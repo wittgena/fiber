@@ -343,7 +343,7 @@ class BasePipeline(PipelineRunner):
 
         if self.external_node_active:
             log.info(
-                "[BasePipeline] 🔗 Live Master Node detected (Operating as PROPOSER). "
+                "[BasePipeline] Live Master Node detected (Operating as PROPOSER). "
                 "Delegating RPC & Real AnchorStore transitions directly to live node."
             )
         else:

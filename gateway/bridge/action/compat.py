@@ -20,10 +20,7 @@ from fiber.infra.vcr.manager import VCRPlaybackConfig
 from xphi.watcher.plane.emitter import get_emitter
 
 log = get_emitter("action.compat")
-
-# 하위 호환성 유지를 위한 Alias
 COMPAT_SAMPLE_TOOLS = DEFAULT_SYNTH_TOOLS
-
 STANDARD_PROMPTS: List[dict[str, Any]] = [
     {
         "scenario": "Stream Compat Traverser",
@@ -111,7 +108,7 @@ async def _execute_suite(
 
         if invoker_mode == "test_fixture" and tools and not fixture_path.exists():
             stats.skipped += 1
-            log.info(f"⚪ [Compat: SKIPPED] '{fixture_path.name}' not present for {target.full_model}.")
+            log.info(f"[Compat: SKIPPED] '{fixture_path.name}' not present for {target.full_model}.")
             continue
 
         stats.executed += 1
@@ -194,7 +191,7 @@ async def _execute_suite(
                 stats.executed -= 1
                 stats.skipped += 1
                 fixture_path.unlink(missing_ok=True)
-                log.info(f"⚪ [Compat: UNSUPPORTED] Skipped '{test['scenario']}' -> {e}")
+                log.info(f"[Compat: UNSUPPORTED] Skipped '{test['scenario']}' -> {e}")
             else:
                 log.error(f"[Compat: {invoker_mode.upper()}] Failed: {type(e).__name__} - {e}")
 
@@ -240,7 +237,7 @@ async def run_gen_fixture(
         print(f"\n{'='*80}")
         log.info(f"[COMPAT: BATCH GENERATION SUMMARY] ({len(models)} models processed)")
         for s in summary:
-            skip_str = f" (⚪ {s.skipped} unsupported)" if s.skipped else ""
+            skip_str = f" ({s.skipped} unsupported)" if s.skipped else ""
             log.info(f"  • {s.model:<42} : {s.passed}/{s.executed} scenarios{skip_str} -> {s.location}")
 
 
@@ -297,8 +294,8 @@ async def run_test_fixture(
         print(f"\n{'='*80}")
         log.info(f"[COMPAT: BATCH REPLAY SUMMARY] ({len(summary)} models tested)")
         for s in summary:
-            status_icon = "✅" if s.all_passed else "❌"
-            skip_str = f" (⚪ {s.skipped} unsupported)" if s.skipped else ""
+            status_icon = "[OK]" if s.all_passed else "[FAIL]"
+            skip_str = f" ({s.skipped} unsupported)" if s.skipped else ""
             log.info(f"  {status_icon} {s.model:<42} : {s.passed}/{s.executed} passed{skip_str}")
 
     if not all_passed:
