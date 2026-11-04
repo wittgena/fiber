@@ -1,8 +1,8 @@
 class Fiber < Formula
   desc "Agent Runtime Harness"
-  homepage "https://github.com/wittgena/fiber"
-  url "https://github.com/wittgena/fiber/archive/refs/tags/v1.1.4.9.tar.gz"
-  sha256 "be9246d13dae0f5965e9815d47d98b7a30dbef5f930aa41d5d7c153bb2a1b2c4"
+  homepage "https://github.com/dphi-network/fiber"
+  url "https://github.com/dphi-network/fiber/archive/refs/tags/v1.1.4.10.tar.gz"
+  sha256 "57617721e0c443e12b45da09675a41e040116aba6318f1bd2911f38a34395237"
 
   depends_on "python@3.12"
   depends_on "redis"
@@ -26,11 +26,11 @@ class Fiber < Formula
       To bootstrap your local workspace (~/.anchor/bound.json) and provision
       local node keys (~/.ssh/fiber_ed25519 & local_cipher.key), run once:
 
-        #{opt_bin}/fiber init
+        fiber init
 
       To start the Redis tunnel and background daemon service:
         brew services start redis
-        brew services start wittgena/fiber/fiber
+        brew services start dphi-network/fiber/fiber
     EOS
   end
 
@@ -47,6 +47,7 @@ class Fiber < Formula
     ENV["HOME"] = testpath
     system bin/"fiber", "init"
     assert_path_exists testpath/".anchor/bound.json"
+    assert_path_exists testpath/".anchor/origin.json"
     assert_path_exists testpath/".ssh/fiber_ed25519"
     assert_path_exists testpath/".ssh/fiber_ed25519.pub"
   end

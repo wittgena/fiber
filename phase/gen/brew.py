@@ -6,12 +6,12 @@ from pathlib import Path
 from xphi.node.space.bind.resolver import resolve_path
 
 # Configuration Constants
-GITHUB_REPO = "wittgena/fiber"
+GITHUB_REPO = "dphi-network/fiber"
 PYTHON_VERSION = "3.12"
 PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"
 PROJECT_DESC = "Agent Runtime Harness"
-DEFAULT_VERSION = "v1.1.4.9"
+DEFAULT_VERSION = "v1.1.4.10"
 
 FIBER_ROOT = resolve_path("fiber")
 
