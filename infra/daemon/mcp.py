@@ -59,7 +59,7 @@ class McpWorkerDaemon(AbstractDaemon):
         try:
             for spec in _specs_from_mapped_entries(anchor_entries):
                 desired[spec.target_id] = spec
-            log.info(f"[{self.name}] 🔗 Loaded {len(desired)} target(s) from mcp.json: {list(desired.keys())}")
+            log.info(f"[{self.name}] Loaded {len(desired)} target(s) from mcp.json: {list(desired.keys())}")
         except BaseException as e:
             log.error(f"[{self.name}] Failed to resolve anchor config entries: {e}")
 
@@ -117,7 +117,7 @@ class McpWorkerDaemon(AbstractDaemon):
                 status_lines.append(f"{tid} (Task Alive: {is_alive})")
 
         log.info(
-            f"[{self.name}] ✅ Worker Process Verification ({len(status_lines)} active): "
+            f"[{self.name}] Worker Process Verification ({len(status_lines)} active): "
             + " | ".join(status_lines)
         )
 
@@ -134,7 +134,7 @@ class McpWorkerDaemon(AbstractDaemon):
             payload = orjson.dumps(active_ids).decode("utf-8")
             await tunnel.set(ACTIVE_TARGETS_TUNNEL_KEY, payload)
             log.info(
-                f"[{self.name}] 📡 Synced {len(active_ids)} active target(s) to Tunnel "
+                f"[{self.name}] Synced {len(active_ids)} active target(s) to Tunnel "
                 f"[{ACTIVE_TARGETS_TUNNEL_KEY}]: {active_ids}"
             )
         except Exception as e:
@@ -191,7 +191,7 @@ class McpWorkerDaemon(AbstractDaemon):
             existing = self._target_specs.get(tid)
             if existing != spec:
                 if existing is not None:
-                    log.info(f"[{self.name}] ♻️ Hot-reloading updated target [{tid}]...")
+                    log.info(f"[{self.name}] Hot-reloading updated target [{tid}]...")
                     await self._stop_single_connector(tid)
                 self._target_specs[tid] = spec
                 self._spawn_connector_task(spec)
@@ -206,7 +206,7 @@ class McpWorkerDaemon(AbstractDaemon):
         try:
             specs = self._collect_target_specs()
             if not specs:
-                log.warning(f"[{self.name}] ⚠️ No MCP workers discovered or configured.")
+                log.warning(f"[{self.name}] No MCP workers discovered or configured.")
                 await self._sync_active_targets([])
             else:
                 self._log_boot_roster(specs)

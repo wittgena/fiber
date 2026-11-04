@@ -186,7 +186,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                 await asyncio.sleep(0.4)
 
                 print("\n" + "=" * 80)
-                print(f"📲 [LIVE SLACK PRE-FLIGHT HITL | Mode: {mode_badge}] Target: {target_id}")
+                print(f"[LIVE SLACK PRE-FLIGHT HITL | Mode: {mode_badge}] Target: {target_id}")
                 print(f"   • Target Channel : {self.slack_bridge.default_channel}  |  Handle : {handle_id}")
                 print("-" * 80)
 
@@ -207,7 +207,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                             )
                         else:
                             sys.stdout.write(
-                                f"\r\033[K   {spinner_icon} ⚡ [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] "
+                                f"\r\033[K   {spinner_icon} [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] "
                                 f"button in Slack (No TOTP required)... ({elapsed:.1f}s)"
                             )
                         sys.stdout.flush()
@@ -437,10 +437,10 @@ async def run_suite() -> None:
     results: List[TestResult] = await pipeline.run_pipeline()
     all_passed = all(r.passed for r in results)
 
-    lines = ["\n" + "=" * 90, "🛡️ [3RD-PARTY ZERO-CODE PRE-FLIGHT HITL (TOTP & 1-CLICK BUTTON) E2E REPORT]", "=" * 90]
+    lines = ["\n" + "=" * 90, "[3RD-PARTY ZERO-CODE PRE-FLIGHT HITL (TOTP & 1-CLICK BUTTON) E2E REPORT]", "=" * 90]
     for idx, r in enumerate(results, 1):
         lines.append(
-            f"{'✅' if r.passed else '❌'} {idx:02d}. [{r.target}]".ljust(22)
+            f"{'[O]' if r.passed else '[X]'} {idx:02d}. [{r.target}]".ljust(22)
             + f"{r.scenario.ljust(60)} | {'PASSED' if r.passed else 'FAILED'}"
         )
     lines.extend([

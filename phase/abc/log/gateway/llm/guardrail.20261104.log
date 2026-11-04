@@ -1,0 +1,89 @@
+(self) wittgena@wittgenas-MacBook-Pro self % fiber-dev e2e gateway.llm.guardrail                           
+ LOG | SYSTEM | INFO  |  phase.cli: [Fiber] Igniting E2E Test Suite(s): gateway.llm.guardrail
+ LOG | SYSTEM | INFO  |  phase.cli: 
+============================================================
+Launching Suite: fiber.dev.e2e.gateway.llm.guardrail
+============================================================
+ LOG | SYSTEM | INFO  |  model.fallback: Loaded 4 fallback models (Local-First).
+ LOG | SYSTEM | INFO  |  model.fallback: [Fallback Registry Diagnostics]
+ [P1] llama_server/gemma-3-1b-it-Q4_K_M.gguf: SELECTED
+ LOG | SYSTEM | INFO  |  e2e.base: [System Online] fallback model: llama_server/gemma-3-1b-it-Q4_K_M.gguf
+ LOG | SYSTEM | INFO  |  app.guardrailsuiteapp: Igniting GuardrailSuiteApp Workflow via Reactor...
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-67143
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Entered Trace Path: [logical:local]
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Initializing Local Direct Surface...
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: [GuardrailSuiteApp] Igniting LLM Guardrail & Secret Registry Suite (Model: llama_server/gemma-3-1b-it-Q4_K_M.gguf)
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: 
+[GuardrailSuiteApp] [Phase 1] BASELINE & CACHE: Tracer Hook & Edge Cache Short-Circuit
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : 018b8177f70250006c9b0d0c91024699
+ ├─ Model    : llama_server/gemma-3-1b-it-Q4_K_M.gguf
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL COMPLETED] 
+ ├─ Trace ID : 018b8177f70250006c9b0d0c91024699
+ ├─ Latency  : 879.04 ms
+ └─ Usage    : 19 tokens
+ LOG | SYSTEM | INFO  |  interceptor.cache: [CACHE HIT] Match found! Short-circuiting physical I/O...
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: [GuardrailSuiteApp] Passed: Baseline Tracer & Edge Cache Short-Circuit (Total: 911.12ms | Tokens: 19)
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: 
+[GuardrailSuiteApp] [Phase 2] PRE_TRANSLATE MASKING: In-Place PII & Payload Sanitization
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: [GuardrailSuiteApp] Passed: PRE_TRANSLATE In-Place PII Masking (Total: 48.93ms | Tokens: 27)
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: 
+[GuardrailSuiteApp] [Phase 3] POST_TRANSLATE BLOCKING: Built-in Secret & Custom C-Regex
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: [GuardrailSuiteApp] Passed: POST_TRANSLATE Strict Blocking (Built-in & Custom) (Total: 2.71ms | Tokens: Blocked)
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: 
+[GuardrailSuiteApp] [Phase 4] SECRET REGISTRY: Dynamic Key-Value Rule Injection & DIP Verification
+ LOG | SYSTEM | WARN  |  redact.registry: [REDACT - broken_regex_rule] Invalid regex skipped ('[INVALID_UNCLOSED_REGEX'): unterminated character set at position 0
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: [GuardrailSuiteApp] Passed: Secret Registry Dynamic Rule Injection (DIP) (Total: 14.43ms | Tokens: Blocked)
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: 
+[GuardrailSuiteApp] [Phase 5] CHAINED DEFENSE & RESILIENCE: [Mask -> Block] & Fallback Shield
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : 018b8178ec8250028f59f7da4b7d3666
+ ├─ Model    : llama_server/gemma-3-1b-it-Q4_K_M.gguf
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL COMPLETED] 
+ ├─ Trace ID : 018b8178ec8250028f59f7da4b7d3666
+ ├─ Latency  : 67.36 ms
+ └─ Usage    : 27 tokens
+ LOG | SYSTEM | ERROR |  executor.handlers: Payload translation failed
+ LOG | SYSTEM | WARN  |  executor.handlers: Fallback attempt triggered. Retrying with model: llama_server/gemma-3-1b-it-Q4_K_M.gguf
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL INITIATED] 
+ ├─ Trace ID : 018b817900c25000836334eea104b9c3
+ ├─ Model    : llama_server/gemma-3-1b-it-Q4_K_M.gguf
+ ├─ Config   : 0.7 Temp
+ └─ Messages : 1 items
+ LOG | SYSTEM | INFO  |  llm.tracer: 
+[LLM CALL COMPLETED] 
+ ├─ Trace ID : 018b817900c25000836334eea104b9c3
+ ├─ Latency  : 44.01 ms
+ └─ Usage    : 18 tokens
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: [GuardrailSuiteApp] Passed: Chained Defense (Mask->Block) & Fallback Shield (Total: 136.86ms | Tokens: 18)
+ LOG | SYSTEM | INFO  |  e2e.guardrailsuiteapp: 
+========================================================================================================================
+[GUARDRAILSUITEAPP] E2E LATENCY & USAGE BREAKDOWN REPORT
+------------------------------------------------------------------------------------------------------------------------
+01. [O] PASS | [PHASE 1]  | Baseline Tracer & Edge Cache Short-Circuit | Total:  911.12ms (Overhead Only:  911.12ms)                 | Tokens:    19
+02. [O] PASS | [PHASE 2]  | PRE_TRANSLATE In-Place PII Masking       | Total:   48.93ms (Overhead Only:   48.93ms)                 | Tokens:    27
+03. [O] PASS | [PHASE 3]  | POST_TRANSLATE Strict Blocking (Built-in & Custom) | Total:    2.71ms (Overhead Only:    2.71ms)                 | Tokens: Blocked
+04. [O] PASS | [PHASE 4]  | Secret Registry Dynamic Rule Injection (DIP) | Total:   14.43ms (Overhead Only:   14.43ms)                 | Tokens: Blocked
+05. [O] PASS | [PHASE 5]  | Chained Defense (Mask->Block) & Fallback Shield | Total:  136.86ms (Overhead Only:  136.86ms)                 | Tokens:    18
+------------------------------------------------------------------------------------------------------------------------
+ALL GUARDRAILSUITEAPP SCENARIOS EXECUTED SUCCESSFULLY.
+========================================================================================================================
+
+ LOG | SYSTEM | INFO  |  topos.workflow: [Workflow] Reached StopMessage Final Result: True
+ LOG | SYSTEM | INFO  |  scope.manager: [managed_scope] Triggering safe teardown sequence for infrastructure resources.
+ LOG | SYSTEM | INFO  |  scope.manager: [*] Folding Local Surface...
+ LOG | SYSTEM | INFO  |  scope.manager: [+] Context Manager closed safely.
+[Reactor] Executing user-defined teardown hook...
+ LOG | SYSTEM | INFO  |  app.guardrailsuiteapp: Reclaiming GuardrailSuiteApp suite resources...
+[Reactor] Lifecycle terminated cleanly.

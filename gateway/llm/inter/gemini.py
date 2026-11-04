@@ -314,7 +314,7 @@ class GoogleGenAI(InterLLM):
     @llm_retry_decorator
     def _chat(self, messages: Sequence[ChatMessage], **kwargs: Any):
         req_id = str(uuid4())[:8]
-        log.debug(f"[GenAI-{req_id}] 🚀 _chat START | model={self.model}, messages_count={len(messages)}")
+        log.debug(f"[GenAI-{req_id}] _chat START | model={self.model}, messages_count={len(messages)}")
 
         generation_config = {
             **(self._generation_config or {}),
@@ -331,7 +331,7 @@ class GoogleGenAI(InterLLM):
             response = chat.send_message(
                 next_msg.parts if isinstance(next_msg, types.Content) else next_msg
             )
-            log.debug(f"[GenAI-{req_id}] ✅ _chat SUCCESS")
+            log.debug(f"[GenAI-{req_id}] _chat SUCCESS")
         finally:
             if self.file_mode in ("fileapi", "hybrid"):
                 delete_uploaded_files(file_api_names, self._client)
@@ -341,7 +341,7 @@ class GoogleGenAI(InterLLM):
     @llm_retry_decorator
     async def _achat(self, messages: Sequence[ChatMessage], **kwargs: Any):
         req_id = str(uuid4())[:8]
-        log.debug(f"[GenAI-{req_id}] ⚡ _achat START | model={self.model}, messages_count={len(messages)}")
+        log.debug(f"[GenAI-{req_id}] _achat START | model={self.model}, messages_count={len(messages)}")
 
         generation_config = {
             **(self._generation_config or {}),
@@ -356,7 +356,7 @@ class GoogleGenAI(InterLLM):
             response = await chat.send_message(
                 next_msg.parts if isinstance(next_msg, types.Content) else next_msg
             )
-            log.debug(f"[GenAI-{req_id}] ✅ _achat SUCCESS")
+            log.debug(f"[GenAI-{req_id}] _achat SUCCESS")
         finally:
             if self.file_mode in ("fileapi", "hybrid"):
                 await adelete_uploaded_files(file_api_names, self._client)
@@ -377,7 +377,7 @@ class GoogleGenAI(InterLLM):
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> ChatResponseGen:
         req_id = str(uuid4())[:8]
-        log.debug(f"[GenAI-{req_id}] 🌊 _stream_chat START | model={self.model}, messages_count={len(messages)}")
+        log.debug(f"[GenAI-{req_id}] _stream_chat START | model={self.model}, messages_count={len(messages)}")
 
         generation_config = {
             **(self._generation_config or {}),
@@ -439,7 +439,7 @@ class GoogleGenAI(InterLLM):
         self, messages: Sequence[ChatMessage], **kwargs: Any
     ) -> ChatResponseAsyncGen:
         req_id = str(uuid4())[:8]
-        log.debug(f"[GenAI-{req_id}] 🌊⚡ _astream_chat START | model={self.model}, messages_count={len(messages)}")
+        log.debug(f"[GenAI-{req_id}] _astream_chat START | model={self.model}, messages_count={len(messages)}")
 
         generation_config = {
             **(self._generation_config or {}),

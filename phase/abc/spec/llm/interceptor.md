@@ -39,7 +39,7 @@ This guide defines the interface contracts, slot lifecycle, and declarative secu
 Developers pass interceptors as a flat list (`interceptors=[...]`), and Fiber autonomously sorts and mounts them into three deterministic execution zones based on each class's `target_slot` attribute:
 
 ```text
-[Caller] ➔ acompletion(..., interceptors=[Cache(), Router(), MaskGuard(), BlockGuard(), Tracer()])
+[Caller] -> acompletion(..., interceptors=[Cache(), Router(), MaskGuard(), BlockGuard(), Tracer()])
        │
        ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -53,7 +53,7 @@ Developers pass interceptors as a flat list (`interceptors=[...]`), and Fiber au
 │  ├─ EdgeRedisCache        : Exact/Vector lookup -> ctx.fire_channel_read()   │
 │  └─ OnnxSemanticRouter    : Intent classification -> mutates msg["model"]    │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│ CORE TRANSLATION (State Traverser: Raw dict ➔ Processor Object)              │
+│ CORE TRANSLATION (State Traverser: Raw dict -> Processor Object)              │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │ EGRESS SECURITY & GOVERNANCE (PipelineSlot.POST_TRANSLATE)                   │
 │  ├─ Active / Custom Block : C-regex secret scan -> ctx.fire_exception_caught │

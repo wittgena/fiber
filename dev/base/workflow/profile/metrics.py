@@ -1,6 +1,4 @@
 # fiber.dev.base.workflow.profile.metrics
-## @lineage: fiber.infra.watcher.profile.metrics
-## @lineage: fiber.infra.bound.watcher.profile.metrics
 """
 Lightweight, zero-dependency load profiling and SLO enforcement engine for Fiber pipelines.
 Captures latency percentiles (p50/p90/p95/p99), TTFT, throughput (RPS/CPS), peak memory delta,
@@ -72,7 +70,6 @@ class LoadProfileSummary:
     peak_memory_mb: float
     max_loop_lag_ms: float
 
-
 class RequestStopwatch:
     """개별 워커 코루틴 내부에서 TTFT 및 E2E 소요 시간을 정밀 측정하는 컨텍스트 헬퍼"""
     def __init__(self, worker_idx: int, mode: str):
@@ -114,7 +111,6 @@ class RequestStopwatch:
             error=self.error,
             metadata=self.metadata,
         )
-
 
 class PipelineLoadProfiler:
     """
@@ -192,12 +188,11 @@ class PipelineLoadProfiler:
         worker_fn: Callable[[int], Coroutine[Any, Any, Dict[str, Any]]]
     ) -> List[Dict[str, Any]]:
         """
-        k6 스타일의 고정 가상 유저(Virtual Users) 풀 실행기.
-        동시에 최대 `concurrency`개의 파이프라인만 인플라이트(In-flight) 상태를 유지하며
-        총 `total_iterations` 횟수만큼 쉼 없이 파이프라인을 타격(Closed-loop).
+        고정 가상 유저(Virtual Users) 풀 실행기.
+        - 동시에 최대 `concurrency`개의 파이프라인만 인플라이트(In-flight) 상태를 유지
+        - 총 `total_iterations` 횟수만큼 쉼 없이 파이프라인을 타격(Closed-loop)
         """
         sem = asyncio.Semaphore(concurrency)
-
         async def _bounded_call(idx: int) -> Dict[str, Any]:
             async with sem:
                 return await worker_fn(idx)
@@ -252,7 +247,7 @@ class PipelineLoadProfiler:
 
         if emit_log:
             profile_log.info(
-                f"\n  ┌── [📊 LOAD PROFILE: {summary.title}] ──────────────────────────────────────\n"
+                f"\n  ┌── [LOAD PROFILE: {summary.title}] ──────────────────────────────────────\n"
                 f"  │ • Throughput : {summary.rps:8.1f} req/s  | {summary.cps:9.1f} chunks/s "
                 f"(Reqs: {summary.succeeded}/{summary.total_requests}, Chunks: {summary.total_chunks})\n"
                 f"  │ • Latency E2E: p50={summary.p50_ms:6.2f}ms | p90={summary.p90_ms:6.2f}ms | "

@@ -47,13 +47,10 @@ async def run_fiber_cli(*args: str) -> None:
         await proc.wait()
 
         raw_out = "\n".join(output_lines)
-
-        # [정렬 1] sign verify 실패(exit 1)는 CLI 크래시가 아니라 비즈니스 검증 실패이므로
-        # fallback 시뮬레이션으로 넘어가지 않고 상태 동기화만 수행
         if proc.returncode != 0:
             if len(args) >= 2 and args[0] == "sign" and args[1] in ("verify", "admin"):
                 await _sync_after_cli_success(raw_out, args)
-                ui.notify("🚨 TOTP Verification Failed or Unregistered Admin", type="negative")
+                ui.notify("TOTP Verification Failed or Unregistered Admin", type="negative")
             else:
                 await _simulate_cli_fallback(args)
         else:
@@ -93,10 +90,10 @@ async def _sync_after_cli_success(raw_out: str, args: tuple[str, ...]) -> None:
                 cip_st = data.get("local_cipher_status", "EXISTING")
 
                 if all(st == "EXISTING" for st in (ssh_st, pub_st, cip_st)):
-                    ui.notify("ℹ️ 모든 노드 키 파일이 이미 존재하여 기존 키를 유지합니다.", type="info")
+                    ui.notify("모든 노드 키 파일이 이미 존재하여 기존 키를 유지합니다.", type="info")
                 else:
                     ui.notify(
-                        f"🔐 노드 키 초기화 완료 (SSH: {ssh_st}, Pub: {pub_st}, Cipher: {cip_st})",
+                        f"노드 키 초기화 완료 (SSH: {ssh_st}, Pub: {pub_st}, Cipher: {cip_st})",
                         type="positive",
                     )
 
@@ -136,13 +133,13 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
             cip_st = info.get("local_cipher_status", "EXISTING")
 
             refs.push_cli(
-                f"  ✓ [Sign Init] SSH={ssh_st}, Pub={pub_st}, Cipher={cip_st}"
+                f" [Sign Init] SSH={ssh_st}, Pub={pub_st}, Cipher={cip_st}"
             )
             if all(st == "EXISTING" for st in (ssh_st, pub_st, cip_st)):
-                ui.notify("ℹ️ 모든 노드 키 파일이 이미 존재합니다 (기존 파일 유지).", type="info")
+                ui.notify("모든 노드 키 파일이 이미 존재합니다 (기존 파일 유지).", type="info")
             else:
                 ui.notify(
-                    f"🔐 노드 키 초기화 완료 (SSH: {ssh_st}, Pub: {pub_st}, Cipher: {cip_st})",
+                    f"노드 키 초기화 완료 (SSH: {ssh_st}, Pub: {pub_st}, Cipher: {cip_st})",
                     type="positive",
                 )
 
@@ -160,8 +157,8 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
         if is_copy:
             await mcp.scan_mcp_topology_and_health(silent=False)
             label = target_id or "all"
-            refs.push_cli(f"  ✓ [Config Sync] Copied to ~/.anchor/mcp.json -> {label}")
-            ui.notify(f"📥 Copied to fiber mcp.json: {label}", type="positive")
+            refs.push_cli(f" [Config Sync] Copied to ~/.anchor/mcp.json -> {label}")
+            ui.notify(f"Copied to fiber mcp.json: {label}", type="positive")
             return
 
         mounted: list[str] = []
@@ -174,9 +171,9 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
 
         s.mcp_topology_dirty = True
         label = ", ".join(mounted) if mounted else (target_id or "all")
-        refs.push_cli(f"  ✓ [MCP Sidecar] Mounted & bridged -> {label}")
+        refs.push_cli(f" [MCP Sidecar] Mounted & bridged -> {label}")
         refs.push_pubsub("mcp:registry", f"MOUNTED targets={label}")
-        ui.notify(f"🔌 Mounted MCP Worker(s): {label}", type="positive")
+        ui.notify(f"Mounted MCP Worker(s): {label}", type="positive")
         return
 
     if "jwt" in cmd or "PROVISION" in cmd or "TOP_UP" in cmd:
@@ -194,7 +191,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
         if f.jwt_op == "REVOKE":
             fuel = core = 0
         f.last_op = f.jwt_op
-        refs.push_cli(f"  ✓ [EdDSA JWT] op={f.jwt_op} ver={f.policy_ver} -> Remaining={fuel:,} Fuel")
+        refs.push_cli(f" [EdDSA JWT] op={f.jwt_op} ver={f.policy_ver} -> Remaining={fuel:,} Fuel")
         plane.emit_ledger(
             "bound.account.manager", f"EVENT={f.jwt_op} fuel={fuel} v={f.policy_ver}", fuel, core, f.policy_ver
         )
@@ -217,7 +214,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
 
     elif "kill" in cmd:
         f.ledger_balance, f.policy_ver, f.last_op = 0, 99, "KILL_SWITCH"
-        refs.push_cli("  🚨 [Kill-Switch] Broadcasted REVOKE (policy_ver=99)")
+        refs.push_cli(" [Kill-Switch] Broadcasted REVOKE (policy_ver=99)")
         plane.emit(
             "channel.fuel",
             "EVENT=REVOKE action=aclose() policy_ver=99",
@@ -229,7 +226,7 @@ async def _simulate_cli_fallback(args: tuple[str, ...]) -> None:
             },
         )
     elif "compat" in cmd:
-        refs.push_cli("  ✓ [Schema Verified] VCR replay extracted 14 chunks (0ms network I/O)")
+        refs.push_cli(" [Schema Verified] VCR replay extracted 14 chunks (0ms network I/O)")
         plane.emit(
             "compat.registry",
             "VCR replay verified 14 chunks in 3.1ms (0ms I/O)",

@@ -101,7 +101,7 @@ class FinopsSystemWorker(AsyncWorkerProtocol):
             kill_payload["finops"]["policy_ver"] = int(policy_ver)
 
         await tunnel.publish("finops:control_plane", json.dumps(kill_payload))
-        self.log.warning(f"🚨 [LocalFinOps] Published KILL-SWITCH (REVOKE) for tenant '{tenant_id}' via Pub/Sub")
+        self.log.warning(f"[LocalFinOps] Published KILL-SWITCH (REVOKE) for tenant '{tenant_id}' via Pub/Sub")
 
 def main():
     worker = FinopsSystemWorker()

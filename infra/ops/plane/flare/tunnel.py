@@ -53,7 +53,7 @@ class _MockStateStore:
             # 1. 안전하게 페이로드 추출 (실패 시 즉시 종료)
             data_val = fields.get('data') or fields.get(b'data')
             if not data_val: 
-                log.debug(f"[FlareTunnel:xadd] No data field found in xadd fields. Returning mock id.")
+                log.debug("[FlareTunnel:xadd] No data field found in xadd fields. Returning mock id.")
                 return b'0-0'
 
             payload = json.loads(data_val)
@@ -133,18 +133,18 @@ class _MockStateStore:
                 "id": job_id
             }
 
-            log.info(f"[FlareTunnel:_process_edge_request] ➔ Sending POST to Edge [{vm_tgt}] (job_id: {job_id}, method: {rpc_method}, timeout: {dynamic_timeout.read}s)")
+            log.info(f"[FlareTunnel:_process_edge_request] -> Sending POST to Edge [{vm_tgt}] (job_id: {job_id}, method: {rpc_method}, timeout: {dynamic_timeout.read}s)")
 
             # 3. Transmit via HTTP
             response = await self.http_client.post("/", json=rpc_request, timeout=dynamic_timeout)
 
             elapsed_time = time.time() - start_time
-            log.debug(f"[FlareTunnel:_process_edge_request] ⬅ Received HTTP {response.status_code} in {elapsed_time:.2f}s (job_id: {job_id})")
+            log.debug(f"[FlareTunnel:_process_edge_request] <- Received HTTP {response.status_code} in {elapsed_time:.2f}s (job_id: {job_id})")
             
             # [핵심 로직] router.ts가 생성하여 삽입한 Edge-Native Hash 추출
             edge_hash = response.headers.get("X-XPHI-Canonical-Hash")
             if edge_hash:
-                log.info(f"[FlareTunnel:_process_edge_request] 🔗 Captured Edge-Sealed Hash: {edge_hash}")
+                log.info(f"[FlareTunnel:_process_edge_request] [SEAL] Captured Edge Boundary Seal: {edge_hash}")
 
             response.raise_for_status()
 
@@ -178,25 +178,25 @@ class _MockStateStore:
             elapsed_time = time.time() - start_time
             err_msg = f"Edge HTTP {e.response.status_code}: {e.response.text}"
             if e.response.status_code in (502, 503):
-                err_msg = "Kinetic Trap: Edge returned 502 Bad Gateway (CPU Limit Exceeded or Crashed)"
+                err_msg = "Wall-Time/CPU Limit Cutoff: Edge returned 502 Bad Gateway (Isolate Terminated)"
             log.warning(f"[FlareTunnel:_process_edge_request] {err_msg} [{job_id}] (after {elapsed_time:.2f}s)")
             await self._put_error(job_id, err_msg)
 
         except httpx.ReadTimeout:
             elapsed_time = time.time() - start_time
-            err_msg = f"Kinetic Trap: Edge Execution Read Timeout (V8 Isolate Hang)"
+            err_msg = "Wall-Time Cutoff: Edge Execution Read Timeout (V8 Isolate Hang)"
             log.warning(f"[FlareTunnel:_process_edge_request] {err_msg} [{job_id}] (after {elapsed_time:.2f}s)")
             await self._put_error(job_id, err_msg)
 
         except httpx.ConnectError:
             elapsed_time = time.time() - start_time
-            err_msg = "Connection Refused: Local Edge Server (Wrangler) is unreachable."
+            err_msg = "Connection Refused: Local Edge Runtime (workerd/Wrangler) is unreachable."
             log.error(f"[FlareTunnel:_process_edge_request] {err_msg} [{job_id}] (after {elapsed_time:.2f}s)")
             await self._put_error(job_id, err_msg)
 
         except httpx.RemoteProtocolError:
             elapsed_time = time.time() - start_time
-            err_msg = "Kinetic Trap: Edge Connection Severed Forcefully (V8 Silent Abort)"
+            err_msg = "Wall-Time Cutoff: Edge Connection Disconnected Forcefully (V8 Isolate Abort / EOF)"
             log.warning(f"[FlareTunnel:_process_edge_request] {err_msg} [{job_id}] (after {elapsed_time:.2f}s)")
             await self._put_error(job_id, err_msg)
 
@@ -260,7 +260,7 @@ class FlareFacade:
 
     def pubsub(self):
         """Mock pubsub to satisfy broker's listener"""
-        log.debug(f"[FlareTunnel:pubsub] Initializing mock pubsub listener")
+        log.debug("[FlareTunnel:pubsub] Initializing mock pubsub listener")
         return _MockPubSub(self._response_queue)
 
     async def publish(self, channel: str, message: Any):
@@ -318,7 +318,7 @@ class FlareFacade:
     async def stream_ack(self, *args, **kwargs): return 1
 
     async def close(self):
-        log.debug(f"[FlareTunnel:close] Closing FlareFacade and HTTP client")
+        log.debug("[FlareTunnel:close] Closing FlareFacade and HTTP client")
         await self.state_store.aclose()
         await self.http_client.aclose()
 

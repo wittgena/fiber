@@ -1,0 +1,262 @@
+(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.inter.concurrency --vcr replay --concurrency 200
+[Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+ LOG | SYSTEM | INFO  |  model.fallback: Loaded 4 fallback models (Local-First).
+ LOG | SYSTEM | INFO  |  model.fallback: [Fallback Registry Diagnostics]
+ [P1] llama_server/gemma-3-1b-it-Q4_K_M.gguf: SELECTED
+ LOG | SYSTEM | INFO  |  e2e.base: [System Online] fallback model: llama_server/gemma-3-1b-it-Q4_K_M.gguf
+ LOG | SYSTEM | INFO  |  vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (replay mode)
+[Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
+[Reactor] UVLoop (epoll) Policy injected.
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-46142
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [Benchmark Notice] VCR Replay mode active. Metrics (TTFT, Latency) strictly measure Core Pipeline Engine overhead (event-loop routing, stream backpressure), NOTactual LLM inference times.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+=== Starting Suite: Core Pipeline VCR Concurrency & Load Profile Suite ===
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [MockPipeline] RPC Bus & Core Daemons Ignited (Mock AnchorStore & Real Validators Aligned).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Init Secure MCP Server...
+ LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [MockPipeline] REST Edge Bootstrapped.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initiating Autonomous RPC Worker Daemon...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Initializing Headless Worker Dependencies...
+ LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: b77bda9b...
+ LOG | KERNEL | INFO  |  anchor.store: [AnchorStore] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | ANCHOR | INFO  |  anchor.oracle: [AnchorOracle] Mounted Anchor DB via AnchorStore. Canonical WASM Broker attached.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Dynamic RPC Registry mounted with 12 routes.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Worker [worker-46142] listening on topic: internal.rpc.queue
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Initializing Origin Registry and verifying cryptographic state...
+ LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/anchor/origin.json
+ LOG | SYSTEM | INFO  |  contract.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Origin Registry integrated successfully. Active signers: 3
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/self/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: SecretAuditor mounted successfully to app.state.
+ LOG | SYSTEM | INFO  |  interceptor.registry: No external interceptor config found. Using default pipeline configuration.
+ LOG | SYSTEM | INFO  |  vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /usr/local/self/anchor/compats/suites/base)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: WasmBroker initialized (timeout: 5.0s).
+ LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: StrictOtlpExtractionEngine initialized.
+ LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 0 Connectors...
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 1/3] Phase 1: Concurrent Unary Burst & Context Isolation
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Executing 200 unary requests across 200 VUs (Mode: Replay (Zero-Network Engine Benchmark))...
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.74ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.15ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:1.0] [Acc:2.4] vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+[Telemetry] Burst Alert Triggered on 'LLM_INTER:vcr.proxy' (Acc: 3.07) Den: 13.50)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:3.1] vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms).
+[Telemetry] System Stabilized on 'SYSTEM:trace.profile'
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [LOAD PROFILE: Phase 1 - Unary Pipeline Burst] ──────────────────────────────────────
+  │ • Throughput :    651.4 req/s  |     651.4 chunks/s (Reqs: 200/200, Chunks: 200)
+  │ • Latency E2E: p50=  1.33ms | p90=  2.12ms | p95=  2.41ms | p99=  3.46ms
+  │ • TTFT       : p50=  1.33ms | p95=  2.41ms | Min/Max=1.2/4.3ms
+  └ • Runtime    : MemPeak= 0.78MB | LoopLag=293.00ms | Wall=307.0ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 2/3] Phase 2: Concurrent Stream Interleaving & Throughput Profile
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Launching 200 interleaved streams across 200 VUs (Mode: Replay (Zero-Network Engine Benchmark))...
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9833.56ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.91ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.55ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.30ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.39ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.56ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.27ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9476.29ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9475.96ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9475.93ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9475.17ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9474.92ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9474.62ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9474.52ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9474.31ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9474.32ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9473.97ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9473.95ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9473.63ms, 0ms upstream I/O).
+ LOG | LLM_INTER | INFO  |  vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9473.39ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:1.0] [Acc:2.4] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9473.11ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.9] [Acc:2.5] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9472.82ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.9] [Acc:2.6] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9472.60ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.8] [Acc:2.7] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9472.46ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.8] [Acc:2.8] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9472.16ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.8] [Acc:3.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 9471.79ms, 0ms upstream I/O).
+[Telemetry] Burst Alert Triggered on 'LLM_INTER:vcr.proxy' (Acc: 3.07) Den: 13.50)
+[Telemetry] System Stabilized on 'SYSTEM:trace.profile'
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [LOAD PROFILE: Phase 2 - Interleaved Stream Fan-Out] ──────────────────────────────────────
+  │ • Throughput :     20.0 req/s  |    2084.5 chunks/s (Reqs: 200/200, Chunks: 20800)
+  │ • Latency E2E: p50=9416.24ms | p90=9474.68ms | p95=9477.10ms | p99=9478.24ms
+  │ • TTFT       : p50=  1.15ms | p95=  1.28ms | Min/Max=9338.3/9836.9ms
+  └ • Runtime    : MemPeak=20.41MB | LoopLag=803.00ms | Wall=9978.5ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[PHASE 3/3] Phase 3: Heterogeneous Sustained VU Pool (Unary + Stream + Aggregated)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Running 200 heterogeneous tasks across 200 VUs (Mode: Replay (Zero-Network Engine Benchmark))...
+[Telemetry] Burst Alert Triggered on 'LLM_INTER:vcr.proxy' (Acc: 22.84) Den: 100.50)
+[Telemetry] System Stabilized on 'LLM_INTER:vcr.proxy'
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:1.9] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.44ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-2.8] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 50.30ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-2.9] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.86ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-5.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.84ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-8.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.14ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-10.7] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.37ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-10.8] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.34ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-12.5] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.66ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-14.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.08ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-14.9] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.32ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-14.8] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.42ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-15.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.35ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-15.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.92ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-14.6] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 44.02ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-13.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 49.87ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-11.8] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.28ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-12.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.24ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-9.5] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.02ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-6.3] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.73ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-4.5] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.34ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-3.8] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.56ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:1.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.76ms, 0ms upstream I/O).
+[Telemetry] Burst Alert Triggered on 'LLM_INTER:vcr.proxy' (Acc: 5.55) Den: 122.50)
+[Telemetry] System Stabilized on 'LLM_INTER:vcr.proxy'
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.2] [Acc:2.7] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 49.58ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.3] [Acc:0.3] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.17ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.3] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.38ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.3] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.35ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.3] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.82ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.21ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.50ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 48.00ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.28ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.11ms (original live: 1674.7ms).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 68.50ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.20ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.92ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.50ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.54ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.98ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.78ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 55.62ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.39ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.55ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.72ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.26ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.33ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.84ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.59ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 56.23ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 48.83ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.90ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.51ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.07ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.3] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.00ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.57ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.3] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.70ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.85ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.67ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.40ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.98ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.45ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.13ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.19ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.71ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 49.76ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 55.30ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.07ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.33ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.86ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.49ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 49.01ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.59ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.97ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 55.05ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.55ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.74ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.46ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.37ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.31ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.52ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.44ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.57ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.59ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.41ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.51ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 48.06ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.34ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.37ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 55.38ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.73ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.93ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.51ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.70ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.02ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.23ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 50.77ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.96ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.77ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 55.46ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 48.08ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.22ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 48.10ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.80ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 49.94ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.74ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.88ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.65ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 49.04ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.12ms, 0ms upstream I/O).
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.72ms, 0ms upstream I/O).
+ LOG | SYSTEM | INFO  |  trace.profile: 
+  ┌── [LOAD PROFILE: Phase 3 - Mixed Workload (Unary/Stream/Aggregated)] ──────────────────────────────────────
+  │ • Throughput :     27.5 req/s  |     977.9 chunks/s (Reqs: 200/200, Chunks: 7101)
+  │ • Latency E2E: p50= 49.46ms | p90= 58.02ms | p95= 60.71ms | p99= 63.31ms
+  │ • TTFT       : p50=  1.57ms | p95= 60.24ms | Min/Max=1.2/76.3ms
+  └ • Runtime    : MemPeak= 0.87MB | LoopLag=7251.00ms | Wall=7261.6ms
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
+[BasePipeline] Teardown sequence initiated...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Cancel signal received.
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Releasing RPC Worker resources...
+ LOG | SYSTEM | INFO  |  daemon.rpc: [RpcWorkerDaemon] Resource cleanup complete.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: Shutting down receptor.rest payload safely...
+ LOG | SYSTEM | INFO  |  vcr.injector: VCRInjector: Teardown complete. Restored 9 original adapters.
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: API Payload Teardown complete. Goodbye.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Teardown complete.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: PIPELINE CONCURRENCY & LOAD PROFILE SUITE VALIDATED SUCCESSFULLY.
+[Reactor] Lifecycle terminated cleanly.
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed sync fixture '91fb1c88' in 0.10ms (original live: 1674.7ms). (x64)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:11.7] vcr.proxy: [vcr.proxy] Bursting logs suppressed... (x370)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 51.66ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.1] [Acc:-15.4] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.32ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.92ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 54.24ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 46.17ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:-0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.35ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 53.50ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.2] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 45.78ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 47.33ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.1] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.07ms, 0ms upstream I/O). (x2)
+SUMMARY🔥| LLM_INTER | INFO  |  [G:0.4] [Acc:0.0] vcr.proxy: [VCR:Replay] Replayed stream fixture '702ca5c0' (104 chunks in 52.13ms, 0ms upstream I/O). (x2)
+(self) wittgena@wittgenas-MacBook-Pro self % 

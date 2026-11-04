@@ -90,12 +90,12 @@ All `"Parameters"` are stripped from the on-ledger graph at compile time and ins
 
 ```mermaid
 flowchart TD
-    Plan["🧠 Plan_Intent_LLM<br/>(llm://gpt-4o | allow_parallel)"]
-    Fast["🛠️ Fast_Readonly_MCP<br/>(mcp://readonly_db_search)<br/>in: intent_filter.$"]
-    Admin["🚨 Admin_Mutation_MCP<br/>(mcp://prod_db_admin)<br/>SQL: DELETE (HTTP 202 Lock)"]
-    Join{"⚖️ Evaluate_And_Join<br/>(DagJoinBarrier & Choice)"}
-    Reflect["🔍 Reflect_Fallback_LLM<br/>(reflect://gpt-4o-mini)"]
-    Final(["🏁 Final_Act (Succeed)"])
+    Plan["Plan_Intent_LLM<br/>(llm://gpt-4o | allow_parallel)"]
+    Fast["Fast_Readonly_MCP<br/>(mcp://readonly_db_search)<br/>in: intent_filter.$"]
+    Admin["Admin_Mutation_MCP<br/>(mcp://prod_db_admin)<br/>SQL: DELETE (HTTP 202 Lock)"]
+    Join{"Evaluate_And_Join<br/>(DagJoinBarrier & Choice)"}
+    Reflect["Reflect_Fallback_LLM<br/>(reflect://gpt-4o-mini)"]
+    Final(["Final_Act (Succeed)"])
 
     Plan ==>|"1:2 Fork (extract: $.intent_type)"| Fast
     Plan ==>|"1:2 Fork"| Admin

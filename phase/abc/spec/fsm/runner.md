@@ -4,7 +4,7 @@
 
 **Fiber FSM/DAG Runner** is a deterministic, WASM-verified, and ledger-anchored multiverse execution engine for autonomous AI agents. Built on top of **Phase Transition Anchors (PTA)**, **Content-Addressable Storage (CAS)**, and the **Canonical FSM WASM Kernel**, it compiles standard and shorthand AWS Step Functions (ASL) definitions into ultra-compact (`<= 2KB`) topological blobs, statically prevents barrier deadlocks prior to execution, and governs parallel hypothesis branching with strict FinOps fuel conservation.
 
-> 🔗 **Authoring & Integration Guide:** For ASL syntax rules, Polyglot URI schemes (`fn://`, `py://`, `http(s)://`, `exec://`, `mcp://`), SDK recipes, and progressive framework onboarding, refer to **[`fiber.phase.abc.spec.fsm.guide`](/phase/abc/spec/fsm/guide.md)**.
+> **Authoring & Integration Guide:** For ASL syntax rules, Polyglot URI schemes (`fn://`, `py://`, `http(s)://`, `exec://`, `mcp://`), SDK recipes, and progressive framework onboarding, refer to **[`fiber.phase.abc.spec.fsm.guide`](/phase/abc/spec/fsm/guide.md)**.
 
 ---
 

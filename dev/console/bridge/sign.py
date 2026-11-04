@@ -136,7 +136,7 @@ class OobActionBridge:
             if refs.qr_dialog:
                 refs.qr_dialog.open()
 
-            refs.push_cli(f"$ fiber sign enroll -u {res.canonical_id}\n  ✓ Zero-Exposure AES-GCM TOTP saved")
+            refs.push_cli(f"$ fiber sign enroll -u {res.canonical_id}\n Zero-Exposure AES-GCM TOTP saved")
             refs.push_pubsub("sign:enroll", f"TOTP_ENROLLED user={res.canonical_id}")
             ui.notify(f"TOTP Enrolled: {res.issuer} ({res.display_label})", type="positive")
         except Exception as e:
@@ -154,7 +154,7 @@ class OobActionBridge:
             refs.push_cli(f"$ fiber sign verify -u {res.user_id} -> valid={res.valid} (code={res.code})")
             refs.push_pubsub("sign:verify", f"TOTP_VERIFY user={res.user_id} valid={res.valid}")
             ui.notify(
-                f"TOTP Verification {'PASSED ✅' if res.valid else 'FAILED ❌'} (Code: {res.code})",
+                f"TOTP Verification {'PASSED' if res.valid else 'FAILED'} (Code: {res.code})",
                 type="positive" if res.valid else "negative",
             )
             return res.valid
@@ -168,7 +168,7 @@ class OobActionBridge:
             canonical_id = await revoke_admin_totp(s.admin_user)
             s.totp_secret = ""
             await self.refresh_sign_status(silent=True)
-            refs.push_cli(f"$ fiber sign revoke -u {canonical_id}\n  ✓ Revoked from SQLite Audit DB.")
+            refs.push_cli(f"$ fiber sign revoke -u {canonical_id}\n Revoked from SQLite Audit DB.")
             refs.push_pubsub("sign:revoke", f"TOTP_REVOKED user={canonical_id}")
             ui.notify(f"Revoked TOTP for '{canonical_id}'", type="warning")
         except Exception as e:
@@ -197,12 +197,12 @@ class OobActionBridge:
 
             if res.is_live:
                 refs.push_pubsub(
-                    "mcp:slack_oob", f"📤 Sent Slack BlockKit ({mode_str}) to {s.slack_channel} (ts={res.ts})"
+                    "mcp:slack_oob", f"Sent Slack BlockKit ({mode_str}) to {s.slack_channel} (ts={res.ts})"
                 )
-                ui.notify(f"📤 Sent HITL ({mode_str}) to Slack {s.slack_channel}", type="positive")
+                ui.notify(f"Sent HITL ({mode_str}) to Slack {s.slack_channel}", type="positive")
             else:
-                refs.push_pubsub("mcp:slack_oob", f"🧬 Minted OOB StateToken (fp={res.node_fp}, mode={mode_str})")
-                ui.notify(f"🧬 Generated Signed Slack BlockKit ({mode_str}) in Inspector", type="info")
+                refs.push_pubsub("mcp:slack_oob", f"Minted OOB StateToken (fp={res.node_fp}, mode={mode_str})")
+                ui.notify(f"Generated Signed Slack BlockKit ({mode_str}) in Inspector", type="info")
         except Exception as e:
             diag.exception("Failed to dispatch Slack OOB blocks", exc=e)
             ui.notify(f"Slack OOB Error: {e}", type="warning")
@@ -218,10 +218,10 @@ class OobActionBridge:
         s = state.security
         if s.oob_require_totp:
             if not await self.verify_admin_totp(s.totp_input_code.strip() or None):
-                refs.push_pubsub("mcp:hitl", "❌ TOTP_VERIFY_FAILED -> Sandbox remains suspended")
+                refs.push_pubsub("mcp:hitl", "TOTP_VERIFY_FAILED -> Sandbox remains suspended")
                 return
         else:
-            refs.push_cli(f"  ⚡ [1-Click OOB] Attested directly by Node Identity ({s.admin_user})")
+            refs.push_cli(f" [1-Click OOB] Attested directly by Node Identity ({s.admin_user})")
 
         if refs.hitl_dialog:
             refs.hitl_dialog.close()
@@ -237,8 +237,7 @@ class OobActionBridge:
         except Exception as e:
             diag.warn("Could not render resolution receipt preview", exc=str(e))
 
-        refs.push_pubsub("mcp:hitl", "✓ ATTESTATION_PASSED -> Resuming suspended sandbox execution")
-        ui.notify("✓ Approved! Cryptographic Audit Receipt anchored.", type="positive")
-
+        refs.push_pubsub("mcp:hitl", "ATTESTATION_PASSED -> Resuming suspended sandbox execution")
+        ui.notify("Approved! Cryptographic Audit Receipt anchored.", type="positive")
 
 oob = OobActionBridge(finops_manager)

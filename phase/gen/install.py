@@ -119,7 +119,7 @@ else
 fi
 
 echo -e "\\n============================================================"
-echo -e "${GREEN}🎉 {{PROJECT_NAME_TITLE}} Installation & Key Provisioning Complete!${NC}"
+echo -e "${GREEN} {{PROJECT_NAME_TITLE}} Installation & Key Provisioning Complete!${NC}"
 echo -e "============================================================"
 echo -e "  ${YELLOW}Check Identity      :${NC} {{PROJECT_NAME_LOWER}} sign status"
 echo -e "  ${YELLOW}Check Daemon Status :${NC} systemctl --user status {{PROJECT_NAME_LOWER}}"

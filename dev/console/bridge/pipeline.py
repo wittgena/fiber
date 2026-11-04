@@ -103,7 +103,7 @@ class PipelineActionBridge:
                 c.classes(replace="bg-amber-900 border-2 border-amber-400 p-2 w-36 text-center")
             refs.push_pubsub(
                 "mcp:audit",
-                f"🎭 [PRE_TRANSLATE MASK] Sanitized in-place ({guard_ms:.3f}ms) -> '{mutated_prompt}'",
+                f"[PRE_TRANSLATE MASK] Sanitized in-place ({guard_ms:.3f}ms) -> '{mutated_prompt}'",
             )
             await asyncio.sleep(0.12)
 
@@ -123,10 +123,10 @@ class PipelineActionBridge:
 
             refs.push_pubsub(
                 "mcp:audit",
-                f"🛑 [PermissionError] Blocked in POST_TRANSLATE ({guard_ms:.3f}ms) — Upstream & VCR I/O short-circuited",
+                f"[PermissionError] Blocked in POST_TRANSLATE ({guard_ms:.3f}ms) — Upstream & VCR I/O short-circuited",
             )
             ui.notify(
-                f"🛑 Guardrail Block: Sensitive pattern detected ({guard_ms:.3f}ms) — Short-circuited before LLM/VCR!",
+                f"Guardrail Block: Sensitive pattern detected ({guard_ms:.3f}ms) — Short-circuited before LLM/VCR!",
                 type="negative",
             )
             return
@@ -166,17 +166,17 @@ class PipelineActionBridge:
 
         refs.push_pubsub(
             "vcr:xray",
-            f"🎞️ [VCR Fixture Replay] model={target_model} chunks={chunk_cnt} tokens=+{token_cnt} overhead={total_ms}ms",
+            f"[VCR Fixture Replay] model={target_model} chunks={chunk_cnt} tokens=+{token_cnt} overhead={total_ms}ms",
         )
 
         if is_mask_mode and matched:
             ui.notify(
-                f"🎭 Masked in-place & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
+                f"Masked in-place & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
                 type="warning",
             )
         else:
             ui.notify(
-                f"✓ Passed Guardrail & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
+                f"Passed Guardrail & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
                 type="positive",
             )
 
@@ -198,8 +198,8 @@ class PipelineActionBridge:
                 if decoded := line.decode("utf-8", errors="replace").rstrip():
                     refs.push_cli(f"  {decoded}")
             await proc.wait()
-            refs.push_pubsub("mcp:audit", "🛡️ [E2E Guardrail Suite] 5/5 Phases Passed (Mask, Block, DIP Registry)")
-            ui.notify("🛡️ Guardrail & Registry E2E Suite Passed!", type="positive")
+            refs.push_pubsub("mcp:audit", "[E2E Guardrail Suite] 5/5 Phases Passed (Mask, Block, DIP Registry)")
+            ui.notify("Guardrail & Registry E2E Suite Passed!", type="positive")
         except Exception as e:
             refs.push_cli(f"  [Guardrail Suite Error] {e}")
             ui.notify(f"Guardrail Suite Error: {e}", type="negative")

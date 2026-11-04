@@ -87,16 +87,16 @@ class MinikubeNativeAdapter:
                         break
                         
             if not is_open:
-                self.log.error(f"  └─ 💥 [PortForward] Failed to bind local port {local_port} within timeout.")
+                self.log.error(f"  └─ [PortForward] Failed to bind local port {local_port} within timeout.")
                 process.terminate()
                 return False
                 
             self._port_forward_processes[local_port] = process
-            self.log.info("  └─ ✨ [PortForward] Tunnel established successfully.")
+            self.log.info("  └─ [PortForward] Tunnel established successfully.")
             return True
             
         except Exception as e:
-            self.log.error(f"  └─ 💥 [PortForward] Failed: {e}")
+            self.log.error(f"  └─ [PortForward] Failed: {e}")
             return False
 
     async def stop_port_forward(self, local_port: int = None):
@@ -117,7 +117,7 @@ class MinikubeNativeAdapter:
         
         pod_name = await self._get_gateway_pod_name()
         if not pod_name:
-            self.log.error("  └─ 💥 Gateway Pod not found.")
+            self.log.error("  └─ Gateway Pod not found.")
             return False
 
         if job_name == "system-e2e-test" or "FIBER_E2E_STEPS" in env:
@@ -146,7 +146,7 @@ class MinikubeNativeAdapter:
             cp_cmd = ["kubectl", "cp", f"{self.namespace}/{pod_name}:/artifact_mount/.", str(self.artifact_dir)]
             cp_code, _, _ = await self.boundary.run_command(cp_cmd, capture=True)
             if cp_code != 0:
-                 self.log.error("  └─ 💥 Failed to extract artifacts via kubectl cp.")
+                 self.log.error("  └─ Failed to extract artifacts via kubectl cp.")
                  return False
 
         self.log.info(f"  └─ Phase '{job_name}' completed successfully.")
@@ -173,7 +173,7 @@ class DeterminismAuditor:
         wheel_files = list(self.target_dir.rglob("fiber-*.whl"))
         
         if not wheel_files:
-            self.log.error("  └─ 💥 Artifact missing. Wheel not found in the extracted directory.")
+            self.log.error("  └─ Artifact missing. Wheel not found in the extracted directory.")
             return False
             
         target_wheel = wheel_files[0]
@@ -181,7 +181,7 @@ class DeterminismAuditor:
         code, out, _ = await self.boundary.run_command(["bash", "-c", cmd], capture=True)
         
         if code != 0:
-            self.log.error("  └─ 💥 Metadata extraction failed. Zip structure might be corrupted.")
+            self.log.error("  └─ Metadata extraction failed. Zip structure might be corrupted.")
             return False
             
         metadata_line = out.strip()
@@ -189,11 +189,11 @@ class DeterminismAuditor:
         self.log.info(f"  ├─ Extracted Dependency: {metadata_line}")
         
         if "file://" in metadata_line:
-            self.log.error("  └─ 💥 FATAL BREACH: Local absolute path leaked into Distribution Artifact!")
+            self.log.error("  └─ FATAL BREACH: Local absolute path leaked into Distribution Artifact!")
             self.is_clean = False
             return False
             
-        self.log.info("  └─ ✨ AUDIT PASSED: Remote Binding Enforced mathematically.")
+        self.log.info("  └─ AUDIT PASSED: Remote Binding Enforced mathematically.")
         self.is_clean = True
         return True
 
@@ -290,7 +290,7 @@ class KubeOrchestrator(KubeTracer):
                 self.rupture_confirmed = True
                 return False, "Pods failed to reach Ready state within timeout."
                 
-            self.log.info("  ├─ Runtime Topology (KUBE Mode) Ready ✅")
+            self.log.info("  ├─ Runtime Topology (KUBE Mode) Ready")
             if self.suites:
                 with flow_scope(phase="TEST_EXECUTION"):
                     total_fails = await self._run_all_suites(broker=None, context=context)

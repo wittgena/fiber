@@ -53,13 +53,10 @@ app = typer.Typer(
     add_completion=False,
 )
 
-
-# Core Key Provisioning (~/.ssh/fiber_ed25519 & local_cipher.key)
 def _normalize_spiffe_id(user_id: str) -> str:
     if user_id.startswith("spiffe://"):
         return user_id
     return f"{BASE_SPIFFE_DOMAIN}{user_id}"
-
 
 def _resolve_target_user(conn: sqlite3.Connection, user_id: Optional[str] = None) -> str:
     """Uses explicit user_id if given; otherwise picks the latest enrolled admin from SQLite."""
@@ -161,10 +158,7 @@ def _open_audit_db(db_path: str = DEFAULT_DB_PATH) -> sqlite3.Connection:
     conn.commit()
     return conn
 
-
-# ==========================================
-# 2. Zero-Exposure Crypto Vault (HMAC Derivation)
-# ==========================================
+# Zero-Exposure Crypto Vault (HMAC Derivation)
 class AdminSecretVault:
     def __init__(self, passphrase: str):
         self.passphrase = passphrase.encode("utf-8")
@@ -202,10 +196,7 @@ def _resolve_vault_context() -> Tuple[str, str]:
     derived_passphrase = hmac.new(ikm, domain_context, hashlib.sha256).hexdigest()
     return derived_passphrase, pubkey_hex
 
-
-# ==========================================
-# 3. Headless Async Actions (for Console / Bridge)
-# ==========================================
+# Headless Async Actions (for Console / Bridge)
 async def inspect_sign_status() -> SignStatusResult:
     def _inspect() -> SignStatusResult:
         signer = NodeSigner.get_instance()
@@ -232,7 +223,6 @@ async def init_node_keys() -> NodeKeysInitResult:
         local_cipher_status=str(raw.get("local_cipher_status", "unknown")),
         raw_info=raw,
     )
-
 
 async def enroll_admin_totp(admin_user: str) -> TotpEnrollmentResult:
     canonical_id = _normalize_spiffe_id(admin_user)
@@ -318,10 +308,7 @@ async def revoke_admin_totp(admin_user: str) -> str:
     await asyncio.to_thread(_delete)
     return canonical_id
 
-
-# ==========================================
-# 4. CLI Commands (init, status, enroll, verify, revoke)
-# ==========================================
+# CLI Commands (init, status, enroll, verify, revoke)
 @app.command("init")
 def cmd_init(
     rotate_cipher: Annotated[bool, typer.Option("--rotate-cipher", help="Regenerate local_cipher.key (invalidates existing TOTP DB)")] = False,
@@ -330,9 +317,8 @@ def cmd_init(
     info = ensure_node_keys(force_regenerate_cipher=rotate_cipher)
     ssh_msg = "newly created" if info["ssh_key_status"] == "CREATED" else "already exists (skipped)"
     cip_msg = "newly created" if info["local_cipher_status"] == "CREATED" else "already exists (skipped)"
-    log_sign.info(f"🔐 Node Cryptographic Identity Initialized (SSH: {ssh_msg}, Cipher: {cip_msg}):")
+    log_sign.info(f"Node Cryptographic Identity Initialized (SSH: {ssh_msg}, Cipher: {cip_msg}):")
     print(json.dumps(info, indent=2, ensure_ascii=False))
-
 
 @app.command("status")
 def cmd_status(
@@ -361,7 +347,6 @@ def cmd_status(
     }
     print(json.dumps(status_payload, indent=2, ensure_ascii=False))
 
-
 @app.command("enroll")
 def cmd_enroll(
     user_id: Annotated[Optional[str], typer.Option("--user", "-u", help="Administrator SPIFFE ID (defaults to latest or 'fiber')")] = None,
@@ -388,9 +373,9 @@ def cmd_enroll(
     conn.commit()
     conn.close()
 
-    log_sign.info(f"\n✅ TOTP Enrolled for '{canonical_id}' (Active Default Admin)")
-    log_sign.info(f"🏷️  Authenticator App Label : {TOTP_ISSUER_NAME} ({display_label})")
-    log_sign.info("📱 Scan the QR code below with Google Authenticator or Authy:\n")
+    log_sign.info(f"\nTOTP Enrolled for '{canonical_id}' (Active Default Admin)")
+    log_sign.info(f"Authenticator App Label : {TOTP_ISSUER_NAME} ({display_label})")
+    log_sign.info("Scan the QR code below with Google Authenticator or Authy:\n")
     qr = qrcode.QRCode(version=1, box_size=1, border=2)
     qr.add_data(totp_uri)
     qr.make(fit=True)
@@ -415,7 +400,7 @@ def cmd_verify(
     conn.close()
 
     if not row:
-        log_sign.error(f"🚨 Unregistered Admin: {canonical_id}. Run 'fiber sign enroll' first.")
+        log_sign.error(f"Unregistered Admin: {canonical_id}. Run 'fiber sign enroll' first.")
         sys.exit(1)
 
     vault = AdminSecretVault(active_passphrase)
@@ -445,7 +430,7 @@ def cmd_revoke(
     conn.execute("DELETE FROM admin_users WHERE user_id = ?", (canonical_id,))
     conn.commit()
     conn.close()
-    log_sign.info(f"✅ Revoked TOTP access for '{canonical_id}'.")
+    log_sign.info(f"Revoked TOTP access for '{canonical_id}'.")
 
 admin_app = typer.Typer(help="Alias group for admin TOTP commands")
 admin_app.command("totp-enroll")(cmd_enroll)

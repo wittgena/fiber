@@ -168,11 +168,7 @@ while True:
         tier="STANDARD"
     )
 
-
-# =====================================================================
-# 3. Runner Hierarchy (BaseRunner -> SchemeRunner -> SandboxRunner)
-# =====================================================================
-
+# Runner Hierarchy (BaseRunner -> SchemeRunner -> SandboxRunner)
 class BaseRunner:
     def __init__(self):
         self.success_count = 0
@@ -201,7 +197,6 @@ class BaseRunner:
             "error": f"[{context}] {error_msg}"
         })
 
-
 class SchemeRunner(BaseRunner):
     def __init__(self, broker: Any):
         super().__init__()
@@ -229,10 +224,8 @@ class SchemeRunner(BaseRunner):
         log.info(f"\n[TEST] {title} (Func: {func_name})")
         start_time = time.time()
         
-        # 1회성 Tier 주입 실행
         result = await self.broker.invoke(target_func=func_name, payload=payload, tier=tier)
         elapsed_ms = (time.time() - start_time) * 1000
-        
         output_str = str(result.output) if result.success else str(result.error)
         safe_payload_str = str(payload)[:50]
 
@@ -264,7 +257,6 @@ class SchemeRunner(BaseRunner):
             return
 
         self._record_success(elapsed_ms, output_str)
-
 
 class SandboxRunner(SchemeRunner):
     async def _assert_script(

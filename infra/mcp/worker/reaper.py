@@ -62,7 +62,7 @@ class WorkerReaper(WorkerProtocol):
 
     async def ignite(self):
         self.running = True
-        self.log.info("👁️ Sentinel Agent Ignited. Commencing Autonomous Entropy Sweeps...")
+        self.log.info("Sentinel Agent Ignited. Commencing Autonomous Entropy Sweeps...")
         try:
             while self.running:
                 await self._sweep_and_reconcile()

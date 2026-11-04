@@ -1,44 +1,43 @@
-(self) wittgena@wittgenas-MacBook-Pro self % python -m dev.e2e.worker.guard                                                                                                                      
-[TunnelFactory] Provisioned Sync Tunnel: redis://localhost:6379/0
- LOG | SYSTEM | INFO  |  contract.path: [PathRegistry] Synced 27 aliases.
+(self) wittgena@wittgenas-MacBook-Pro self % fiber-dev e2e gateway.worker.guard 
+ LOG | SYSTEM | INFO  |  phase.cli: [Fiber] Igniting E2E Test Suite(s): gateway.worker.guard
 [Registry] DAEMON Registered: rpc_worker -> RpcWorkerDaemon
+ LOG | SYSTEM | INFO  |  phase.cli: 
+============================================================
+Launching Suite: fiber.dev.e2e.gateway.worker.guard
+============================================================
 [Reactor] macOS detected. Native CPU Affinity pinning is bypassed (OS constraint).
 [Reactor] UVLoop (epoll) Policy injected.
-[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-20760
+[Reactor] Ignition... Loop: EventLoopPolicy | CPU: Core Virtual-68251
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
 === Starting Suite: Zero-Code Pre-Flight HITL Guard (Daemon TOTP & Ephemeral 1-Click) Suite ===
  LOG | KERNEL | INFO  |  adapter.pta: [Crypto] Node identity loaded. PubKey: b77bda9b...
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: [GuardPipeline:LIVE] Slack Socket Mode Active! Channel: C0A9L79HY57
- LOG | KERNEL | INFO  |  anchor.store: [Ledger] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
- LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] 🔗 Live Master Node detected (Operating as PROPOSER). Delegating RPC & Real PhaseStore transitions directly to live node.
-[TunnelFactory] Provisioned Async Tunnel: redis://localhost:6379/0
+ LOG | KERNEL | INFO  |  anchor.store: [AnchorStore] Lock held by another node. Operating as PROPOSER (Read-Only/Proposer).
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Live Master Node detected (Operating as PROPOSER). Delegating RPC & Real AnchorStore transitions directly to live node.
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: Init Secure MCP Server...
  LOG | NETWORK | INFO  |  arch.contract.server: [MCP Adapter] Safely registered 0 FastAPI routes via Whitelist.
- LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped with Real PhaseStore.
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] REST Edge Bootstrapped with Real AnchorStore.
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: Starting DPHI REST Edge API Payload (Stateless Mode)...
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: Initializing Origin Registry and verifying cryptographic state...
- LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/xphi/node/space/bind/origin/config.json
+ LOG | SYSTEM | INFO  |  contract.origin: Loading and verifying Origin Config from: /usr/local/self/anchor/origin.json
  LOG | SYSTEM | INFO  |  contract.origin: Origin Config cryptographically verified. (Network: xphi.origin, Signers: 3)
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: Origin Registry integrated successfully. Active signers: 3
  LOG | SYSTEM | INFO  |  fiber.gateway.security: Provisioning Cryptographic Secret Auditor (Manager: local)...
- LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/meta/anchor/sign/local_cipher.key).
+ LOG | SYSTEM | INFO  |  fiber.gateway.security: Loaded persistent cipher key from local disk (/usr/local/self/anchor/sign/local_cipher.key).
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: SecretAuditor mounted successfully to app.state.
  LOG | SYSTEM | INFO  |  interceptor.registry: No external interceptor config found. Using default pipeline configuration.
- LOG | SYSTEM | INFO  |  registry.llm: [*] Starting runtime introspection on package: fiber.gateway.llm.inter
- LOG | SYSTEM | INFO  |  registry.llm: [Router] Registry Ready: 3 Native, 1 Dynamic modules.
  LOG | SYSTEM | INFO  |  vcr.injector: VCRInjector: Applying VCRAdapterProxy to AdapterRegistry (record mode)
- LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /Users/wittgena/Library/CloudStorage/Dropbox/fixture)
+ LOG | SYSTEM | INFO  |  fiber.gateway.payload: VCRAdapterProxy mounted (Default Mode: LIVE | Fixture Root: /usr/local/self/anchor/compats/suites/base)
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: WasmBroker initialized (timeout: 5.0s).
  LOG | SYSTEM | INFO  |  parser.otlp: [Parser] Compiled StrictOtlpExtractionEngine. Enforcing keys: ['resourceLogs']
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: StrictOtlpExtractionEngine initialized.
  LOG | SYSTEM | INFO  |  serv.gateway: [TransitionBridge] Mounted. Pure MCP-to-RPC translation & Zero-Latency Gateway Active.
  LOG | SYSTEM | INFO  |  fiber.gateway.payload: REST Edge API Payload is fully READY.
+ LOG | SYSTEM | INFO  |  bridge.channel.slack: [SlackBridge] Listening for MCP_PHASE_YIELD on eco.telemetry.events (Node FP: b77bda9ba36d3c90, Bridge ID: 23d4255c)
  LOG | SYSTEM | INFO  |  xphi.node.space.tunnel.subs: DistributedPubSub started listening on tunnel channel: audit_channel
- LOG | SYSTEM | INFO  |  mcp.bridge.slack: [SlackBridge] Listening for MCP_PHASE_YIELD on eco.telemetry.events (Node FP: b77bda9ba36d3c90, Bridge ID: 70364fef)
- LOG | SYSTEM | INFO  |  infra.e2e.bridge: [GuardPipeline] 🔗 Attached to live daemon: [worker.eco.finlib] (/normalize_order|pow\(|exp\(/i)
+ LOG | SYSTEM | INFO  |  infra.e2e.bridge: [GuardPipeline] Attached to live daemon: [worker.eco.finlib] (/normalize_order|pow\(|exp\(/i)
  LOG | DEFENSE | INFO  |  mcp.preflight.hitl-stdio-fs-01: [PreFlight] Armed Zero-Code HITL Guard on 'hitl-stdio-fs-01' (Pattern: /prod_secrets|DELETE|DROP/i, Mode: BUTTON-ONLY)
-HTTP Request: POST https://slack.com/api/apps.connections.open "HTTP/1.1 200 OK"
- LOG | SYSTEM | INFO  |  mcp.bridge.slack: [SlackBridge:SocketMode] 🔌 Connected to Slack Outbound WebSocket.
+ LOG | SYSTEM | INFO  |  bridge.channel.slack: [SlackBridge:SocketMode] Connected to Slack Outbound WebSocket.
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Igniting 1 Connectors...
  LOG | SYSTEM | INFO  |  mcp.connector: [Connector:hitl-stdio-fs-01] Listening for Intents on DPHI Bus (Mode: EPHEMERAL, Transport: STDIO)
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
@@ -50,16 +49,14 @@ HTTP Request: POST https://slack.com/api/apps.connections.open "HTTP/1.1 200 OK"
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
-HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/worker.eco.finlib/invoke "HTTP/1.1 200 OK"
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
- LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792771842_158ac9031b9a] Booting legacy sandbox: npx -y @modelcontextprotocol/server-filesystem /private/var/folders/83/h_zklvgd6zn9ngl1gfm77pc40000gn/T/fiber_guard_fs_3xln33wy
- LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792771842_158ac9031b9a] Sandbox running (PID: 20808)
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1793767810_a77936a2cfe5] Booting stdio sandbox: npx -y @modelcontextprotocol/server-filesystem /private/var/folders/83/h_zklvgd6zn9ngl1gfm77pc40000gn/T/fiber_guard_fs_vut7l_is
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1793767810_a77936a2cfe5] Sandbox running (PID: 68316)
  LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] Secure MCP Filesystem Server running on stdio
- LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Intent txn_1792771842_158ac9031b9a RESOLVED.
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Intent txn_1793767810_a77936a2cfe5 RESOLVED.
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Resolved] Execution completed successfully
- LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792771842_158ac9031b9a] Terminating sandbox (PID: 20808)
-HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/hitl-stdio-fs-01/invoke "HTTP/1.1 200 OK"
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1793767810_a77936a2cfe5] Terminating sandbox (PID: 68316)
  LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Safe Calls ('eval_math' & 'public_readme.txt') bypassed Guard with 200 OK.
  LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
@@ -67,49 +64,40 @@ HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/hitl-stdio-fs-01/invoke
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Yield] Agent prompted for input
-HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/worker.eco.finlib/invoke "HTTP/1.1 202 Accepted"
+ LOG | SYSTEM | INFO  |  bridge.channel.slack: [SlackBridge] Sent HITL (TOTP) prompt to Slack channel C0A9L79HY57 (ts: 1793767812.571729)
 
 ================================================================================
-📲 [LIVE SLACK HITL | TOTP-6DIGIT] Target: worker.eco.finlib | Handle: txn_1792771843_5f563271907b
+[LIVE SLACK HITL | TOTP-6DIGIT] Target: worker.eco.finlib | Handle: txn_1793767812_d40602ddd5d4
 --------------------------------------------------------------------------------
-   ⠋ ⏳ [PARKED: TOTP] Code [ 981797 ] (in 17s)... (0.0s)HTTP Request: POST https://slack.com/api/chat.postMessage "HTTP/1.1 200 OK"
- LOG | SYSTEM | INFO  |  mcp.bridge.slack: [SlackBridge] 📤 Sent HITL (TOTP) prompt to Slack channel C0A9L79HY57 (ts: 1792771843.380679)
-   ⠴ ⏳ [PARKED: TOTP] Code [ 117188 ] (in 16s)... (31.2s) LOG | SYSTEM | INFO  |  mcp.bridge.oob: [OOB:Approved] Dispatched verified RESUME for txn_1792771843_5f563271907b by spiffe://self/fiber_e2e_987ac6c5
-   [SIGNAL RECEIVED] Status: RESOLVED (31.7s)
+   ⠼ [PARKED: TOTP] Code [ 984078 ] (in 09s)... (8.9s) LOG | SYSTEM | INFO  |  gateway.bridge.oob: [OOB:Approved] Dispatched verified RESUME for txn_1793767812_d40602ddd5d4 by spiffe://self/fiber_e2e_26013043
+   [SIGNAL RECEIVED] Status: RESOLVED (9.2s)
 ================================================================================
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:State] Existing state found: RESOLVED
-HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/worker.eco.finlib/invoke "HTTP/1.1 200 OK"
  LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ [Daemon/Linear | TOTP] Verified -> Normalized price=65000.0
  LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
 [PHASE 4/4] Phase 4: [Stdio/Ephemeral + 1-Click Button] Zero-Spawn Trap & Button-Only Resume
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Intent] EXECUTE Intent published to queue
- LOG | DEFENSE | SIGNAL |  mcp.preflight.hitl-stdio-fs-01: [PreFlight:BUTTON] Intercepted high-risk call 'read_file' (matched 'prod_secrets') for txn_1792771875_3d5e9e31f62c. Parking transaction (HTTP 202 YIELD).
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:PubSub:Yield] Agent prompted for input
-HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/hitl-stdio-fs-01/invoke "HTTP/1.1 202 Accepted"
-HTTP Request: POST https://hooks.slack.com/actions/T099P2S5ZBR/12399714699041/iXJiOGiBi2d5w9eZV5c5Tasx "HTTP/1.1 200 OK"
-HTTP Request: POST https://slack.com/api/chat.postMessage "HTTP/1.1 200 OK"
- LOG | SYSTEM | INFO  |  mcp.bridge.slack: [SlackBridge] 📤 Sent HITL (1-Click) prompt to Slack channel C0A9L79HY57 (ts: 1792771875.399029)
+ LOG | SYSTEM | INFO  |  bridge.channel.slack: [SlackBridge] Sent HITL (1-Click) prompt to Slack channel C0A9L79HY57 (ts: 1793767822.201449)
 
 ================================================================================
-📲 [LIVE SLACK HITL | 1-CLICK BUTTON] Target: hitl-stdio-fs-01 | Handle: txn_1792771875_3d5e9e31f62c
+[LIVE SLACK HITL | 1-CLICK BUTTON] Target: hitl-stdio-fs-01 | Handle: txn_1793767821_f1427b54b351
 --------------------------------------------------------------------------------
-   ⠼ ⚡ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (43.0s) LOG | SYSTEM | INFO  |  mcp.bridge.oob: [OOB:Approved] Dispatched verified RESUME for txn_1792771875_3d5e9e31f62c by spiffe://self/fiber_e2e_987ac6c5
-   ⠴ ⚡ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (43.2s) LOG | DEFENSE | INFO  |  mcp.preflight.hitl-stdio-fs-01: [PreFlight] Proxy Attestation (Button) Verified for txn_1792771875_3d5e9e31f62c ('read_file'). Releasing stashed payload.
- LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Releasing Pre-Flight approved intent (EPHEMERAL): txn_1792771875_3d5e9e31f62c
- LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792771875_3d5e9e31f62c] Booting legacy sandbox: npx -y @modelcontextprotocol/server-filesystem /private/var/folders/83/h_zklvgd6zn9ngl1gfm77pc40000gn/T/fiber_guard_fs_3xln33wy
- LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792771875_3d5e9e31f62c] Sandbox running (PID: 21118)
-   ⠦ ⚡ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (43.4s)HTTP Request: POST https://hooks.slack.com/actions/T099P2S5ZBR/12395862608438/XJHLmDRqTNdQaaMttUAky410 "HTTP/1.1 200 OK"
-   ⠏ ⚡ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (44.0s) LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] Secure MCP Filesystem Server running on stdio
- LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Intent txn_1792771875_3d5e9e31f62c RESOLVED.
- LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1792771875_3d5e9e31f62c] Terminating sandbox (PID: 21118)
-   [SIGNAL RECEIVED] Status: RESOLVED (44.2s)
+   ⠸ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (2.6s) LOG | SYSTEM | INFO  |  gateway.bridge.oob: [OOB:Approved] Dispatched verified RESUME for txn_1793767821_f1427b54b351 by spiffe://self/fiber_e2e_26013043
+   ⠼ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (2.8s) LOG | DEFENSE | INFO  |  mcp.preflight.hitl-stdio-fs-01: [PreFlight] Proxy Attestation (Button) Verified for txn_1793767821_f1427b54b351 ('read_file'). Releasing stashed payload.
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Releasing Pre-Flight approved intent (EPHEMERAL): txn_1793767821_f1427b54b351
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1793767821_f1427b54b351] Booting stdio sandbox: npx -y @modelcontextprotocol/server-filesystem /private/var/folders/83/h_zklvgd6zn9ngl1gfm77pc40000gn/T/fiber_guard_fs_vut7l_is
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1793767821_f1427b54b351] Sandbox running (PID: 68383)
+   ⠧ [PARKED: 1-CLICK] Click [ Approve & Resume ] in Slack... (3.4s) LOG | SYSTEM | WARN  |  network.transport: [Sandbox:RAW] Secure MCP Filesystem Server running on stdio
+ LOG | SYSTEM | INFO  |  mcp.connector: [Connector] Intent txn_1793767821_f1427b54b351 RESOLVED.
+ LOG | SYSTEM | INFO  |  network.transport: [Transport:txn_1793767821_f1427b54b351] Terminating sandbox (PID: 68383)
+   [SIGNAL RECEIVED] Status: RESOLVED (3.5s)
 ================================================================================
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:Start] Ingress request received
  LOG | SYSTEM | INFO  |  serv.gateway: [Bridge:State] Existing state found: RESOLVED
-HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/hitl-stdio-fs-01/invoke "HTTP/1.1 200 OK"
  LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ [Stdio/Ephemeral | 1-Click] Zero-Spawn -> Button Approved -> Lazy Spawn -> Destroyed!
  LOG | SYSTEM | INFO  |  infra.e2e.bridge:   └─ Status: PASSED
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: 
@@ -121,12 +109,12 @@ HTTP Request: POST http://127.0.0.1:59385/v1/mcp-gateway/hitl-stdio-fs-01/invoke
  LOG | SYSTEM | INFO  |  infra.e2e.bridge: [BasePipeline] Teardown complete.
 
 ==========================================================================================
-🛡️ [ZERO-CODE PRE-FLIGHT GUARD (DAEMON TOTP & EPHEMERAL 1-CLICK) E2E REPORT]
+[ZERO-CODE PRE-FLIGHT GUARD (DAEMON TOTP & EPHEMERAL 1-CLICK) E2E REPORT]
 ==========================================================================================
-✅ 01. [MCP_PREFLIGHT_GUARD_SUITE]Phase 1: Connect Spec Resolver & Dual Mode (TOTP / Button) Guard Arming | PASSED
-✅ 02. [MCP_PREFLIGHT_GUARD_SUITE]Phase 2: Safe Call Passthrough (Zero-Overhead on Non-Matching Payload) | PASSED
-✅ 03. [MCP_PREFLIGHT_GUARD_SUITE]Phase 3: [Daemon Persistent + TOTP] FinLib Trap & TOTP Attested Resume | PASSED
-✅ 04. [MCP_PREFLIGHT_GUARD_SUITE]Phase 4: [Stdio/Ephemeral + 1-Click Button] Zero-Spawn Trap & Button-Only Resume | PASSED
+[O] 01. [MCP_PREFLIGHT_GUARD_SUITE]Phase 1: Connect Spec Resolver & Dual Mode (TOTP / Button) Guard Arming | PASSED
+[O] 02. [MCP_PREFLIGHT_GUARD_SUITE]Phase 2: Safe Call Passthrough (Zero-Overhead on Non-Matching Payload) | PASSED
+[O] 03. [MCP_PREFLIGHT_GUARD_SUITE]Phase 3: [Daemon Persistent + TOTP] FinLib Trap & TOTP Attested Resume | PASSED
+[O] 04. [MCP_PREFLIGHT_GUARD_SUITE]Phase 4: [Stdio/Ephemeral + 1-Click Button] Zero-Spawn Trap & Button-Only Resume | PASSED
 ------------------------------------------------------------------------------------------
 PRE-FLIGHT GUARD PIPELINE VALIDATED SUCCESSFULLY.
 ==========================================================================================

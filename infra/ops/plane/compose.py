@@ -81,10 +81,10 @@ class DockerComposeAdapter(BaseComposeAdapter):
                 needs_update = False
                 
         if needs_update:
-            log.info(f"  ├─ 📝 Synthesizing topology blueprint at {self.compose_file.name}")
+            log.info(f"  ├─ Synthesizing topology blueprint at {self.compose_file.name}")
             self.compose_file.write_text(DOCKER_COMPOSE_BLUEPRINT, encoding="utf-8")
         else:
-            log.info("  ├─ 📝 Topology blueprint matches cache.")
+            log.info("  ├─ Topology blueprint matches cache.")
 
     async def _provision_topology(self) -> bool:
         """Bootstraps background infrastructure."""
@@ -102,7 +102,7 @@ class DockerComposeAdapter(BaseComposeAdapter):
             ]
             code, _, _ = await self.boundary.run_command(build_cmd, cwd=str(self.workspace), capture=False)
             if code != 0:
-                log.error("  └─ 💥 Topology Build (no-cache) Failed. Inspect Docker logs.")
+                log.error("  └─ Topology Build (no-cache) Failed. Inspect Docker logs.")
                 return False
             log.info("  ├─ Clean Build Completed.")
 
@@ -117,13 +117,12 @@ class DockerComposeAdapter(BaseComposeAdapter):
         log.info("  ├─ [Streaming Infrastructure Provisioning Logs...]")
         code, _, _ = await self.boundary.run_command(cmd, cwd=str(self.workspace), capture=False)
         if code != 0:
-            log.error("  └─ 💥 Topology Boot Failed. Inspect Docker logs.")
+            log.error("  └─ Topology Boot Failed. Inspect Docker logs.")
             return False
             
-        log.info("  ├─ Runtime Topology (USER Mode) Ready ✅")
+        log.info("  ├─ Runtime Topology (USER Mode) Ready")
         return True
 
-    # 🎯 변경점: detach 인자 수신 및 명령어 주입
     async def apply_job(self, job_name: str, env: Dict[str, str], detach: bool = False) -> bool:
         log.info(f"[Adapter:COMPOSE] Executing Job Phase: {job_name} (Detach: {detach})")
         
@@ -148,14 +147,11 @@ class DockerComposeAdapter(BaseComposeAdapter):
             "exec", "-T"
         ]
         
-        # Detach 플래그가 넘어오면 백그라운드 모드로 실행
         if detach:
             cmd.append("-d")
             
         cmd = cmd + env_vars + ["test-runner", "bash", "-c", exec_command]
-        
         code, _, err = await self.boundary.run_command(cmd, cwd=str(self.workspace), capture=False)
-        
         if code != 0:
             log.error(f"[Adapter:COMPOSE] Phase '{job_name}' fractured.")
             return False
@@ -226,13 +222,10 @@ class ComposeOrchestrator:
                         return False, f"Topology verified, but {total_fails} logical E2E tests failed."
             
             return True, ""
-            
         except Exception as e:
             log.error(f"[FATAL] Orchestration process crashed: {e}")
             return False, str(e)
-            
         finally:
-            # 🎯 변경점: auto_teardown이 참일 때만 컨테이너를 부수도록 제어
             if self.auto_teardown:
                 log.info("\n[SYSTEM] Initiating Teardown Sequence...")
                 if self.adapter:

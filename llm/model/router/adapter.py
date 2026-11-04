@@ -37,7 +37,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
     async def execute(self, ctx: CompletionContext) -> Union[ModelResponse, AsyncGenerator]:
         req_id = (ctx.system_meta.call_id[:8] if getattr(ctx, "system_meta", None) and ctx.system_meta.call_id else uuid4().hex[-8:])
         provider = ctx.custom_llm_provider
-        adapter_log.debug(f"[GenericHTTP-{req_id}] 🚀 execute START | model={ctx.model}, provider={provider}")
+        adapter_log.debug(f"[GenericHTTP-{req_id}] execute START | model={ctx.model}, provider={provider}")
         
         headers = (ctx.headers or {}).copy()
         if ctx.api_key and ctx.api_key != "not-needed" and "Authorization" not in headers:
@@ -88,7 +88,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                 ) as response:
                     if response.is_error:
                         await response.aread()
-                        adapter_log.error(f"[GenericHTTP-{req_id}] 🚨 스트림 HTTP 에러 ({response.status_code}): {response.text}")
+                        adapter_log.error(f"[GenericHTTP-{req_id}] Strem HTTP error ({response.status_code}): {response.text}")
                     response.raise_for_status()
                     async for line in response.aiter_lines():
                         if line:
@@ -96,7 +96,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                             
             return stream_generator()
         else:
-            adapter_log.debug(f"[GenericHTTP-{req_id}] ⚡ Initiating SINGULAR Execution")
+            adapter_log.debug(f"[GenericHTTP-{req_id}] Initiating SINGULAR Execution")
             response = await client.post(
                 url=target_url, 
                 headers=headers, 
@@ -105,7 +105,7 @@ class GenericHTTPAdapter(BaseProviderAdapter):
             )
 
             if response.is_error:
-                adapter_log.error(f"[GenericHTTP-{req_id}] 단일 HTTP 에러 ({response.status_code}): {response.text}")
+                adapter_log.error(f"[GenericHTTP-{req_id}] Unary Http error ({response.status_code}): {response.text}")
 
             response.raise_for_status()
             data = response.json()
@@ -117,7 +117,6 @@ class GenericHTTPAdapter(BaseProviderAdapter):
                 if "id" in data:
                     model_response.id = data["id"]
                 
-                # 1. 표준 OpenAI 포맷 우선 매핑, 없을 경우 StateMapper를 통한 비표준(Cohere/Ollama 등) 추출
                 if "choices" in data and data["choices"]:
                     model_response.choices = data["choices"]
                     if "usage" in data:
@@ -151,7 +150,7 @@ class InterLLMAdapter(BaseProviderAdapter):
                 if dynamic_key:
                     resolved_api_key = dynamic_key
             except Exception as e:
-                llm_log.warning(f"[InterLLM-{req_id}] ⚠️ Locator key resolution bypassed/failed: {e}")
+                llm_log.warning(f"[InterLLM-{req_id}] Locator key resolution bypassed/failed: {e}")
 
         opt_params = (ctx.optional_params or {}).copy()
         execution_kwargs = {}
@@ -248,7 +247,7 @@ class InterLLMAdapter(BaseProviderAdapter):
             return stream_generator()
             
         else:
-            llm_log.debug(f"[InterLLM-{req_id}] ⚡ Initiating SINGULAR Execution")
+            llm_log.debug(f"[InterLLM-{req_id}] Initiating SINGULAR Execution")
             if ctx.acompletion:
                 response = await llm.achat(llama_messages, **execution_kwargs)
             else:

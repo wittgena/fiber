@@ -125,7 +125,6 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
         return str(agent_uri or "") in managed_spiffes
 
     def _check_user_authorized(self, user_id: str, member_roles: List[str]) -> bool:
-        """검증: 1) Allowed Role ID가 설정된 경우 역할 보유 여부 확인, 2) identity_map 매핑 확인"""
         if self.allowed_roles and not (self.allowed_roles & set(member_roles)):
             return False
         if user_id not in self.identity_map and "*" in self.identity_map:
@@ -158,13 +157,13 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
         # Discord custom_id limit is 100 chars: "fbr:{action}:{bridge_id}:{handle_id}"
         approve_custom_id = f"fbr:approve:{self.bridge_id}:{handle_id}"[:100]
         deny_custom_id = f"fbr:deny:{self.bridge_id}:{handle_id}"[:100]
-        approve_label = "🔐 Approve (Enter TOTP)" if require_totp else "🛡️ Approve & Resume"
+        approve_label = "Approve (Enter TOTP)" if require_totp else "Approve & Resume"
 
         return {
-            "content": f"🚨 **[Fiber HITL]** Approval required for `{handle_id}` on `{target_id}`",
+            "content": f"**[Fiber HITL]** Approval required for `{handle_id}` on `{target_id}`",
             "embeds": [
                 {
-                    "title": "🚨 Fiber HITL: High-Risk Execution Parked",
+                    "title": "Fiber HITL: High-Risk Execution Parked",
                     "color": 0xE67E22,
                     "description": f"**Intercepted Prompt:** _{prompt_msg}_",
                     "fields": [
@@ -174,7 +173,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                         {"name": "Requester", "value": f"`{agent_uri}`", "inline": True},
                         {
                             "name": "Auth Mode",
-                            "value": "`RFC-6238 TOTP Modal`" if require_totp else "`⚡ 1-Click Attestation`",
+                            "value": "`RFC-6238 TOTP Modal`" if require_totp else "`1-Click Attestation`",
                             "inline": False,
                         },
                     ],
@@ -193,7 +192,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                         {
                             "type": 2,  # Button
                             "style": 4,  # Danger (Red)
-                            "label": "🛑 Deny & Rollback",
+                            "label": "Deny & Rollback",
                             "custom_id": deny_custom_id,
                         },
                     ],
@@ -202,13 +201,12 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
         }
 
     def build_totp_modal_response(self, handle_id: str, target_id: str) -> Dict[str, Any]:
-        """TOTP 모드에서 Approve 클릭 시 호출자에게만 띄우는 팝업 모달 (Interaction Callback Type 9)"""
         modal_custom_id = f"fbr:modal:{self.bridge_id}:{handle_id}"[:100]
         return {
             "type": DiscordCallbackType.MODAL,
             "data": {
                 "custom_id": modal_custom_id,
-                "title": f"🔐 Fiber Sudo: {target_id[:20]}",
+                "title": f"Fiber Sudo: {target_id[:20]}",
                 "components": [
                     {
                         "type": 1,  # ActionRow
@@ -244,22 +242,22 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
         utc_now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         if is_approved:
-            title = "✅ Fiber HITL: Cryptographic Sudo Granted"
+            title = "Fiber HITL: Cryptographic Sudo Granted"
             color = 0x2ECC71
-            status_badge = "🟢 `RESUMED -> EXECUTING`"
+            status_badge = "`RESUMED -> EXECUTING`"
             seal_type = "RFC-6238 TOTP + Ed25519" if require_totp else "1-Click Button + Ed25519"
             desc = (
-                f"🛡️ **Zero-Trust Attestation Receipt**\n"
+                f"**Zero-Trust Attestation Receipt**\n"
                 f"• **Attested Identity:** `{spiffe_id}` (by <@{discord_user}>)\n"
                 f"• **Cryptographic Seal:** `{seal_type} ({sig_preview}...)`\n"
                 f"• **Action Taken:** Parked sandbox unlocked & destructive payload released."
             )
         else:
-            title = "🛑 Fiber HITL: Execution Aborted & Rolled Back"
+            title = "Fiber HITL: Execution Aborted & Rolled Back"
             color = 0xE74C3C
-            status_badge = "🔴 `ROLLED_BACK (FAULTED)`"
+            status_badge = "`ROLLED_BACK (FAULTED)`"
             desc = (
-                f"🛑 **Security Intervention Receipt**\n"
+                f"**Security Intervention Receipt**\n"
                 f"• **Rejected By:** <@{discord_user}>\n"
                 f"• **Action Taken:** `FORCE_ROLLBACK` dispatched. Parked sandbox terminated immediately."
             )
@@ -277,10 +275,10 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                         {"name": "Handle ID", "value": f"`{handle_id}`", "inline": True},
                         {"name": "Node Fingerprint", "value": f"`{self.node_fp}`", "inline": True},
                     ],
-                    "footer": {"text": f"🔒 Immutable PTA state transition anchored at {utc_now}"},
+                    "footer": {"text": f"Immutable PTA state transition anchored at {utc_now}"},
                 }
             ],
-            "components": [],  # 버튼 제거 (재클릭 원천 방지)
+            "components": [],
         }
 
     def parse_discord_interaction(self, interaction: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -367,7 +365,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
         interaction_token = str(interaction.get("token", ""))
         action = parsed.get("action")
 
-        # 1. 권한 없는 유저가 클릭한 경우: 원본 메시지는 건드리지 않고 본인에게만 Ephemeral(flags=64) 경고 표시
+        # 권한 없는 유저가 클릭한 경우: 원본 메시지는 건드리지 않고 본인에게만 Ephemeral(flags=64) 경고 표시
         if action == "UNAUTHORIZED_USER":
             if interaction_id and interaction_token:
                 await self._send_interaction_callback(
@@ -376,7 +374,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                     {
                         "type": DiscordCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
                         "data": {
-                            "content": f"⛔ **Access Denied:** Discord user `<@{parsed['user_id']}>` is not enrolled in Fiber's SPIFFE/RBAC identity map.",
+                            "content": f"**Access Denied:** Discord user `<@{parsed['user_id']}>` is not enrolled in Fiber's SPIFFE/RBAC identity map.",
                             "flags": 64,  # Ephemeral (Only visible to the clicker)
                         },
                     },
@@ -392,21 +390,21 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                     {
                         "type": DiscordCallbackType.CHANNEL_MESSAGE_WITH_SOURCE,
                         "data": {
-                            "content": "⚠️ This HITL transaction handle has already been resolved or expired.",
+                            "content": "This HITL transaction handle has already been resolved or expired.",
                             "flags": 64,
                         },
                     },
                 )
             return {"status": "EXPIRED_HANDLE"}
 
-        # 3. TOTP 모드에서 Approve 클릭 시: 즉시 TOTP 입력 모달창(Type 9) 팝업
+        # TOTP 모드에서 Approve 클릭 시: 즉시 TOTP 입력 모달창(Type 9) 팝업
         if action == "OPEN_MODAL":
             modal_payload = self.build_totp_modal_response(parsed["handle_id"], parsed["target_id"])
             if interaction_id and interaction_token:
                 await self._send_interaction_callback(interaction_id, interaction_token, modal_payload)
             return {"status": "MODAL_OPENED", "handle_id": parsed["handle_id"]}
 
-        # 4. 최종 승인(모달 제출 / 1-Click) 또는 거부(Deny) -> 부모 OutOfBandApprovalBridge로 위임
+        # 최종 승인(모달 제출 / 1-Click) 또는 거부(Deny) -> 부모 OutOfBandApprovalBridge로 위임
         ts = str(int(time.time()))
         raw_bytes = json.dumps(parsed, separators=(",", ":")).encode("utf-8")
         sig = "v0=" + hmac.new(self.slack_secret, f"v0:{ts}:".encode() + raw_bytes, hashlib.sha256).hexdigest()
@@ -430,9 +428,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
 
         return res_status
 
-    # =========================================================================
-    # 4. Egress Notification & Outbound Gateway WebSocket Daemon
-    # =========================================================================
+    # Egress Notification & Outbound Gateway WebSocket Daemon
     async def post_yield_notification(self, yield_event: Dict[str, Any]) -> Optional[str]:
         msg_payload = self.build_yield_message_payload(yield_event)
         if not self.is_live_configured:
@@ -447,7 +443,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
             data = resp.json()
             msg_id = data.get("id")
             mode_tag = "TOTP-Modal" if yield_event.get("prompt", {}).get("params", {}).get("require_totp", True) else "1-Click"
-            log.info(f"[DiscordBridge] 📤 Sent HITL ({mode_tag}) prompt to Discord channel {self.default_channel} (id: {msg_id})")
+            log.info(f"[DiscordBridge] Sent HITL ({mode_tag}) prompt to Discord channel {self.default_channel} (id: {msg_id})")
             return msg_id
 
     async def listen_telemetry_and_notify(self) -> None:
@@ -487,7 +483,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
             heartbeat_task: Optional[asyncio.Task] = None
             try:
                 async with websockets.connect(self.DISCORD_GATEWAY_URL, max_size=4 * 1024 * 1024) as ws:
-                    # 1. Receive Opcode 10 (Hello) -> extract heartbeat_interval
+                    # Receive Opcode 10 (Hello) -> extract heartbeat_interval
                     hello_raw = await ws.recv()
                     hello = json.loads(hello_raw)
                     if hello.get("op") != 10:
@@ -495,7 +491,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
 
                     hb_interval_sec = hello["d"]["heartbeat_interval"] / 1000.0
 
-                    # 2. Send Opcode 2 (Identify) - Intents=0 is sufficient to receive INTERACTION_CREATE
+                    # Send Opcode 2 (Identify) - Intents=0 is sufficient to receive INTERACTION_CREATE
                     identify_payload = {
                         "op": 2,
                         "d": {
@@ -512,9 +508,7 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                             await ws.send(json.dumps({"op": 1, "d": self._last_seq}))
 
                     heartbeat_task = asyncio.create_task(_heartbeat_loop())
-                    log.info("[DiscordBridge:Gateway] 🔌 Connected to Discord Outbound Gateway v10.")
-
-                    # 3. Event Loop
+                    log.info("[DiscordBridge:Gateway] Connected to Discord Outbound Gateway v10.")
                     async for raw_frame in ws:
                         if not self.running:
                             break
@@ -534,7 +528,6 @@ class DiscordHitlBridge(OutOfBandApprovalBridge):
                                 await self.process_gateway_interaction(interaction_data)
                             except Exception as act_err:
                                 log.error(f"[DiscordBridge:Gateway] Interaction rejected: {act_err}")
-
             except asyncio.CancelledError:
                 break
             except Exception as e:

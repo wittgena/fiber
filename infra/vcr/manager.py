@@ -196,7 +196,7 @@ class VCRManager:
                             if scenario:
                                 self.trace_routing_map[scenario] = t_id
                             implicit_pool.remove(t_id)
-                            log.info(f"[VCR] 🔍 매핑 성공: {t_id} -> Scenario '{scenario}'")
+                            log.info(f"[VCR] Mapping: {t_id} -> Scenario '{scenario}'")
                 except Exception:
                     continue
                     
@@ -285,7 +285,7 @@ class VCRManager:
             json.dump(file_data, f, indent=2, ensure_ascii=False)
             
         self.memory_fixtures[filepath] = file_data
-        log.info(f"💾 [VCR RECORD] Saved readable fixture to: {filepath} (Trace: {trace_id[:8]})")
+        log.info(f"[VCR RECORD] Saved readable fixture to: {filepath} (Trace: {trace_id[:8]})")
 
     @staticmethod
     def create_empty_fixture(trace_id: str, ctx: Any) -> dict:

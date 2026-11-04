@@ -133,10 +133,10 @@ $ fiber connect -c .mcp.json
 `PreflightGuard.resolve_pattern()` resolves rules in the following priority order:
 
 1. **Explicit CLI/SDK Argument:** `-p` / `preflight_pattern="..."`
-2. **Target-Scoped Env Var:** `FIBER_PREFLIGHT_<SANITIZED_TARGET_ID>` *(Non-alphanumeric characters in `target_id` are replaced with `_` and uppercased, e.g., `hitl-stdio-fs-01` ➔ `FIBER_PREFLIGHT_HITL_STDIO_FS_01`)*
+2. **Target-Scoped Env Var:** `FIBER_PREFLIGHT_<SANITIZED_TARGET_ID>` *(Non-alphanumeric characters in `target_id` are replaced with `_` and uppercased, e.g., `hitl-stdio-fs-01` -> `FIBER_PREFLIGHT_HITL_STDIO_FS_01`)*
 3. **Global Env Var:** `FIBER_PREFLIGHT_PATTERN` or `FIBER_HITL_ON`
 
-Mode overrides follow the same hierarchy: `prefix (button:)` ➔ `FIBER_PREFLIGHT_MODE_<TARGET>` ➔ `FIBER_PREFLIGHT_MODE` / `FIBER_HITL_MODE`.
+Mode overrides follow the same hierarchy: `prefix (button:)` -> `FIBER_PREFLIGHT_MODE_<TARGET>` -> `FIBER_PREFLIGHT_MODE` / `FIBER_HITL_MODE`.
 
 ---
 
@@ -174,7 +174,7 @@ Configure the following variables in the `.env` file passed to `fiber daemon -s 
 
 ---
 
-## Client Invocation & Resumption Protocol (`HTTP 202` ➔ `200`)
+## Client Invocation & Resumption Protocol (`HTTP 202` -> `200`)
 
 When an AI agent or HTTP client calls `/v1/mcp-gateway/{target_id}/invoke` with a payload that triggers a pre-flight or native HITL trap:
 
@@ -200,9 +200,9 @@ When an AI agent or HTTP client calls `/v1/mcp-gateway/{target_id}/invoke` with 
 ### Operator Approval
 
 1. `SlackHitlBridge` listens on `eco.telemetry.events` for `MCP_PHASE_YIELD` and posts an interactive Block-Kit card containing the **Target MCP**, **Node Fingerprint** (`node_fp`), **Handle ID**, and **Intercepted Prompt**.
-2. When the operator clicks **🛡️ Approve & Resume** (with or without TOTP, depending on `require_totp`) or **🛑 Deny & Rollback**:
+2. When the operator clicks **Approve & Resume** (with or without TOTP, depending on `require_totp`) or **Deny & Rollback**:
 * **Multi-Node Filtering:** `is_owned_by_this_node()` verifies that `envelope.node_fp` matches the local node's public key fingerprint, ignoring events meant for other nodes sharing the same Slack channel.
-* **Real-Time Card Replacement:** Upon verification, `SlackHitlBridge` posts to Slack's `response_url` (`replace_original: True`), replacing the interactive buttons with an immutable **Zero-Trust Attestation Receipt** (`🟢 RESUMED -> EXECUTING` or `🔴 ROLLED_BACK (FAULTED)`).
+* **Real-Time Card Replacement:** Upon verification, `SlackHitlBridge` posts to Slack's `response_url` (`replace_original: True`), replacing the interactive buttons with an immutable **Zero-Trust Attestation Receipt** (`RESUMED -> EXECUTING` or `ROLLED_BACK (FAULTED)`).
 
 ### Polling & Resolution
 

@@ -53,7 +53,7 @@ class DebugTracer(BaseLLMTracer):
         
         safe_kwargs = {k: v for k, v in kwargs.items() if k not in ["api_key", "headers", "interceptors", "pipeline_hooks"]}
         tracer_log.info(
-            f"\n[🔍 LLM CALL INITIATED] \n"
+            f"\n[LLM CALL INITIATED] \n"
             f" ├─ Trace ID : {meta.trace_id}\n"
             f" ├─ Model    : {meta.base_model}\n"
             f" ├─ Config   : {safe_kwargs.get('temperature', 0.7)} Temp\n"
@@ -69,7 +69,7 @@ class DebugTracer(BaseLLMTracer):
         is_stream = hasattr(response, "__aiter__")
         if is_stream:
             tracer_log.info(
-                f"\n[🌊 LLM STREAM ESTABLISHED] \n"
+                f"\n[LLM STREAM ESTABLISHED] \n"
                 f" ├─ Trace ID : {meta.trace_id}\n"
                 f" ├─ Handshake: {duration_ms:.2f} ms\n"
                 f" └─ Note     : Usage will be tracked dynamically at stream end."
@@ -78,7 +78,7 @@ class DebugTracer(BaseLLMTracer):
             def deferred_stream_log(total_tokens: int, **kwargs):
                 real_duration = (time.time() - self.start_time) * 1000
                 tracer_log.info(
-                    f"\n[✅ STREAM COMPLETED] \n"
+                    f"\n[STREAM COMPLETED] \n"
                     f" ├─ Trace ID : {meta.trace_id}\n"
                     f" ├─ Latency  : {real_duration:.2f} ms\n"
                     f" └─ Usage    : {total_tokens} tokens"
@@ -97,14 +97,14 @@ class DebugTracer(BaseLLMTracer):
                 raw_usage = StateTraverser.resolve(raw_resp, "usage")
 
             if raw_usage:
-                tracer_log.debug(f"[🔍 DEBUG] Original Raw API payload contains usage data: {raw_usage}")
+                tracer_log.debug(f"[DEBUG] Original Raw API payload contains usage data: {raw_usage}")
             else:
-                tracer_log.debug(f"[🔍 DEBUG] Original Raw API payload DOES NOT contain usage metadata. (Token usage is purely 0 from Provider: {meta.base_model})")
+                tracer_log.debug(f"[DEBUG] Original Raw API payload DOES NOT contain usage metadata. (Token usage is purely 0 from Provider: {meta.base_model})")
         else:
-            tracer_log.debug(f"[🔍 DEBUG] 'response.raw' is missing for model {meta.base_model}. Cannot inspect original API payload.")
+            tracer_log.debug(f"[DEBUG] 'response.raw' is missing for model {meta.base_model}. Cannot inspect original API payload.")
         
         tracer_log.info(
-            f"\n[✅ LLM CALL COMPLETED] \n"
+            f"\n[LLM CALL COMPLETED] \n"
             f" ├─ Trace ID : {meta.trace_id}\n"
             f" ├─ Latency  : {duration_ms:.2f} ms\n"
             f" └─ Usage    : {total_tokens} tokens"
@@ -115,12 +115,11 @@ class DebugTracer(BaseLLMTracer):
         self.meta = meta
         
         tracer_log.error(
-            f"\n[🚨 LLM CALL FAILED] \n"
+            f"\n[LLM CALL FAILED] \n"
             f" ├─ Trace ID : {meta.trace_id}\n"
             f" ├─ Latency  : {duration_ms:.2f} ms\n"
             f" └─ Error    : {type(exc).__name__} - {str(exc)}"
         )
-
 
 class TracerInterceptorChannel(DuplexChannel):
     target_slot = PipelineSlot.PRE_OBSERVER

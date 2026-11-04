@@ -131,7 +131,7 @@ class PreflightGuardPipeline(BasePipeline):
 
         if self.finlib_target_id in active_daemon_ids:
             self._attached_to_daemon = True
-            log.info(f"[GuardPipeline] 🔗 Attached to live daemon: [{self.finlib_target_id}] (/{self.finlib_preflight_rule}/i)")
+            log.info(f"[GuardPipeline] Attached to live daemon: [{self.finlib_target_id}] (/{self.finlib_preflight_rule}/i)")
             if was_updated:
                 await asyncio.sleep(2.0)
         else:
@@ -233,7 +233,7 @@ class PreflightGuardPipeline(BasePipeline):
         try:
             if self.slack_bridge.is_live_configured and self.slack_bridge.app_token:
                 await asyncio.sleep(0.4)
-                print(f"\n{'=' * 80}\n📲 [LIVE SLACK HITL | {mode_badge}] Target: {target_id} | Handle: {handle_id}\n{'-' * 80}")
+                print(f"\n{'=' * 80}\n[LIVE SLACK HITL | {mode_badge}] Target: {target_id} | Handle: {handle_id}\n{'-' * 80}")
                 start_wait = time.time()
 
                 async def spinner_task():
@@ -244,9 +244,9 @@ class PreflightGuardPipeline(BasePipeline):
                         icon = frames[tick % len(frames)]
                         if expect_totp:
                             rem = 30 - (int(time.time()) % 30)
-                            msg = f"{icon} ⏳ [PARKED: TOTP] Code [ \033[1;32m{self.crypto_ctx.generate_totp()}\033[0m ] (in {rem:02d}s)... ({el:.1f}s)"
+                            msg = f"{icon} [PARKED: TOTP] Code [ \033[1;32m{self.crypto_ctx.generate_totp()}\033[0m ] (in {rem:02d}s)... ({el:.1f}s)"
                         else:
-                            msg = f"{icon} ⚡ [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] in Slack... ({el:.1f}s)"
+                            msg = f"{icon} [PARKED: 1-CLICK] Click [ \033[1;36mApprove & Resume\033[0m ] in Slack... ({el:.1f}s)"
                         sys.stdout.write(f"\r\033[K   {msg}")
                         sys.stdout.flush()
                         tick += 1
@@ -351,16 +351,14 @@ async def run_suite() -> None:
     results: List[TestResult] = await pipeline.run_pipeline()
     all_passed = all(r.passed for r in results)
 
-    lines = ["\n" + "=" * 90, "🛡️ [ZERO-CODE PRE-FLIGHT GUARD (DAEMON TOTP & EPHEMERAL 1-CLICK) E2E REPORT]", "=" * 90]
+    lines = ["\n" + "=" * 90, "[ZERO-CODE PRE-FLIGHT GUARD (DAEMON TOTP & EPHEMERAL 1-CLICK) E2E REPORT]", "=" * 90]
     for idx, r in enumerate(results, 1):
-        lines.append(f"{'✅' if r.passed else '❌'} {idx:02d}. [{r.target}]".ljust(28) + f"{r.scenario.ljust(60)} | {'PASSED' if r.passed else 'FAILED'}")
+        lines.append(f"{'[O]' if r.passed else '[X]'} {idx:02d}. [{r.target}]".ljust(28) + f"{r.scenario.ljust(60)} | {'PASSED' if r.passed else 'FAILED'}")
     lines.extend(["-" * 90, "PRE-FLIGHT GUARD PIPELINE VALIDATED SUCCESSFULLY." if all_passed else "PRE-FLIGHT GUARD FAILURE DETECTED.", "=" * 90 + "\n"])
     print("\n".join(lines), flush=True)
 
-
 def main(args_list: Optional[List[str]] = None) -> None:
     PhaseReactor.ignite(main_coro_func=run_suite)
-
 
 if __name__ == "__main__":
     main()
