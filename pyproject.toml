@@ -19,8 +19,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dphi-network/fiber"
-Repository = "https://github.com/dphi-network/fiber.git"
+Homepage = "https://github.com/dphilabs/fiber"
+Repository = "https://github.com/dphilabs/fiber.git"
 
 [project.scripts]
 fiber = "fiber.phase.cli:app"

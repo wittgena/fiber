@@ -30,7 +30,7 @@ class CustomMetadataHook(MetadataHookInterface):
         ## [CASE A] 원격 강제 시 (FIBER_BUILD_DIST=1)
         if force_remote:
             print(f"[Phase: Metadata] STRICT Remote lock: xphi @ {remote_ref}")
-            deps.append(f"xphi @ git+https://github.com/dphi-network/xphi.git@{remote_ref}")
+            deps.append(f"xphi @ git+https://github.com/dphilabs/xphi.git@{remote_ref}")
             
         ## [CASE B] 로컬 소스 존재 + 명시적으로 로컬 Git의 특정 커밋/태그 고정 요청 시
         elif local_xphi.exists() and local_ref:
@@ -45,6 +45,6 @@ class CustomMetadataHook(MetadataHookInterface):
         ## [CASE D] 로컬 소스 없음 (ex. Git에서 직접 설치) -> 원격 Fallback
         else:
             print(f"[Phase: Metadata] Remote Fallback: xphi @ {remote_ref}")
-            deps.append(f"xphi @ git+https://github.com/dphi-network/xphi.git@{remote_ref}")
+            deps.append(f"xphi @ git+https://github.com/dphilabs/xphi.git@{remote_ref}")
             
         metadata["dependencies"] = deps

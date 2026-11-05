@@ -6,7 +6,7 @@ from pathlib import Path
 from xphi.node.space.bind.resolver import resolve_path
 
 # Configuration Constants
-GITHUB_REPO = "dphi-network/fiber"
+GITHUB_REPO = "dphilabs/fiber"
 PYTHON_VERSION = "3.12"
 PROJECT_NAME_TITLE = "Fiber"
 PROJECT_NAME_LOWER = "fiber"

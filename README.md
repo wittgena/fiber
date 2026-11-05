@@ -17,7 +17,7 @@ As the counterpart on the model path, the same control plane governs LLM callsâ€
 ## 0. Quick Start
 
 ```bash
-uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
+uv pip install git+https://github.com/dphilabs/fiber.git@v1.1.4.10
 ```
 
 **1. Boot the Local Control Plane**
@@ -458,7 +458,7 @@ Best suited for full-stack integrationâ€”including the in-process Python harness
 mkdir -p ~/fiber-user && cd ~/fiber-user
 pyenv local fiber-user
 
-uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
+uv pip install git+https://github.com/dphilabs/fiber.git@v1.1.4.10
 # OR: uv pip install -e /path/to/local/self/fiber
 
 ## Bootstrap workspace & Provision node identity
@@ -476,12 +476,12 @@ Best suited for running Fiber as a persistent, OS-supervised background service 
 
 ```bash
 ## Install Fiber (auto-provisions isolated Python 3.12 runtime & Redis dependency)
-brew install dphi-network/fiber/fiber
+brew install dphilabs/fiber/fiber
 
 ## Bootstrap local workspace (~/.anchor) & start background services
 fiber init
 brew services start redis
-brew services start dphi-network/fiber/fiber
+brew services start dphilabs/fiber/fiber
 
 ## Verify install, bootstrap, and gateway
 python -m fiber.dev.tester.brew.verify

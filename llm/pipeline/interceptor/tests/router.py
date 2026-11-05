@@ -5,7 +5,7 @@ Execution Guide:
     Ensure your working directory matches the following structure:
       /usr/local/self/           <-- Execute pytest from here
       ├── fiber/                 <-- Main repository
-      └── fiber-compats/         <-- Fixture storage (git clone https://github.com/dphi-network/fiber-compats)
+      └── fiber-compats/         <-- Fixture storage (git clone https://github.com/dphilabs/fiber-compats)
       
   [Record Fixtures] $ VCR_MODE=record pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
   [Run Offline]     $ pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
