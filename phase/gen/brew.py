@@ -3,7 +3,7 @@ import hashlib
 import sys
 import urllib.request
 from pathlib import Path
-from xphi.node.space.bind.resolver import resolve_path
+from xphi.node.space.bind.resolver import resolve_path, find_current_self
 
 # Configuration Constants
 GITHUB_REPO = "dphi-network/fiber"
@@ -76,7 +76,10 @@ end
 def generate_formula(version: str) -> None:
     tag_version = version if version.startswith("v") else f"v{version}"
     tarball_url = f"https://github.com/{GITHUB_REPO}/archive/refs/tags/{tag_version}.tar.gz"
-    output_path = FIBER_ROOT / f"{PROJECT_NAME_LOWER}.rb"
+
+    formula_dir = find_current_self() / "homebrew-fiber" / "Formula"
+    formula_dir.mkdir(parents=True, exist_ok=True)
+    output_path = formula_dir / f"{PROJECT_NAME_LOWER}.rb"
 
     print(f"[*] Target Version: {tag_version}")
     print(f"[*] Downloading {tarball_url}...")

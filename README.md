@@ -20,7 +20,7 @@ As the counterpart on the model path, the same control plane governs LLM calls�
 uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
 ```
 
-**1. Boot the Local Control Plane (`127.0.0.1:8356`)**
+**1. Boot the Local Control Plane**
 Initialize your workspace, harvest existing IDE MCP definitions into Fiber's host registry (`~/.anchor/mcp.json`) without mutating your original IDE files, and launch the gateway daemon:
 
 ```bash
@@ -286,57 +286,19 @@ To add custom credential patterns, override existing rules, or disable specific 
 
 ### 2.2. Deterministic Replay (LLM VCR & Fixtures)
 
-Fiber's Application-Layer VCR serializes LLM and tool network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables zero-cost deterministic fast-forward replay, side-effect-free state recovery, and precise historical latency emulation without altering business logic.
+Fiber's Application-Layer VCR serializes LLM and tool network traffic (requests, stream chunks, and exceptions) into local JSON fixtures. This enables zero-cost deterministic replay, state recovery, and historical latency emulation without altering business logic.
 
 > **Why Fiber VCR?**
-> Standard HTTP mockers (like `vcrpy`) capture network-layer raw bytes, which breaks stream timing and bloats memory during LLM testing. Fiber’s Application-Layer VCR natively understands LLM semantics—autonomously coalescing SSE micro-chunks across configurable time windows (e.g., 100ms) while preserving exact stream semantics.
-> Furthermore, because `StreamBreaker` is natively integrated into the recording lifecycle, streams terminated mid-flight by a policy kill-switch or quota limit capture only the pre-cutoff chunks—allowing you to deterministically replay and test exact circuit-breaking states offline.
+> Standard HTTP mockers (like `vcrpy`) capture raw network bytes, breaking stream timing and bloating memory. Fiber VCR operates at the LLM schema layer—coalescing SSE micro-chunks across configurable time windows (`record_tick_ms=100.0`) while preserving stream semantics.
+> Because `StreamBreaker` integrates directly into the recording lifecycle, streams cut off mid-flight by a policy kill-switch or quota limit capture only pre-cutoff chunks for exact offline circuit-breaker testing.
 
-**Automated Testing (Pytest Standard)**
+**Per-Request HTTP Gateway & Runtime VCR**
 
-Adopting the industry-standard VCR pattern, Fiber empowers your pytest suites to act as the single source of truth. By toggling the `VCR_MODE` environment variable, a single test script can autonomously generate its own fixtures against live APIs (Record) and subsequently execute offline in CI/CD environments (Replay)—preventing any drift between request payloads and assertions.
-
-```python
-import os, pytest
-from fiber.infra.vcr.manager import VCRPlaybackConfig
-from fiber.infra.vcr.injector import VCRInjector
-from fiber.llm.entry import acompletion
-
-@pytest.fixture(scope="module", autouse=True)
-def inject_vcr():
-    """Injects the VCR engine and safely restores original adapters upon teardown."""
-    vcr_mode = os.getenv("VCR_MODE", "replay")
-    config = VCRPlaybackConfig(mode=vcr_mode, speed="max", record_tick_ms=100.0)
-    
-    # Context manager cleanly scopes the proxy injection to a target suite directory
-    with VCRInjector.use_cassette(config=config, fixture_dir="../fiber-compats/suites/pytest"):
-        yield
-
-@pytest.mark.asyncio
-async def test_semantic_routing_pipeline():
-    # VCR transparently intercepts this call based on the injected context
-    response = await acompletion(
-        model="auto",
-        messages=[{"role": "user", "content": "Format this to JSON."}],
-        metadata={
-            "vcr_scenario": "soft_rule_intent",
-            "vcr_filename": "fixture_soft_rule_intent.json" # Explicit naming for clarity
-        }
-    )
-    assert response is not None
-```
-
-> **Zero-Refactor Bridge for Existing SDKs:** If your codebase is already coupled to third-party SDKs (e.g., `import litellm`), calling `vcr_setup_sequence()` from `fiber.dev.bridge.vcr` at boot transparently routes legacy SDK calls through Fiber's VCR and Guardrail harness with full stream duck-typing parity—requiring zero changes to existing business logic.
-
-**Per-Request HTTP Gateway VCR**
-
-When running `fiber daemon`, the REST Gateway (`/v1/chat/completions`) keeps the VCR proxy mounted in zero-overhead `live` passthrough mode. Any HTTP client (Node.js, Go, Rust, or `curl`) can dynamically trigger fixture recording or offline playback per request—without restarting the daemon—by passing `vcr` parameters in the JSON payload:
+When running `fiber daemon`, the REST Gateway (`/v1/chat/completions`) keeps the VCR proxy mounted in zero-overhead `live` passthrough mode. Any HTTP client or agent can dynamically trigger fixture recording or offline disk playback per request—without restarting the daemon—by passing `vcr` parameters in the JSON payload (or via `metadata` in `acompletion`):
 
 ```bash
-# Dynamic Record: Executes live LLM call and freezes the response into a local fixture
-$ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
+# Dynamic Record: Executes live LLM call and freezes response into a local fixture
+$ curl -X POST http://127.0.0.1:8356/v1/chat/completions -H "Content-Type: application/json" -d '{
     "model": "llama_server/gemma-3-1b-it-Q4_K_M.gguf",
     "messages": [{"role": "user", "content": "Give me a 3-word motto."}],
     "vcr": "record",
@@ -344,9 +306,7 @@ $ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
   }'
 
 # Dynamic Replay: Replays deterministically from disk (~3ms) with zero upstream I/O
-$ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
+$ curl -X POST http://127.0.0.1:8356/v1/chat/completions -H "Content-Type: application/json" -d '{
     "model": "llama_server/gemma-3-1b-it-Q4_K_M.gguf",
     "messages": [{"role": "user", "content": "Give me a 3-word motto."}],
     "vcr": "replay",
@@ -354,23 +314,21 @@ $ curl -X POST http://127.0.0.1:8356/v1/chat/completions \
     "vcr_speed": "max"
   }'
 
-```
-
-**Pytest Record & Replay**
-
-Once recorded (`VCR_MODE=record`), suites execute entirely offline (`VCR_MODE=replay` by default)—running at maximum velocity for CI/CD or with real-time latency and chaos jitter emulation:
-
-```bash
-# 1. Record live API streams into coalesced local fixtures (100ms window)
-$ VCR_MODE=record pytest -v fiber/llm/pipeline/interceptor/tests/router.py
-
-# 2. Replay offline at maximum velocity (~0ms I/O) or emulate real latency + 500ms chaos jitter
-$ pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
-$ VCR_SPEED=real VCR_CHAOS=500.0 pytest -v -s fiber/llm/pipeline/interceptor/tests/router.py
-
-# 3. Verify live HTTP Gateway roundtrip (Unary, SSE Stream, and Dynamic Record -> Replay)
+# Verify live HTTP Gateway roundtrip (Unary, SSE Stream, and Dynamic Record -> Replay)
 $ python -m fiber.dev.tester.gateway
 ```
+
+**VCR Control Parameters**
+
+The runtime resolves options per request (via JSON payload or `metadata`), environment variables, or CLI flags:
+
+| Parameter / Flag | Accepted Values | Description |
+| :--- | :--- | :--- |
+| **`vcr` / `VCR_MODE`** | `"live"` \| `"record"` \| `"replay"` | Controls passthrough, upstream capture (max 5 traces), or zero-I/O disk playback. |
+| **`vcr_speed` / `VCR_SPEED`** | `"max"` \| `"real"` | Immediate execution (`~0ms`) or emulated historical latency pacing (`ttfb_ms`, `delta_ms`). |
+| **`vcr_chaos` / `vcr_tick`** | Float | Injects synthetic replay jitter (ms) or sets the SSE chunk coalescing window (default `100.0` ms). |
+
+> **Pytest Suites & VCR Specifications:** For offline `pytest` cassette injection, full `VCRManager` parameter matrices, and Fixture schema, refer to: **[VCR Testing & Config Spec](./phase/abc/spec/vcr.test.md)** · **[Fixture Format Spec](./phase/abc/spec/vcr.fixture.format.md)**
 
 ---
 
@@ -433,7 +391,7 @@ Fiber loads this registry exactly once at boot-time. It performs strict Pydantic
 | **`sign`** | **[Identity & TOTP]** | Inspects local node key status and manages AES-GCM encrypted Admin TOTP secrets in SQLite. | `fiber sign enroll -u fiber` |
 | **`connect`** | **[Config Sync]** | Explicitly scans and registers IDE configs (`fiber connect claude`, `fiber connect all`) or third-party servers into `~/.anchor/mcp.json`. | `fiber connect all`, `fiber connect -t local-fs -e "npx -y @modelcontextprotocol/server-filesystem /tmp" -p "button:DELETE"` |
 | **`connect --standalone`** | **[Standalone Sidecar]** | Runs MCP servers directly in the foreground without writing to `~/.anchor/mcp.json`. | `fiber connect --standalone -t prod-db -e "npx -y @modelcontextprotocol/server-postgres"` |
-| **`daemon`** | **[Local Gateway]** | Ignites the local gateway daemon (`127.0.0.1:8356`), automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon` |
+| **`daemon`** | **[Local Gateway]** | Ignites the local gateway daemon, automatically booting and hot-reloading all MCP servers registered in `~/.anchor/mcp.json`. | `fiber daemon` |
 | **`compat`** | **[Compat & VCR]** | Records raw provider payloads (`record`) and verifies declarative extraction rules offline (`replay`) for schema parity. | `fiber compat fixture -m gemini/gemini-3.1-flash-lite --vcr record` |
 | **`account`** | **[Account & Quota]** | Manages tenant quotas, binds optional tenant identities, issues signed execution mandates, and triggers real-time stream kill-switches. | `fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50 --op PROVISION --sync` |
 
@@ -482,7 +440,7 @@ $ fiber account --tenant accounting_dept kill --ver 99
 ```
 
 **Console Studio**
-Console Studio is a unified web console for the local daemon (`127.0.0.1:8356`) featuring **MCP Gateway, Guardrail, Metering, VCR, and Setting** tabs—allowing you to approve parked HITL transactions, toggle secret rules, monitor real-time token velocity and fuel budgets, and inspect VCR fixtures. Launch with `fiber console` (or `python -m fiber.dev.console.app`).
+Console Studio is a unified web console for the local daemon featuring **MCP Gateway, Guardrail, Metering, VCR, and Setting** tabs—allowing you to approve parked HITL transactions, toggle secret rules, monitor real-time token velocity and fuel budgets, and inspect VCR fixtures. Launch with `fiber console` (or `python -m fiber.dev.console.app`).
 
 ---
 
@@ -525,7 +483,7 @@ fiber init
 brew services start redis
 brew services start dphi-network/fiber/fiber
 
-## Verify install, bootstrap, and gateway(:8356)
+## Verify install, bootstrap, and gateway
 python -m fiber.dev.tester.brew.verify
 ```
 
@@ -547,7 +505,7 @@ $ fiber e2e infra.plane.flare --mode dev
 
 | Execution Plane | Entrypoint & Substrate | Architectural Role & Security Boundary |
 | --- | --- | --- |
-| **Host / CI Plane** | `fiber daemon` (Native OS + Redis) | Runs the primary loopback control plane (`127.0.0.1:8356`) across local environments and GitHub Actions PR gates with automated process reaping. |
+| **Host / CI Plane** | `fiber daemon` (Native OS + Redis) | Runs the primary loopback control plane across local environments and GitHub Actions PR gates with automated process reaping. |
 | **Container Plane** | `infra.plane.compose` (Docker Compose) | Synthesizes a network-coupled (`service:redis`) container topology in `VCR_MODE=replay` to cross-validate gateway, FinOps, and WASM suites locally. |
 | **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a compiled WASM state engine (`fsm.wasm`) to a Pyodide/Wasm Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and cryptographic state verification. |
 

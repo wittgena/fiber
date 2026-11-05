@@ -1,5 +1,4 @@
 # fiber.llm.model.resolver
-## @lineage: fiber.llm.provider.resolver
 from __future__ import annotations
 
 import re
@@ -13,7 +12,7 @@ from fiber.llm.model.secret import get_secret_str, get_secret
 from xphi.arch.contract.config.env import config
 from xphi.watcher.plane.emitter import get_emitter 
 
-log_route = get_emitter("provider.resolver")
+log_route = get_emitter("model.resolver")
 
 PROVIDER_REGISTRY = {
     "openai": ("https://api.openai.com/v1", ["OPENAI_API_KEY"]),
@@ -60,7 +59,14 @@ PROVIDER_REGISTRY = {
     "bedrock": (None, ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"])
 }
 
-_CLAUDE_PATTERN = re.compile(r"^claude-[a-z]+-\d+-\d+(?:-\d{8})?$", re.IGNORECASE)
+# claude-3-5-haiku-20241022, claude-sonnet-4-5-20250929, claude-opus-4-6, claude-3-7-sonnet-latest, claude-fable-5 등 전 세대 포괄
+_CLAUDE_PATTERN = re.compile(
+    r"^(?:(?:us|eu)\.)?(?:anthropic\.)?claude-(?:(?:\d+(?:-\d+)?-[a-z]+)|(?:[a-z]+-\d+(?:-\d+)?))(?:-(?:\d{8}|latest)|@\d{8})?(?:-v\d+:\d+)?$",
+    re.IGNORECASE,
+)
+
+# OpenAI o1/o3/o4/gpt 계열 prefix 없는 모델명 인식용
+_OPENAI_MODEL_PREFIXES = ("gpt-", "ft:gpt", "o1-", "o3-", "o4-", "chatgpt-")
 
 
 class GateBadRequestError(Exception):
@@ -141,10 +147,10 @@ class LLMProviderResolver:
         if not model:
             raise ValueError("model parameter is required.")
 
-        dynamic_api_key = None
         model, custom_llm_provider, is_resolved = self._resolve_special_cases(model, custom_llm_provider)
         if is_resolved:
-            return model, custom_llm_provider, dynamic_api_key, api_base
+            resolved_key, resolved_base = self._fill_provider_defaults(custom_llm_provider, api_key, api_base)
+            return model, custom_llm_provider, resolved_key, resolved_base
 
         if "/" in model:
             resolved = self._resolve_by_prefix(model, api_base, api_key)
@@ -162,7 +168,20 @@ class LLMProviderResolver:
                 message=f"LLM Provider NOT provided. Pass model as E.g. `completion(model='gemini/gemini-3.1-flash-lite',..)`. You passed model={model}",
                 model=model
             )
-        return model, custom_llm_provider, api_key, api_base
+        resolved_key, resolved_base = self._fill_provider_defaults(custom_llm_provider, api_key, api_base)
+        return model, custom_llm_provider, resolved_key, resolved_base
+
+    def _fill_provider_defaults(
+        self,
+        provider: Optional[str],
+        api_key: Optional[str],
+        api_base: Optional[str],
+    ) -> Tuple[Optional[str], Optional[str]]:
+        if provider and provider in self._provider_configs:
+            default_base, key_envs = self._provider_configs[provider]
+            api_base = api_base or default_base
+            api_key = api_key or self._get_secret_from_list(key_envs)
+        return api_key, api_base
 
     def get_api_base(self, model: str, optional_params: Union[dict, LegacyParams]) -> Optional[str]:
         params = optional_params if isinstance(optional_params, LegacyParams) else LegacyParams(**optional_params)
@@ -207,16 +226,21 @@ class LLMProviderResolver:
     def check_capability(self, model: str, custom_llm_provider: Optional[str], key: str, default_if_none: bool = False) -> bool:
         try:
             resolved_model, resolved_provider, _, _ = self.resolve(model=model, custom_llm_provider=custom_llm_provider)
-            model_info = ModelCostRegistry.lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
             
+            # 1. 대소문자 무관 매칭으로 먼저 등록 여부 확인 (불필요한 warning 로그 방지)
+            matched_key = (
+                self._get_cost_key(f"{resolved_provider}/{resolved_model}")
+                or self._get_cost_key(resolved_model)
+            )
+            if matched_key:
+                entry = ModelCostRegistry.get_cost(matched_key)
+                if entry.get(key) is not None:
+                    return bool(entry.get(key))
+
+            # 2. 기존 lookup_base_model_info 호출 호환 유지
+            model_info = ModelCostRegistry.lookup_base_model_info(model=resolved_model, custom_llm_provider=resolved_provider)
             if model_info.get(key) is not None:
                 return bool(model_info.get(key))
-
-            bare_model_key = self._get_cost_key(resolved_model)
-            if bare_model_key:
-                bare_entry = ModelCostRegistry.get_cost(bare_model_key)
-                if bare_entry.get(key) is not None:
-                    return bool(bare_entry.get(key))
 
             return default_if_none
         except Exception as e:
@@ -224,7 +248,25 @@ class LLMProviderResolver:
             return default_if_none
 
     def supports_function_calling(self, model: str, custom_llm_provider: Optional[str] = None) -> bool:
-        return self.check_capability(model, custom_llm_provider, "supports_function_calling", default_if_none=False)
+        if self.check_capability(model, custom_llm_provider, "supports_function_calling", default_if_none=False):
+            return True
+
+        # Fallback: model_cost에 아직 매핑되지 않은 신규 모델이라도 프로바이더/모델 패턴상 지원이 확실한 경우 허용
+        try:
+            resolved_model, resolved_provider, _, _ = self.resolve(model=model, custom_llm_provider=custom_llm_provider)
+            matched_key = (
+                self._get_cost_key(f"{resolved_provider}/{resolved_model}")
+                or self._get_cost_key(resolved_model)
+            )
+            # model_cost에 아예 키가 없는 미등록 모델인 경우에만 패턴 기반 폴백 적용
+            if matched_key is None:
+                if resolved_provider == "anthropic":
+                    return "claude-2" not in resolved_model and "claude-instant" not in resolved_model
+                if resolved_provider in ("openai", "gemini", "google", "groq", "cerebras", "mistral", "cohere", "ollama", "vllm", "llama_server", "lm_studio"):
+                    return True
+        except Exception:
+            pass
+        return False
 
     def supports_httpx_timeout(self, custom_llm_provider: str) -> bool:
         return custom_llm_provider in ["openai"]
@@ -310,13 +352,17 @@ class LLMProviderResolver:
     
     def _resolve_by_model_name(self, model: str, custom_llm_provider: Optional[str]) -> Tuple[str, Optional[str]]:
         registry_provider = ModelCostRegistry.get_provider(model)
+        if not registry_provider:
+            ci_key = self._get_cost_key(model)
+            if ci_key:
+                registry_provider = ModelCostRegistry.get_provider(ci_key)
         if registry_provider:
             return model, registry_provider
 
         if ":" in model and len(model.split(":")[1]) == REPLICATE_MODEL_NAME_WITH_ID_LENGTH:
             return model, "replicate"
 
-        if "ft:gpt" in model or model.startswith("gpt-"):
+        if model.startswith(_OPENAI_MODEL_PREFIXES):
             return model, "openai"
         if _matches_claude_model_pattern(model):
             return model, "anthropic"
@@ -334,7 +380,7 @@ class LLMProviderResolver:
             if config_tuple is None:
                 continue
             base_url, _ = config_tuple
-            if base_url and endpoint in base_url:
+            if base_url and (_endpoint_matches_api_base(endpoint, base_url) or endpoint in base_url):
                 return provider
         return None
 
