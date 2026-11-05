@@ -84,7 +84,7 @@ pyenv local fiber-user
 
   ## [Scenario 3: Direct Remote Release] Clean installation from GitHub release tag
   ## (Downloads both fiber and xphi from remote repository without local source dependencies)
-  uv pip install git+https://github.com/dphi-network/fiber.git@v1.1.4.10
+  uv pip install git+https://github.com/dphilabs/fiber.git@v1.1.4.10
 
   ## [Scenario 4: Mismatch & Ref Locking] Forced cross-version compatibility testing
   ## (Locks xphi to a specific remote tag or local commit against latest local fiber)
@@ -106,14 +106,14 @@ Best suited for running `fiber daemon` as a background OS service to govern loca
 
 ```bash
 ## Install Fiber and its isolated runtime in a single command
-brew install dphi-network/fiber/fiber
+brew install dphilabs/fiber/fiber
 
 ## Initialize Zero-Env node identity & verify cryptographic keychain
 fiber init
 fiber sign status
 
 ## Start background daemon service (Exposes :8356/v1 LLM & MCP Gateway)
-brew services start dphi-network/fiber/fiber
+brew services start dphilabs/fiber/fiber
 
 ## Note: If Xcode Command Line Tools or macOS build metadata issues occur during tap build,
 ## fall back to the Phase C (uv pip) installation above.

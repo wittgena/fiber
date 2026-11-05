@@ -149,7 +149,7 @@ def verify_service_and_gateway(brew_prefix: Path, host: str = "127.0.0.1", port:
 
     if not is_listening:
         log_info(f"Daemon is not currently listening on {host}:{port}.")
-        log_info("To start the background daemon: `brew services start redis && brew services start dphi-network/fiber/fiber`")
+        log_info("To start the background daemon: `brew services start redis && brew services start dphilabs/fiber/fiber`")
         return
 
     log_pass(f"Loopback daemon is active on {host}:{port}")
@@ -165,7 +165,7 @@ def verify_service_and_gateway(brew_prefix: Path, host: str = "127.0.0.1", port:
     log_pass(f"Gateway HTTP endpoint responded (HTTP {status_code} on {url})")
 
 
-def run_brew_audit(tap_formula: str = "dphi-network/fiber/fiber") -> None:
+def run_brew_audit(tap_formula: str = "dphilabs/fiber/fiber") -> None:
     """Optional: Run `brew audit --strict` and `brew test`."""
     log_info(f"Running `brew audit --strict {tap_formula}`...")
     audit_res = run_cmd(["brew", "audit", "--strict", tap_formula], check=False)
@@ -176,8 +176,8 @@ def run_brew_audit(tap_formula: str = "dphi-network/fiber/fiber") -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Verify Fiber Homebrew installation and runtime.")
-    parser.add_argument("--audit", action="store_true", help="Also run `brew audit --strict dphi-network/fiber/fiber`")
-    parser.add_argument("--tap", default="dphi-network/fiber/fiber", help="Target Homebrew tap formula name")
+    parser.add_argument("--audit", action="store_true", help="Also run `brew audit --strict dphilabs/fiber/fiber`")
+    parser.add_argument("--tap", default="dphilabs/fiber/fiber", help="Target Homebrew tap formula name")
     args = parser.parse_args()
 
     print("========================================================")
