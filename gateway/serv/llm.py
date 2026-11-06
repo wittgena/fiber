@@ -7,12 +7,17 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from fiber.llm.response import ModelResponse, EmbeddingResponse
-from fiber.llm.pipeline.bootstrap import PipelineBootstrap 
+from fiber.llm.pipeline.bootstrap import PipelineBootstrap
 from fiber.llm.pipeline.interceptor.registry import InterceptorConfigLoader
+from fiber.llm.pipeline.interceptor.guardrail import (
+    PayloadSanitizationGuardrail,
+    ActiveBlockingGuardrail,
+)
 from fiber.gateway.llm.stream.wrapper import StreamWrapper
 from fiber.gateway.security import NodeAuthenticator, NodeAuthPayload
 from fiber.gateway.contract.router import ContractRouter
 from fiber.infra.vcr.manager import VCRIdentityRule
+from fiber.infra.ops.account.state import state, STATE_FILE_PATH, load_or_init_state
 
 from xphi.arch.contract.event.next import next_trace_id
 from xphi.arch.model.auth import BrokerKey, BrokerAction
@@ -21,15 +26,48 @@ from xphi.watcher.plane.emitter import get_emitter, flow_scope
 log = get_emitter("serv.llm")
 
 llm_edge = ContractRouter(
-    namespace="llm",  
-    prefix="/v1", 
+    namespace="llm",
+    prefix="/v1",
     tags=["LLM Gateway"],
     description="Deterministic LLM Gateway"
 )
 
+_MASK_GUARDRAIL = PayloadSanitizationGuardrail()
+_BLOCK_GUARDRAIL = ActiveBlockingGuardrail()
+_state_mtime: float = 0.0
+
+
+def _resolve_console_guardrails() -> List[Any]:
+    """
+    Resolves active guardrail interceptors from Console state (`state.security`)
+    when no explicit `interceptors` payload is supplied by the client.
+    """
+    global _state_mtime
+    try:
+        if STATE_FILE_PATH.exists():
+            mtime = STATE_FILE_PATH.stat().st_mtime
+            if mtime > _state_mtime:
+                load_or_init_state(STATE_FILE_PATH)
+                _state_mtime = mtime
+    except Exception:
+        pass
+
+    sec = getattr(state, "security", None)
+    if not sec:
+        return []
+
+    active: List[Any] = []
+    if getattr(sec, "guardrail_mask", False):
+        active.append(_MASK_GUARDRAIL)
+    if getattr(sec, "guardrail_block", False):
+        active.append(_BLOCK_GUARDRAIL)
+    return active
+
+
 class InterceptorItem(BaseModel):
     class_name: str = Field(alias="class", description="Interceptor class name (e.g. cache.EdgeRedisCache)")
     kwargs: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
 
 class ChatCompletionRequest(BaseModel):
     model: str = Field(..., description="Target LLM model")
@@ -39,7 +77,7 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: Optional[int] = None
     tools: Optional[List[Dict[str, Any]]] = None
     interceptors: Optional[List[InterceptorItem]] = None
-    
+
     # Optional top-level VCR convenience fields (also accepted inside `metadata`)
     vcr: Optional[str] = Field(default=None, description="Per-request VCR mode: live | record | replay")
     vcr_scenario: Optional[str] = Field(default=None, description="VCR scenario name for fixture routing")
@@ -48,7 +86,7 @@ class ChatCompletionRequest(BaseModel):
     vcr_speed: Optional[str] = Field(default=None, description="VCR replay speed: max | real")
     vcr_chaos: Optional[float] = Field(default=None, description="VCR artificial chaos latency (ms)")
     vcr_tick: Optional[float] = Field(default=None, description="VCR stream coalescing tick window (ms)")
-    
+
     model_config = {"extra": "allow"}
 
 
@@ -119,7 +157,7 @@ async def chat_completions(
             #     max_tokens=payload.max_tokens
             # )
             node_auth = NodeAuthPayload()
-            
+
             # Exclude internal/VCR top-level fields from leaking into downstream LLM SDK kwargs
             exclude_fields = {
                 "model", "messages", "interceptors",
@@ -127,13 +165,13 @@ async def chat_completions(
                 "vcr_speed", "vcr_chaos", "vcr_tick",
             }
             kwargs = payload.model_dump(exclude=exclude_fields, exclude_none=True)
-            
+
             kwargs.pop("base_url", None)
             kwargs.pop("api_base", None)
             kwargs.pop("headers", None)
-            
+
             internal_receipt = getattr(request.state, "fuel_receipt", None)
-            
+
             metadata = kwargs.get("metadata")
             if not isinstance(metadata, dict):
                 metadata = {}
@@ -155,19 +193,24 @@ async def chat_completions(
 
             # 1. Boot-time loaded global interceptors (Immutable)
             global_interceptors = getattr(request.app.state, "pipeline_interceptors", [])
-            
-            # 2. Client-requested interceptors (Additive)
-            client_interceptors = InterceptorConfigLoader.build_from_payload(payload.interceptors or [])
-            
+
+            # 2. Client-requested interceptors or Console default guardrails
+            if payload.interceptors is not None:
+                active_interceptors = InterceptorConfigLoader.build_from_payload(payload.interceptors)
+            else:
+                active_interceptors = _resolve_console_guardrails()
+
             # 3. Safe Merge (Deduplication & System Priority)
             global_class_names = {type(i).__name__ for i in global_interceptors}
             final_interceptors = list(global_interceptors)
-            
-            for ci in client_interceptors:
+
+            for ci in active_interceptors:
                 if type(ci).__name__ in global_class_names:
-                    log.warning(f"Client tried to override global interceptor '{type(ci).__name__}'. Override denied.")
+                    if payload.interceptors is not None:
+                        log.warning(f"Client tried to override global interceptor '{type(ci).__name__}'. Override denied.")
                     continue
                 final_interceptors.append(ci)
+                global_class_names.add(type(ci).__name__)
 
             # 4. Execute Pipeline
             response = await PipelineBootstrap.execute_completion(
@@ -185,7 +228,7 @@ async def chat_completions(
                         ).decode("utf-8")
                         yield f"data: {data_str}\n\n"
                     yield "data: [DONE]\n\n"
-                
+
                 return StreamingResponse(sse_generator(), media_type="text/event-stream")
             return response
         except HTTPException:
@@ -193,6 +236,7 @@ async def chat_completions(
         except Exception as e:
             log.error(f"[LLM Gateway] Completion Failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Downstream LLM Error: {str(e)}")
+
 
 @llm_edge.post(
     "/embeddings",
@@ -217,7 +261,7 @@ async def embeddings(
             action=BrokerAction.LLM_EMBEDDING.value,
             model=model
         )
-        
+
         kwargs.pop("base_url", None)
         kwargs.pop("api_base", None)
         kwargs.pop("headers", None)
@@ -231,8 +275,9 @@ async def embeddings(
         kwargs["metadata"] = metadata
 
         response = await PipelineBootstrap.execute_embedding(
-            model=model, 
-            input_data=input, 
+            model=model,
+            input_data=input,
+            interceptors=_resolve_console_guardrails(),
             **kwargs
         )
         return response

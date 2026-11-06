@@ -9,7 +9,7 @@ As the counterpart on the model path, the same control plane governs LLM calls�
 | **1. Local MCP Gateway** | Loopback Daemon for Agents & IDEs, Pre-Flight HITL Locks, Zero-Key LLM Routing, Config Sync | **[1. Local MCP Gateway](#1-local-mcp-gateway)** |
 | **2. LLM Guardrails & Replay** | In-Flight DLP Guardrails, Mid-Stream Kill-Switch, Deterministic VCR Replay, Schema Traverser | **[2.1 LLM Guardrails](#21-llm-guardrails)** · **[2.2 VCR](#22-deterministic-replay-llm-vcr--fixtures)** · **[2.3 Schema Traverser](#23-schema-traverser--compat-registry)** |
 | **3. CLI & Installation** | Connect CLI, Account & Quota Governance, Sandbox Provisioning (`uv pip`), Node Identity (`fiber init`) & Homebrew | **[3.1 Connect CLI](#31-fiber-connect-cli)** · **[3.2 Python & CLI](#32-python-environment-via-uv-pip-recommended-for-sdk--local-control-plane)** · **[3.3 Homebrew](#33-macos-homebrew-tap-for-local-daemon--mcp-gateway)** |
-| **4. Planes & Benchmarks** | Multi-Plane Orchestration (`compose` / `flare`) & 200-VU Concurrency Metrics | **[4.1 Execution Planes](#41-execution-planes-compose--flare)** · **[4.2 Benchmarks](#42-pipeline-performance-benchmarks-apple-m2-32gb-ram)** |
+| **4. Edge Plane & Benchmarks** | Edge V8 Isolate Offload (`plane.flare`), BYOC Provisioning & 200-VU Concurrency Metrics | **[4.1 Edge V8 Plane](#41-edge-v8-execution-plane-planeflare)** · **[4.2 Benchmarks](#42-pipeline-performance-benchmarks-apple-m2-32gb-ram)** |
 | **5. System Validation Logs** | End-to-End Security, FSM, Guardrail & Edge Cryptographic Audit Logs | **[5. System Validation Logs](#5-system-validation-logs)** |
 
 ---
@@ -41,7 +41,7 @@ Because `fiber connect` never overwrites your client files, explicitly point you
 }
 
 // (B) Model Harness — Point your IDE (e.g., Continue, Cursor) or OpenAI client to :8356/v1
-// Upstream API keys are resolved from the daemon's host OS environment (zero client keys).
+// Resolves host OS API keys (zero client keys) and enforces DLP guardrails by default (toggle On/Off in `fiber console`).
 // apiBase: "http://127.0.0.1:8356/v1"  |  model: "cerebras/qwen-3.8-27b"
 ```
 
@@ -161,8 +161,7 @@ While the Local MCP Gateway (**1**) governs tool execution, Fiber's duplex LLM p
 
 > **Unlike passive callbacks, this event-driven pipeline empowers interceptors to actively mutate payloads in-place, short-circuit physical I/O, and abort unauthorized streams in sub-millisecond time.**
 
-> **In-Process SDK vs. Gateway Daemon:** While the Python SDK and pytest VCR run entirely in-process without a daemon, running `fiber daemon` exposes this exact guardrail pipeline as an OpenAI-compatible REST endpoint (`/v1/chat/completions`) for external agents, IDEs, and Console Studio.
-
+> **In-Process SDK vs. Gateway Daemon:** While the Python SDK runs explicit `interceptors=[...]` in-process without a daemon, routing requests through `fiber daemon` (`/v1/chat/completions`) enforces both `PRE_TRANSLATE` masking and `POST_TRANSLATE` secret blocking by default—with live On/Off slot toggles persisted in `~/.anchor/state.json` via Console Studio (`fiber console`).
 
 **1. Two-Track Guardrails & Slot Interceptors (`PRE_TRANSLATE` vs. `POST_TRANSLATE`):**
 Production guardrails are built into `fiber.llm.pipeline.interceptor.guardrail` and ready to mount directly in **Step 2**; under the hood, each interceptor implements `DuplexChannel` for its target execution slot:
@@ -248,7 +247,7 @@ response = await acompletion(
 )
 ```
 
-> **Node Quota & Mid-Stream Kill-Switch Binding:** To enforce real-time stream termination on quota exhaustion or `fiber account ... kill` signals, bind the `StreamBreaker` and `xphi` ledger adapters (`PtaAdapter`, `NodeAuthPayload`) to the call:
+> **Node Quota & Mid-Stream Kill-Switch Binding:** To enforce real-time stream termination on quota exhaustion or `fiber account ... kill` signals, bind the `StreamBreaker` and local state ledger adapters (`PtaAdapter`, `NodeAuthPayload`) to the call:
 > ```python
 > from fiber.llm.pipeline.channel.breaker import StreamBreaker
 > from fiber.llm.pipeline.channel.observer import MeteringObserver
@@ -436,11 +435,10 @@ $ fiber account --tenant accounting_dept --spiffe fiber jwt --usd 50.0 --op PROV
 
 # Trigger a Pub/Sub REVOKE kill-switch to sever active streams
 $ fiber account --tenant accounting_dept kill --ver 99
-
 ```
 
 **Console Studio**
-Console Studio is a unified web console for the local daemon featuring **MCP Gateway, Guardrail, Metering, VCR, and Setting** tabs—allowing you to approve parked HITL transactions, toggle secret rules, monitor real-time token velocity and fuel budgets, and inspect VCR fixtures. Launch with `fiber console` (or `python -m fiber.dev.console.app`).
+Console Studio is a unified web console for the local daemon featuring **MCP Gateway, Guardrail, Metering, VCR, and Setting** tabs—allowing you to approve parked HITL transactions, toggle gateway `PRE_TRANSLATE` masking and `POST_TRANSLATE` blocking slots On/Off (`state.json`) alongside custom secret rules (`redact_rules.json`), monitor real-time token velocity and fuel budgets, and inspect VCR fixtures. Launch with `fiber console` (or `python -m fiber.dev.console.app`).
 
 ---
 
@@ -489,25 +487,42 @@ python -m fiber.dev.tester.brew.verify
 
 ## 4. Execution Planes & Pipeline Benchmarks
 
-Beyond the host loopback daemon, Fiber extends its runtime governance across **Docker Compose** for containerized CI parity and **Cloudflare Edge V8 Isolates** for zero-trust sandbox execution.
+Beyond the default host loopback runtime (`XPHI_WASM_PLANE=local`), Fiber extends its execution governance to **Cloudflare Edge V8 Isolates** for zero-trust, hardware-isolated sandbox offload.
 
-### 4.1. Execution Planes (`compose` & `flare`)
+### 4.1. Edge V8 Execution Plane (`plane.flare`)
 
-Fiber dynamically synthesizes target infrastructure blueprints (`docker-compose.yml`, `wrangler.toml`), executes plane-specific verification suites, and tears down ephemeral workspaces automatically (or preserves crash dumps via `--keep-workspace`):
+Setting `XPHI_WASM_PLANE` dynamically re-binds the execution broker to the **Edge V8 Plane (`flare`)** without modifying local agent or gateway logic. Fiber dispatches compiled WASM kernels (`phase`, `fsm`) and sandboxed Python (`Pyodide`) across an HTTP/1.1 JSON-RPC bridge—enforcing hypervisor-level CPU/Wall-Time cutoffs (`Error 1102`) and returning cryptographic execution receipts (`X-XPHI-Canonical-Hash`) to the local state ledger:
 
 ```bash
-# Container Plane: Replicates the GitHub Actions CI topology locally (--rebuild for no-cache)
-$ fiber e2e infra.plane.compose --mode dev
+# Flare Local Dev Plane: Auto-provisions local Dual V8 Isolates (:8787/:8788) on demand
+$ XPHI_WASM_PLANE=flare fiber daemon
 
-# Edge Sandbox Plane: Provisions Dual V8 Isolates and seals execution into a Merkle root
+# Flare Global Edge Plane (BYOC): Routes directly to a self-hosted Cloudflare Worker
+$ XPHI_WASM_PLANE=flare:https://xphi-gateway-node.<subdomain>.workers.dev fiber daemon
+
+```
+
+**Autonomous Blueprint Synthesis & Self-Hosted (BYOC) Provisioning**
+To prevent cross-tenant state exposure and metering exhaustion, Fiber operates strictly on a **Self-Hosted (BYOC)** basis rather than routing traffic to a shared public endpoint. During provisioning, the Edge Controller synthesizes an ephemeral two-tier microservice workspace comprising an upstream **WASM Gateway (`xphi-gateway-node`)** and a downstream **Pyodide Engine (`xphi-python-node`)** linked via internal Cloudflare Service Bindings (`PYTHON_ENGINE`).
+
+While the core runtime retains final state Merkle rollups, fuel metering, and policy locks on the local host (Host-Sovereign mode), both the transport facade (`EdgeStateAnchor`) and synthesized manifests (`edge_state_bindings`) expose open extension slots for external **Cloudflare Durable Objects, D1, or Queues** integrations:
+
+```bash
+# Live Edge Provisioning & 3-Stage Smoke Verification (Deploys Dual Workers to Cloudflare)
+$ python -m fiber.phase.ops.flare.deploy
+
+# Verify, Inspect, or Teardown Remote Edge Workers (Reverse Dependency Order)
+$ python -m fiber.phase.ops.flare.deploy teardown  # or `verify --url https://...`, `status`
+
+# Full Local Dual-Isolate E2E Suite (23 Scenarios: Bridge Routing, Isolation & State Rollup)
 $ fiber e2e infra.plane.flare --mode dev
 ```
 
-| Execution Plane | Entrypoint & Substrate | Architectural Role & Security Boundary |
-| --- | --- | --- |
-| **Host / CI Plane** | `fiber daemon` (Native OS + Redis) | Runs the primary loopback control plane across local environments and GitHub Actions PR gates with automated process reaping. |
-| **Container Plane** | `infra.plane.compose` (Docker Compose) | Synthesizes a network-coupled (`service:redis`) container topology in `VCR_MODE=replay` to cross-validate gateway, FinOps, and WASM suites locally. |
-| **Edge V8 Plane** | `infra.plane.flare` (Cloudflare Workers) | Binds a compiled WASM state engine (`fsm.wasm`) to a Pyodide/Wasm Python V8 isolate, intercepting CPU exhaustion (`Error 1102`) and cryptographic state verification. |
+| Execution Mode | `XPHI_WASM_PLANE` Binding | Target Endpoint | Architectural Role & Security Boundary |
+| --- | --- | --- | --- |
+| **Host Native** | `local` (Default) | Local Stream Store | Executes over native host streams and local WASM workers while anchoring the loopback control plane (`:8356`). |
+| **Flare Local Dev** | `flare` or `flare:dev` | `http://127.0.0.1:8787` | Auto-spawns local Dual V8 Isolates (`:8787` Gateway / `:8788` Pyodide) on first dispatch for offline parity and E2E verification. |
+| **Flare Global Edge** | `flare:https://<worker>.<subdomain>.workers.dev` | Cloudflare Global Edge | Offloads WASM/Pyodide compute to self-hosted V8 Isolates; enforces `Error 1102` cutoffs and seals `X-XPHI-Canonical-Hash` into the local state ledger while leaving `EdgeStateAnchor` open for stateful bindings. |
 
 ---
 
@@ -535,8 +550,8 @@ fiber e2e inter.concurrency --vcr replay --concurrency 200
 
 Fiber enforces execution determinism and runtime safety through automated CI gates (on every PR and release tag) alongside targeted end-to-end validation suites across each subsystem:
 
-* **[mcp.guard.log](./phase/abc/log/gateway/worker/guard.20261104.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
-* **[fsm.contract.log](./phase/abc/log/fsm/contract.20261102.log):** Validates the declarative agent state machine and polyglot execution bridge, confirming 10-scheme URI routing (`llm://`, `mcp://`, `fn://`, `py://`, `https://`, `exec://`), <=2KB content-addressed state projection slicing, asymmetric M:N fuel conservation, and zero-spend 202 HITL parking with $O(1)$ mid-flow resumption across heterogeneous DAGs.
+- **[mcp.guard.log](./phase/abc/log/gateway/worker/guard.20261104.log):** Validates zero-code HITL governance for MCP servers, confirming that safe tool calls pass through instantly while high-risk payloads pause for Slack approval (via 6-digit TOTP or 1-Click buttons)—spawning third-party stdio sandboxes only after human verification.
+- **[fsm.contract.log](./phase/abc/log/fsm/contract.20261102.log):** Validates the declarative agent state machine and polyglot execution bridge, confirming 10-scheme URI routing (`llm://`, `mcp://`, `fn://`, `py://`, `https://`, `exec://`), <=2KB content-addressed state projection slicing, asymmetric M:N fuel conservation, and zero-spend 202 HITL parking with $O(1)$ mid-flow resumption across heterogeneous DAGs.
 - **[llm.guardrail.log](./phase/abc/log/gateway/llm/guardrail.20261104.log):** Validates the two-track DLP guardrail pipeline and dynamic secret registry, confirming zero-I/O edge cache short-circuiting, in-place `PRE_TRANSLATE` PII masking, strict `POST_TRANSLATE` credential blocking, fault-tolerant JSON rule injection (DIP), and chained `[Mask -> Block]` defense with fallback shielding.
-**[llm.vcr.log](./phase/abc/log/gateway/llm/vcr.20261104.log):** Validates deterministic VCR replay and tracer isolation across the LLM pipeline, confirming sub-millisecond synchronous fixture playback, zero-I/O asynchronous stream chunk tracking, strict exception boundary verification, and idempotent fallback routing with deepcopy payload shielding.
-- **[infra.plane.flare.log](./phase/abc/log/infra/plane/flare.20261104.log):** Validates remote sandbox execution on Cloudflare Edge V8 isolates, confirming zero-leakage host isolation, bit-exact compute determinism, and tamper-proof state verification via Merkle roots.
+- **[llm.vcr.log](./phase/abc/log/gateway/llm/vcr.20261104.log):** Validates deterministic VCR replay and tracer isolation across the LLM pipeline, confirming sub-millisecond synchronous fixture playback, zero-I/O asynchronous stream chunk tracking, strict exception boundary verification, and idempotent fallback routing with deepcopy payload shielding.
+- **[infra.plane.flare.log](./phase/abc/log/infra/plane/flare.20261106.log):** Validates `XPHI_WASM_PLANE` bridge routing and Dual V8 Isolate execution on Cloudflare Edge, confirming `PHASE`/Pyodide Service Binding parity, zero-leakage host isolation, bit-exact compute determinism, and `X-XPHI-Canonical-Hash` sealing into local state Merkle roots.

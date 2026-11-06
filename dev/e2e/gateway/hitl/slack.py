@@ -132,7 +132,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
         headers = {
             "x-idempotency-key": idem_key or uuid.uuid4().hex,
             "x-nonce": nonce,
-            "Fuel-Receipt": "valid_receipt",
+            "X-Fiber-Fuel-Receipt": "valid_receipt",
             "x-spiffe-id": self.crypto_ctx.spiffe_id,
             "DPoP": self.dpop_client.generate_proof(url=url, method="POST", nonce=nonce),
         }

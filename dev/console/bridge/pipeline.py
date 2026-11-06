@@ -74,7 +74,9 @@ def _load_vcr_fixture_stats(model_id: str) -> Tuple[str, int, int]:
 class PipelineActionBridge:
     async def run_pipeline_xray(self, prompt: str) -> None:
         s, f, p = state.security, state.finops, state.pipeline
-        is_mask_mode = "Redact" in str(getattr(s, "guardrail_mode", ""))
+        mask_on = bool(getattr(s, "guardrail_mask", True))
+        block_on = bool(getattr(s, "guardrail_block", True))
+        any_guard_on = mask_on or block_on
         target_model = getattr(p, "compat_model", "gemini/gemini-3.1-flash-lite")
 
         # 로컬에 fiber-compats 픽스처가 없으면 백그라운드 동기화 유도 (비차단)
@@ -89,15 +91,15 @@ class PipelineActionBridge:
             if c := refs.slot_cards.get(key):
                 c.classes(replace="bg-slate-800 border border-slate-700 p-2 w-36 text-center")
 
-        # 실제 C-Regex & Registry 엔진 평가
+        # 실제 C-Regex & Registry 엔진 평가 (스위치가 하나라도 켜져 있을 때만 활성화)
         matched, mutated_prompt, guard_ms = evaluate_guardrail_payload(
             prompt=prompt or "",
-            use_builtin_secrets=bool(s.block_api_keys),
-            custom_regex=str(s.custom_regex or ""),
+            use_builtin_secrets=any_guard_on,
+            custom_regex=str(s.custom_regex or "") if any_guard_on else "",
         )
 
-        # [Track 1: PRE_TRANSLATE Masking Mode] 캐시/라우터 진입 전에 인플레이스 마스킹 후 통과
-        if is_mask_mode and matched:
+        # [Track 1: PRE_TRANSLATE Masking] guardrail_mask가 켜져 있으면 인플레이스 마스킹 수행
+        if mask_on and matched:
             s.test_prompt = mutated_prompt  # UI 입력창에서도 즉시 마스킹된 결과 확인 가능
             if c := refs.slot_cards.get("guardrail"):
                 c.classes(replace="bg-amber-900 border-2 border-amber-400 p-2 w-36 text-center")
@@ -112,8 +114,20 @@ class PipelineActionBridge:
                 c.classes(replace="bg-emerald-900 border-2 border-emerald-400 p-2 w-36 text-center")
             await asyncio.sleep(0.10)
 
-        # [Track 2: POST_TRANSLATE Strict Blocking Mode] 발견 즉시 숏서킷 차단 (VCR 리플레이 미진입)
-        if not is_mask_mode and matched:
+        # [Track 2: POST_TRANSLATE Strict Blocking]
+        # Masking 없이 Block이 켜져 있거나, Masking 후에도 잔존 시크릿이 매칭된 경우 즉시 차단
+        post_matched = False
+        if block_on:
+            if not mask_on:
+                post_matched = matched
+            else:
+                post_matched, _, _ = evaluate_guardrail_payload(
+                    prompt=mutated_prompt,
+                    use_builtin_secrets=True,
+                    custom_regex=str(s.custom_regex or ""),
+                )
+
+        if block_on and post_matched:
             if c := refs.slot_cards.get("guardrail"):
                 c.classes(replace="bg-red-900 border-2 border-red-500 animate-pulse p-2 w-36 text-center")
             s.xray_latencies = [0.0, guard_ms, 0.19, 0.09]
@@ -136,12 +150,12 @@ class PipelineActionBridge:
         refs.push_cli(f"$ fiber xray --vcr replay -m {target_model} -> Replaying {chunk_cnt} chunks from VCR fixture")
 
         for key in ("guardrail", "fuel"):
-            if key == "guardrail" and is_mask_mode and matched:
+            if key == "guardrail" and mask_on and matched:
                 continue  # 이미 Amber(Masked) 상태로 표시됨
             if c := refs.slot_cards.get(key):
                 c.classes(replace="bg-emerald-900 border-2 border-emerald-400 p-2 w-36 text-center")
 
-        # VCR Fixture 스트림 리플레이 텔레메트리(Active Streams, Velocity, Tokens) 실시간 연출
+        # VCR Fixture 스트림 리플레이 텔레메트리 실시간 연출
         s.active_streams = int(getattr(s, "active_streams", 0)) + 1
         s.plane_bursting = True
         try:
@@ -160,7 +174,7 @@ class PipelineActionBridge:
             s.plane_bursting = False
             s.plane_density = 1.2
 
-        s.xray_latencies = [0.11, guard_ms, 0.42, 0.08]
+        s.xray_latencies = [0.11, guard_ms if any_guard_on else 0.0, 0.42, 0.08]
         s.xray_chart_dirty = True
         total_ms = round(sum(s.xray_latencies), 2)
 
@@ -169,7 +183,7 @@ class PipelineActionBridge:
             f"[VCR Fixture Replay] model={target_model} chunks={chunk_cnt} tokens=+{token_cnt} overhead={total_ms}ms",
         )
 
-        if is_mask_mode and matched:
+        if mask_on and matched:
             ui.notify(
                 f"Masked in-place & Replayed via VCR Fixture [{target_model}] (+{token_cnt} tok, {total_ms}ms)",
                 type="warning",

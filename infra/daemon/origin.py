@@ -138,7 +138,7 @@ class OriginDelegatorDaemon(AbstractDaemon):
             "x-nonce": nonce,
             "x-timestamp": str(timestamp),
             "DPoP": signature,
-            "Fuel-Receipt": master_receipt,
+            "X-Fiber-Fuel-Receipt": master_receipt,
             "X-Delegated-From": "local_mesh"
         }
 

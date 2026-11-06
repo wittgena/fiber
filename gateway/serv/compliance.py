@@ -82,7 +82,7 @@ async def get_trust_keys(request: Request):
 async def otlp_logs_export(
     request: Request,
     payload: ExportLogsServiceRequest = Body(...),
-    # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
+    # fuel_receipt: Optional[str] = Header(None, alias="X-Fiber-Fuel-Receipt"),
     bg_tasks: BackgroundTasks = BackgroundTasks(),
     pubsub: DistributedPubSub = Depends(get_pubsub),
     broker: WasmBroker = Depends(get_wasm_broker),
@@ -132,7 +132,7 @@ async def otlp_logs_export(
             headers={
                 EdgeHeader.STATE: EdgeState.SUCCESS,
                 EdgeHeader.CONTENT_HASH: content_hash,
-                EdgeHeader.FINGERPRINT: fingerprint
+                EdgeHeader.CANONICAL_HASH: fingerprint
             }, 
             content=b"{}"
         )
@@ -150,7 +150,7 @@ async def otlp_logs_export(
 async def audit_log(
     request: Request,
     payload: AuditLogRequest,
-    # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
+    # fuel_receipt: Optional[str] = Header(None, alias="X-Fiber-Fuel-Receipt"),
     secret_auditor: SecretAuditor = Depends(get_secret_auditor),
     broker: WasmBroker = Depends(get_wasm_broker)
 ) -> AuditLogResponse:

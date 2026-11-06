@@ -133,7 +133,7 @@ class ComplianceSuiteWorkflow(Workflow):
         self.log.info("\n--- [Phase 4/4] Audit Schema Enforcement (Negative) ---")
         try:
             malformed_payload = {"verbose": True, "some_data": "invalid"}
-            headers = {"Fuel-Receipt": "mock_receipt_trade"}
+            headers = {"X-Fiber-Fuel-Receipt": "mock_receipt_trade"}
             
             res = await self.raw_client.post(Endpoints.AUDIT_EVENT, json=malformed_payload, headers=headers)
             if res.status_code != 422:
