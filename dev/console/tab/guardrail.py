@@ -21,6 +21,7 @@ from fiber.dev.console.tab.vcr import VcrTab
 from fiber.dev.console.tab.metering import MeteringTab
 from fiber.dev.console.tab.setting import ModelNSettingTab  # noqa: F401
 
+
 class SecretRulesModal:
     """Built-in(33) + Custom Patterns(redact_rules.json) 및 Secret Keys를 단일 SSOT로 관리하는 Dialog"""
 
@@ -39,7 +40,6 @@ class SecretRulesModal:
         base_keys = sorted(BASE_SECRET_KEYS)
 
         def _merged_rules() -> dict[str, str]:
-            # Custom patterns를 상단에 배치하여 추가/확인이 쉽도록 구성
             return {**self.custom_patterns, **_redact_mod.BASE_SECRET_RULES}
 
         self.dialog.clear()
@@ -280,6 +280,8 @@ class LLMGuardrailTab(StudioTab):
     @staticmethod
     def _ensure_telemetry_attrs(s: object) -> None:
         defaults = {
+            "guardrail_mask": True,
+            "guardrail_block": True,
             "active_streams": 0,
             "throughput_cps": 0.0,
             "live_stream_tokens": 0,
@@ -292,9 +294,21 @@ class LLMGuardrailTab(StudioTab):
             if not hasattr(s, k):
                 setattr(s, k, v)
 
+    @staticmethod
+    def _sync_legacy_guardrail_attrs(s: object) -> None:
+        """Keeps legacy `block_api_keys` and `guardrail_mode` attributes aligned for bridge compatibility."""
+        mask_on = bool(getattr(s, "guardrail_mask", False))
+        block_on = bool(getattr(s, "guardrail_block", False))
+        setattr(s, "block_api_keys", mask_on or block_on)
+        if block_on:
+            setattr(s, "guardrail_mode", "Strict Block (PermissionError)")
+        elif mask_on:
+            setattr(s, "guardrail_mode", "Redact (Mask with ***)")
+
     def compose_left(self) -> None:
         s = state.security
         self._ensure_telemetry_attrs(s)
+        self._sync_legacy_guardrail_attrs(s)
         # 일회성 custom_regex가 Built-in/Registry 룰 비활성화 테스트를 간섭하지 않도록 비움
         s.custom_regex = ""
 
@@ -353,20 +367,28 @@ class LLMGuardrailTab(StudioTab):
                     "dense flat round size=xs color=slate-4"
                 ).tooltip("Reload redact_rules.json from disk")
 
-        ui.label("Registry Policy Enforcement").classes("text-[11px] font-bold text-slate-400 shrink-0")
-        kit.switch("Enforce Active Registry Rules (Built-in + Custom JSON)", s, "block_api_keys", color="red")
-        kit.select(
-            ["Strict Block (PermissionError)", "Redact (Mask with ***)"],
-            "Guardrail Action",
+        ui.label("Runtime Slot Enforcement (state.json)").classes("text-[11px] font-bold text-slate-400 shrink-0")
+        kit.switch(
+            "PRE_TRANSLATE : In-Place Masking (Mutate with ***)",
             s,
-            "guardrail_mode",
-            width="w-full",
+            "guardrail_mask",
+            color="cyan",
         )
+        kit.switch(
+            "POST_TRANSLATE : Strict Secret Block (PermissionError)",
+            s,
+            "guardrail_block",
+            color="red",
+        )
+
+        async def _run_xray() -> None:
+            self._sync_legacy_guardrail_attrs(s)
+            await pipeline.run_pipeline_xray(s.test_prompt)
 
         ui.label("Test Prompt").classes("text-[11px] font-bold text-cyan-400 mt-1 shrink-0")
         kit.text("Input Prompt", s, "test_prompt", flex=False, width="w-full")
         with kit.row(gap="gap-1.5"):
-            kit.button("Test Prompt", lambda: pipeline.run_pipeline_xray(s.test_prompt), color="red", flex=True)
+            kit.button("Test Prompt", _run_xray, color="red", flex=True)
 
     def compose_right(self) -> None:
         s = state.security

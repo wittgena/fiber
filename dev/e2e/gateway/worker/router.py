@@ -1,5 +1,4 @@
 # fiber.dev.e2e.gateway.worker.router
-## @lineage: fiber.dev.e2e.worker.router
 """
 @requirements: fiber daemon 
 $ XPHI_WORKERS=1 python -m xphi.node.ops.boot
@@ -164,7 +163,7 @@ class MCPRouterPipeline(MockPipeline):
         headers = {
             "x-idempotency-key": uuid.uuid4().hex,
             "x-nonce": nonce,
-            "Fuel-Receipt": "valid_receipt",
+            "X-Fiber-Fuel-Receipt": "valid_receipt",
             "DPoP": dpop_proof,
         }
 
@@ -191,7 +190,7 @@ class MCPRouterPipeline(MockPipeline):
             headers = {
                 "x-idempotency-key": uuid.uuid4().hex,
                 "x-nonce": nonce,
-                "Fuel-Receipt": "valid_receipt",
+                "X-Fiber-Fuel-Receipt": "valid_receipt",
                 "DPoP": dpop_proof,
             }
 
@@ -218,7 +217,7 @@ class MCPRouterPipeline(MockPipeline):
             headers = {
                 "x-idempotency-key": uuid.uuid4().hex,
                 "x-nonce": nonce,
-                "Fuel-Receipt": "valid_receipt",
+                "X-Fiber-Fuel-Receipt": "valid_receipt",
                 "DPoP": dpop_proof,
             }
 
@@ -266,7 +265,7 @@ class MCPRouterPipeline(MockPipeline):
         headers = {
             "x-idempotency-key": uuid.uuid4().hex,
             "x-nonce": nonce,
-            "Fuel-Receipt": "valid_receipt",
+            "X-Fiber-Fuel-Receipt": "valid_receipt",
             "DPoP": dpop_proof,
         }
 
@@ -293,7 +292,7 @@ class MCPRouterPipeline(MockPipeline):
             headers = {
                 "x-idempotency-key": uuid.uuid4().hex,
                 "x-nonce": nonce,
-                "Fuel-Receipt": "invalid_receipt",
+                "X-Fiber-Fuel-Receipt": "invalid_receipt",
                 "DPoP": dpop_proof,
             }
 
@@ -318,7 +317,7 @@ class MCPRouterPipeline(MockPipeline):
         headers = {
             "x-idempotency-key": uuid.uuid4().hex,
             "x-nonce": nonce,
-            "Fuel-Receipt": "valid_receipt",
+            "X-Fiber-Fuel-Receipt": "valid_receipt",
             "DPoP": dpop_proof,
         }
 
@@ -345,7 +344,7 @@ class MCPRouterPipeline(MockPipeline):
         headers = {
             "x-idempotency-key": uuid.uuid4().hex,
             "x-nonce": nonce,
-            "Fuel-Receipt": "valid_receipt",
+            "X-Fiber-Fuel-Receipt": "valid_receipt",
             "DPoP": dpop_proof,
         }
 
@@ -416,7 +415,7 @@ class MCPRouterPipeline(MockPipeline):
             headers = {
                 "x-idempotency-key": uuid.uuid4().hex,
                 "x-nonce": nonce,
-                "Fuel-Receipt": "invalid_receipt",
+                "X-Fiber-Fuel-Receipt": "invalid_receipt",
                 "DPoP": dpop_proof,
             }
 

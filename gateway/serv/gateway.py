@@ -250,7 +250,7 @@ async def invoke_mcp_stateless(
     request: Request,
     target_server_id: str,
     payload: Dict[str, Any] = Body(...),
-    # fuel_receipt: Optional[str] = Header(None, alias="Fuel-Receipt"),
+    # fuel_receipt: Optional[str] = Header(None, alias="X-Fiber-Fuel-Receipt"),
     x_idempotency_key: str = Header(..., alias="x-idempotency-key"),
     x_nonce: str = Header(..., alias="x-nonce"),
     x_dpop_proof: Optional[str] = Header(None, alias="DPoP"),

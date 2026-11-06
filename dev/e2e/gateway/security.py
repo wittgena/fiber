@@ -100,7 +100,7 @@ class SecurityBoundWorkflow(Workflow):
         res_large = await self.client.post(
             Endpoints.TELEMETRY_LOGS, 
             json=payload_model.model_dump(exclude_none=True),
-            headers={"Fuel-Receipt": "valid_receipt"}
+            headers={"X-Fiber-Fuel-Receipt": "valid_receipt"}
         )
         
         self._record("Volumetric Exceed", "Funded Heavy Load", (200, 200), res_large.status_code, "Large payload processed successfully via Economic Firewall (Metered).")
@@ -108,7 +108,7 @@ class SecurityBoundWorkflow(Workflow):
             res_chunk = await self.client.post(
                 Endpoints.TELEMETRY_LOGS, 
                 content=b"malicious_chunk", 
-                headers={"Transfer-Encoding": "chunked", "Fuel-Receipt": "valid_receipt"}
+                headers={"Transfer-Encoding": "chunked", "X-Fiber-Fuel-Receipt": "valid_receipt"}
             )
             chunk_status = res_chunk.status_code
         except httpx.ReadError:
@@ -134,18 +134,18 @@ class SecurityBoundWorkflow(Workflow):
         self.log.info("\n--- [Phase 3] Protocol Smuggling & State Corruption ---")
         smuggling_vectors = ChaosPayloadLibrary.SMUGGLING + ChaosPayloadLibrary.INVALID_STATE
         for idx, payload_func in enumerate(smuggling_vectors):
-            res = await self.client.post(Endpoints.TELEMETRY_LOGS, content=payload_func(), headers={"Fuel-Receipt": "valid_receipt"})
+            res = await self.client.post(Endpoints.TELEMETRY_LOGS, content=payload_func(), headers={"X-Fiber-Fuel-Receipt": "valid_receipt"})
             self._record(f"Smuggling/Corruption {idx}", "Malformed JSON/Protocol", (400, 422), res.status_code, "Malformed payload rejected by SpecValidator.")
         return McpPoisoningMsg()
 
     @step
     async def phase_mcp_poisoning(self, msg: McpPoisoningMsg) -> WorkflowMessage:
         self.log.info("\n--- [Phase 4] MCP Privilege Escalation & Injection ---")
-        res_rce = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_COMMAND_INJECTION[0](), headers={"Content-Type": "application/json", "Fuel-Receipt": "valid_receipt"})
+        res_rce = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_COMMAND_INJECTION[0](), headers={"Content-Type": "application/json", "X-Fiber-Fuel-Receipt": "valid_receipt"})
         blocked = res_rce.status_code in [400, 401, 403]
         self._record("MCP CVE-2026-42271", "Command Injection", (200, 403), res_rce.status_code, "RCE attempt via MCP tool intercepted." if blocked else "RCE Block verification")
         
-        res_path = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_PATH_TRAVERSAL[0](), headers={"Content-Type": "application/json", "Fuel-Receipt": "valid_receipt"})
+        res_path = await self.client.post("/mcp/messages", content=ChaosPayloadLibrary.MCP_PATH_TRAVERSAL[0](), headers={"Content-Type": "application/json", "X-Fiber-Fuel-Receipt": "valid_receipt"})
         blocked_path = res_path.status_code in [400, 401, 403]
         self._record("MCP Traversal", "Path Traversal", (200, 403), res_path.status_code, "Path Traversal via MCP intercepted." if blocked_path else "Traversal Block verification")
         return SignatureTamperMsg()
@@ -169,7 +169,7 @@ class SecurityBoundWorkflow(Workflow):
             return {
                 "x-spiffe-id": "spiffe://corp.local/hr-agent",
                 "DPoP": dpop_sig,                
-                "x-tenant-id": "tenant_test_001",
+                "X-Fiber-Tenant": "tenant_test_001",
                 "x-idempotency-key": idem_key,
                 "x-nonce": nonce
             }

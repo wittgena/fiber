@@ -139,7 +139,7 @@ class GatewayClient:
 
     async def push_telemetry(self, request: ExportLogsServiceRequest, fuel_receipt: Optional[str] = None) -> Dict[str, Any]:
         verifier = self._get_verified_client()
-        headers = {"Fuel-Receipt": fuel_receipt} if fuel_receipt else {}
+        headers = {"X-Fiber-Fuel-Receipt": fuel_receipt} if fuel_receipt else {}
         try:
             response = await verifier.async_post_verified(
                 Endpoints.TELEMETRY_LOGS, 
@@ -149,8 +149,7 @@ class GatewayClient:
             response.raise_for_status()
             headers_dict = response.headers
             content_hash = headers_dict.get(EdgeHeader.CONTENT_HASH.value, "N/A")
-            fingerprint = headers_dict.get(EdgeHeader.FINGERPRINT.value, "N/A")
-            
+            fingerprint = headers_dict.get(EdgeHeader.CANONICAL_HASH.value, "N/A")
             return {
                 "status": "success", 
                 "content_hash": content_hash, 
@@ -168,7 +167,7 @@ class GatewayClient:
     async def record_audit_event(self, request: AuditLogRequest, fuel_receipt: Optional[str] = None) -> Dict[str, Any]:
         """Gateway returns AuditLogResponse schema containing 'request_id' and 'result.hash'"""
         verifier = self._get_verified_client()
-        headers = {"Fuel-Receipt": fuel_receipt} if fuel_receipt else {}
+        headers = {"X-Fiber-Fuel-Receipt": fuel_receipt} if fuel_receipt else {}
         try:
             response = await verifier.async_post_verified(
                 Endpoints.AUDIT_EVENT, 
@@ -209,7 +208,7 @@ class GatewayClient:
                 if not fuel_receipt:
                     raise Exception("Failed to procure fuel_receipt from Handshake")
                     
-                headers = {"Fuel-Receipt": fuel_receipt}
+                headers = {"X-Fiber-Fuel-Receipt": fuel_receipt}
                 response = await verifier._client.post(Endpoints.LLM_CHAT, json=payload, headers=headers)
                 
             response.raise_for_status()
@@ -226,7 +225,7 @@ class GatewayClient:
             "x-spiffe-id": intent.x_spiffe_id,
             "x-dpop-proof": intent.x_dpop_proof,
             "x-nonce": intent.x_nonce,
-            "x-tenant-id": intent.x_tenant_id,
+            "X-Fiber-Tenant": intent.x_tenant_id,
             "x-idempotency-key": intent.x_idempotency_key
         }
         if intent.x_trace_id:

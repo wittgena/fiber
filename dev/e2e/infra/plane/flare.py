@@ -10,10 +10,12 @@ from typing import List, Dict
 
 import fiber.dev.base.scene as scene_module
 
+from xphi.watcher.plane.flare.controller import FlareController
+
+from xphi.arch.contract.config.env import config as env_config
 from xphi.node.runtime.wasm.broker import WasmBroker
 from xphi.state.phase.reactor import PhaseReactor
-from fiber.infra.ops.plane.flare.tunnel import FlareTunnelFactory
-from fiber.infra.ops.plane.flare.controller import FlareController
+from xphi.watcher.plane.flare.tunnel import FlareTunnelFactory
 from xphi.watcher.plane.emitter import get_emitter, flow_scope
 
 log = get_emitter("e2e.plane.flare")
@@ -21,8 +23,13 @@ MODULE_PATH = scene_module.__name__
 
 @dataclass
 class FlarePipelineConfig:
-    suites_registry: Dict[str, str] = field(default_factory=lambda: {"flare": f"{MODULE_PATH}.flare:FlareScene",})
-    default_suites: List[str] = field(default_factory=lambda: ["flare",])
+    suites_registry: Dict[str, str] = field(
+        default_factory=lambda: {
+            "bridge": f"{MODULE_PATH}.flare.bridge:FlareBridgeScene",
+            "flare": f"{MODULE_PATH}.flare.base:FlareScene",
+        }
+    )
+    default_suites: List[str] = field(default_factory=lambda: ["bridge", "flare"])
 
 class FlareFlow:
     def __init__(self, mode: str = "dev", command: str = "test", suites: List[str] = None, config: FlarePipelineConfig = None, keep_workspace: bool = False):
@@ -74,23 +81,26 @@ class FlareFlow:
         worker_name = "dphi-edge-sandbox"
         edge_url = "http://127.0.0.1:8787" if self.mode == "dev" else f"https://{worker_name}.workers.dev"
 
-        self.log.info(f"[PHASE 2] Connecting to Edge Endpoint: {edge_url}")
-        self.log.debug("[FlareFlow:test] Awaiting FlareTunnelFactory.get_default()...")
+        self.log.info(f"[PHASE 2] Binding XPHI_WASM_PLANE -> flare:{edge_url}")
+        prev_plane = env_config.get("XPHI_WASM_PLANE", os.getenv("XPHI_WASM_PLANE", "local"))
+        env_config.set_override("XPHI_WASM_PLANE", f"flare:{edge_url}")
 
         t0 = time.time()
         await FlareTunnelFactory.get_default(mq_url=edge_url)
-
         self.log.debug(f"[FlareFlow:test] FlareTunnelFactory initialized in {time.time() - t0:.3f}s")
-        self.log.debug("[FlareFlow:test] Instantiating WasmBroker with timeout=15.0s (Dynamic Timeout Enable)")
+
+        # XPHI_WASM_PLANE 설정에 의해 WasmBroker가 자동으로 FlareTunnelFactory를 바인딩하는지 검증
+        self.log.debug("[FlareFlow:test] Instantiating WasmBroker via XPHI_WASM_PLANE resolution (timeout=15.0s)")
         broker = WasmBroker(
-            tunnel_factory=FlareTunnelFactory,
             request_stream="wasm:execute:stream:tester_isolated",
             timeout=15.0
         )
         broker.control_channel = "wasm:control:req:tester_isolated"
-        self.log.debug(f"[FlareFlow:test] Broker instantiated. Request stream: {broker.request_stream}, Control: {broker.control_channel}")
+        self.log.debug(
+            f"[FlareFlow:test] Broker instantiated (Plane={broker._plane_key}, Factory={broker.tunnel_factory.__name__})"
+        )
+
         self.log.info("[PHASE 3] Handing over execution to FlareController...")
-        self.log.debug("[FlareFlow:test] Instantiating FlareController...")
         controller = FlareController(
             target_name=worker_name,
             mode=self.mode,
@@ -99,9 +109,12 @@ class FlareFlow:
         )
         controller.keep_workspace = self.keep_workspace
         
-        self.log.debug("[FlareFlow:test] Yielding execution to controller.execute() -> Will block until orchestration/tests complete.")
         t1 = time.time()
-        success, err_msg = await controller.execute(broker=broker)
+        try:
+            success, err_msg = await controller.execute(broker=broker)
+        finally:
+            env_config.set_override("XPHI_WASM_PLANE", prev_plane)
+
         self.log.debug(f"[FlareFlow:test] controller.execute() returned in {time.time() - t1:.3f}s. Success={success}")
         
         log.info("\n" + "="*75)
@@ -145,7 +158,7 @@ class FlareFlow:
 def main(args_list: list[str] = None):
     parser = argparse.ArgumentParser(description="DPHI Cloudflare Edge Orchestrator")
     parser.add_argument("--mode", choices=["dev", "deploy"], default="dev", help="Run locally (dev) or on Global Edge (deploy)")
-    parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run")
+    parser.add_argument("--suites", nargs="+", default=["all"], help="List of suites to run (e.g., flare, bridge, or all)")
     parser.add_argument("--debug", action="store_true", help="Enable DEBUG log level to capture underlying Edge/Wrangler streams.")
     parser.add_argument("--keep-workspace", action="store_true", help="Prevent teardown of the workspace on failure for post-mortem analysis.")
     

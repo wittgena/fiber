@@ -118,7 +118,7 @@ class MCPGatewayTestClient:
         return {
             "x-idempotency-key": idempotency_key,
             "x-nonce": nonce,
-            "Fuel-Receipt": receipt,
+            "X-Fiber-Fuel-Receipt": receipt,
             "x-spiffe-id": self.spiffe_id,
             "DPoP": proof,
         }

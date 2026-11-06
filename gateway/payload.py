@@ -53,7 +53,7 @@ def get_default_config() -> Config:
     return Config()
 
 async def verify_access_credential(request: Request, api_key: str = Security(api_key_header)):
-    raw_token = request.headers.get("Authorization") or request.headers.get("Fuel-Receipt")
+    raw_token = request.headers.get("Authorization") or request.headers.get("X-Fiber-Fuel-Receipt")
     translated_receipt = None
     if raw_token:
         if raw_token.startswith("Bearer "):

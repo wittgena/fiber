@@ -27,6 +27,8 @@ _PERSIST_SCHEMA: Dict[str, Tuple[str, ...]] = {
         "saved_tokens",
     ),
     "security": (
+        "guardrail_mask",
+        "guardrail_block",
         "block_api_keys",
         "custom_regex",
         "guardrail_mode",
@@ -106,6 +108,8 @@ class FinOpsState:
 
 @dataclass
 class SecurityState:
+    guardrail_mask: bool = True
+    guardrail_block: bool = True
     block_api_keys: bool = True
     custom_regex: str = r"sk-[a-zA-Z0-9]{20,}"
     guardrail_mode: str = "Strict Block (PermissionError)"
