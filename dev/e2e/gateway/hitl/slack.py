@@ -30,7 +30,6 @@ from xphi.state.phase.reactor import PhaseReactor
 from xphi.arch.bound.adapter.gateway import DPoPClientGenerator
 from xphi.node.space.tunnel.factory import TunnelFactory
 
-
 class ThirdPartyPreflightHitlPipeline(MockPipeline):
     def __init__(self, config: E2EConfig):
         super().__init__(
@@ -40,28 +39,27 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
         )
         self.mcp = McpPayloadBuilder()
 
-        # 검증 대상 타겟 ID 2종 (Network/Multiplex + TOTP vs Stdio/Ephemeral + 1-Click Button)
-        self.net_target_id = "net-context7-remote-01"
-        self.stdio_target_id = "hitl-stdio-fs-01"
+        self.crypto_ctx = AuditContext(spiffe_id="spiffe://self/fiber")
+        run_suffix = self.crypto_ctx.run_id[:6]
 
-        # 1. Network Target (Context7) 설정
+        self.net_target_id = f"net-context7-e2e-{run_suffix}"
+        self.stdio_target_id = f"hitl-stdio-fs-e2e-{run_suffix}"
+
         self.env_key_name = "CONTEXT7_API_KEY"
         user_key = os.environ.get(self.env_key_name, "").strip()
         self._injected_temp_env = not bool(user_key)
         self.active_api_key = user_key or f"ctx7_live_e2e_{uuid.uuid4().hex[:16]}"
         os.environ[self.env_key_name] = self.active_api_key
 
-        self.mock_mcp = MockMcpServer(host="127.0.0.1", port=8360, expected_api_key=self.active_api_key)
+        mock_port = get_free_port(8360)
+        self.mock_mcp = MockMcpServer(host="127.0.0.1", port=mock_port, expected_api_key=self.active_api_key)
         self.context7_url = os.environ.get("CONTEXT7_MCP_URL", "").strip() or self.mock_mcp.context7_url
 
-        # 2. Stdio Target (npx @modelcontextprotocol/server-filesystem) 용 샌드박스 디렉토리 준비
         self.temp_dir = tempfile.TemporaryDirectory(prefix="fiber_hitl_fs_")
         self.sandbox_path = Path(self.temp_dir.name).resolve()
         (self.sandbox_path / "public_readme.txt").write_text("SAFE_PUBLIC_CONTENT", encoding="utf-8")
         (self.sandbox_path / "prod_secrets.env").write_text("SUPER_SECRET_KEY=12345", encoding="utf-8")
 
-        # 3. HITL 서명 및 TOTP 검증 컨텍스트
-        self.crypto_ctx = AuditContext(spiffe_id="spiffe://self/fiber")
         self.slack_bridge: Optional[SlackHitlBridge] = None
         self.slack_admin_id = os.environ.get("FIBER_SLACK_USER_ID", "U_SLACK_ADMIN_99")
         self.dpop_client = DPoPClientGenerator(key_size=2048)
@@ -104,9 +102,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
         stdio_npx_cmd = f"npx -y @modelcontextprotocol/server-filesystem {self.sandbox_path}"
 
         targets = [
-            # 구조 1: URL 기반 (network/multiplex) + 기본 TOTP 모드 (require_totp=True)
             (self.net_target_id, self.context7_url, "RESTRICTED_TOPIC|DROP"),
-            # 구조 2: CLI 기반 (stdio/ephemeral) + "button:" 접두어를 통한 1-Click 버튼 단독 모드 (require_totp=False)
             (self.stdio_target_id, stdio_npx_cmd, "button:prod_secrets|DELETE|DROP"),
         ]
 
@@ -147,11 +143,6 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
         idem_key: str,
         expect_totp: bool,
     ) -> str:
-        """
-        [이벤트 구동 & 경계 분리 리팩토링 적용]
-        UniversalPubSub(`tunnel.pubsub()`)을 통해 원장 상태 확정(Pub/Sub)과 
-        샌드박스 실행(Gateway Timeout)의 타임아웃 경계를 명확하게 분리합니다.
-        """
         prompt_params = prompt_payload.get("params", {})
         actual_require_totp = bool(prompt_params.get("require_totp", True))
         if actual_require_totp != expect_totp:
@@ -161,15 +152,12 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
 
         mode_badge = "TOTP-6DIGIT" if expect_totp else "1-CLICK BUTTON"
 
-        # 0. 레이스 컨디션 방지를 위해 액션 전에 미리 Pub/Sub 객체 생성 및 채널 구독
         tunnel = await TunnelFactory.get_default()
         pubsub_channel = f"mcp.intent.reply.{handle_id}"
         pubsub = tunnel.pubsub()
         await pubsub.subscribe(pubsub_channel)
 
         async def listen_for_ledger() -> Dict[str, Any]:
-            # UniversalFacade의 socket_timeout(5.0s)으로 인해 장시간 대기 시 발생할 수 있는
-            # redis.exceptions.TimeoutError를 무시하고 get_message 폴링/대기를 이어갑니다.
             while True:
                 try:
                     msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
@@ -181,7 +169,6 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                 await asyncio.sleep(0.05)
 
         try:
-            # 분기 A: Live Slack 모드 (실제 Slack 메시지 발송 및 사용자 액션 대기)
             if self.slack_bridge.is_live_configured and self.slack_bridge.app_token:
                 await asyncio.sleep(0.4)
 
@@ -217,7 +204,6 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                 spinner = asyncio.create_task(spinner_task())
 
                 try:
-                    # 60초간 사용자 액션 및 원장 합의 이벤트를 대기
                     event_data = await asyncio.wait_for(listen_for_ledger(), timeout=60.0)
                 except asyncio.TimeoutError:
                     print("\n" + "=" * 80)
@@ -240,8 +226,6 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                     sys.stdout.flush()
                     print("=" * 80 + "\n")
                     raise RuntimeError(f"Execution faulted on {target_id}: {err_detail}")
-
-            # 분기 B: 로컬 웹훅 에뮬레이션 모드 (UI 블록 구조 및 State payload 정밀 검증)
             else:
                 yield_event = {
                     "event": "MCP_PHASE_YIELD",
@@ -281,7 +265,6 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                 if oob_res.get("status") != "RESUMED":
                     raise RuntimeError(f"Expected OOB status RESUMED ({mode_badge}), got {oob_res}")
 
-                # [경계 1] 원장 합의 대기 (순수 원장 I/O 및 실행 완료 통보 대기)
                 try:
                     event_data = await asyncio.wait_for(listen_for_ledger(), timeout=15.0)
                 except asyncio.TimeoutError:
@@ -294,10 +277,9 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
                     err_detail = event_data.get("error_detail", "Unknown")
                     raise RuntimeError(f"Handle {handle_id} FAULTED after RESUME ({mode_badge}): {err_detail}")
 
-            # [경계 2] 샌드박스 실행 및 게이트웨이 응답 대기 (OS 종속적: 느리고 불확정적인 구간, Timeout 25.0초)
             res_final = await self._post_gateway(target_id, orig_payload, idem_key=idem_key, timeout=25.0)
             if res_final.status_code == 200:
-                log.info(f"  ├─ [Boundary 2] External Sandbox Execution completed.")
+                log.info("  ├─ [Boundary 2] External Sandbox Execution completed.")
                 return McpPayloadBuilder.extract_data(res_final.content, parse_json=False)
 
             raise RuntimeError(f"Expected 200 OK after resolution, got {res_final.status_code}: {res_final.text}")
@@ -309,9 +291,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
             except Exception:
                 pass
 
-    # =========================================================================
     # Phase 1: resolve_connector_spec 추론 및 Dual Mode(TOTP / Button) 장착 검증
-    # =========================================================================
     async def phase_resolver_and_guard_arming(self) -> None:
         net_conn = self._get_connector(self.net_target_id)
         stdio_conn = self._get_connector(self.stdio_target_id)
@@ -337,9 +317,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
             f"[{self.stdio_target_id} -> STDIO/EPHEMERAL (Mode: 1-CLICK BUTTON)]"
         )
 
-    # =========================================================================
     # Phase 2: 정규식 미매칭(Safe) 요청의 무정지 통과(200 OK) 검증
-    # =========================================================================
     async def phase_safe_passthrough(self) -> None:
         safe_file = str(self.sandbox_path / "public_readme.txt")
         payload = self.mcp.next_tool_call("read_file", path=safe_file)
@@ -354,14 +332,12 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
 
         log.info("  └─ Safe Stdio Call ('public_readme.txt') bypassed Pre-Flight Guard with 200 OK.")
 
-    # =========================================================================
     # Phase 3: [Network/Multiplex + TOTP 모드] Context7 차단 및 TOTP 검증 재개
-    # =========================================================================
     async def phase_network_multiplex_totp_hitl(self) -> None:
         net_conn = self._get_connector(self.net_target_id)
         idem_key = uuid.uuid4().hex
         payload = self.mcp.next_tool_call(
-            "get-library-docs",
+            "query-docs",
             context7CompatibleLibraryID="/duckdb/duckdb",
             libraryId="/duckdb/duckdb",
             libraryName="duckdb",
@@ -387,9 +363,7 @@ class ThirdPartyPreflightHitlPipeline(MockPipeline):
         )
         log.info(f"  └─ [Network/Multiplex | TOTP] 6-Digit TOTP Verified -> Context7 Stream Resumed ({len(content)} bytes)")
 
-    # =========================================================================
     # Phase 4: [Stdio/Ephemeral + 1-Click Button 모드] Zero-Spawn 차단 및 버튼 단독 승인 재개
-    # =========================================================================
     async def phase_stdio_ephemeral_button_hitl(self) -> None:
         stdio_conn = self._get_connector(self.stdio_target_id)
         idem_key = uuid.uuid4().hex
@@ -450,10 +424,8 @@ async def run_suite() -> None:
     ])
     print("\n".join(lines), flush=True)
 
-
 def main(args_list: Optional[List[str]] = None) -> None:
     PhaseReactor.ignite(main_coro_func=run_suite)
-
 
 if __name__ == "__main__":
     main()

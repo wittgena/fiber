@@ -19,8 +19,6 @@ from fiber.dev.console.ui.guide import GuideModal
 from fiber.dev.console.tab.mcp import HitlModal, QrModal, McpGatewayTab
 from fiber.dev.console.tab.vcr import VcrTab
 from fiber.dev.console.tab.metering import MeteringTab
-from fiber.dev.console.tab.setting import ModelNSettingTab  # noqa: F401
-
 
 class SecretRulesModal:
     """Built-in(33) + Custom Patterns(redact_rules.json) 및 Secret Keys를 단일 SSOT로 관리하는 Dialog"""
