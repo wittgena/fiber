@@ -27,9 +27,10 @@ from fiber.dev.console.tab.mcp import McpGatewayTab, HitlModal, QrModal
 from fiber.dev.console.tab.guardrail import LLMGuardrailTab
 from fiber.dev.console.tab.metering import MeteringTab
 from fiber.dev.console.tab.vcr import VcrTab
-from fiber.dev.console.tab.setting import ModelNSettingTab
+from fiber.dev.console.tab.hitl import HitlNSettingTab
 
 from fiber.dev.console.ui.guide import GuideModal
+from fiber.dev.console.ui.sim import HitlSimulatorModal
 import fiber.dev.console.observer.plane as plane
 import fiber.dev.console.ui.diag as diag
 import fiber.dev.console.ui.header as header
@@ -173,10 +174,10 @@ def _on_tick(tabs: Sequence[StudioTab]) -> None:
         diag.exception("100ms tick flush error", exc=exc)
 
 def build_tabs() -> list[StudioTab]:
-    return [McpGatewayTab(), LLMGuardrailTab(), MeteringTab(), VcrTab(), ModelNSettingTab()]
+    return [McpGatewayTab(), LLMGuardrailTab(), MeteringTab(), VcrTab(), HitlNSettingTab()]
 
 def build_modals() -> list[ModalTemplate]:
-    return [HitlModal(), QrModal(), GuideModal()]
+    return [HitlModal(), QrModal(), GuideModal(), HitlSimulatorModal()]
 
 def build_console_shell() -> ConsoleTemplate:
     shell = ConsoleTemplate(

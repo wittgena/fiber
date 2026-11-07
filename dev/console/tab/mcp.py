@@ -18,10 +18,8 @@ from xphi.node.space.bind.resolver import resolve_path
 
 DEFAULT_ANCHOR_MCP_JSON = '{\n  "mcpServers": {}\n}\n'
 
-
 def _get_anchor_mcp_path() -> Path:
     return resolve_path("anchor") / "mcp.json"
-
 
 def _read_anchor_mcp_text() -> str:
     p = _get_anchor_mcp_path()
@@ -31,7 +29,6 @@ def _read_anchor_mcp_text() -> str:
         return p.read_text(encoding="utf-8")
     except Exception:
         return DEFAULT_ANCHOR_MCP_JSON
-
 
 def _load_anchor_specs_map() -> dict[str, dict]:
     """~/.anchor/mcp.json의 mcpServers 맵을 직접 읽어 {target_id: spec_dict} 반환"""
@@ -44,7 +41,6 @@ def _load_anchor_specs_map() -> dict[str, dict]:
         return servers if isinstance(servers, dict) else {}
     except Exception:
         return {}
-
 
 class HitlModal(ModalTemplate):
     width_cls = "w-[520px]"
@@ -102,7 +98,6 @@ class QrModal(ModalTemplate):
             "text-xs font-mono text-amber-300"
         )
         kit.button("Close", dialog.close, color="cyan", outline=True).classes("w-full mt-2")
-
 
 # Tab 1: MCP Gateway
 class McpGatewayTab(StudioTab):

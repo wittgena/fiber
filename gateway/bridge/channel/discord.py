@@ -18,7 +18,7 @@ from xphi.arch.bound.client.rpc import InternalRpcClient
 from xphi.node.space.tunnel.factory import TunnelFactory
 from xphi.watcher.plane.emitter import get_emitter
 
-log = get_emitter("gateway.bridge.channel.discord")
+log = get_emitter("bridge.channel.discord")
 
 class DiscordInteractionType:
     PING = 1

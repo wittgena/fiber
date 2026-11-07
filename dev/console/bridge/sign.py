@@ -240,4 +240,45 @@ class OobActionBridge:
         refs.push_pubsub("mcp:hitl", "ATTESTATION_PASSED -> Resuming suspended sandbox execution")
         ui.notify("Approved! Cryptographic Audit Receipt anchored.", type="positive")
 
+    # fiber.dev.console.bridge.sign 의 OobActionBridge 클래스 내부에 추가
+    async def dispatch_discord_oob(
+        self,
+        target_id: str = "postgres-prod-db",
+        tool_name: str = "drop_table",
+        tool_args: dict | None = None,
+    ) -> None:
+        from fiber.gateway.bridge.channel.discord import DiscordHitlBridge
+
+        s = state.security
+        channel = getattr(s, "discord_channel", "").strip()
+        args_payload = tool_args or {"table": "customer_ledgers", "cascade": True}
+        handle_id = f"h_{int(time.time() * 1000) % 1000000:06d}"
+        mode_str = "TOTP Modal" if s.oob_require_totp else "1-Click Button"
+
+        try:
+            bridge = DiscordHitlBridge(default_channel=channel)
+            bridge.register_identity_mapping("*", s.admin_user)
+            yield_event = {
+                "event": "MCP_PHASE_YIELD",
+                "handle_id": handle_id,
+                "target_server_id": f"{target_id}.{tool_name}",
+                "agent": s.admin_user,
+                "prompt": {
+                    "id": f"req_{handle_id}",
+                    "params": {
+                        "require_totp": s.oob_require_totp,
+                        "message": f"Execute '{tool_name}' with args {json.dumps(args_payload)}",
+                    },
+                },
+            }
+            msg_id = await bridge.post_yield_notification(yield_event)
+            if msg_id:
+                refs.push_pubsub("mcp:discord_oob", f"Sent Discord ({mode_str}) to {channel} (id={msg_id})")
+                ui.notify(f"Sent HITL ({mode_str}) to Discord {channel}", type="positive")
+            else:
+                ui.notify("Discord API rejected message. Check Bot Token & Channel ID.", type="warning")
+        except Exception as e:
+            diag.exception("Failed to dispatch Discord OOB", exc=e)
+            ui.notify(f"Discord OOB Error: {e}", type="warning")
+
 oob = OobActionBridge(finops_manager)
